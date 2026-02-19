@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.local
 
 import android.content.Context
+import androidx.annotation.OptIn
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.core.DataStore
@@ -12,6 +13,8 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultLoadControl.DEFAULT_VIDEO_BUFFER_SIZE
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -97,14 +100,14 @@ data class SubtitleStyleSettings(
 /**
  * Data class representing buffer settings
  */
+@UnstableApi
 data class BufferSettings(
     val minBufferMs: Int = 50_000,
     val maxBufferMs: Int = 50_000,
     val bufferForPlaybackMs: Int = 2_500,
     val bufferForPlaybackAfterRebufferMs: Int = 5_000,
-    val targetBufferSizeMb: Int = 0, // 0 = ExoPlayer default
+    val targetBufferSizeMb: Int = (DEFAULT_VIDEO_BUFFER_SIZE / (1024L * 1024L)).toInt(),
     val backBufferDurationMs: Int = 0,
-    val retainBackBufferFromKeyframe: Boolean = false
 )
 
 /**
@@ -148,7 +151,11 @@ data class PlayerSettings(
     val nextEpisodeThresholdMinutesBeforeEnd: Float = 2f,
     val streamReuseLastLinkEnabled: Boolean = false,
     val streamReuseLastLinkCacheHours: Int = 24,
-    val subtitleOrganizationMode: SubtitleOrganizationMode = SubtitleOrganizationMode.NONE
+    val subtitleOrganizationMode: SubtitleOrganizationMode = SubtitleOrganizationMode.NONE,
+    // Networking
+    val useParallelConnections: Boolean = false,
+    val parallelConnectionCount: Int = 3,
+    val parallelChunkSizeMb: Int = 8
 )
 
 enum class StreamAutoPlayMode {
@@ -198,6 +205,7 @@ enum class LibassRenderType {
     OVERLAY_OPEN_GL    // Overlay OpenGL rendering (supports HDR, recommended)
 }
 
+@UnstableApi
 @Singleton
 class PlayerSettingsDataStore @Inject constructor(
     @ApplicationContext private val context: Context
@@ -238,6 +246,11 @@ class PlayerSettingsDataStore @Inject constructor(
     private val streamReuseLastLinkCacheHoursKey = intPreferencesKey("stream_reuse_last_link_cache_hours")
     private val subtitleOrganizationModeKey = stringPreferencesKey("subtitle_organization_mode")
 
+    // Networking keys
+    private val useParallelConnectionsKey = booleanPreferencesKey("use_parallel_connections")
+    private val parallelConnectionCountKey = intPreferencesKey("parallel_connection_count")
+    private val parallelChunkSizeMbKey = intPreferencesKey("parallel_chunk_size_mb")
+
     // Subtitle style settings keys
     private val subtitlePreferredLanguageKey = stringPreferencesKey("subtitle_preferred_language")
     private val subtitleSecondaryLanguageKey = stringPreferencesKey("subtitle_secondary_language")
@@ -257,7 +270,6 @@ class PlayerSettingsDataStore @Inject constructor(
     private val bufferForPlaybackAfterRebufferMsKey = intPreferencesKey("buffer_for_playback_after_rebuffer_ms")
     private val targetBufferSizeMbKey = intPreferencesKey("target_buffer_size_mb")
     private val backBufferDurationMsKey = intPreferencesKey("back_buffer_duration_ms")
-    private val retainBackBufferFromKeyframeKey = booleanPreferencesKey("retain_back_buffer_from_keyframe")
 
     private val migrationLoadControlDefaultsAlignedDoneKey = booleanPreferencesKey("migration_load_control_defaults_aligned_done")
 
@@ -346,6 +358,9 @@ class PlayerSettingsDataStore @Inject constructor(
             streamReuseLastLinkEnabled = prefs[streamReuseLastLinkEnabledKey] ?: false,
             streamReuseLastLinkCacheHours = (prefs[streamReuseLastLinkCacheHoursKey] ?: 24).coerceIn(1, 168),
             subtitleOrganizationMode = parseSubtitleOrganizationMode(prefs[subtitleOrganizationModeKey]),
+            useParallelConnections = prefs[useParallelConnectionsKey] ?: false,
+            parallelConnectionCount = (prefs[parallelConnectionCountKey] ?: 2),
+            parallelChunkSizeMb = (prefs[parallelChunkSizeMbKey] ?: 16),
             subtitleStyle = SubtitleStyleSettings(
                 preferredLanguage = prefs[subtitlePreferredLanguageKey] ?: "en",
                 secondaryPreferredLanguage = prefs[subtitleSecondaryLanguageKey],
@@ -363,9 +378,8 @@ class PlayerSettingsDataStore @Inject constructor(
                 maxBufferMs = prefs[maxBufferMsKey] ?: 50_000,
                 bufferForPlaybackMs = prefs[bufferForPlaybackMsKey] ?: 2_500,
                 bufferForPlaybackAfterRebufferMs = prefs[bufferForPlaybackAfterRebufferMsKey] ?: 5_000,
-                targetBufferSizeMb = prefs[targetBufferSizeMbKey] ?: 0,
+                targetBufferSizeMb = prefs[targetBufferSizeMbKey] ?: (DEFAULT_VIDEO_BUFFER_SIZE / (1024L * 1024L)).toInt(),
                 backBufferDurationMs = prefs[backBufferDurationMsKey] ?: 0,
-                retainBackBufferFromKeyframe = prefs[retainBackBufferFromKeyframeKey] ?: false
             )
         )
     }
@@ -679,9 +693,55 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
-    suspend fun setBufferRetainBackBufferFromKeyframe(retain: Boolean) {
+    @OptIn(UnstableApi::class)
+    suspend fun resetBufferSettingsToDefaults() {
         dataStore.edit { prefs ->
-            prefs[retainBackBufferFromKeyframeKey] = retain
+            prefs[minBufferMsKey] = 50_000
+            prefs[maxBufferMsKey] = 50_000
+            prefs[bufferForPlaybackMsKey] = 2_500
+            prefs[bufferForPlaybackAfterRebufferMsKey] = 5_000
+            prefs[targetBufferSizeMbKey] = (DEFAULT_VIDEO_BUFFER_SIZE / (1024L * 1024L)).toInt()
+            prefs[backBufferDurationMsKey] = 0
+        }
+    }
+
+    suspend fun resetNetworkSettingsToDefaults() {
+        dataStore.edit { prefs ->
+            prefs[useParallelConnectionsKey] = false
+            prefs[parallelConnectionCountKey] = 2
+            prefs[parallelChunkSizeMbKey] = 16
+        }
+    }
+
+    suspend fun setUseParallelConnections(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[useParallelConnectionsKey] = enabled
+        }
+    }
+
+    suspend fun setParallelConnectionCount(count: Int) {
+        dataStore.edit { prefs ->
+            prefs[parallelConnectionCountKey] = count.coerceIn(2, 4)
+        }
+    }
+
+    suspend fun setParallelChunkSizeMb(mb: Int) {
+        dataStore.edit { prefs ->
+            prefs[parallelChunkSizeMbKey] = mb.coerceIn(1, 128)
+        }
+    }
+
+    suspend fun updateMemorySettings(
+        targetBufferSizeMb: Int? = null,
+        useParallelConnections: Boolean? = null,
+        parallelConnectionCount: Int? = null,
+        parallelChunkSizeMb: Int? = null
+    ) {
+        dataStore.edit { prefs ->
+            targetBufferSizeMb?.let { prefs[targetBufferSizeMbKey] = it.coerceAtLeast(0) }
+            useParallelConnections?.let { prefs[useParallelConnectionsKey] = it }
+            parallelConnectionCount?.let { prefs[parallelConnectionCountKey] = it.coerceIn(2, 4) }
+            parallelChunkSizeMb?.let { prefs[parallelChunkSizeMbKey] = it.coerceIn(8, 128) }
         }
     }
 }

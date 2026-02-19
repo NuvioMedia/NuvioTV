@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
@@ -12,8 +13,13 @@ import okhttp3.OkHttpClient
 import java.net.URLDecoder
 import java.util.concurrent.TimeUnit
 
+@UnstableApi
 internal class PlayerMediaSourceFactory {
     private var okHttpClient: OkHttpClient? = null
+
+    var useParallelConnections: Boolean = false
+    var parallelConnectionCount: Int = 2
+    var parallelChunkSizeMb: Int = 16
 
     fun createMediaSource(
         url: String,
@@ -54,8 +60,19 @@ internal class PlayerMediaSourceFactory {
                 .createMediaSource(mediaItem)
             isDash -> DashMediaSource.Factory(okHttpFactory)
                 .createMediaSource(mediaItem)
-            else -> DefaultMediaSourceFactory(okHttpFactory)
-                .createMediaSource(mediaItem)
+            else -> {
+                val dataSourceFactory = if (useParallelConnections) {
+                    ParallelRangeDataSource.Factory(
+                        okHttpFactory,
+                        parallelConnectionCount,
+                        parallelChunkSizeMb.toLong() * 1024 * 1024
+                    )
+                } else {
+                    okHttpFactory
+                }
+                DefaultMediaSourceFactory(dataSourceFactory)
+                    .createMediaSource(mediaItem)
+            }
         }
     }
 

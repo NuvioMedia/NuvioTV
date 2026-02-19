@@ -43,9 +43,27 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
             val playerSettings = playerSettingsDataStore.playerSettings.first()
             val useLibass = false // Temporarily disabled for maintenance
             val libassRenderType = playerSettings.libassRenderType.toAssRenderType()
-            val loadControl = DefaultLoadControl.Builder().build()
+            val bufferSettings = playerSettings.bufferSettings
+            val loadControl = DefaultLoadControl.Builder()
+                .setBufferDurationsMs(
+                    bufferSettings.minBufferMs,
+                    bufferSettings.maxBufferMs,
+                    bufferSettings.bufferForPlaybackMs,
+                    bufferSettings.bufferForPlaybackAfterRebufferMs
+                )
+                .setTargetBufferBytes(bufferSettings.targetBufferSizeMb * 1024 * 1024)
+                .setBackBuffer(
+                    bufferSettings.backBufferDurationMs,
+                    bufferSettings.backBufferDurationMs > 0
+                )
+                .setPrioritizeTimeOverSizeThresholds(false)
+                .build()
 
-            
+            mediaSourceFactory.useParallelConnections = playerSettings.useParallelConnections
+            mediaSourceFactory.parallelConnectionCount = playerSettings.parallelConnectionCount
+            mediaSourceFactory.parallelChunkSizeMb = playerSettings.parallelChunkSizeMb
+
+
             trackSelector = DefaultTrackSelector(context).apply {
                 setParameters(
                     buildUponParameters()

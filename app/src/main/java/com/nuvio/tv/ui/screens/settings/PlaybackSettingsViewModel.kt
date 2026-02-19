@@ -1,6 +1,9 @@
 package com.nuvio.tv.ui.screens.settings
 
+import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.PlayerSettings
@@ -15,13 +18,16 @@ import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.data.local.TrailerSettingsDataStore
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 @HiltViewModel
 class PlaybackSettingsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val addonRepository: AddonRepository,
@@ -180,16 +186,54 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setBufferForPlaybackAfterRebufferMs(ms)
     }
 
+    @androidx.annotation.OptIn(UnstableApi::class)
     suspend fun setBufferTargetSizeMb(mb: Int) {
-        playerSettingsDataStore.setBufferTargetSizeMb(mb)
+        val current = playerSettings.first()
+        if (!current.useParallelConnections) {
+            Log.d(MemoryBudget.TAG, "setBufferTargetSizeMb: tB=$mb, parallel=off, total=$mb / ${MemoryBudget.budgetMb}")
+            playerSettingsDataStore.setBufferTargetSizeMb(mb)
+            return
+        }
+        val (adjBuffer, adjChunk) = MemoryBudget.enforce(mb, current.parallelChunkSizeMb, current.parallelConnectionCount)
+        val total = MemoryBudget.totalUsageMb(adjBuffer, current.parallelConnectionCount, adjChunk, true)
+        Log.d(MemoryBudget.TAG, "setBufferTargetSizeMb: tB=$adjBuffer, pC=$adjChunk, pCC=${current.parallelConnectionCount}, total=$total / ${MemoryBudget.budgetMb}")
+        if (adjBuffer == mb && adjChunk == current.parallelChunkSizeMb) {
+            playerSettingsDataStore.setBufferTargetSizeMb(mb)
+        } else {
+            playerSettingsDataStore.updateMemorySettings(
+                targetBufferSizeMb = adjBuffer,
+                parallelChunkSizeMb = adjChunk
+            )
+        }
     }
 
     suspend fun setBufferBackBufferDurationMs(ms: Int) {
         playerSettingsDataStore.setBufferBackBufferDurationMs(ms)
     }
 
-    suspend fun setBufferRetainBackBufferFromKeyframe(retain: Boolean) {
-        playerSettingsDataStore.setBufferRetainBackBufferFromKeyframe(retain)
+    @androidx.annotation.OptIn(UnstableApi::class)
+    suspend fun resetBufferSettingsToDefaults() {
+        playerSettingsDataStore.resetBufferSettingsToDefaults()
+        val current = playerSettings.first()
+        if (!current.useParallelConnections) {
+            Log.d(MemoryBudget.TAG, "resetDefaults: tB=${MemoryBudget.defaultBufferSizeMb}, parallel=off")
+            return
+        }
+        val (adjBuffer, adjChunk) = MemoryBudget.enforce(
+            MemoryBudget.defaultBufferSizeMb, current.parallelChunkSizeMb, current.parallelConnectionCount
+        )
+        val total = MemoryBudget.totalUsageMb(adjBuffer, current.parallelConnectionCount, adjChunk, true)
+        Log.d(MemoryBudget.TAG, "resetDefaults: tB=$adjBuffer, pC=$adjChunk, pCC=${current.parallelConnectionCount}, total=$total / ${MemoryBudget.budgetMb}")
+        if (adjChunk != current.parallelChunkSizeMb || adjBuffer != MemoryBudget.defaultBufferSizeMb) {
+            playerSettingsDataStore.updateMemorySettings(
+                targetBufferSizeMb = adjBuffer,
+                parallelChunkSizeMb = adjChunk
+            )
+        }
+    }
+
+    suspend fun resetNetworkSettingsToDefaults() {
+        playerSettingsDataStore.resetNetworkSettingsToDefaults()
     }
 
     suspend fun setStreamAutoPlayMode(mode: StreamAutoPlayMode) {
@@ -226,6 +270,65 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setNextEpisodeThresholdMinutesBeforeEnd(minutes: Float) {
         playerSettingsDataStore.setNextEpisodeThresholdMinutesBeforeEnd(minutes)
+    }
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    suspend fun setUseParallelConnections(enabled: Boolean) {
+        if (!enabled) {
+            Log.d(MemoryBudget.TAG, "setUseParallelConnections: disabled")
+            playerSettingsDataStore.setUseParallelConnections(false)
+            return
+        }
+        val current = playerSettings.first()
+        val bufferMb = MemoryBudget.effectiveBufferMb(current.bufferSettings.targetBufferSizeMb)
+        val (adjBuffer, adjChunk) = MemoryBudget.enforce(bufferMb, current.parallelChunkSizeMb, current.parallelConnectionCount)
+        val total = MemoryBudget.totalUsageMb(adjBuffer, current.parallelConnectionCount, adjChunk, true)
+        Log.d(MemoryBudget.TAG, "setUseParallelConnections: enabled, tB=$adjBuffer, pC=$adjChunk, pCC=${current.parallelConnectionCount}, total=$total / ${MemoryBudget.budgetMb}")
+        if (adjBuffer == bufferMb && adjChunk == current.parallelChunkSizeMb) {
+            playerSettingsDataStore.setUseParallelConnections(true)
+        } else {
+            playerSettingsDataStore.updateMemorySettings(
+                useParallelConnections = true,
+                targetBufferSizeMb = if (adjBuffer != bufferMb) adjBuffer else null,
+                parallelChunkSizeMb = adjChunk
+            )
+        }
+    }
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    suspend fun setParallelConnectionCount(count: Int) {
+        val current = playerSettings.first()
+        if (count <= current.parallelConnectionCount) {
+            // Decreasing: keep pC unchanged
+            Log.d(MemoryBudget.TAG, "setParallelConnectionCount: pCC=$count (decreased), pC=${current.parallelChunkSizeMb} (unchanged)")
+            playerSettingsDataStore.setParallelConnectionCount(count)
+        } else {
+            // Increasing: reduce pC to max that fits budget
+            val bufferMb = MemoryBudget.effectiveBufferMb(current.bufferSettings.targetBufferSizeMb)
+            val maxChunk = MemoryBudget.maxChunkMb(bufferMb, count)
+            val newChunkMb = current.parallelChunkSizeMb.coerceAtMost(maxChunk)
+            val total = MemoryBudget.totalUsageMb(bufferMb, count, newChunkMb, true)
+            Log.d(MemoryBudget.TAG, "setParallelConnectionCount: pCC=$count (increased), pC=$newChunkMb (max=$maxChunk), tB=$bufferMb, total=$total / ${MemoryBudget.budgetMb}")
+            if (newChunkMb == current.parallelChunkSizeMb) {
+                playerSettingsDataStore.setParallelConnectionCount(count)
+            } else {
+                playerSettingsDataStore.updateMemorySettings(
+                    parallelConnectionCount = count,
+                    parallelChunkSizeMb = newChunkMb
+                )
+            }
+        }
+    }
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    suspend fun setParallelChunkSizeMb(mb: Int) {
+        val current = playerSettings.first()
+        val bufferMb = MemoryBudget.effectiveBufferMb(current.bufferSettings.targetBufferSizeMb)
+        val maxChunk = MemoryBudget.maxChunkMb(bufferMb, current.parallelConnectionCount)
+        val clamped = mb.coerceAtMost(maxChunk)
+        val total = MemoryBudget.totalUsageMb(bufferMb, current.parallelConnectionCount, clamped, true)
+        Log.d(MemoryBudget.TAG, "setParallelChunkSizeMb: pC=$clamped (requested=$mb, max=$maxChunk), tB=$bufferMb, pCC=${current.parallelConnectionCount}, total=$total / ${MemoryBudget.budgetMb}")
+        playerSettingsDataStore.setParallelChunkSizeMb(clamped)
     }
 
     suspend fun setStreamReuseLastLinkEnabled(enabled: Boolean) {

@@ -2,6 +2,9 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -66,6 +69,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import android.view.KeyEvent
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
@@ -94,6 +98,7 @@ import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.ui.theme.NuvioColors
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.PauseCircle
@@ -148,6 +153,18 @@ fun PlaybackSettingsContent(
     var showReuseLastLinkCacheDialog by remember { mutableStateOf(false) }
     var showPlayerPreferenceDialog by remember { mutableStateOf(false) }
 
+    // Transient memory usage overlay
+    var memoryUsageTrigger by remember { mutableStateOf(0) }
+    var showMemoryUsage by remember { mutableStateOf(false) }
+
+    LaunchedEffect(memoryUsageTrigger) {
+        if (memoryUsageTrigger > 0) {
+            showMemoryUsage = true
+            delay(3000)
+            showMemoryUsage = false
+        }
+    }
+
     fun dismissAllDialogs() {
         showLanguageDialog = false
         showSecondaryLanguageDialog = false
@@ -181,10 +198,13 @@ fun PlaybackSettingsContent(
             subtitle = "Configure video playback and subtitle options"
         )
 
-        SettingsGroupCard(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
+        ) {
+        SettingsGroupCard(
+            modifier = Modifier.matchParentSize()
         ) {
             PlaybackSettingsSections(
                 initialFocusRequester = initialFocusRequester,
@@ -230,9 +250,58 @@ fun PlaybackSettingsContent(
                 onSetSubtitleBold = { bold -> coroutineScope.launch { viewModel.setSubtitleBold(bold) } },
                 onSetSubtitleOutlineEnabled = { enabled -> coroutineScope.launch { viewModel.setSubtitleOutlineEnabled(enabled) } },
                 onSetUseLibass = { enabled -> coroutineScope.launch { viewModel.setUseLibass(enabled) } },
-                onSetLibassRenderType = { renderType -> coroutineScope.launch { viewModel.setLibassRenderType(renderType) } }
+                onSetLibassRenderType = { renderType -> coroutineScope.launch { viewModel.setLibassRenderType(renderType) } },
+        onSetUseParallelConnections = { enabled -> coroutineScope.launch { viewModel.setUseParallelConnections(enabled) }; memoryUsageTrigger++ },
+        onSetParallelConnectionCount = { count -> coroutineScope.launch { viewModel.setParallelConnectionCount(count) }; memoryUsageTrigger++ },
+        onSetParallelChunkSizeMb = { mb -> coroutineScope.launch { viewModel.setParallelChunkSizeMb(mb) }; memoryUsageTrigger++ },
+        onSetBufferMinBufferMs = { ms -> coroutineScope.launch { viewModel.setBufferMinBufferMs(ms) } },
+        onSetBufferMaxBufferMs = { ms -> coroutineScope.launch { viewModel.setBufferMaxBufferMs(ms) } },
+        onSetBufferForPlaybackMs = { ms -> coroutineScope.launch { viewModel.setBufferForPlaybackMs(ms) } },
+        onSetBufferForPlaybackAfterRebufferMs = { ms -> coroutineScope.launch { viewModel.setBufferForPlaybackAfterRebufferMs(ms) } },
+        onSetBufferTargetSizeMb = { mb -> coroutineScope.launch { viewModel.setBufferTargetSizeMb(mb) }; memoryUsageTrigger++ },
+        onSetBufferBackBufferDurationMs = { ms -> coroutineScope.launch { viewModel.setBufferBackBufferDurationMs(ms) } },
+        onResetBufferSettingsToDefaults = { coroutineScope.launch { viewModel.resetBufferSettingsToDefaults() }; memoryUsageTrigger++ },
+        onResetNetworkSettingsToDefaults = { coroutineScope.launch { viewModel.resetNetworkSettingsToDefaults() }; memoryUsageTrigger++ },
+    )}
+
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showMemoryUsage,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp)
+        ) {
+            val effectiveBufferMb = MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
+            val totalUsageMb = MemoryBudget.totalUsageMb(
+                effectiveBufferMb,
+                playerSettings.parallelConnectionCount,
+                playerSettings.parallelChunkSizeMb,
+                playerSettings.useParallelConnections
             )
+            val usageRatio = totalUsageMb.toFloat() / MemoryBudget.budgetMb
+            val usageColor = when {
+                usageRatio > 0.9f -> Color(0xFFF44336)
+                usageRatio > 0.7f -> Color(0xFFFF9800)
+                else -> Color(0xFF4CAF50)
+            }
+            Box(
+                modifier = Modifier
+                    .background(
+                        color = NuvioColors.BackgroundCard,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .border(1.dp, usageColor.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    text = "Estimated memory usage: $totalUsageMb / ${MemoryBudget.budgetMb} MB",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = usageColor
+                )
+            }
         }
+    }
     }
 
     PlaybackSettingsDialogsHost(
@@ -385,7 +454,8 @@ internal fun ToggleSettingsItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextSecondary.copy(alpha = contentAlpha),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = if (isFocused) Modifier.basicMarquee() else Modifier
                 )
             }
 
@@ -651,7 +721,8 @@ internal fun SliderSettingsItem(
                             style = MaterialTheme.typography.bodySmall,
                             color = NuvioColors.TextSecondary.copy(alpha = contentAlpha),
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = if (isFocused) Modifier.basicMarquee() else Modifier
                         )
                     }
                 }
