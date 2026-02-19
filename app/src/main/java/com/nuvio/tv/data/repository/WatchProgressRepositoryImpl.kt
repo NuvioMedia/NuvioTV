@@ -215,12 +215,10 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 if (isAuthenticated) {
                     combine(
                         traktProgressService.observeAllProgress(),
+                        watchProgressPreferences.allRawProgress,
                         metadataState
-                    ) { remoteItems, metadataMap ->
-                        val mergedByKey = linkedMapOf<String, WatchProgress>()
-                        remoteItems.forEach { mergedByKey[progressKey(it)] = it }
-                        val merged = mergedByKey.values
-                            .sortedByDescending { it.lastWatched }
+                    ) { remoteItems, localItems, metadataMap ->
+                        val merged = mergeProgressLists(remoteItems, localItems)
                         hydrateMetadata(merged)
                         merged.map { enrichWithMetadata(it, metadataMap) }
                     }
@@ -433,5 +431,44 @@ class WatchProgressRepositoryImpl @Inject constructor(
         } else {
             progress.contentId
         }
+    }
+
+    private fun mergeProgressLists(
+        remoteItems: List<WatchProgress>,
+        localItems: List<WatchProgress>
+    ): List<WatchProgress> {
+        val mergedByKey = linkedMapOf<String, WatchProgress>()
+
+        fun upsert(progress: WatchProgress) {
+            val key = progressKey(progress)
+            val existing = mergedByKey[key]
+            if (existing == null || shouldPreferProgress(existing, progress)) {
+                mergedByKey[key] = progress
+            }
+        }
+
+        remoteItems.forEach(::upsert)
+        localItems.forEach(::upsert)
+
+        return mergedByKey.values
+            .sortedByDescending { it.lastWatched }
+    }
+
+    private fun shouldPreferProgress(existing: WatchProgress, candidate: WatchProgress): Boolean {
+        val timeDiffMs = candidate.lastWatched - existing.lastWatched
+        if (timeDiffMs > 1_000L) return true
+        if (timeDiffMs < -1_000L) return false
+
+        val candidateInProgress = candidate.isInProgress()
+        val existingInProgress = existing.isInProgress()
+        if (candidateInProgress && !existingInProgress) return true
+        if (!candidateInProgress && existingInProgress) return false
+
+        val candidateIsPlayback = candidate.source == WatchProgress.SOURCE_TRAKT_PLAYBACK
+        val existingIsPlayback = existing.source == WatchProgress.SOURCE_TRAKT_PLAYBACK
+        if (candidateIsPlayback && !existingIsPlayback) return true
+        if (!candidateIsPlayback && existingIsPlayback) return false
+
+        return false
     }
 }

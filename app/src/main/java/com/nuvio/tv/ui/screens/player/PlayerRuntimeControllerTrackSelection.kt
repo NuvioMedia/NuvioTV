@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
@@ -125,14 +126,19 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: com.nuvio.tv.
         Log.d(PlayerRuntimeController.TAG, "Selecting ADDON subtitle lang=${subtitle.lang} id=${subtitle.id}")
 
         val normalizedLang = PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)
+        val addonTrackId = "${PlayerRuntimeController.ADDON_SUBTITLE_TRACK_ID_PREFIX}${subtitle.id}"
         pendingAddonSubtitleLanguage = normalizedLang
+        pendingAddonSubtitleTrackId = addonTrackId
+        pendingAudioSelectionAfterSubtitleRefresh =
+            captureCurrentAudioSelectionForSubtitleRefresh(player)
 
         
         val subtitleConfig = MediaItem.SubtitleConfiguration.Builder(
             android.net.Uri.parse(subtitle.url)
         )
+            .setId(addonTrackId)
             .setMimeType(PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url))
-            .setLanguage(subtitle.lang)
+            .setLanguage(normalizedLang)
             .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
             .build()
 
@@ -154,7 +160,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: com.nuvio.tv.
         player.trackSelectionParameters = player.trackSelectionParameters
             .buildUpon()
             .clearOverridesOfType(C.TRACK_TYPE_TEXT)
-            .setPreferredTextLanguage(normalizedLang)
+            .setPreferredTextLanguage(null)
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
             .build()
         
@@ -165,4 +171,32 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: com.nuvio.tv.
             )
         }
     }
+}
+
+internal fun PlayerRuntimeController.captureCurrentAudioSelectionForSubtitleRefresh(
+    player: Player
+): PlayerRuntimeController.PendingAudioSelection? {
+    val state = _uiState.value
+    state.audioTracks.getOrNull(state.selectedAudioTrackIndex)?.let { selected ->
+        return PlayerRuntimeController.PendingAudioSelection(
+            language = selected.language,
+            name = selected.name,
+            streamUrl = currentStreamUrl
+        )
+    }
+
+    player.currentTracks.groups.forEach { trackGroup ->
+        if (trackGroup.type != C.TRACK_TYPE_AUDIO) return@forEach
+        for (i in 0 until trackGroup.length) {
+            if (trackGroup.isTrackSelected(i)) {
+                val format = trackGroup.getTrackFormat(i)
+                return PlayerRuntimeController.PendingAudioSelection(
+                    language = format.language,
+                    name = format.label ?: format.language,
+                    streamUrl = currentStreamUrl
+                )
+            }
+        }
+    }
+    return null
 }

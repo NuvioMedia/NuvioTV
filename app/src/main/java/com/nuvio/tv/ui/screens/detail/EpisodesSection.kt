@@ -6,17 +6,14 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -60,7 +57,6 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
-import androidx.compose.ui.window.Dialog
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
@@ -246,16 +242,8 @@ private fun EpisodeCard(
     val shouldBlur = blurUnwatched && !isWatched
     var isFocused by remember { mutableStateOf(false) }
     var longPressTriggered by remember { mutableStateOf(false) }
-    val thumbnailWidth by animateDpAsState(
-        targetValue = if (isFocused) 268.dp else 280.dp,
-        animationSpec = tween(durationMillis = 180),
-        label = "episodeThumbnailWidth"
-    )
-    val cardWidth by animateDpAsState(
-        targetValue = if (isFocused) 456.dp else 280.dp,
-        animationSpec = tween(durationMillis = 180),
-        label = "episodeCardWidth"
-    )
+    val thumbnailWidth = 280.dp
+    val cardWidth = 280.dp
     val cardAlpha by animateFloatAsState(
         targetValue = if (dimmed) 0.68f else 1f,
         animationSpec = tween(durationMillis = 160),
@@ -284,26 +272,11 @@ private fun EpisodeCard(
             )
         )
     }
-    val edgeFadeBrush = remember(backgroundCard) {
-        Brush.horizontalGradient(
-            0.0f to androidx.compose.ui.graphics.Color.Transparent,
-            0.12f to backgroundCard.copy(alpha = 0.08f),
-            0.30f to backgroundCard.copy(alpha = 0.25f),
-            0.50f to backgroundCard.copy(alpha = 0.50f),
-            0.68f to backgroundCard.copy(alpha = 0.72f),
-            0.82f to backgroundCard.copy(alpha = 0.88f),
-            1.0f to backgroundCard
-        )
-    }
-    val detailsGradientBrush = remember(backgroundCard) {
-        Brush.horizontalGradient(
-            0.0f to backgroundCard.copy(alpha = 0f),
-            0.12f to backgroundCard.copy(alpha = 0.15f),
-            0.3f to backgroundCard.copy(alpha = 0.40f),
-            0.5f to backgroundCard.copy(alpha = 0.65f),
-            0.7f to backgroundCard.copy(alpha = 0.85f),
-            0.85f to backgroundCard.copy(alpha = 0.95f),
-            1.0f to backgroundCard
+    val overlayBrush = remember {
+        Brush.verticalGradient(
+            0.0f to Color.Transparent,
+            0.35f to Color.Black.copy(alpha = 0.55f),
+            1.0f to Color.Black.copy(alpha = 0.82f)
         )
     }
     val thumbnailWidthPx = remember(thumbnailWidth, density) {
@@ -390,13 +363,12 @@ private fun EpisodeCard(
         ),
         scale = CardDefaults.scale(focusedScale = 1.0f)
     ) {
-        Row {
-            Box(
-                modifier = Modifier
-                    .width(thumbnailWidth)
-                    .height(158.dp)
-                    .clip(RoundedCornerShape(8.dp))
-            ) {
+        Box(
+            modifier = Modifier
+                .width(thumbnailWidth)
+                .height(158.dp)
+                .clip(RoundedCornerShape(8.dp))
+        ) {
                 AsyncImage(
                     model = thumbnailRequest,
                     contentDescription = episode.title,
@@ -464,93 +436,68 @@ private fun EpisodeCard(
                     }
                 }
 
-                val edgeFadeAlpha by animateFloatAsState(
+                val overlayAlpha by animateFloatAsState(
                     targetValue = if (isFocused) 1f else 0f,
-                    animationSpec = tween(durationMillis = 180),
-                    label = "episodeEdgeFadeAlpha"
+                    animationSpec = tween(durationMillis = 200),
+                    label = "episodeOverlayAlpha"
                 )
-                // Always present and alpha-animated, so blend starts immediately with expansion.
                 Box(
                     modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .width(92.dp)
                         .fillMaxSize()
-                        .alpha(edgeFadeAlpha)
-                        .background(edgeFadeBrush)
+                        .alpha(overlayAlpha)
+                        .background(overlayBrush)
                 )
-            }
-
-            val detailsAlpha by animateFloatAsState(
-                targetValue = if (isFocused) 1f else 0f,
-                animationSpec = tween(durationMillis = 170),
-                label = "episodeDetailsAlpha"
-            )
-            val detailsWidth by animateDpAsState(
-                targetValue = if (isFocused) 200.dp else 0.dp,
-                animationSpec = tween(durationMillis = 180),
-                label = "episodeDetailsWidth"
-            )
-            Column(
-                modifier = Modifier
-                    .width(detailsWidth)
-                    .height(158.dp)
-                    .offset(x = (-12).dp)
-                    .alpha(detailsAlpha)
-                    .background(detailsGradientBrush)
-                    .padding(start = 0.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
-                horizontalAlignment = Alignment.Start
-            ) {
-                if (detailsAlpha > 0.01f) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .alpha(overlayAlpha)
+                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp, top = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.Top
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (formattedDate.isNotBlank()) {
                             Text(
                                 text = formattedDate,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = NuvioTheme.extendedColors.textTertiary,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.75f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f)
                             )
                         }
-
                         episode.runtime?.let { runtime ->
                             Text(
                                 text = "${runtime}m",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = NuvioTheme.extendedColors.textTertiary,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.75f),
                                 maxLines = 1
                             )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
                     Text(
                         text = episode.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = NuvioColors.TextPrimary,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.fillMaxWidth()
                     )
-
                     episode.overview?.let { overview ->
-                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = overview,
                             style = MaterialTheme.typography.bodySmall,
-                            color = NuvioTheme.extendedColors.textSecondary,
-                            maxLines = 4,
+                            color = Color.White.copy(alpha = 0.85f),
+                            maxLines = 3,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
-            }
         }
     }
 }

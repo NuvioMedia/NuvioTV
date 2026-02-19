@@ -76,7 +76,7 @@ fun CatalogOrderScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "This controls catalog row order on Home (Classic + Grid).",
+                    text = "This controls catalog row order on Home (Classic + Modern + Grid).",
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )

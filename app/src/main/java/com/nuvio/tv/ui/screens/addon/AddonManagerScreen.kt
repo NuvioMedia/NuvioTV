@@ -475,7 +475,7 @@ private fun CatalogOrderEntryCard(onClick: () -> Unit) {
                         color = NuvioColors.TextPrimary
                     )
                     Text(
-                        text = "Controls catalog row order on Home (Classic + Grid)",
+                        text = "Controls catalog row order on Home (Classic + Modern + Grid)",
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )

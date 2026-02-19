@@ -184,7 +184,7 @@ fun ContinueWatchingSection(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-internal fun ContinueWatchingCard(
+fun ContinueWatchingCard(
     item: ContinueWatchingItem,
     onClick: () -> Unit,
     onLongPress: () -> Unit,
@@ -389,7 +389,7 @@ internal fun ContinueWatchingCard(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-internal fun ContinueWatchingOptionsDialog(
+fun ContinueWatchingOptionsDialog(
     item: ContinueWatchingItem,
     onDismiss: () -> Unit,
     onRemove: () -> Unit,

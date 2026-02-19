@@ -70,6 +70,15 @@ class WatchProgressPreferences @Inject constructor(
                 .sortedByDescending { it.lastWatched }
         }
 
+    
+    val allRawProgress: Flow<List<WatchProgress>> = context.watchProgressDataStore.data
+        .map { preferences ->
+            val json = preferences[watchProgressKey] ?: "{}"
+            parseProgressMap(json)
+                .values
+                .sortedByDescending { it.lastWatched }
+        }
+
     /**
      * Get items that are in progress (not completed)
      */

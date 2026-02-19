@@ -57,6 +57,7 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.ui.components.ClassicLayoutPreview
 import com.nuvio.tv.ui.components.GridLayoutPreview
+import com.nuvio.tv.ui.components.ModernLayoutPreview
 import com.nuvio.tv.ui.theme.NuvioColors
 
 @Composable
@@ -165,10 +166,10 @@ fun LayoutSettingsContent(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         LayoutCard(
-                            layout = HomeLayout.CLASSIC,
-                            isSelected = uiState.selectedLayout == HomeLayout.CLASSIC,
+                            layout = HomeLayout.MODERN,
+                            isSelected = uiState.selectedLayout == HomeLayout.MODERN,
                             onClick = {
-                                viewModel.onEvent(LayoutSettingsEvent.SelectLayout(HomeLayout.CLASSIC))
+                                viewModel.onEvent(LayoutSettingsEvent.SelectLayout(HomeLayout.MODERN))
                             },
                             onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT },
                             modifier = Modifier.weight(1f)
@@ -181,6 +182,44 @@ fun LayoutSettingsContent(
                             },
                             onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT },
                             modifier = Modifier.weight(1f)
+                        )
+                        LayoutCard(
+                            layout = HomeLayout.CLASSIC,
+                            isSelected = uiState.selectedLayout == HomeLayout.CLASSIC,
+                            onClick = {
+                                viewModel.onEvent(LayoutSettingsEvent.SelectLayout(HomeLayout.CLASSIC))
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    if (uiState.selectedLayout == HomeLayout.MODERN) {
+                        CompactToggleRow(
+                            title = "Landscape Posters",
+                            subtitle = "Switch between portrait and landscape cards for Modern view.",
+                            checked = uiState.modernLandscapePostersEnabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetModernLandscapePostersEnabled(
+                                        !uiState.modernLandscapePostersEnabled
+                                    )
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
+                        )
+                        CompactToggleRow(
+                            title = "Show Preview Row",
+                            subtitle = "Show a partial preview of the row below in Modern Home layout.",
+                            checked = uiState.modernNextRowPreviewEnabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetModernNextRowPreviewEnabled(
+                                        !uiState.modernNextRowPreviewEnabled
+                                    )
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
                         )
                     }
 
@@ -282,28 +321,32 @@ fun LayoutSettingsContent(
                         },
                         onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                     )
-                    CompactToggleRow(
-                        title = "Show Poster Labels",
-                        subtitle = "Show titles under posters in rows, grid, and see-all.",
-                        checked = uiState.posterLabelsEnabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                LayoutSettingsEvent.SetPosterLabelsEnabled(!uiState.posterLabelsEnabled)
-                            )
-                        },
-                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                    )
-                    CompactToggleRow(
-                        title = "Show Addon Name",
-                        subtitle = "Show source name under catalog titles.",
-                        checked = uiState.catalogAddonNameEnabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                LayoutSettingsEvent.SetCatalogAddonNameEnabled(!uiState.catalogAddonNameEnabled)
-                            )
-                        },
-                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                    )
+                    if (uiState.selectedLayout != HomeLayout.MODERN) {
+                        CompactToggleRow(
+                            title = "Show Poster Labels",
+                            subtitle = "Show titles under posters in rows, grid, and see-all.",
+                            checked = uiState.posterLabelsEnabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetPosterLabelsEnabled(!uiState.posterLabelsEnabled)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                        )
+                    }
+                    if (uiState.selectedLayout != HomeLayout.MODERN) {
+                        CompactToggleRow(
+                            title = "Show Addon Name",
+                            subtitle = "Show source name under catalog titles.",
+                            checked = uiState.catalogAddonNameEnabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetCatalogAddonNameEnabled(!uiState.catalogAddonNameEnabled)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                        )
+                    }
                     CompactToggleRow(
                         title = "Show Catalog Type",
                         subtitle = "Show type suffix next to catalog name (Movie/Series).",
@@ -369,76 +412,78 @@ fun LayoutSettingsContent(
                 }
             }
 
-            item {
-                CollapsibleSectionCard(
-                    title = "Focused Poster",
-                    description = "Advanced behavior for focused poster cards.",
-                    expanded = focusedPosterExpanded,
-                    onToggle = { focusedPosterExpanded = !focusedPosterExpanded },
-                    focusRequester = focusedPosterHeaderFocus,
-                    onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
-                ) {
-                    CompactToggleRow(
-                        title = "Expand Focused Poster to Backdrop",
-                        subtitle = "Expand focused poster after idle delay.",
-                        checked = uiState.focusedPosterBackdropExpandEnabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                LayoutSettingsEvent.SetFocusedPosterBackdropExpandEnabled(
-                                    !uiState.focusedPosterBackdropExpandEnabled
-                                )
-                            )
-                        },
+            if (uiState.selectedLayout != HomeLayout.MODERN) {
+                item {
+                    CollapsibleSectionCard(
+                        title = "Focused Poster",
+                        description = "Advanced behavior for focused poster cards.",
+                        expanded = focusedPosterExpanded,
+                        onToggle = { focusedPosterExpanded = !focusedPosterExpanded },
+                        focusRequester = focusedPosterHeaderFocus,
                         onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
-                    )
-
-                    if (uiState.focusedPosterBackdropExpandEnabled) {
-                        SliderSettingsItem(
-                            icon = Icons.Default.Timer,
-                            title = "Backdrop Expand Delay",
-                            subtitle = "How long to wait before expanding focused cards.",
-                            value = uiState.focusedPosterBackdropExpandDelaySeconds,
-                            valueText = "${uiState.focusedPosterBackdropExpandDelaySeconds}s",
-                            minValue = 1,
-                            maxValue = 10,
-                            step = 1,
-                            onValueChange = { seconds ->
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetFocusedPosterBackdropExpandDelaySeconds(seconds)
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
-                        )
-
+                    ) {
                         CompactToggleRow(
-                            title = "Autoplay Trailer in Expanded Card",
-                            subtitle = "Play trailer inside expanded backdrop when available.",
-                            checked = uiState.focusedPosterBackdropTrailerEnabled,
+                            title = "Expand Focused Poster to Backdrop",
+                            subtitle = "Expand focused poster after idle delay.",
+                            checked = uiState.focusedPosterBackdropExpandEnabled,
                             onToggle = {
                                 viewModel.onEvent(
-                                    LayoutSettingsEvent.SetFocusedPosterBackdropTrailerEnabled(
-                                        !uiState.focusedPosterBackdropTrailerEnabled
+                                    LayoutSettingsEvent.SetFocusedPosterBackdropExpandEnabled(
+                                        !uiState.focusedPosterBackdropExpandEnabled
                                     )
                                 )
                             },
                             onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
                         )
-                    }
 
-                    if (uiState.focusedPosterBackdropExpandEnabled && uiState.focusedPosterBackdropTrailerEnabled) {
-                        CompactToggleRow(
-                            title = "Play Trailer Muted",
-                            subtitle = "Mute trailer audio in expanded cards.",
-                            checked = uiState.focusedPosterBackdropTrailerMuted,
-                            onToggle = {
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetFocusedPosterBackdropTrailerMuted(
-                                        !uiState.focusedPosterBackdropTrailerMuted
+                        if (uiState.focusedPosterBackdropExpandEnabled) {
+                            SliderSettingsItem(
+                                icon = Icons.Default.Timer,
+                                title = "Backdrop Expand Delay",
+                                subtitle = "How long to wait before expanding focused cards.",
+                                value = uiState.focusedPosterBackdropExpandDelaySeconds,
+                                valueText = "${uiState.focusedPosterBackdropExpandDelaySeconds}s",
+                                minValue = 1,
+                                maxValue = 10,
+                                step = 1,
+                                onValueChange = { seconds ->
+                                    viewModel.onEvent(
+                                        LayoutSettingsEvent.SetFocusedPosterBackdropExpandDelaySeconds(seconds)
                                     )
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
-                        )
+                                },
+                                onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
+                            )
+
+                            CompactToggleRow(
+                                title = "Autoplay Trailer in Expanded Card",
+                                subtitle = "Play trailer inside expanded backdrop when available.",
+                                checked = uiState.focusedPosterBackdropTrailerEnabled,
+                                onToggle = {
+                                    viewModel.onEvent(
+                                        LayoutSettingsEvent.SetFocusedPosterBackdropTrailerEnabled(
+                                            !uiState.focusedPosterBackdropTrailerEnabled
+                                        )
+                                    )
+                                },
+                                onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
+                            )
+                        }
+
+                        if (uiState.focusedPosterBackdropExpandEnabled && uiState.focusedPosterBackdropTrailerEnabled) {
+                            CompactToggleRow(
+                                title = "Play Trailer Muted",
+                                subtitle = "Mute trailer audio in expanded cards.",
+                                checked = uiState.focusedPosterBackdropTrailerMuted,
+                                onToggle = {
+                                    viewModel.onEvent(
+                                        LayoutSettingsEvent.SetFocusedPosterBackdropTrailerMuted(
+                                            !uiState.focusedPosterBackdropTrailerMuted
+                                        )
+                                    )
+                                },
+                                onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
+                            )
+                        }
                     }
                 }
             }
@@ -573,6 +618,7 @@ private fun LayoutCard(
                 when (layout) {
                     HomeLayout.CLASSIC -> ClassicLayoutPreview(modifier = Modifier.fillMaxWidth())
                     HomeLayout.GRID -> GridLayoutPreview(modifier = Modifier.fillMaxWidth())
+                    HomeLayout.MODERN -> ModernLayoutPreview(modifier = Modifier.fillMaxWidth())
                 }
             }
 

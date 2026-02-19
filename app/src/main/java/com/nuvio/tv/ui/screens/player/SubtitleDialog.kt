@@ -524,6 +524,9 @@ private fun buildAddonSubtitleViewData(
 
 private fun subtitleLanguageGroupKey(language: String): String {
     val normalized = normalizeSubtitleLanguageCode(language)
+    if (normalized == "pt-br") {
+        return "pt-br"
+    }
     return normalized
         .substringBefore('-')
         .substringBefore('_')
@@ -531,13 +534,13 @@ private fun subtitleLanguageGroupKey(language: String): String {
 
 private fun normalizeSubtitleLanguageCode(lang: String): String {
     return when (lang.trim().lowercase()) {
-        "pt-br", "pt_br", "br", "pob" -> "pt"
+        "pt-br", "pt_br", "br", "pob" -> "pt-br"
+        "pt", "pt-pt", "pt_pt", "por" -> "pt"
         "eng" -> "en"
         "spa" -> "es"
         "fre", "fra" -> "fr"
         "ger", "deu" -> "de"
         "ita" -> "it"
-        "por" -> "pt"
         "rus" -> "ru"
         "jpn" -> "ja"
         "kor" -> "ko"
@@ -577,6 +580,10 @@ private fun matchesPreferredLanguage(language: String?, preferredLanguage: Strin
 
     val normalizedLanguage = normalizeSubtitleLanguageCode(language)
     val normalizedPreferred = normalizeSubtitleLanguageCode(preferred)
+
+    if (normalizedPreferred == "pt") {
+        return normalizedLanguage == "pt"
+    }
 
     return normalizedLanguage == normalizedPreferred ||
         normalizedLanguage.startsWith("$normalizedPreferred-") ||

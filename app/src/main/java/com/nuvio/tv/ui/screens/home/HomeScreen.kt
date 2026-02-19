@@ -48,7 +48,7 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val hasCatalogContent = uiState.catalogRows.any { it.items.isNotEmpty() }
-    var hasEnteredCatalogContent: Boolean by rememberSaveable { mutableStateOf(false) }
+    var hasEnteredCatalogContent by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(hasCatalogContent) {
         if (hasCatalogContent) {
@@ -120,7 +120,6 @@ fun HomeScreen(
 
             else -> {
                 val shouldShowLoadingGate = !hasEnteredCatalogContent && !hasCatalogContent
-
                 if (shouldShowLoadingGate) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -146,6 +145,13 @@ fun HomeScreen(
                             onNavigateToDetail = onNavigateToDetail,
                             onContinueWatchingClick = onContinueWatchingClick,
                             onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll
+                        )
+
+                        HomeLayout.MODERN -> ModernHomeRoute(
+                            viewModel = viewModel,
+                            uiState = uiState,
+                            onNavigateToDetail = onNavigateToDetail,
+                            onContinueWatchingClick = onContinueWatchingClick
                         )
                     }
                 }
@@ -209,6 +215,31 @@ private fun GridHomeRoute(
         },
         onSaveGridFocusState = { vi, vo ->
             viewModel.saveGridFocusState(vi, vo)
+        }
+    )
+}
+
+@Composable
+private fun ModernHomeRoute(
+    viewModel: HomeViewModel,
+    uiState: HomeUiState,
+    onNavigateToDetail: (String, String, String) -> Unit,
+    onContinueWatchingClick: (ContinueWatchingItem) -> Unit
+) {
+    val focusState by viewModel.focusState.collectAsState()
+    ModernHomeContent(
+        uiState = uiState,
+        focusState = focusState,
+        onNavigateToDetail = onNavigateToDetail,
+        onContinueWatchingClick = onContinueWatchingClick,
+        onLoadMoreCatalog = { catalogId, addonId, type ->
+            viewModel.onEvent(HomeEvent.OnLoadMoreCatalog(catalogId, addonId, type))
+        },
+        onRemoveContinueWatching = { contentId, season, episode, isNextUp ->
+            viewModel.onEvent(HomeEvent.OnRemoveContinueWatching(contentId, season, episode, isNextUp))
+        },
+        onSaveFocusState = { vi, vo, ri, ii, m ->
+            viewModel.saveFocusState(vi, vo, ri, ii, m)
         }
     )
 }

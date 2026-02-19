@@ -22,7 +22,8 @@ internal fun PlayerRuntimeController.showEpisodesPanel() {
             showAudioDialog = false,
             showSubtitleDialog = false,
             showSubtitleStylePanel = false,
-            showSpeedDialog = false
+            showSpeedDialog = false,
+            showMoreDialog = false
         )
     }
 
@@ -44,6 +45,7 @@ internal fun PlayerRuntimeController.showSourcesPanel() {
             showSubtitleDialog = false,
             showSubtitleStylePanel = false,
             showSpeedDialog = false,
+            showMoreDialog = false,
             showEpisodesPanel = false,
             showEpisodeStreams = false
         )
@@ -173,13 +175,15 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
     nextEpisodeAutoPlayJob?.cancel()
     nextEpisodeAutoPlayJob = null
 
-    emitStopScrobbleForCurrentProgress()
-    saveWatchProgress()
+    flushPlaybackSnapshotForSwitchOrExit()
 
     val newHeaders = stream.behaviorHints?.proxyHeaders?.request.orEmpty()
         .filterKeys { !it.equals("Range", ignoreCase = true) }
     currentStreamUrl = url
     currentHeaders = newHeaders
+    pendingAddonSubtitleLanguage = null
+    pendingAddonSubtitleTrackId = null
+    pendingAudioSelectionAfterSubtitleRefresh = null
     hasRetriedCurrentStreamAfter416 = false
     lastSavedPosition = 0L
     resetLoadingOverlayForNewStream()
@@ -442,8 +446,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
     nextEpisodeAutoPlayJob?.cancel()
     nextEpisodeAutoPlayJob = null
 
-    emitStopScrobbleForCurrentProgress()
-    saveWatchProgress()
+    flushPlaybackSnapshotForSwitchOrExit()
 
     val newHeaders = stream.behaviorHints?.proxyHeaders?.request.orEmpty()
         .filterKeys { !it.equals("Range", ignoreCase = true) }
@@ -452,6 +455,9 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
 
     currentStreamUrl = url
     currentHeaders = newHeaders
+    pendingAddonSubtitleLanguage = null
+    pendingAddonSubtitleTrackId = null
+    pendingAudioSelectionAfterSubtitleRefresh = null
     hasRetriedCurrentStreamAfter416 = false
     currentVideoId = targetVideo?.id ?: _uiState.value.episodeStreamsForVideoId ?: currentVideoId
     currentSeason = targetVideo?.season ?: _uiState.value.episodeStreamsSeason ?: currentSeason
@@ -539,6 +545,7 @@ internal fun PlayerRuntimeController.showEpisodeStreamPicker(video: Video, force
             showSubtitleDialog = false,
             showSubtitleStylePanel = false,
             showSpeedDialog = false,
+            showMoreDialog = false,
             episodesSelectedSeason = video.season ?: it.episodesSelectedSeason
         )
     }

@@ -42,6 +42,7 @@ data class PlayerUiState(
     val showSubtitleDialog: Boolean = false,
     val showSubtitleStylePanel: Boolean = false,
     val showSpeedDialog: Boolean = false,
+    val showMoreDialog: Boolean = false,
     // Subtitle style settings
     val subtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(),
     val subtitleOrganizationMode: SubtitleOrganizationMode = SubtitleOrganizationMode.NONE,
@@ -119,6 +120,7 @@ data class TrackInfo(
     val index: Int,
     val name: String,
     val language: String?,
+    val trackId: String? = null,
     val codec: String? = null,
     val channelCount: Int? = null,
     val isSelected: Boolean = false
@@ -155,6 +157,8 @@ sealed class PlayerEvent {
     data object OnOpenSubtitleStylePanel : PlayerEvent()
     data object OnDismissSubtitleStylePanel : PlayerEvent()
     data object OnShowSpeedDialog : PlayerEvent()
+    data object OnShowMoreDialog : PlayerEvent()
+    data object OnDismissMoreDialog : PlayerEvent()
     data object OnShowEpisodesPanel : PlayerEvent()
     data object OnDismissEpisodesPanel : PlayerEvent()
     data object OnBackFromEpisodeStreams : PlayerEvent()

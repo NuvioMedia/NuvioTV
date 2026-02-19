@@ -40,6 +40,7 @@ class SearchViewModel @Inject constructor(
     private var catalogRowsUpdateJob: Job? = null
     private var hasRenderedFirstCatalog = false
     private var pendingCatalogResponses = 0
+    private var revealBatchAfterNextDiscoverFetch = false
 
     private companion object {
         const val DISCOVER_INITIAL_LIMIT = 100
@@ -114,8 +115,7 @@ class SearchViewModel @Inject constructor(
             is SearchEvent.SelectDiscoverType -> selectDiscoverType(event.type)
             is SearchEvent.SelectDiscoverCatalog -> selectDiscoverCatalog(event.catalogKey)
             is SearchEvent.SelectDiscoverGenre -> selectDiscoverGenre(event.genre)
-            SearchEvent.ShowMoreDiscoverResults -> showMoreDiscoverResults()
-            SearchEvent.LoadMoreDiscoverResults -> loadMoreDiscoverResults()
+            SearchEvent.LoadNextDiscoverResults -> loadNextDiscoverResults()
             SearchEvent.Retry -> performSearch(uiState.value.submittedQuery.ifBlank { uiState.value.query })
         }
     }
@@ -462,6 +462,15 @@ class SearchViewModel @Inject constructor(
         fetchDiscoverContent(reset = true)
     }
 
+    private fun loadNextDiscoverResults() {
+        if (_uiState.value.pendingDiscoverResults.isNotEmpty()) {
+            showMoreDiscoverResults()
+        } else {
+            revealBatchAfterNextDiscoverFetch = true
+            loadMoreDiscoverResults()
+        }
+    }
+
     private fun showMoreDiscoverResults() {
         val pending = _uiState.value.pendingDiscoverResults
         if (pending.isEmpty()) return
@@ -491,6 +500,7 @@ class SearchViewModel @Inject constructor(
                 ?: return@launch
 
             if (reset) {
+                revealBatchAfterNextDiscoverFetch = false
                 _uiState.update {
                     it.copy(
                         discoverLoading = true,
@@ -506,6 +516,7 @@ class SearchViewModel @Inject constructor(
 
             val currentPage = if (reset) 1 else state.discoverPage + 1
             val skip = if (currentPage <= 1) 0 else state.discoverResults.size + state.pendingDiscoverResults.size
+            val visibleCountBeforeRequest = state.discoverResults.size
             val extraArgs = buildMap<String, String> {
                 state.selectedDiscoverGenre?.takeIf { it.isNotBlank() }?.let { put("genre", it) }
             }
@@ -537,8 +548,17 @@ class SearchViewModel @Inject constructor(
                         }
                         val merged = if (reset) incoming else (existing + incoming)
                         val deduped = merged.distinctBy { "${it.apiType}:${it.id}" }
-                        val visible = deduped.take(DISCOVER_INITIAL_LIMIT)
-                        val pending = deduped.drop(DISCOVER_INITIAL_LIMIT)
+                        val shouldRevealBatch = !reset && revealBatchAfterNextDiscoverFetch
+                        val visibleLimit = if (reset) {
+                            DISCOVER_INITIAL_LIMIT
+                        } else if (shouldRevealBatch) {
+                            (visibleCountBeforeRequest + DISCOVER_SHOW_MORE_BATCH)
+                                .coerceAtLeast(DISCOVER_INITIAL_LIMIT)
+                        } else {
+                            visibleCountBeforeRequest.coerceAtLeast(DISCOVER_INITIAL_LIMIT)
+                        }
+                        val visible = deduped.take(visibleLimit)
+                        val pending = deduped.drop(visibleLimit)
                         val shouldStopPagination = !reset && !hasNewUniqueIncoming
                         _uiState.update {
                             it.copy(
@@ -550,8 +570,10 @@ class SearchViewModel @Inject constructor(
                                 discoverPage = if (shouldStopPagination) it.discoverPage else currentPage
                             )
                         }
+                        revealBatchAfterNextDiscoverFetch = false
                     }
                     is NetworkResult.Error -> {
+                        revealBatchAfterNextDiscoverFetch = false
                         _uiState.update {
                             it.copy(
                                 discoverLoading = false,

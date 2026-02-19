@@ -188,15 +188,10 @@ fun SearchScreen(
                     onDiscoverItemFocused = { index ->
                         discoverFocusedItemIndex = index
                     },
-                    onRequestRestoreFocus = { index ->
-                        discoverFocusedItemIndex = index
-                        restoreDiscoverFocus = true
-                    },
                     onSelectType = { viewModel.onEvent(SearchEvent.SelectDiscoverType(it)) },
                     onSelectCatalog = { viewModel.onEvent(SearchEvent.SelectDiscoverCatalog(it)) },
                     onSelectGenre = { viewModel.onEvent(SearchEvent.SelectDiscoverGenre(it)) },
-                    onShowMore = { viewModel.onEvent(SearchEvent.ShowMoreDiscoverResults) },
-                    onLoadMore = { viewModel.onEvent(SearchEvent.LoadMoreDiscoverResults) },
+                    onLoadMore = { viewModel.onEvent(SearchEvent.LoadNextDiscoverResults) },
                     modifier = Modifier.weight(1f)
                 )
             }

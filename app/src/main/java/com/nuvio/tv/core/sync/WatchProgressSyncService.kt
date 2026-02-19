@@ -35,8 +35,9 @@ class WatchProgressSyncService @Inject constructor(
                 return@withContext Result.success(Unit)
             }
 
-            val entries = watchProgressPreferences.getAllRawEntries()
-            Log.d(TAG, "pushToRemote: ${entries.size} local entries to push")
+            val rawEntries = watchProgressPreferences.getAllRawEntries()
+            val entries = canonicalizeForRemote(rawEntries)
+            Log.d(TAG, "pushToRemote: ${rawEntries.size} local entries, ${entries.size} canonical entries to push")
             entries.forEach { (key, progress) ->
                 Log.d(TAG, "  push entry: key=$key contentId=${progress.contentId} type=${progress.contentType} pos=${progress.position} dur=${progress.duration} lastWatched=${progress.lastWatched}")
             }
@@ -89,7 +90,7 @@ class WatchProgressSyncService @Inject constructor(
                 Log.d(TAG, "  pull entry: key=${entry.progressKey} contentId=${entry.contentId} type=${entry.contentType} pos=${entry.position} dur=${entry.duration} lastWatched=${entry.lastWatched}")
             }
 
-            Result.success(remote.map { entry ->
+            val pulled = remote.map { entry ->
                 entry.progressKey to WatchProgress(
                     contentId = entry.contentId,
                     contentType = entry.contentType,
@@ -106,10 +107,100 @@ class WatchProgressSyncService @Inject constructor(
                     lastWatched = entry.lastWatched,
                     source = WatchProgress.SOURCE_LOCAL
                 )
-            })
+            }
+
+            val normalized = normalizePulledEntries(pulled)
+            Log.d(TAG, "pullFromRemote: normalized ${pulled.size} -> ${normalized.size} entries")
+            Result.success(normalized)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to pull watch progress from remote", e)
             Result.failure(e)
         }
+    }
+
+    private fun canonicalizeForRemote(
+        rawEntries: Map<String, WatchProgress>
+    ): Map<String, WatchProgress> {
+        if (rawEntries.isEmpty()) return rawEntries
+
+        val canonical = rawEntries.toMutableMap()
+        rawEntries.forEach { (key, progress) ->
+            val isSeriesMirrorKey = key == progress.contentId &&
+                isSeriesType(progress.contentType) &&
+                progress.season != null &&
+                progress.episode != null
+            if (!isSeriesMirrorKey) return@forEach
+
+            val season = progress.season
+            val episode = progress.episode
+            val episodeKey = episodeKey(
+                contentId = progress.contentId,
+                season = season,
+                episode = episode
+            )
+            val episodeProgress = rawEntries[episodeKey] ?: return@forEach
+
+            val exactMirror = progress.position == episodeProgress.position &&
+                progress.duration == episodeProgress.duration &&
+                progress.lastWatched == episodeProgress.lastWatched
+            val episodeIsAtLeastAsFresh = episodeProgress.lastWatched >= progress.lastWatched - 1_000L
+
+            if (exactMirror || episodeIsAtLeastAsFresh) {
+                canonical.remove(key)
+            }
+        }
+
+        return canonical
+    }
+
+    private fun normalizePulledEntries(
+        entries: List<Pair<String, WatchProgress>>
+    ): List<Pair<String, WatchProgress>> {
+        if (entries.isEmpty()) return entries
+
+        val byKey = linkedMapOf<String, WatchProgress>()
+        entries.sortedByDescending { it.second.lastWatched }
+            .forEach { (key, progress) ->
+                val existing = byKey[key]
+                if (existing == null || progress.lastWatched > existing.lastWatched) {
+                    byKey[key] = progress
+                }
+            }
+
+        val latestEpisodeByContent = byKey.entries
+            .asSequence()
+            .mapNotNull { (key, progress) ->
+                if (isSeriesType(progress.contentType) &&
+                    progress.season != null &&
+                    progress.episode != null &&
+                    key != progress.contentId
+                ) {
+                    progress
+                } else {
+                    null
+                }
+            }
+            .groupBy { it.contentId }
+            .mapValues { (_, episodes) -> episodes.maxByOrNull { it.lastWatched } }
+
+        latestEpisodeByContent.forEach { (contentId, latestEpisode) ->
+            val latest = latestEpisode ?: return@forEach
+            val existingSeriesEntry = byKey[contentId]
+            if (existingSeriesEntry == null || existingSeriesEntry.lastWatched < latest.lastWatched) {
+                byKey[contentId] = latest
+            }
+        }
+
+        return byKey.entries
+            .sortedByDescending { it.value.lastWatched }
+            .map { it.key to it.value }
+    }
+
+    private fun episodeKey(contentId: String, season: Int, episode: Int): String {
+        return "${contentId}_s${season}e${episode}"
+    }
+
+    private fun isSeriesType(contentType: String): Boolean {
+        return contentType.lowercase() in setOf("series", "tv")
     }
 }

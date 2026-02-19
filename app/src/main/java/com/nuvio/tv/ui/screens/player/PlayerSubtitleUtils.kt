@@ -6,13 +6,13 @@ internal object PlayerSubtitleUtils {
     fun normalizeLanguageCode(lang: String): String {
         val code = lang.lowercase()
         return when (code) {
-            "pt-br", "pt_br", "br", "pob" -> "pt"
+            "pt-br", "pt_br", "br", "pob" -> "pt-br"
+            "pt", "pt-pt", "pt_pt", "por" -> "pt"
             "eng" -> "en"
             "spa" -> "es"
             "fre", "fra" -> "fr"
             "ger", "deu" -> "de"
             "ita" -> "it"
-            "por" -> "pt"
             "rus" -> "ru"
             "jpn" -> "ja"
             "kor" -> "ko"
@@ -49,6 +49,9 @@ internal object PlayerSubtitleUtils {
         if (language.isNullOrBlank()) return false
         val normalizedLanguage = normalizeLanguageCode(language)
         val normalizedTarget = normalizeLanguageCode(target)
+        if (normalizedTarget == "pt") {
+            return normalizedLanguage == "pt"
+        }
         return normalizedLanguage == normalizedTarget ||
             normalizedLanguage.startsWith("$normalizedTarget-") ||
             normalizedLanguage.startsWith("${normalizedTarget}_")

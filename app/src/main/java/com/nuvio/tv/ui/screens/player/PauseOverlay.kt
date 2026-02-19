@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -46,6 +48,10 @@ import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import com.nuvio.tv.domain.model.MetaCastMember
 import com.nuvio.tv.ui.theme.NuvioColors
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlinx.coroutines.delay
 
 @Composable
 fun PauseOverlay(
@@ -107,6 +113,10 @@ fun PauseOverlay(
                     .fillMaxSize()
                     .padding(start = 56.dp, end = 56.dp, top = 40.dp, bottom = 120.dp)
             ) {
+                PauseOverlayClock(
+                    modifier = Modifier.align(Alignment.TopEnd)
+                )
+
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Bottom
@@ -133,6 +143,29 @@ fun PauseOverlay(
             }
         }
     }
+}
+
+@Composable
+private fun PauseOverlayClock(modifier: Modifier = Modifier) {
+    var nowMillis by remember { mutableStateOf(System.currentTimeMillis()) }
+    val formatter = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            nowMillis = System.currentTimeMillis()
+            delay(1_000)
+        }
+    }
+
+    Text(
+        text = formatter.format(Date(nowMillis)),
+        style = MaterialTheme.typography.headlineSmall.copy(
+            fontWeight = FontWeight.Normal,
+            fontSize = 34.sp
+        ),
+        color = Color.White.copy(alpha = 0.95f),
+        modifier = modifier
+    )
 }
 
 @Composable

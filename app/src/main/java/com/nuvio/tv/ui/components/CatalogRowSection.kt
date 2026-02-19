@@ -31,6 +31,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,26 +69,38 @@ fun CatalogRowSection(
     initialScrollIndex: Int = 0,
     focusedItemIndex: Int = -1,
     onItemFocused: (itemIndex: Int) -> Unit = {},
+    rowFocusRequester: FocusRequester? = null,
     upFocusRequester: FocusRequester? = null,
+    downFocusRequester: FocusRequester? = null,
     listState: LazyListState = rememberLazyListState(initialFirstVisibleItemIndex = initialScrollIndex)
 ) {
     val seeAllCardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
-
     val currentOnItemFocused by rememberUpdatedState(onItemFocused)
 
+    val internalRowFocusRequester = remember { FocusRequester() }
+    val resolvedRowFocusRequester = rowFocusRequester ?: internalRowFocusRequester
     val itemFocusRequestersById = remember { mutableMapOf<String, FocusRequester>() }
     LaunchedEffect(catalogRow.items) {
         val validIds = catalogRow.items.mapTo(mutableSetOf()) { it.id }
         itemFocusRequestersById.keys.retainAll(validIds)
     }
 
-    LaunchedEffect(focusedItemIndex, catalogRow.items.size) {
+    LaunchedEffect(focusedItemIndex, catalogRow.items) {
         if (focusedItemIndex >= 0 && focusedItemIndex < catalogRow.items.size) {
             val targetItemId = catalogRow.items[focusedItemIndex].id
             val requester = itemFocusRequestersById.getOrPut(targetItemId) { FocusRequester() }
             repeat(2) { withFrameNanos { } }
             runCatching { requester.requestFocus() }
         }
+    }
+
+    val directionalFocusModifier = if (upFocusRequester != null || downFocusRequester != null) {
+        Modifier.focusProperties {
+            if (upFocusRequester != null) up = upFocusRequester
+            if (downFocusRequester != null) down = downFocusRequester
+        }
+    } else {
+        Modifier
     }
 
     val catalogTitle = remember(catalogRow.catalogName, catalogRow.apiType, showCatalogTypeSuffix) {
@@ -129,6 +142,7 @@ fun CatalogRowSection(
             state = listState,
             modifier = Modifier
                 .fillMaxWidth()
+                .focusRequester(resolvedRowFocusRequester)
                 .then(
                     if (enableRowFocusRestorer && focusedItemIndex < 0 && catalogRow.items.isNotEmpty()) {
                         Modifier.focusRestorer {
@@ -138,7 +152,7 @@ fun CatalogRowSection(
                             if (fallbackItemId != null) {
                                 itemFocusRequestersById.getOrPut(fallbackItemId) { FocusRequester() }
                             } else {
-                                FocusRequester()
+                                resolvedRowFocusRequester
                             }
                         }
                     } else {
@@ -173,18 +187,11 @@ fun CatalogRowSection(
                                 currentOnItemFocused(index)
                             }
                         }
-                        .then(
-                            if (upFocusRequester != null) {
-                                Modifier.focusProperties { up = upFocusRequester }
-                            } else {
-                                Modifier
-                            }
-                        ),
+                        .then(directionalFocusModifier),
                     focusRequester = itemFocusRequestersById.getOrPut(item.id) { FocusRequester() }
                 )
             }
 
-            // "See All" card
             if (catalogRow.items.size >= 15) {
                 item(key = "${catalogRow.type}_${catalogRow.catalogId}_see_all") {
                     Card(
@@ -192,13 +199,7 @@ fun CatalogRowSection(
                         modifier = Modifier
                             .width(posterCardStyle.width)
                             .height(posterCardStyle.height)
-                            .then(
-                                if (upFocusRequester != null) {
-                                    Modifier.focusProperties { up = upFocusRequester }
-                                } else {
-                                    Modifier
-                                }
-                            ),
+                            .then(directionalFocusModifier),
                         shape = CardDefaults.shape(shape = seeAllCardShape),
                         colors = CardDefaults.colors(
                             containerColor = NuvioColors.BackgroundCard,

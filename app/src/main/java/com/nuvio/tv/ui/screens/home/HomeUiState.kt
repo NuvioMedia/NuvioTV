@@ -14,7 +14,9 @@ data class HomeUiState(
     val error: String? = null,
     val selectedItemId: String? = null,
     val installedAddonsCount: Int = 0,
-    val homeLayout: HomeLayout = HomeLayout.CLASSIC,
+    val homeLayout: HomeLayout = HomeLayout.MODERN,
+    val modernLandscapePostersEnabled: Boolean = true,
+    val modernNextRowPreviewEnabled: Boolean = false,
     val heroItems: List<MetaPreview> = emptyList(),
     val heroCatalogKeys: List<String> = emptyList(),
     val heroSectionEnabled: Boolean = true,
@@ -34,7 +36,11 @@ data class HomeUiState(
 @Immutable
 sealed class ContinueWatchingItem {
     @Immutable
-    data class InProgress(val progress: WatchProgress) : ContinueWatchingItem()
+    data class InProgress(
+        val progress: WatchProgress,
+        val episodeDescription: String? = null,
+        val episodeThumbnail: String? = null
+    ) : ContinueWatchingItem()
 
     @Immutable
     data class NextUp(val info: NextUpInfo) : ContinueWatchingItem()
@@ -52,6 +58,7 @@ data class NextUpInfo(
     val season: Int,
     val episode: Int,
     val episodeTitle: String?,
+    val episodeDescription: String? = null,
     val thumbnail: String?,
     val lastWatched: Long
 )

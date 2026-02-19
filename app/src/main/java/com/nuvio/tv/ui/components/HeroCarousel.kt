@@ -201,7 +201,7 @@ private fun HeroCarouselSlide(
         // Background image
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(item.background ?: item.poster)
+                .data(item.background)
                 .crossfade(false)
                 .size(width = requestWidthPx, height = requestHeightPx)
                 .build(),
@@ -233,7 +233,7 @@ private fun HeroCarouselSlide(
                 .fillMaxWidth(0.5f)
         ) {
             // Title logo or text title
-            if (item.logo != null) {
+            if (!item.logo.isNullOrBlank()) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(item.logo)

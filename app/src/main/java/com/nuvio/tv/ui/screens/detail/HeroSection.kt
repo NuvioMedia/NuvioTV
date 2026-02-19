@@ -124,7 +124,7 @@ fun HeroContentSection(
             verticalArrangement = Arrangement.Bottom
         ) {
             // Logo/Title — always visible during trailer, animates size
-            if (meta.logo != null && !(isTrailerPlaying && hideLogoDuringTrailer)) {
+            if (!meta.logo.isNullOrBlank() && !(isTrailerPlaying && hideLogoDuringTrailer)) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(meta.logo)

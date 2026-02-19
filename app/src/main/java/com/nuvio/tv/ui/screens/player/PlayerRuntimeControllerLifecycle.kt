@@ -4,34 +4,26 @@ import android.content.Intent
 import android.media.audiofx.AudioEffect
 
 internal fun PlayerRuntimeController.releasePlayer() {
-    
-    val progressPercent = currentPlaybackProgressPercent()
-    emitPauseScrobbleStop(progressPercent = progressPercent)
-    emitCompletionScrobbleStop(progressPercent = progressPercent)
-    saveWatchProgress()
+    flushPlaybackSnapshotForSwitchOrExit()
 
-    
     notifyAudioSessionUpdate(false)
 
-    
     try {
         loudnessEnhancer?.release()
         loudnessEnhancer = null
     } catch (e: Exception) {
         e.printStackTrace()
     }
-    
-    
     try {
         currentMediaSession?.release()
         currentMediaSession = null
     } catch (e: Exception) {
         e.printStackTrace()
     }
-    
     progressJob?.cancel()
     hideControlsJob?.cancel()
     watchProgressSaveJob?.cancel()
+    seekProgressSyncJob?.cancel()
     frameRateProbeJob?.cancel()
     hideStreamSourceIndicatorJob?.cancel()
     nextEpisodeAutoPlayJob?.cancel()
@@ -40,10 +32,6 @@ internal fun PlayerRuntimeController.releasePlayer() {
     _exoPlayer = null
 }
 
-
-
-
- 
 internal fun PlayerRuntimeController.notifyAudioSessionUpdate(active: Boolean) {
     _exoPlayer?.let { player ->
         try {

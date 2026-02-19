@@ -51,6 +51,8 @@ internal fun PlayerRuntimeController.refreshSubtitlesForCurrentEpisode() {
     autoSubtitleSelected = false
     hasScannedTextTracksOnce = false
     pendingAddonSubtitleLanguage = null
+    pendingAddonSubtitleTrackId = null
+    pendingAudioSelectionAfterSubtitleRefresh = null
     _uiState.update {
         it.copy(
             addonSubtitles = emptyList(),

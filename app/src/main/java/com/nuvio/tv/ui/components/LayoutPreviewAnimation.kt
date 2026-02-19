@@ -146,3 +146,66 @@ fun GridLayoutPreview(
         }
     }
 }
+
+/**
+ * Animated preview of the modern layout.
+ * Shows a large hero area with a moving row of cards beneath it.
+ */
+@Composable
+fun ModernLayoutPreview(
+    modifier: Modifier = Modifier,
+    accentColor: Color = NuvioColors.Primary
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "modernPreview")
+    val scrollOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "modernScroll"
+    )
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(NuvioColors.Background)
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val w = size.width
+            val h = size.height
+            val horizontalPadding = w * 0.05f
+            val topPadding = h * 0.06f
+            val heroHeight = h * 0.62f
+            val rowTop = topPadding + heroHeight + (h * 0.05f)
+            val cardHeight = h * 0.24f
+            val cardWidth = cardHeight * 1.45f
+            val gap = w * 0.03f
+
+            drawRoundRect(
+                color = accentColor.copy(alpha = 0.38f),
+                topLeft = Offset(horizontalPadding, topPadding),
+                size = Size(w - (horizontalPadding * 2f), heroHeight),
+                cornerRadius = CornerRadius(h * 0.05f)
+            )
+
+            val shift = scrollOffset * (cardWidth + gap) * 2.2f
+            for (i in 0..8) {
+                val x = horizontalPadding + (i * (cardWidth + gap)) - shift
+                if (x + cardWidth > -cardWidth && x < w + cardWidth) {
+                    drawRoundRect(
+                        color = if (i % 3 == 1) {
+                            accentColor.copy(alpha = 0.46f)
+                        } else {
+                            accentColor.copy(alpha = 0.28f)
+                        },
+                        topLeft = Offset(x, rowTop),
+                        size = Size(cardWidth, cardHeight),
+                        cornerRadius = CornerRadius(h * 0.03f)
+                    )
+                }
+            }
+        }
+    }
+}

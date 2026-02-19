@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.search
 
+import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
@@ -69,11 +71,9 @@ internal fun DiscoverSection(
     onRestoreFocusedItemHandled: () -> Unit,
     onNavigateToDetail: (String, String, String) -> Unit,
     onDiscoverItemFocused: (Int) -> Unit,
-    onRequestRestoreFocus: (Int) -> Unit,
     onSelectType: (String) -> Unit,
     onSelectCatalog: (String) -> Unit,
     onSelectGenre: (String?) -> Unit,
-    onShowMore: () -> Unit,
     onLoadMore: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -196,9 +196,7 @@ internal fun DiscoverSection(
                     pendingCount = uiState.pendingDiscoverResults.size,
                     canLoadMore = uiState.discoverHasMore,
                     isLoadingMore = uiState.discoverLoadingMore,
-                    onShowMore = onShowMore,
                     onLoadMore = onLoadMore,
-                    onRequestRestoreFocus = onRequestRestoreFocus,
                     onItemClick = { _, item ->
                         onNavigateToDetail(
                             item.id,
@@ -356,15 +354,22 @@ internal fun DiscoverGrid(
     pendingCount: Int,
     canLoadMore: Boolean,
     isLoadingMore: Boolean,
-    onShowMore: () -> Unit,
     onLoadMore: () -> Unit,
-    onRequestRestoreFocus: (Int) -> Unit,
     onItemClick: (Int, MetaPreview) -> Unit
 ) {
     val restoreFocusRequester = remember { FocusRequester() }
     val gridState = rememberLazyGridState()
+    var pendingFocusOnNewItemIndex by remember { mutableStateOf<Int?>(null) }
+    var localRestoreFocusedItemIndex by remember { mutableStateOf(-1) }
+    var localShouldRestoreFocusedItem by remember { mutableStateOf(false) }
+    val effectiveFocusedItemIndex = if (localShouldRestoreFocusedItem) {
+        localRestoreFocusedItemIndex
+    } else {
+        focusedItemIndex
+    }
+    val effectiveShouldRestoreFocusedItem = shouldRestoreFocusedItem || localShouldRestoreFocusedItem
     val actionType = when {
-        pendingCount > 0 -> DiscoverGridAction.ShowMore(pendingCount)
+        pendingCount > 0 -> DiscoverGridAction.ShowMore
         isLoadingMore -> DiscoverGridAction.Loading
         canLoadMore -> DiscoverGridAction.LoadMore
         else -> DiscoverGridAction.None
@@ -380,10 +385,15 @@ internal fun DiscoverGrid(
         )
     }
 
-    LaunchedEffect(shouldRestoreFocusedItem, focusedItemIndex, totalCells) {
-        if (!shouldRestoreFocusedItem) return@LaunchedEffect
-        if (focusedItemIndex !in 0 until totalCells) {
-            onRestoreFocusedItemHandled()
+    LaunchedEffect(effectiveShouldRestoreFocusedItem, effectiveFocusedItemIndex, totalCells) {
+        if (!effectiveShouldRestoreFocusedItem) return@LaunchedEffect
+        if (effectiveFocusedItemIndex !in 0 until totalCells) {
+            if (localShouldRestoreFocusedItem) {
+                localShouldRestoreFocusedItem = false
+                localRestoreFocusedItemIndex = -1
+            } else {
+                onRestoreFocusedItemHandled()
+            }
             return@LaunchedEffect
         }
         try {
@@ -395,7 +405,20 @@ internal fun DiscoverGrid(
             restoreFocusRequester.requestFocus()
         } catch (_: Exception) {
         }
-        onRestoreFocusedItemHandled()
+        if (localShouldRestoreFocusedItem) {
+            localShouldRestoreFocusedItem = false
+            localRestoreFocusedItemIndex = -1
+        } else {
+            onRestoreFocusedItemHandled()
+        }
+    }
+
+    LaunchedEffect(items.size, pendingFocusOnNewItemIndex) {
+        val targetIndex = pendingFocusOnNewItemIndex ?: return@LaunchedEffect
+        if (items.size <= targetIndex) return@LaunchedEffect
+        pendingFocusOnNewItemIndex = null
+        localRestoreFocusedItemIndex = targetIndex
+        localShouldRestoreFocusedItem = true
     }
 
     LazyVerticalGrid(
@@ -412,7 +435,7 @@ internal fun DiscoverGrid(
             contentType = { _, _ -> "content_card" }
         ) { index, item ->
             val focusReq = when {
-                shouldRestoreFocusedItem && index == focusedItemIndex -> restoreFocusRequester
+                effectiveShouldRestoreFocusedItem && index == effectiveFocusedItemIndex -> restoreFocusRequester
                 focusResults && index == 0 -> firstItemFocusRequester
                 else -> null
             }
@@ -433,7 +456,7 @@ internal fun DiscoverGrid(
             ) {
                 val actionIndex = items.size
                 val focusReq = when {
-                    shouldRestoreFocusedItem && actionIndex == focusedItemIndex -> restoreFocusRequester
+                    effectiveShouldRestoreFocusedItem && actionIndex == effectiveFocusedItemIndex -> restoreFocusRequester
                     focusResults && items.isEmpty() -> firstItemFocusRequester
                     else -> null
                 }
@@ -444,10 +467,15 @@ internal fun DiscoverGrid(
                     focusRequester = focusReq,
                     onFocused = { onItemFocused(actionIndex) },
                     onClick = {
-                        onRequestRestoreFocus((items.lastIndex).coerceAtLeast(0))
                         when (actionType) {
-                            is DiscoverGridAction.ShowMore -> onShowMore()
-                            DiscoverGridAction.LoadMore -> onLoadMore()
+                            DiscoverGridAction.ShowMore -> {
+                                pendingFocusOnNewItemIndex = items.size
+                                onLoadMore()
+                            }
+                            DiscoverGridAction.LoadMore -> {
+                                pendingFocusOnNewItemIndex = items.size
+                                onLoadMore()
+                            }
                             DiscoverGridAction.Loading -> Unit
                             DiscoverGridAction.None -> Unit
                         }
@@ -460,7 +488,7 @@ internal fun DiscoverGrid(
 
 private sealed class DiscoverGridAction {
     object None : DiscoverGridAction()
-    data class ShowMore(val count: Int) : DiscoverGridAction()
+    object ShowMore : DiscoverGridAction()
     object LoadMore : DiscoverGridAction()
     object Loading : DiscoverGridAction()
 }
@@ -477,7 +505,7 @@ private fun DiscoverActionCard(
 ) {
     val cardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
     val title = when (actionType) {
-        is DiscoverGridAction.ShowMore -> "Show more\n(${actionType.count})"
+        DiscoverGridAction.ShowMore -> "Load more"
         DiscoverGridAction.LoadMore -> "Load more"
         DiscoverGridAction.Loading -> "Loading..."
         DiscoverGridAction.None -> ""
@@ -487,6 +515,11 @@ private fun DiscoverActionCard(
         onClick = onClick,
         modifier = modifier
             .width(posterCardStyle.width)
+            .onPreviewKeyEvent { event ->
+                actionType != DiscoverGridAction.None &&
+                    event.nativeKeyEvent.action == AndroidKeyEvent.ACTION_DOWN &&
+                    event.nativeKeyEvent.keyCode == AndroidKeyEvent.KEYCODE_DPAD_RIGHT
+            }
             .onFocusChanged { state -> if (state.isFocused) onFocused() }
             .then(
                 if (focusRequester != null) Modifier.focusRequester(focusRequester)
