@@ -102,13 +102,22 @@ data class SubtitleStyleSettings(
  */
 @UnstableApi
 data class BufferSettings(
-    val minBufferMs: Int = 50_000,
-    val maxBufferMs: Int = 50_000,
-    val bufferForPlaybackMs: Int = 2_500,
-    val bufferForPlaybackAfterRebufferMs: Int = 5_000,
-    val targetBufferSizeMb: Int = (DEFAULT_VIDEO_BUFFER_SIZE / (1024L * 1024L)).toInt(),
-    val backBufferDurationMs: Int = 0,
-)
+    val minBufferMs: Int = DEFAULT_MIN_BUFFER_MS,
+    val maxBufferMs: Int = DEFAULT_MAX_BUFFER_MS,
+    val bufferForPlaybackMs: Int = DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+    val bufferForPlaybackAfterRebufferMs: Int = DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS,
+    val targetBufferSizeMb: Int = DEFAULT_TARGET_BUFFER_SIZE_MB,
+    val backBufferDurationMs: Int = DEFAULT_BACK_BUFFER_DURATION_MS,
+) {
+    companion object {
+        const val DEFAULT_MIN_BUFFER_MS = 50_000
+        const val DEFAULT_MAX_BUFFER_MS = 50_000
+        const val DEFAULT_BUFFER_FOR_PLAYBACK_MS = 2_500
+        const val DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 5_000
+        val DEFAULT_TARGET_BUFFER_SIZE_MB: Int = (DEFAULT_VIDEO_BUFFER_SIZE / (1024L * 1024L)).toInt()
+        const val DEFAULT_BACK_BUFFER_DURATION_MS = 0
+    }
+}
 
 /**
  * Available audio language options
@@ -153,10 +162,16 @@ data class PlayerSettings(
     val streamReuseLastLinkCacheHours: Int = 24,
     val subtitleOrganizationMode: SubtitleOrganizationMode = SubtitleOrganizationMode.NONE,
     // Networking
-    val useParallelConnections: Boolean = false,
-    val parallelConnectionCount: Int = 3,
-    val parallelChunkSizeMb: Int = 8
-)
+    val useParallelConnections: Boolean = DEFAULT_USE_PARALLEL_CONNECTIONS,
+    val parallelConnectionCount: Int = DEFAULT_PARALLEL_CONNECTION_COUNT,
+    val parallelChunkSizeMb: Int = DEFAULT_PARALLEL_CHUNK_SIZE_MB
+) {
+    companion object {
+        const val DEFAULT_USE_PARALLEL_CONNECTIONS = false
+        const val DEFAULT_PARALLEL_CONNECTION_COUNT = 2
+        const val DEFAULT_PARALLEL_CHUNK_SIZE_MB = 16
+    }
+}
 
 enum class StreamAutoPlayMode {
     MANUAL,
@@ -285,8 +300,8 @@ class PlayerSettingsDataStore @Inject constructor(
                         (currentMin == 15_000 && currentMax == 25_000)
 
                     if (legacyDefaultsDetected) {
-                        prefs[minBufferMsKey] = 50_000
-                        prefs[maxBufferMsKey] = 50_000
+                        prefs[minBufferMsKey] = BufferSettings.DEFAULT_MIN_BUFFER_MS
+                        prefs[maxBufferMsKey] = BufferSettings.DEFAULT_MAX_BUFFER_MS
                     }
 
                     prefs[migrationLoadControlDefaultsAlignedDoneKey] = true
@@ -358,9 +373,9 @@ class PlayerSettingsDataStore @Inject constructor(
             streamReuseLastLinkEnabled = prefs[streamReuseLastLinkEnabledKey] ?: false,
             streamReuseLastLinkCacheHours = (prefs[streamReuseLastLinkCacheHoursKey] ?: 24).coerceIn(1, 168),
             subtitleOrganizationMode = parseSubtitleOrganizationMode(prefs[subtitleOrganizationModeKey]),
-            useParallelConnections = prefs[useParallelConnectionsKey] ?: false,
-            parallelConnectionCount = (prefs[parallelConnectionCountKey] ?: 2),
-            parallelChunkSizeMb = (prefs[parallelChunkSizeMbKey] ?: 16),
+            useParallelConnections = prefs[useParallelConnectionsKey] ?: PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS,
+            parallelConnectionCount = (prefs[parallelConnectionCountKey] ?: PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT),
+            parallelChunkSizeMb = (prefs[parallelChunkSizeMbKey] ?: PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB),
             subtitleStyle = SubtitleStyleSettings(
                 preferredLanguage = prefs[subtitlePreferredLanguageKey] ?: "en",
                 secondaryPreferredLanguage = prefs[subtitleSecondaryLanguageKey],
@@ -374,12 +389,12 @@ class PlayerSettingsDataStore @Inject constructor(
                 outlineWidth = prefs[subtitleOutlineWidthKey] ?: 2
             ),
             bufferSettings = BufferSettings(
-                minBufferMs = prefs[minBufferMsKey] ?: 50_000,
-                maxBufferMs = prefs[maxBufferMsKey] ?: 50_000,
-                bufferForPlaybackMs = prefs[bufferForPlaybackMsKey] ?: 2_500,
-                bufferForPlaybackAfterRebufferMs = prefs[bufferForPlaybackAfterRebufferMsKey] ?: 5_000,
-                targetBufferSizeMb = prefs[targetBufferSizeMbKey]?.coerceAtLeast(50) ?: (DEFAULT_VIDEO_BUFFER_SIZE / (1024L * 1024L)).toInt(),
-                backBufferDurationMs = prefs[backBufferDurationMsKey] ?: 0,
+                minBufferMs = prefs[minBufferMsKey] ?: BufferSettings.DEFAULT_MIN_BUFFER_MS,
+                maxBufferMs = prefs[maxBufferMsKey] ?: BufferSettings.DEFAULT_MAX_BUFFER_MS,
+                bufferForPlaybackMs = prefs[bufferForPlaybackMsKey] ?: BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+                bufferForPlaybackAfterRebufferMs = prefs[bufferForPlaybackAfterRebufferMsKey] ?: BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS,
+                targetBufferSizeMb = prefs[targetBufferSizeMbKey]?.coerceAtLeast(50) ?: BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB,
+                backBufferDurationMs = prefs[backBufferDurationMsKey] ?: BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS,
             )
         )
     }
@@ -655,7 +670,7 @@ class PlayerSettingsDataStore @Inject constructor(
         dataStore.edit { prefs ->
             val newMin = ms.coerceIn(5_000, 120_000)
             prefs[minBufferMsKey] = newMin
-            val currentMax = prefs[maxBufferMsKey] ?: 50_000
+            val currentMax = prefs[maxBufferMsKey] ?: BufferSettings.DEFAULT_MAX_BUFFER_MS
             if (currentMax < newMin) {
                 prefs[maxBufferMsKey] = newMin
             }
@@ -664,7 +679,7 @@ class PlayerSettingsDataStore @Inject constructor(
 
     suspend fun setBufferMaxBufferMs(ms: Int) {
         dataStore.edit { prefs ->
-            val currentMin = prefs[minBufferMsKey] ?: 50_000
+            val currentMin = prefs[minBufferMsKey] ?: BufferSettings.DEFAULT_MIN_BUFFER_MS
             prefs[maxBufferMsKey] = ms.coerceIn(currentMin, 120_000)
         }
     }
@@ -696,20 +711,20 @@ class PlayerSettingsDataStore @Inject constructor(
     @OptIn(UnstableApi::class)
     suspend fun resetBufferSettingsToDefaults() {
         dataStore.edit { prefs ->
-            prefs[minBufferMsKey] = 50_000
-            prefs[maxBufferMsKey] = 50_000
-            prefs[bufferForPlaybackMsKey] = 2_500
-            prefs[bufferForPlaybackAfterRebufferMsKey] = 5_000
-            prefs[targetBufferSizeMbKey] = (DEFAULT_VIDEO_BUFFER_SIZE / (1024L * 1024L)).toInt()
-            prefs[backBufferDurationMsKey] = 0
+            prefs[minBufferMsKey] = BufferSettings.DEFAULT_MIN_BUFFER_MS
+            prefs[maxBufferMsKey] = BufferSettings.DEFAULT_MAX_BUFFER_MS
+            prefs[bufferForPlaybackMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_MS
+            prefs[bufferForPlaybackAfterRebufferMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
+            prefs[targetBufferSizeMbKey] = BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB
+            prefs[backBufferDurationMsKey] = BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS
         }
     }
 
     suspend fun resetNetworkSettingsToDefaults() {
         dataStore.edit { prefs ->
-            prefs[useParallelConnectionsKey] = false
-            prefs[parallelConnectionCountKey] = 2
-            prefs[parallelChunkSizeMbKey] = 16
+            prefs[useParallelConnectionsKey] = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS
+            prefs[parallelConnectionCountKey] = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
+            prefs[parallelChunkSizeMbKey] = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB
         }
     }
 

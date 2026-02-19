@@ -8,6 +8,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.exoplayer.hls.HlsMediaSource
+import com.nuvio.tv.data.local.PlayerSettings
 import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import java.net.URLDecoder
@@ -17,9 +18,9 @@ import java.util.concurrent.TimeUnit
 internal class PlayerMediaSourceFactory {
     private var okHttpClient: OkHttpClient? = null
 
-    var useParallelConnections: Boolean = false
-    var parallelConnectionCount: Int = 2
-    var parallelChunkSizeMb: Int = 16
+    var useParallelConnections: Boolean = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS
+    var parallelConnectionCount: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
+    var parallelChunkSizeMb: Int = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB
 
     fun createMediaSource(
         url: String,

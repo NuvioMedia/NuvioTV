@@ -1,7 +1,7 @@
 package com.nuvio.tv.ui.screens.settings
 
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.DefaultLoadControl.DEFAULT_VIDEO_BUFFER_SIZE
+import com.nuvio.tv.data.local.BufferSettings
 
 /**
  * Shared memory budget constants and helpers for buffer + parallel connection settings.
@@ -23,8 +23,7 @@ object MemoryBudget {
     const val MIN_BUFFER_MB = 25
     const val MAX_BUFFER_MB = 1024 * 4
 
-    val defaultBufferSizeMb: Int =
-        (DEFAULT_VIDEO_BUFFER_SIZE / (1024L * 1024L)).toInt()
+    val defaultBufferSizeMb: Int = BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB
 
     val budgetMb: Int =
         ((Runtime.getRuntime().maxMemory() / (1024L * 1024L)) * BUDGET_RATIO).toInt()

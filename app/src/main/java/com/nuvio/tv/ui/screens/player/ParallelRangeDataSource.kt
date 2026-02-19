@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import com.nuvio.tv.data.local.PlayerSettings
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -30,8 +31,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 @UnstableApi
 class ParallelRangeDataSource(
     private val upstreamFactory: OkHttpDataSource.Factory,
-    private val parallelConnections: Int = 3,
-    private val chunkSize: Long = 8L * 1024 * 1024 // 8MB per chunk
+    private val parallelConnections: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT,
+    private val chunkSize: Long = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB.toLong() * 1024 * 1024
 ) : DataSource {
 
     companion object {
@@ -326,8 +327,8 @@ class ParallelRangeDataSource(
      */
     class Factory(
         private val upstreamFactory: OkHttpDataSource.Factory,
-        private val parallelConnections: Int = 3,
-        private val chunkSize: Long = 8L * 1024 * 1024
+        private val parallelConnections: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT,
+        private val chunkSize: Long = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB.toLong() * 1024 * 1024
     ) : DataSource.Factory {
         override fun createDataSource(): DataSource {
             return ParallelRangeDataSource(upstreamFactory, parallelConnections, chunkSize)
