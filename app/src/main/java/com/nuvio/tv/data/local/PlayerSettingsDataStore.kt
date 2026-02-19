@@ -378,7 +378,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 maxBufferMs = prefs[maxBufferMsKey] ?: 50_000,
                 bufferForPlaybackMs = prefs[bufferForPlaybackMsKey] ?: 2_500,
                 bufferForPlaybackAfterRebufferMs = prefs[bufferForPlaybackAfterRebufferMsKey] ?: 5_000,
-                targetBufferSizeMb = prefs[targetBufferSizeMbKey] ?: (DEFAULT_VIDEO_BUFFER_SIZE / (1024L * 1024L)).toInt(),
+                targetBufferSizeMb = prefs[targetBufferSizeMbKey]?.coerceAtLeast(50) ?: (DEFAULT_VIDEO_BUFFER_SIZE / (1024L * 1024L)).toInt(),
                 backBufferDurationMs = prefs[backBufferDurationMsKey] ?: 0,
             )
         )
