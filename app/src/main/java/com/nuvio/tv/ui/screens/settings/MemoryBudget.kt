@@ -17,6 +17,8 @@ object MemoryBudget {
     /** ParallelRangeDataSource schedules maxAhead = parallelConnections + 1 chunks concurrently */
     private const val BUFFER_OVERHEAD = 1
 
+    const val MIN_CONNECTIONS = 2
+    const val MAX_CONNECTIONS = 4
     const val MIN_CHUNK_MB = 8
     const val MAX_CHUNK_MB = 128
     const val BUFFER_STEP_MB = 25

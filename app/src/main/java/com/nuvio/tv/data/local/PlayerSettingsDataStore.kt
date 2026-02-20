@@ -15,6 +15,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl.DEFAULT_VIDEO_BUFFER_SIZE
+import com.nuvio.tv.ui.screens.settings.MemoryBudget
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -785,13 +786,17 @@ class PlayerSettingsDataStore @Inject constructor(
 
     suspend fun setParallelConnectionCount(count: Int) {
         dataStore.edit { prefs ->
-            prefs[parallelConnectionCountKey] = count.coerceIn(2, 4)
+            prefs[parallelConnectionCountKey] = count.coerceIn(
+                MemoryBudget.MIN_CONNECTIONS, MemoryBudget.MAX_CONNECTIONS
+            )
         }
     }
 
     suspend fun setParallelChunkSizeMb(mb: Int) {
         dataStore.edit { prefs ->
-            prefs[parallelChunkSizeMbKey] = mb.coerceIn(1, 128)
+            prefs[parallelChunkSizeMbKey] = mb.coerceIn(
+                MemoryBudget.MIN_CHUNK_MB, MemoryBudget.MAX_CHUNK_MB
+            )
         }
     }
 
@@ -804,8 +809,16 @@ class PlayerSettingsDataStore @Inject constructor(
         dataStore.edit { prefs ->
             targetBufferSizeMb?.let { prefs[targetBufferSizeMbKey] = it.coerceAtLeast(0) }
             useParallelConnections?.let { prefs[useParallelConnectionsKey] = it }
-            parallelConnectionCount?.let { prefs[parallelConnectionCountKey] = it.coerceIn(2, 4) }
-            parallelChunkSizeMb?.let { prefs[parallelChunkSizeMbKey] = it.coerceIn(8, 128) }
+            parallelConnectionCount?.let {
+                prefs[parallelConnectionCountKey] = it.coerceIn(
+                    MemoryBudget.MIN_CONNECTIONS, MemoryBudget.MAX_CONNECTIONS
+                )
+            }
+            parallelChunkSizeMb?.let {
+                prefs[parallelChunkSizeMbKey] = it.coerceIn(
+                    MemoryBudget.MIN_CHUNK_MB, MemoryBudget.MAX_CHUNK_MB
+                )
+            }
         }
     }
 }

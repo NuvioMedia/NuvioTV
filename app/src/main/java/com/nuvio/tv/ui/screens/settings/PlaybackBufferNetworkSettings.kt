@@ -200,9 +200,9 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
                 title = "Connection Count",
                 subtitle = "Number of parallel TCP connections. Higher values increase memory usage and throughput but with diminishing returns.",
                 value = playerSettings.parallelConnectionCount,
-                valueText = if (playerSettings.parallelConnectionCount == 2) "2 (recommended)" else playerSettings.parallelConnectionCount.toString(),
-                minValue = 2,
-                maxValue = 4,
+                valueText = playerSettings.parallelConnectionCount.toString(),
+                minValue = MemoryBudget.MIN_CONNECTIONS,
+                maxValue = MemoryBudget.MAX_CONNECTIONS,
                 step = 1,
                 onValueChange = onSetParallelConnectionCount
             )
