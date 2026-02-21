@@ -62,7 +62,7 @@ fun AccountSettingsContent(
             is AuthState.Loading -> {
                 item {
                     Text(
-                        text = "Loading...",
+                        text = "Cargando...",
                         style = MaterialTheme.typography.bodyMedium,
                         color = NuvioColors.TextSecondary
                     )
@@ -72,7 +72,7 @@ fun AccountSettingsContent(
             is AuthState.SignedOut -> {
                 item {
                     Text(
-                        text = "Sync your library, watch progress, addons, and plugins across devices.",
+                        text = "Sincroniza tu biblioteca, progreso, addons y plugins en todos tus dispositivos.",
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )
@@ -80,15 +80,15 @@ fun AccountSettingsContent(
                 item {
                     SettingsActionButton(
                         icon = Icons.Default.VpnKey,
-                        title = "Sign In with QR",
-                        subtitle = "Scan a QR code and complete email login on your phone",
+                        title = "Iniciar sesión con QR",
+                        subtitle = "Escanea un código QR y completa el inicio de sesión en tu teléfono",
                         onClick = onNavigateToAuthQrSignIn
                     )
                 }
             }
 
             is AuthState.FullAccount -> {
-                item { StatusCard(label = "Signed in", value = authState.email) }
+                item { StatusCard(label = "Sesión iniciada", value = authState.email) }
 
                 val overview = uiState.syncOverview
                 if (overview != null) {
@@ -101,7 +101,7 @@ fun AccountSettingsContent(
             }
 
             is AuthState.Anonymous -> {
-                item { StatusCard(label = "Anonymous", value = "Upgrade with QR to link an email") }
+                item { StatusCard(label = "Anónimo", value = "Vincula un correo mediante QR") }
 
                 val overview = uiState.syncOverview
                 if (overview != null) {
@@ -113,8 +113,8 @@ fun AccountSettingsContent(
                 item {
                     SettingsActionButton(
                         icon = Icons.Default.VpnKey,
-                        title = "Upgrade with QR",
-                        subtitle = "Scan a QR code and sign in from your phone",
+                        title = "Mejorar cuenta con QR",
+                        subtitle = "Escanea un código QR e inicia sesión desde tu teléfono",
                         onClick = onNavigateToAuthQrSignIn
                     )
                 }
@@ -160,9 +160,9 @@ private fun SyncOverviewCard(overview: SyncOverview) {
                 ) {
                     ProfileStatValue(overview.totalAddons, "addons")
                     ProfileStatValue(overview.totalPlugins, "plugins")
-                    ProfileStatValue(overview.totalLibrary, "library")
-                    ProfileStatValue(overview.totalWatchProgress, "progress")
-                    ProfileStatValue(overview.totalWatchedItems, "watched")
+                    ProfileStatValue(overview.totalLibrary, "biblioteca")
+                    ProfileStatValue(overview.totalWatchProgress, "progreso")
+                    ProfileStatValue(overview.totalWatchedItems, "vistos")
                 }
             }
 
@@ -239,9 +239,9 @@ private fun ProfileSyncRow(profile: ProfileSyncStats) {
         ) {
             ProfileStatValue(profile.addons, "addons")
             ProfileStatValue(profile.plugins, "plugins")
-            ProfileStatValue(profile.library, "library")
-            ProfileStatValue(profile.watchProgress, "progress")
-            ProfileStatValue(profile.watchedItems, "watched")
+            ProfileStatValue(profile.library, "biblioteca")
+            ProfileStatValue(profile.watchProgress, "progreso")
+            ProfileStatValue(profile.watchedItems, "vistos")
         }
     }
 }
@@ -276,7 +276,7 @@ private fun SyncOverviewLoadingCard() {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "Loading sync data...",
+            text = "Cargando datos de sincronización...",
             style = MaterialTheme.typography.bodySmall,
             color = NuvioColors.TextSecondary
         )
@@ -403,7 +403,7 @@ private fun SignOutSettingsButton(onClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = "Sign Out",
+                text = "Cerrar sesión",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFFF44336),
                 fontWeight = FontWeight.Medium
