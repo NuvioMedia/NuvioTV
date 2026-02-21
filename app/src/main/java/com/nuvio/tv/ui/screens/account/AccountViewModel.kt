@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalTvMaterial3Api::class)
+
 package com.nuvio.tv.ui.screens.account
 
 import android.os.Build
@@ -256,7 +258,7 @@ class AccountViewModel @Inject constructor(
                     qrLoginUrl = null,
                     qrLoginNonce = nonce,
                     qrLoginBitmap = null,
-                    qrLoginStatus = "Preparing QR login...",
+                    qrLoginStatus = "Preparando inicio de sesión por QR...",
                     qrLoginExpiresAtMillis = null
                 )
             }
@@ -266,7 +268,7 @@ class AccountViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             error = userFriendlyError(e),
-                            qrLoginStatus = "Failed to authenticate device"
+                            qrLoginStatus = "Fallo al autenticar el dispositivo"
                         )
                     }
                     return@launch
@@ -286,7 +288,7 @@ class AccountViewModel @Inject constructor(
                             qrLoginCode = result.code,
                             qrLoginUrl = result.webUrl,
                             qrLoginBitmap = qrBitmap,
-                            qrLoginStatus = "Scan QR and sign in on your phone",
+                            qrLoginStatus = "Escanea el QR e inicia sesión en tu teléfono",
                             qrLoginExpiresAtMillis = expiresAtMillis,
                             qrLoginPollIntervalSeconds = result.pollIntervalSeconds.coerceAtLeast(2)
                         )
@@ -298,7 +300,7 @@ class AccountViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             error = userFriendlyError(e),
-                            qrLoginStatus = "Failed to start QR login"
+                            qrLoginStatus = "Fallo al iniciar sesión por QR"
                         )
                     }
                 }
@@ -317,21 +319,21 @@ class AccountViewModel @Inject constructor(
             val current = _uiState.value
             val code = current.qrLoginCode ?: return@launch
             val nonce = current.qrLoginNonce ?: return@launch
-            _uiState.update { it.copy(isLoading = true, error = null, qrLoginStatus = "Signing you in...") }
+            _uiState.update { it.copy(isLoading = true, error = null, qrLoginStatus = "Iniciando sesión...") }
             authManager.exchangeTvLoginSession(code = code, deviceNonce = nonce).fold(
                 onSuccess = {
                     pullRemoteData().onFailure { e ->
                         Log.e("AccountViewModel", "exchangeQrLogin: pullRemoteData failed, continuing", e)
                     }
                     loadConnectedStats()
-                    _uiState.update { it.copy(isLoading = false, qrLoginStatus = "Signed in successfully") }
+                    _uiState.update { it.copy(isLoading = false, qrLoginStatus = "Sesión iniciada correctamente") }
                 },
                 onFailure = { e ->
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             error = userFriendlyError(e),
-                            qrLoginStatus = "Could not complete QR sign in"
+                            qrLoginStatus = "No se pudo completar el inicio de sesión por QR"
                         )
                     }
                 }
@@ -429,7 +431,7 @@ class AccountViewModel @Inject constructor(
                     val remote = response.profiles[pidStr]
                     ProfileSyncStats(
                         profileId = pid,
-                        profileName = local?.name ?: remote?.name ?: "Profile $pid",
+                        profileName = local?.name ?: remote?.name ?: "Perfil $pid",
                         avatarColorHex = local?.avatarColorHex ?: remote?.color ?: "#1E88E5",
                         addons = response.addons[pidStr] ?: 0,
                         plugins = response.plugins[pidStr] ?: 0,
@@ -466,51 +468,51 @@ class AccountViewModel @Inject constructor(
         Log.w("AccountViewModel", "Raw error: $compactRaw")
 
         return when {
-            // PIN errors (from PG RAISE EXCEPTION or any wrapper)
-            message.contains("incorrect pin") || message.contains("invalid pin") || message.contains("wrong pin") -> "Incorrect PIN."
+            // PIN errors
+            message.contains("incorrect pin") || message.contains("invalid pin") || message.contains("wrong pin") -> "PIN incorrecto."
 
             // Sync code errors
-            message.contains("expired") -> "Sync code has expired."
-            message.contains("invalid") && message.contains("code") -> "Invalid sync code."
-            message.contains("not found") || message.contains("no sync code") -> "Sync code not found."
-            message.contains("already linked") -> "Device is already linked."
-            message.contains("empty response") -> "Something went wrong. Please try again."
+            message.contains("expired") -> "El código de sincronización ha expirado."
+            message.contains("invalid") && message.contains("code") -> "Código de sincronización inválido."
+            message.contains("not found") || message.contains("no sync code") -> "Código de sincronización no encontrado."
+            message.contains("already linked") -> "El dispositivo ya está vinculado."
+            message.contains("empty response") -> "Algo salió mal. Por favor, inténtalo de nuevo."
 
             // Auth errors
-            message.contains("invalid login credentials") -> "Incorrect email or password."
-            message.contains("email not confirmed") -> "Please confirm your email first."
-            message.contains("user already registered") -> "An account with this email already exists."
-            message.contains("invalid email") -> "Please enter a valid email address."
-            message.contains("password") && message.contains("short") -> "Password is too short."
-            message.contains("password") && message.contains("weak") -> "Password is too weak."
-            message.contains("signup is disabled") -> "Sign up is currently disabled."
-            message.contains("rate limit") || message.contains("too many requests") -> "Too many attempts. Please try again later."
-            message.contains("tv login") && message.contains("expired") -> "QR login expired. Please try again."
-            message.contains("tv login") && message.contains("invalid") -> "Invalid QR login code."
-            message.contains("tv login") && message.contains("nonce") -> "This QR login was requested from another device."
+            message.contains("invalid login credentials") -> "Correo o contraseña incorrectos."
+            message.contains("email not confirmed") -> "Por favor, confirma tu correo primero."
+            message.contains("user already registered") -> "Ya existe una cuenta con este correo."
+            message.contains("invalid email") -> "Por favor, ingresa un correo electrónico válido."
+            message.contains("password") && message.contains("short") -> "La contraseña es muy corta."
+            message.contains("password") && message.contains("weak") -> "La contraseña es muy débil."
+            message.contains("signup is disabled") -> "El registro está deshabilitado actualmente."
+            message.contains("rate limit") || message.contains("too many requests") -> "Demasiados intentos. Por favor, inténtalo más tarde."
+            message.contains("tv login") && message.contains("expired") -> "El inicio de sesión por QR expiró. Por favor, inténtalo de nuevo."
+            message.contains("tv login") && message.contains("invalid") -> "Código de inicio de sesión QR inválido."
+            message.contains("tv login") && message.contains("nonce") -> "Este inicio de sesión por QR se solicitó desde otro dispositivo."
             message.contains("start_tv_login_session") && message.contains("could not find the function") ->
-                "QR login service is outdated. Reapply TV login SQL setup."
+                "El servicio de inicio de sesión QR está desactualizado. Vuelve a aplicar la configuración SQL."
             message.contains("gen_random_bytes") && message.contains("does not exist") ->
-                "QR login backend is missing setup. Update TV login SQL setup."
+                "Falta configuración en el servidor para el QR. Actualiza la configuración SQL."
             message.contains("invalid tv login redirect base url") ->
-                "QR login URL is misconfigured."
+                "La URL de inicio de sesión QR está mal configurada."
             message.contains("invalid device nonce") ->
-                "QR login request was invalid. Please retry."
+                "La solicitud de QR fue inválida. Por favor, reintenta."
 
             // Network errors
-            message.contains("unable to resolve host") || message.contains("no address associated") -> "No internet connection."
-            message.contains("timeout") || message.contains("timed out") -> "Connection timed out. Please try again."
-            message.contains("connection refused") || message.contains("connect failed") -> "Could not connect to server."
+            message.contains("unable to resolve host") || message.contains("no address associated") -> "Sin conexión a internet."
+            message.contains("timeout") || message.contains("timed out") -> "Tiempo de espera agotado. Por favor, inténtalo de nuevo."
+            message.contains("connection refused") || message.contains("connect failed") -> "No se pudo conectar al servidor."
 
             // Auth state
-            message.contains("not authenticated") -> "Please sign in first."
+            message.contains("not authenticated") -> "Por favor, inicia sesión primero."
 
-            // Supabase HTTP errors (e.g. 404 for missing RPC, 400 for bad params)
-            message.contains("404") || message.contains("could not find") -> "Service unavailable. Please try again later."
-            message.contains("400") || message.contains("bad request") -> "Invalid request. Please check your input."
+            // Supabase HTTP errors
+            message.contains("404") || message.contains("could not find") -> "Servicio no disponible. Por favor, inténtalo más tarde."
+            message.contains("400") || message.contains("bad request") -> "Solicitud inválida. Por favor, revisa los datos ingresados."
 
             // Fallback
-            else -> "An unexpected error occurred."
+            else -> "Ocurrió un error inesperado."
         }
     }
 
@@ -547,10 +549,10 @@ class AccountViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         qrLoginStatus = when (normalizedStatus) {
-                            "approved" -> "Login approved. Finishing sign in..."
-                            "pending" -> "Waiting for approval on your phone..."
-                            "expired" -> "QR login expired. Generate a new code."
-                            else -> "Status: ${result.status}"
+                            "approved" -> "Inicio de sesión aprobado. Finalizando..."
+                            "pending" -> "Esperando aprobación en tu teléfono..."
+                            "expired" -> "El inicio de sesión por QR expiró. Genera un nuevo código."
+                            else -> "Estado: ${result.status}"
                         },
                         qrLoginExpiresAtMillis = expiresAtMillis ?: it.qrLoginExpiresAtMillis,
                         qrLoginPollIntervalSeconds = (result.pollIntervalSeconds ?: it.qrLoginPollIntervalSeconds).coerceAtLeast(2)
