@@ -63,7 +63,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         }
 
         val mediaItem = mediaItemBuilder.build()
-        val useVodCache = !isHls && !isDash && shouldUseVodCache(url)
+        val useVodCache = ENABLE_VOD_CACHE && !isHls && !isDash && shouldUseVodCache(url)
         val progressiveFactory = if (useVodCache && !isVodCacheDisabled) {
             runCatching {
                 Log.d(TAG, "Using VOD cache for host=${Uri.parse(url).host ?: "unknown"}")
@@ -138,6 +138,7 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
 
     companion object {
         private const val TAG = "PlayerMediaSource"
+        private const val ENABLE_VOD_CACHE = false
         private const val VOD_CACHE_DIR = "player_vod_cache"
         private const val VOD_CACHE_MAX_BYTES = 2L * 1024L * 1024L * 1024L
         @Volatile private var sharedSimpleCache: SimpleCache? = null
