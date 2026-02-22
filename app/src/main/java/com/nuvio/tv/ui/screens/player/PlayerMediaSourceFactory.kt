@@ -55,7 +55,18 @@ internal class PlayerMediaSourceFactory {
         }
 
         val mediaItem = mediaItemBuilder.build()
-        val defaultFactory = DefaultMediaSourceFactory(okHttpFactory)
+
+        val dataSourceFactory = if (useParallelConnections) {
+            ParallelRangeDataSource.Factory(
+                okHttpFactory,
+                parallelConnectionCount,
+                parallelChunkSizeMb.toLong() * 1024 * 1024
+            )
+        } else {
+            okHttpFactory
+        }
+
+        val defaultFactory = DefaultMediaSourceFactory(dataSourceFactory)
 
         // Sidecar subtitles are more reliable through DefaultMediaSourceFactory.
         if (subtitleConfigurations.isNotEmpty()) {
@@ -69,17 +80,7 @@ internal class PlayerMediaSourceFactory {
             isDash -> DashMediaSource.Factory(okHttpFactory)
                 .createMediaSource(mediaItem)
             else -> {
-                val dataSourceFactory = if (useParallelConnections) {
-                    ParallelRangeDataSource.Factory(
-                        okHttpFactory,
-                        parallelConnectionCount,
-                        parallelChunkSizeMb.toLong() * 1024 * 1024
-                    )
-                } else {
-                    okHttpFactory
-                }
-                DefaultMediaSourceFactory(dataSourceFactory)
-                    .createMediaSource(mediaItem)
+                defaultFactory.createMediaSource(mediaItem)
             }
         }
     }

@@ -780,7 +780,7 @@ class PlayerSettingsDataStore @Inject constructor(
 
     @OptIn(UnstableApi::class)
     suspend fun resetBufferSettingsToDefaults() {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[minBufferMsKey] = BufferSettings.DEFAULT_MIN_BUFFER_MS
             prefs[maxBufferMsKey] = BufferSettings.DEFAULT_MAX_BUFFER_MS
             prefs[bufferForPlaybackMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_MS
@@ -791,7 +791,7 @@ class PlayerSettingsDataStore @Inject constructor(
     }
 
     suspend fun resetNetworkSettingsToDefaults() {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[useParallelConnectionsKey] = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS
             prefs[parallelConnectionCountKey] = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
             prefs[parallelChunkSizeMbKey] = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB
@@ -805,7 +805,7 @@ class PlayerSettingsDataStore @Inject constructor(
     }
 
     suspend fun setParallelConnectionCount(count: Int) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[parallelConnectionCountKey] = count.coerceIn(
                 MemoryBudget.MIN_CONNECTIONS, MemoryBudget.MAX_CONNECTIONS
             )
@@ -813,7 +813,7 @@ class PlayerSettingsDataStore @Inject constructor(
     }
 
     suspend fun setParallelChunkSizeMb(mb: Int) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[parallelChunkSizeMbKey] = mb.coerceIn(
                 MemoryBudget.MIN_CHUNK_MB, MemoryBudget.MAX_CHUNK_MB
             )
@@ -826,7 +826,7 @@ class PlayerSettingsDataStore @Inject constructor(
         parallelConnectionCount: Int? = null,
         parallelChunkSizeMb: Int? = null
     ) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             targetBufferSizeMb?.let { prefs[targetBufferSizeMbKey] = it.coerceAtLeast(0) }
             useParallelConnections?.let { prefs[useParallelConnectionsKey] = it }
             parallelConnectionCount?.let {
