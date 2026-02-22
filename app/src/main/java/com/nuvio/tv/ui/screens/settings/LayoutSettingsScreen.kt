@@ -763,7 +763,7 @@ private fun PosterCardStyleControls(
         PresetOption("Sutil", 4),
         PresetOption("Clásico", 8),
         PresetOption("Redondeado", 12),
-        PresetOption("Píldora", 16)
+        PresetOption("Ovalado", 16)
     )
 
     Column(
