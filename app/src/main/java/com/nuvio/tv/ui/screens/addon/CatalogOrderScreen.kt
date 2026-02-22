@@ -70,13 +70,13 @@ fun CatalogOrderScreen(
         ) {
             item {
                 Text(
-                    text = "Reorder Home Catalogs",
+                    text = "Reordenar catálogos de Inicio",
                     style = MaterialTheme.typography.headlineLarge,
                     color = NuvioColors.TextPrimary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "This controls catalog row order on Home (Classic + Modern + Grid).",
+                    text = "Controla el orden de las filas en Inicio (Clásico + Moderno + Cuadrícula).",
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
@@ -99,7 +99,7 @@ fun CatalogOrderScreen(
                 uiState.items.isEmpty() -> {
                     item {
                         Text(
-                            text = "No home catalogs available yet.",
+                            text = "Aún no hay catálogos de Inicio disponibles.",
                             style = MaterialTheme.typography.bodyLarge,
                             color = NuvioColors.TextSecondary
                         )
@@ -170,7 +170,7 @@ private fun CatalogOrderCard(
                 if (item.isDisabled) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Disabled on Home",
+                        text = "Desactivado en Inicio",
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.Error
                     )
@@ -200,7 +200,7 @@ private fun CatalogOrderCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowUpward,
-                        contentDescription = "Move up"
+                        contentDescription = "Subir"
                     )
                 }
 
@@ -223,7 +223,7 @@ private fun CatalogOrderCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowDownward,
-                        contentDescription = "Move down"
+                        contentDescription = "Bajar"
                     )
                 }
 
@@ -243,7 +243,7 @@ private fun CatalogOrderCard(
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                 ) {
-                    Text(text = if (item.isDisabled) "Enable" else "Disable")
+                    Text(text = if (item.isDisabled) "Activar" else "Desactivar")
                 }
             }
         }
