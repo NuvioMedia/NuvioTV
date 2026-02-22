@@ -91,17 +91,17 @@ fun UpdatePromptDialog(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
-                    text = "App Update",
+                    text = "Actualización de la App",
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary
                 )
 
                 val subtitle = when {
                     state.errorMessage != null -> state.errorMessage
-                    state.isChecking -> "Checking for updates…"
-                    state.downloadedApkPath != null -> "Download complete. Ready to install."
-                    state.update != null && state.isUpdateAvailable -> "New version: ${state.update.tag}"
-                    state.update != null && !state.isUpdateAvailable -> "You're up to date."
+                    state.isChecking -> "Buscando actualizaciones..."
+                    state.downloadedApkPath != null -> "Descarga completada. Listo para instalar."
+                    state.update != null && state.isUpdateAvailable -> "Nueva versión: ${state.update.tag}"
+                    state.update != null && !state.isUpdateAvailable -> "Tienes la versión más reciente."
                     else -> ""
                 }
 
@@ -165,7 +165,7 @@ fun UpdatePromptDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Downloading update",
+                                text = "Descargando actualización",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = NuvioColors.TextSecondary
                             )
@@ -204,7 +204,7 @@ fun UpdatePromptDialog(
 
                 if (state.showUnknownSourcesDialog) {
                     Text(
-                        text = "Allow installs from unknown sources to continue.",
+                        text = "Permitir instalaciones de orígenes desconocidos para continuar.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = NuvioColors.TextSecondary
                     )
@@ -225,7 +225,7 @@ fun UpdatePromptDialog(
                         ),
                         shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                     ) {
-                        Text("Close")
+                        Text("Cerrar")
                     }
 
                     if (state.showUnknownSourcesDialog) {
@@ -240,7 +240,7 @@ fun UpdatePromptDialog(
                             ),
                             shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                         ) {
-                            Text("Open Settings")
+                            Text("Abrir Ajustes")
                         }
                     } else if (state.downloadedApkPath != null) {
                         Button(
@@ -255,7 +255,7 @@ fun UpdatePromptDialog(
                             ),
                             shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                         ) {
-                            Text("Install")
+                            Text("Instalar")
                         }
                     } else if (canDownload) {
                         Button(
@@ -270,7 +270,7 @@ fun UpdatePromptDialog(
                             ),
                             shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                         ) {
-                            Text(if (state.isDownloading) "Downloading…" else "Download")
+                            Text(if (state.isDownloading) "Descargando..." else "Descargar")
                         }
 
                         Button(
@@ -283,7 +283,7 @@ fun UpdatePromptDialog(
                             ),
                             shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                         ) {
-                            Text("Ignore")
+                            Text("Ignorar")
                         }
                     }
                 }
