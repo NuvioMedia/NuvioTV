@@ -234,7 +234,7 @@ fun MetaDetailsScreen(
             }
             uiState.error != null -> {
                 ErrorState(
-                    message = uiState.error ?: "An error occurred",
+                    message = uiState.error ?: "Ocurrió un error",
                     onRetry = { viewModel.onEvent(MetaDetailsEvent.OnRetry) }
                 )
             }
@@ -383,7 +383,7 @@ fun MetaDetailsScreen(
 
         if (uiState.showListPicker) {
             LibraryListPickerDialog(
-                title = uiState.meta?.name ?: "Lists",
+                title = uiState.meta?.name ?: "Listas",
                 tabs = uiState.libraryListTabs,
                 membership = uiState.pickerMembership,
                 isPending = uiState.pickerPending,
@@ -651,7 +651,7 @@ private fun MetaDetailsContent(
                 add(
                     PeopleTabItem(
                         tab = PeopleSectionTab.CAST,
-                        label = "Creator and Cast",
+                        label = "Creadores y reparto",
                         focusRequester = castTabFocusRequester
                     )
                 )
@@ -660,7 +660,7 @@ private fun MetaDetailsContent(
                 add(
                     PeopleTabItem(
                         tab = PeopleSectionTab.RATINGS,
-                        label = "Ratings",
+                        label = "Calificaciones",
                         focusRequester = ratingsTabFocusRequester
                     )
                 )
@@ -669,7 +669,7 @@ private fun MetaDetailsContent(
                 add(
                     PeopleTabItem(
                         tab = PeopleSectionTab.MORE_LIKE_THIS,
-                        label = "More like this",
+                        label = "Similares",
                         focusRequester = moreLikeTabFocusRequester
                     )
                 )
@@ -967,7 +967,7 @@ private fun MetaDetailsContent(
                             PeopleSectionTab.CAST -> {
                                 CastSection(
                                     cast = normalCastMembers,
-                                    title = if (hasPeopleTabs) "" else "Creator and Cast",
+                                    title = if (hasPeopleTabs) "" else "Creadores y reparto",
                                     leadingCast = directorWriterMembers,
                                     upFocusRequester = castTabFocusRequester.takeIf { hasPeopleTabs },
                                     restorePersonId = if (pendingRestoreType == RestoreTarget.CAST_MEMBER) pendingRestoreCastPersonId else null,
@@ -1009,7 +1009,7 @@ private fun MetaDetailsContent(
                                     ratings = episodeImdbRatings,
                                     isLoading = isEpisodeRatingsLoading,
                                     error = episodeRatingsError,
-                                    title = if (hasPeopleTabs) "" else "Ratings",
+                                    title = if (hasPeopleTabs) "" else "Calificaciones",
                                     upFocusRequester = if (hasPeopleTabs) {
                                         ratingsTabFocusRequester
                                     } else {
@@ -1027,7 +1027,7 @@ private fun MetaDetailsContent(
                 if (meta.networks.isNotEmpty()) {
                     item(key = "networks", contentType = "horizontal_row") {
                         CompanyLogosSection(
-                            title = "Network",
+                            title = "Cadena",
                             companies = meta.networks
                         )
                     }
@@ -1036,7 +1036,7 @@ private fun MetaDetailsContent(
                 if (meta.productionCompanies.isNotEmpty()) {
                     item(key = "production", contentType = "horizontal_row") {
                         CompanyLogosSection(
-                            title = "Production",
+                            title = "Producción",
                             companies = meta.productionCompanies
                         )
                     }
@@ -1045,7 +1045,7 @@ private fun MetaDetailsContent(
                 if (meta.productionCompanies.isNotEmpty()) {
                     item(key = "production", contentType = "horizontal_row") {
                         CompanyLogosSection(
-                            title = "Production",
+                            title = "Producción",
                             companies = meta.productionCompanies
                         )
                     }
@@ -1054,7 +1054,7 @@ private fun MetaDetailsContent(
                 if (meta.networks.isNotEmpty()) {
                     item(key = "networks", contentType = "horizontal_row") {
                         CompanyLogosSection(
-                            title = "Network",
+                            title = "Cadena",
                             companies = meta.networks
                         )
                     }
@@ -1259,7 +1259,7 @@ private fun LibraryListPickerDialog(
     NuvioDialog(
         onDismiss = onDismiss,
         title = title,
-        subtitle = "Select which lists should include this title.",
+        subtitle = "Selecciona qué listas deben incluir este título.",
         width = 500.dp
     ) {
         if (!error.isNullOrBlank()) {
@@ -1314,7 +1314,7 @@ private fun LibraryListPickerDialog(
                     contentColor = NuvioColors.TextPrimary
                 )
             ) {
-                Text(if (isPending) "Saving..." else "Save")
+                Text(if (isPending) "Guardando..." else "Guardar")
             }
         }
     }
