@@ -447,7 +447,7 @@ class MetaDetailsViewModel @Inject constructor(
                             state.copy(
                                 episodeImdbRatings = emptyMap(),
                                 isEpisodeRatingsLoading = false,
-                                episodeRatingsError = "Ratings are unavailable for this show."
+                                episodeRatingsError = "Las calificaciones no están disponibles para esta serie."
                             )
                         }
                     }
@@ -481,7 +481,7 @@ class MetaDetailsViewModel @Inject constructor(
                         state.copy(
                             episodeImdbRatings = emptyMap(),
                             isEpisodeRatingsLoading = false,
-                            episodeRatingsError = "Unable to load episode ratings."
+                            episodeRatingsError = "No se pudieron cargar las calificaciones de los episodios."
                         )
                     }
                 }
@@ -656,7 +656,7 @@ class MetaDetailsViewModel @Inject constructor(
                         nextVideoId = meta.id,
                         nextSeason = null,
                         nextEpisode = null,
-                        displayText = "Resume"
+                        displayText = "Reanudar"
                     )
                 } else {
                     NextToWatch(
@@ -665,7 +665,7 @@ class MetaDetailsViewModel @Inject constructor(
                         nextVideoId = meta.id,
                         nextSeason = null,
                         nextEpisode = null,
-                        displayText = "Play"
+                        displayText = "Reproducir"
                     )
                 }
                 _uiState.update { it.copy(nextToWatch = nextToWatch) }
@@ -686,7 +686,7 @@ class MetaDetailsViewModel @Inject constructor(
                         nextVideoId = meta.id,
                         nextSeason = null,
                         nextEpisode = null,
-                        displayText = "Play"
+                        displayText = "Reproducir"
                     ))
                 }
                 return@launch
@@ -720,7 +720,7 @@ class MetaDetailsViewModel @Inject constructor(
                 nextVideoId = metaId,
                 nextSeason = null,
                 nextEpisode = null,
-                displayText = "Play"
+                displayText = "Reproducir"
             )
         }
 
@@ -737,7 +737,7 @@ class MetaDetailsViewModel @Inject constructor(
                     nextVideoId = matchedEpisode?.id ?: latestProgress.videoId,
                     nextSeason = season,
                     nextEpisode = episode,
-                    displayText = "Resume S${season}E${episode}"
+                    displayText = "Reanudar S${season}E${episode}"
                 )
             }
 
@@ -750,7 +750,7 @@ class MetaDetailsViewModel @Inject constructor(
                         nextVideoId = next.id,
                         nextSeason = next.season,
                         nextEpisode = next.episode,
-                        displayText = "Next S${next.season}E${next.episode}"
+                        displayText = "Siguiente S${next.season}E${next.episode}"
                     )
                 }
             }
@@ -791,12 +791,12 @@ class MetaDetailsViewModel @Inject constructor(
                     nextVideoId = resumeEpisode.id,
                     nextSeason = resumeEpisode.season,
                     nextEpisode = resumeEpisode.episode,
-                    displayText = "Resume S${resumeEpisode.season}E${resumeEpisode.episode}"
+                    displayText = "Reanudar S${resumeEpisode.season}E${resumeEpisode.episode}"
                 )
             }
             nextUnwatchedEpisode != null -> {
                 val hasWatchedSomething = fallbackProgressMap.isNotEmpty()
-                val displayPrefix = if (hasWatchedSomething) "Next" else "Play"
+                val displayPrefix = if (hasWatchedSomething) "Siguiente" else "Reproducir"
                 NextToWatch(
                     watchProgress = null,
                     isResume = false,
@@ -815,9 +815,9 @@ class MetaDetailsViewModel @Inject constructor(
                     nextSeason = firstEpisode?.season,
                     nextEpisode = firstEpisode?.episode,
                     displayText = if (firstEpisode != null) {
-                        "Play S${firstEpisode.season}E${firstEpisode.episode}"
+                        "Reproducir S${firstEpisode.season}E${firstEpisode.episode}"
                     } else {
-                        "Play"
+                        "Reproducir"
                     }
                 )
             }
@@ -837,14 +837,14 @@ class MetaDetailsViewModel @Inject constructor(
             runCatching {
                 libraryRepository.toggleDefault(input)
                 val message = if (_uiState.value.librarySourceMode == LibrarySourceMode.TRAKT) {
-                    if (wasInWatchlist) "Removed from watchlist" else "Added to watchlist"
+                    if (wasInWatchlist) "Eliminado de la lista de seguimiento" else "Añadido a la lista de seguimiento"
                 } else {
-                    if (wasInLibrary) "Removed from library" else "Added to library"
+                    if (wasInLibrary) "Eliminado de la biblioteca" else "Añadido a la biblioteca"
                 }
                 showMessage(message)
             }.onFailure { error ->
                 showMessage(
-                    message = error.message ?: "Failed to update library",
+                    message = error.message ?: "Error al actualizar la biblioteca",
                     isError = true
                 )
             }
@@ -870,11 +870,11 @@ class MetaDetailsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         pickerPending = false,
-                        pickerError = error.message ?: "Failed to load lists",
+                        pickerError = error.message ?: "Error al cargar las listas",
                         showListPicker = false
                     )
                 }
-                showMessage(error.message ?: "Failed to load lists", isError = true)
+                showMessage(error.message ?: "Error al cargar las listas", isError = true)
             }
         }
     }
@@ -913,15 +913,15 @@ class MetaDetailsViewModel @Inject constructor(
                         pickerError = null
                     )
                 }
-                showMessage("Lists updated")
+                showMessage("Listas actualizadas")
             }.onFailure { error ->
                 _uiState.update {
                     it.copy(
                         pickerPending = false,
-                        pickerError = error.message ?: "Failed to update lists"
+                        pickerError = error.message ?: "Error al actualizar las listas"
                     )
                 }
-                showMessage(error.message ?: "Failed to update lists", isError = true)
+                showMessage(error.message ?: "Error al actualizar las listas", isError = true)
             }
         }
     }
@@ -946,14 +946,14 @@ class MetaDetailsViewModel @Inject constructor(
             runCatching {
                 if (_uiState.value.isMovieWatched) {
                     watchProgressRepository.removeFromHistory(itemId)
-                    showMessage("Marked as unwatched")
+                    showMessage("Marcado como no visto")
                 } else {
                     watchProgressRepository.markAsCompleted(buildCompletedMovieProgress(meta))
-                    showMessage("Marked as watched")
+                    showMessage("Marcado como visto")
                 }
             }.onFailure { error ->
                 showMessage(
-                    message = error.message ?: "Failed to update watched status",
+                    message = error.message ?: "Error al actualizar el estado de visualización",
                     isError = true
                 )
             }
@@ -978,14 +978,14 @@ class MetaDetailsViewModel @Inject constructor(
             runCatching {
                 if (isWatched) {
                     watchProgressRepository.removeFromHistory(itemId, season, episode)
-                    showMessage("Episode marked as unwatched")
+                    showMessage("Episodio marcado como no visto")
                 } else {
                     watchProgressRepository.markAsCompleted(buildCompletedEpisodeProgress(meta, video))
-                    showMessage("Episode marked as watched")
+                    showMessage("Episodio marcado como visto")
                 }
             }.onFailure { error ->
                 showMessage(
-                    message = error.message ?: "Failed to update episode watched status",
+                    message = error.message ?: "Error al actualizar el estado de visualización del episodio",
                     isError = true
                 )
             }
@@ -1021,7 +1021,7 @@ class MetaDetailsViewModel @Inject constructor(
                 !isWatched
             }
             if (unwatched.isEmpty()) {
-                showMessage("All episodes already watched")
+                showMessage("Todos los episodios ya han sido vistos")
                 return@launch
             }
 
@@ -1044,7 +1044,7 @@ class MetaDetailsViewModel @Inject constructor(
                 }
             }
 
-            showMessage("Marked $marked episode${if (marked != 1) "s" else ""} as watched")
+            showMessage(if (marked == 1) "1 episodio marcado como visto" else "$marked episodios marcados como vistos")
         }
     }
 
@@ -1059,7 +1059,7 @@ class MetaDetailsViewModel @Inject constructor(
                     || _uiState.value.watchedEpisodes.contains(s to e)
             }
             if (watched.isEmpty()) {
-                showMessage("No watched episodes in this season")
+                showMessage("No hay episodios vistos en esta temporada")
                 return@launch
             }
 
@@ -1082,7 +1082,7 @@ class MetaDetailsViewModel @Inject constructor(
                 }
             }
 
-            showMessage("Marked $unmarked episode${if (unmarked != 1) "s" else ""} as unwatched")
+            showMessage(if (unmarked == 1) "1 episodio marcado como no visto" else "$unmarked episodios marcados como no vistos")
         }
     }
 
@@ -1103,7 +1103,7 @@ class MetaDetailsViewModel @Inject constructor(
                 !isWatched
             }
             if (unwatched.isEmpty()) {
-                showMessage("All previous episodes already watched")
+                showMessage("Todos los episodios anteriores ya han sido vistos")
                 return@launch
             }
 
@@ -1126,7 +1126,7 @@ class MetaDetailsViewModel @Inject constructor(
                 }
             }
 
-            showMessage("Marked $marked previous episode${if (marked != 1) "s" else ""} as watched")
+            showMessage(if (marked == 1) "1 episodio anterior marcado como visto" else "$marked episodios anteriores marcados como vistos")
         }
     }
 
