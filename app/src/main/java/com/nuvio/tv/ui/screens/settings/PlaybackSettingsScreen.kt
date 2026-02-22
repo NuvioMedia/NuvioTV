@@ -112,8 +112,8 @@ fun PlaybackSettingsScreen(
     BackHandler { onBackPress() }
 
     SettingsStandaloneScaffold(
-        title = "Playback Settings",
-        subtitle = "Configure video playback and subtitle options"
+        title = "Ajustes de Reproducción",
+        subtitle = "Configura la reproducción de video y las opciones de subtítulos"
     ) {
         PlaybackSettingsContent(viewModel = viewModel)
     }
@@ -177,8 +177,8 @@ fun PlaybackSettingsContent(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         SettingsDetailHeader(
-            title = "Playback Settings",
-            subtitle = "Configure video playback and subtitle options"
+            title = "Ajustes de Reproducción",
+            subtitle = "Configura la reproducción de video y opciones de subtítulos"
         )
 
         SettingsGroupCard(
@@ -254,6 +254,7 @@ fun PlaybackSettingsContent(
         showStreamAutoPlayAddonSelectionDialog = showStreamAutoPlayAddonSelectionDialog,
         showStreamAutoPlayPluginSelectionDialog = showStreamAutoPlayPluginSelectionDialog,
         showStreamRegexDialog = showStreamRegexDialog,
+        showNextEpisodeThresholdModeDialog = showNextEpisodeThresholdModeDialog,
         showNextEpisodeThresholdModeDialog = showNextEpisodeThresholdModeDialog,
         showReuseLastLinkCacheDialog = showReuseLastLinkCacheDialog,
         onSetPlayerPreference = { preference ->
@@ -394,7 +395,7 @@ internal fun ToggleSettingsItem(
 
             Switch(
                 checked = isChecked,
-                onCheckedChange = null, // Handled by Card onClick
+                onCheckedChange = null, // Manejado por onClick del Card
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = NuvioColors.Secondary.copy(alpha = contentAlpha),
                     checkedTrackColor = NuvioColors.Secondary.copy(alpha = 0.35f * contentAlpha),
@@ -479,7 +480,7 @@ internal fun RenderTypeSettingsItem(
                 Spacer(modifier = Modifier.width(16.dp))
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = "Seleccionado",
                     tint = NuvioColors.Primary.copy(alpha = contentAlpha),
                     modifier = Modifier.size(24.dp)
                 )
@@ -668,13 +669,11 @@ internal fun SliderSettingsItem(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Custom slider controls for TV - use Row with focusable buttons
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Decrease button
                 var decreaseFocused by remember { mutableStateOf(false) }
                 Card(
                     onClick = {
@@ -707,14 +706,13 @@ internal fun SliderSettingsItem(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Remove,
-                            contentDescription = "Decrease",
+                            contentDescription = "Disminuir",
                             tint = (if (decreaseFocused) NuvioColors.OnPrimary else NuvioColors.TextPrimary).copy(alpha = contentAlpha),
                             modifier = Modifier.size(20.dp)
                         )
                     }
                 }
 
-                // Progress bar
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -732,7 +730,6 @@ internal fun SliderSettingsItem(
                     )
                 }
 
-                // Increase button
                 var increaseFocused by remember { mutableStateOf(false) }
                 Card(
                     onClick = {
@@ -765,7 +762,7 @@ internal fun SliderSettingsItem(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Increase",
+                            contentDescription = "Aumentar",
                             tint = (if (increaseFocused) NuvioColors.OnPrimary else NuvioColors.TextPrimary).copy(alpha = contentAlpha),
                             modifier = Modifier.size(20.dp)
                         )
@@ -834,9 +831,7 @@ internal fun ColorSettingsItem(
                 modifier = Modifier.weight(1f)
             )
 
-            // Color preview
             if (showTransparent || currentColor.alpha == 0f) {
-                // Transparent indicator (checkered pattern simulation)
                 Box(
                     modifier = Modifier
                         .size(28.dp)
@@ -844,7 +839,6 @@ internal fun ColorSettingsItem(
                         .background(Color.Gray)
                         .border(2.dp, NuvioColors.Border, CircleShape)
                 ) {
-                    // Diagonal line to indicate transparency
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -908,7 +902,7 @@ internal fun LanguageSelectionDialog(
                     if (showNoneOption) {
                         item {
                             LanguageOptionItem(
-                                name = "None",
+                                name = "Ninguno",
                                 code = null,
                                 isSelected = selectedLanguage == null,
                                 onClick = { onLanguageSelected(null) },
@@ -991,7 +985,7 @@ private fun LanguageOptionItem(
                 Spacer(modifier = Modifier.width(12.dp))
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = "Seleccionado",
                     tint = NuvioColors.Primary,
                     modifier = Modifier.size(20.dp)
                 )
@@ -1025,7 +1019,6 @@ internal fun ColorSelectionDialog(
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            // Color grid using LazyRow for proper TV focus
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.focusRequester(focusRequester)
@@ -1043,7 +1036,6 @@ internal fun ColorSelectionDialog(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Cancel button
             Card(
                 onClick = onDismiss,
                 colors = CardDefaults.colors(
@@ -1060,7 +1052,7 @@ internal fun ColorSelectionDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Cancel",
+                    text = "Cancelar",
                     style = MaterialTheme.typography.bodyLarge,
                     color = NuvioColors.TextPrimary,
                     modifier = Modifier
@@ -1112,7 +1104,6 @@ private fun ColorOption(
             modifier = Modifier.fillMaxSize()
         ) {
             if (isTransparent) {
-                // Checkered pattern for transparent
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -1133,7 +1124,7 @@ private fun ColorOption(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = "Seleccionado",
                     tint = if (color == Color.White || color == Color.Yellow) Color.Black else Color.White,
                     modifier = Modifier.size(20.dp)
                 )
