@@ -65,9 +65,9 @@ private enum class PlaybackSection {
 
 private fun frameRateMatchingModeLabel(mode: FrameRateMatchingMode): String {
     return when (mode) {
-        FrameRateMatchingMode.OFF -> "Off"
-        FrameRateMatchingMode.START -> "On start"
-        FrameRateMatchingMode.START_STOP -> "On start/stop"
+        FrameRateMatchingMode.OFF -> "Desactivado"
+        FrameRateMatchingMode.START -> "Al iniciar"
+        FrameRateMatchingMode.START_STOP -> "Al iniciar/detener"
     }
 }
 
@@ -159,7 +159,7 @@ internal fun PlaybackSettingsSections(
         playbackCollapsibleSection(
             keyPrefix = "general",
             title = "General",
-            description = "Core playback behavior.",
+            description = "Comportamiento principal de reproducción.",
             expanded = generalExpanded,
             onToggle = { generalExpanded = !generalExpanded },
             focusRequester = generalHeaderFocus,
@@ -168,8 +168,8 @@ internal fun PlaybackSettingsSections(
             item {
                 ToggleSettingsItem(
                     icon = Icons.Default.Image,
-                    title = "Loading Overlay",
-                    subtitle = "Show loading screen until first video frame appears.",
+                    title = "Pantalla de carga",
+                    subtitle = "Mostrar pantalla de carga hasta que aparezca el primer fotograma.",
                     isChecked = playerSettings.loadingOverlayEnabled,
                     onCheckedChange = onSetLoadingOverlayEnabled,
                     onFocused = { focusedSection = PlaybackSection.GENERAL },
@@ -180,8 +180,8 @@ internal fun PlaybackSettingsSections(
             item {
                 ToggleSettingsItem(
                     icon = Icons.Default.PauseCircle,
-                    title = "Pause Overlay",
-                    subtitle = "Show details overlay after 5 seconds while paused.",
+                    title = "Información al pausar",
+                    subtitle = "Mostrar información de la serie/película tras 5 segundos en pausa.",
                     isChecked = playerSettings.pauseOverlayEnabled,
                     onCheckedChange = onSetPauseOverlayEnabled,
                     onFocused = { focusedSection = PlaybackSection.GENERAL },
@@ -192,8 +192,8 @@ internal fun PlaybackSettingsSections(
             item {
                 ToggleSettingsItem(
                     icon = Icons.Default.Timer,
-                    title = "OSD Clock",
-                    subtitle = "Show current time and end time while controls are visible.",
+                    title = "Reloj en pantalla",
+                    subtitle = "Mostrar hora actual y de finalización mientras los controles estén visibles.",
                     isChecked = playerSettings.osdClockEnabled,
                     onCheckedChange = onSetOsdClockEnabled,
                     onFocused = { focusedSection = PlaybackSection.GENERAL },
@@ -204,8 +204,8 @@ internal fun PlaybackSettingsSections(
             item {
                 ToggleSettingsItem(
                     icon = Icons.Default.History,
-                    title = "Skip Intro",
-                    subtitle = "Use introdb.app to detect intros and recaps.",
+                    title = "Omitir Intro",
+                    subtitle = "Usar introdb.app para detectar intros y resúmenes.",
                     isChecked = playerSettings.skipIntroEnabled,
                     onCheckedChange = onSetSkipIntroEnabled,
                     onFocused = { focusedSection = PlaybackSection.GENERAL },
@@ -215,7 +215,7 @@ internal fun PlaybackSettingsSections(
 
             item {
                 PlaybackSectionHeader(
-                    title = "Auto Frame Rate",
+                    title = "Ajuste automático de fotogramas (AFR)",
                     description = frameRateMatchingModeLabel(playerSettings.frameRateMatchingMode),
                     expanded = afrExpanded,
                     onToggle = { afrExpanded = !afrExpanded },
@@ -239,8 +239,8 @@ internal fun PlaybackSettingsSections(
 
         playbackCollapsibleSection(
             keyPrefix = "stream_selection",
-            title = "Player & Stream Selection",
-            description = "Player preference, auto-play, and source filtering.",
+            title = "Reproductor y Selección de Enlaces",
+            description = "Preferencia de reproductor, reproducción automática y filtros.",
             expanded = streamExpanded,
             onToggle = { streamExpanded = !streamExpanded },
             focusRequester = streamHeaderFocus,
@@ -249,11 +249,11 @@ internal fun PlaybackSettingsSections(
             item {
                 NavigationSettingsItem(
                     icon = Icons.Default.PlayArrow,
-                    title = "Player",
+                    title = "Reproductor",
                     subtitle = when (playerSettings.playerPreference) {
-                        PlayerPreference.INTERNAL -> "Internal"
-                        PlayerPreference.EXTERNAL -> "External"
-                        PlayerPreference.ASK_EVERY_TIME -> "Ask every time"
+                        PlayerPreference.INTERNAL -> "Interno"
+                        PlayerPreference.EXTERNAL -> "Externo"
+                        PlayerPreference.ASK_EVERY_TIME -> "Preguntar siempre"
                     },
                     onClick = onShowPlayerPreferenceDialog,
                     onFocused = { focusedSection = PlaybackSection.STREAM_SELECTION }
@@ -279,8 +279,8 @@ internal fun PlaybackSettingsSections(
 
         playbackCollapsibleSection(
             keyPrefix = "audio_trailer",
-            title = "Audio & Trailer",
-            description = "Trailer behavior and audio controls.",
+            title = "Audio y Tráilers",
+            description = "Comportamiento de los tráilers y controles de audio.",
             expanded = audioTrailerExpanded,
             onToggle = { audioTrailerExpanded = !audioTrailerExpanded },
             focusRequester = audioTrailerHeaderFocus,
@@ -303,8 +303,8 @@ internal fun PlaybackSettingsSections(
 
         playbackCollapsibleSection(
             keyPrefix = "subtitles",
-            title = "Subtitles",
-            description = "Language, style, and render mode.",
+            title = "Subtítulos",
+            description = "Idioma, estilo y modo de renderizado.",
             expanded = subtitlesExpanded,
             onToggle = { subtitlesExpanded = !subtitlesExpanded },
             focusRequester = subtitlesHeaderFocus,
@@ -379,7 +379,7 @@ private fun PlaybackSectionHeader(
     SettingsActionRow(
         title = title,
         subtitle = description,
-        value = if (expanded) "Open" else "Closed",
+        value = if (expanded) "Expandido" else "Contraído",
         onClick = onToggle,
         modifier = Modifier
             .fillMaxWidth()
@@ -399,8 +399,8 @@ private fun FrameRateMatchingModeOptions(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         RenderTypeSettingsItem(
-            title = "Off",
-            subtitle = "Don't change display refresh rate.",
+            title = "Desactivado",
+            subtitle = "No cambiar la tasa de refresco de la pantalla.",
             isSelected = selectedMode == FrameRateMatchingMode.OFF,
             onClick = { onSelect(FrameRateMatchingMode.OFF) },
             onFocused = onFocused,
@@ -410,8 +410,8 @@ private fun FrameRateMatchingModeOptions(
         Spacer(modifier = Modifier.height(8.dp))
 
         RenderTypeSettingsItem(
-            title = "On start",
-            subtitle = "Switch when playback starts.",
+            title = "Al iniciar",
+            subtitle = "Cambiar cuando comienza la reproducción.",
             isSelected = selectedMode == FrameRateMatchingMode.START,
             onClick = { onSelect(FrameRateMatchingMode.START) },
             onFocused = onFocused,
@@ -421,8 +421,8 @@ private fun FrameRateMatchingModeOptions(
         Spacer(modifier = Modifier.height(8.dp))
 
         RenderTypeSettingsItem(
-            title = "On start/stop",
-            subtitle = "Switch on start and restore on stop.",
+            title = "Al iniciar/detener",
+            subtitle = "Cambiar al iniciar y restaurar al detener la reproducción.",
             isSelected = selectedMode == FrameRateMatchingMode.START_STOP,
             onClick = { onSelect(FrameRateMatchingMode.START_STOP) },
             onFocused = onFocused,
@@ -570,9 +570,9 @@ private fun PlayerPreferenceDialog(
     }
 
     val options = listOf(
-        Triple(PlayerPreference.INTERNAL, "Internal", "Use NuvioTV's built-in player"),
-        Triple(PlayerPreference.EXTERNAL, "External", "Always open streams in an external app"),
-        Triple(PlayerPreference.ASK_EVERY_TIME, "Ask every time", "Choose the player each time")
+        Triple(PlayerPreference.INTERNAL, "Interno", "Usar el reproductor integrado de NuvioTV"),
+        Triple(PlayerPreference.EXTERNAL, "Externo", "Abrir siempre los enlaces en una aplicación externa"),
+        Triple(PlayerPreference.ASK_EVERY_TIME, "Preguntar siempre", "Elegir el reproductor en cada ocasión")
     )
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
@@ -587,7 +587,7 @@ private fun PlayerPreferenceDialog(
                     .padding(24.dp)
             ) {
                 Text(
-                    text = "Player",
+                    text = "Reproductor",
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary
                 )
@@ -641,7 +641,7 @@ private fun PlayerPreferenceDialog(
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Icon(
                                         imageVector = Icons.Default.Check,
-                                        contentDescription = "Selected",
+                                        contentDescription = "Seleccionado",
                                         tint = NuvioColors.Primary,
                                         modifier = Modifier.size(20.dp)
                                     )
