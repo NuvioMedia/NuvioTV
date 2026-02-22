@@ -1222,30 +1222,38 @@ class HomeViewModel @Inject constructor(
             )
         }
 
-        // Push the first catalog row's items to the Trending TV recommendation channel
-        val trendingItems = displayRows.firstOrNull()?.items.orEmpty()
-        if (trendingItems.isNotEmpty()) {
+        // Trending channel taking 1 item from first row, 1 item from second row alternatively.
+        // Assuming first 2 rows are usually popular movies and popular series.
+        val trendingList1 = displayRows.getOrNull(0)?.items.orEmpty()
+        val trendingList2 = displayRows.getOrNull(1)?.items.orEmpty()
+        
+        val mixedTrending = buildList {
+            val maxT = maxOf(trendingList1.size, trendingList2.size)
+            for (i in 0 until maxT) {
+                if (i < trendingList1.size) add(trendingList1[i])
+                if (i < trendingList2.size) add(trendingList2[i])
+            }
+        }.distinctBy { it.id }
+
+        if (mixedTrending.isNotEmpty()) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    tvRecommendationManager.updateTrending(trendingItems)
+                    tvRecommendationManager.updateTrending(mixedTrending)
                 } catch (_: Exception) {
                 }
             }
         }
 
         // Row at index 2 is typically "New Movies", and index 3 is "New Series".
-        // We take these two rows and interleave their items 
-        // (1 movie, 1 series, 1 movie, 1 series...) so both are reflected on the screen.
+        // We merge them and sort by release info so the absolute newest content
+        // always floats to the top of the "New Releases" TV channel.
         val newMovies = displayRows.getOrNull(2)?.items.orEmpty()
         val newSeries = displayRows.getOrNull(3)?.items.orEmpty()
 
-        val newReleases = buildList {
-            val maxSize = maxOf(newMovies.size, newSeries.size)
-            for (i in 0 until maxSize) {
-                if (i < newMovies.size) add(newMovies[i])
-                if (i < newSeries.size) add(newSeries[i])
-            }
-        }.distinctBy { it.id }
+        val newReleases = (newMovies + newSeries)
+            .distinctBy { it.id }
+            .filter { !it.releaseInfo.isNullOrBlank() }
+            .sortedByDescending { it.releaseInfo }
         if (newReleases.isNotEmpty()) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
