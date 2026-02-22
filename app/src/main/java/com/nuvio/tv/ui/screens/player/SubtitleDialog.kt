@@ -101,11 +101,11 @@ internal fun SubtitleSelectionDialog(
             .size
     }
     val addonsTabTitle = when (subtitleOrganizationMode) {
-        SubtitleOrganizationMode.BY_LANGUAGE -> "Languages"
+        SubtitleOrganizationMode.BY_LANGUAGE -> "Idiomas"
         SubtitleOrganizationMode.NONE,
         SubtitleOrganizationMode.BY_ADDON -> "Addons"
     }
-    val tabs = listOf("Built-in", addonsTabTitle, "Style", "Delay")
+    val tabs = listOf("Internos", addonsTabTitle, "Estilo", "Retraso")
     val tabFocusRequesters = remember { tabs.map { FocusRequester() } }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -119,7 +119,7 @@ internal fun SubtitleSelectionDialog(
                 modifier = Modifier.padding(24.dp)
             ) {
                 Text(
-                    text = "Subtitles",
+                    text = "Subtítulos",
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color.White,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -265,7 +265,7 @@ private fun InternalSubtitlesContent(
     ) {
         item {
             TrackItem(
-                track = TrackInfo(index = -1, name = "None", language = null),
+                track = TrackInfo(index = -1, name = "Ninguno", language = null),
                 isSelected = selectedIndex == -1 && selectedAddonSubtitle == null,
                 onClick = onDisableSubtitles
             )
@@ -280,7 +280,7 @@ private fun InternalSubtitlesContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No built-in subtitles available",
+                        text = "No hay subtítulos internos disponibles",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.5f)
                     )
@@ -342,7 +342,7 @@ private fun AddonSubtitlesContent(
                     ) {
                         LoadingIndicator(modifier = Modifier.size(24.dp))
                         Text(
-                            text = "Loading subtitles from addons...",
+                            text = "Cargando subtítulos de los addons...",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(alpha = 0.5f)
                         )
@@ -358,7 +358,7 @@ private fun AddonSubtitlesContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No addon subtitles available",
+                        text = "No hay subtítulos de addons disponibles",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.5f)
                     )
@@ -486,7 +486,7 @@ private fun buildAddonSubtitleViewData(
                 filters = listOf(
                     SubtitleFilter(
                         key = "all",
-                        label = "All",
+                        label = "Todos",
                         items = preferredFirst
                     )
                 )
@@ -495,7 +495,7 @@ private fun buildAddonSubtitleViewData(
 
         SubtitleOrganizationMode.BY_LANGUAGE -> {
             AddonSubtitleViewData(
-                filterTitle = "Languages",
+                filterTitle = "Idiomas",
                 filters = preferredFirst
                     .groupBy { subtitleLanguageGroupKey(it.lang) }
                     .map { (languageKey, items) ->
@@ -652,7 +652,7 @@ private fun AddonSubtitleItem(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = "Seleccionado",
                     tint = NuvioColors.Secondary,
                     modifier = Modifier.size(20.dp)
                 )
@@ -676,11 +676,11 @@ private fun SubtitleStyleContent(
         // Core section
         item {
             StyleSection(
-                title = "Core",
+                title = "Principal",
                 icon = Icons.Default.FormatSize
             ) {
                 // Font Size
-                StyleSettingRow(label = "Font Size") {
+                StyleSettingRow(label = "Tamaño de fuente") {
                     StyleStepperButton(
                         icon = Icons.Default.Remove,
                         onClick = { onEvent(PlayerEvent.OnSetSubtitleSize(subtitleStyle.size - 10)) }
@@ -695,7 +695,7 @@ private fun SubtitleStyleContent(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Bold
-                StyleSettingRow(label = "Bold") {
+                StyleSettingRow(label = "Negrita") {
                     StyleToggleButton(
                         isEnabled = subtitleStyle.bold,
                         onClick = { onEvent(PlayerEvent.OnSetSubtitleBold(!subtitleStyle.bold)) }
@@ -707,13 +707,13 @@ private fun SubtitleStyleContent(
         // Advanced section
         item {
             StyleSection(
-                title = "Advanced",
+                title = "Avanzado",
                 icon = Icons.Default.Tune
             ) {
                 // Text Color
                 Column {
                     Text(
-                        text = "Text Color",
+                        text = "Color del texto",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -732,7 +732,7 @@ private fun SubtitleStyleContent(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Outline
-                StyleSettingRow(label = "Outline") {
+                StyleSettingRow(label = "Contorno") {
                     StyleToggleButton(
                         isEnabled = subtitleStyle.outlineEnabled,
                         onClick = { onEvent(PlayerEvent.OnSetSubtitleOutlineEnabled(!subtitleStyle.outlineEnabled)) }
@@ -745,7 +745,7 @@ private fun SubtitleStyleContent(
 
                     Column {
                         Text(
-                            text = "Outline Color",
+                            text = "Color del contorno",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White,
                             modifier = Modifier.padding(bottom = 8.dp)
@@ -765,7 +765,7 @@ private fun SubtitleStyleContent(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Bottom Offset
-                StyleSettingRow(label = "Bottom Offset") {
+                StyleSettingRow(label = "Desplazamiento inferior") {
                     StyleStepperButton(
                         icon = Icons.Default.Remove,
                         onClick = { onEvent(PlayerEvent.OnSetSubtitleVerticalOffset(subtitleStyle.verticalOffset - 5)) }
@@ -792,7 +792,7 @@ private fun SubtitleStyleContent(
                 shape = CardDefaults.shape(RoundedCornerShape(12.dp))
             ) {
                 Text(
-                    text = "Reset Defaults",
+                    text = "Restablecer por defecto",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.7f),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
@@ -928,7 +928,7 @@ private fun StyleColorChip(
         shape = IconButtonDefaults.shape(shape = CircleShape)
     ) {
         if (isSelected) {
-            Icon(Icons.Default.Check, "Selected", modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Check, "Seleccionado", modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -949,7 +949,7 @@ private fun StyleToggleButton(
         shape = CardDefaults.shape(RoundedCornerShape(10.dp))
     ) {
         Text(
-            text = if (isEnabled) "On" else "Off",
+            text = if (isEnabled) "Activado" else "Desactivado",
             style = MaterialTheme.typography.bodyMedium,
             color = if (isEnabled) Color.White else Color.White.copy(alpha = 0.5f),
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -1002,7 +1002,7 @@ internal fun TrackItem(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = "Seleccionado",
                     tint = NuvioColors.Secondary,
                     modifier = Modifier.size(20.dp)
                 )
