@@ -104,7 +104,7 @@ fun TraktScreen(
         ) {
             Image(
                 painter = traktLogoPainter,
-                contentDescription = "Trakt Logo",
+                contentDescription = "Logo de Trakt",
                 modifier = Modifier.size(96.dp),
                 contentScale = ContentScale.Fit
             )
@@ -116,14 +116,14 @@ fun TraktScreen(
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Sync your watchlist, watch progress, continue watching, scrobbles, and personal lists with Trakt.",
+                text = "Sincroniza tu lista de seguimiento, progreso, continuar viendo, scrobbles y listas personales con Trakt.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = NuvioColors.TextSecondary
             )
             if (uiState.mode == TraktConnectionMode.CONNECTED) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Connected as ${uiState.username ?: "Trakt user"}",
+                    text = "Conectado como ${uiState.username ?: "usuario de Trakt"}",
                     style = MaterialTheme.typography.titleMedium,
                     color = Color(0xFF7CFF9B)
                 )
@@ -148,7 +148,7 @@ fun TraktScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Account Login",
+                    text = "Inicio de sesión",
                     style = MaterialTheme.typography.titleLarge,
                     color = NuvioColors.TextPrimary
                 )
@@ -160,14 +160,14 @@ fun TraktScreen(
                             contentColor = NuvioColors.TextPrimary
                         )
                     ) {
-                        Text("Cancel")
+                        Text("Cancelar")
                     }
                 }
             }
 
             if (uiState.mode == TraktConnectionMode.AWAITING_APPROVAL) {
                 Text(
-                    text = "Go to trakt.tv/activate and enter this code:",
+                    text = "Ve a trakt.tv/activate e ingresa este código:",
                     style = MaterialTheme.typography.bodyLarge,
                     color = NuvioColors.TextSecondary
                 )
@@ -181,20 +181,20 @@ fun TraktScreen(
                 if (qrBitmap != null) {
                     Image(
                         bitmap = qrBitmap.asImageBitmap(),
-                        contentDescription = "Trakt activation QR",
+                        contentDescription = "QR de activación de Trakt",
                         modifier = Modifier.size(220.dp),
                         contentScale = ContentScale.Fit
                     )
                 }
                 Text(
-                    text = "Code expires in ${formatDuration(remaining)}",
+                    text = "El código expira en ${formatDuration(remaining)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
             } else if (uiState.mode == TraktConnectionMode.CONNECTED) {
                 uiState.tokenExpiresAtMillis?.let { expiresAtMillis ->
                     Text(
-                        text = "Trakt access token refreshes in ${formatDuration((expiresAtMillis - nowMillis).coerceAtLeast(0L))}",
+                        text = "El token de acceso de Trakt se actualiza en ${formatDuration((expiresAtMillis - nowMillis).coerceAtLeast(0L))}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = NuvioColors.TextSecondary
                     )
@@ -207,7 +207,7 @@ fun TraktScreen(
                         contentColor = NuvioColors.TextPrimary
                     )
                 ) {
-                    Text("Disconnect")
+                    Text("Desconectar")
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 TraktConnectedStatsStrip(
@@ -216,7 +216,7 @@ fun TraktScreen(
                 )
             } else {
                 Text(
-                    text = "Press Login to start Trakt device authentication. A QR code will appear here.",
+                    text = "Presiona Iniciar sesión para autenticar el dispositivo con Trakt. Aquí aparecerá un código QR.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = NuvioColors.TextSecondary
                 )
@@ -229,11 +229,11 @@ fun TraktScreen(
                         contentColor = Color.Black
                     )
                 ) {
-                    Text("Login")
+                    Text("Iniciar sesión")
                 }
                 if (!uiState.credentialsConfigured) {
                     Text(
-                        text = "Missing TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET in local.properties.",
+                        text = "Falta TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET en local.properties.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFFFFB74D)
                     )
@@ -242,9 +242,9 @@ fun TraktScreen(
 
             if (uiState.mode == TraktConnectionMode.CONNECTED) {
                 SettingsActionRow(
-                    title = "Continue Watching Window",
-                    subtitle = "Days of Trakt progress considered for continue watching",
-                    value = "${uiState.continueWatchingDaysCap} days",
+                    title = "Ventana de Continuar Viendo",
+                    subtitle = "Días de progreso de Trakt considerados para continuar viendo",
+                    value = "${uiState.continueWatchingDaysCap} días",
                     onClick = { showDaysCapDialog = true }
                 )
             }
@@ -276,7 +276,7 @@ fun TraktScreen(
                         enabled = !uiState.isLoading,
                         modifier = Modifier.focusRequester(primaryFocusRequester)
                     ) {
-                        Text("Retry")
+                        Text("Reintentar")
                     }
                 }
                 Button(
@@ -286,7 +286,7 @@ fun TraktScreen(
                         contentColor = NuvioColors.TextPrimary
                     )
                 ) {
-                    Text("Back")
+                    Text("Atrás")
                 }
             }
         }
@@ -303,12 +303,12 @@ fun TraktScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Continue Watching Window",
+                    text = "Límite de Continuar Viendo",
                     style = MaterialTheme.typography.titleLarge,
                     color = NuvioColors.TextPrimary
                 )
                 Text(
-                    text = "Choose how many days of Trakt activity should appear in continue watching.",
+                    text = "Elige cuántos días de actividad de Trakt deben aparecer en la sección continuar viendo.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
@@ -331,7 +331,7 @@ fun TraktScreen(
                                     contentColor = if (selected) Color.Black else NuvioColors.TextPrimary
                                 )
                             ) {
-                                Text("$days days")
+                                Text("$days días")
                             }
                         }
                         if (rowOptions.size == 1) {
@@ -351,7 +351,7 @@ fun TraktScreen(
                             contentColor = NuvioColors.TextPrimary
                         )
                     ) {
-                        Text("Cancel")
+                        Text("Cancelar")
                     }
                 }
             }
@@ -369,12 +369,12 @@ fun TraktScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Disconnect Trakt?",
+                    text = "¿Desconectar Trakt?",
                     style = MaterialTheme.typography.titleLarge,
                     color = NuvioColors.TextPrimary
                 )
                 Text(
-                    text = "This will disconnect your Trakt account from Nuvio.",
+                    text = "Esto desconectará tu cuenta de Trakt de Nuvio.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
@@ -391,7 +391,7 @@ fun TraktScreen(
                             contentColor = NuvioColors.TextPrimary
                         )
                     ) {
-                        Text("Disconnect")
+                        Text("Desconectar")
                     }
                     Button(
                         onClick = { showDisconnectConfirm = false },
@@ -400,7 +400,7 @@ fun TraktScreen(
                             contentColor = NuvioColors.TextPrimary
                         )
                     ) {
-                        Text("Cancel")
+                        Text("Cancelar")
                     }
                 }
             }
@@ -423,14 +423,14 @@ private fun TraktConnectedStatsStrip(
             stats?.totalWatchedHours?.let { "${it}h" } ?: "-"
         )
     }
-    val labels = listOf("Movies", "Shows", "Episodes", "Watched Hours")
+    val labels = listOf("Películas", "Series", "Episodios", "Horas vistas")
 
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = "Cached",
+            text = "En caché",
             style = MaterialTheme.typography.labelMedium,
             color = NuvioColors.TextTertiary
         )
