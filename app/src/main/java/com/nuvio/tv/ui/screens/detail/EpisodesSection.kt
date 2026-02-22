@@ -150,7 +150,7 @@ fun SeasonTabs(
                 scale = CardDefaults.scale(focusedScale = 1.0f)
             ) {
                 Text(
-                    text = if (season == 0) "Specials" else "Season $season",
+                    text = if (season == 0) "Especiales" else "Temporada $season",
                     style = MaterialTheme.typography.titleMedium,
                     color = when {
                         isFocused -> NuvioColors.OnPrimary
@@ -316,9 +316,9 @@ private fun EpisodeCard(
     )
     val episodeCode = remember(episode.season, episode.episode) {
         if (episode.season != null && episode.episode != null) {
-            "S${episode.season.toString().padStart(2, '0')}E${episode.episode.toString().padStart(2, '0')}"
+            "T${episode.season.toString().padStart(2, '0')}E${episode.episode.toString().padStart(2, '0')}"
         } else {
-            "Episode"
+            "Episodio"
         }
     }
     val textMeasurer = rememberTextMeasurer()
@@ -527,7 +527,7 @@ private fun EpisodeCard(
                         )
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Watched",
+                            contentDescription = "Visto",
                             tint = androidx.compose.ui.graphics.Color.White,
                             modifier = Modifier.size(21.dp)
                         )
@@ -623,7 +623,7 @@ private fun EpisodeOptionsDialog(
     NuvioDialog(
         onDismiss = onDismiss,
         title = episode.title,
-        subtitle = "Episode actions"
+        subtitle = "Acciones del episodio"
     ) {
         Button(
             onClick = onToggleWatched,
@@ -636,7 +636,7 @@ private fun EpisodeOptionsDialog(
                 contentColor = NuvioColors.TextPrimary
             )
         ) {
-            Text(if (isWatched) "Mark as unwatched" else "Mark as watched")
+            Text(if (isWatched) "Marcar como no visto" else "Marcar como visto")
         }
 
         Button(
@@ -647,7 +647,7 @@ private fun EpisodeOptionsDialog(
             ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(if (isSeasonFullyWatched) "Mark season as unwatched" else "Mark season as watched")
+            Text(if (isSeasonFullyWatched) "Marcar temporada como no vista" else "Marcar temporada como vista")
         }
 
         if (hasPreviousEpisodes) {
@@ -659,7 +659,7 @@ private fun EpisodeOptionsDialog(
                 ),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Mark previous in this season as watched")
+                Text("Marcar anteriores de esta temporada como vistos")
             }
         }
 
@@ -671,7 +671,7 @@ private fun EpisodeOptionsDialog(
             ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Play")
+            Text("Reproducir")
         }
     }
 }
@@ -693,8 +693,8 @@ fun SeasonOptionsDialog(
 
     NuvioDialog(
         onDismiss = onDismiss,
-        title = if (season == 0) "Specials" else "Season $season",
-        subtitle = "Season actions"
+        title = if (season == 0) "Especiales" else "Temporada $season",
+        subtitle = "Acciones de la temporada"
     ) {
         Button(
             onClick = if (isFullyWatched) onMarkSeasonUnwatched else onMarkSeasonWatched,
@@ -706,7 +706,7 @@ fun SeasonOptionsDialog(
                 contentColor = NuvioColors.TextPrimary
             )
         ) {
-            Text(if (isFullyWatched) "Mark season as unwatched" else "Mark season as watched")
+            Text(if (isFullyWatched) "Marcar temporada como no vista" else "Marcar temporada como vista")
         }
     }
 }
