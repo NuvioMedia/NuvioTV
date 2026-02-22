@@ -235,7 +235,7 @@ fun PlayerScreen(
                                 width = result.appliedMode.physicalWidth,
                                 height = result.appliedMode.physicalHeight,
                                 refreshRate = result.appliedMode.refreshRate,
-                                statusMessage = if (result.isFallback) "Fallback applied" else null
+                                statusMessage = if (result.isFallback) "Alternativa aplicada" else null
                             )
                         )
                     )
@@ -1091,7 +1091,7 @@ private fun PlayerControlsOverlay(
                                 exit = fadeOut(animationSpec = tween(durationMillis = 180))
                             ) {
                                 Text(
-                                    text = "via ${uiState.currentStreamName}",
+                                    text = "vía ${uiState.currentStreamName}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Color.White.copy(alpha = 0.68f),
                                     maxLines = 2,
@@ -1131,7 +1131,7 @@ private fun PlayerControlsOverlay(
                     ControlButton(
                         icon = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         iconPainter = if (uiState.isPlaying) customPausePainter else customPlayPainter,
-                        contentDescription = if (uiState.isPlaying) "Pause" else "Play",
+                        contentDescription = if (uiState.isPlaying) "Pausar" else "Reproducir",
                         onClick = onPlayPause,
                         focusRequester = playPauseFocusRequester,
                         onFocused = onResetHideTimer
@@ -1141,7 +1141,7 @@ private fun PlayerControlsOverlay(
                         ControlButton(
                             icon = Icons.Default.ClosedCaption,
                             iconPainter = customSubtitlePainter,
-                            contentDescription = "Subtitles",
+                            contentDescription = "Subtítulos",
                             onClick = onShowSubtitleDialog,
                             onFocused = onResetHideTimer
                         )
@@ -1151,7 +1151,7 @@ private fun PlayerControlsOverlay(
                         ControlButton(
                             icon = Icons.AutoMirrored.Filled.VolumeUp,
                             iconPainter = customAudioPainter,
-                            contentDescription = "Audio tracks",
+                            contentDescription = "Pistas de audio",
                             onClick = onShowAudioDialog,
                             onFocused = onResetHideTimer
                         )
@@ -1160,7 +1160,7 @@ private fun PlayerControlsOverlay(
                     ControlButton(
                         icon = Icons.Default.AspectRatio,
                         iconPainter = customAspectPainter,
-                        contentDescription = "Aspect ratio",
+                        contentDescription = "Relación de aspecto",
                         onClick = onToggleAspectRatio,
                         onFocused = onResetHideTimer
                     )
@@ -1169,7 +1169,7 @@ private fun PlayerControlsOverlay(
                         ControlButton(
                             icon = Icons.Default.SwapHoriz,
                             iconPainter = customSourcePainter,
-                            contentDescription = "Sources",
+                            contentDescription = "Fuentes",
                             onClick = onShowSourcesPanel,
                             onFocused = onResetHideTimer
                         )
@@ -1179,7 +1179,7 @@ private fun PlayerControlsOverlay(
                         ControlButton(
                             icon = Icons.AutoMirrored.Filled.List,
                             iconPainter = customEpisodesPainter,
-                            contentDescription = "Episodes",
+                            contentDescription = "Episodios",
                             onClick = onShowEpisodesPanel,
                             onFocused = onResetHideTimer
                         )
@@ -1187,7 +1187,7 @@ private fun PlayerControlsOverlay(
 
                     ControlButton(
                         icon = Icons.Default.MoreHoriz,
-                        contentDescription = "More options",
+                        contentDescription = "Más opciones",
                         onClick = onShowMoreDialog,
                         onFocused = onResetHideTimer
                     )
@@ -1351,7 +1351,7 @@ private fun PlayerClockOverlay(
             color = Color.White.copy(alpha = 0.96f)
         )
         Text(
-            text = "Ends at: $endTimeText",
+            text = "Termina a las: $endTimeText",
             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 10.sp),
             color = Color.White.copy(alpha = 0.78f)
         )
@@ -1452,7 +1452,7 @@ private fun SubtitleDelayOverlay(subtitleDelayMs: Int) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Subtitles Delay",
+                text = "Retraso de subtítulos",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
                 color = Color.White
             )
@@ -1546,7 +1546,7 @@ private fun ErrorOverlay(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Playback Error",
+                text = "Error de reproducción",
                 style = MaterialTheme.typography.headlineMedium,
                 color = Color.White
             )
@@ -1565,7 +1565,7 @@ private fun ErrorOverlay(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 DialogButton(
-                    text = "Go Back",
+                    text = "Volver",
                     onClick = onBack,
                     isPrimary = true,
                     modifier = Modifier
@@ -1594,7 +1594,7 @@ private fun SpeedSelectionDialog(
                 modifier = Modifier.padding(24.dp)
             ) {
                 Text(
-                    text = "Playback Speed",
+                    text = "Velocidad de reproducción",
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -1637,24 +1637,24 @@ private fun MoreActionsDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = "More Actions",
+                    text = "Más acciones",
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
                 MoreActionItem(
-                    text = "Playback Speed",
+                    text = "Velocidad de reproducción",
                     onClick = onPlaybackSpeed
                 )
                 if (showSourcesAction) {
                     MoreActionItem(
-                        text = "Sources",
+                        text = "Fuentes",
                         onClick = onSources
                     )
                 }
                 MoreActionItem(
-                    text = "Open in External Player",
+                    text = "Abrir en reproductor externo",
                     onClick = onOpenInExternalPlayer
                 )
             }
@@ -1724,7 +1724,7 @@ private fun SpeedItem(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = "Seleccionado",
                     tint = NuvioColors.Secondary,
                     modifier = Modifier.size(24.dp)
                 )
