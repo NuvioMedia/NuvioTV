@@ -84,8 +84,8 @@ internal fun LazyListScope.autoPlaySettingsItems(
     item {
         ToggleSettingsItem(
             icon = Icons.Default.History,
-            title = "Reuse Last Link",
-            subtitle = "Auto-play your last working stream for this same movie/episode when cache is still valid",
+            title = "Reutilizar último enlace",
+            subtitle = "Reproducir automáticamente el último enlace funcional de esta película/episodio si el caché es válido",
             isChecked = playerSettings.streamReuseLastLinkEnabled,
             onCheckedChange = onSetReuseLastLinkEnabled,
             onFocused = onItemFocused
@@ -96,7 +96,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
         item {
             NavigationSettingsItem(
                 icon = Icons.Default.Tune,
-                title = "Last Link Cache Duration",
+                title = "Duración de caché del último enlace",
                 subtitle = formatReuseCacheDuration(playerSettings.streamReuseLastLinkCacheHours),
                 onClick = onShowReuseLastLinkCacheDialog,
                 onFocused = onItemFocused
@@ -106,13 +106,13 @@ internal fun LazyListScope.autoPlaySettingsItems(
 
     item {
         val modeLabel = when (playerSettings.streamAutoPlayMode) {
-            StreamAutoPlayMode.MANUAL -> "Manual (choose stream)"
-            StreamAutoPlayMode.FIRST_STREAM -> "Auto-play first source"
-            StreamAutoPlayMode.REGEX_MATCH -> "Auto-play regex match"
+            StreamAutoPlayMode.MANUAL -> "Manual (elegir enlace)"
+            StreamAutoPlayMode.FIRST_STREAM -> "Reproducir primera fuente automáticamente"
+            StreamAutoPlayMode.REGEX_MATCH -> "Reproducir coincidencia de regex automáticamente"
         }
         NavigationSettingsItem(
             icon = Icons.Default.PlayArrow,
-            title = "Auto Stream Selection",
+            title = "Selección automática de fuente",
             subtitle = modeLabel,
             onClick = onShowModeDialog,
             onFocused = onItemFocused
@@ -123,8 +123,8 @@ internal fun LazyListScope.autoPlaySettingsItems(
         item {
             ToggleSettingsItem(
                 icon = Icons.Default.SkipNext,
-                title = "Auto-play Next Episode",
-                subtitle = "Start next episode automatically when prompt appears.",
+                title = "Reproducir siguiente episodio automáticamente",
+                subtitle = "Iniciar el siguiente episodio automáticamente cuando aparezca el aviso.",
                 isChecked = playerSettings.streamAutoPlayNextEpisodeEnabled,
                 onCheckedChange = onSetStreamAutoPlayNextEpisodeEnabled,
                 onFocused = onItemFocused
@@ -134,12 +134,12 @@ internal fun LazyListScope.autoPlaySettingsItems(
 
     item {
         val thresholdModeSubtitle = when (playerSettings.nextEpisodeThresholdMode) {
-            NextEpisodeThresholdMode.PERCENTAGE -> "Percentage"
-            NextEpisodeThresholdMode.MINUTES_BEFORE_END -> "Minutes before end"
+            NextEpisodeThresholdMode.PERCENTAGE -> "Porcentaje"
+            NextEpisodeThresholdMode.MINUTES_BEFORE_END -> "Minutos antes del final"
         }
         NavigationSettingsItem(
             icon = Icons.Default.Tune,
-            title = "Next Episode Threshold Mode",
+            title = "Modo de umbral para siguiente episodio",
             subtitle = thresholdModeSubtitle,
             onClick = onShowNextEpisodeThresholdModeDialog,
             onFocused = onItemFocused
@@ -151,8 +151,8 @@ internal fun LazyListScope.autoPlaySettingsItems(
             NextEpisodeThresholdMode.PERCENTAGE -> {
                 SliderSettingsItem(
                     icon = Icons.Default.Tune,
-                    title = "Threshold Percentage",
-                    subtitle = "Fallback when no outro timestamp exists.",
+                    title = "Porcentaje de umbral",
+                    subtitle = "Alternativa cuando no hay marca de tiempo de cierre.",
                     value = (playerSettings.nextEpisodeThresholdPercent * 2f).roundToInt(),
                     valueText = "${formatHalfStepValue(playerSettings.nextEpisodeThresholdPercent)}%",
                     minValue = 194,
@@ -165,8 +165,8 @@ internal fun LazyListScope.autoPlaySettingsItems(
             NextEpisodeThresholdMode.MINUTES_BEFORE_END -> {
                 SliderSettingsItem(
                     icon = Icons.Default.Tune,
-                    title = "Threshold Minutes",
-                    subtitle = "Fallback when no outro timestamp exists.",
+                    title = "Minutos de umbral",
+                    subtitle = "Alternativa cuando no hay marca de tiempo de cierre.",
                     value = (playerSettings.nextEpisodeThresholdMinutesBeforeEnd * 2f).roundToInt(),
                     valueText = "${formatHalfStepValue(playerSettings.nextEpisodeThresholdMinutesBeforeEnd)} min",
                     minValue = 2,
@@ -183,13 +183,13 @@ internal fun LazyListScope.autoPlaySettingsItems(
 
         item {
             val sourceLabel = when (playerSettings.streamAutoPlaySource) {
-                StreamAutoPlaySource.ALL_SOURCES -> "All sources"
-                StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> "Installed addons only"
-                StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> "Enabled plugins only"
+                StreamAutoPlaySource.ALL_SOURCES -> "Todas las fuentes"
+                StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> "Solo addons instalados"
+                StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> "Solo plugins habilitados"
             }
             NavigationSettingsItem(
                 icon = Icons.Default.Tune,
-                title = "Auto-play Source Scope",
+                title = "Fuentes para reproducción automática",
                 subtitle = sourceLabel,
                 onClick = onShowSourceDialog,
                 onFocused = onItemFocused
@@ -199,13 +199,13 @@ internal fun LazyListScope.autoPlaySettingsItems(
         if (playerSettings.streamAutoPlaySource != StreamAutoPlaySource.ENABLED_PLUGINS_ONLY) {
             item {
                 val addonSubtitle = if (playerSettings.streamAutoPlaySelectedAddons.isEmpty()) {
-                    "All installed addons"
+                    "Todos los addons instalados"
                 } else {
-                    "${playerSettings.streamAutoPlaySelectedAddons.size} selected"
+                    "${playerSettings.streamAutoPlaySelectedAddons.size} seleccionados"
                 }
                 NavigationSettingsItem(
                     icon = Icons.Default.Language,
-                    title = "Allowed Addons",
+                    title = "Addons permitidos",
                     subtitle = addonSubtitle,
                     onClick = onShowAddonSelectionDialog,
                     onFocused = onItemFocused
@@ -216,13 +216,13 @@ internal fun LazyListScope.autoPlaySettingsItems(
         if (playerSettings.streamAutoPlaySource != StreamAutoPlaySource.INSTALLED_ADDONS_ONLY) {
             item {
                 val pluginSubtitle = if (playerSettings.streamAutoPlaySelectedPlugins.isEmpty()) {
-                    "All enabled plugins"
+                    "Todos los plugins habilitados"
                 } else {
-                    "${playerSettings.streamAutoPlaySelectedPlugins.size} selected"
+                    "${playerSettings.streamAutoPlaySelectedPlugins.size} seleccionados"
                 }
                 NavigationSettingsItem(
                     icon = Icons.Default.Extension,
-                    title = "Allowed Plugins",
+                    title = "Plugins permitidos",
                     subtitle = pluginSubtitle,
                     onClick = onShowPluginSelectionDialog,
                     onFocused = onItemFocused
@@ -234,11 +234,11 @@ internal fun LazyListScope.autoPlaySettingsItems(
     if (playerSettings.streamAutoPlayMode == StreamAutoPlayMode.REGEX_MATCH) {
         item {
             val regexSubtitle = playerSettings.streamAutoPlayRegex.ifBlank {
-                "No pattern set. Example: 4K|2160p|Remux"
+                "Sin patrón establecido. Ejemplo: 4K|2160p|Remux"
             }
             NavigationSettingsItem(
                 icon = Icons.Default.Tune,
-                title = "Regex Pattern",
+                title = "Patrón Regex",
                 subtitle = regexSubtitle,
                 onClick = onShowRegexDialog,
                 onFocused = onItemFocused
@@ -328,8 +328,8 @@ internal fun AutoPlaySettingsDialogs(
 
     if (showAddonSelectionDialog) {
         StreamAutoPlayProviderSelectionDialog(
-            title = "Allowed Addons",
-            allLabel = "All installed addons",
+            title = "Addons permitidos",
+            allLabel = "Todos los addons instalados",
             items = installedAddonNames,
             selectedItems = playerSettings.streamAutoPlaySelectedAddons,
             onSelectionSaved = onSetSelectedAddons,
@@ -339,8 +339,8 @@ internal fun AutoPlaySettingsDialogs(
 
     if (showPluginSelectionDialog) {
         StreamAutoPlayProviderSelectionDialog(
-            title = "Allowed Plugins",
-            allLabel = "All enabled plugins",
+            title = "Plugins permitidos",
+            allLabel = "Todos los plugins habilitados",
             items = enabledPluginNames,
             selectedItems = playerSettings.streamAutoPlaySelectedPlugins,
             onSelectionSaved = onSetSelectedPlugins,
@@ -370,13 +370,13 @@ private fun NextEpisodeThresholdModeDialog(
     val options = listOf(
         Triple(
             NextEpisodeThresholdMode.PERCENTAGE,
-            "Percentage",
-            "Show by playback percent when no outro timestamp is available."
+            "Porcentaje",
+            "Mostrar por porcentaje de reproducción cuando no haya marca de tiempo de cierre disponible."
         ),
         Triple(
             NextEpisodeThresholdMode.MINUTES_BEFORE_END,
-            "Minutes before end",
-            "Show this many minutes before episode end when no outro timestamp is available."
+            "Minutos antes del final",
+            "Mostrar esta cantidad de minutos antes del final del episodio cuando no haya marca de tiempo de cierre."
         )
     )
 
@@ -396,7 +396,7 @@ private fun NextEpisodeThresholdModeDialog(
                     .padding(24.dp)
             ) {
                 Text(
-                    text = "Next Episode Threshold Mode",
+                    text = "Modo de umbral para siguiente episodio",
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary
                 )
@@ -448,7 +448,7 @@ private fun NextEpisodeThresholdModeDialog(
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Icon(
                                         imageVector = Icons.Default.Check,
-                                        contentDescription = "Selected",
+                                        contentDescription = "Seleccionado",
                                         tint = NuvioColors.Primary,
                                         modifier = Modifier.height(20.dp)
                                     )
@@ -464,10 +464,10 @@ private fun NextEpisodeThresholdModeDialog(
 
 private fun formatReuseCacheDuration(hours: Int): String {
     return when {
-        hours < 24 -> "$hours hour${if (hours == 1) "" else "s"}"
+        hours < 24 -> "$hours hora${if (hours == 1) "" else "s"}"
         hours % 24 == 0 -> {
             val days = hours / 24
-            "$days day${if (days == 1) "" else "s"}"
+            "$days día${if (days == 1) "" else "s"}"
         }
         else -> {
             val days = hours / 24
@@ -485,9 +485,9 @@ private fun StreamAutoPlayModeDialog(
 ) {
     val focusRequester = remember { FocusRequester() }
     val options = listOf(
-        Triple(StreamAutoPlayMode.MANUAL, "Manual", "Always show source list and let me choose."),
-        Triple(StreamAutoPlayMode.FIRST_STREAM, "Auto-play first stream", "Play the first available source automatically."),
-        Triple(StreamAutoPlayMode.REGEX_MATCH, "Auto-play regex match", "Play first source whose text matches your regex pattern.")
+        Triple(StreamAutoPlayMode.MANUAL, "Manual", "Mostrar siempre la lista de fuentes y permitirme elegir."),
+        Triple(StreamAutoPlayMode.FIRST_STREAM, "Reproducir primera fuente", "Reproducir la primera fuente disponible automáticamente."),
+        Triple(StreamAutoPlayMode.REGEX_MATCH, "Reproducir coincidencia de regex", "Reproducir la primera fuente cuyo texto coincida con tu patrón regex.")
     )
 
     LaunchedEffect(Unit) {
@@ -506,7 +506,7 @@ private fun StreamAutoPlayModeDialog(
                     .padding(24.dp)
             ) {
                 Text(
-                    text = "Auto Stream Selection",
+                    text = "Selección automática de fuente",
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary
                 )
@@ -559,7 +559,7 @@ private fun StreamAutoPlayModeDialog(
                                 if (isSelected) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
-                                        contentDescription = "Selected",
+                                        contentDescription = "Seleccionado",
                                         tint = NuvioColors.Primary,
                                         modifier = Modifier.height(20.dp)
                                     )
@@ -606,7 +606,7 @@ private fun StreamReuseLastLinkCacheDurationDialog(
                     .padding(24.dp)
             ) {
                 Text(
-                    text = "Last Link Cache Duration",
+                    text = "Duración de caché del último enlace",
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary
                 )
@@ -649,7 +649,7 @@ private fun StreamReuseLastLinkCacheDurationDialog(
                                 if (isSelected) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
-                                        contentDescription = "Selected",
+                                        contentDescription = "Seleccionado",
                                         tint = NuvioColors.Primary,
                                         modifier = Modifier.height(20.dp)
                                     )
@@ -673,18 +673,18 @@ private fun StreamAutoPlaySourceDialog(
     val options = listOf(
         Triple(
             StreamAutoPlaySource.ALL_SOURCES,
-            "All sources",
-            "Auto-play can use both installed addons and enabled plugins."
+            "Todas las fuentes",
+            "La reproducción automática puede usar tanto addons instalados como plugins habilitados."
         ),
         Triple(
             StreamAutoPlaySource.INSTALLED_ADDONS_ONLY,
-            "Installed addons only",
-            "Auto-play only considers streams coming from your installed addons."
+            "Solo addons instalados",
+            "La reproducción automática solo considera enlaces provenientes de tus addons instalados."
         ),
         Triple(
             StreamAutoPlaySource.ENABLED_PLUGINS_ONLY,
-            "Enabled plugins only",
-            "Auto-play only considers streams coming from enabled plugins."
+            "Solo plugins habilitados",
+            "La reproducción automática solo considera enlaces provenientes de plugins habilitados."
         )
     )
 
@@ -704,7 +704,7 @@ private fun StreamAutoPlaySourceDialog(
                     .padding(24.dp)
             ) {
                 Text(
-                    text = "Auto-play Source Scope",
+                    text = "Fuentes para reproducción automática",
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary
                 )
@@ -756,7 +756,7 @@ private fun StreamAutoPlaySourceDialog(
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Icon(
                                         imageVector = Icons.Default.Check,
-                                        contentDescription = "Selected",
+                                        contentDescription = "Seleccionado",
                                         tint = NuvioColors.Primary,
                                         modifier = Modifier.height(20.dp)
                                     )
@@ -844,7 +844,7 @@ private fun StreamAutoPlayProviderSelectionDialog(
                         if (selected.isEmpty()) {
                             Icon(
                                 imageVector = Icons.Default.Check,
-                                contentDescription = "Selected",
+                                contentDescription = "Seleccionado",
                                 tint = NuvioColors.Primary,
                                 modifier = Modifier.height(20.dp)
                             )
@@ -854,7 +854,7 @@ private fun StreamAutoPlayProviderSelectionDialog(
 
                 if (items.isEmpty()) {
                     Text(
-                        text = "No items available",
+                        text = "No hay elementos disponibles",
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )
@@ -902,7 +902,7 @@ private fun StreamAutoPlayProviderSelectionDialog(
                                     if (isSelected) {
                                         Icon(
                                             imageVector = Icons.Default.Check,
-                                            contentDescription = "Selected",
+                                            contentDescription = "Seleccionado",
                                             tint = NuvioColors.Primary,
                                             modifier = Modifier.height(18.dp)
                                         )
@@ -930,18 +930,18 @@ private fun StreamRegexDialog(
     val keyboardController = LocalSoftwareKeyboardController.current
     val presets = remember {
         listOf(
-            "Any 1080p+" to "(2160p|4k|1080p)",
+            "Cualquiera 1080p+" to "(2160p|4k|1080p)",
             "4K / Remux" to "(2160p|4k|remux)",
-            "1080p Standard" to "(1080p|full\\s*hd)",
-            "720p / Smaller" to "(720p|webrip|web-dl)",
-            "WEB Sources" to "(web[-\\s]?dl|webrip)",
-            "BluRay Quality" to "(bluray|b[dr]rip|remux)",
+            "1080p Estándar" to "(1080p|full\\s*hd)",
+            "720p / Menor" to "(720p|webrip|web-dl)",
+            "Fuentes WEB" to "(web[-\\s]?dl|webrip)",
+            "Calidad BluRay" to "(bluray|b[dr]rip|remux)",
             "HEVC / x265" to "(hevc|x265|h\\.265)",
             "AVC / x264" to "(x264|h\\.264|avc)",
             "HDR / Dolby Vision" to "(hdr|hdr10\\+?|dv|dolby\\s*vision)",
             "Dolby Atmos / DTS" to "(atmos|truehd|dts[-\\s]?hd|dtsx?)",
-            "English" to "(\\beng\\b|english)",
-            "No CAM/TS" to "^(?!.*\\b(cam|hdcam|ts|telesync)\\b).*$"
+            "Inglés" to "(\\beng\\b|english)",
+            "Sin CAM/TS" to "^(?!.*\\b(cam|hdcam|ts|telesync)\\b).*$"
         )
     }
 
@@ -962,18 +962,18 @@ private fun StreamRegexDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Stream Regex Pattern",
+                    text = "Patrón Regex",
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary
                 )
                 Text(
-                    text = "Matches against stream name/title/description/addon/url. Example: 4K|2160p|Remux",
+                    text = "Busca coincidencias en el nombre del enlace/título/descripción/addon/url. Ejemplo: 4K|2160p|Remux",
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextSecondary
                 )
 
                 Text(
-                    text = "Presets",
+                    text = "Ajustes preestablecidos",
                     style = MaterialTheme.typography.titleSmall,
                     color = NuvioColors.TextSecondary
                 )
@@ -1092,7 +1092,7 @@ private fun StreamRegexDialog(
                         ),
                         shape = ButtonDefaults.shape(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
                     ) {
-                        Text("Cancel")
+                        Text("Cancelar")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -1108,7 +1108,7 @@ private fun StreamRegexDialog(
                         ),
                         shape = ButtonDefaults.shape(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
                     ) {
-                        Text("Clear")
+                        Text("Limpiar")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -1117,7 +1117,7 @@ private fun StreamRegexDialog(
                             if (value.isNotEmpty()) {
                                 val valid = runCatching { Regex(value, RegexOption.IGNORE_CASE) }.isSuccess
                                 if (!valid) {
-                                    regexError = "Invalid regex pattern"
+                                    regexError = "Patrón regex no válido"
                                     return@Button
                                 }
                             }
@@ -1131,7 +1131,7 @@ private fun StreamRegexDialog(
                         ),
                         shape = ButtonDefaults.shape(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
                     ) {
-                        Text("Save")
+                        Text("Guardar")
                     }
                 }
             }
