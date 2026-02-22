@@ -42,8 +42,8 @@ fun AboutScreen(
     BackHandler { onBackPress() }
 
     SettingsStandaloneScaffold(
-        title = "About",
-        subtitle = "App information, updates, and legal links"
+        title = "Acerca de",
+        subtitle = "Información de la aplicación, actualizaciones y enlaces legales"
     ) {
         AboutSettingsContent()
     }
@@ -61,8 +61,8 @@ fun AboutSettingsContent(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         SettingsDetailHeader(
-            title = "About",
-            subtitle = "App information, updates, and legal links"
+            title = "Acerca de",
+            subtitle = "Información de la aplicación, actualizaciones y enlaces legales"
         )
 
         SettingsGroupCard(
@@ -86,14 +86,14 @@ fun AboutSettingsContent(
                 )
 
                 Text(
-                    text = "Made with \u2764\uFE0F by Tapframe and friends",
+                    text = "Hecho con \u2764\uFE0F por Tapframe y amigos",
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextSecondary,
                     textAlign = TextAlign.Center
                 )
 
                 Text(
-                    text = "Version ${BuildConfig.VERSION_NAME}",
+                    text = "Versión ${BuildConfig.VERSION_NAME}",
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextSecondary,
                     textAlign = TextAlign.Center
@@ -102,8 +102,8 @@ fun AboutSettingsContent(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 SettingsActionRow(
-                    title = "Check for updates",
-                    subtitle = "Download latest release",
+                    title = "Buscar actualizaciones",
+                    subtitle = "Descargar la última versión",
                     trailingIcon = Icons.Default.OpenInNew,
                     modifier = if (initialFocusRequester != null) {
                         Modifier.focusRequester(initialFocusRequester)
@@ -116,8 +116,8 @@ fun AboutSettingsContent(
                 )
 
                 SettingsActionRow(
-                    title = "Privacy Policy",
-                    subtitle = "View our privacy policy",
+                    title = "Política de privacidad",
+                    subtitle = "Ver nuestra política de privacidad",
                     trailingIcon = Icons.Default.OpenInNew,
                     onClick = {
                         val intent = Intent(
