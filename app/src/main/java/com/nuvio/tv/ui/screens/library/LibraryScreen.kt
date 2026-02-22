@@ -126,7 +126,7 @@ fun LibraryScreen(
             ) {
                 LoadingIndicator()
                 Text(
-                    text = "Syncing Trakt library...",
+                    text = "Sincronizando biblioteca de Trakt...",
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
@@ -151,7 +151,7 @@ fun LibraryScreen(
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Library",
+                    text = "Biblioteca",
                     style = MaterialTheme.typography.headlineMedium,
                     color = if (showBuiltInHeader) NuvioColors.TextPrimary else Color.Transparent,
                     fontWeight = FontWeight.SemiBold,
@@ -203,14 +203,14 @@ fun LibraryScreen(
 
         item {
             if (uiState.visibleItems.isEmpty()) {
-                val selectedTypeLabel = uiState.selectedTypeTab?.label?.lowercase() ?: "items"
+                val selectedTypeLabel = uiState.selectedTypeTab?.label?.lowercase() ?: "elementos"
                 val title = when (uiState.sourceMode) {
-                    LibrarySourceMode.LOCAL -> "No $selectedTypeLabel yet"
-                    LibrarySourceMode.TRAKT -> "No $selectedTypeLabel in this list"
+                    LibrarySourceMode.LOCAL -> "Aún no hay $selectedTypeLabel"
+                    LibrarySourceMode.TRAKT -> "No hay $selectedTypeLabel en esta lista"
                 }
                 val subtitle = when (uiState.sourceMode) {
-                    LibrarySourceMode.LOCAL -> "Start saving your favorites to see them here"
-                    LibrarySourceMode.TRAKT -> "Use + in details to add items to watchlist or lists"
+                    LibrarySourceMode.LOCAL -> "Empieza a guardar tus favoritos para verlos aquí"
+                    LibrarySourceMode.TRAKT -> "Usa el botón + en los detalles para añadir elementos"
                 }
                 EmptyScreenState(
                     title = title,
@@ -316,8 +316,8 @@ private fun LibrarySelectorsRow(
     onSelectList: (String) -> Unit,
     onSelectType: (LibraryTypeTab) -> Unit
 ) {
-    val selectedListLabel = listTabs.firstOrNull { it.key == selectedListKey }?.title ?: "Select"
-    val selectedTypeLabel = selectedTypeTab?.label ?: "All"
+    val selectedListLabel = listTabs.firstOrNull { it.key == selectedListKey }?.title ?: "Seleccionar"
+    val selectedTypeLabel = selectedTypeTab?.label ?: "Todos"
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -329,7 +329,7 @@ private fun LibrarySelectorsRow(
                     .weight(1f)
                     .padding(start = 48.dp)
                     .focusRequester(primaryFocusRequester),
-                title = "List",
+                title = "Lista",
                 value = selectedListLabel,
                 expanded = expandedPicker == "list",
                 options = listTabs.map { LibraryOption(it.title, it.key) },
@@ -349,7 +349,7 @@ private fun LibrarySelectorsRow(
                     .padding(start = 48.dp, end = 48.dp)
                     .focusRequester(primaryFocusRequester)
             },
-            title = "Type",
+            title = "Tipo",
             value = selectedTypeLabel,
             expanded = expandedPicker == "type",
             options = typeTabs.map { LibraryOption(it.label, it.key) },
@@ -427,7 +427,7 @@ private fun LibraryDropdownPicker(
                     )
                     Icon(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (expanded) "Collapse $title" else "Expand $title",
+                        contentDescription = if (expanded) "Contraer $title" else "Expandir $title",
                         tint = if (isFocused) NuvioColors.FocusRing else NuvioColors.TextSecondary
                     )
                 }
@@ -494,7 +494,7 @@ private fun LibraryActionsRow(
                 contentColor = NuvioColors.TextPrimary
             )
         ) {
-            Text("Manage Lists")
+            Text("Gestionar listas")
         }
         Button(
             onClick = onRefresh,
@@ -504,7 +504,7 @@ private fun LibraryActionsRow(
                 contentColor = NuvioColors.TextPrimary
             )
         ) {
-            Text(if (isSyncing) "Syncing..." else "Sync")
+            Text(if (isSyncing) "Sincronizando..." else "Sincronizar")
         }
     }
 }
@@ -546,7 +546,7 @@ private fun ManageListsDialog(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(
-                    text = "Manage Trakt Lists",
+                    text = "Gestionar listas de Trakt",
                     style = MaterialTheme.typography.titleLarge,
                     color = NuvioColors.TextPrimary
                 )
@@ -561,7 +561,7 @@ private fun ManageListsDialog(
 
                 if (personalTabs.isEmpty()) {
                     Text(
-                        text = "No personal lists yet.",
+                        text = "Aún no hay listas personales.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = NuvioTheme.extendedColors.textSecondary
                     )
@@ -607,7 +607,7 @@ private fun ManageListsDialog(
                             containerColor = NuvioColors.BackgroundCard,
                             contentColor = NuvioColors.TextPrimary
                         )
-                    ) { Text("Create") }
+                    ) { Text("Crear") }
                     Button(
                         onClick = onEdit,
                         enabled = !pending && selectedKey != null,
@@ -615,7 +615,7 @@ private fun ManageListsDialog(
                             containerColor = NuvioColors.BackgroundCard,
                             contentColor = NuvioColors.TextPrimary
                         )
-                    ) { Text("Edit") }
+                    ) { Text("Editar") }
                     Button(
                         onClick = onMoveUp,
                         enabled = !pending && selectedKey != null,
@@ -623,7 +623,7 @@ private fun ManageListsDialog(
                             containerColor = NuvioColors.BackgroundCard,
                             contentColor = NuvioColors.TextPrimary
                         )
-                    ) { Text("Move Up") }
+                    ) { Text("Subir") }
                     Button(
                         onClick = onMoveDown,
                         enabled = !pending && selectedKey != null,
@@ -631,7 +631,7 @@ private fun ManageListsDialog(
                             containerColor = NuvioColors.BackgroundCard,
                             contentColor = NuvioColors.TextPrimary
                         )
-                    ) { Text("Move Down") }
+                    ) { Text("Bajar") }
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -642,7 +642,7 @@ private fun ManageListsDialog(
                             containerColor = Color(0xFF4A2323),
                             contentColor = NuvioColors.TextPrimary
                         )
-                    ) { Text("Delete") }
+                    ) { Text("Eliminar") }
                     Button(
                         onClick = onDismiss,
                         enabled = !pending,
@@ -651,7 +651,7 @@ private fun ManageListsDialog(
                             containerColor = NuvioColors.BackgroundCard,
                             contentColor = NuvioColors.TextPrimary
                         )
-                    ) { Text("Close") }
+                    ) { Text("Cerrar") }
                 }
             }
         }
@@ -687,7 +687,7 @@ private fun ListEditorDialog(
 
     NuvioDialog(
         onDismiss = onCancel,
-        title = if (state.mode == LibraryListEditorState.Mode.CREATE) "Create List" else "Edit List",
+        title = if (state.mode == LibraryListEditorState.Mode.CREATE) "Crear lista" else "Editar lista",
         width = 560.dp
     ) {
         androidx.compose.material3.OutlinedTextField(
@@ -721,7 +721,7 @@ private fun ListEditorDialog(
                     keyboardController?.hide()
                 }
             ),
-            label = { androidx.compose.material3.Text("Name") },
+            label = { androidx.compose.material3.Text("Nombre") },
             colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                 focusedTextColor = NuvioColors.TextPrimary,
                 unfocusedTextColor = NuvioColors.TextPrimary,
@@ -759,7 +759,7 @@ private fun ListEditorDialog(
             readOnly = !descriptionEditing,
             minLines = 3,
             maxLines = 5,
-            label = { androidx.compose.material3.Text("Description") },
+            label = { androidx.compose.material3.Text("Descripción") },
             colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                 focusedTextColor = NuvioColors.TextPrimary,
                 unfocusedTextColor = NuvioColors.TextPrimary,
@@ -774,7 +774,7 @@ private fun ListEditorDialog(
         )
 
         Text(
-            text = "Privacy",
+            text = "Privacidad",
             style = MaterialTheme.typography.bodyMedium,
             color = NuvioTheme.extendedColors.textSecondary
         )
@@ -782,6 +782,12 @@ private fun ListEditorDialog(
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(TraktListPrivacy.entries.toList(), key = { it.name }) { privacy ->
                 val selected = privacy == state.privacy
+                val labelTraducida = when(privacy.apiValue.lowercase()) {
+                    "private" -> "Privada"
+                    "public" -> "Pública"
+                    "friends" -> "Amigos"
+                    else -> privacy.apiValue.replaceFirstChar { it.uppercase() }
+                }
                 Button(
                     onClick = { onPrivacyChanged(privacy) },
                     enabled = !pending,
@@ -790,7 +796,7 @@ private fun ListEditorDialog(
                         contentColor = NuvioColors.TextPrimary
                     )
                 ) {
-                    Text(privacy.apiValue.replaceFirstChar { it.uppercase() })
+                    Text(labelTraducida)
                 }
             }
         }
@@ -804,7 +810,7 @@ private fun ListEditorDialog(
                 contentColor = NuvioColors.TextPrimary
             )
         ) {
-            Text(if (pending) "Saving..." else "Save")
+            Text(if (pending) "Guardando..." else "Guardar")
         }
     }
 }
@@ -818,8 +824,8 @@ private fun ConfirmDeleteDialog(
 ) {
     NuvioDialog(
         onDismiss = onCancel,
-        title = "Delete this list?",
-        subtitle = "This removes the list and all list items from Trakt.",
+        title = "¿Eliminar esta lista?",
+        subtitle = "Esto elimina la lista y todos sus elementos de Trakt.",
         width = 420.dp
     ) {
         Button(
@@ -831,7 +837,7 @@ private fun ConfirmDeleteDialog(
                 contentColor = NuvioColors.TextPrimary
             )
         ) {
-            Text("Delete")
+            Text("Eliminar")
         }
     }
 }
