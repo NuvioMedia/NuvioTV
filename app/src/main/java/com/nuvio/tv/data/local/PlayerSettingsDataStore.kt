@@ -29,56 +29,56 @@ data class SubtitleLanguage(
 )
 
 val AVAILABLE_SUBTITLE_LANGUAGES = listOf(
-    SubtitleLanguage("en", "English"),
-    SubtitleLanguage("es", "Spanish"),
-    SubtitleLanguage("fr", "French"),
-    SubtitleLanguage("de", "German"),
-    SubtitleLanguage("it", "Italian"),
-    SubtitleLanguage("pt", "Portuguese (Portugal)"),
-    SubtitleLanguage("pt-br", "Portuguese (Brazil)"),
-    SubtitleLanguage("ru", "Russian"),
-    SubtitleLanguage("ja", "Japanese"),
-    SubtitleLanguage("ko", "Korean"),
-    SubtitleLanguage("zh", "Chinese"),
-    SubtitleLanguage("ar", "Arabic"),
+    SubtitleLanguage("en", "Inglés"),
+    SubtitleLanguage("es", "Español"),
+    SubtitleLanguage("fr", "Francés"),
+    SubtitleLanguage("de", "Alemán"),
+    SubtitleLanguage("it", "Italiano"),
+    SubtitleLanguage("pt", "Portugués (Portugal)"),
+    SubtitleLanguage("pt-br", "Portugués (Brasil)"),
+    SubtitleLanguage("ru", "Ruso"),
+    SubtitleLanguage("ja", "Japonés"),
+    SubtitleLanguage("ko", "Coreano"),
+    SubtitleLanguage("zh", "Chino"),
+    SubtitleLanguage("ar", "Árabe"),
     SubtitleLanguage("hi", "Hindi"),
-    SubtitleLanguage("tr", "Turkish"),
-    SubtitleLanguage("pl", "Polish"),
-    SubtitleLanguage("nl", "Dutch"),
-    SubtitleLanguage("sv", "Swedish"),
-    SubtitleLanguage("da", "Danish"),
-    SubtitleLanguage("no", "Norwegian"),
-    SubtitleLanguage("fi", "Finnish"),
-    SubtitleLanguage("th", "Thai"),
-    SubtitleLanguage("vi", "Vietnamese"),
-    SubtitleLanguage("id", "Indonesian"),
-    SubtitleLanguage("ms", "Malay"),
-    SubtitleLanguage("he", "Hebrew"),
-    SubtitleLanguage("el", "Greek"),
-    SubtitleLanguage("cs", "Czech"),
-    SubtitleLanguage("hu", "Hungarian"),
-    SubtitleLanguage("ro", "Romanian"),
-    SubtitleLanguage("uk", "Ukrainian"),
-    SubtitleLanguage("bg", "Bulgarian"),
-    SubtitleLanguage("hr", "Croatian"),
-    SubtitleLanguage("sk", "Slovak"),
-    SubtitleLanguage("sl", "Slovenian"),
-    SubtitleLanguage("sr", "Serbian"),
+    SubtitleLanguage("tr", "Turco"),
+    SubtitleLanguage("pl", "Polaco"),
+    SubtitleLanguage("nl", "Holandés"),
+    SubtitleLanguage("sv", "Sueco"),
+    SubtitleLanguage("da", "Danés"),
+    SubtitleLanguage("no", "Noruego"),
+    SubtitleLanguage("fi", "Finlandés"),
+    SubtitleLanguage("th", "Tailandés"),
+    SubtitleLanguage("vi", "Vietnamita"),
+    SubtitleLanguage("id", "Indonesio"),
+    SubtitleLanguage("ms", "Malayo"),
+    SubtitleLanguage("he", "Hebreo"),
+    SubtitleLanguage("el", "Griego"),
+    SubtitleLanguage("cs", "Checo"),
+    SubtitleLanguage("hu", "Húngaro"),
+    SubtitleLanguage("ro", "Rumano"),
+    SubtitleLanguage("uk", "Ucraniano"),
+    SubtitleLanguage("bg", "Búlgaro"),
+    SubtitleLanguage("hr", "Croata"),
+    SubtitleLanguage("sk", "Eslovaco"),
+    SubtitleLanguage("sl", "Esloveno"),
+    SubtitleLanguage("sr", "Serbio"),
     SubtitleLanguage("ta", "Tamil"),
     SubtitleLanguage("te", "Telugu"),
     SubtitleLanguage("ml", "Malayalam"),
-    SubtitleLanguage("bn", "Bengali"),
-    SubtitleLanguage("mr", "Marathi"),
-    SubtitleLanguage("gu", "Gujarati"),
-    SubtitleLanguage("kn", "Kannada"),
-    SubtitleLanguage("pa", "Punjabi")
+    SubtitleLanguage("bn", "Bengalí"),
+    SubtitleLanguage("mr", "Maratí"),
+    SubtitleLanguage("gu", "Guyaratí"),
+    SubtitleLanguage("kn", "Canarés"),
+    SubtitleLanguage("pa", "Punyabí")
 )
 
 /**
  * Data class representing subtitle style settings
  */
 data class SubtitleStyleSettings(
-    val preferredLanguage: String = "en",
+    val preferredLanguage: String = "es", // Cambiado el default a "es"
     val secondaryPreferredLanguage: String? = null,
     val size: Int = 120, // Percentage (50-200)
     val verticalOffset: Int = 5, // Percentage from bottom (-20 to 50)
@@ -384,7 +384,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 subtitleOrganizationMode = parseSubtitleOrganizationMode(prefs[subtitleOrganizationModeKey]),
                 subtitleStyle = SubtitleStyleSettings(
                     preferredLanguage = normalizeSelectableLanguageCode(
-                        prefs[subtitlePreferredLanguageKey] ?: "en"
+                        prefs[subtitlePreferredLanguageKey] ?: "es"
                     ),
                     secondaryPreferredLanguage = prefs[subtitleSecondaryLanguageKey]
                         ?.let(::normalizeSelectableLanguageCode),
@@ -635,7 +635,7 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setSubtitlePreferredLanguage(language: String) {
         store().edit { prefs ->
             prefs[subtitlePreferredLanguageKey] = normalizeSelectableLanguageCode(
-                language.ifBlank { "en" }
+                language.ifBlank { "es" } // Ojo aquí, también le cambié el valor por defecto a español
             )
         }
     }
