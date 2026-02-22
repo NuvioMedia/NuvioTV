@@ -72,7 +72,7 @@ fun LayoutSelectionScreen(
         ) {
             // Header
             Text(
-                text = "Welcome to Nuvio",
+                text = "Bienvenido a Nuvio",
                 style = MaterialTheme.typography.headlineLarge,
                 color = NuvioColors.TextPrimary
             )
@@ -80,7 +80,7 @@ fun LayoutSelectionScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Choose your home screen layout",
+                text = "Elige el diseño de tu pantalla de inicio",
                 style = MaterialTheme.typography.bodyLarge,
                 color = NuvioColors.TextSecondary
             )
@@ -146,7 +146,7 @@ fun LayoutSelectionScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Continue",
+                        text = "Continuar",
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White
                     )
@@ -221,9 +221,9 @@ private fun LayoutOptionCard(
 
             Text(
                 text = when (layout) {
-                    HomeLayout.CLASSIC -> "Scroll through categories horizontally"
-                    HomeLayout.GRID -> "Browse everything in a vertical grid with a hero section"
-                    HomeLayout.MODERN -> "Fixed hero with a single active row for faster browsing"
+                    HomeLayout.CLASSIC -> "Desplázate por las categorías horizontalmente"
+                    HomeLayout.GRID -> "Explora todo en una cuadrícula vertical con sección principal"
+                    HomeLayout.MODERN -> "Sección principal fija con una sola fila activa para explorar más rápido"
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = NuvioColors.TextTertiary
@@ -233,7 +233,7 @@ private fun LayoutOptionCard(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = "Seleccionado",
                     tint = NuvioColors.FocusRing,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
