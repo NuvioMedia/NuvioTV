@@ -56,8 +56,8 @@ fun ThemeSettingsScreen(
     BackHandler { onBackPress() }
 
     SettingsStandaloneScaffold(
-        title = "Appearance",
-        subtitle = "Choose your color theme"
+        title = "Apariencia",
+        subtitle = "Elige tu tema de color"
     ) {
         ThemeSettingsContent(viewModel = viewModel)
     }
@@ -75,8 +75,8 @@ fun ThemeSettingsContent(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         SettingsDetailHeader(
-            title = "Appearance",
-            subtitle = "Choose your color theme"
+            title = "Apariencia",
+            subtitle = "Elige tu tema de color"
         )
 
         SettingsGroupCard(
@@ -156,7 +156,7 @@ private fun ThemeCard(
                 if (isSelected) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "Selected",
+                        contentDescription = "Seleccionado",
                         tint = Color.White,
                         modifier = Modifier.size(28.dp)
                     )
