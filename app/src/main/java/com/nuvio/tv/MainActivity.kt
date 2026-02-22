@@ -275,17 +275,17 @@ class MainActivity : ComponentActivity() {
                         listOf(
                             DrawerItem(
                                 route = Screen.Home.route,
-                                label = "Home",
+                                label = "Inicio",
                                 icon = Icons.Default.Home
                             ),
                             DrawerItem(
                                 route = Screen.Search.route,
-                                label = "Search",
+                                label = "Buscar",
                                 iconRes = R.raw.sidebar_search
                             ),
                             DrawerItem(
                                 route = Screen.Library.route,
-                                label = "Library",
+                                label = "Biblioteca",
                                 iconRes = R.raw.sidebar_library
                             ),
                             DrawerItem(
@@ -295,7 +295,7 @@ class MainActivity : ComponentActivity() {
                             ),
                             DrawerItem(
                                 route = Screen.Settings.route,
-                                label = "Settings",
+                                label = "Ajustes",
                                 iconRes = R.raw.sidebar_settings
                             )
                         )
@@ -1046,7 +1046,7 @@ private fun CollapsedSidebarPill(
         if (!iconOnly) {
             Image(
                 painter = painterResource(id = R.drawable.ic_chevron_compact_left),
-                contentDescription = "Expand sidebar",
+                contentDescription = "Expandir menú",
                 modifier = Modifier
                     .width(8.5.dp)
                     .height(16.dp)
