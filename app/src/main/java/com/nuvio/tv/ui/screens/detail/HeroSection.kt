@@ -161,7 +161,7 @@ fun HeroContentSection(
                 exit = fadeOut(tween(300))
             ) {
                 Text(
-                    text = "Press back to exit trailer",
+                    text = "Presiona atrás para salir del tráiler",
                     style = MaterialTheme.typography.labelMedium,
                     color = NuvioColors.TextTertiary,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -181,8 +181,8 @@ fun HeroContentSection(
                     ) {
                         PlayButton(
                             text = nextToWatch?.displayText ?: when {
-                                nextEpisode != null -> "Play S${nextEpisode.season}, E${nextEpisode.episode}"
-                                else -> "Play"
+                                nextEpisode != null -> "Reproducir S${nextEpisode.season?.toString()?.padStart(2, '0')}E${nextEpisode.episode?.toString()?.padStart(2, '0')}"
+                                else -> "Reproducir"
                             },
                             onClick = onPlayClick,
                             focusRequester = playButtonFocusRequester,
@@ -200,7 +200,7 @@ fun HeroContentSection(
                             } else {
                                 null
                             },
-                            contentDescription = if (isInLibrary) "Remove from library" else "Add to library",
+                            contentDescription = if (isInLibrary) "Eliminar de la biblioteca" else "Añadir a la biblioteca",
                             onClick = onToggleLibrary,
                             onLongPress = onLibraryLongPress
                         )
@@ -213,9 +213,9 @@ fun HeroContentSection(
                                     Icons.Default.VisibilityOff
                                 },
                                 contentDescription = if (isMovieWatched) {
-                                    "Mark as unwatched"
+                                    "Marcar como no vista"
                                 } else {
-                                    "Mark as watched"
+                                    "Marcar como vista"
                                 },
                                 onClick = onToggleMovieWatched,
                                 enabled = !isMovieWatchedPending,
@@ -233,7 +233,7 @@ fun HeroContentSection(
                             )
                             ActionIconButtonPainter(
                                 painter = trailerPainter,
-                                contentDescription = "Play trailer",
+                                contentDescription = "Reproducir tráiler",
                                 onClick = onTrailerClick
                             )
                         }
@@ -246,12 +246,12 @@ fun HeroContentSection(
                     val writerLine = meta.writer.takeIf { it.isNotEmpty() }?.joinToString(", ")
                     val creditLine = if (!directorLine.isNullOrBlank()) {
                         if (meta.apiType in listOf("series", "tv")) {
-                            "Creator: $directorLine"
+                            "Creador: $directorLine"
                         } else {
                             "Director: $directorLine"
                         }
                     } else if (!writerLine.isNullOrBlank()) {
-                        "Writer: $writerLine"
+                        "Escritor: $writerLine"
                     } else {
                         null
                     }
@@ -546,7 +546,7 @@ private fun MetaInfoRow(
                     }
                     AsyncImage(
                         model = imdbModel,
-                        contentDescription = "Rating",
+                        contentDescription = "Puntuación",
                         modifier = Modifier.size(30.dp),
                         contentScale = ContentScale.Fit
                     )
