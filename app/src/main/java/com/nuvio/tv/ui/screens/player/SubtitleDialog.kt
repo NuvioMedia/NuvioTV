@@ -111,7 +111,7 @@ internal fun SubtitleSelectionDialog(
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
-                .width(450.dp)
+                .width(560.dp)
                 .clip(RoundedCornerShape(24.dp))
                 .background(Color(0xFF0F0F0F))
         ) {

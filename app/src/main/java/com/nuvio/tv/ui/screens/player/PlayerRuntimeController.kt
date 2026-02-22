@@ -130,6 +130,7 @@ class PlayerRuntimeController(
     internal var hideAspectRatioIndicatorJob: Job? = null
     internal var hideStreamSourceIndicatorJob: Job? = null
     internal var hideSubtitleDelayOverlayJob: Job? = null
+    internal var subtitleAutoSyncLoadJob: Job? = null
     internal var nextEpisodeAutoPlayJob: Job? = null
     internal var sourceStreamsJob: Job? = null
     internal var sourceStreamsCacheRequestKey: String? = null

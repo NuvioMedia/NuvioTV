@@ -85,6 +85,7 @@ internal fun PlayerRuntimeController.persistRememberedLinkAudioSelection(trackIn
 }
 
 internal fun PlayerRuntimeController.selectSubtitleTrack(trackIndex: Int) {
+    resetSubtitleAutoSyncState()
     _exoPlayer?.let { player ->
         Log.d(PlayerRuntimeController.TAG, "Selecting INTERNAL subtitle trackIndex=$trackIndex")
         val tracks = player.currentTracks
@@ -110,10 +111,36 @@ internal fun PlayerRuntimeController.selectSubtitleTrack(trackIndex: Int) {
 }
 
 internal fun PlayerRuntimeController.disableSubtitles() {
+    resetSubtitleAutoSyncState()
     _exoPlayer?.let { player ->
         player.trackSelectionParameters = player.trackSelectionParameters
             .buildUpon()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+            .build()
+    }
+}
+
+internal fun PlayerRuntimeController.refreshActiveSubtitleTrackAfterTimingChange() {
+    val player = _exoPlayer ?: return
+    val state = _uiState.value
+    if (state.selectedAddonSubtitle == null && state.selectedSubtitleTrackIndex < 0) return
+
+    // Force a renderer reset so stale cues from the old delay do not linger on screen.
+    player.trackSelectionParameters = player.trackSelectionParameters
+        .buildUpon()
+        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+        .build()
+
+    scope.launch {
+        delay(90)
+        if (_exoPlayer !== player) return@launch
+        val latestState = _uiState.value
+        if (latestState.selectedAddonSubtitle == null && latestState.selectedSubtitleTrackIndex < 0) {
+            return@launch
+        }
+        player.trackSelectionParameters = player.trackSelectionParameters
+            .buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
             .build()
     }
 }
@@ -125,6 +152,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: com.nuvio.tv.
             return@let
         }
         Log.d(PlayerRuntimeController.TAG, "Selecting ADDON subtitle lang=${subtitle.lang} id=${subtitle.id}")
+        resetSubtitleAutoSyncState()
 
         val normalizedLang = PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)
         val addonTrackId = "${PlayerRuntimeController.ADDON_SUBTITLE_TRACK_ID_PREFIX}${subtitle.id}"
