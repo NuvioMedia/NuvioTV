@@ -66,8 +66,8 @@ internal fun ProfileSettingsContent(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SettingsDetailHeader(
-            title = "Profiles",
-            subtitle = "Manage user profiles for this account."
+            title = "Perfiles",
+            subtitle = "Gestionar perfiles de usuario para esta cuenta."
         )
 
         SettingsGroupCard(modifier = Modifier.fillMaxSize()) {
@@ -184,7 +184,7 @@ private fun ProfileListItem(
                 )
                 if (profile.isPrimary) {
                     Text(
-                        text = "Primary",
+                        text = "Principal",
                         color = NuvioColors.TextSecondary,
                         fontSize = 12.sp
                     )
@@ -195,7 +195,7 @@ private fun ProfileListItem(
                     }
                     if (sharing.isNotEmpty()) {
                         Text(
-                            text = "Shares primary's ${sharing.joinToString(" & ")}",
+                            text = "Comparte ${sharing.joinToString(" y ")} del principal",
                             color = NuvioColors.TextSecondary,
                             fontSize = 12.sp
                         )
@@ -204,7 +204,7 @@ private fun ProfileListItem(
             }
 
             Text(
-                text = "Edit",
+                text = "Editar",
                 color = NuvioColors.TextSecondary,
                 fontSize = 14.sp
             )
@@ -256,7 +256,7 @@ private fun AddProfileButton(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Add Profile",
+                    text = "Añadir perfil",
                     color = NuvioColors.TextSecondary,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium
@@ -273,7 +273,7 @@ private fun ProfileCreateForm(
     onCreate: (name: String, color: String, useAddons: Boolean, usePlugins: Boolean) -> Unit,
     onCancel: () -> Unit
 ) {
-    var name by remember { mutableStateOf("Profile ${existingProfiles.size + 1}") }
+    var name by remember { mutableStateOf("Perfil ${existingProfiles.size + 1}") }
     val usedColors = existingProfiles.map { it.avatarColorHex }.toSet()
     val defaultColor = PROFILE_AVATAR_COLORS.firstOrNull { it !in usedColors }
         ?: PROFILE_AVATAR_COLORS.first()
@@ -288,7 +288,7 @@ private fun ProfileCreateForm(
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text(
-            text = "Create Profile",
+            text = "Crear perfil",
             color = NuvioColors.TextPrimary,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold
@@ -297,11 +297,11 @@ private fun ProfileCreateForm(
         InputField(
             value = name,
             onValueChange = { if (it.length <= 20) name = it },
-            placeholder = "Profile name"
+            placeholder = "Nombre del perfil"
         )
 
         Text(
-            text = "Avatar Color",
+            text = "Color del avatar",
             color = NuvioColors.TextSecondary,
             fontSize = 14.sp
         )
@@ -316,13 +316,13 @@ private fun ProfileCreateForm(
         }
 
         SettingsToggleRow(
-            title = "Use primary profile's addons",
+            title = "Usar addons del perfil principal",
             subtitle = null,
             checked = usesPrimaryAddons,
             onToggle = { usesPrimaryAddons = !usesPrimaryAddons }
         )
         SettingsToggleRow(
-            title = "Use primary profile's plugins",
+            title = "Usar plugins del perfil principal",
             subtitle = null,
             checked = usesPrimaryPlugins,
             onToggle = { usesPrimaryPlugins = !usesPrimaryPlugins }
@@ -332,9 +332,9 @@ private fun ProfileCreateForm(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            ProfileFormButton(text = "Cancel", onClick = onCancel, modifier = Modifier.weight(1f))
+            ProfileFormButton(text = "Cancelar", onClick = onCancel, modifier = Modifier.weight(1f))
             ProfileFormButton(
-                text = if (isCreating) "Creating..." else "Create",
+                text = if (isCreating) "Creando..." else "Crear",
                 enabled = name.isNotBlank() && !isCreating,
                 onClick = { onCreate(name.trim(), selectedColor, usesPrimaryAddons, usesPrimaryPlugins) },
                 modifier = Modifier.weight(1f)
@@ -362,7 +362,7 @@ private fun ProfileEditForm(
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text(
-            text = "Edit Profile ${profile.id}",
+            text = "Editar perfil ${profile.id}",
             color = NuvioColors.TextPrimary,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold
@@ -371,11 +371,11 @@ private fun ProfileEditForm(
         InputField(
             value = name,
             onValueChange = { if (it.length <= 20) name = it },
-            placeholder = "Profile name"
+            placeholder = "Nombre del perfil"
         )
 
         Text(
-            text = "Avatar Color",
+            text = "Color del avatar",
             color = NuvioColors.TextSecondary,
             fontSize = 14.sp
         )
@@ -391,13 +391,13 @@ private fun ProfileEditForm(
 
         if (!profile.isPrimary) {
             SettingsToggleRow(
-                title = "Use primary profile's addons",
+                title = "Usar addons del perfil principal",
                 subtitle = null,
                 checked = usesPrimaryAddons,
                 onToggle = { usesPrimaryAddons = !usesPrimaryAddons }
             )
             SettingsToggleRow(
-                title = "Use primary profile's plugins",
+                title = "Usar plugins del perfil principal",
                 subtitle = null,
                 checked = usesPrimaryPlugins,
                 onToggle = { usesPrimaryPlugins = !usesPrimaryPlugins }
@@ -408,9 +408,9 @@ private fun ProfileEditForm(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            ProfileFormButton(text = "Cancel", onClick = onCancel, modifier = Modifier.weight(1f))
+            ProfileFormButton(text = "Cancelar", onClick = onCancel, modifier = Modifier.weight(1f))
             ProfileFormButton(
-                text = "Save",
+                text = "Guardar",
                 onClick = {
                     onSave(
                         profile.copy(
@@ -426,7 +426,7 @@ private fun ProfileEditForm(
             if (onDelete != null) {
                 var confirmDelete by remember { mutableStateOf(false) }
                 ProfileFormButton(
-                    text = if (confirmDelete) "Confirm" else "Delete",
+                    text = if (confirmDelete) "Confirmar" else "Eliminar",
                     onClick = {
                         if (confirmDelete) onDelete() else confirmDelete = true
                     },
