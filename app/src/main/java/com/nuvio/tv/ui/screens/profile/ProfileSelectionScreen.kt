@@ -140,7 +140,7 @@ fun ProfileSelectionScreen(
             Spacer(modifier = Modifier.height(ProfileSelectionSpacing.LogoToHeading))
 
             Text(
-                text = "Who's watching?",
+                text = "¿Quién está viendo?",
                 color = NuvioColors.TextPrimary,
                 fontSize = 44.sp,
                 fontWeight = FontWeight.Bold,
@@ -150,7 +150,7 @@ fun ProfileSelectionScreen(
             Spacer(modifier = Modifier.height(ProfileSelectionSpacing.HeadingToSubheading))
 
             Text(
-                text = "Select a profile to continue",
+                text = "Selecciona un perfil para continuar",
                 color = NuvioColors.TextSecondary,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium
@@ -171,7 +171,7 @@ fun ProfileSelectionScreen(
             Spacer(modifier = Modifier.weight(1f, fill = true))
 
             Text(
-                text = "Use D-pad to choose a profile",
+                text = "Usa el control para elegir un perfil",
                 color = NuvioColors.TextTertiary.copy(alpha = 0.9f),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
@@ -199,7 +199,7 @@ private fun ProfileGrid(
 
     if (profiles.isEmpty()) {
         Text(
-            text = "No profiles found",
+            text = "No se encontraron perfiles",
             color = NuvioColors.TextSecondary,
             fontSize = 18.sp,
             fontWeight = FontWeight.Medium
@@ -324,7 +324,7 @@ private fun ProfileCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "\u2605",
+                        text = "\u2605", // Estrella
                         color = Color.White,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
@@ -354,7 +354,7 @@ private fun ProfileCard(
         ) {
             if (profile.isPrimary) {
                 Text(
-                    text = "PRIMARY",
+                    text = "PRINCIPAL",
                     color = Color(0xFFFFB300),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
