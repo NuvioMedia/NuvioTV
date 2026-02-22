@@ -177,7 +177,7 @@ fun AddonManagerScreen(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "Using primary profile's addons and can't be changed",
+                            text = "Usando los addons del perfil principal (no se pueden modificar)",
                             style = MaterialTheme.typography.bodyMedium,
                             color = NuvioColors.TextSecondary,
                             modifier = androidx.compose.ui.Modifier.padding(16.dp)
@@ -197,7 +197,7 @@ fun AddonManagerScreen(
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
-                                text = "Install addon",
+                                text = "Instalar addon",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = NuvioColors.TextPrimary
                             )
@@ -291,7 +291,7 @@ fun AddonManagerScreen(
                                     ),
                                     shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                                 ) {
-                                    Text(text = if (uiState.isInstalling) "Installing" else "Install")
+                                    Text(text = if (uiState.isInstalling) "Instalando..." else "Instalar")
                                 }
                             }
 
@@ -325,7 +325,7 @@ fun AddonManagerScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Installed",
+                        text = "Instalados",
                         style = MaterialTheme.typography.titleLarge,
                         color = NuvioColors.TextPrimary
                     )
@@ -339,7 +339,7 @@ fun AddonManagerScreen(
             if (uiState.installedAddons.isEmpty() && !uiState.isLoading) {
                 item {
                     Text(
-                        text = "No addons installed. Add one to get started.",
+                        text = "No hay addons instalados. Añade uno para empezar.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = NuvioColors.TextSecondary
                     )
@@ -429,12 +429,12 @@ private fun ManageFromPhoneCard(onClick: () -> Unit) {
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "Manage from phone",
+                        text = "Gestionar desde el teléfono",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = NuvioColors.TextPrimary
                     )
                     Text(
-                        text = "Scan a QR code to manage addons and Home catalogs from your phone",
+                        text = "Escanea un código QR para gestionar addons y catálogos desde tu teléfono",
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )
@@ -490,12 +490,12 @@ private fun CatalogOrderEntryCard(onClick: () -> Unit) {
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "Reorder home catalogs",
+                        text = "Reordenar catálogos de Inicio",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = NuvioColors.TextPrimary
                     )
                     Text(
-                        text = "Controls catalog row order on Home (Classic + Modern + Grid)",
+                        text = "Controla el orden de las filas en Inicio (Clásico + Moderno + Cuadrícula)",
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )
@@ -539,7 +539,7 @@ private fun QrCodeOverlay(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Scan with your phone to manage addons and catalogs",
+                text = "Escanea con tu teléfono para gestionar addons y catálogos",
                 style = MaterialTheme.typography.bodyMedium,
                 color = NuvioColors.TextSecondary,
                 textAlign = TextAlign.Center
@@ -550,7 +550,7 @@ private fun QrCodeOverlay(
             if (qrBitmap != null) {
                 Image(
                     bitmap = qrBitmap.asImageBitmap(),
-                    contentDescription = "QR Code",
+                    contentDescription = "Código QR",
                     modifier = Modifier.size(220.dp),
                     contentScale = ContentScale.Fit
                 )
@@ -597,7 +597,7 @@ private fun QrCodeOverlay(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Close",
+                        text = "Cerrar",
                         color = NuvioColors.TextPrimary
                     )
                 }
@@ -643,7 +643,7 @@ private fun ConfirmAddonChangesDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Confirm addon & catalog changes",
+                    text = "Confirmar cambios en addons y catálogos",
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary
                 )
@@ -651,7 +651,7 @@ private fun ConfirmAddonChangesDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "The following changes were made from your phone:",
+                    text = "Se realizaron los siguientes cambios desde el teléfono:",
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
@@ -675,7 +675,7 @@ private fun ConfirmAddonChangesDialog(
                     ) {
                         if (pendingChange.addedUrls.isNotEmpty()) {
                             Text(
-                                text = "Added:",
+                                text = "Añadidos:",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = NuvioColors.Success,
                                 modifier = Modifier
@@ -698,7 +698,7 @@ private fun ConfirmAddonChangesDialog(
 
                         if (pendingChange.removedUrls.isNotEmpty()) {
                             Text(
-                                text = "Removed:",
+                                text = "Eliminados:",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = NuvioColors.Error,
                                 modifier = Modifier
@@ -721,7 +721,7 @@ private fun ConfirmAddonChangesDialog(
 
                         if (pendingChange.catalogsReordered) {
                             Text(
-                                text = "Catalog order was changed",
+                                text = "Se cambió el orden de los catálogos",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = NuvioColors.TextSecondary,
                                 modifier = Modifier
@@ -732,7 +732,7 @@ private fun ConfirmAddonChangesDialog(
 
                         if (pendingChange.disabledCatalogNames.isNotEmpty()) {
                             Text(
-                                text = "Catalogs disabled on Home:",
+                                text = "Catálogos desactivados en Inicio:",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = NuvioColors.Error,
                                 modifier = Modifier
@@ -754,7 +754,7 @@ private fun ConfirmAddonChangesDialog(
 
                         if (pendingChange.enabledCatalogNames.isNotEmpty()) {
                             Text(
-                                text = "Catalogs enabled on Home:",
+                                text = "Catálogos activados en Inicio:",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = NuvioColors.Success,
                                 modifier = Modifier
@@ -782,7 +782,7 @@ private fun ConfirmAddonChangesDialog(
                             pendingChange.enabledCatalogNames.isEmpty()
                         ) {
                             Text(
-                                text = "No visible changes detected",
+                                text = "No se detectaron cambios visibles",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = NuvioColors.TextSecondary
                             )
@@ -791,13 +791,13 @@ private fun ConfirmAddonChangesDialog(
                 }
 
                 Text(
-                    text = "Total addons: ${pendingChange.proposedUrls.size}",
+                    text = "Total de addons: ${pendingChange.proposedUrls.size}",
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextTertiary,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    text = "Total catalogs: ${pendingChange.proposedCatalogOrderKeys.size}",
+                    text = "Total de catálogos: ${pendingChange.proposedCatalogOrderKeys.size}",
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextTertiary,
                     modifier = Modifier.fillMaxWidth()
@@ -837,7 +837,7 @@ private fun ConfirmAddonChangesDialog(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Reject",
+                                    text = "Rechazar",
                                     color = NuvioColors.TextPrimary
                                 )
                             }
@@ -859,7 +859,7 @@ private fun ConfirmAddonChangesDialog(
                             shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50))
                         ) {
                             Text(
-                                text = "Confirm",
+                                text = "Confirmar",
                                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                                 color = Color.White
                             )
@@ -969,7 +969,7 @@ private fun AddonCardContent(
                         ),
                         shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                     ) {
-                        Icon(imageVector = Icons.Default.ArrowUpward, contentDescription = "Move up")
+                        Icon(imageVector = Icons.Default.ArrowUpward, contentDescription = "Subir")
                     }
                     Button(
                         onClick = onMoveDown,
@@ -982,7 +982,7 @@ private fun AddonCardContent(
                         ),
                         shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                     ) {
-                        Icon(imageVector = Icons.Default.ArrowDownward, contentDescription = "Move down")
+                        Icon(imageVector = Icons.Default.ArrowDownward, contentDescription = "Bajar")
                     }
                     Button(
                         onClick = onRemove,
@@ -994,7 +994,7 @@ private fun AddonCardContent(
                         ),
                         shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                     ) {
-                        Text(text = "Remove")
+                        Text(text = "Desinstalar")
                     }
                 }
             }
@@ -1018,7 +1018,7 @@ private fun AddonCardContent(
 
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Catalogs: ${addon.catalogs.size} • Types: ${addon.rawTypes.joinToString()}",
+            text = "Catálogos: ${addon.catalogs.size} • Tipos: ${addon.rawTypes.joinToString()}",
             style = MaterialTheme.typography.bodySmall,
             color = NuvioColors.TextTertiary
         )
