@@ -166,7 +166,7 @@ fun PluginScreenContent(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         androidx.tv.material3.Text(
-                            text = "Using primary profile's plugins and can't be changed",
+                            text = "Usando plugins del perfil principal (no se pueden modificar)",
                             style = androidx.tv.material3.MaterialTheme.typography.bodyMedium,
                             color = com.nuvio.tv.ui.theme.NuvioColors.TextSecondary,
                             modifier = Modifier.padding(16.dp)
@@ -190,16 +190,14 @@ fun PluginScreenContent(
                     )
                 }
 
-                // Manage from phone card
                 item {
                     ManageFromPhoneCard(onClick = { viewModel.onEvent(PluginUiEvent.StartQrMode) })
                 }
             }
 
-            // Repositories section
             item {
                 Text(
-                    text = "Repositories (${uiState.repositories.size})",
+                    text = "Repositorios (${uiState.repositories.size})",
                     style = MaterialTheme.typography.titleLarge,
                     color = NuvioColors.TextPrimary
                 )
@@ -208,7 +206,7 @@ fun PluginScreenContent(
             if (uiState.repositories.isEmpty()) {
                 item {
                     EmptyState(
-                        message = "No repositories added yet.\nAdd a repository to get started.",
+                        message = "No se han añadido repositorios aún.\nAñade uno para comenzar.",
                         modifier = Modifier.padding(vertical = 24.dp)
                     )
                 }
@@ -224,12 +222,11 @@ fun PluginScreenContent(
                 )
             }
 
-            // Scrapers section
             if (uiState.scrapers.isNotEmpty()) {
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Providers (${uiState.scrapers.size})",
+                        text = "Proveedores (${uiState.scrapers.size})",
                         style = MaterialTheme.typography.titleLarge,
                         color = NuvioColors.TextPrimary
                     )
@@ -250,36 +247,33 @@ fun PluginScreenContent(
             }
         }
 
-    // Success/Error Messages
-    MessageOverlay(
-        successMessage = uiState.successMessage,
-        errorMessage = uiState.errorMessage
-    )
+        MessageOverlay(
+            successMessage = uiState.successMessage,
+            errorMessage = uiState.errorMessage
+        )
 
-    // QR Code overlay — Popup renders above the entire screen
-    if (uiState.isQrModeActive) {
-        Popup(properties = PopupProperties(focusable = true)) {
-            QrCodeOverlay(
-                qrBitmap = uiState.qrCodeBitmap,
-                serverUrl = uiState.serverUrl,
-                onClose = { viewModel.onEvent(PluginUiEvent.StopQrMode) },
-                hasPendingChange = uiState.pendingRepoChange != null
-            )
-        }
-    }
-
-    // Confirmation dialog overlay
-    if (uiState.pendingRepoChange != null) {
-        Popup(properties = PopupProperties(focusable = true)) {
-            uiState.pendingRepoChange?.let { pending ->
-                ConfirmRepoChangesDialog(
-                    pendingChange = pending,
-                    onConfirm = { viewModel.onEvent(PluginUiEvent.ConfirmPendingRepoChange) },
-                    onReject = { viewModel.onEvent(PluginUiEvent.RejectPendingRepoChange) }
+        if (uiState.isQrModeActive) {
+            Popup(properties = PopupProperties(focusable = true)) {
+                QrCodeOverlay(
+                    qrBitmap = uiState.qrCodeBitmap,
+                    serverUrl = uiState.serverUrl,
+                    onClose = { viewModel.onEvent(PluginUiEvent.StopQrMode) },
+                    hasPendingChange = uiState.pendingRepoChange != null
                 )
             }
         }
-    }
+
+        if (uiState.pendingRepoChange != null) {
+            Popup(properties = PopupProperties(focusable = true)) {
+                uiState.pendingRepoChange?.let { pending ->
+                    ConfirmRepoChangesDialog(
+                        pendingChange = pending,
+                        onConfirm = { viewModel.onEvent(PluginUiEvent.ConfirmPendingRepoChange) },
+                        onReject = { viewModel.onEvent(PluginUiEvent.RejectPendingRepoChange) }
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -303,7 +297,7 @@ private fun PluginHeader(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Manage local scrapers and providers",
+                text = "Gestionar scrapers locales y proveedores",
                 style = MaterialTheme.typography.bodyMedium,
                 color = NuvioColors.TextSecondary
             )
@@ -330,7 +324,7 @@ private fun PluginHeader(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = if (pluginsEnabled) "Enabled" else "Disabled",
+                    text = if (pluginsEnabled) "Activado" else "Desactivado",
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (pluginsEnabled) NuvioColors.Secondary else NuvioColors.TextSecondary
                 )
@@ -359,7 +353,6 @@ private fun AddRepositoryInline(
     val textFieldFocusRequester = remember { FocusRequester() }
     var isEditing by remember { mutableStateOf(false) }
 
-    // When isEditing changes to true, focus the text field and show keyboard
     LaunchedEffect(isEditing) {
         if (isEditing) {
             textFieldFocusRequester.requestFocus()
@@ -374,7 +367,7 @@ private fun AddRepositoryInline(
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "Add repository",
+                text = "Añadir repositorio",
                 style = MaterialTheme.typography.titleMedium,
                 color = NuvioColors.TextPrimary
             )
@@ -384,7 +377,6 @@ private fun AddRepositoryInline(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Surface always stays in the tree for stable D-pad focus
                 Surface(
                     onClick = { isEditing = true },
                     modifier = Modifier.weight(1f),
@@ -438,7 +430,7 @@ private fun AddRepositoryInline(
                             decorationBox = { innerTextField ->
                                 if (url.isEmpty()) {
                                     Text(
-                                        text = "https://example.com/manifest.json",
+                                        text = "https://ejemplo.com/manifest.json",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = NuvioColors.TextTertiary
                                     )
@@ -475,12 +467,12 @@ private fun AddRepositoryInline(
                     } else {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Add",
+                            contentDescription = "Añadir",
                             modifier = Modifier.size(18.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Add")
+                    Text("Añadir")
                 }
             }
         }
@@ -526,12 +518,12 @@ private fun ManageFromPhoneCard(onClick: () -> Unit) {
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "Manage from phone",
+                        text = "Gestionar desde el móvil",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = NuvioColors.TextPrimary
                     )
                     Text(
-                        text = "Scan a QR code to add or remove repositories from your phone",
+                        text = "Escanea un código QR para añadir o quitar repositorios",
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )
@@ -574,7 +566,7 @@ private fun QrCodeOverlay(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Scan with your phone to manage repositories",
+                text = "Escanea con tu móvil para gestionar los repositorios",
                 style = MaterialTheme.typography.bodyMedium,
                 color = NuvioColors.TextSecondary,
                 textAlign = TextAlign.Center
@@ -585,7 +577,7 @@ private fun QrCodeOverlay(
             if (qrBitmap != null) {
                 Image(
                     bitmap = qrBitmap.asImageBitmap(),
-                    contentDescription = "QR Code",
+                    contentDescription = "Código QR",
                     modifier = Modifier.size(220.dp),
                     contentScale = ContentScale.Fit
                 )
@@ -632,7 +624,7 @@ private fun QrCodeOverlay(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Close",
+                        text = "Cerrar",
                         color = NuvioColors.TextPrimary
                     )
                 }
@@ -677,7 +669,7 @@ private fun ConfirmRepoChangesDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Confirm repository changes",
+                    text = "Confirmar cambios en repositorios",
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary
                 )
@@ -685,7 +677,7 @@ private fun ConfirmRepoChangesDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "The following changes were made from your phone:",
+                    text = "Se han detectado los siguientes cambios desde tu móvil:",
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
@@ -709,7 +701,7 @@ private fun ConfirmRepoChangesDialog(
                     ) {
                         if (pendingChange.addedUrls.isNotEmpty()) {
                             Text(
-                                text = "Added:",
+                                text = "Añadidos:",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = NuvioColors.Success,
                                 modifier = Modifier
@@ -731,7 +723,7 @@ private fun ConfirmRepoChangesDialog(
 
                         if (pendingChange.removedUrls.isNotEmpty()) {
                             Text(
-                                text = "Removed:",
+                                text = "Eliminados:",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = NuvioColors.Error,
                                 modifier = Modifier
@@ -753,7 +745,7 @@ private fun ConfirmRepoChangesDialog(
 
                         if (pendingChange.addedUrls.isEmpty() && pendingChange.removedUrls.isEmpty()) {
                             Text(
-                                text = "No changes detected",
+                                text = "No se detectaron cambios",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = NuvioColors.TextSecondary
                             )
@@ -762,7 +754,7 @@ private fun ConfirmRepoChangesDialog(
                 }
 
                 Text(
-                    text = "Total repositories: ${pendingChange.proposedUrls.size}",
+                    text = "Total de repositorios: ${pendingChange.proposedUrls.size}",
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextTertiary,
                     modifier = Modifier.fillMaxWidth()
@@ -802,7 +794,7 @@ private fun ConfirmRepoChangesDialog(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Reject",
+                                    text = "Rechazar",
                                     color = NuvioColors.TextPrimary
                                 )
                             }
@@ -824,7 +816,7 @@ private fun ConfirmRepoChangesDialog(
                             shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50))
                         ) {
                             Text(
-                                text = "Confirm",
+                                text = "Confirmar",
                                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                                 color = Color.White
                             )
@@ -867,12 +859,12 @@ private fun RepositoryCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${repository.scraperCount} providers",
+                    text = "${repository.scraperCount} proveedores",
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextSecondary
                 )
                 Text(
-                    text = "Updated: ${formatDate(repository.lastUpdated)}",
+                    text = "Actualizado: ${formatDate(repository.lastUpdated)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextSecondary
                 )
@@ -892,7 +884,7 @@ private fun RepositoryCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = "Refresh"
+                        contentDescription = "Actualizar"
                     )
                 }
 
@@ -909,7 +901,7 @@ private fun RepositoryCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Remove"
+                        contentDescription = "Eliminar"
                     )
                 }
             }
@@ -932,7 +924,6 @@ private fun ScraperCard(
         showResults = testResults != null
     }
 
-    // Use Box instead of focusable Surface to allow child focus
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -962,7 +953,6 @@ private fun ScraperCard(
                             color = NuvioColors.TextPrimary
                         )
 
-                        // Type badges
                         scraper.supportedTypes.forEach { type ->
                             TypeBadge(type = type)
                         }
@@ -971,7 +961,7 @@ private fun ScraperCard(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "Version ${scraper.version}",
+                        text = "Versión ${scraper.version}",
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )
@@ -981,7 +971,6 @@ private fun ScraperCard(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Test button
                     Button(
                         onClick = onTest,
                         enabled = !isTesting && scraper.enabled,
@@ -998,15 +987,14 @@ private fun ScraperCard(
                         } else {
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "Test",
+                                contentDescription = "Probar",
                                 modifier = Modifier.size(16.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Test")
+                        Text("Probar")
                     }
 
-                    // Enable toggle
                     if (!isReadOnly) {
                         Switch(
                             checked = scraper.enabled,
@@ -1020,7 +1008,6 @@ private fun ScraperCard(
                 }
             }
 
-            // Test results
             AnimatedVisibility(visible = showResults && testResults != null) {
                 Column(
                     modifier = Modifier
@@ -1028,7 +1015,7 @@ private fun ScraperCard(
                         .padding(top = 12.dp)
                 ) {
                     Text(
-                        text = "Test Results (${testResults?.size ?: 0} streams)",
+                        text = "Resultados de la prueba (${testResults?.size ?: 0} streams)",
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )
@@ -1041,7 +1028,7 @@ private fun ScraperCard(
 
                     if ((testResults?.size ?: 0) > 3) {
                         Text(
-                            text = "... and ${testResults!!.size - 3} more",
+                            text = "... y ${testResults!!.size - 3} más",
                             style = MaterialTheme.typography.bodySmall,
                             color = NuvioColors.TextSecondary
                         )
@@ -1054,6 +1041,12 @@ private fun ScraperCard(
 
 @Composable
 private fun TypeBadge(type: String) {
+    val translatedType = when (type.lowercase()) {
+        "movie" -> "PELÍCULA"
+        "series", "show", "tv" -> "SERIE"
+        else -> type.uppercase()
+    }
+    
     val color = when (type.lowercase()) {
         "movie" -> Color(0xFF4CAF50)
         "series", "show", "tv" -> Color(0xFF2196F3)
@@ -1069,7 +1062,7 @@ private fun TypeBadge(type: String) {
             .padding(horizontal = 6.dp, vertical = 2.dp)
     ) {
         Text(
-            text = type.uppercase(),
+            text = translatedType,
             style = MaterialTheme.typography.labelSmall,
             color = color
         )
@@ -1189,5 +1182,5 @@ private fun MessageOverlay(
 }
 
 private fun formatDate(timestamp: Long): String {
-    return SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(timestamp))
+    return SimpleDateFormat("dd 'de' MMM, yyyy", Locale("es", "ES")).format(Date(timestamp))
 }
