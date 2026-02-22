@@ -117,7 +117,7 @@ fun NextEpisodeCardOverlay(
                 ) {
                     AsyncImage(
                         model = nextEpisode.thumbnail,
-                        contentDescription = "Next episode thumbnail",
+                        contentDescription = "Miniatura del siguiente episodio",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
@@ -136,7 +136,7 @@ fun NextEpisodeCardOverlay(
 
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                     Text(
-                        text = "Next Episode",
+                        text = "Siguiente episodio",
                         color = Color.White.copy(alpha = 0.8f),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium
@@ -152,9 +152,9 @@ fun NextEpisodeCardOverlay(
                     )
                     val autoPlayStatus = when {
                         !isPlayable && !unairedMessage.isNullOrBlank() -> unairedMessage
-                        isAutoPlaySearching -> "Finding source..."
+                        isAutoPlaySearching -> "Buscando fuente..."
                         !autoPlaySourceName.isNullOrBlank() && autoPlayCountdownSec != null ->
-                            "Playing via $autoPlaySourceName in ${autoPlayCountdownSec}s"
+                            "Reproduciendo vía $autoPlaySourceName en ${autoPlayCountdownSec}s"
                         else -> null
                     }
                     if (autoPlayStatus != null) {
@@ -187,7 +187,7 @@ fun NextEpisodeCardOverlay(
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        text = if (isPlayable) "Play" else "Unaired",
+                        text = if (isPlayable) "Reproducir" else "No emitido",
                         color = if (isPlayable) Color.White else Color.White.copy(alpha = 0.72f),
                         fontSize = 12.sp,
                         modifier = Modifier.padding(start = 3.dp)
