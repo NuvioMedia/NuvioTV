@@ -77,7 +77,7 @@ internal fun LazyListScope.subtitleSettingsItems(
     item {
         Spacer(modifier = androidx.compose.ui.Modifier.height(16.dp))
         Text(
-            text = "Subtitles",
+            text = "Subtítulos",
             style = MaterialTheme.typography.titleMedium,
             color = NuvioColors.TextSecondary,
             modifier = androidx.compose.ui.Modifier.padding(vertical = 8.dp)
@@ -86,16 +86,16 @@ internal fun LazyListScope.subtitleSettingsItems(
 
     item {
         val languageName = if (playerSettings.subtitleStyle.preferredLanguage == "none") {
-            "None"
+            "Ninguno"
         } else {
             AVAILABLE_SUBTITLE_LANGUAGES.find {
                 it.code == playerSettings.subtitleStyle.preferredLanguage
-            }?.name ?: "English"
+            }?.name ?: "Inglés"
         }
 
         NavigationSettingsItem(
             icon = Icons.Default.Language,
-            title = "Preferred Language",
+            title = "Idioma preferido",
             subtitle = languageName,
             onClick = onShowLanguageDialog,
             onFocused = onItemFocused,
@@ -106,11 +106,11 @@ internal fun LazyListScope.subtitleSettingsItems(
     item {
         val secondaryLanguageName = playerSettings.subtitleStyle.secondaryPreferredLanguage?.let { code ->
             AVAILABLE_SUBTITLE_LANGUAGES.find { it.code == code }?.name
-        } ?: "Not set"
+        } ?: "No configurado"
 
         NavigationSettingsItem(
             icon = Icons.Default.Language,
-            title = "Secondary Preferred Language",
+            title = "Idioma secundario preferido",
             subtitle = secondaryLanguageName,
             onClick = onShowSecondaryLanguageDialog,
             onFocused = onItemFocused,
@@ -121,7 +121,7 @@ internal fun LazyListScope.subtitleSettingsItems(
     item {
         NavigationSettingsItem(
             icon = Icons.Default.Subtitles,
-            title = "Subtitle Organization",
+            title = "Organización de subtítulos",
             subtitle = subtitleOrganizationModeLabel(playerSettings.subtitleOrganizationMode),
             onClick = onShowSubtitleOrganizationDialog,
             onFocused = onItemFocused,
@@ -132,7 +132,7 @@ internal fun LazyListScope.subtitleSettingsItems(
     item {
         SliderSettingsItem(
             icon = Icons.Default.FormatSize,
-            title = "Size",
+            title = "Tamaño",
             value = playerSettings.subtitleStyle.size,
             valueText = "${playerSettings.subtitleStyle.size}%",
             minValue = 50,
@@ -147,7 +147,7 @@ internal fun LazyListScope.subtitleSettingsItems(
     item {
         SliderSettingsItem(
             icon = Icons.Default.VerticalAlignBottom,
-            title = "Vertical Offset",
+            title = "Desplazamiento vertical",
             value = playerSettings.subtitleStyle.verticalOffset,
             valueText = "${playerSettings.subtitleStyle.verticalOffset}%",
             minValue = -20,
@@ -162,8 +162,8 @@ internal fun LazyListScope.subtitleSettingsItems(
     item {
         ToggleSettingsItem(
             icon = Icons.Default.FormatBold,
-            title = "Bold",
-            subtitle = "Use bold font weight for subtitles",
+            title = "Negrita",
+            subtitle = "Usar fuente en negrita para los subtítulos",
             isChecked = playerSettings.subtitleStyle.bold,
             onCheckedChange = onSetSubtitleBold,
             onFocused = onItemFocused,
@@ -174,7 +174,7 @@ internal fun LazyListScope.subtitleSettingsItems(
     item {
         ColorSettingsItem(
             icon = Icons.Default.Palette,
-            title = "Text Color",
+            title = "Color del texto",
             currentColor = Color(playerSettings.subtitleStyle.textColor),
             onClick = onShowTextColorDialog,
             onFocused = onItemFocused,
@@ -185,7 +185,7 @@ internal fun LazyListScope.subtitleSettingsItems(
     item {
         ColorSettingsItem(
             icon = Icons.Default.Palette,
-            title = "Background Color",
+            title = "Color de fondo",
             currentColor = Color(playerSettings.subtitleStyle.backgroundColor),
             showTransparent = playerSettings.subtitleStyle.backgroundColor == Color.Transparent.toArgb(),
             onClick = onShowBackgroundColorDialog,
@@ -197,8 +197,8 @@ internal fun LazyListScope.subtitleSettingsItems(
     item {
         ToggleSettingsItem(
             icon = Icons.Default.ClosedCaption,
-            title = "Outline",
-            subtitle = "Add outline around subtitle text for better visibility",
+            title = "Contorno",
+            subtitle = "Añadir contorno alrededor del texto de los subtítulos para mayor visibilidad",
             isChecked = playerSettings.subtitleStyle.outlineEnabled,
             onCheckedChange = onSetSubtitleOutlineEnabled,
             onFocused = onItemFocused,
@@ -210,7 +210,7 @@ internal fun LazyListScope.subtitleSettingsItems(
         item {
             ColorSettingsItem(
                 icon = Icons.Default.Palette,
-                title = "Outline Color",
+                title = "Color del contorno",
                 currentColor = Color(playerSettings.subtitleStyle.outlineColor),
                 onClick = onShowOutlineColorDialog,
                 onFocused = onItemFocused,
@@ -222,7 +222,7 @@ internal fun LazyListScope.subtitleSettingsItems(
     item {
         Spacer(modifier = androidx.compose.ui.Modifier.height(16.dp))
         Text(
-            text = "Advanced Subtitle Rendering",
+            text = "Renderizado avanzado de subtítulos",
             style = MaterialTheme.typography.titleMedium,
             color = NuvioColors.TextSecondary,
             modifier = androidx.compose.ui.Modifier.padding(vertical = 8.dp)
@@ -232,8 +232,8 @@ internal fun LazyListScope.subtitleSettingsItems(
     item {
         ToggleSettingsItem(
             icon = Icons.Default.Subtitles,
-            title = "Use libass for ASS/SSA subtitles",
-            subtitle = "Temporarily disabled for maintenance",
+            title = "Usar libass para subtítulos ASS/SSA",
+            subtitle = "Desactivado temporalmente por mantenimiento",
             isChecked = false,
             onCheckedChange = {},
             onFocused = onItemFocused,
@@ -244,7 +244,7 @@ internal fun LazyListScope.subtitleSettingsItems(
     if (false) { // Libass temporarily disabled for maintenance
         item {
             Text(
-                text = "Libass Render Mode",
+                text = "Modo de renderizado de Libass",
                 style = MaterialTheme.typography.titleMedium,
                 color = NuvioColors.TextSecondary,
                 modifier = androidx.compose.ui.Modifier.padding(vertical = 8.dp)
@@ -253,8 +253,8 @@ internal fun LazyListScope.subtitleSettingsItems(
 
         item {
             RenderTypeSettingsItem(
-                title = "Overlay OpenGL (Recommended)",
-                subtitle = "Best quality with HDR support. Renders subtitles on a separate thread.",
+                title = "Overlay OpenGL (Recomendado)",
+                subtitle = "Mejor calidad con soporte HDR. Renderiza los subtítulos en un hilo separado.",
                 isSelected = playerSettings.libassRenderType == LibassRenderType.OVERLAY_OPEN_GL,
                 onClick = { onSetLibassRenderType(LibassRenderType.OVERLAY_OPEN_GL) },
                 onFocused = onItemFocused
@@ -264,7 +264,7 @@ internal fun LazyListScope.subtitleSettingsItems(
         item {
             RenderTypeSettingsItem(
                 title = "Overlay Canvas",
-                subtitle = "HDR support with canvas rendering. May block UI thread.",
+                subtitle = "Soporte HDR con renderizado canvas. Puede bloquear la interfaz.",
                 isSelected = playerSettings.libassRenderType == LibassRenderType.OVERLAY_CANVAS,
                 onClick = { onSetLibassRenderType(LibassRenderType.OVERLAY_CANVAS) },
                 onFocused = onItemFocused
@@ -274,7 +274,7 @@ internal fun LazyListScope.subtitleSettingsItems(
         item {
             RenderTypeSettingsItem(
                 title = "Effects OpenGL",
-                subtitle = "Animation support using Media3 effects. Faster than Canvas.",
+                subtitle = "Soporte de animaciones usando efectos de Media3. Más rápido que Canvas.",
                 isSelected = playerSettings.libassRenderType == LibassRenderType.EFFECTS_OPEN_GL,
                 onClick = { onSetLibassRenderType(LibassRenderType.EFFECTS_OPEN_GL) },
                 onFocused = onItemFocused
@@ -284,7 +284,7 @@ internal fun LazyListScope.subtitleSettingsItems(
         item {
             RenderTypeSettingsItem(
                 title = "Effects Canvas",
-                subtitle = "Animation support using Media3 effects with Canvas rendering.",
+                subtitle = "Soporte de animaciones usando efectos de Media3 con renderizado canvas.",
                 isSelected = playerSettings.libassRenderType == LibassRenderType.EFFECTS_CANVAS,
                 onClick = { onSetLibassRenderType(LibassRenderType.EFFECTS_CANVAS) },
                 onFocused = onItemFocused
@@ -293,8 +293,8 @@ internal fun LazyListScope.subtitleSettingsItems(
 
         item {
             RenderTypeSettingsItem(
-                title = "Standard Cues",
-                subtitle = "Basic subtitle rendering without animation support. Most compatible.",
+                title = "Cues Estándar",
+                subtitle = "Renderizado básico de subtítulos sin soporte de animaciones. Mayor compatibilidad.",
                 isSelected = playerSettings.libassRenderType == LibassRenderType.CUES,
                 onClick = { onSetLibassRenderType(LibassRenderType.CUES) },
                 onFocused = onItemFocused
@@ -327,7 +327,7 @@ internal fun SubtitleSettingsDialogs(
 ) {
     if (showLanguageDialog) {
         LanguageSelectionDialog(
-            title = "Preferred Language",
+            title = "Idioma preferido",
             selectedLanguage = if (playerSettings.subtitleStyle.preferredLanguage == "none") null else playerSettings.subtitleStyle.preferredLanguage,
             showNoneOption = true,
             onLanguageSelected = {
@@ -340,7 +340,7 @@ internal fun SubtitleSettingsDialogs(
 
     if (showSecondaryLanguageDialog) {
         LanguageSelectionDialog(
-            title = "Secondary Preferred Language",
+            title = "Idioma secundario preferido",
             selectedLanguage = playerSettings.subtitleStyle.secondaryPreferredLanguage,
             showNoneOption = true,
             onLanguageSelected = {
@@ -364,7 +364,7 @@ internal fun SubtitleSettingsDialogs(
 
     if (showTextColorDialog) {
         ColorSelectionDialog(
-            title = "Text Color",
+            title = "Color del texto",
             colors = subtitleColors,
             selectedColor = Color(playerSettings.subtitleStyle.textColor),
             onColorSelected = {
@@ -377,7 +377,7 @@ internal fun SubtitleSettingsDialogs(
 
     if (showBackgroundColorDialog) {
         ColorSelectionDialog(
-            title = "Background Color",
+            title = "Color de fondo",
             colors = subtitleBackgroundColors,
             selectedColor = Color(playerSettings.subtitleStyle.backgroundColor),
             showTransparentOption = true,
@@ -391,7 +391,7 @@ internal fun SubtitleSettingsDialogs(
 
     if (showOutlineColorDialog) {
         ColorSelectionDialog(
-            title = "Outline Color",
+            title = "Color del contorno",
             colors = subtitleOutlineColors,
             selectedColor = Color(playerSettings.subtitleStyle.outlineColor),
             onColorSelected = {
@@ -405,9 +405,9 @@ internal fun SubtitleSettingsDialogs(
 
 private fun subtitleOrganizationModeLabel(mode: SubtitleOrganizationMode): String {
     return when (mode) {
-        SubtitleOrganizationMode.NONE -> "None (default order)"
-        SubtitleOrganizationMode.BY_LANGUAGE -> "By language"
-        SubtitleOrganizationMode.BY_ADDON -> "By addon"
+        SubtitleOrganizationMode.NONE -> "Ninguna (orden por defecto)"
+        SubtitleOrganizationMode.BY_LANGUAGE -> "Por idioma"
+        SubtitleOrganizationMode.BY_ADDON -> "Por addon"
     }
 }
 
@@ -418,9 +418,9 @@ private fun SubtitleOrganizationModeDialog(
     onDismiss: () -> Unit
 ) {
     val options = listOf(
-        Triple(SubtitleOrganizationMode.NONE, "None", "Show subtitles in default addon result order."),
-        Triple(SubtitleOrganizationMode.BY_LANGUAGE, "By language", "Group subtitles by language."),
-        Triple(SubtitleOrganizationMode.BY_ADDON, "By addon", "Group subtitles by addon source.")
+        Triple(SubtitleOrganizationMode.NONE, "Ninguna", "Mostrar subtítulos en el orden predeterminado de los addons."),
+        Triple(SubtitleOrganizationMode.BY_LANGUAGE, "Por idioma", "Agrupar los subtítulos por idioma."),
+        Triple(SubtitleOrganizationMode.BY_ADDON, "Por addon", "Agrupar los subtítulos por el addon de origen.")
     )
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
@@ -435,7 +435,7 @@ private fun SubtitleOrganizationModeDialog(
                     .padding(24.dp)
             ) {
                 Text(
-                    text = "Subtitle Organization",
+                    text = "Organización de subtítulos",
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary
                 )
