@@ -30,6 +30,7 @@ fun NuvioTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // El nombre de la app se mantiene igual
         Text(
             text = "NUVIO",
             style = MaterialTheme.typography.headlineLarge.copy(
@@ -42,11 +43,12 @@ fun NuvioTopBar(
             horizontalArrangement = Arrangement.spacedBy(32.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TopBarNavItem(text = "Home", isSelected = true)
-            TopBarNavItem(text = "Movies", isSelected = false)
+            // Traducción de los ítems de navegación
+            TopBarNavItem(text = "Inicio", isSelected = true)
+            TopBarNavItem(text = "Películas", isSelected = false)
             TopBarNavItem(text = "Series", isSelected = false)
-            TopBarNavItem(text = "Search", isSelected = false)
-            TopBarNavItem(text = "Settings", isSelected = false)
+            TopBarNavItem(text = "Buscar", isSelected = false)
+            TopBarNavItem(text = "Ajustes", isSelected = false)
         }
     }
 }
