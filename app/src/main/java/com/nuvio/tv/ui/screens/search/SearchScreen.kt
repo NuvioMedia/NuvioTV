@@ -217,7 +217,7 @@ fun SearchScreen(
                 if (trimmedSubmittedQuery.length < 2 || hasPendingUnsubmittedQuery) {
                     item {
                         Text(
-                            text = "Press Done on the keyboard to search",
+                            text = "Presiona Buscar o Enter en el teclado",
                             style = androidx.tv.material3.MaterialTheme.typography.bodySmall,
                             color = NuvioColors.TextSecondary,
                             modifier = Modifier
@@ -231,11 +231,11 @@ fun SearchScreen(
                     trimmedSubmittedQuery.length < 2 && !hasPendingUnsubmittedQuery -> {
                         item {
                             EmptyScreenState(
-                                title = "Start Searching",
+                                title = "Empieza a buscar",
                                 subtitle = if (uiState.discoverEnabled) {
-                                    "Enter at least 2 characters"
+                                    "Escribe al menos 2 caracteres"
                                 } else {
-                                    "Discover is disabled. Enter at least 2 characters"
+                                    "La pestaña Explorar está desactivada. Escribe al menos 2 caracteres"
                                 },
                                 icon = Icons.Default.Search
                             )
@@ -258,7 +258,7 @@ fun SearchScreen(
                     uiState.error != null && uiState.catalogRows.isEmpty() -> {
                         item {
                             ErrorState(
-                                message = uiState.error ?: "Search failed",
+                                message = uiState.error ?: "La búsqueda falló",
                                 onRetry = { viewModel.onEvent(SearchEvent.Retry) }
                             )
                         }
@@ -267,8 +267,8 @@ fun SearchScreen(
                     uiState.catalogRows.isEmpty() || uiState.catalogRows.none { it.items.isNotEmpty() } -> {
                         item {
                             EmptyScreenState(
-                                title = "No Results",
-                                subtitle = "Try searching with different keywords",
+                                title = "Sin resultados",
+                                subtitle = "Intenta buscar con otras palabras clave",
                                 icon = Icons.Default.Search
                             )
                         }
@@ -365,7 +365,7 @@ private fun SearchInputField(
         shape = RoundedCornerShape(12.dp),
         placeholder = {
             Text(
-                text = "Search movies & series",
+                text = "Busca películas y series",
                 color = NuvioColors.TextTertiary
             )
         },
