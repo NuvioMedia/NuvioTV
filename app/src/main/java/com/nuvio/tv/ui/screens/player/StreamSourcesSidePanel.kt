@@ -50,13 +50,13 @@ internal fun StreamSourcesSidePanel(
     onStreamSelected: (Stream) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Only request focus when loading finishes (not on addon filter changes)
+    // Solo solicitar el foco cuando termina la carga (no al cambiar el filtro de addons)
     LaunchedEffect(uiState.isLoadingSourceStreams) {
         if (!uiState.isLoadingSourceStreams && uiState.sourceFilteredStreams.isNotEmpty()) {
             try {
                 streamsFocusRequester.requestFocus()
             } catch (_: Exception) {
-                // Focus requester may not be ready yet
+                // El focus requester podría no estar listo todavía
             }
         }
     }
@@ -75,19 +75,19 @@ internal fun StreamSourcesSidePanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Sources",
+                    text = "Fuentes",
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     DialogButton(
-                        text = "Reload",
+                        text = "Recargar",
                         onClick = onReload,
                         isPrimary = false
                     )
                     DialogButton(
-                        text = "Close",
+                        text = "Cerrar",
                         onClick = onClose,
                         isPrimary = false
                     )
@@ -96,11 +96,11 @@ internal fun StreamSourcesSidePanel(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Current content info
+            // Información del contenido actual
             Text(
                 text = buildString {
                     if (uiState.currentSeason != null && uiState.currentEpisode != null) {
-                        append("S${uiState.currentSeason} E${uiState.currentEpisode}")
+                        append("T${uiState.currentSeason} E${uiState.currentEpisode}")
                         if (!uiState.currentEpisodeTitle.isNullOrBlank()) {
                             append(" • ${uiState.currentEpisodeTitle}")
                         }
@@ -144,7 +144,7 @@ internal fun StreamSourcesSidePanel(
 
                 uiState.sourceStreamsError != null -> {
                     Text(
-                        text = uiState.sourceStreamsError ?: "Failed to load streams",
+                        text = uiState.sourceStreamsError ?: "Error al cargar los enlaces",
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White.copy(alpha = 0.85f)
                     )
@@ -152,7 +152,7 @@ internal fun StreamSourcesSidePanel(
 
                 uiState.sourceFilteredStreams.isEmpty() -> {
                     Text(
-                        text = "No streams found",
+                        text = "No se encontraron enlaces",
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White.copy(alpha = 0.7f)
                     )
