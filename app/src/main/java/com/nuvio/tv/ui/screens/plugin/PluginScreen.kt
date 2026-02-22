@@ -156,23 +156,44 @@ fun PluginScreenContent(
                 }
             }
 
-            item {
-                AddRepositoryInline(
-                    url = repoUrl,
-                    onUrlChange = { repoUrl = it },
-                    onConfirm = {
-                        if (repoUrl.isNotBlank()) {
-                            viewModel.onEvent(PluginUiEvent.AddRepository(repoUrl))
-                            repoUrl = ""
-                        }
-                    },
-                    isLoading = uiState.isAddingRepo
-                )
+            if (viewModel.isReadOnly) {
+                item {
+                    androidx.compose.material3.Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = androidx.compose.material3.CardDefaults.cardColors(
+                            containerColor = androidx.compose.ui.graphics.Color(0xFF1A3A5C)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        androidx.tv.material3.Text(
+                            text = "Using primary profile's plugins and can't be changed",
+                            style = androidx.tv.material3.MaterialTheme.typography.bodyMedium,
+                            color = com.nuvio.tv.ui.theme.NuvioColors.TextSecondary,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
             }
 
-            // Manage from phone card
-            item {
-                ManageFromPhoneCard(onClick = { viewModel.onEvent(PluginUiEvent.StartQrMode) })
+            if (!viewModel.isReadOnly) {
+                item {
+                    AddRepositoryInline(
+                        url = repoUrl,
+                        onUrlChange = { repoUrl = it },
+                        onConfirm = {
+                            if (repoUrl.isNotBlank()) {
+                                viewModel.onEvent(PluginUiEvent.AddRepository(repoUrl))
+                                repoUrl = ""
+                            }
+                        },
+                        isLoading = uiState.isAddingRepo
+                    )
+                }
+
+                // Manage from phone card
+                item {
+                    ManageFromPhoneCard(onClick = { viewModel.onEvent(PluginUiEvent.StartQrMode) })
+                }
             }
 
             // Repositories section
@@ -198,7 +219,8 @@ fun PluginScreenContent(
                     repository = repo,
                     onRefresh = { viewModel.onEvent(PluginUiEvent.RefreshRepository(repo.id)) },
                     onRemove = { viewModel.onEvent(PluginUiEvent.RemoveRepository(repo.id)) },
-                    isLoading = uiState.isLoading
+                    isLoading = uiState.isLoading,
+                    isReadOnly = viewModel.isReadOnly
                 )
             }
 
@@ -221,7 +243,8 @@ fun PluginScreenContent(
                         },
                         onTest = { viewModel.onEvent(PluginUiEvent.TestScraper(scraper.id)) },
                         isTesting = uiState.isTesting && uiState.testScraperId == scraper.id,
-                        testResults = if (uiState.testScraperId == scraper.id) uiState.testResults else null
+                        testResults = if (uiState.testScraperId == scraper.id) uiState.testResults else null,
+                        isReadOnly = viewModel.isReadOnly
                     )
                 }
             }
@@ -818,7 +841,8 @@ private fun RepositoryCard(
     repository: PluginRepository,
     onRefresh: () -> Unit,
     onRemove: () -> Unit,
-    isLoading: Boolean
+    isLoading: Boolean,
+    isReadOnly: Boolean = false
 ) {
     Box(
         modifier = Modifier
@@ -854,7 +878,7 @@ private fun RepositoryCard(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (!isReadOnly) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = onRefresh,
                     enabled = !isLoading,
@@ -899,7 +923,8 @@ private fun ScraperCard(
     onToggle: (Boolean) -> Unit,
     onTest: () -> Unit,
     isTesting: Boolean,
-    testResults: List<LocalScraperResult>?
+    testResults: List<LocalScraperResult>?,
+    isReadOnly: Boolean = false
 ) {
     var showResults by remember { mutableStateOf(false) }
 
@@ -982,14 +1007,16 @@ private fun ScraperCard(
                     }
 
                     // Enable toggle
-                    Switch(
-                        checked = scraper.enabled,
-                        onCheckedChange = onToggle,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = NuvioColors.Secondary,
-                            checkedTrackColor = NuvioColors.Secondary.copy(alpha = 0.3f)
+                    if (!isReadOnly) {
+                        Switch(
+                            checked = scraper.enabled,
+                            onCheckedChange = onToggle,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = NuvioColors.Secondary,
+                                checkedTrackColor = NuvioColors.Secondary.copy(alpha = 0.3f)
+                            )
                         )
-                    )
+                    }
                 }
             }
 

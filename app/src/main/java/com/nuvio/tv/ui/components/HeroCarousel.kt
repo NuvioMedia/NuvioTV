@@ -60,6 +60,7 @@ private val YEAR_REGEX = Regex("""\b\d{4}\b""")
 fun HeroCarousel(
     items: List<MetaPreview>,
     onItemClick: (MetaPreview) -> Unit,
+    onItemFocus: (MetaPreview) -> Unit = {},
     focusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier
 ) {
@@ -67,6 +68,11 @@ fun HeroCarousel(
 
     var activeIndex by remember { mutableIntStateOf(0) }
     var isFocused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(activeIndex, isFocused) {
+        if (!isFocused) return@LaunchedEffect
+        items.getOrNull(activeIndex)?.let { onItemFocus(it) }
+    }
 
     // Auto-advance when not focused
     LaunchedEffect(isFocused, items.size) {

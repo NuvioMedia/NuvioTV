@@ -120,7 +120,8 @@ internal fun PlayerRuntimeController.disableSubtitles() {
 
 internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: com.nuvio.tv.domain.model.Subtitle) {
     _exoPlayer?.let { player ->
-        if (_uiState.value.selectedAddonSubtitle?.id == subtitle.id) {
+        val currentlySelected = _uiState.value.selectedAddonSubtitle
+        if (currentlySelected?.id == subtitle.id && currentlySelected.url == subtitle.url) {
             return@let
         }
         Log.d(PlayerRuntimeController.TAG, "Selecting ADDON subtitle lang=${subtitle.lang} id=${subtitle.id}")
@@ -131,16 +132,16 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: com.nuvio.tv.
         pendingAddonSubtitleTrackId = addonTrackId
         pendingAudioSelectionAfterSubtitleRefresh =
             captureCurrentAudioSelectionForSubtitleRefresh(player)
+        val subtitleMimeType = PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url)
 
-        
-        val subtitleConfig = MediaItem.SubtitleConfiguration.Builder(
+        val subtitleConfigBuilder = MediaItem.SubtitleConfiguration.Builder(
             android.net.Uri.parse(subtitle.url)
         )
             .setId(addonTrackId)
-            .setMimeType(PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url))
             .setLanguage(normalizedLang)
+            .setMimeType(subtitleMimeType)
             .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
-            .build()
+        val subtitleConfig = subtitleConfigBuilder.build()
 
         val currentPosition = player.currentPosition
         val playWhenReady = player.playWhenReady

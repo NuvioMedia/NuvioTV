@@ -8,6 +8,7 @@ import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.core.server.AddonConfigServer
 import com.nuvio.tv.core.server.DeviceIpAddress
+import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
@@ -30,11 +31,18 @@ import javax.inject.Inject
 class AddonManagerViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
+    private val profileManager: ProfileManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddonManagerUiState())
     val uiState: StateFlow<AddonManagerUiState> = _uiState.asStateFlow()
+
+    val isReadOnly: Boolean
+        get() {
+            val profile = profileManager.activeProfile ?: return false
+            return !profile.isPrimary && profile.usesPrimaryAddons
+        }
 
     private var server: AddonConfigServer? = null
     private var logoBytes: ByteArray? = null
@@ -186,7 +194,6 @@ class AddonManagerViewModel @Inject constructor(
                 )
             },
             onChangeProposed = { change -> handleChangeProposed(change) },
-            manifestFetcher = { url -> fetchAddonInfoBlocking(url) },
             logoProvider = { logoBytes }
         )
 
@@ -239,16 +246,6 @@ class AddonManagerViewModel @Inject constructor(
             } catch (_: Exception) {
                 null
             }
-        }
-    }
-
-    private fun fetchAddonInfoBlocking(url: String): AddonConfigServer.AddonInfo? {
-        return try {
-            kotlinx.coroutines.runBlocking(Dispatchers.IO) {
-                fetchAddonInfo(url)
-            }
-        } catch (_: Exception) {
-            null
         }
     }
 
@@ -353,22 +350,8 @@ class AddonManagerViewModel @Inject constructor(
         _uiState.update { it.copy(pendingChange = pending.copy(isApplying = true)) }
 
         viewModelScope.launch {
-            val validUrls = mutableListOf<String>()
-            val currentUrls = _uiState.value.installedAddons.map { normalizeUrlForComparison(it.baseUrl) }.toSet()
-
-            for (url in pending.proposedUrls) {
-                if (normalizeUrlForComparison(url) in currentUrls) {
-                    validUrls.add(url)
-                } else {
-                    when (addonRepository.fetchAddon(url)) {
-                        is NetworkResult.Success -> validUrls.add(url)
-                        else -> { }
-                    }
-                }
-            }
-
-            addonRepository.setAddonOrder(validUrls)
-            applyCatalogPreferencesFromPending(pending, validUrls)
+            addonRepository.setAddonOrder(pending.proposedUrls)
+            applyCatalogPreferencesFromPending(pending, pending.proposedUrls)
             server?.confirmChange(pending.changeId)
 
             _uiState.update { it.copy(pendingChange = null) }

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -32,10 +33,18 @@ class ThemeSettingsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            themeDataStore.selectedTheme.collectLatest { theme ->
-                _uiState.update { it.copy(selectedTheme = theme) }
-            }
+            themeDataStore.selectedTheme
+                .distinctUntilChanged()
+                .collectLatest { theme ->
+                    _uiState.update { state ->
+                        if (state.selectedTheme == theme) state else state.copy(selectedTheme = theme)
+                    }
+                }
         }
+    }
+
+    private fun currentTheme(): AppTheme {
+        return _uiState.value.selectedTheme
     }
 
     fun onEvent(event: ThemeSettingsEvent) {
@@ -45,6 +54,7 @@ class ThemeSettingsViewModel @Inject constructor(
     }
 
     private fun selectTheme(theme: AppTheme) {
+        if (currentTheme() == theme) return
         viewModelScope.launch {
             themeDataStore.setTheme(theme)
         }

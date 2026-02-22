@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -15,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -46,7 +46,7 @@ fun HomeScreen(
     },
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit = { _, _, _ -> }
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val hasCatalogContent = uiState.catalogRows.any { it.items.isNotEmpty() }
     var hasEnteredCatalogContent by rememberSaveable { mutableStateOf(false) }
 
@@ -169,7 +169,7 @@ private fun ClassicHomeRoute(
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit
 ) {
-    val focusState by viewModel.focusState.collectAsState()
+    val focusState by viewModel.focusState.collectAsStateWithLifecycle()
     ClassicHomeContent(
         uiState = uiState,
         posterCardStyle = posterCardStyle,
@@ -202,7 +202,7 @@ private fun GridHomeRoute(
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit
 ) {
-    val gridFocusState by viewModel.gridFocusState.collectAsState()
+    val gridFocusState by viewModel.gridFocusState.collectAsStateWithLifecycle()
     GridHomeContent(
         uiState = uiState,
         posterCardStyle = posterCardStyle,
@@ -226,12 +226,16 @@ private fun ModernHomeRoute(
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit
 ) {
-    val focusState by viewModel.focusState.collectAsState()
+    val focusState by viewModel.focusState.collectAsStateWithLifecycle()
     ModernHomeContent(
         uiState = uiState,
         focusState = focusState,
+        trailerPreviewUrls = viewModel.trailerPreviewUrls,
         onNavigateToDetail = onNavigateToDetail,
         onContinueWatchingClick = onContinueWatchingClick,
+        onRequestTrailerPreview = { itemId, title, releaseInfo, apiType ->
+            viewModel.requestTrailerPreview(itemId, title, releaseInfo, apiType)
+        },
         onLoadMoreCatalog = { catalogId, addonId, type ->
             viewModel.onEvent(HomeEvent.OnLoadMoreCatalog(catalogId, addonId, type))
         },

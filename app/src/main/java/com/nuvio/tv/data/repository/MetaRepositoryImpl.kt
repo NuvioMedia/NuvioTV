@@ -29,6 +29,8 @@ class MetaRepositoryImpl @Inject constructor(
 
     // In-memory cache: "type:id" -> Meta
     private val metaCache = ConcurrentHashMap<String, Meta>()
+    // Separate cache for full meta fetched from addons (bypasses catalog-level cache)
+    private val addonMetaCache = ConcurrentHashMap<String, Meta>()
 
     override fun getMeta(
         addonBaseUrl: String,
@@ -66,7 +68,7 @@ class MetaRepositoryImpl @Inject constructor(
         id: String
     ): Flow<NetworkResult<Meta>> = flow {
         val cacheKey = "$type:$id"
-        metaCache[cacheKey]?.let { cached ->
+        addonMetaCache[cacheKey]?.let { cached ->
             emit(NetworkResult.Success(cached))
             return@flow
         }
@@ -120,6 +122,7 @@ class MetaRepositoryImpl @Inject constructor(
                         val metaDto = result.data.meta
                         if (metaDto != null) {
                             val meta = metaDto.toDomain()
+                            addonMetaCache[cacheKey] = meta
                             metaCache[cacheKey] = meta
                             emit(NetworkResult.Success(meta))
                             return@flow
@@ -145,6 +148,7 @@ class MetaRepositoryImpl @Inject constructor(
                     val metaDto = result.data.meta
                     if (metaDto != null) {
                         val meta = metaDto.toDomain()
+                        addonMetaCache[cacheKey] = meta
                         metaCache[cacheKey] = meta
                         Log.d(
                             TAG,
@@ -212,5 +216,6 @@ class MetaRepositoryImpl @Inject constructor(
     
     override fun clearCache() {
         metaCache.clear()
+        addonMetaCache.clear()
     }
 }

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -96,6 +97,7 @@ internal fun PlaybackSettingsSections(
     onSetReuseLastLinkEnabled: (Boolean) -> Unit,
     onSetLoadingOverlayEnabled: (Boolean) -> Unit,
     onSetPauseOverlayEnabled: (Boolean) -> Unit,
+    onSetOsdClockEnabled: (Boolean) -> Unit,
     onSetSkipIntroEnabled: (Boolean) -> Unit,
     onSetFrameRateMatchingMode: (FrameRateMatchingMode) -> Unit,
     onSetTrailerEnabled: (Boolean) -> Unit,
@@ -194,6 +196,18 @@ internal fun PlaybackSettingsSections(
                     subtitle = "Show details overlay after 5 seconds while paused.",
                     isChecked = playerSettings.pauseOverlayEnabled,
                     onCheckedChange = onSetPauseOverlayEnabled,
+                    onFocused = { focusedSection = PlaybackSection.GENERAL },
+                    enabled = !isExternalPlayer
+                )
+            }
+
+            item {
+                ToggleSettingsItem(
+                    icon = Icons.Default.Timer,
+                    title = "OSD Clock",
+                    subtitle = "Show current time and end time while controls are visible.",
+                    isChecked = playerSettings.osdClockEnabled,
+                    onCheckedChange = onSetOsdClockEnabled,
                     onFocused = { focusedSection = PlaybackSection.GENERAL },
                     enabled = !isExternalPlayer
                 )

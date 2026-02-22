@@ -54,13 +54,14 @@ fun EpisodeRatingsSection(
             .distinct()
             .sorted()
     }
-    val seasonFocusRequesters = remember(seasonNumbers.joinToString(",")) {
+    val seasonSignature = remember(seasonNumbers) { seasonNumbers.joinToString(",") }
+    val seasonFocusRequesters = remember(seasonNumbers) {
         seasonNumbers.associateWith { FocusRequester() }
     }
     val defaultSeason = remember(seasonNumbers) {
         seasonNumbers.firstOrNull { it > 0 } ?: seasonNumbers.firstOrNull() ?: 0
     }
-    var selectedSeason by rememberSaveable(seasonNumbers.joinToString(",")) {
+    var selectedSeason by rememberSaveable(seasonSignature) {
         mutableIntStateOf(defaultSeason)
     }
 
@@ -74,6 +75,25 @@ fun EpisodeRatingsSection(
         episodes
             .filter { it.season == selectedSeason && it.episode != null }
             .sortedBy { it.episode }
+    }
+    val defaultChipColor = NuvioColors.BackgroundCard
+    val defaultChipTextColor = NuvioColors.TextSecondary
+    val seasonRatings = remember(episodesForSeason, ratings) {
+        episodesForSeason.mapNotNull { episode ->
+            val season = episode.season ?: return@mapNotNull null
+            val episodeNumber = episode.episode ?: return@mapNotNull null
+            val rating = ratings[season to episodeNumber]
+            val ratingText = rating?.let { String.format("%.1f", it) } ?: "—"
+            val chipColor = rating?.let(::ratingColor) ?: defaultChipColor
+            val chipTextColor = rating?.let(::ratingTextColor) ?: defaultChipTextColor
+            EpisodeRatingChipUi(
+                id = episode.id,
+                episodeNumber = episodeNumber,
+                ratingText = ratingText,
+                chipColor = chipColor,
+                chipTextColor = chipTextColor
+            )
+        }
     }
     val hasTitle = title.isNotBlank()
     val upFocusModifier = if (upFocusRequester != null) {
@@ -183,13 +203,7 @@ fun EpisodeRatingsSection(
                     contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(episodesForSeason, key = { it.id }) { episode ->
-                        val season = episode.season ?: return@items
-                        val episodeNumber = episode.episode ?: return@items
-                        val rating = ratings[season to episodeNumber]
-                        val ratingText = rating?.let { String.format("%.1f", it) } ?: "—"
-                        val chipColor = rating?.let(::ratingColor) ?: NuvioColors.BackgroundCard
-                        val chipTextColor = rating?.let(::ratingTextColor) ?: NuvioColors.TextSecondary
+                    items(seasonRatings, key = { it.id }) { episodeRating ->
                         val selectedSeasonUpRequester = firstItemFocusRequester ?: seasonFocusRequesters[selectedSeason]
 
                         Card(
@@ -201,8 +215,8 @@ fun EpisodeRatingsSection(
                             },
                             shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
                             colors = CardDefaults.colors(
-                                containerColor = chipColor,
-                                focusedContainerColor = chipColor
+                                containerColor = episodeRating.chipColor,
+                                focusedContainerColor = episodeRating.chipColor
                             ),
                             border = CardDefaults.border(
                                 focusedBorder = Border(
@@ -220,14 +234,14 @@ fun EpisodeRatingsSection(
                                 verticalArrangement = Arrangement.Center
                             ) {
                                 Text(
-                                    text = "E$episodeNumber",
+                                    text = "E${episodeRating.episodeNumber}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = chipTextColor
+                                    color = episodeRating.chipTextColor
                                 )
                                 Text(
-                                    text = ratingText,
+                                    text = episodeRating.ratingText,
                                     style = MaterialTheme.typography.labelLarge,
-                                    color = chipTextColor
+                                    color = episodeRating.chipTextColor
                                 )
                             }
                         }
@@ -255,3 +269,11 @@ private fun ratingTextColor(value: Double): Color {
         else -> Color.White
     }
 }
+
+private data class EpisodeRatingChipUi(
+    val id: String,
+    val episodeNumber: Int,
+    val ratingText: String,
+    val chipColor: Color,
+    val chipTextColor: Color
+)

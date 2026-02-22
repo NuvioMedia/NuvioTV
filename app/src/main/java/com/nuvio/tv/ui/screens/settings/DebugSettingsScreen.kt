@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,8 +23,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -35,13 +36,14 @@ import androidx.tv.material3.Switch
 import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.screens.account.InputField
 import com.nuvio.tv.ui.theme.NuvioColors
 
 @Composable
 fun DebugSettingsContent(
     viewModel: DebugSettingsViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showErrorDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -109,6 +111,27 @@ fun DebugSettingsContent(
                     subtitle = "Show Generate/Enter Sync Code buttons in Account settings",
                     checked = uiState.syncCodeFeaturesEnabled,
                     onToggle = { viewModel.onEvent(DebugSettingsEvent.ToggleSyncCodeFeatures(it)) }
+                )
+            }
+
+            // ── Manual Sign In ──
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Account",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = NuvioColors.TextTertiary,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+
+            item {
+                DebugSignInCard(
+                    isLoading = uiState.signInLoading,
+                    result = uiState.signInResult,
+                    onSignIn = { email, password ->
+                        viewModel.onEvent(DebugSettingsEvent.SignIn(email, password))
+                    }
                 )
             }
         }
@@ -264,6 +287,65 @@ private fun DebugDialogButton(
                 .fillMaxWidth()
                 .padding(vertical = 12.dp, horizontal = 16.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun DebugSignInCard(
+    isLoading: Boolean,
+    result: String?,
+    onSignIn: (email: String, password: String) -> Unit
+) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(4.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            text = "Manual Sign In",
+            style = MaterialTheme.typography.titleMedium,
+            color = NuvioColors.TextPrimary
+        )
+        Text(
+            text = "Sign in with email and password (Supabase auth)",
+            style = MaterialTheme.typography.bodySmall,
+            color = NuvioColors.TextSecondary
+        )
+
+        InputField(
+            value = email,
+            onValueChange = { email = it },
+            placeholder = "Email",
+            keyboardType = KeyboardType.Email
+        )
+
+        InputField(
+            value = password,
+            onValueChange = { password = it },
+            placeholder = "Password",
+            isPassword = true
+        )
+
+        if (result != null) {
+            Text(
+                text = result,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (result.startsWith("Failed")) NuvioColors.Error else NuvioColors.Secondary
+            )
+        }
+
+        DebugDialogButton(
+            text = if (isLoading) "Signing in..." else "Sign In",
+            onClick = {
+                if (!isLoading && email.isNotBlank() && password.isNotBlank()) {
+                    onSignIn(email.trim(), password)
+                }
+            }
         )
     }
 }

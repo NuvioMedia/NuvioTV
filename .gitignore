@@ -33,3 +33,11 @@ scripts/live_app_logs.sh
 docs/tv_qr_login.sql
 docss
 benchmark
+.mcp.json
+db/
+backups/
+.supabase_db.env
+scripts
+supabase
+tv-samples
+HOME_UI_OPTIMIZATION_NOTES.local.md

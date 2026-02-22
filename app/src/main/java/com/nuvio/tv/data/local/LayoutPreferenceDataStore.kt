@@ -1,29 +1,37 @@
 package com.nuvio.tv.data.local
 
-import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nuvio.tv.domain.model.HomeLayout
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.layoutDataStore: DataStore<Preferences> by preferencesDataStore(name = "layout_settings")
-
 @Singleton
 class LayoutPreferenceDataStore @Inject constructor(
-    @ApplicationContext private val context: Context
+    private val factory: ProfileDataStoreFactory,
+    private val profileManager: ProfileManager
 ) {
-    private val dataStore = context.layoutDataStore
+    companion object {
+        private const val FEATURE = "layout_settings"
+        private const val DEFAULT_POSTER_CARD_WIDTH_DP = 126
+        private const val DEFAULT_POSTER_CARD_HEIGHT_DP = 189
+        private const val DEFAULT_POSTER_CARD_CORNER_RADIUS_DP = 12
+        private const val DEFAULT_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS = 3
+        private const val MIN_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS = 1
+    }
+
+    private fun store(profileId: Int = profileManager.activeProfileId.value) =
+        factory.get(profileId, FEATURE)
+
     private val gson = Gson()
 
     private val layoutKey = stringPreferencesKey("selected_layout")
@@ -47,6 +55,8 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val focusedPosterBackdropExpandDelaySecondsKey = intPreferencesKey("focused_poster_backdrop_expand_delay_seconds")
     private val focusedPosterBackdropTrailerEnabledKey = booleanPreferencesKey("focused_poster_backdrop_trailer_enabled")
     private val focusedPosterBackdropTrailerMutedKey = booleanPreferencesKey("focused_poster_backdrop_trailer_muted")
+    private val focusedPosterBackdropTrailerPlaybackTargetKey =
+        stringPreferencesKey("focused_poster_backdrop_trailer_playback_target")
     private val posterCardWidthDpKey = intPreferencesKey("poster_card_width_dp")
     private val posterCardHeightDpKey = intPreferencesKey("poster_card_height_dp")
     private val posterCardCornerRadiusDpKey = intPreferencesKey("poster_card_corner_radius_dp")
@@ -54,15 +64,12 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val detailPageTrailerButtonEnabledKey = booleanPreferencesKey("detail_page_trailer_button_enabled")
     private val preferExternalMetaAddonDetailKey = booleanPreferencesKey("prefer_external_meta_addon_detail")
 
-    private companion object {
-        const val DEFAULT_POSTER_CARD_WIDTH_DP = 126
-        const val DEFAULT_POSTER_CARD_HEIGHT_DP = 189
-        const val DEFAULT_POSTER_CARD_CORNER_RADIUS_DP = 12
-        const val DEFAULT_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS = 3
-        const val MIN_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS = 1
-    }
+    private fun <T> profileFlow(extract: (prefs: androidx.datastore.preferences.core.Preferences) -> T): Flow<T> =
+        profileManager.activeProfileId.flatMapLatest { pid ->
+            factory.get(pid, FEATURE).data.map { prefs -> extract(prefs) }
+        }
 
-    val selectedLayout: Flow<HomeLayout> = dataStore.data.map { prefs ->
+    val selectedLayout: Flow<HomeLayout> = profileFlow { prefs ->
         val layoutName = prefs[layoutKey] ?: HomeLayout.MODERN.name
         try {
             HomeLayout.valueOf(layoutName)
@@ -71,11 +78,11 @@ class LayoutPreferenceDataStore @Inject constructor(
         }
     }
 
-    val hasChosenLayout: Flow<Boolean> = dataStore.data.map { prefs ->
+    val hasChosenLayout: Flow<Boolean> = profileFlow { prefs ->
         prefs[hasChosenKey] ?: false
     }
 
-    val heroCatalogSelections: Flow<List<String>> = dataStore.data.map { prefs ->
+    val heroCatalogSelections: Flow<List<String>> = profileFlow { prefs ->
         val multiSelection = parseCatalogKeys(prefs[heroCatalogKeysKey])
         if (multiSelection.isNotEmpty()) {
             multiSelection
@@ -92,15 +99,15 @@ class LayoutPreferenceDataStore @Inject constructor(
         selections.firstOrNull()
     }
 
-    val homeCatalogOrderKeys: Flow<List<String>> = dataStore.data.map { prefs ->
+    val homeCatalogOrderKeys: Flow<List<String>> = profileFlow { prefs ->
         parseCatalogKeys(prefs[homeCatalogOrderKeysKey])
     }
 
-    val disabledHomeCatalogKeys: Flow<List<String>> = dataStore.data.map { prefs ->
+    val disabledHomeCatalogKeys: Flow<List<String>> = profileFlow { prefs ->
         parseCatalogKeys(prefs[disabledHomeCatalogKeysKey])
     }
 
-    val sidebarCollapsedByDefault: Flow<Boolean> = dataStore.data.map { prefs ->
+    val sidebarCollapsedByDefault: Flow<Boolean> = profileFlow { prefs ->
         val modernSidebarEnabled =
             prefs[modernSidebarEnabledKey] ?: prefs[legacyModernSidebarEnabledKey] ?: false
         if (modernSidebarEnabled) {
@@ -110,94 +117,111 @@ class LayoutPreferenceDataStore @Inject constructor(
         }
     }
 
-    val modernSidebarEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+    val modernSidebarEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[modernSidebarEnabledKey] ?: prefs[legacyModernSidebarEnabledKey] ?: false
     }
 
-    val modernSidebarBlurEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+    val modernSidebarBlurEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[modernSidebarBlurEnabledKey] ?: false
     }
 
-    val modernLandscapePostersEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+    val modernLandscapePostersEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[modernLandscapePostersEnabledKey] ?: true
     }
 
-    val modernNextRowPreviewEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+    val modernNextRowPreviewEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[modernNextRowPreviewEnabledKey] ?: false
     }
 
-    val heroSectionEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+    val heroSectionEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[heroSectionEnabledKey] ?: true
     }
 
-    val searchDiscoverEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+    val searchDiscoverEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[searchDiscoverEnabledKey] ?: true
     }
 
-    val posterLabelsEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+    val posterLabelsEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[posterLabelsEnabledKey] ?: true
     }
 
-    val catalogAddonNameEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+    val catalogAddonNameEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[catalogAddonNameEnabledKey] ?: true
     }
 
-    val catalogTypeSuffixEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+    val catalogTypeSuffixEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[catalogTypeSuffixEnabledKey] ?: true
     }
 
-    val focusedPosterBackdropExpandEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+    val focusedPosterBackdropExpandEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[focusedPosterBackdropExpandEnabledKey] ?: false
     }
 
-    val focusedPosterBackdropExpandDelaySeconds: Flow<Int> = dataStore.data.map { prefs ->
+    val focusedPosterBackdropExpandDelaySeconds: Flow<Int> = profileFlow { prefs ->
         (prefs[focusedPosterBackdropExpandDelaySecondsKey]
             ?: DEFAULT_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS)
             .coerceAtLeast(MIN_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS)
     }
 
-    val focusedPosterBackdropTrailerEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+    val focusedPosterBackdropTrailerEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[focusedPosterBackdropTrailerEnabledKey] ?: false
     }
 
-    val focusedPosterBackdropTrailerMuted: Flow<Boolean> = dataStore.data.map { prefs ->
+    val focusedPosterBackdropTrailerMuted: Flow<Boolean> = profileFlow { prefs ->
         prefs[focusedPosterBackdropTrailerMutedKey] ?: true
     }
 
-    val posterCardWidthDp: Flow<Int> = dataStore.data.map { prefs ->
+    val focusedPosterBackdropTrailerPlaybackTarget: Flow<FocusedPosterTrailerPlaybackTarget> =
+        profileFlow { prefs ->
+            val stored = prefs[focusedPosterBackdropTrailerPlaybackTargetKey]
+                ?: FocusedPosterTrailerPlaybackTarget.HERO_MEDIA.name
+            runCatching { FocusedPosterTrailerPlaybackTarget.valueOf(stored) }
+                .getOrDefault(FocusedPosterTrailerPlaybackTarget.HERO_MEDIA)
+        }
+
+    val posterCardWidthDp: Flow<Int> = profileFlow { prefs ->
         prefs[posterCardWidthDpKey] ?: DEFAULT_POSTER_CARD_WIDTH_DP
     }
 
-    val posterCardHeightDp: Flow<Int> = dataStore.data.map { prefs ->
+    val posterCardHeightDp: Flow<Int> = profileFlow { prefs ->
         prefs[posterCardHeightDpKey] ?: DEFAULT_POSTER_CARD_HEIGHT_DP
     }
 
-    val posterCardCornerRadiusDp: Flow<Int> = dataStore.data.map { prefs ->
+    val posterCardCornerRadiusDp: Flow<Int> = profileFlow { prefs ->
         prefs[posterCardCornerRadiusDpKey] ?: DEFAULT_POSTER_CARD_CORNER_RADIUS_DP
     }
 
-    val blurUnwatchedEpisodes: Flow<Boolean> = dataStore.data.map { prefs ->
+    val blurUnwatchedEpisodes: Flow<Boolean> = profileFlow { prefs ->
         prefs[blurUnwatchedEpisodesKey] ?: false
     }
 
-    val detailPageTrailerButtonEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+    val detailPageTrailerButtonEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[detailPageTrailerButtonEnabledKey] ?: false
     }
 
-    val preferExternalMetaAddonDetail: Flow<Boolean> = dataStore.data.map { prefs ->
+    val preferExternalMetaAddonDetail: Flow<Boolean> = profileFlow { prefs ->
         prefs[preferExternalMetaAddonDetailKey] ?: false
     }
 
     suspend fun setLayout(layout: HomeLayout) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
+            val hadChosenLayout = prefs[hasChosenKey] ?: false
             prefs[layoutKey] = layout.name
+            if (
+                layout == HomeLayout.MODERN &&
+                !hadChosenLayout &&
+                prefs[focusedPosterBackdropTrailerPlaybackTargetKey] == null
+            ) {
+                prefs[focusedPosterBackdropTrailerPlaybackTargetKey] =
+                    FocusedPosterTrailerPlaybackTarget.HERO_MEDIA.name
+            }
             prefs[hasChosenKey] = true
         }
     }
 
     suspend fun setHeroCatalogKeys(catalogKeys: List<String>) {
         val normalizedKeys = normalizeCatalogOrderKeys(catalogKeys)
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             if (normalizedKeys.isEmpty()) {
                 prefs.remove(heroCatalogKeysKey)
                 prefs.remove(heroCatalogKey)
@@ -214,7 +238,7 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     suspend fun setHomeCatalogOrderKeys(keys: List<String>) {
         val normalizedKeys = normalizeCatalogOrderKeys(keys)
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             if (normalizedKeys.isEmpty()) {
                 prefs.remove(homeCatalogOrderKeysKey)
             } else {
@@ -225,7 +249,7 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     suspend fun setDisabledHomeCatalogKeys(keys: List<String>) {
         val normalizedKeys = normalizeCatalogOrderKeys(keys)
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             if (normalizedKeys.isEmpty()) {
                 prefs.remove(disabledHomeCatalogKeysKey)
             } else {
@@ -235,7 +259,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     suspend fun setSidebarCollapsedByDefault(collapsed: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             val modernSidebarEnabled =
                 prefs[modernSidebarEnabledKey] ?: prefs[legacyModernSidebarEnabledKey] ?: false
             prefs[sidebarCollapsedKey] = if (modernSidebarEnabled) false else collapsed
@@ -243,7 +267,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     suspend fun setModernSidebarEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[modernSidebarEnabledKey] = enabled
             prefs.remove(legacyModernSidebarEnabledKey)
             if (enabled) {
@@ -253,55 +277,55 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     suspend fun setModernSidebarBlurEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[modernSidebarBlurEnabledKey] = enabled
         }
     }
 
     suspend fun setModernLandscapePostersEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[modernLandscapePostersEnabledKey] = enabled
         }
     }
 
     suspend fun setModernNextRowPreviewEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[modernNextRowPreviewEnabledKey] = enabled
         }
     }
 
     suspend fun setHeroSectionEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[heroSectionEnabledKey] = enabled
         }
     }
 
     suspend fun setSearchDiscoverEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[searchDiscoverEnabledKey] = enabled
         }
     }
 
     suspend fun setPosterLabelsEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[posterLabelsEnabledKey] = enabled
         }
     }
 
     suspend fun setCatalogAddonNameEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[catalogAddonNameEnabledKey] = enabled
         }
     }
 
     suspend fun setCatalogTypeSuffixEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[catalogTypeSuffixEnabledKey] = enabled
         }
     }
 
     suspend fun setFocusedPosterBackdropExpandEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[focusedPosterBackdropExpandEnabledKey] = enabled
             if (!enabled) {
                 prefs[focusedPosterBackdropTrailerEnabledKey] = false
@@ -311,14 +335,14 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     suspend fun setFocusedPosterBackdropExpandDelaySeconds(seconds: Int) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[focusedPosterBackdropExpandDelaySecondsKey] =
                 seconds.coerceAtLeast(MIN_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS)
         }
     }
 
     suspend fun setFocusedPosterBackdropTrailerEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[focusedPosterBackdropTrailerEnabledKey] = enabled
             if (!enabled) {
                 prefs[focusedPosterBackdropTrailerMutedKey] = true
@@ -327,43 +351,51 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     suspend fun setFocusedPosterBackdropTrailerMuted(muted: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[focusedPosterBackdropTrailerMutedKey] = muted
         }
     }
 
+    suspend fun setFocusedPosterBackdropTrailerPlaybackTarget(
+        target: FocusedPosterTrailerPlaybackTarget
+    ) {
+        store().edit { prefs ->
+            prefs[focusedPosterBackdropTrailerPlaybackTargetKey] = target.name
+        }
+    }
+
     suspend fun setPosterCardWidthDp(widthDp: Int) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[posterCardWidthDpKey] = widthDp
         }
     }
 
     suspend fun setPosterCardHeightDp(heightDp: Int) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[posterCardHeightDpKey] = heightDp
         }
     }
 
     suspend fun setPosterCardCornerRadiusDp(cornerRadiusDp: Int) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[posterCardCornerRadiusDpKey] = cornerRadiusDp
         }
     }
 
     suspend fun setBlurUnwatchedEpisodes(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[blurUnwatchedEpisodesKey] = enabled
         }
     }
 
     suspend fun setDetailPageTrailerButtonEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[detailPageTrailerButtonEnabledKey] = enabled
         }
     }
 
     suspend fun setPreferExternalMetaAddonDetail(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[preferExternalMetaAddonDetailKey] = enabled
         }
     }

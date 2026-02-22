@@ -31,7 +31,12 @@ object FrameRateUtils {
     private var displayListener: DisplayManager.DisplayListener? = null
     private var timeoutHandler: Handler? = null
     private var timeoutRunnable: Runnable? = null
-    private var pendingAfterSwitch: ((Display.Mode) -> Unit)? = null
+    data class DisplayModeSwitchResult(
+        val appliedMode: Display.Mode,
+        val isFallback: Boolean
+    )
+
+    private var pendingAfterSwitch: ((DisplayModeSwitchResult) -> Unit)? = null
     private var pendingDisplayId: Int? = null
     private var pendingMode: Display.Mode? = null
     private var originalModeId: Int? = null
@@ -70,10 +75,20 @@ object FrameRateUtils {
     private fun completeSwitch(reason: String) {
         Log.d(TAG, "Display mode switch completed ($reason)")
         val callback = pendingAfterSwitch
-        val mode = pendingMode
+        val requestedMode = pendingMode
+        val realMode = runCatching {
+            val displayId = pendingDisplayId
+            if (displayId != null) {
+                displayManager?.getDisplay(displayId)?.mode
+            } else {
+                null
+            }
+        }.getOrNull()
+        val appliedMode = realMode ?: requestedMode
+        val isFallback = requestedMode != null && realMode != null && realMode.modeId != requestedMode.modeId
         cleanupDisplayListener()
-        if (callback != null && mode != null) {
-            callback(mode)
+        if (callback != null && appliedMode != null) {
+            callback(DisplayModeSwitchResult(appliedMode = appliedMode, isFallback = isFallback))
         }
     }
 
@@ -140,7 +155,7 @@ object FrameRateUtils {
         activity: Activity,
         frameRate: Float,
         onBeforeSwitch: (() -> Unit)? = null,
-        onAfterSwitch: ((Display.Mode) -> Unit)? = null
+        onAfterSwitch: ((DisplayModeSwitchResult) -> Unit)? = null
     ): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return false
         if (frameRate <= 0f) return false

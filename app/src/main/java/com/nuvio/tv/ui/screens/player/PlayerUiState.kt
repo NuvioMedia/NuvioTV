@@ -33,6 +33,7 @@ data class PlayerUiState(
     val loadingOverlayEnabled: Boolean = true,
     val showLoadingOverlay: Boolean = true,
     val pauseOverlayEnabled: Boolean = true,
+    val osdClockEnabled: Boolean = true,
     val showPauseOverlay: Boolean = false,
     val audioTracks: List<TrackInfo> = emptyList(),
     val subtitleTracks: List<TrackInfo> = emptyList(),
@@ -41,6 +42,8 @@ data class PlayerUiState(
     val showAudioDialog: Boolean = false,
     val showSubtitleDialog: Boolean = false,
     val showSubtitleStylePanel: Boolean = false,
+    val showSubtitleDelayOverlay: Boolean = false,
+    val subtitleDelayMs: Int = 0,
     val showSpeedDialog: Boolean = false,
     val showMoreDialog: Boolean = false,
     // Subtitle style settings
@@ -156,6 +159,9 @@ sealed class PlayerEvent {
     data object OnShowSubtitleDialog : PlayerEvent()
     data object OnOpenSubtitleStylePanel : PlayerEvent()
     data object OnDismissSubtitleStylePanel : PlayerEvent()
+    data object OnShowSubtitleDelayOverlay : PlayerEvent()
+    data object OnHideSubtitleDelayOverlay : PlayerEvent()
+    data class OnAdjustSubtitleDelay(val deltaMs: Int) : PlayerEvent()
     data object OnShowSpeedDialog : PlayerEvent()
     data object OnShowMoreDialog : PlayerEvent()
     data object OnDismissMoreDialog : PlayerEvent()
@@ -201,7 +207,8 @@ data class ParentalWarning(
 data class DisplayModeInfo(
     val width: Int,
     val height: Int,
-    val refreshRate: Float
+    val refreshRate: Float,
+    val statusMessage: String? = null
 )
 
 enum class FrameRateSource {

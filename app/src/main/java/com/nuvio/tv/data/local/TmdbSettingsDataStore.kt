@@ -1,26 +1,27 @@
 package com.nuvio.tv.data.local
 
-import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.domain.model.TmdbSettings
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.tmdbSettingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "tmdb_settings")
-
 @Singleton
 class TmdbSettingsDataStore @Inject constructor(
-    @ApplicationContext private val context: Context
+    private val factory: ProfileDataStoreFactory,
+    private val profileManager: ProfileManager
 ) {
-    private val dataStore = context.tmdbSettingsDataStore
+    companion object {
+        private const val FEATURE = "tmdb_settings"
+    }
+
+    private fun store(profileId: Int = profileManager.activeProfileId.value) =
+        factory.get(profileId, FEATURE)
 
     private val enabledKey = booleanPreferencesKey("tmdb_enabled")
     private val languageKey = stringPreferencesKey("tmdb_language")
@@ -33,59 +34,60 @@ class TmdbSettingsDataStore @Inject constructor(
     private val useEpisodesKey = booleanPreferencesKey("tmdb_use_episodes")
     private val useMoreLikeThisKey = booleanPreferencesKey("tmdb_use_more_like_this")
 
-    val settings: Flow<TmdbSettings> = dataStore.data.map { prefs ->
-        TmdbSettings(
-            enabled = prefs[enabledKey] ?: false,
-            language = prefs[languageKey] ?: "en",
-            useArtwork = prefs[useArtworkKey] ?: true,
-            useBasicInfo = prefs[useBasicInfoKey] ?: true,
-            useDetails = prefs[useDetailsKey] ?: true,
-            useCredits = prefs[useCreditsKey] ?: true,
-            useProductions = prefs[useProductionsKey] ?: true,
-            useNetworks = prefs[useNetworksKey] ?: true,
-            useEpisodes = prefs[useEpisodesKey] ?: true,
-            useMoreLikeThis = prefs[useMoreLikeThisKey] ?: true
-        )
+    val settings: Flow<TmdbSettings> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            TmdbSettings(
+                enabled = prefs[enabledKey] ?: false,
+                language = prefs[languageKey] ?: "en",
+                useArtwork = prefs[useArtworkKey] ?: true,
+                useBasicInfo = prefs[useBasicInfoKey] ?: true,
+                useDetails = prefs[useDetailsKey] ?: true,
+                useCredits = prefs[useCreditsKey] ?: true,
+                useProductions = prefs[useProductionsKey] ?: true,
+                useNetworks = prefs[useNetworksKey] ?: true,
+                useEpisodes = prefs[useEpisodesKey] ?: true,
+                useMoreLikeThis = prefs[useMoreLikeThisKey] ?: true
+            )
+        }
     }
 
     suspend fun setEnabled(enabled: Boolean) {
-        dataStore.edit { it[enabledKey] = enabled }
+        store().edit { it[enabledKey] = enabled }
     }
 
     suspend fun setLanguage(language: String) {
-        dataStore.edit { it[languageKey] = language.ifBlank { "en" } }
+        store().edit { it[languageKey] = language.ifBlank { "en" } }
     }
 
     suspend fun setUseArtwork(enabled: Boolean) {
-        dataStore.edit { it[useArtworkKey] = enabled }
+        store().edit { it[useArtworkKey] = enabled }
     }
 
     suspend fun setUseBasicInfo(enabled: Boolean) {
-        dataStore.edit { it[useBasicInfoKey] = enabled }
+        store().edit { it[useBasicInfoKey] = enabled }
     }
 
     suspend fun setUseDetails(enabled: Boolean) {
-        dataStore.edit { it[useDetailsKey] = enabled }
+        store().edit { it[useDetailsKey] = enabled }
     }
 
     suspend fun setUseCredits(enabled: Boolean) {
-        dataStore.edit { it[useCreditsKey] = enabled }
+        store().edit { it[useCreditsKey] = enabled }
     }
 
     suspend fun setUseProductions(enabled: Boolean) {
-        dataStore.edit { it[useProductionsKey] = enabled }
+        store().edit { it[useProductionsKey] = enabled }
     }
 
     suspend fun setUseNetworks(enabled: Boolean) {
-        dataStore.edit { it[useNetworksKey] = enabled }
+        store().edit { it[useNetworksKey] = enabled }
     }
 
     suspend fun setUseEpisodes(enabled: Boolean) {
-        dataStore.edit { it[useEpisodesKey] = enabled }
+        store().edit { it[useEpisodesKey] = enabled }
     }
 
     suspend fun setUseMoreLikeThis(enabled: Boolean) {
-        dataStore.edit { it[useMoreLikeThisKey] = enabled }
+        store().edit { it[useMoreLikeThisKey] = enabled }
     }
-
 }

@@ -99,53 +99,71 @@ fun DisplayModeOverlay(
 
     if (containerAlpha.value <= 0f) return
 
-    Row(
+    Column(
         modifier = modifier
             .alpha(containerAlpha.value)
             .padding(end = 32.dp, top = 24.dp),
-        verticalAlignment = Alignment.Top
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.End
     ) {
-        Column(
-            modifier = Modifier.padding(end = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(ROW_GAP),
-            horizontalAlignment = Alignment.End
-        ) {
-            items.forEachIndexed { index, item ->
-                Row(
-                    modifier = Modifier
-                        .height(ROW_HEIGHT)
-                        .alpha(itemAlphas.getOrNull(index)?.value ?: 0f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = item.first,
-                        fontSize = 11.sp,
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.End
-                    )
-                    Text(
-                        text = " - ",
-                        fontSize = 11.sp,
-                        color = Color.White.copy(alpha = 0.4f),
-                    )
-                    Text(
-                        text = item.second,
-                        fontSize = 11.sp,
-                        color = Color.White.copy(alpha = 0.6f),
-                        textAlign = TextAlign.End
-                    )
-                }
-            }
+        val statusMessage = info.statusMessage?.takeIf { it.isNotBlank() }
+        if (statusMessage != null) {
+            Text(
+                text = statusMessage,
+                fontSize = 11.sp,
+                color = NuvioColors.Secondary,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.End,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            )
         }
 
-        Box(
-            modifier = Modifier
-                .width(3.dp)
-                .height((totalLineHeight * lineHeightFraction.value).dp)
-                .clip(RoundedCornerShape(1.dp))
-                .background(NuvioColors.Secondary)
-        )
+        Row(verticalAlignment = Alignment.Top) {
+            Column(
+                modifier = Modifier.padding(end = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(ROW_GAP),
+                horizontalAlignment = Alignment.End
+            ) {
+                items.forEachIndexed { index, item ->
+                    Row(
+                        modifier = Modifier
+                            .height(ROW_HEIGHT)
+                            .alpha(itemAlphas.getOrNull(index)?.value ?: 0f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = item.first,
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.End
+                        )
+                        Text(
+                            text = " - ",
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = 0.4f),
+                        )
+                        Text(
+                            text = item.second,
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = 0.6f),
+                            textAlign = TextAlign.End
+                        )
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height((totalLineHeight * lineHeightFraction.value).dp)
+                    .clip(RoundedCornerShape(1.dp))
+                    .background(NuvioColors.Secondary)
+            )
+        }
     }
 }
 

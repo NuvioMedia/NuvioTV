@@ -121,6 +121,8 @@ sealed class Screen(val route: String) {
         }
     }
 
+    data object ProfileSelection : Screen("profile_selection")
+
     data object CastDetail : Screen("cast_detail/{personId}/{personName}?preferCrew={preferCrew}") {
         private fun encode(value: String): String =
             URLEncoder.encode(value, "UTF-8").replace("+", "%20")

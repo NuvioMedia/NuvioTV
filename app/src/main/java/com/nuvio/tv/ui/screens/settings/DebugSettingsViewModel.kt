@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.data.local.DebugSettingsDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +15,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class DebugSettingsViewModel @Inject constructor(
-    private val dataStore: DebugSettingsDataStore
+    private val dataStore: DebugSettingsDataStore,
+    private val authManager: AuthManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DebugSettingsUiState())
@@ -41,16 +43,31 @@ class DebugSettingsViewModel @Inject constructor(
             is DebugSettingsEvent.ToggleSyncCodeFeatures -> {
                 viewModelScope.launch { dataStore.setSyncCodeFeaturesEnabled(event.enabled) }
             }
+            is DebugSettingsEvent.SignIn -> {
+                viewModelScope.launch {
+                    _uiState.update { it.copy(signInLoading = true, signInResult = null) }
+                    val result = authManager.signInWithEmail(event.email, event.password)
+                    _uiState.update {
+                        it.copy(
+                            signInLoading = false,
+                            signInResult = if (result.isSuccess) "Signed in successfully" else "Failed: ${result.exceptionOrNull()?.message}"
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
 data class DebugSettingsUiState(
     val accountTabEnabled: Boolean = false,
-    val syncCodeFeaturesEnabled: Boolean = false
+    val syncCodeFeaturesEnabled: Boolean = false,
+    val signInLoading: Boolean = false,
+    val signInResult: String? = null
 )
 
 sealed class DebugSettingsEvent {
     data class ToggleAccountTab(val enabled: Boolean) : DebugSettingsEvent()
     data class ToggleSyncCodeFeatures(val enabled: Boolean) : DebugSettingsEvent()
+    data class SignIn(val email: String, val password: String) : DebugSettingsEvent()
 }

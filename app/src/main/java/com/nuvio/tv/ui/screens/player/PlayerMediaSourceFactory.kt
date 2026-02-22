@@ -55,6 +55,13 @@ internal class PlayerMediaSourceFactory {
         }
 
         val mediaItem = mediaItemBuilder.build()
+        val defaultFactory = DefaultMediaSourceFactory(okHttpFactory)
+
+        // Sidecar subtitles are more reliable through DefaultMediaSourceFactory.
+        if (subtitleConfigurations.isNotEmpty()) {
+            return defaultFactory.createMediaSource(mediaItem)
+        }
+
         return when {
             isHls -> HlsMediaSource.Factory(okHttpFactory)
                 .setAllowChunklessPreparation(true)

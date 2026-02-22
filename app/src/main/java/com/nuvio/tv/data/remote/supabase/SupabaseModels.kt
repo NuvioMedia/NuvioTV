@@ -11,6 +11,7 @@ data class SupabasePlugin(
     val name: String? = null,
     val enabled: Boolean = true,
     @SerialName("sort_order") val sortOrder: Int = 0,
+    @SerialName("profile_id") val profileId: Int = 1,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
 )
@@ -23,6 +24,7 @@ data class SupabaseAddon(
     val name: String? = null,
     val enabled: Boolean = true,
     @SerialName("sort_order") val sortOrder: Int = 0,
+    @SerialName("profile_id") val profileId: Int = 1,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
 )
@@ -83,7 +85,8 @@ data class SupabaseWatchProgress(
     val position: Long,
     val duration: Long,
     @SerialName("last_watched") val lastWatched: Long,
-    @SerialName("progress_key") val progressKey: String
+    @SerialName("progress_key") val progressKey: String,
+    @SerialName("profile_id") val profileId: Int = 1
 )
 
 @Serializable
@@ -101,7 +104,8 @@ data class SupabaseLibraryItem(
     @SerialName("imdb_rating") val imdbRating: Float? = null,
     val genres: List<String> = emptyList(),
     @SerialName("addon_base_url") val addonBaseUrl: String? = null,
-    @SerialName("added_at") val addedAt: Long = 0
+    @SerialName("added_at") val addedAt: Long = 0,
+    @SerialName("profile_id") val profileId: Int = 1
 )
 
 @Serializable
@@ -113,5 +117,19 @@ data class SupabaseWatchedItem(
     val title: String = "",
     val season: Int? = null,
     val episode: Int? = null,
-    @SerialName("watched_at") val watchedAt: Long
+    @SerialName("watched_at") val watchedAt: Long,
+    @SerialName("profile_id") val profileId: Int = 1
+)
+
+@Serializable
+data class SupabaseProfile(
+    val id: String? = null,
+    @SerialName("user_id") val userId: String? = null,
+    @SerialName("profile_index") val profileIndex: Int,
+    val name: String = "",
+    @SerialName("avatar_color_hex") val avatarColorHex: String = "#1E88E5",
+    @SerialName("uses_primary_addons") val usesPrimaryAddons: Boolean = false,
+    @SerialName("uses_primary_plugins") val usesPrimaryPlugins: Boolean = false,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null
 )

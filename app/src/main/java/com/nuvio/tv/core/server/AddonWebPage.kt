@@ -584,7 +584,6 @@ function toggleCatalog(index) {
 
 async function addAddon() {
   const input = document.getElementById('addonUrl');
-  const addBtn = document.getElementById('addBtn');
   const errorEl = document.getElementById('addError');
   let url = input.value.trim();
   if (!url) return;
@@ -607,35 +606,10 @@ async function addAddon() {
     return;
   }
 
-  addBtn.disabled = true;
-  addBtn.textContent = '...';
   errorEl.style.display = 'none';
-
-  try {
-    const res = await fetch('/api/validate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: url })
-    });
-    const data = await res.json();
-
-    if (data.error) {
-      errorEl.textContent = data.error;
-      errorEl.style.display = 'block';
-      setTimeout(() => { errorEl.style.display = 'none'; }, 4000);
-    } else {
-      addons.push({ url: data.url, name: data.name || url, description: data.description, isNew: true });
-      input.value = '';
-      renderAddons();
-    }
-  } catch (e) {
-    errorEl.textContent = 'Failed to validate addon';
-    errorEl.style.display = 'block';
-    setTimeout(() => { errorEl.style.display = 'none'; }, 4000);
-  }
-
-  addBtn.disabled = false;
-  addBtn.textContent = 'Add';
+  addons.push({ url: url, name: url, description: null, isNew: true });
+  input.value = '';
+  renderAddons();
 }
 
 function removeAddon(index) {

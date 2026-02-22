@@ -16,15 +16,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.delay
@@ -41,6 +44,8 @@ fun TrailerPlayer(
     seekDeltaMs: Long = 0L,
     onProgressChanged: (positionMs: Long, durationMs: Long) -> Unit = { _, _ -> },
     onRemoteKey: (keyCode: Int, action: Int, repeatCount: Int) -> Boolean = { _, _, _ -> false },
+    cropToFill: Boolean = false,
+    overscanZoom: Float = 1f,
     modifier: Modifier = Modifier,
     enter: EnterTransition = fadeIn(animationSpec = tween(800)),
     exit: ExitTransition = fadeOut(animationSpec = tween(500))
@@ -53,6 +58,7 @@ fun TrailerPlayer(
     val currentOnFirstFrameRendered by rememberUpdatedState(onFirstFrameRendered)
     val currentOnProgressChanged by rememberUpdatedState(onProgressChanged)
     val currentOnRemoteKey by rememberUpdatedState(onRemoteKey)
+    val zoomScale = if (cropToFill) overscanZoom.coerceAtLeast(1f) else 1f
     var hasRenderedFirstFrame by remember(trailerUrl) { mutableStateOf(false) }
     val playerAlpha by animateFloatAsState(
         targetValue = if (isPlaying && hasRenderedFirstFrame) 1f else 0f,
@@ -67,6 +73,11 @@ fun TrailerPlayer(
                 .apply {
                     repeatMode = Player.REPEAT_MODE_OFF
                     volume = if (muted) 0f else 1f
+                    videoScalingMode = if (cropToFill) {
+                        C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+                    } else {
+                        C.VIDEO_SCALING_MODE_SCALE_TO_FIT
+                    }
                 }
         } else {
             null
@@ -86,6 +97,15 @@ fun TrailerPlayer(
             hasRenderedFirstFrame = false
             player.stop()
             player.clearMediaItems()
+        }
+    }
+
+    LaunchedEffect(trailerPlayer, cropToFill) {
+        val player = trailerPlayer ?: return@LaunchedEffect
+        player.videoScalingMode = if (cropToFill) {
+            C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+        } else {
+            C.VIDEO_SCALING_MODE_SCALE_TO_FIT
         }
     }
 
@@ -183,9 +203,27 @@ fun TrailerPlayer(
                         keepScreenOn = true
                         setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
                         setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                        resizeMode = if (cropToFill) {
+                            AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                        } else {
+                            AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        }
                     }
                 },
-                modifier = modifier.graphicsLayer { alpha = playerAlpha }
+                update = { view ->
+                    view.resizeMode = if (cropToFill) {
+                        AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    } else {
+                        AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    }
+                },
+                modifier = modifier
+                    .clipToBounds()
+                    .graphicsLayer {
+                        alpha = playerAlpha
+                        scaleX = zoomScale
+                        scaleY = zoomScale
+                    }
             )
         }
     }

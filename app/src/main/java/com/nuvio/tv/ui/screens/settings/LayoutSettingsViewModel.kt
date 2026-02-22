@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -33,6 +35,8 @@ data class LayoutSettingsUiState(
     val focusedPosterBackdropExpandDelaySeconds: Int = 3,
     val focusedPosterBackdropTrailerEnabled: Boolean = false,
     val focusedPosterBackdropTrailerMuted: Boolean = true,
+    val focusedPosterBackdropTrailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget =
+        FocusedPosterTrailerPlaybackTarget.HERO_MEDIA,
     val posterCardWidthDp: Int = 126,
     val posterCardHeightDp: Int = 189,
     val posterCardCornerRadiusDp: Int = 12,
@@ -64,6 +68,9 @@ sealed class LayoutSettingsEvent {
     data class SetFocusedPosterBackdropExpandDelaySeconds(val seconds: Int) : LayoutSettingsEvent()
     data class SetFocusedPosterBackdropTrailerEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetFocusedPosterBackdropTrailerMuted(val muted: Boolean) : LayoutSettingsEvent()
+    data class SetFocusedPosterBackdropTrailerPlaybackTarget(
+        val target: FocusedPosterTrailerPlaybackTarget
+    ) : LayoutSettingsEvent()
     data class SetPosterCardWidth(val widthDp: Int) : LayoutSettingsEvent()
     data class SetPosterCardCornerRadius(val cornerRadiusDp: Int) : LayoutSettingsEvent()
     data class SetBlurUnwatchedEpisodes(val enabled: Boolean) : LayoutSettingsEvent()
@@ -82,120 +89,134 @@ class LayoutSettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LayoutSettingsUiState())
     val uiState: StateFlow<LayoutSettingsUiState> = _uiState.asStateFlow()
 
+    private inline fun updateUiStateIfChanged(
+        update: (LayoutSettingsUiState) -> LayoutSettingsUiState
+    ) {
+        _uiState.update { current ->
+            val next = update(current)
+            if (next == current) current else next
+        }
+    }
+
     init {
         viewModelScope.launch {
-            layoutPreferenceDataStore.selectedLayout.collectLatest { layout ->
-                _uiState.update { it.copy(selectedLayout = layout) }
+            layoutPreferenceDataStore.selectedLayout.distinctUntilChanged().collectLatest { layout ->
+                updateUiStateIfChanged { it.copy(selectedLayout = layout) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.hasChosenLayout.collectLatest { hasChosen ->
-                _uiState.update { it.copy(hasChosen = hasChosen) }
+            layoutPreferenceDataStore.hasChosenLayout.distinctUntilChanged().collectLatest { hasChosen ->
+                updateUiStateIfChanged { it.copy(hasChosen = hasChosen) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.heroCatalogSelections.collectLatest { keys ->
-                _uiState.update { it.copy(heroCatalogKeys = keys) }
+            layoutPreferenceDataStore.heroCatalogSelections.distinctUntilChanged().collectLatest { keys ->
+                updateUiStateIfChanged { it.copy(heroCatalogKeys = keys) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.sidebarCollapsedByDefault.collectLatest { collapsed ->
-                _uiState.update { it.copy(sidebarCollapsedByDefault = collapsed) }
+            layoutPreferenceDataStore.sidebarCollapsedByDefault.distinctUntilChanged().collectLatest { collapsed ->
+                updateUiStateIfChanged { it.copy(sidebarCollapsedByDefault = collapsed) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.modernSidebarEnabled.collectLatest { enabled ->
-                _uiState.update { it.copy(modernSidebarEnabled = enabled) }
+            layoutPreferenceDataStore.modernSidebarEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(modernSidebarEnabled = enabled) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.modernSidebarBlurEnabled.collectLatest { enabled ->
-                _uiState.update { it.copy(modernSidebarBlurEnabled = enabled) }
+            layoutPreferenceDataStore.modernSidebarBlurEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(modernSidebarBlurEnabled = enabled) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.modernLandscapePostersEnabled.collectLatest { enabled ->
-                _uiState.update { it.copy(modernLandscapePostersEnabled = enabled) }
+            layoutPreferenceDataStore.modernLandscapePostersEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(modernLandscapePostersEnabled = enabled) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.modernNextRowPreviewEnabled.collectLatest { enabled ->
-                _uiState.update { it.copy(modernNextRowPreviewEnabled = enabled) }
+            layoutPreferenceDataStore.modernNextRowPreviewEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(modernNextRowPreviewEnabled = enabled) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.heroSectionEnabled.collectLatest { enabled ->
-                _uiState.update { it.copy(heroSectionEnabled = enabled) }
+            layoutPreferenceDataStore.heroSectionEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(heroSectionEnabled = enabled) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.searchDiscoverEnabled.collectLatest { enabled ->
-                _uiState.update { it.copy(searchDiscoverEnabled = enabled) }
+            layoutPreferenceDataStore.searchDiscoverEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(searchDiscoverEnabled = enabled) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.posterLabelsEnabled.collectLatest { enabled ->
-                _uiState.update { it.copy(posterLabelsEnabled = enabled) }
+            layoutPreferenceDataStore.posterLabelsEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(posterLabelsEnabled = enabled) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.catalogAddonNameEnabled.collectLatest { enabled ->
-                _uiState.update { it.copy(catalogAddonNameEnabled = enabled) }
+            layoutPreferenceDataStore.catalogAddonNameEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(catalogAddonNameEnabled = enabled) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.catalogTypeSuffixEnabled.collectLatest { enabled ->
-                _uiState.update { it.copy(catalogTypeSuffixEnabled = enabled) }
+            layoutPreferenceDataStore.catalogTypeSuffixEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(catalogTypeSuffixEnabled = enabled) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.focusedPosterBackdropExpandEnabled.collectLatest { enabled ->
-                _uiState.update { it.copy(focusedPosterBackdropExpandEnabled = enabled) }
+            layoutPreferenceDataStore.focusedPosterBackdropExpandEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(focusedPosterBackdropExpandEnabled = enabled) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.focusedPosterBackdropExpandDelaySeconds.collectLatest { seconds ->
-                _uiState.update { it.copy(focusedPosterBackdropExpandDelaySeconds = seconds) }
+            layoutPreferenceDataStore.focusedPosterBackdropExpandDelaySeconds.distinctUntilChanged().collectLatest { seconds ->
+                updateUiStateIfChanged { it.copy(focusedPosterBackdropExpandDelaySeconds = seconds) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.focusedPosterBackdropTrailerEnabled.collectLatest { enabled ->
-                _uiState.update { it.copy(focusedPosterBackdropTrailerEnabled = enabled) }
+            layoutPreferenceDataStore.focusedPosterBackdropTrailerEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(focusedPosterBackdropTrailerEnabled = enabled) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.focusedPosterBackdropTrailerMuted.collectLatest { muted ->
-                _uiState.update { it.copy(focusedPosterBackdropTrailerMuted = muted) }
+            layoutPreferenceDataStore.focusedPosterBackdropTrailerMuted.distinctUntilChanged().collectLatest { muted ->
+                updateUiStateIfChanged { it.copy(focusedPosterBackdropTrailerMuted = muted) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.posterCardWidthDp.collectLatest { widthDp ->
-                _uiState.update { it.copy(posterCardWidthDp = widthDp) }
+            layoutPreferenceDataStore.focusedPosterBackdropTrailerPlaybackTarget.distinctUntilChanged().collectLatest { target ->
+                updateUiStateIfChanged { it.copy(focusedPosterBackdropTrailerPlaybackTarget = target) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.posterCardHeightDp.collectLatest { heightDp ->
-                _uiState.update { it.copy(posterCardHeightDp = heightDp) }
+            layoutPreferenceDataStore.posterCardWidthDp.distinctUntilChanged().collectLatest { widthDp ->
+                updateUiStateIfChanged { it.copy(posterCardWidthDp = widthDp) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.posterCardCornerRadiusDp.collectLatest { cornerRadiusDp ->
-                _uiState.update { it.copy(posterCardCornerRadiusDp = cornerRadiusDp) }
+            layoutPreferenceDataStore.posterCardHeightDp.distinctUntilChanged().collectLatest { heightDp ->
+                updateUiStateIfChanged { it.copy(posterCardHeightDp = heightDp) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.blurUnwatchedEpisodes.collectLatest { enabled ->
-                _uiState.update { it.copy(blurUnwatchedEpisodes = enabled) }
+            layoutPreferenceDataStore.posterCardCornerRadiusDp.distinctUntilChanged().collectLatest { cornerRadiusDp ->
+                updateUiStateIfChanged { it.copy(posterCardCornerRadiusDp = cornerRadiusDp) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.detailPageTrailerButtonEnabled.collectLatest { enabled ->
-                _uiState.update { it.copy(detailPageTrailerButtonEnabled = enabled) }
+            layoutPreferenceDataStore.blurUnwatchedEpisodes.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(blurUnwatchedEpisodes = enabled) }
             }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.preferExternalMetaAddonDetail.collectLatest { enabled ->
-                _uiState.update { it.copy(preferExternalMetaAddonDetail = enabled) }
+            layoutPreferenceDataStore.detailPageTrailerButtonEnabled.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(detailPageTrailerButtonEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.preferExternalMetaAddonDetail.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(preferExternalMetaAddonDetail = enabled) }
             }
         }
         loadAvailableCatalogs()
@@ -219,6 +240,8 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetFocusedPosterBackdropExpandDelaySeconds -> setFocusedPosterBackdropExpandDelaySeconds(event.seconds)
             is LayoutSettingsEvent.SetFocusedPosterBackdropTrailerEnabled -> setFocusedPosterBackdropTrailerEnabled(event.enabled)
             is LayoutSettingsEvent.SetFocusedPosterBackdropTrailerMuted -> setFocusedPosterBackdropTrailerMuted(event.muted)
+            is LayoutSettingsEvent.SetFocusedPosterBackdropTrailerPlaybackTarget ->
+                setFocusedPosterBackdropTrailerPlaybackTarget(event.target)
             is LayoutSettingsEvent.SetPosterCardWidth -> setPosterCardWidth(event.widthDp)
             is LayoutSettingsEvent.SetPosterCardCornerRadius -> setPosterCardCornerRadius(event.cornerRadiusDp)
             is LayoutSettingsEvent.SetBlurUnwatchedEpisodes -> setBlurUnwatchedEpisodes(event.enabled)
@@ -229,6 +252,7 @@ class LayoutSettingsViewModel @Inject constructor(
     }
 
     private fun selectLayout(layout: HomeLayout) {
+        if (_uiState.value.selectedLayout == layout && _uiState.value.hasChosen) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setLayout(layout)
         }
@@ -247,90 +271,112 @@ class LayoutSettingsViewModel @Inject constructor(
     }
 
     private fun setSidebarCollapsed(collapsed: Boolean) {
+        if (_uiState.value.sidebarCollapsedByDefault == collapsed) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setSidebarCollapsedByDefault(collapsed)
         }
     }
 
     private fun setModernSidebarEnabled(enabled: Boolean) {
+        if (_uiState.value.modernSidebarEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setModernSidebarEnabled(enabled)
         }
     }
 
     private fun setModernSidebarBlurEnabled(enabled: Boolean) {
+        if (_uiState.value.modernSidebarBlurEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setModernSidebarBlurEnabled(enabled)
         }
     }
 
     private fun setModernLandscapePostersEnabled(enabled: Boolean) {
+        if (_uiState.value.modernLandscapePostersEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setModernLandscapePostersEnabled(enabled)
         }
     }
 
     private fun setModernNextRowPreviewEnabled(enabled: Boolean) {
+        if (_uiState.value.modernNextRowPreviewEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setModernNextRowPreviewEnabled(enabled)
         }
     }
 
     private fun setHeroSectionEnabled(enabled: Boolean) {
+        if (_uiState.value.heroSectionEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setHeroSectionEnabled(enabled)
         }
     }
 
     private fun setSearchDiscoverEnabled(enabled: Boolean) {
+        if (_uiState.value.searchDiscoverEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setSearchDiscoverEnabled(enabled)
         }
     }
 
     private fun setPosterLabelsEnabled(enabled: Boolean) {
+        if (_uiState.value.posterLabelsEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setPosterLabelsEnabled(enabled)
         }
     }
 
     private fun setCatalogAddonNameEnabled(enabled: Boolean) {
+        if (_uiState.value.catalogAddonNameEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setCatalogAddonNameEnabled(enabled)
         }
     }
 
     private fun setCatalogTypeSuffixEnabled(enabled: Boolean) {
+        if (_uiState.value.catalogTypeSuffixEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setCatalogTypeSuffixEnabled(enabled)
         }
     }
 
     private fun setFocusedPosterBackdropExpandEnabled(enabled: Boolean) {
+        if (_uiState.value.focusedPosterBackdropExpandEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setFocusedPosterBackdropExpandEnabled(enabled)
         }
     }
 
     private fun setFocusedPosterBackdropExpandDelaySeconds(seconds: Int) {
+        if (_uiState.value.focusedPosterBackdropExpandDelaySeconds == seconds) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setFocusedPosterBackdropExpandDelaySeconds(seconds)
         }
     }
 
     private fun setFocusedPosterBackdropTrailerEnabled(enabled: Boolean) {
+        if (_uiState.value.focusedPosterBackdropTrailerEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setFocusedPosterBackdropTrailerEnabled(enabled)
         }
     }
 
     private fun setFocusedPosterBackdropTrailerMuted(muted: Boolean) {
+        if (_uiState.value.focusedPosterBackdropTrailerMuted == muted) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setFocusedPosterBackdropTrailerMuted(muted)
         }
     }
 
+    private fun setFocusedPosterBackdropTrailerPlaybackTarget(target: FocusedPosterTrailerPlaybackTarget) {
+        if (_uiState.value.focusedPosterBackdropTrailerPlaybackTarget == target) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setFocusedPosterBackdropTrailerPlaybackTarget(target)
+        }
+    }
+
     private fun setPosterCardWidth(widthDp: Int) {
+        if (_uiState.value.posterCardWidthDp == widthDp) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setPosterCardWidthDp(widthDp)
             layoutPreferenceDataStore.setPosterCardHeightDp((widthDp * 3) / 2)
@@ -338,24 +384,28 @@ class LayoutSettingsViewModel @Inject constructor(
     }
 
     private fun setPosterCardCornerRadius(cornerRadiusDp: Int) {
+        if (_uiState.value.posterCardCornerRadiusDp == cornerRadiusDp) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setPosterCardCornerRadiusDp(cornerRadiusDp)
         }
     }
 
     private fun setDetailPageTrailerButtonEnabled(enabled: Boolean) {
+        if (_uiState.value.detailPageTrailerButtonEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setDetailPageTrailerButtonEnabled(enabled)
         }
     }
 
     private fun setBlurUnwatchedEpisodes(enabled: Boolean) {
+        if (_uiState.value.blurUnwatchedEpisodes == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setBlurUnwatchedEpisodes(enabled)
         }
     }
 
     private fun setPreferExternalMetaAddonDetail(enabled: Boolean) {
+        if (_uiState.value.preferExternalMetaAddonDetail == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setPreferExternalMetaAddonDetail(enabled)
             metaRepository.clearCache()
@@ -363,6 +413,13 @@ class LayoutSettingsViewModel @Inject constructor(
     }
 
     private fun resetPosterCardStyle() {
+        if (
+            _uiState.value.posterCardWidthDp == 126 &&
+            _uiState.value.posterCardHeightDp == 189 &&
+            _uiState.value.posterCardCornerRadiusDp == 12
+        ) {
+            return
+        }
         viewModelScope.launch {
             layoutPreferenceDataStore.setPosterCardWidthDp(126)
             layoutPreferenceDataStore.setPosterCardHeightDp(189)
@@ -386,7 +443,7 @@ class LayoutSettingsViewModel @Inject constructor(
                             )
                         }
                 }
-                _uiState.update { it.copy(availableCatalogs = catalogs) }
+                updateUiStateIfChanged { it.copy(availableCatalogs = catalogs) }
             }
         }
     }

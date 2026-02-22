@@ -42,9 +42,11 @@ class LibraryRepositoryImpl @Inject constructor(
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var syncJob: Job? = null
     var isSyncingFromRemote = false
+    var hasCompletedInitialPull = false
 
     private fun triggerRemoteSync() {
         if (isSyncingFromRemote) return
+        if (!hasCompletedInitialPull) return
         if (!authManager.isAuthenticated) return
         syncJob?.cancel()
         syncJob = syncScope.launch {
@@ -53,7 +55,7 @@ class LibraryRepositoryImpl @Inject constructor(
         }
     }
 
-    override val sourceMode: Flow<LibrarySourceMode> = traktAuthDataStore.isAuthenticated
+    override val sourceMode: Flow<LibrarySourceMode> = traktAuthDataStore.isEffectivelyAuthenticated
         .map { isAuthenticated ->
             if (isAuthenticated) LibrarySourceMode.TRAKT else LibrarySourceMode.LOCAL
         }
@@ -129,7 +131,7 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun toggleDefault(item: LibraryEntryInput) {
-        if (traktAuthDataStore.isAuthenticated.first()) {
+        if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
             traktLibraryService.toggleWatchlist(item)
             return
         }
@@ -144,7 +146,7 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getMembershipSnapshot(item: LibraryEntryInput): ListMembershipSnapshot {
-        if (traktAuthDataStore.isAuthenticated.first()) {
+        if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
             return traktLibraryService.getMembershipSnapshot(item)
         }
         val inLocal = libraryPreferences.isInLibrary(item.itemId, item.itemType).first()
@@ -152,7 +154,7 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun applyMembershipChanges(item: LibraryEntryInput, changes: ListMembershipChanges) {
-        if (traktAuthDataStore.isAuthenticated.first()) {
+        if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
             traktLibraryService.applyMembershipChanges(item, changes)
             return
         }
@@ -197,13 +199,13 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun refreshNow() {
-        if (traktAuthDataStore.isAuthenticated.first()) {
+        if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
             traktLibraryService.refreshNow()
         }
     }
 
     private suspend fun requireTraktAuth() {
-        if (!traktAuthDataStore.isAuthenticated.first()) {
+        if (!traktAuthDataStore.isEffectivelyAuthenticated.first()) {
             throw IllegalStateException("Trakt authentication required")
         }
     }

@@ -30,6 +30,12 @@ fun MoreLikeThisSection(
     if (items.isEmpty()) return
 
     val restoreFocusRequester = remember { FocusRequester() }
+    val itemFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+
+    LaunchedEffect(items) {
+        val validIds = items.mapTo(mutableSetOf()) { it.id }
+        itemFocusRequesters.keys.retainAll(validIds)
+    }
 
     LaunchedEffect(restoreFocusToken, restoreItemId, items) {
         if (restoreFocusToken <= 0 || restoreItemId.isNullOrBlank()) return@LaunchedEffect
@@ -60,12 +66,12 @@ fun MoreLikeThisSection(
             itemsIndexed(
                 items = items,
                 key = { index, item -> item.id + "|" + item.name + "|" + index }
-            ) { index, item ->
+            ) { _, item ->
                 val isRestoreTarget = item.id == restoreItemId
                 val focusRequester = if (isRestoreTarget) {
                     restoreFocusRequester
                 } else {
-                    remember(index, item.id, item.name) { FocusRequester() }
+                    itemFocusRequesters.getOrPut(item.id) { FocusRequester() }
                 }
 
                 GridContentCard(

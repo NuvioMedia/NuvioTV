@@ -28,13 +28,13 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Divider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -113,6 +114,14 @@ private data class PeopleTabItem(
     val focusRequester: FocusRequester
 )
 
+private const val USER_INTERACTION_DISPATCH_DEBOUNCE_MS = 120L
+
+@Stable
+private class TrailerSeekOverlayState {
+    var positionMs by mutableLongStateOf(0L)
+    var durationMs by mutableLongStateOf(0L)
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun MetaDetailsScreen(
@@ -136,7 +145,7 @@ fun MetaDetailsScreen(
         runtime: Int?
     ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _ -> }
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var restorePlayFocusAfterTrailerBackToken by rememberSaveable { mutableIntStateOf(0) }
 
     BackHandler {
@@ -151,10 +160,16 @@ fun MetaDetailsScreen(
     val currentIsTrailerPlaying by rememberUpdatedState(uiState.isTrailerPlaying)
     val currentShowTrailerControls by rememberUpdatedState(uiState.showTrailerControls)
     var trailerSeekOverlayVisible by remember { mutableStateOf(false) }
-    var trailerPositionMs by remember { mutableLongStateOf(0L) }
-    var trailerDurationMs by remember { mutableLongStateOf(0L) }
+    val trailerSeekOverlayState = remember { TrailerSeekOverlayState() }
     var trailerSeekToken by remember { mutableIntStateOf(0) }
     var trailerSeekDeltaMs by remember { mutableLongStateOf(0L) }
+    var lastUserInteractionDispatchMs by remember { mutableLongStateOf(0L) }
+    val onTrailerProgressChanged = remember(trailerSeekOverlayState) {
+        { position: Long, duration: Long ->
+            trailerSeekOverlayState.positionMs = position
+            trailerSeekOverlayState.durationMs = duration
+        }
+    }
 
     LaunchedEffect(uiState.userMessage) {
         if (uiState.userMessage != null) {
@@ -223,7 +238,15 @@ fun MetaDetailsScreen(
                             keyCode != KeyEvent.KEYCODE_ESCAPE
                 }
                 if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
-                    viewModel.onEvent(MetaDetailsEvent.OnUserInteraction)
+                    val nativeEvent = keyEvent.nativeKeyEvent
+                    val shouldDispatch =
+                        nativeEvent.repeatCount == 0 &&
+                            (nativeEvent.eventTime - lastUserInteractionDispatchMs) >=
+                            USER_INTERACTION_DISPATCH_DEBOUNCE_MS
+                    if (shouldDispatch) {
+                        lastUserInteractionDispatchMs = nativeEvent.eventTime
+                        viewModel.onEvent(MetaDetailsEvent.OnUserInteraction)
+                    }
                 }
                 false
             }
@@ -309,6 +332,18 @@ fun MetaDetailsScreen(
                     onToggleEpisodeWatched = { video ->
                         viewModel.onEvent(MetaDetailsEvent.OnToggleEpisodeWatched(video))
                     },
+                    onMarkSeasonWatched = { season ->
+                        viewModel.onEvent(MetaDetailsEvent.OnMarkSeasonWatched(season))
+                    },
+                    onMarkSeasonUnwatched = { season ->
+                        viewModel.onEvent(MetaDetailsEvent.OnMarkSeasonUnwatched(season))
+                    },
+                    onMarkPreviousEpisodesWatched = { video ->
+                        viewModel.onEvent(MetaDetailsEvent.OnMarkPreviousEpisodesWatched(video))
+                    },
+                    isSeasonFullyWatched = { season ->
+                        viewModel.isSeasonFullyWatched(season)
+                    },
                     trailerUrl = uiState.trailerUrl,
                     isTrailerPlaying = uiState.isTrailerPlaying,
                     showTrailerControls = uiState.showTrailerControls,
@@ -356,10 +391,7 @@ fun MetaDetailsScreen(
                             }
                         }
                     },
-                    onTrailerProgressChanged = { position, duration ->
-                        trailerPositionMs = position
-                        trailerDurationMs = duration
-                    },
+                    onTrailerProgressChanged = onTrailerProgressChanged,
                     onTrailerEnded = { viewModel.onEvent(MetaDetailsEvent.OnTrailerEnded) },
                     onTrailerButtonClick = { viewModel.onEvent(MetaDetailsEvent.OnTrailerButtonClick) },
                     restorePlayFocusAfterTrailerBackToken = restorePlayFocusAfterTrailerBackToken,
@@ -408,17 +440,11 @@ fun MetaDetailsScreen(
             }
         }
 
-        androidx.compose.animation.AnimatedVisibility(
+        TrailerSeekOverlayHost(
             visible = uiState.isTrailerPlaying && uiState.showTrailerControls && trailerSeekOverlayVisible,
-            enter = androidx.compose.animation.fadeIn(animationSpec = tween(150)),
-            exit = androidx.compose.animation.fadeOut(animationSpec = tween(150)),
+            overlayState = trailerSeekOverlayState,
             modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            TrailerSeekOverlay(
-                currentPosition = trailerPositionMs,
-                duration = trailerDurationMs
-            )
-        }
+        )
     }
 
     LaunchedEffect(trailerSeekOverlayVisible, uiState.isTrailerPlaying, uiState.showTrailerControls, trailerSeekToken) {
@@ -466,6 +492,10 @@ private fun MetaDetailsContent(
     onLibraryLongPress: () -> Unit,
     onToggleMovieWatched: () -> Unit,
     onToggleEpisodeWatched: (Video) -> Unit,
+    onMarkSeasonWatched: (Int) -> Unit,
+    onMarkSeasonUnwatched: (Int) -> Unit,
+    onMarkPreviousEpisodesWatched: (Video) -> Unit,
+    isSeasonFullyWatched: (Int) -> Boolean,
     trailerUrl: String?,
     isTrailerPlaying: Boolean,
     showTrailerControls: Boolean,
@@ -669,6 +699,7 @@ private fun MetaDetailsContent(
         else -> PeopleSectionTab.RATINGS
     }
     var activePeopleTab by rememberSaveable(meta.id) { mutableStateOf(initialPeopleTab) }
+    var seasonOptionsDialogSeason by remember { mutableStateOf<Int?>(null) }
 
     val activePeopleTabFocusRequester = peopleTabItems
         .firstOrNull { it.tab == activePeopleTab }
@@ -769,8 +800,29 @@ private fun MetaDetailsContent(
 
     // Pre-compute screen dimensions to avoid BoxWithConstraints subcomposition overhead
     val configuration = LocalConfiguration.current
+    val localContext = LocalContext.current
+    val localDensity = LocalDensity.current
     val screenWidthDp = remember(configuration) { configuration.screenWidthDp.dp }
     val screenHeightDp = remember(configuration) { configuration.screenHeightDp.dp }
+    val backdropWidthPx = remember(screenWidthDp, localDensity) {
+        with(localDensity) { screenWidthDp.roundToPx() }
+    }
+    val backdropHeightPx = remember(screenHeightDp, localDensity) {
+        with(localDensity) { screenHeightDp.roundToPx() }
+    }
+    val backdropRequest = remember(
+        localContext,
+        meta.background,
+        meta.poster,
+        backdropWidthPx,
+        backdropHeightPx
+    ) {
+        ImageRequest.Builder(localContext)
+            .data(meta.background ?: meta.poster)
+            .crossfade(false)
+            .size(width = backdropWidthPx, height = backdropHeightPx)
+            .build()
+    }
 
     // Animated gradient alpha (moved outside subcomposition scope)
     val gradientAlpha by animateFloatAsState(
@@ -791,14 +843,7 @@ private fun MetaDetailsContent(
         Box(modifier = Modifier.fillMaxSize()) {
             // Backdrop image (fades out when trailer plays)
             AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(meta.background ?: meta.poster)
-                    .crossfade(true)
-                    .size(
-                        width = with(LocalDensity.current) { screenWidthDp.roundToPx() },
-                        height = with(LocalDensity.current) { screenHeightDp.roundToPx() }
-                    )
-                    .build(),
+                model = backdropRequest,
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
@@ -890,6 +935,7 @@ private fun MetaDetailsContent(
                         seasons = seasons,
                         selectedSeason = selectedSeason,
                         onSeasonSelected = onSeasonSelected,
+                        onSeasonLongPress = { seasonOptionsDialogSeason = it },
                         selectedTabFocusRequester = selectedSeasonFocusRequester
                     )
                 }
@@ -902,6 +948,11 @@ private fun MetaDetailsContent(
                         blurUnwatchedEpisodes = blurUnwatchedEpisodes,
                         onEpisodeClick = episodeClick,
                         onToggleEpisodeWatched = onToggleEpisodeWatched,
+                        onMarkSeasonWatched = onMarkSeasonWatched,
+                        onMarkSeasonUnwatched = onMarkSeasonUnwatched,
+                        isSeasonFullyWatched = isSeasonFullyWatched(selectedSeason),
+                        selectedSeason = selectedSeason,
+                        onMarkPreviousEpisodesWatched = onMarkPreviousEpisodesWatched,
                         upFocusRequester = selectedSeasonFocusRequester,
                         downFocusRequester = episodesDownFocusRequester,
                         restoreEpisodeId = if (pendingRestoreType == RestoreTarget.EPISODE) pendingRestoreEpisodeId else null,
@@ -1038,6 +1089,22 @@ private fun MetaDetailsContent(
                 }
             }
         }
+
+        seasonOptionsDialogSeason?.let { season ->
+            SeasonOptionsDialog(
+                season = season,
+                isFullyWatched = isSeasonFullyWatched(season),
+                onDismiss = { seasonOptionsDialogSeason = null },
+                onMarkSeasonWatched = {
+                    onMarkSeasonWatched(season)
+                    seasonOptionsDialogSeason = null
+                },
+                onMarkSeasonUnwatched = {
+                    onMarkSeasonUnwatched(season)
+                    seasonOptionsDialogSeason = null
+                }
+            )
+        }
     }
 }
 
@@ -1130,6 +1197,25 @@ private fun PeopleSectionTabButton(
                 else -> NuvioColors.TextPrimary.copy(alpha = 0.55f)
             },
             modifier = Modifier.padding(horizontal = 2.dp, vertical = 2.dp)
+        )
+    }
+}
+
+@Composable
+private fun TrailerSeekOverlayHost(
+    visible: Boolean,
+    overlayState: TrailerSeekOverlayState,
+    modifier: Modifier = Modifier
+) {
+    androidx.compose.animation.AnimatedVisibility(
+        visible = visible,
+        enter = androidx.compose.animation.fadeIn(animationSpec = tween(150)),
+        exit = androidx.compose.animation.fadeOut(animationSpec = tween(150)),
+        modifier = modifier
+    ) {
+        TrailerSeekOverlay(
+            currentPosition = overlayState.positionMs,
+            duration = overlayState.durationMs
         )
     }
 }

@@ -25,8 +25,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -50,14 +52,17 @@ import kotlinx.coroutines.delay
 @Composable
 fun AuthQrSignInScreen(
     onBackPress: () -> Unit = {},
+    onContinue: (() -> Unit)? = null,
     viewModel: AccountViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val fullAccount = uiState.authState as? AuthState.FullAccount
     val isSignedIn = fullAccount != null
+    val isOnboardingMode = onContinue != null
     val isApproved = remember(uiState.qrLoginStatus) {
         uiState.qrLoginStatus?.contains("approved", ignoreCase = true) == true
     }
+    var onboardingTransitionHandled by remember(isOnboardingMode) { mutableStateOf(false) }
 
     BackHandler {
         viewModel.clearQrLoginSession()
@@ -88,6 +93,15 @@ fun AuthQrSignInScreen(
         }
     }
 
+    LaunchedEffect(isOnboardingMode, isSignedIn) {
+        if (!isOnboardingMode || onboardingTransitionHandled) return@LaunchedEffect
+        if (isSignedIn) {
+            onboardingTransitionHandled = true
+            viewModel.clearQrLoginSession()
+            onContinue.invoke()
+        }
+    }
+
     val nowMillis by produceState(initialValue = System.currentTimeMillis(), key1 = uiState.qrLoginCode) {
         while (true) {
             value = System.currentTimeMillis()
@@ -96,190 +110,211 @@ fun AuthQrSignInScreen(
     }
     val remainingMillis = uiState.qrLoginExpiresAtMillis?.let { (it - nowMillis).coerceAtLeast(0L) } ?: 0L
 
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(NuvioColors.Background)
-            .padding(horizontal = 48.dp, vertical = 28.dp),
-        horizontalArrangement = Arrangement.spacedBy(36.dp)
     ) {
-        Column(
+        Row(
             modifier = Modifier
-                .weight(0.45f)
-                .fillMaxHeight(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .fillMaxSize()
+                .padding(horizontal = 48.dp, vertical = 28.dp),
+            horizontalArrangement = Arrangement.spacedBy(36.dp)
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.app_logo_wordmark),
-                contentDescription = "Nuvio",
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth(0.85f)
-                    .height(60.dp),
-                contentScale = ContentScale.Fit
-            )
-            Spacer(modifier = Modifier.height(22.dp))
-            Text(
-                text = "Sign In With QR",
-                style = MaterialTheme.typography.headlineLarge,
-                color = NuvioColors.TextPrimary,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = if (isSignedIn) {
-                    "Your account is connected on this TV."
-                } else {
-                    "Use your phone to sign in with email/password. TV stays QR-only for faster login."
-                },
-                style = MaterialTheme.typography.bodyLarge,
-                color = NuvioColors.TextSecondary,
-                textAlign = TextAlign.Center
-            )
-            if (isSignedIn) {
-                Spacer(modifier = Modifier.height(16.dp))
+                    .weight(0.45f)
+                    .fillMaxHeight(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.app_logo_wordmark),
+                    contentDescription = "Nuvio",
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .height(60.dp),
+                    contentScale = ContentScale.Fit
+                )
+                Spacer(modifier = Modifier.height(22.dp))
                 Text(
-                    text = fullAccount.email,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color(0xFF7CFF9B),
+                    text = "Sign In With QR",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = NuvioColors.TextPrimary,
                     textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = fullAccount.userId,
+                    text = if (isSignedIn) {
+                        "Your account is connected on this TV."
+                    } else {
+                        "Use your phone to sign in with email/password. TV stays QR-only for faster login."
+                    },
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = NuvioColors.TextSecondary,
+                    textAlign = TextAlign.Center
+                )
+                if (isSignedIn) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = fullAccount.email,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color(0xFF7CFF9B),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = fullAccount.userId,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = NuvioColors.TextSecondary,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(0.55f)
+                    .fillMaxHeight()
+                    .border(1.dp, NuvioColors.Border.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
+                    .background(
+                        NuvioColors.BackgroundElevated.copy(alpha = 0.35f),
+                        RoundedCornerShape(18.dp)
+                    )
+                    .padding(26.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Account Login",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = NuvioColors.TextPrimary
+                )
+                Text(
+                    text = if (isSignedIn) {
+                        "Your synced data"
+                    } else {
+                        "Scan QR, approve in browser, then return here."
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextSecondary,
                     textAlign = TextAlign.Center
                 )
-            }
-        }
 
-        Column(
-            modifier = Modifier
-                .weight(0.55f)
-                .fillMaxHeight()
-                .border(1.dp, NuvioColors.Border.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
-                .background(
-                    NuvioColors.BackgroundElevated.copy(alpha = 0.35f),
-                    RoundedCornerShape(18.dp)
-                )
-                .padding(26.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "Account Login",
-                style = MaterialTheme.typography.titleLarge,
-                color = NuvioColors.TextPrimary
-            )
-            Text(
-                text = if (isSignedIn) {
-                    "Your synced data"
-                } else {
-                    "Scan QR, approve in browser, then return here."
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = NuvioColors.TextSecondary,
-                textAlign = TextAlign.Center
-            )
-
-            if (isSignedIn) {
-                AccountConnectedStatsStrip(
-                    stats = uiState.connectedStats,
-                    isLoading = uiState.isStatsLoading
-                )
-            } else {
-                if (uiState.qrLoginBitmap != null) {
-                    Image(
-                        bitmap = uiState.qrLoginBitmap!!.asImageBitmap(),
-                        contentDescription = "QR login code",
-                        modifier = Modifier
-                            .size(200.dp)
-                            .background(Color.White, RoundedCornerShape(12.dp))
-                            .padding(8.dp),
-                        contentScale = ContentScale.Fit
+                if (isSignedIn && !isOnboardingMode) {
+                    AccountConnectedStatsStrip(
+                        stats = uiState.connectedStats,
+                        isLoading = uiState.isStatsLoading
+                    )
+                } else if (isSignedIn && isOnboardingMode) {
+                    StatusPill(
+                        text = "Finishing sign in...",
+                        containerColor = NuvioColors.BackgroundCard,
+                        contentColor = NuvioColors.TextSecondary
                     )
                 } else {
-                    Box(
-                        modifier = Modifier
-                            .size(200.dp)
-                            .background(NuvioColors.BackgroundCard, RoundedCornerShape(12.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    if (uiState.qrLoginBitmap != null) {
+                        Image(
+                            bitmap = uiState.qrLoginBitmap!!.asImageBitmap(),
+                            contentDescription = "QR login code",
+                            modifier = Modifier
+                                .size(200.dp)
+                                .background(Color.White, RoundedCornerShape(12.dp))
+                                .padding(8.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(200.dp)
+                                .background(NuvioColors.BackgroundCard, RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (uiState.isLoading) "Generating QR..." else "QR unavailable. Refresh to retry.",
+                                color = NuvioColors.TextSecondary,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+
+                    if (!uiState.qrLoginCode.isNullOrBlank()) {
                         Text(
-                            text = if (uiState.isLoading) "Generating QR..." else "QR unavailable. Refresh to retry.",
-                            color = NuvioColors.TextSecondary,
-                            textAlign = TextAlign.Center
+                            text = "Code: ${uiState.qrLoginCode}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = NuvioColors.TextPrimary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    if (uiState.qrLoginExpiresAtMillis != null) {
+                        Text(
+                            text = "Expires in ${formatDuration(remainingMillis)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NuvioColors.TextSecondary
+                        )
+                    }
+
+                    val statusText = uiState.error ?: uiState.qrLoginStatus
+                    if (!statusText.isNullOrBlank()) {
+                        StatusPill(
+                            text = statusText,
+                            containerColor = if (uiState.error != null) Color(0x33C62828) else NuvioColors.BackgroundCard,
+                            contentColor = if (uiState.error != null) Color(0xFFFF6E6E) else NuvioColors.TextSecondary
                         )
                     }
                 }
 
-                if (!uiState.qrLoginCode.isNullOrBlank()) {
-                    Text(
-                        text = "Code: ${uiState.qrLoginCode}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = NuvioColors.TextPrimary,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-                if (uiState.qrLoginExpiresAtMillis != null) {
-                    Text(
-                        text = "Expires in ${formatDuration(remainingMillis)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = NuvioColors.TextSecondary
-                    )
-                }
-
-                val statusText = uiState.error ?: uiState.qrLoginStatus
-                if (!statusText.isNullOrBlank()) {
-                    StatusPill(
-                        text = statusText,
-                        containerColor = if (uiState.error != null) Color(0x33C62828) else NuvioColors.BackgroundCard,
-                        contentColor = if (uiState.error != null) Color(0xFFFF6E6E) else NuvioColors.TextSecondary
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Button(
-                    onClick = {
-                        if (isSignedIn) {
-                            viewModel.signOut()
-                        } else {
-                            viewModel.startQrLogin()
-                        }
-                    },
-                    enabled = !uiState.isLoading,
-                    colors = ButtonDefaults.colors(
-                        containerColor = NuvioColors.BackgroundCard,
-                        focusedContainerColor = Color.White,
-                        contentColor = NuvioColors.TextPrimary,
-                        focusedContentColor = Color.Black,
-                        disabledContainerColor = NuvioColors.BackgroundCard.copy(alpha = 0.55f)
-                    )
-                ) {
-                    Text(
-                        when {
-                            isSignedIn -> "Sign Out"
-                            uiState.isLoading -> "Please wait..."
-                            else -> "Refresh QR"
-                        }
-                    )
-                }
-                Button(
-                    onClick = {
-                        viewModel.clearQrLoginSession()
-                        onBackPress()
-                    },
-                    colors = ButtonDefaults.colors(
-                        containerColor = NuvioColors.BackgroundCard,
-                        focusedContainerColor = Color.White,
-                        contentColor = NuvioColors.TextPrimary,
-                        focusedContentColor = Color.Black
-                    )
-                ) {
-                    Text("Back")
+                Spacer(modifier = Modifier.weight(1f))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Button(
+                        onClick = {
+                            if (isSignedIn) {
+                                viewModel.signOut()
+                            } else {
+                                viewModel.startQrLogin()
+                            }
+                        },
+                        enabled = !uiState.isLoading,
+                        colors = ButtonDefaults.colors(
+                            containerColor = NuvioColors.BackgroundCard,
+                            focusedContainerColor = Color.White,
+                            contentColor = NuvioColors.TextPrimary,
+                            focusedContentColor = Color.Black,
+                            disabledContainerColor = NuvioColors.BackgroundCard.copy(alpha = 0.55f)
+                        )
+                    ) {
+                        Text(
+                            when {
+                                isSignedIn -> "Sign Out"
+                                uiState.isLoading -> "Please wait..."
+                                else -> "Refresh QR"
+                            }
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            viewModel.clearQrLoginSession()
+                            if (onContinue != null) {
+                                onContinue()
+                            } else {
+                                onBackPress()
+                            }
+                        },
+                        colors = ButtonDefaults.colors(
+                            containerColor = NuvioColors.BackgroundCard,
+                            focusedContainerColor = Color.White,
+                            contentColor = NuvioColors.TextPrimary,
+                            focusedContentColor = Color.Black
+                        )
+                    ) {
+                        Text(
+                            if (onContinue != null) {
+                                if (isSignedIn) "Continue" else "Continue without account"
+                            } else {
+                                "Back"
+                            }
+                        )
+                    }
                 }
             }
         }

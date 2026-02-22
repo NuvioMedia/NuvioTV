@@ -26,6 +26,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.atomic.AtomicLong
 
 class PlayerRuntimeController(
     internal val context: Context,
@@ -128,6 +129,7 @@ class PlayerRuntimeController(
     internal var frameRateProbeToken: Long = 0L
     internal var hideAspectRatioIndicatorJob: Job? = null
     internal var hideStreamSourceIndicatorJob: Job? = null
+    internal var hideSubtitleDelayOverlayJob: Job? = null
     internal var nextEpisodeAutoPlayJob: Job? = null
     internal var sourceStreamsJob: Job? = null
     internal var sourceStreamsCacheRequestKey: String? = null
@@ -173,6 +175,7 @@ class PlayerRuntimeController(
     internal var pauseOverlayJob: Job? = null
     internal val pauseOverlayDelayMs = 5000L
     internal val seekProgressSyncDebounceMs = 700L
+    internal val subtitleDelayUs = AtomicLong(0L)
     internal var pendingPreviewSeekPosition: Long? = null
     internal var pendingResumeProgress: WatchProgress? = null
     internal var hasRetriedCurrentStreamAfter416: Boolean = false

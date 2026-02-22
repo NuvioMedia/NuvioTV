@@ -26,6 +26,7 @@ internal fun PlayerRuntimeController.releasePlayer() {
     seekProgressSyncJob?.cancel()
     frameRateProbeJob?.cancel()
     hideStreamSourceIndicatorJob?.cancel()
+    hideSubtitleDelayOverlayJob?.cancel()
     nextEpisodeAutoPlayJob?.cancel()
     nextEpisodeAutoPlayJob = null
     _exoPlayer?.release()

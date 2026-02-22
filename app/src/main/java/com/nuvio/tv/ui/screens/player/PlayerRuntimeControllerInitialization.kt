@@ -14,7 +14,10 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.ForwardingRenderer
+import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.text.TextOutput
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
@@ -121,7 +124,11 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                 .setTsExtractorTimestampSearchBytes(1500 * TsExtractor.TS_PACKET_SIZE)
 
             
-            val renderersFactory = DefaultRenderersFactory(context)
+            subtitleDelayUs.set(_uiState.value.subtitleDelayMs.toLong() * 1000L)
+            val renderersFactory = SubtitleOffsetRenderersFactory(
+                context = context,
+                subtitleDelayUsProvider = subtitleDelayUs::get
+            )
                 .setExtensionRendererMode(playerSettings.decoderPriority)
                 .setMapDV7ToHevc(playerSettings.mapDV7ToHevc)
 
@@ -334,5 +341,36 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
             showLoadingOverlay = state.loadingOverlayEnabled,
             showControls = false
         )
+    }
+}
+
+private class SubtitleOffsetRenderersFactory(
+    context: Context,
+    private val subtitleDelayUsProvider: () -> Long
+) : DefaultRenderersFactory(context) {
+
+    override fun buildTextRenderers(
+        context: Context,
+        output: TextOutput,
+        outputLooper: android.os.Looper,
+        extensionRendererMode: Int,
+        out: ArrayList<Renderer>
+    ) {
+        val startIndex = out.size
+        super.buildTextRenderers(context, output, outputLooper, extensionRendererMode, out)
+        for (index in startIndex until out.size) {
+            out[index] = SubtitleOffsetRenderer(out[index], subtitleDelayUsProvider)
+        }
+    }
+}
+
+private class SubtitleOffsetRenderer(
+    renderer: Renderer,
+    private val subtitleDelayUsProvider: () -> Long
+) : ForwardingRenderer(renderer) {
+
+    override fun render(positionUs: Long, elapsedRealtimeUs: Long) {
+        val adjustedPositionUs = (positionUs - subtitleDelayUsProvider()).coerceAtLeast(0L)
+        super.render(adjustedPositionUs, elapsedRealtimeUs)
     }
 }

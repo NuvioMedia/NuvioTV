@@ -60,6 +60,19 @@ fun CastSection(
     if (cast.isEmpty() && leadingCast.isEmpty()) return
 
     val restoreFocusRequester = remember { FocusRequester() }
+    val itemFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+
+    LaunchedEffect(cast, leadingCast) {
+        val validKeys = buildSet {
+            leadingCast.forEach { member ->
+                add("leading:${member.tmdbId ?: member.name}:${member.character.orEmpty()}")
+            }
+            cast.forEach { member ->
+                add("cast:${member.tmdbId ?: member.name}:${member.character.orEmpty()}")
+            }
+        }
+        itemFocusRequesters.keys.retainAll(validKeys)
+    }
 
     LaunchedEffect(restoreFocusToken, restorePersonId, leadingCast, cast) {
         if (restoreFocusToken <= 0 || restorePersonId == null) return@LaunchedEffect
@@ -111,10 +124,11 @@ fun CastSection(
                     val isLastLeading = member == leadingCast.last()
                     val endPadding = if (isLastLeading && cast.isNotEmpty()) 0.dp else standardGap
                     val isRestoreTarget = member.tmdbId == restorePersonId
+                    val focusKey = "leading:${member.tmdbId ?: member.name}:${member.character.orEmpty()}"
                     val focusRequester = if (isRestoreTarget) {
                         restoreFocusRequester
                     } else {
-                        remember(index, member.tmdbId, member.name, member.photo, member.character) { FocusRequester() }
+                        itemFocusRequesters.getOrPut(focusKey) { FocusRequester() }
                     }
 
                     Box(modifier = Modifier.padding(end = endPadding)) {
@@ -161,10 +175,11 @@ fun CastSection(
                 }
             ) { index, member ->
                 val isRestoreTarget = member.tmdbId == restorePersonId
+                val focusKey = "cast:${member.tmdbId ?: member.name}:${member.character.orEmpty()}"
                 val focusRequester = if (isRestoreTarget) {
                     restoreFocusRequester
                 } else {
-                    remember(index, member.tmdbId, member.name, member.photo, member.character) { FocusRequester() }
+                    itemFocusRequesters.getOrPut(focusKey) { FocusRequester() }
                 }
 
                 Box(modifier = Modifier.padding(end = standardGap)) {
@@ -199,6 +214,22 @@ private fun CastMemberItem(
     onFocused: () -> Unit = {},
     onClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val cardSizePx = remember(cardSize, density) {
+        with(density) { cardSize.roundToPx() }
+    }
+    val photo = member.photo
+    val photoModel = remember(context, photo, cardSizePx) {
+        photo?.takeIf { it.isNotBlank() }?.let { url ->
+            ImageRequest.Builder(context)
+                .data(url)
+                .crossfade(false)
+                .size(width = cardSizePx, height = cardSizePx)
+                .build()
+        }
+    }
+
     Column(
         modifier = Modifier.width(itemWidth),
         horizontalAlignment = Alignment.Start
@@ -231,17 +262,9 @@ private fun CastMemberItem(
                     .clip(CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                val photo = member.photo
-                if (!photo.isNullOrBlank()) {
+                if (photoModel != null) {
                     AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(photo)
-                            .crossfade(true)
-                            .size(
-                                width = with(LocalDensity.current) { cardSize.roundToPx() },
-                                height = with(LocalDensity.current) { cardSize.roundToPx() }
-                            )
-                            .build(),
+                        model = photoModel,
                         contentDescription = member.name,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop

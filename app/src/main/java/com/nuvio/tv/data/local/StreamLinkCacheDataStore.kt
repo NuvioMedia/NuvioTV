@@ -1,19 +1,14 @@
 package com.nuvio.tv.data.local
 
-import android.content.Context
-import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import dagger.hilt.android.qualifiers.ApplicationContext
+import com.nuvio.tv.core.profile.ProfileManager
 import kotlinx.coroutines.flow.first
 import org.json.JSONObject
 import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
-
-private val Context.streamLinkCacheDataStore: DataStore<Preferences> by preferencesDataStore(name = "stream_link_cache")
 
 data class CachedStreamLink(
     val url: String,
@@ -26,9 +21,15 @@ data class CachedStreamLink(
 
 @Singleton
 class StreamLinkCacheDataStore @Inject constructor(
-    @ApplicationContext private val context: Context
+    private val factory: ProfileDataStoreFactory,
+    private val profileManager: ProfileManager
 ) {
-    private val dataStore = context.streamLinkCacheDataStore
+    companion object {
+        private const val FEATURE = "stream_link_cache"
+    }
+
+    private fun store(profileId: Int = profileManager.activeProfileId.value) =
+        factory.get(profileId, FEATURE)
 
     suspend fun save(
         contentKey: String,
@@ -47,7 +48,7 @@ class StreamLinkCacheDataStore @Inject constructor(
             put("rememberedAudioName", rememberedAudioName)
         }.toString()
 
-        dataStore.edit { prefs ->
+        store().edit { prefs ->
             prefs[cachePrefKey(contentKey)] = payload
         }
     }
@@ -56,7 +57,7 @@ class StreamLinkCacheDataStore @Inject constructor(
         if (maxAgeMs <= 0L) return null
 
         val key = cachePrefKey(contentKey)
-        val raw = dataStore.data.first()[key] ?: return null
+        val raw = store().data.first()[key] ?: return null
 
         val parsed = runCatching {
             val json = JSONObject(raw)
@@ -86,7 +87,7 @@ class StreamLinkCacheDataStore @Inject constructor(
         }.getOrNull()
 
         if (parsed == null) {
-            dataStore.edit { mutablePrefs ->
+            store().edit { mutablePrefs ->
                 mutablePrefs.remove(key)
             }
         }

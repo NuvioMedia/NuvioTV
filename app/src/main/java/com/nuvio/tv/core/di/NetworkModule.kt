@@ -9,6 +9,7 @@ import com.nuvio.tv.data.remote.api.GitHubReleaseApi
 import com.nuvio.tv.data.remote.api.TraktApi
 import com.nuvio.tv.data.remote.api.TrailerApi
 import com.nuvio.tv.data.remote.api.IntroDbApi
+import com.nuvio.tv.data.remote.api.ImdbTapframeApi
 import com.nuvio.tv.data.remote.api.MDBListApi
 import com.nuvio.tv.data.remote.api.ParentalGuideApi
 import com.nuvio.tv.data.remote.api.SeriesGraphApi
@@ -238,8 +239,11 @@ object NetworkModule {
     @Named("seriesGraph")
     fun provideSeriesGraphRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit {
         val rawBaseUrl = BuildConfig.IMDB_RATINGS_API_BASE_URL
-        require(rawBaseUrl.isNotBlank()) { "IMDB_RATINGS_API_BASE_URL must be set in local properties." }
-        val normalizedBaseUrl = if (rawBaseUrl.endsWith('/')) rawBaseUrl else "$rawBaseUrl/"
+        val normalizedBaseUrl = if (rawBaseUrl.isNotBlank()) {
+            if (rawBaseUrl.endsWith('/')) rawBaseUrl else "$rawBaseUrl/"
+        } else {
+            "http://localhost/"
+        }
         return Retrofit.Builder()
             .baseUrl(normalizedBaseUrl)
             .client(okHttpClient)
@@ -251,4 +255,26 @@ object NetworkModule {
     @Singleton
     fun provideSeriesGraphApi(@Named("seriesGraph") retrofit: Retrofit): SeriesGraphApi =
         retrofit.create(SeriesGraphApi::class.java)
+
+    @Provides
+    @Singleton
+    @Named("imdbTapframe")
+    fun provideImdbTapframeRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit {
+        val rawBaseUrl = BuildConfig.IMDB_TAPFRAME_API_BASE_URL
+        val normalizedBaseUrl = if (rawBaseUrl.isNotBlank()) {
+            if (rawBaseUrl.endsWith('/')) rawBaseUrl else "$rawBaseUrl/"
+        } else {
+            "http://localhost/"
+        }
+        return Retrofit.Builder()
+            .baseUrl(normalizedBaseUrl)
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideImdbTapframeApi(@Named("imdbTapframe") retrofit: Retrofit): ImdbTapframeApi =
+        retrofit.create(ImdbTapframeApi::class.java)
 }

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.core.server.DeviceIpAddress
 import com.nuvio.tv.core.server.RepositoryConfigServer
@@ -17,17 +18,23 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 @HiltViewModel
 class PluginViewModel @Inject constructor(
     private val pluginManager: PluginManager,
+    private val profileManager: ProfileManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PluginUiState())
     val uiState: StateFlow<PluginUiState> = _uiState.asStateFlow()
+
+    val isReadOnly: Boolean
+        get() {
+            val profile = profileManager.activeProfile ?: return false
+            return !profile.isPrimary && profile.usesPrimaryPlugins
+        }
 
     private var repoServer: RepositoryConfigServer? = null
     private var logoBytes: ByteArray? = null
@@ -53,11 +60,16 @@ class PluginViewModel @Inject constructor(
             ) { enabled, repos, scrapers ->
                 Triple(enabled, repos, scrapers)
             }.collect { (enabled, repos, scrapers) ->
+                val visibleScrapers = if (isReadOnly) {
+                    scrapers.filter { it.enabled }
+                } else {
+                    scrapers
+                }
                 _uiState.update {
                     it.copy(
                         pluginsEnabled = enabled,
                         repositories = repos,
-                        scrapers = scrapers
+                        scrapers = visibleScrapers
                     )
                 }
             }
@@ -209,7 +221,6 @@ class PluginViewModel @Inject constructor(
                 }
             },
             onChangeProposed = { change -> handleRepoChangeProposed(change) },
-            manifestFetcher = { url -> fetchRepoInfo(url) },
             logoProvider = { logoBytes }
         )
 
@@ -241,22 +252,6 @@ class PluginViewModel @Inject constructor(
                 serverUrl = null,
                 pendingRepoChange = null
             )
-        }
-    }
-
-    private fun fetchRepoInfo(url: String): RepositoryConfigServer.RepositoryInfo? {
-        return try {
-            val result = runBlocking { pluginManager.addRepository(url) }
-            result.getOrNull()?.let { repo ->
-                runBlocking { pluginManager.removeRepository(repo.id) }
-                RepositoryConfigServer.RepositoryInfo(
-                    url = url,
-                    name = repo.name.ifBlank { url },
-                    description = repo.description
-                )
-            }
-        } catch (e: Exception) {
-            null
         }
     }
 

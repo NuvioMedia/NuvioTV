@@ -132,19 +132,17 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         } else {
             val pendingLang = pendingAddonSubtitleLanguage
             val hasManualAddonSelection = _uiState.value.selectedAddonSubtitle != null
-            if (hasManualAddonSelection && !pendingLang.isNullOrBlank()) {
-                val addonFallbackIndex = subtitleTracks.indexOfLast {
-                    PlayerSubtitleUtils.matchesLanguageCode(it.language, pendingLang)
-                }
-                if (addonFallbackIndex >= 0) {
-                    Log.d(
-                        PlayerRuntimeController.TAG,
-                        "Addon track id not found; falling back to last language match index=$addonFallbackIndex lang=$pendingLang"
-                    )
-                    selectSubtitleTrack(addonFallbackIndex)
-                    selectedSubtitleIndex = -1
-                    pendingAddonSubtitleTrackId = null
-                    pendingAddonSubtitleLanguage = null
+            if (hasManualAddonSelection) {
+                if (!pendingLang.isNullOrBlank()) {
+                    val addonFallbackIndex = subtitleTracks.indexOfLast {
+                        PlayerSubtitleUtils.matchesLanguageCode(it.language, pendingLang)
+                    }
+                    if (addonFallbackIndex >= 0) {
+                        selectSubtitleTrack(addonFallbackIndex)
+                        selectedSubtitleIndex = -1
+                        pendingAddonSubtitleTrackId = null
+                        pendingAddonSubtitleLanguage = null
+                    }
                 }
             }
         }

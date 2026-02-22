@@ -61,12 +61,20 @@ class AddonRepositoryImpl @Inject constructor(
     private fun normalizeUrl(url: String): String = canonicalizeUrl(url).lowercase()
 
     private fun triggerRemoteSync() {
-        if (isSyncingFromRemote) return
-        if (!authManager.isAuthenticated) return
+        if (isSyncingFromRemote) {
+            Log.d(TAG, "triggerRemoteSync: skipped (syncing from remote)")
+            return
+        }
+        if (!authManager.isAuthenticated) {
+            Log.d(TAG, "triggerRemoteSync: skipped (not authenticated, state=${authManager.authState.value})")
+            return
+        }
+        Log.d(TAG, "triggerRemoteSync: scheduling push in 500ms")
         syncJob?.cancel()
         syncJob = syncScope.launch {
             delay(500)
-            addonSyncService.pushToRemote()
+            val result = addonSyncService.pushToRemote()
+            Log.d(TAG, "triggerRemoteSync: push result=${result.isSuccess} ${result.exceptionOrNull()?.message ?: ""}")
         }
     }
 
@@ -119,7 +127,8 @@ class AddonRepositoryImpl @Inject constructor(
                     }.awaitAll().filterNotNull()
                 }
 
-                if (fresh != cached) {
+               
+                if (fresh != cached || cached.isEmpty()) {
                     emit(applyDisplayNames(fresh))
                 }
             }.flowOn(Dispatchers.IO)

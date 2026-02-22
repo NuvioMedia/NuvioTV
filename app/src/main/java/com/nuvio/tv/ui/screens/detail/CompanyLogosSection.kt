@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,6 +22,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import coil.compose.AsyncImage
@@ -58,8 +60,11 @@ fun CompanyLogosSection(
             contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(companies.size, key = { index -> "$title-${companies[index].name}-$index" }) { index ->
-                CompanyLogoCard(company = companies[index])
+            items(
+                items = companies,
+                key = { company -> "$title-${company.name}-${company.logo.orEmpty()}" }
+            ) { company ->
+                CompanyLogoCard(company = company)
             }
         }
     }
@@ -67,6 +72,20 @@ fun CompanyLogosSection(
 
 @Composable
 private fun CompanyLogoCard(company: MetaCompany) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val logoWidthPx = remember(density) { with(density) { 140.dp.roundToPx() } }
+    val logoHeightPx = remember(density) { with(density) { 56.dp.roundToPx() } }
+    val logoModel = remember(context, company.logo, logoWidthPx, logoHeightPx) {
+        company.logo?.let { logo ->
+            ImageRequest.Builder(context)
+                .data(logo)
+                .crossfade(false)
+                .size(width = logoWidthPx, height = logoHeightPx)
+                .build()
+        }
+    }
+
     Card(
         onClick = { },
         modifier = Modifier
@@ -92,16 +111,9 @@ private fun CompanyLogoCard(company: MetaCompany) {
                 .background(Color.White),
         contentAlignment = Alignment.Center
         ) {
-            if (company.logo != null) {
+            if (logoModel != null) {
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(company.logo)
-                        .crossfade(true)
-                        .size(
-                            width = with(LocalDensity.current) { 140.dp.roundToPx() },
-                            height = with(LocalDensity.current) { 56.dp.roundToPx() }
-                        )
-                        .build(),
+                    model = logoModel,
                     contentDescription = company.name,
                     modifier = Modifier
                         .fillMaxWidth()

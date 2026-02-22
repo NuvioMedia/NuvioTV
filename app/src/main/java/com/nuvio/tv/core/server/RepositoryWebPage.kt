@@ -400,7 +400,6 @@ function renderList() {
 
 async function addRepo() {
   const input = document.getElementById('repoUrl');
-  const addBtn = document.getElementById('addBtn');
   const errorEl = document.getElementById('addError');
   let url = input.value.trim();
   if (!url) return;
@@ -420,35 +419,10 @@ async function addRepo() {
     return;
   }
 
-  addBtn.disabled = true;
-  addBtn.textContent = '...';
   errorEl.style.display = 'none';
-
-  try {
-    const res = await fetchWithTimeout('/api/validate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: url })
-    }, 8000);
-    const data = await res.json();
-
-    if (data.error) {
-      errorEl.textContent = data.error;
-      errorEl.style.display = 'block';
-      setTimeout(() => { errorEl.style.display = 'none'; }, 4000);
-    } else {
-      repos.push({ url: data.url, name: data.name || url, description: data.description, isNew: true });
-      input.value = '';
-      renderList();
-    }
-  } catch (e) {
-    errorEl.textContent = 'Failed to validate repository';
-    errorEl.style.display = 'block';
-    setTimeout(() => { errorEl.style.display = 'none'; }, 4000);
-  }
-
-  addBtn.disabled = false;
-  addBtn.textContent = 'Add';
+  repos.push({ url: url, name: url, description: null, isNew: true });
+  input.value = '';
+  renderList();
 }
 
 function removeRepo(index) {

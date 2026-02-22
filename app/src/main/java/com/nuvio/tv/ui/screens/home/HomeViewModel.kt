@@ -14,6 +14,7 @@ import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
@@ -76,6 +77,7 @@ class HomeViewModel @Inject constructor(
         private const val MAX_NEXT_UP_LOOKUPS = 24
         private const val MAX_NEXT_UP_CONCURRENCY = 4
         private const val MAX_CATALOG_LOAD_CONCURRENCY = 4
+        private const val EXTERNAL_META_PREFETCH_FOCUS_DEBOUNCE_MS = 220L
     }
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -117,6 +119,8 @@ class HomeViewModel @Inject constructor(
     private var lastHeroEnrichedItems: List<MetaPreview> = emptyList()
     private val prefetchedExternalMetaIds = Collections.synchronizedSet(mutableSetOf<String>())
     private val externalMetaPrefetchInFlightIds = Collections.synchronizedSet(mutableSetOf<String>())
+    private var externalMetaPrefetchJob: Job? = null
+    private var pendingExternalMetaPrefetchItemId: String? = null
     @Volatile
     private var externalMetaPrefetchEnabled: Boolean = false
     val trailerPreviewUrls: Map<String, String>
@@ -159,13 +163,15 @@ class HomeViewModel @Inject constructor(
             layoutPreferenceDataStore.focusedPosterBackdropExpandEnabled,
             layoutPreferenceDataStore.focusedPosterBackdropExpandDelaySeconds,
             layoutPreferenceDataStore.focusedPosterBackdropTrailerEnabled,
-            layoutPreferenceDataStore.focusedPosterBackdropTrailerMuted
-        ) { expandEnabled, expandDelaySeconds, trailerEnabled, trailerMuted ->
+            layoutPreferenceDataStore.focusedPosterBackdropTrailerMuted,
+            layoutPreferenceDataStore.focusedPosterBackdropTrailerPlaybackTarget
+        ) { expandEnabled, expandDelaySeconds, trailerEnabled, trailerMuted, trailerPlaybackTarget ->
             FocusedBackdropPrefs(
                 expandEnabled = expandEnabled,
                 expandDelaySeconds = expandDelaySeconds,
                 trailerEnabled = trailerEnabled,
-                trailerMuted = trailerMuted
+                trailerMuted = trailerMuted,
+                trailerPlaybackTarget = trailerPlaybackTarget
             )
         }
 
@@ -196,6 +202,7 @@ class HomeViewModel @Inject constructor(
                 focusedBackdropExpandDelaySeconds = focusedBackdropPrefs.expandDelaySeconds,
                 focusedBackdropTrailerEnabled = focusedBackdropPrefs.trailerEnabled,
                 focusedBackdropTrailerMuted = focusedBackdropPrefs.trailerMuted,
+                focusedBackdropTrailerPlaybackTarget = focusedBackdropPrefs.trailerPlaybackTarget,
                 posterCardWidthDp = posterCardWidthDp,
                 posterCardHeightDp = posterCardHeightDp,
                 posterCardCornerRadiusDp = posterCardCornerRadiusDp
@@ -211,7 +218,9 @@ class HomeViewModel @Inject constructor(
                     modernLandscapePostersEnabled = modernPrefs.first,
                     modernNextRowPreviewEnabled = modernPrefs.second
                 )
-            }.collectLatest { prefs ->
+            }
+                .distinctUntilChanged()
+                .collectLatest { prefs ->
                 val effectivePosterLabelsEnabled = if (prefs.layout == HomeLayout.MODERN) {
                     false
                 } else {
@@ -237,6 +246,7 @@ class HomeViewModel @Inject constructor(
                         focusedPosterBackdropExpandDelaySeconds = prefs.focusedBackdropExpandDelaySeconds,
                         focusedPosterBackdropTrailerEnabled = prefs.focusedBackdropTrailerEnabled,
                         focusedPosterBackdropTrailerMuted = prefs.focusedBackdropTrailerMuted,
+                        focusedPosterBackdropTrailerPlaybackTarget = prefs.focusedBackdropTrailerPlaybackTarget,
                         posterCardWidthDp = prefs.posterCardWidthDp,
                         posterCardHeightDp = prefs.posterCardHeightDp,
                         posterCardCornerRadiusDp = prefs.posterCardCornerRadiusDp
@@ -256,6 +266,8 @@ class HomeViewModel @Inject constructor(
                 .collectLatest { enabled ->
                     externalMetaPrefetchEnabled = enabled
                     if (!enabled) {
+                        externalMetaPrefetchJob?.cancel()
+                        pendingExternalMetaPrefetchItemId = null
                         externalMetaPrefetchInFlightIds.clear()
                     }
                 }
@@ -275,7 +287,8 @@ class HomeViewModel @Inject constructor(
         val expandEnabled: Boolean,
         val expandDelaySeconds: Int,
         val trailerEnabled: Boolean,
-        val trailerMuted: Boolean
+        val trailerMuted: Boolean,
+        val trailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget
     )
 
     private data class LayoutUiPrefs(
@@ -291,13 +304,27 @@ class HomeViewModel @Inject constructor(
         val focusedBackdropExpandDelaySeconds: Int,
         val focusedBackdropTrailerEnabled: Boolean,
         val focusedBackdropTrailerMuted: Boolean,
+        val focusedBackdropTrailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget,
         val posterCardWidthDp: Int,
         val posterCardHeightDp: Int,
         val posterCardCornerRadiusDp: Int
     )
 
     fun requestTrailerPreview(item: MetaPreview) {
-        val itemId = item.id
+        requestTrailerPreview(
+            itemId = item.id,
+            title = item.name,
+            releaseInfo = item.releaseInfo,
+            apiType = item.apiType
+        )
+    }
+
+    fun requestTrailerPreview(
+        itemId: String,
+        title: String,
+        releaseInfo: String?,
+        apiType: String
+    ) {
         if (activeTrailerPreviewItemId != itemId) {
             activeTrailerPreviewItemId = itemId
             trailerPreviewRequestVersion++
@@ -311,10 +338,10 @@ class HomeViewModel @Inject constructor(
 
         viewModelScope.launch {
             val trailerUrl = trailerService.getTrailerUrl(
-                title = item.name,
-                year = extractYear(item.releaseInfo),
+                title = title,
+                year = extractYear(releaseInfo),
                 tmdbId = null,
-                type = item.apiType
+                type = apiType
             )
 
             val isLatestFocusedItem =
@@ -339,9 +366,16 @@ class HomeViewModel @Inject constructor(
     fun onItemFocus(item: MetaPreview) {
         if (!externalMetaPrefetchEnabled) return
         if (item.id in prefetchedExternalMetaIds) return
-        if (!externalMetaPrefetchInFlightIds.add(item.id)) return
+        if (pendingExternalMetaPrefetchItemId == item.id) return
 
-        viewModelScope.launch(Dispatchers.IO) {
+        pendingExternalMetaPrefetchItemId = item.id
+        externalMetaPrefetchJob?.cancel()
+        externalMetaPrefetchJob = viewModelScope.launch(Dispatchers.IO) {
+            delay(EXTERNAL_META_PREFETCH_FOCUS_DEBOUNCE_MS)
+            if (pendingExternalMetaPrefetchItemId != item.id) return@launch
+            if (!externalMetaPrefetchEnabled) return@launch
+            if (item.id in prefetchedExternalMetaIds) return@launch
+            if (!externalMetaPrefetchInFlightIds.add(item.id)) return@launch
             try {
                 val result = metaRepository.getMetaFromAllAddons(item.apiType, item.id)
                     .first { it is NetworkResult.Success || it is NetworkResult.Error }
@@ -352,11 +386,37 @@ class HomeViewModel @Inject constructor(
                 }
             } finally {
                 externalMetaPrefetchInFlightIds.remove(item.id)
+                if (pendingExternalMetaPrefetchItemId == item.id) {
+                    pendingExternalMetaPrefetchItemId = null
+                }
             }
         }
     }
 
     private fun updateCatalogItemWithMeta(itemId: String, meta: Meta) {
+        fun mergeItem(currentItem: MetaPreview): MetaPreview = currentItem.copy(
+            background = meta.background ?: currentItem.background,
+            logo = meta.logo ?: currentItem.logo,
+            description = meta.description ?: currentItem.description,
+            releaseInfo = meta.releaseInfo ?: currentItem.releaseInfo,
+            imdbRating = meta.imdbRating ?: currentItem.imdbRating,
+            genres = if (meta.genres.isNotEmpty()) meta.genres else currentItem.genres
+        )
+
+        // Update the source-of-truth catalogsMap so re-renders don't revert the enrichment
+        catalogsMap.forEach { (key, row) ->
+            val itemIndex = row.items.indexOfFirst { it.id == itemId }
+            if (itemIndex >= 0) {
+                val merged = mergeItem(row.items[itemIndex])
+                if (merged != row.items[itemIndex]) {
+                    val mutableItems = row.items.toMutableList()
+                    mutableItems[itemIndex] = merged
+                    catalogsMap[key] = row.copy(items = mutableItems)
+                    truncatedRowCache.remove(key)
+                }
+            }
+        }
+
         _uiState.update { state ->
             var changed = false
             val updatedRows = state.catalogRows.map { row ->
@@ -364,16 +424,8 @@ class HomeViewModel @Inject constructor(
                 if (itemIndex < 0) {
                     row
                 } else {
-                    val currentItem = row.items[itemIndex]
-                    val mergedItem = currentItem.copy(
-                        background = meta.background ?: currentItem.background,
-                        logo = meta.logo ?: currentItem.logo,
-                        description = meta.description ?: currentItem.description,
-                        releaseInfo = meta.releaseInfo ?: currentItem.releaseInfo,
-                        imdbRating = meta.imdbRating ?: currentItem.imdbRating,
-                        genres = if (meta.genres.isNotEmpty()) meta.genres else currentItem.genres
-                    )
-                    if (mergedItem == currentItem) {
+                    val mergedItem = mergeItem(row.items[itemIndex])
+                    if (mergedItem == row.items[itemIndex]) {
                         row
                     } else {
                         changed = true
@@ -383,11 +435,7 @@ class HomeViewModel @Inject constructor(
                     }
                 }
             }
-            if (changed) {
-                state.copy(catalogRows = updatedRows)
-            } else {
-                state
-            }
+            if (changed) state.copy(catalogRows = updatedRows) else state
         }
     }
 
@@ -478,7 +526,13 @@ class HomeViewModel @Inject constructor(
                 Log.d("HomeViewModel", "inProgressOnly: ${inProgressOnly.size} items after filter+dedup")
 
                 // Optimistic immediate render: show in-progress entries instantly.
-                _uiState.update { it.copy(continueWatchingItems = inProgressOnly) }
+                _uiState.update { state ->
+                    if (state.continueWatchingItems == inProgressOnly) {
+                        state
+                    } else {
+                        state.copy(continueWatchingItems = inProgressOnly)
+                    }
+                }
 
                 // Then enrich Next Up in background with bounded concurrency.
                 enrichContinueWatchingProgressively(
@@ -589,12 +643,15 @@ class HomeViewModel @Inject constructor(
                         if (nextUpByContent.size - lastEmittedNextUpCount >= 2) {
                             val nextUpItems = nextUpByContent.values.toList()
                             _uiState.update {
-                                it.copy(
-                                    continueWatchingItems = mergeContinueWatchingItems(
-                                        inProgressItems = inProgressItems,
-                                        nextUpItems = nextUpItems
-                                    )
+                                val mergedItems = mergeContinueWatchingItems(
+                                    inProgressItems = inProgressItems,
+                                    nextUpItems = nextUpItems
                                 )
+                                if (it.continueWatchingItems == mergedItems) {
+                                    it
+                                } else {
+                                    it.copy(continueWatchingItems = mergedItems)
+                                }
                             }
                             lastEmittedNextUpCount = nextUpByContent.size
                         }
@@ -608,12 +665,15 @@ class HomeViewModel @Inject constructor(
             if (nextUpByContent.size != lastEmittedNextUpCount) {
                 val nextUpItems = nextUpByContent.values.toList()
                 _uiState.update {
-                    it.copy(
-                        continueWatchingItems = mergeContinueWatchingItems(
-                            inProgressItems = inProgressItems,
-                            nextUpItems = nextUpItems
-                        )
+                    val mergedItems = mergeContinueWatchingItems(
+                        inProgressItems = inProgressItems,
+                        nextUpItems = nextUpItems
                     )
+                    if (it.continueWatchingItems == mergedItems) {
+                        it
+                    } else {
+                        it.copy(continueWatchingItems = mergedItems)
+                    }
                 }
             }
         }
@@ -852,6 +912,8 @@ class HomeViewModel @Inject constructor(
         trailerPreviewRequestVersion = 0L
         prefetchedExternalMetaIds.clear()
         externalMetaPrefetchInFlightIds.clear()
+        externalMetaPrefetchJob?.cancel()
+        pendingExternalMetaPrefetchItemId = null
         lastHeroEnrichmentSignature = null
         lastHeroEnrichedItems = emptyList()
 
@@ -970,12 +1032,12 @@ class HomeViewModel @Inject constructor(
                         val mergedItems = currentRow.items + result.data.items
                         catalogsMap[key] = result.data.copy(items = mergedItems)
                         _loadingCatalogs.update { it - key }
-                        updateCatalogRows()
+                        scheduleUpdateCatalogRows()
                     }
                     is NetworkResult.Error -> {
                         catalogsMap[key] = currentRow.copy(isLoading = false)
                         _loadingCatalogs.update { it - key }
-                        updateCatalogRows()
+                        scheduleUpdateCatalogRows()
                     }
                     NetworkResult.Loading -> { }
                 }
@@ -1342,7 +1404,7 @@ class HomeViewModel @Inject constructor(
         focusedItemIndex: Int,
         catalogRowScrollStates: Map<String, Int>
     ) {
-        _focusState.value = HomeScreenFocusState(
+        val nextState = HomeScreenFocusState(
             verticalScrollIndex = verticalScrollIndex,
             verticalScrollOffset = verticalScrollOffset,
             focusedRowIndex = focusedRowIndex,
@@ -1350,6 +1412,8 @@ class HomeViewModel @Inject constructor(
             catalogRowScrollStates = catalogRowScrollStates,
             hasSavedFocus = true
         )
+        if (_focusState.value == nextState) return
+        _focusState.value = nextState
     }
 
     /**

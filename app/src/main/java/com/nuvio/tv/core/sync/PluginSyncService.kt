@@ -2,6 +2,7 @@ package com.nuvio.tv.core.sync
 
 import android.util.Log
 import com.nuvio.tv.core.auth.AuthManager
+import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.PluginDataStore
 import com.nuvio.tv.data.remote.supabase.SupabasePlugin
 import io.github.jan.supabase.postgrest.Postgrest
@@ -21,7 +22,8 @@ private const val TAG = "PluginSyncService"
 class PluginSyncService @Inject constructor(
     private val postgrest: Postgrest,
     private val authManager: AuthManager,
-    private val pluginDataStore: PluginDataStore
+    private val pluginDataStore: PluginDataStore,
+    private val profileManager: ProfileManager
 ) {
     /**
      * Push local plugin repository URLs to Supabase via RPC.
@@ -29,7 +31,17 @@ class PluginSyncService @Inject constructor(
      */
     suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
+            val activeProfile = profileManager.activeProfile
+            val profileId = profileManager.activeProfileId.value
+            Log.d(TAG, "pushToRemote: activeProfile=${activeProfile?.id} isPrimary=${activeProfile?.isPrimary} usesPrimaryPlugins=${activeProfile?.usesPrimaryPlugins} profileId=$profileId")
+
+            if (activeProfile != null && !activeProfile.isPrimary && activeProfile.usesPrimaryPlugins) {
+                Log.d(TAG, "Profile ${activeProfile.id} uses primary plugins, skipping push")
+                return@withContext Result.success(Unit)
+            }
+
             val localRepos = pluginDataStore.repositories.first()
+            Log.d(TAG, "pushToRemote: localRepos count=${localRepos.size} for profile $profileId")
 
             val params = buildJsonObject {
                 put("p_plugins", buildJsonArray {
@@ -42,10 +54,12 @@ class PluginSyncService @Inject constructor(
                         }
                     }
                 })
+                put("p_profile_id", profileId)
             }
+            Log.d(TAG, "pushToRemote: calling RPC sync_push_plugins with profile_id=$profileId")
             postgrest.rpc("sync_push_plugins", params)
 
-            Log.d(TAG, "Pushed ${localRepos.size} plugin repos to remote")
+            Log.d(TAG, "Pushed ${localRepos.size} plugin repos to remote for profile $profileId")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to push plugins to remote", e)
@@ -58,8 +72,15 @@ class PluginSyncService @Inject constructor(
             val effectiveUserId = authManager.getEffectiveUserId()
                 ?: return@withContext Result.success(emptyList())
 
+            val activeProfile = profileManager.activeProfile
+            val profileId = if (activeProfile != null && !activeProfile.isPrimary && activeProfile.usesPrimaryPlugins) 1
+                            else profileManager.activeProfileId.value
+
             val remotePlugins = postgrest.from("plugins")
-                .select { filter { eq("user_id", effectiveUserId) } }
+                .select { filter {
+                    eq("user_id", effectiveUserId)
+                    eq("profile_id", profileId)
+                } }
                 .decodeList<SupabasePlugin>()
 
             Result.success(

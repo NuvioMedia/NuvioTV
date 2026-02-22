@@ -93,6 +93,38 @@ fun HeroContentSection(
     restorePlayFocusToken: Int = 0,
     onPlayFocusRestored: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val isSeriesApi = remember(meta.apiType) {
+        meta.apiType.equals("series", ignoreCase = true) || meta.apiType.equals("tv", ignoreCase = true)
+    }
+    val logoModel = remember(context, meta.logo) {
+        meta.logo?.let { logo ->
+            ImageRequest.Builder(context)
+                .data(logo)
+                .crossfade(false)
+                .build()
+        }
+    }
+    val libraryAddPainter = rememberRawSvgPainter(
+        context = context,
+        rawRes = com.nuvio.tv.R.raw.library_add_plus
+    )
+    val trailerPainter = rememberRawSvgPainter(
+        context = context,
+        rawRes = com.nuvio.tv.R.raw.trailer_play_button
+    )
+    val creditLine = remember(meta.director, meta.writer, isSeriesApi) {
+        val directorLine = meta.director.takeIf { it.isNotEmpty() }?.joinToString(", ")
+        val writerLine = meta.writer.takeIf { it.isNotEmpty() }?.joinToString(", ")
+        when {
+            !directorLine.isNullOrBlank() -> {
+                if (isSeriesApi) "Creator: $directorLine" else "Director: $directorLine"
+            }
+            !writerLine.isNullOrBlank() -> "Writer: $writerLine"
+            else -> null
+        }
+    }
+
     // Animate logo properties for trailer mode
     val logoHeight by animateDpAsState(
         targetValue = if (isTrailerPlaying) 60.dp else 100.dp,
@@ -126,10 +158,7 @@ fun HeroContentSection(
             // Logo/Title — always visible during trailer, animates size
             if (!meta.logo.isNullOrBlank() && !(isTrailerPlaying && hideLogoDuringTrailer)) {
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(meta.logo)
-                        .crossfade(true)
-                        .build(),
+                    model = logoModel,
                     contentDescription = meta.name,
                     modifier = Modifier
                         .height(logoHeight)
@@ -193,10 +222,7 @@ fun HeroContentSection(
                         ActionIconButton(
                             icon = if (isInLibrary) Icons.Default.Check else null,
                             painter = if (!isInLibrary) {
-                                rememberRawSvgPainter(
-                                    context = LocalContext.current,
-                                    rawRes = com.nuvio.tv.R.raw.library_add_plus
-                                )
+                                libraryAddPainter
                             } else {
                                 null
                             },
@@ -226,11 +252,6 @@ fun HeroContentSection(
                         }
 
                         if (trailerAvailable) {
-                            val context = LocalContext.current
-                            val trailerPainter = rememberRawSvgPainter(
-                                context = context,
-                                rawRes = com.nuvio.tv.R.raw.trailer_play_button
-                            )
                             ActionIconButtonPainter(
                                 painter = trailerPainter,
                                 contentDescription = "Play trailer",
@@ -242,20 +263,6 @@ fun HeroContentSection(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Director/Writer line above description
-                    val directorLine = meta.director.takeIf { it.isNotEmpty() }?.joinToString(", ")
-                    val writerLine = meta.writer.takeIf { it.isNotEmpty() }?.joinToString(", ")
-                    val creditLine = if (!directorLine.isNullOrBlank()) {
-                        if (meta.apiType in listOf("series", "tv")) {
-                            "Creator: $directorLine"
-                        } else {
-                            "Director: $directorLine"
-                        }
-                    } else if (!writerLine.isNullOrBlank()) {
-                        "Writer: $writerLine"
-                    } else {
-                        null
-                    }
-
                     if (!creditLine.isNullOrBlank()) {
                         Text(
                             text = creditLine,
@@ -487,6 +494,7 @@ private fun MetaInfoRow(
     meta: Meta,
     hideImdbRating: Boolean
 ) {
+    val context = LocalContext.current
     val genresText = remember(meta.genres) { meta.genres.joinToString(" • ") }
     val runtimeText = remember(meta.runtime) { meta.runtime?.let { formatRuntime(it) } }
     val yearText = remember(meta.releaseInfo) {
@@ -494,6 +502,19 @@ private fun MetaInfoRow(
     }
     val imdbRating = if (hideImdbRating) null else meta.imdbRating
     val shouldShowImdbRating = imdbRating != null
+    val imdbModel = remember(context) {
+        ImageRequest.Builder(context)
+            .data(com.nuvio.tv.R.raw.imdb_logo_2016)
+            .decoderFactory(SvgDecoder.Factory())
+            .build()
+    }
+    val secondaryItems = remember(meta.ageRating, meta.country, meta.language) {
+        buildList<String> {
+            meta.ageRating?.trim()?.takeIf { it.isNotBlank() }?.let { add(it) }
+            meta.country?.trim()?.takeIf { it.isNotBlank() }?.let { add(it) }
+            meta.language?.trim()?.takeIf { it.isNotBlank() }?.let { add(it.uppercase()) }
+        }
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Primary row: Genres, Runtime, Release, Ratings
@@ -537,13 +558,6 @@ private fun MetaInfoRow(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    val context = LocalContext.current
-                    val imdbModel = remember {
-                        ImageRequest.Builder(context)
-                            .data(com.nuvio.tv.R.raw.imdb_logo_2016)
-                            .decoderFactory(SvgDecoder.Factory())
-                            .build()
-                    }
                     AsyncImage(
                         model = imdbModel,
                         contentDescription = "Rating",
@@ -561,13 +575,7 @@ private fun MetaInfoRow(
         }
 
         // Secondary row: Age Rating, Country, Language
-        val hasSecondaryInfo = meta.ageRating != null || meta.country != null || meta.language != null
-        if (hasSecondaryInfo) {
-            val secondaryItems = buildList<String> {
-                meta.ageRating?.trim()?.takeIf { it.isNotBlank() }?.let { add(it) }
-                meta.country?.trim()?.takeIf { it.isNotBlank() }?.let { add(it) }
-                meta.language?.trim()?.takeIf { it.isNotBlank() }?.let { add(it.uppercase()) }
-            }
+        if (secondaryItems.isNotEmpty()) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -597,7 +605,7 @@ private fun MDBListRatingsRow(ratings: MDBListRatings) {
             Triple("tmdb", com.nuvio.tv.R.raw.mdblist_tmdb, ratings.tmdb),
             Triple("letterboxd", com.nuvio.tv.R.raw.mdblist_letterboxd, ratings.letterboxd),
             Triple("tomatoes", com.nuvio.tv.R.raw.mdblist_tomatoes, ratings.tomatoes)
-        )
+        ).filter { it.third != null }
     }
 
     Row(
@@ -605,29 +613,28 @@ private fun MDBListRatingsRow(ratings: MDBListRatings) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         items.forEach { (provider, logoRes, rating) ->
-            if (rating != null) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val model = remember(logoRes) {
-                        ImageRequest.Builder(context)
-                            .data(logoRes)
-                            .decoderFactory(SvgDecoder.Factory())
-                            .build()
-                    }
-                    AsyncImage(
-                        model = model,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                    Text(
-                        text = formatMDBListRating(provider, rating),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = NuvioTheme.extendedColors.textSecondary
-                    )
+            val resolvedRating = rating ?: return@forEach
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val model = remember(context, logoRes) {
+                    ImageRequest.Builder(context)
+                        .data(logoRes)
+                        .decoderFactory(SvgDecoder.Factory())
+                        .build()
                 }
+                AsyncImage(
+                    model = model,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    contentScale = ContentScale.Fit
+                )
+                Text(
+                    text = formatMDBListRating(provider, resolvedRating),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = NuvioTheme.extendedColors.textSecondary
+                )
             }
         }
 

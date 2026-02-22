@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.sync
 
 import android.util.Log
+import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.data.remote.supabase.SupabaseWatchedItem
@@ -23,7 +24,8 @@ private const val TAG = "WatchedItemsSyncService"
 class WatchedItemsSyncService @Inject constructor(
     private val postgrest: Postgrest,
     private val watchedItemsPreferences: WatchedItemsPreferences,
-    private val traktAuthDataStore: TraktAuthDataStore
+    private val traktAuthDataStore: TraktAuthDataStore,
+    private val profileManager: ProfileManager
 ) {
     suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
@@ -35,6 +37,7 @@ class WatchedItemsSyncService @Inject constructor(
             val items = watchedItemsPreferences.getAllItems()
             Log.d(TAG, "pushToRemote: ${items.size} watched items to push")
 
+            val profileId = profileManager.activeProfileId.value
             val params = buildJsonObject {
                 put("p_items", buildJsonArray {
                     items.forEach { item ->
@@ -50,10 +53,11 @@ class WatchedItemsSyncService @Inject constructor(
                         }
                     }
                 })
+                put("p_profile_id", profileId)
             }
             postgrest.rpc("sync_push_watched_items", params)
 
-            Log.d(TAG, "Pushed ${items.size} watched items to remote")
+            Log.d(TAG, "Pushed ${items.size} watched items to remote for profile $profileId")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to push watched items to remote", e)
@@ -68,10 +72,14 @@ class WatchedItemsSyncService @Inject constructor(
                 return@withContext Result.success(emptyList())
             }
 
-            val response = postgrest.rpc("sync_pull_watched_items")
+            val profileId = profileManager.activeProfileId.value
+            val params = buildJsonObject {
+                put("p_profile_id", profileId)
+            }
+            val response = postgrest.rpc("sync_pull_watched_items", params)
             val remote = response.decodeList<SupabaseWatchedItem>()
 
-            Log.d(TAG, "pullFromRemote: fetched ${remote.size} watched items from Supabase")
+            Log.d(TAG, "pullFromRemote: fetched ${remote.size} watched items from Supabase for profile $profileId")
 
             Result.success(remote.map { entry ->
                 WatchedItem(

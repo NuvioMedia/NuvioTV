@@ -12,20 +12,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.theme.NuvioColors
 import androidx.compose.ui.platform.LocalContext
@@ -109,15 +112,24 @@ fun GridContentCard(
         }
 
         if (showLabel) {
-            Text(
-                text = item.name,
+            val textMeasurer = rememberTextMeasurer()
+            val titleStyle = MaterialTheme.typography.titleMedium.copy(color = NuvioColors.TextPrimary)
+            val itemName = item.name
+            Box(
                 modifier = Modifier
                     .width(posterCardStyle.width)
-                    .padding(top = 8.dp, start = 2.dp, end = 2.dp),
-                style = MaterialTheme.typography.titleMedium,
-                color = NuvioColors.TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                    .padding(top = 8.dp, start = 2.dp, end = 2.dp)
+                    .height(24.dp)
+                    .drawWithCache {
+                        val layout = textMeasurer.measure(
+                            text = itemName,
+                            style = titleStyle,
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 1,
+                            constraints = Constraints(maxWidth = size.width.toInt())
+                        )
+                        onDrawBehind { drawText(layout) }
+                    }
             )
         }
     }

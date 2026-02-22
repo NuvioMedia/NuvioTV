@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -29,14 +30,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Border
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -54,30 +55,25 @@ fun AccountSettingsContent(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         when (val authState = uiState.authState) {
             is AuthState.Loading -> {
                 item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Loading...",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = NuvioColors.TextSecondary
-                        )
-                    }
+                    Text(
+                        text = "Loading...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = NuvioColors.TextSecondary
+                    )
                 }
             }
 
             is AuthState.SignedOut -> {
                 item {
                     Text(
-                        text = "Sync your library, watch progress, addons, and plugins across devices. Library and watch progress sync only when Trakt is not connected.",
-                        style = MaterialTheme.typography.bodyLarge,
+                        text = "Sync your library, watch progress, addons, and plugins across devices.",
+                        style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )
                 }
@@ -92,41 +88,28 @@ fun AccountSettingsContent(
             }
 
             is AuthState.FullAccount -> {
-                val ownerId = uiState.effectiveOwnerId ?: authState.userId
-                val connectionType = if (ownerId == authState.userId) "Email" else "Sync"
-                item {
-                    StatusCard(
-                        label = "Signed in",
-                        value = authState.email
-                    )
+                item { StatusCard(label = "Signed in", value = authState.email) }
+
+                val overview = uiState.syncOverview
+                if (overview != null) {
+                    item { SyncOverviewCard(overview) }
+                } else if (uiState.isSyncOverviewLoading) {
+                    item { SyncOverviewLoadingCard() }
                 }
-                item {
-                    DatabaseStatusCard(
-                        connectionType = connectionType,
-                        userId = authState.userId,
-                        ownerId = ownerId
-                    )
-                }
-                item {
-                    SignOutSettingsButton(onClick = { viewModel.signOut() })
-                }
+
+                item { SignOutSettingsButton(onClick = { viewModel.signOut() }) }
             }
 
             is AuthState.Anonymous -> {
-                val ownerId = uiState.effectiveOwnerId ?: authState.userId
-                item {
-                    StatusCard(
-                        label = "Signed in anonymously",
-                        value = "Upgrade with QR to link an email account"
-                    )
+                item { StatusCard(label = "Anonymous", value = "Upgrade with QR to link an email") }
+
+                val overview = uiState.syncOverview
+                if (overview != null) {
+                    item { SyncOverviewCard(overview) }
+                } else if (uiState.isSyncOverviewLoading) {
+                    item { SyncOverviewLoadingCard() }
                 }
-                item {
-                    DatabaseStatusCard(
-                        connectionType = "Sync",
-                        userId = authState.userId,
-                        ownerId = ownerId
-                    )
-                }
+
                 item {
                     SettingsActionButton(
                         icon = Icons.Default.VpnKey,
@@ -135,11 +118,168 @@ fun AccountSettingsContent(
                         onClick = onNavigateToAuthQrSignIn
                     )
                 }
-                item {
-                    SignOutSettingsButton(onClick = { viewModel.signOut() })
+                item { SignOutSettingsButton(onClick = { viewModel.signOut() }) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SyncOverviewCard(overview: SyncOverview) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = NuvioColors.BackgroundCard,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(10.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            // Totals row — layout matches ProfileSyncRow columns
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = NuvioColors.BackgroundElevated,
+                        shape = RoundedCornerShape(6.dp)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Total",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioColors.Secondary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.width(100.dp)
+                )
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    ProfileStatValue(overview.totalAddons, "addons")
+                    ProfileStatValue(overview.totalPlugins, "plugins")
+                    ProfileStatValue(overview.totalLibrary, "library")
+                    ProfileStatValue(overview.totalWatchProgress, "progress")
+                    ProfileStatValue(overview.totalWatchedItems, "watched")
+                }
+            }
+
+            // Per-profile breakdown
+            if (overview.perProfile.isNotEmpty()) {
+                overview.perProfile.forEach { profile ->
+                    ProfileSyncRow(profile)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SyncStatChip(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = NuvioColors.Secondary,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = label,
+            fontSize = 9.sp,
+            color = NuvioColors.TextTertiary
+        )
+    }
+}
+
+@Composable
+private fun ProfileSyncRow(profile: ProfileSyncStats) {
+    val color = runCatching { Color(android.graphics.Color.parseColor(profile.avatarColorHex)) }
+        .getOrDefault(Color(0xFF1E88E5))
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = NuvioColors.BackgroundElevated,
+                shape = RoundedCornerShape(6.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(color),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = profile.profileName.firstOrNull()?.uppercase() ?: "?",
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Text(
+            text = profile.profileName,
+            style = MaterialTheme.typography.bodySmall,
+            color = NuvioColors.TextPrimary,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.width(70.dp)
+        )
+
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            ProfileStatValue(profile.addons, "addons")
+            ProfileStatValue(profile.plugins, "plugins")
+            ProfileStatValue(profile.library, "library")
+            ProfileStatValue(profile.watchProgress, "progress")
+            ProfileStatValue(profile.watchedItems, "watched")
+        }
+    }
+}
+
+@Composable
+private fun ProfileStatValue(count: Int, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = count.toString(),
+            fontSize = 12.sp,
+            color = if (count > 0) NuvioColors.TextPrimary else NuvioColors.TextTertiary,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = label,
+            fontSize = 8.sp,
+            color = NuvioColors.TextTertiary
+        )
+    }
+}
+
+@Composable
+private fun SyncOverviewLoadingCard() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = NuvioColors.BackgroundCard,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Loading sync data...",
+            style = MaterialTheme.typography.bodySmall,
+            color = NuvioColors.TextSecondary
+        )
     }
 }
 
@@ -164,35 +304,35 @@ private fun SettingsActionButton(
         border = CardDefaults.border(
             focusedBorder = Border(
                 border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(8.dp)
             )
         ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp)),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(8.dp)),
         scale = CardDefaults.scale(focusedScale = 1.02f)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(28.dp),
+                modifier = Modifier.size(22.dp),
                 tint = if (isFocused) NuvioColors.Primary else NuvioColors.TextSecondary
             )
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = NuvioColors.TextPrimary
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NuvioColors.TextPrimary,
+                    fontWeight = FontWeight.Medium
                 )
-                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 11.sp,
                     color = NuvioColors.TextSecondary
                 )
             }
@@ -202,82 +342,33 @@ private fun SettingsActionButton(
 
 @Composable
 private fun StatusCard(label: String, value: String) {
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(
                 color = NuvioColors.Secondary.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(8.dp)
             )
-            .padding(16.dp)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = NuvioColors.Secondary
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = NuvioColors.TextTertiary
-                )
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextPrimary,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun DatabaseStatusCard(
-    connectionType: String,
-    userId: String,
-    ownerId: String
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = NuvioColors.BackgroundCard,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .padding(16.dp)
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = "Database Status",
-                style = MaterialTheme.typography.titleSmall,
-                color = NuvioColors.TextPrimary,
-                fontWeight = FontWeight.SemiBold
-            )
-            InfoRow(label = "Status", value = "Connected")
-            InfoRow(label = "Connection", value = connectionType)
-            InfoRow(label = "User ID", value = userId)
-            InfoRow(label = "Owner ID", value = ownerId)
-        }
-    }
-}
-
-@Composable
-private fun InfoRow(label: String, value: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Icon(
+            imageVector = Icons.Default.CheckCircle,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = NuvioColors.Secondary
+        )
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = label,
+            text = "$label  ",
             style = MaterialTheme.typography.labelSmall,
             color = NuvioColors.TextTertiary
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
-            color = NuvioColors.TextPrimary
+            color = NuvioColors.TextPrimary,
+            fontWeight = FontWeight.Medium
         )
     }
 }
@@ -294,26 +385,26 @@ private fun SignOutSettingsButton(onClick: () -> Unit) {
         border = CardDefaults.border(
             focusedBorder = Border(
                 border = BorderStroke(2.dp, Color(0xFFF44336).copy(alpha = 0.5f)),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(8.dp)
             )
         ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp)),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(8.dp)),
         scale = CardDefaults.scale(focusedScale = 1.02f)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Default.Logout,
                 contentDescription = null,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(18.dp),
                 tint = Color(0xFFF44336)
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = "Sign Out",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFFF44336),
                 fontWeight = FontWeight.Medium
             )

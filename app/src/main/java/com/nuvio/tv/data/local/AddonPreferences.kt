@@ -1,27 +1,36 @@
 package com.nuvio.tv.data.local
 
-import android.content.Context
-import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import com.nuvio.tv.core.profile.ProfileManager
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "addon_preferences")
-
 @Singleton
 class AddonPreferences @Inject constructor(
-    @ApplicationContext private val context: Context
+    private val factory: ProfileDataStoreFactory,
+    private val profileManager: ProfileManager
 ) {
+    companion object {
+        private const val FEATURE = "addon_preferences"
+    }
+
+    private fun effectiveProfileId(): Int {
+        val active = profileManager.activeProfile
+        return if (active != null && active.usesPrimaryAddons) 1 else profileManager.activeProfileId.value
+    }
+
+    private fun store(profileId: Int = effectiveProfileId()) =
+        factory.get(profileId, FEATURE)
+
     private val gson = Gson()
     private val orderedUrlsKey = stringPreferencesKey("installed_addon_urls_ordered")
     private val legacyUrlsKey = stringSetPreferencesKey("installed_addon_urls")
@@ -36,8 +45,9 @@ class AddonPreferences @Inject constructor(
         }
     }
 
-    val installedAddonUrls: Flow<List<String>> = context.dataStore.data
-        .map { preferences ->
+    val installedAddonUrls: Flow<List<String>> = profileManager.activeProfileId.flatMapLatest { _ ->
+        val pid = effectiveProfileId()
+        factory.get(pid, FEATURE).data.map { preferences ->
             val json = preferences[orderedUrlsKey]
             if (json != null) {
                 parseUrlList(json)
@@ -46,12 +56,14 @@ class AddonPreferences @Inject constructor(
                 legacySet.toList()
             }
         }
+    }
 
     suspend fun ensureMigrated() {
-        val prefs = context.dataStore.data.first()
+        val ds = store()
+        val prefs = ds.data.first()
         if (prefs[orderedUrlsKey] == null) {
             val legacySet = prefs[legacyUrlsKey] ?: getDefaultAddons()
-            context.dataStore.edit { preferences ->
+            ds.edit { preferences ->
                 preferences[orderedUrlsKey] = gson.toJson(legacySet.toList())
                 preferences.remove(legacyUrlsKey)
             }
@@ -59,7 +71,8 @@ class AddonPreferences @Inject constructor(
     }
 
     suspend fun addAddon(url: String) {
-        context.dataStore.edit { preferences ->
+        if (profileManager.activeProfile?.usesPrimaryAddons == true) return
+        store().edit { preferences ->
             val current = getCurrentList(preferences)
             val normalizedUrl = canonicalizeUrl(url)
             if (current.any { canonicalizeUrl(it).equals(normalizedUrl, ignoreCase = true) }) return@edit
@@ -68,10 +81,11 @@ class AddonPreferences @Inject constructor(
     }
 
     suspend fun removeAddon(url: String) {
-        context.dataStore.edit { preferences ->
+        if (profileManager.activeProfile?.usesPrimaryAddons == true) return
+        store().edit { preferences ->
             val current = getCurrentList(preferences).toMutableList()
             val normalizedUrl = canonicalizeUrl(url)
-            
+
             val indexToRemove = current.indexOfFirst {
                 canonicalizeUrl(it).equals(normalizedUrl, ignoreCase = true)
             }
@@ -83,7 +97,8 @@ class AddonPreferences @Inject constructor(
     }
 
     suspend fun setAddonOrder(urls: List<String>) {
-        context.dataStore.edit { preferences ->
+        if (profileManager.activeProfile?.usesPrimaryAddons == true) return
+        store().edit { preferences ->
             preferences[orderedUrlsKey] = gson.toJson(urls.map(::canonicalizeUrl))
         }
     }

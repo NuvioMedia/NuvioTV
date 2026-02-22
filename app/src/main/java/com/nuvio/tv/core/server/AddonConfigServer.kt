@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap
 class AddonConfigServer(
     private val currentPageStateProvider: () -> PageState,
     private val onChangeProposed: (PendingAddonChange) -> Unit,
-    private val manifestFetcher: (String) -> AddonInfo?,
     private val logoProvider: (() -> ByteArray?)? = null,
     port: Int = 8080
 ) : NanoHTTPD(port) {
@@ -66,7 +65,6 @@ class AddonConfigServer(
             method == Method.GET && uri == "/api/state" -> servePageState()
             method == Method.GET && uri == "/api/addons" -> serveAddonList()
             method == Method.POST && uri == "/api/addons" -> handleAddonUpdate(session)
-            method == Method.POST && uri == "/api/validate" -> handleValidateAddon(session)
             method == Method.GET && uri.startsWith("/api/status/") -> serveChangeStatus(uri)
             else -> newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not found")
         }
@@ -139,32 +137,6 @@ class AddonConfigServer(
         return newFixedLengthResponse(Response.Status.OK, "application/json", gson.toJson(response))
     }
 
-    private fun handleValidateAddon(session: IHTTPSession): Response {
-        val bodyMap = HashMap<String, String>()
-        session.parseBody(bodyMap)
-        val body = bodyMap["postData"] ?: ""
-
-        val url: String = try {
-            val parsed = gson.fromJson<Map<String, Any>>(body, object : TypeToken<Map<String, Any>>() {}.type)
-            (parsed["url"] as? String) ?: ""
-        } catch (e: Exception) {
-            ""
-        }
-
-        if (url.isBlank()) {
-            val error = mapOf("error" to "Missing URL")
-            return newFixedLengthResponse(Response.Status.BAD_REQUEST, "application/json", gson.toJson(error))
-        }
-
-        val addonInfo = manifestFetcher(url)
-        return if (addonInfo != null) {
-            newFixedLengthResponse(Response.Status.OK, "application/json", gson.toJson(addonInfo))
-        } else {
-            val error = mapOf("error" to "Could not fetch addon manifest")
-            newFixedLengthResponse(Response.Status.BAD_REQUEST, "application/json", gson.toJson(error))
-        }
-    }
-
     private fun serveChangeStatus(uri: String): Response {
         val id = uri.removePrefix("/api/status/")
         val change = pendingChanges[id]
@@ -186,14 +158,13 @@ class AddonConfigServer(
         fun startOnAvailablePort(
             currentPageStateProvider: () -> PageState,
             onChangeProposed: (PendingAddonChange) -> Unit,
-            manifestFetcher: (String) -> AddonInfo?,
             logoProvider: (() -> ByteArray?)? = null,
             startPort: Int = 8080,
             maxAttempts: Int = 10
         ): AddonConfigServer? {
             for (port in startPort until startPort + maxAttempts) {
                 try {
-                    val server = AddonConfigServer(currentPageStateProvider, onChangeProposed, manifestFetcher, logoProvider, port)
+                    val server = AddonConfigServer(currentPageStateProvider, onChangeProposed, logoProvider, port)
                     server.start(SOCKET_READ_TIMEOUT, false)
                     return server
                 } catch (e: Exception) {

@@ -90,6 +90,7 @@ internal fun SubtitleSelectionDialog(
     onAddonSubtitleSelected: (Subtitle) -> Unit,
     onDisableSubtitles: () -> Unit,
     onOpenStylePanel: () -> Unit,
+    onOpenDelayOverlay: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
@@ -104,7 +105,7 @@ internal fun SubtitleSelectionDialog(
         SubtitleOrganizationMode.NONE,
         SubtitleOrganizationMode.BY_ADDON -> "Addons"
     }
-    val tabs = listOf("Built-in", addonsTabTitle, "Style")
+    val tabs = listOf("Built-in", addonsTabTitle, "Style", "Delay")
     val tabFocusRequesters = remember { tabs.map { FocusRequester() } }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -132,13 +133,15 @@ internal fun SubtitleSelectionDialog(
                         .padding(bottom = 16.dp)
                 ) {
                     tabs.forEachIndexed { index, _ ->
-                        val onTabClick = if (index == 2) {
-                            {
-                                onOpenStylePanel()
+                        val onTabClick = when (index) {
+                            2 -> {
+                                { onOpenStylePanel() }
                             }
-                        } else {
-                            {
-                                selectedTabIndex = index
+                            3 -> {
+                                { onOpenDelayOverlay() }
+                            }
+                            else -> {
+                                { selectedTabIndex = index }
                             }
                         }
                         SubtitleTab(
@@ -173,6 +176,7 @@ internal fun SubtitleSelectionDialog(
                         onSubtitleSelected = onAddonSubtitleSelected
                     )
                     2 -> Unit
+                    3 -> Unit
                 }
             }
         }

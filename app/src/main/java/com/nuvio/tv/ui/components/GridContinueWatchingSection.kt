@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -41,16 +43,24 @@ fun GridContinueWatchingSection(
     var optionsItem by remember { mutableStateOf<ContinueWatchingItem?>(null) }
     val itemFocusRequester = remember { FocusRequester() }
     val focusRequesters = remember(items.size) { List(items.size) { FocusRequester() } }
-    var lastFocusedIndex by remember { mutableStateOf(-1) }
+    var lastFocusedIndex by remember { mutableIntStateOf(-1) }
+    var lastRequestedFocusIndex by remember { mutableIntStateOf(-1) }
     var pendingFocusIndex by remember { mutableStateOf<Int?>(null) }
 
-    LaunchedEffect(focusedItemIndex) {
+    LaunchedEffect(focusedItemIndex, items) {
         if (focusedItemIndex >= 0 && focusedItemIndex < items.size) {
-            kotlinx.coroutines.delay(100)
-            try {
-                itemFocusRequester.requestFocus()
-            } catch (_: IllegalStateException) {
+            if (lastRequestedFocusIndex == focusedItemIndex) return@LaunchedEffect
+            var focused = false
+            for (attempt in 0 until 3) {
+                withFrameNanos { }
+                focused = runCatching { itemFocusRequester.requestFocus() }.isSuccess
+                if (focused) break
             }
+            if (focused) {
+                lastRequestedFocusIndex = focusedItemIndex
+            }
+        } else {
+            lastRequestedFocusIndex = -1
         }
     }
 
@@ -78,10 +88,12 @@ fun GridContinueWatchingSection(
         ) {
             itemsIndexed(
                 items = items,
-                key = { index, item ->
+                key = { _, item ->
                     when (item) {
-                        is ContinueWatchingItem.InProgress -> "cw_${item.progress.videoId}_$index"
-                        is ContinueWatchingItem.NextUp -> "nextup_${item.info.videoId}_$index"
+                        is ContinueWatchingItem.InProgress ->
+                            "cw_${item.progress.contentId}_${item.progress.videoId}_${item.progress.season ?: -1}_${item.progress.episode ?: -1}"
+                        is ContinueWatchingItem.NextUp ->
+                            "nextup_${item.info.contentId}_${item.info.videoId}_${item.info.season}_${item.info.episode}"
                     }
                 }
             ) { index, progress ->
@@ -99,7 +111,7 @@ fun GridContinueWatchingSection(
                     onLongPress = { optionsItem = progress },
                     modifier = focusModifier
                         .onFocusChanged { focusState ->
-                            if (focusState.isFocused) {
+                            if (focusState.isFocused && lastFocusedIndex != index) {
                                 lastFocusedIndex = index
                             }
                         },
@@ -131,10 +143,14 @@ fun GridContinueWatchingSection(
     LaunchedEffect(items.size, pendingFocusIndex) {
         val target = pendingFocusIndex
         if (target != null && target >= 0 && target < focusRequesters.size) {
-            kotlinx.coroutines.delay(100)
-            try {
-                focusRequesters[target].requestFocus()
-            } catch (_: IllegalStateException) {
+            var focused = false
+            for (attempt in 0 until 3) {
+                withFrameNanos { }
+                focused = runCatching { focusRequesters[target].requestFocus() }.isSuccess
+                if (focused) break
+            }
+            if (focused) {
+                lastRequestedFocusIndex = target
             }
             pendingFocusIndex = null
         }

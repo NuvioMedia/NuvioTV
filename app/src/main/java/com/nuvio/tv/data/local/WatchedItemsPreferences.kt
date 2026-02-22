@@ -1,36 +1,40 @@
 package com.nuvio.tv.data.local
 
-import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import com.nuvio.tv.core.profile.ProfileManager
 import com.google.gson.Gson
 import com.nuvio.tv.domain.model.WatchedItem
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.watchedItemsDataStore: DataStore<Preferences> by preferencesDataStore(name = "watched_items_preferences")
-
 @Singleton
 class WatchedItemsPreferences @Inject constructor(
-    @ApplicationContext private val context: Context
+    private val factory: ProfileDataStoreFactory,
+    private val profileManager: ProfileManager
 ) {
+    companion object {
+        private const val FEATURE = "watched_items_preferences"
+    }
+
+    private fun store(profileId: Int = profileManager.activeProfileId.value) =
+        factory.get(profileId, FEATURE)
+
     private val gson = Gson()
     private val watchedItemsKey = stringSetPreferencesKey("watched_items")
 
-    private val allItems: Flow<List<WatchedItem>> = context.watchedItemsDataStore.data
-        .map { preferences ->
+    private val allItems: Flow<List<WatchedItem>> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { preferences ->
             val raw = preferences[watchedItemsKey] ?: emptySet()
             raw.mapNotNull { json ->
                 runCatching { gson.fromJson(json, WatchedItem::class.java) }.getOrNull()
             }
         }
+    }
 
     fun isWatched(contentId: String, season: Int? = null, episode: Int? = null): Flow<Boolean> {
         return allItems.map { items ->
@@ -51,7 +55,7 @@ class WatchedItemsPreferences @Inject constructor(
     }
 
     suspend fun markAsWatched(item: WatchedItem) {
-        context.watchedItemsDataStore.edit { preferences ->
+        store().edit { preferences ->
             val current = preferences[watchedItemsKey] ?: emptySet()
             val filtered = current.filterNot { json ->
                 runCatching {
@@ -67,7 +71,7 @@ class WatchedItemsPreferences @Inject constructor(
     }
 
     suspend fun unmarkAsWatched(contentId: String, season: Int? = null, episode: Int? = null) {
-        context.watchedItemsDataStore.edit { preferences ->
+        store().edit { preferences ->
             val current = preferences[watchedItemsKey] ?: emptySet()
             val filtered = current.filterNot { json ->
                 runCatching {
@@ -87,7 +91,7 @@ class WatchedItemsPreferences @Inject constructor(
     }
 
     suspend fun mergeRemoteItems(remoteItems: List<WatchedItem>) {
-        context.watchedItemsDataStore.edit { preferences ->
+        store().edit { preferences ->
             val current = preferences[watchedItemsKey] ?: emptySet()
             val localItems = current.mapNotNull { json ->
                 runCatching { gson.fromJson(json, WatchedItem::class.java) }.getOrNull()
@@ -105,7 +109,7 @@ class WatchedItemsPreferences @Inject constructor(
     }
 
     suspend fun replaceWithRemoteItems(remoteItems: List<WatchedItem>) {
-        context.watchedItemsDataStore.edit { preferences ->
+        store().edit { preferences ->
             val deduped = linkedMapOf<Triple<String, Int?, Int?>, WatchedItem>()
             remoteItems.forEach { item ->
                 deduped[Triple(item.contentId, item.season, item.episode)] = item

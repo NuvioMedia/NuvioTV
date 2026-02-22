@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap
 class RepositoryConfigServer(
     private val currentRepositoriesProvider: () -> List<RepositoryInfo>,
     private val onChangeProposed: (PendingRepoChange) -> Unit,
-    private val manifestFetcher: (String) -> RepositoryInfo?,
     private val logoProvider: (() -> ByteArray?)? = null,
     port: Int = 8090
 ) : NanoHTTPD(port) {
@@ -49,7 +48,6 @@ class RepositoryConfigServer(
             method == Method.GET && uri == "/logo.png" -> serveLogo()
             method == Method.GET && uri == "/api/repositories" -> serveRepositoryList()
             method == Method.POST && uri == "/api/repositories" -> handleRepositoryUpdate(session)
-            method == Method.POST && uri == "/api/validate" -> handleValidateRepository(session)
             method == Method.GET && uri.startsWith("/api/status/") -> serveChangeStatus(uri)
             else -> newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not found")
         }
@@ -110,32 +108,6 @@ class RepositoryConfigServer(
         return newFixedLengthResponse(Response.Status.OK, "application/json", gson.toJson(response))
     }
 
-    private fun handleValidateRepository(session: IHTTPSession): Response {
-        val bodyMap = HashMap<String, String>()
-        session.parseBody(bodyMap)
-        val body = bodyMap["postData"] ?: ""
-
-        val url: String = try {
-            val parsed = gson.fromJson<Map<String, Any>>(body, object : TypeToken<Map<String, Any>>() {}.type)
-            (parsed["url"] as? String) ?: ""
-        } catch (e: Exception) {
-            ""
-        }
-
-        if (url.isBlank()) {
-            val error = mapOf("error" to "Missing URL")
-            return newFixedLengthResponse(Response.Status.BAD_REQUEST, "application/json", gson.toJson(error))
-        }
-
-        val repoInfo = manifestFetcher(url)
-        return if (repoInfo != null) {
-            newFixedLengthResponse(Response.Status.OK, "application/json", gson.toJson(repoInfo))
-        } else {
-            val error = mapOf("error" to "Could not fetch repository")
-            newFixedLengthResponse(Response.Status.BAD_REQUEST, "application/json", gson.toJson(error))
-        }
-    }
-
     private fun serveChangeStatus(uri: String): Response {
         val id = uri.removePrefix("/api/status/")
         val change = pendingChanges[id]
@@ -148,14 +120,13 @@ class RepositoryConfigServer(
         fun startOnAvailablePort(
             currentRepositoriesProvider: () -> List<RepositoryInfo>,
             onChangeProposed: (PendingRepoChange) -> Unit,
-            manifestFetcher: (String) -> RepositoryInfo?,
             logoProvider: (() -> ByteArray?)? = null,
             startPort: Int = 8090,
             maxAttempts: Int = 10
         ): RepositoryConfigServer? {
             for (port in startPort until startPort + maxAttempts) {
                 try {
-                    val server = RepositoryConfigServer(currentRepositoriesProvider, onChangeProposed, manifestFetcher, logoProvider, port)
+                    val server = RepositoryConfigServer(currentRepositoriesProvider, onChangeProposed, logoProvider, port)
                     server.start(SOCKET_READ_TIMEOUT, false)
                     return server
                 } catch (e: Exception) {

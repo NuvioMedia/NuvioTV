@@ -2,7 +2,7 @@ package com.nuvio.tv.ui.components
 
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +26,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -36,7 +37,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
@@ -49,7 +54,6 @@ import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
 import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 
@@ -86,10 +90,13 @@ fun ContentCard(
     }
     val expandedCardWidth = baseCardHeight * BACKDROP_ASPECT_RATIO
 
-    var isFocused by remember(item.id) { mutableStateOf(false) }
-    var interactionNonce by remember(item.id) { mutableIntStateOf(0) }
-    var isBackdropExpanded by remember(item.id) { mutableStateOf(false) }
-    var trailerFirstFrameRendered by remember(item.id, trailerPreviewUrl) { mutableStateOf(false) }
+    var isFocused by remember { mutableStateOf(false) }
+    var interactionNonce by remember { mutableIntStateOf(0) }
+    var isBackdropExpanded by remember { mutableStateOf(false) }
+    var trailerFirstFrameRendered by remember(trailerPreviewUrl) { mutableStateOf(false) }
+
+    val needsFocusState = focusedPosterBackdropExpandEnabled || focusedPosterBackdropTrailerEnabled
+    val lastFocusedRef = remember { booleanArrayOf(false) }
 
     if (focusedPosterBackdropExpandEnabled) {
         LaunchedEffect(
@@ -172,14 +179,13 @@ fun ContentCard(
         } else {
             item.poster
         }
-        val imageModel = remember(context, imageUrl, requestWidthPx, requestHeightPx) {
+        val imageModel = remember(imageUrl, requestWidthPx, requestHeightPx) {
             ImageRequest.Builder(context)
                 .data(imageUrl)
                 .crossfade(false)
                 .size(width = requestWidthPx, height = requestHeightPx)
                 .build()
         }
-        val imagePainter = rememberAsyncImagePainter(model = imageModel)
 
         Card(
             onClick = onClick,
@@ -187,13 +193,20 @@ fun ContentCard(
                 .fillMaxWidth()
                 .onFocusChanged { state ->
                     val focusedNow = state.isFocused
-                    if (focusedNow != isFocused) {
-                        isFocused = focusedNow
-                        if (focusedNow) {
-                            interactionNonce++
-                            onFocus(item)
-                        } else {
-                            isBackdropExpanded = false
+                    if (needsFocusState) {
+                        if (focusedNow != isFocused) {
+                            isFocused = focusedNow
+                            if (focusedNow) {
+                                interactionNonce++
+                                onFocus(item)
+                            } else {
+                                isBackdropExpanded = false
+                            }
+                        }
+                    } else {
+                        if (focusedNow != lastFocusedRef[0]) {
+                            lastFocusedRef[0] = focusedNow
+                            if (focusedNow) onFocus(item)
                         }
                     }
                 }
@@ -205,13 +218,10 @@ fun ContentCard(
                             }
                             false
                         }
-                    } else {
-                        Modifier
-                    }
+                    } else Modifier
                 )
                 .then(
-                    if (focusRequester != null) Modifier.focusRequester(focusRequester)
-                    else Modifier
+                    if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
                 ),
             shape = CardDefaults.shape(shape = cardShape),
             colors = CardDefaults.colors(
@@ -232,12 +242,14 @@ fun ContentCard(
                     .height(baseCardHeight)
                     .clip(cardShape)
             ) {
-                Image(
-                    painter = imagePainter,
-                    contentDescription = item.name,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                if (imageUrl != null) {
+                    AsyncImage(
+                        model = imageModel,
+                        contentDescription = item.name,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
 
                 val shouldPlayTrailerPreview = isBackdropExpanded &&
                     focusedPosterBackdropTrailerEnabled &&
@@ -279,9 +291,9 @@ fun ContentCard(
                     )
                 }
 
-                if (shouldPlayTrailerPreview) {
-                    Image(
-                        painter = imagePainter,
+                if (shouldPlayTrailerPreview && imageUrl != null) {
+                    AsyncImage(
+                        model = imageModel,
                         contentDescription = null,
                         modifier = Modifier
                             .fillMaxSize()
@@ -375,29 +387,43 @@ fun ContentCard(
         }
 
         if (showLabels && !isBackdropExpanded) {
-            Column(
+            val textMeasurer = rememberTextMeasurer()
+            val titleStyle = MaterialTheme.typography.titleMedium.copy(color = NuvioColors.TextPrimary)
+            val subtitleStyle = MaterialTheme.typography.labelMedium.copy(color = NuvioTheme.extendedColors.textSecondary)
+            val releaseInfo = item.releaseInfo
+            val itemName = item.name
+            val labelHeight = if (releaseInfo != null) 52.dp else 32.dp
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp)
-            ) {
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = NuvioColors.TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                item.releaseInfo?.let { release ->
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = release,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = NuvioTheme.extendedColors.textSecondary,
-                        maxLines = 1
-                    )
-                }
-            }
+                    .height(labelHeight)
+                    .drawWithCache {
+                        val widthPx = size.width.toInt()
+                        val titleLayout = textMeasurer.measure(
+                            text = itemName,
+                            style = titleStyle,
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 1,
+                            constraints = Constraints(maxWidth = widthPx)
+                        )
+                        val subtitleLayout = if (releaseInfo != null) {
+                            textMeasurer.measure(
+                                text = releaseInfo,
+                                style = subtitleStyle,
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 1,
+                                constraints = Constraints(maxWidth = widthPx)
+                            )
+                        } else null
+                        onDrawBehind {
+                            drawText(titleLayout)
+                            if (subtitleLayout != null) {
+                                drawText(subtitleLayout, topLeft = androidx.compose.ui.geometry.Offset(0f, titleLayout.size.height + 4.dp.toPx()))
+                            }
+                        }
+                    }
+            )
         }
     }
 }

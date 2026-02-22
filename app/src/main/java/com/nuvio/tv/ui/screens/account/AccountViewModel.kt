@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.core.sync.AddonSyncService
 import com.nuvio.tv.core.sync.LibrarySyncService
@@ -22,6 +23,9 @@ import com.nuvio.tv.data.repository.LibraryRepositoryImpl
 import com.nuvio.tv.data.repository.WatchProgressRepositoryImpl
 import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.domain.repository.SyncRepository
+import io.github.jan.supabase.postgrest.Postgrest
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,7 +57,9 @@ class AccountViewModel @Inject constructor(
     private val watchProgressPreferences: WatchProgressPreferences,
     private val libraryPreferences: LibraryPreferences,
     private val watchedItemsPreferences: WatchedItemsPreferences,
-    private val traktAuthDataStore: TraktAuthDataStore
+    private val traktAuthDataStore: TraktAuthDataStore,
+    private val postgrest: Postgrest,
+    private val profileManager: ProfileManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AccountUiState())
@@ -62,6 +68,7 @@ class AccountViewModel @Inject constructor(
 
     init {
         observeAuthState()
+        observeProfileNames()
     }
 
     private fun observeAuthState() {
@@ -76,9 +83,27 @@ class AccountViewModel @Inject constructor(
                     )
                 }
                 updateEffectiveOwnerId(state)
-                if (state is AuthState.FullAccount) {
+                if (state is AuthState.FullAccount || state is AuthState.Anonymous) {
                     loadConnectedStats()
+                    loadSyncOverview()
                 }
+            }
+        }
+    }
+
+    private fun observeProfileNames() {
+        viewModelScope.launch {
+            profileManager.profiles.collect { profiles ->
+                val current = _uiState.value.syncOverview ?: return@collect
+                val updated = current.copy(
+                    perProfile = current.perProfile.map { stat ->
+                        val local = profiles.firstOrNull { it.id == stat.profileId }
+                        if (local != null) {
+                            stat.copy(profileName = local.name, avatarColorHex = local.avatarColorHex)
+                        } else stat
+                    }
+                )
+                _uiState.update { it.copy(syncOverview = updated) }
             }
         }
     }
@@ -103,7 +128,9 @@ class AccountViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             authManager.signInWithEmail(email, password).fold(
                 onSuccess = {
-                    pullRemoteData()
+                    pullRemoteData().onFailure { e ->
+                        Log.e("AccountViewModel", "signIn: pullRemoteData failed, continuing signed-in flow", e)
+                    }
                     loadConnectedStats()
                     _uiState.update { it.copy(isLoading = false) }
                 },
@@ -162,7 +189,9 @@ class AccountViewModel @Inject constructor(
                 onSuccess = { result ->
                     if (result.success) {
                         authManager.clearEffectiveUserIdCache()
-                        pullRemoteData()
+                        pullRemoteData().onFailure { e ->
+                            Log.e("AccountViewModel", "claimSyncCode: pullRemoteData failed, continuing", e)
+                        }
                         updateEffectiveOwnerId(_uiState.value.authState)
                         _uiState.update { it.copy(isLoading = false, syncClaimSuccess = true) }
                     } else {
@@ -291,7 +320,9 @@ class AccountViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null, qrLoginStatus = "Signing you in...") }
             authManager.exchangeTvLoginSession(code = code, deviceNonce = nonce).fold(
                 onSuccess = {
-                    pullRemoteData()
+                    pullRemoteData().onFailure { e ->
+                        Log.e("AccountViewModel", "exchangeQrLogin: pullRemoteData failed, continuing", e)
+                    }
                     loadConnectedStats()
                     _uiState.update { it.copy(isLoading = false, qrLoginStatus = "Signed in successfully") }
                 },
@@ -355,6 +386,74 @@ class AccountViewModel @Inject constructor(
                 it.copy(
                     connectedStats = stats ?: it.connectedStats,
                     isStatsLoading = false
+                )
+            }
+        }
+    }
+
+    @Serializable
+    private data class SyncOverviewResponse(
+        val addons: Map<String, Int> = emptyMap(),
+        val plugins: Map<String, Int> = emptyMap(),
+        @SerialName("library_items") val libraryItems: Map<String, Int> = emptyMap(),
+        @SerialName("watch_progress") val watchProgress: Map<String, Int> = emptyMap(),
+        @SerialName("watched_items") val watchedItems: Map<String, Int> = emptyMap(),
+        val profiles: Map<String, ProfileInfo> = emptyMap()
+    ) {
+        @Serializable
+        data class ProfileInfo(
+            val name: String,
+            val color: String
+        )
+    }
+
+    fun loadSyncOverview() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSyncOverviewLoading = true) }
+
+            val overview = runCatching {
+                val response = postgrest.rpc("get_sync_overview")
+                    .decodeAs<SyncOverviewResponse>()
+
+                val allProfileIds = (response.addons.keys + response.plugins.keys +
+                    response.libraryItems.keys + response.watchProgress.keys +
+                    response.watchedItems.keys + response.profiles.keys)
+                    .mapNotNull { it.toIntOrNull() }
+                    .distinct()
+                    .sorted()
+
+                val localProfiles = profileManager.profiles.value
+                val perProfile = allProfileIds.map { pid ->
+                    val pidStr = pid.toString()
+                    val local = localProfiles.firstOrNull { it.id == pid }
+                    val remote = response.profiles[pidStr]
+                    ProfileSyncStats(
+                        profileId = pid,
+                        profileName = local?.name ?: remote?.name ?: "Profile $pid",
+                        avatarColorHex = local?.avatarColorHex ?: remote?.color ?: "#1E88E5",
+                        addons = response.addons[pidStr] ?: 0,
+                        plugins = response.plugins[pidStr] ?: 0,
+                        library = response.libraryItems[pidStr] ?: 0,
+                        watchProgress = response.watchProgress[pidStr] ?: 0,
+                        watchedItems = response.watchedItems[pidStr] ?: 0
+                    )
+                }
+
+                SyncOverview(
+                    profileCount = response.profiles.size,
+                    totalAddons = response.addons.values.sum(),
+                    totalPlugins = response.plugins.values.sum(),
+                    totalLibrary = response.libraryItems.values.sum(),
+                    totalWatchProgress = response.watchProgress.values.sum(),
+                    totalWatchedItems = response.watchedItems.values.sum(),
+                    perProfile = perProfile
+                )
+            }.getOrNull()
+
+            _uiState.update {
+                it.copy(
+                    syncOverview = overview ?: it.syncOverview,
+                    isSyncOverviewLoading = false
                 )
             }
         }
@@ -479,13 +578,13 @@ class AccountViewModel @Inject constructor(
         watchedItemsSyncService.pushToRemote()
     }
 
-    private suspend fun pullRemoteData() {
+    private suspend fun pullRemoteData(): Result<Unit> {
         try {
             pluginManager.isSyncingFromRemote = true
             val remotePluginUrls = pluginSyncService.getRemoteRepoUrls().getOrElse { throw it }
             pluginManager.reconcileWithRemoteRepoUrls(
                 remoteUrls = remotePluginUrls,
-                removeMissingLocal = false
+                removeMissingLocal = true
             )
             pluginManager.isSyncingFromRemote = false
 
@@ -493,12 +592,13 @@ class AccountViewModel @Inject constructor(
             val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
             addonRepository.reconcileWithRemoteAddonUrls(
                 remoteUrls = remoteAddonUrls,
-                removeMissingLocal = false
+                removeMissingLocal = true
             )
             addonRepository.isSyncingFromRemote = false
 
-            val isTraktConnected = traktAuthDataStore.isAuthenticated.first()
-            Log.d("AccountViewModel", "pullRemoteData: isTraktConnected=$isTraktConnected")
+            val isPrimaryProfile = profileManager.activeProfileId.value == 1
+            val isTraktConnected = isPrimaryProfile && traktAuthDataStore.isAuthenticated.first()
+            Log.d("AccountViewModel", "pullRemoteData: isTraktConnected=$isTraktConnected isPrimaryProfile=$isPrimaryProfile")
             if (!isTraktConnected) {
                 watchProgressRepository.isSyncingFromRemote = true
                 val remoteEntries = watchProgressSyncService.pullFromRemote().getOrElse { throw it }
@@ -525,12 +625,13 @@ class AccountViewModel @Inject constructor(
                 watchedItemsPreferences.replaceWithRemoteItems(remoteWatchedItems)
                 Log.d("AccountViewModel", "pullRemoteData: reconciled local watched items with ${remoteWatchedItems.size} remote items")
             }
+            return Result.success(Unit)
         } catch (e: Exception) {
             pluginManager.isSyncingFromRemote = false
             addonRepository.isSyncingFromRemote = false
             watchProgressRepository.isSyncingFromRemote = false
             libraryRepository.isSyncingFromRemote = false
-            throw e
+            return Result.failure(e)
         }
     }
 

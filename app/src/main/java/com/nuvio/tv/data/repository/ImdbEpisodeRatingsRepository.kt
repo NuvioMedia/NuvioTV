@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.repository
 
 import android.util.Log
+import com.nuvio.tv.data.remote.api.ImdbTapframeApi
 import com.nuvio.tv.data.remote.api.SeriesGraphApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +15,8 @@ import javax.inject.Singleton
 
 @Singleton
 class ImdbEpisodeRatingsRepository @Inject constructor(
-    private val api: SeriesGraphApi
+    private val imdbTapframeApi: ImdbTapframeApi,
+    private val seriesGraphApi: SeriesGraphApi
 ) {
     private data class CacheEntry(
         val ratings: Map<Pair<Int, Int>, Double>,
@@ -23,64 +25,113 @@ class ImdbEpisodeRatingsRepository @Inject constructor(
 
     private val tag = "ImdbEpisodeRatingsRepo"
     private val cacheTtlMs = 30L * 60L * 1000L
-    private val cache = ConcurrentHashMap<Int, CacheEntry>()
-    private val inFlight = mutableMapOf<Int, kotlinx.coroutines.Deferred<Map<Pair<Int, Int>, Double>>>()
+    private val cache = ConcurrentHashMap<String, CacheEntry>()
+    private val inFlight = mutableMapOf<String, kotlinx.coroutines.Deferred<Map<Pair<Int, Int>, Double>>>()
     private val inFlightMutex = Mutex()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    suspend fun getEpisodeRatings(tmdbId: Int): Map<Pair<Int, Int>, Double> {
-        if (tmdbId <= 0) return emptyMap()
+    suspend fun getEpisodeRatings(
+        imdbId: String?,
+        tmdbId: Int?
+    ): Map<Pair<Int, Int>, Double> {
+        val normalizedImdbId = imdbId
+            ?.trim()
+            ?.takeIf { it.startsWith("tt", ignoreCase = true) }
+            ?.substringBefore(':')
+        val normalizedTmdbId = tmdbId?.takeIf { it > 0 }
+        if (normalizedImdbId == null && normalizedTmdbId == null) return emptyMap()
+
+        val cacheKey = when {
+            !normalizedImdbId.isNullOrBlank() -> "imdb:$normalizedImdbId"
+            else -> "tmdb:$normalizedTmdbId"
+        }
 
         val now = System.currentTimeMillis()
-        cache[tmdbId]?.let { cached ->
+        cache[cacheKey]?.let { cached ->
             if (cached.expiresAtMs > now) return cached.ratings
-            cache.remove(tmdbId)
+            cache.remove(cacheKey)
         }
 
         val deferred = inFlightMutex.withLock {
-            inFlight[tmdbId] ?: scope.async {
+            inFlight[cacheKey] ?: scope.async {
                 try {
-                    fetchEpisodeRatings(tmdbId).also { result ->
-                        cache[tmdbId] = CacheEntry(
+                    fetchEpisodeRatings(
+                        imdbId = normalizedImdbId,
+                        tmdbId = normalizedTmdbId
+                    ).also { result ->
+                        cache[cacheKey] = CacheEntry(
                             ratings = result,
                             expiresAtMs = System.currentTimeMillis() + cacheTtlMs
                         )
                     }
                 } finally {
                     inFlightMutex.withLock {
-                        inFlight.remove(tmdbId)
+                        inFlight.remove(cacheKey)
                     }
                 }
             }.also { created ->
-                inFlight[tmdbId] = created
+                inFlight[cacheKey] = created
             }
         }
 
         return deferred.await()
     }
 
-    private suspend fun fetchEpisodeRatings(tmdbId: Int): Map<Pair<Int, Int>, Double> {
+    private suspend fun fetchEpisodeRatings(
+        imdbId: String?,
+        tmdbId: Int?
+    ): Map<Pair<Int, Int>, Double> {
+        if (!imdbId.isNullOrBlank()) {
+            val primary = fetchFromImdbTapframe(imdbId)
+            if (primary.isNotEmpty()) return primary
+            Log.w(tag, "Primary episode ratings empty for imdbId=$imdbId, trying fallback.")
+        }
+
+        if (tmdbId != null && tmdbId > 0) {
+            return fetchFromSeriesGraph(tmdbId)
+        }
+
+        return emptyMap()
+    }
+
+    private suspend fun fetchFromImdbTapframe(imdbId: String): Map<Pair<Int, Int>, Double> {
         return try {
-            val response = api.getSeasonRatings(tmdbId)
+            val response = imdbTapframeApi.getSeasonRatings(imdbId)
             if (!response.isSuccessful) {
-                Log.w(tag, "Failed season ratings for tmdbId=$tmdbId (${response.code()})")
+                Log.w(tag, "Failed primary season ratings for imdbId=$imdbId (${response.code()})")
                 return emptyMap()
             }
+            toRatingsMap(response.body().orEmpty())
+        } catch (e: Exception) {
+            Log.w(tag, "Error fetching primary season ratings for imdbId=$imdbId", e)
+            emptyMap()
+        }
+    }
 
-            val payload = response.body().orEmpty()
-            buildMap {
-                payload.forEach { season ->
-                    season.episodes.orEmpty().forEach { episode ->
-                        val seasonNumber = episode.seasonNumber ?: return@forEach
-                        val episodeNumber = episode.episodeNumber ?: return@forEach
-                        val voteAverage = episode.voteAverage ?: return@forEach
-                        put(seasonNumber to episodeNumber, voteAverage)
-                    }
+    private suspend fun fetchFromSeriesGraph(tmdbId: Int): Map<Pair<Int, Int>, Double> {
+        return try {
+            val response = seriesGraphApi.getSeasonRatings(tmdbId)
+            if (!response.isSuccessful) {
+                Log.w(tag, "Failed fallback season ratings for tmdbId=$tmdbId (${response.code()})")
+                return emptyMap()
+            }
+            toRatingsMap(response.body().orEmpty())
+        } catch (e: Exception) {
+            Log.w(tag, "Error fetching fallback season ratings for tmdbId=$tmdbId", e)
+            emptyMap()
+        }
+    }
+
+    private fun toRatingsMap(payload: List<com.nuvio.tv.data.remote.api.SeriesGraphSeasonRatingsDto>): Map<Pair<Int, Int>, Double> {
+        return buildMap {
+            payload.forEach { season ->
+                season.episodes.orEmpty().forEach { episode ->
+                    val seasonNumber = episode.seasonNumber ?: return@forEach
+                    val episodeNumber = episode.episodeNumber ?: return@forEach
+                    val voteAverage = episode.voteAverage ?: return@forEach
+                    put(seasonNumber to episodeNumber, voteAverage)
                 }
             }
-        } catch (e: Exception) {
-            Log.w(tag, "Error fetching season ratings for tmdbId=$tmdbId", e)
-            emptyMap()
         }
     }
 }

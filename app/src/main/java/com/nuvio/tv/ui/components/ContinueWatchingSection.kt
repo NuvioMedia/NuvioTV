@@ -18,9 +18,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -78,21 +80,28 @@ fun ContinueWatchingSection(
 
     val itemFocusRequester = remember { FocusRequester() }
     val focusRequesters = remember(items.size) { List(items.size) { FocusRequester() } }
-    var lastFocusedIndex by remember { mutableStateOf(-1) }
+    var lastFocusedIndex by remember { mutableIntStateOf(-1) }
+    var lastRequestedFocusIndex by remember { mutableIntStateOf(-1) }
     var pendingFocusIndex by remember { mutableStateOf<Int?>(null) }
     var optionsItem by remember { mutableStateOf<ContinueWatchingItem?>(null) }
     
     val listState = rememberLazyListState()
 
     // Restore focus to specific item if requested
-    LaunchedEffect(focusedItemIndex) {
+    LaunchedEffect(focusedItemIndex, items) {
         if (focusedItemIndex >= 0 && focusedItemIndex < items.size) {
-            kotlinx.coroutines.delay(100)
-            try {
-                itemFocusRequester.requestFocus()
-            } catch (e: IllegalStateException) {
-                // Item not yet composed, ignore
+            if (lastRequestedFocusIndex == focusedItemIndex) return@LaunchedEffect
+            var focused = false
+            for (attempt in 0 until 3) {
+                withFrameNanos { }
+                focused = runCatching { itemFocusRequester.requestFocus() }.isSuccess
+                if (focused) break
             }
+            if (focused) {
+                lastRequestedFocusIndex = focusedItemIndex
+            }
+        } else {
+            lastRequestedFocusIndex = -1
         }
     }
 
@@ -121,10 +130,12 @@ fun ContinueWatchingSection(
         ) {
             itemsIndexed(
                 items = items,
-                key = { index, progress ->
+                key = { _, progress ->
                     when (progress) {
-                        is ContinueWatchingItem.InProgress -> "cw_${progress.progress.videoId}_$index"
-                        is ContinueWatchingItem.NextUp -> "nextup_${progress.info.videoId}_$index"
+                        is ContinueWatchingItem.InProgress ->
+                            "cw_${progress.progress.contentId}_${progress.progress.videoId}_${progress.progress.season ?: -1}_${progress.progress.episode ?: -1}"
+                        is ContinueWatchingItem.NextUp ->
+                            "nextup_${progress.info.contentId}_${progress.info.videoId}_${progress.info.season}_${progress.info.episode}"
                     }
                 }
             ) { index, progress ->
@@ -140,7 +151,7 @@ fun ContinueWatchingSection(
                     onLongPress = { optionsItem = progress },
                     modifier = Modifier
                         .onFocusChanged { focusState ->
-                            if (focusState.isFocused) {
+                            if (focusState.isFocused && lastFocusedIndex != index) {
                                 lastFocusedIndex = index
                                 onItemFocused(index)
                             }
@@ -172,10 +183,14 @@ fun ContinueWatchingSection(
     LaunchedEffect(items.size, pendingFocusIndex) {
         val target = pendingFocusIndex
         if (target != null && target >= 0 && target < focusRequesters.size) {
-            kotlinx.coroutines.delay(100)
-            try {
-                focusRequesters[target].requestFocus()
-            } catch (_: IllegalStateException) {
+            var focused = false
+            for (attempt in 0 until 3) {
+                withFrameNanos { }
+                focused = runCatching { focusRequesters[target].requestFocus() }.isSuccess
+                if (focused) break
+            }
+            if (focused) {
+                lastRequestedFocusIndex = target
             }
             pendingFocusIndex = null
         }

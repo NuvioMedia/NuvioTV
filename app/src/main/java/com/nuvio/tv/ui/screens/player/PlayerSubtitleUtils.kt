@@ -58,12 +58,16 @@ internal object PlayerSubtitleUtils {
     }
 
     fun mimeTypeFromUrl(url: String): String {
-        val lowerUrl = url.lowercase()
+        val normalizedPath = url
+            .substringBefore('#')
+            .substringBefore('?')
+            .lowercase()
+
         return when {
-            lowerUrl.endsWith(".srt") -> MimeTypes.APPLICATION_SUBRIP
-            lowerUrl.endsWith(".vtt") || lowerUrl.endsWith(".webvtt") -> MimeTypes.TEXT_VTT
-            lowerUrl.endsWith(".ass") || lowerUrl.endsWith(".ssa") -> MimeTypes.TEXT_SSA
-            lowerUrl.endsWith(".ttml") || lowerUrl.endsWith(".dfxp") -> MimeTypes.APPLICATION_TTML
+            normalizedPath.endsWith(".srt") -> MimeTypes.APPLICATION_SUBRIP
+            normalizedPath.endsWith(".vtt") || normalizedPath.endsWith(".webvtt") -> MimeTypes.TEXT_VTT
+            normalizedPath.endsWith(".ass") || normalizedPath.endsWith(".ssa") -> MimeTypes.TEXT_SSA
+            normalizedPath.endsWith(".ttml") || normalizedPath.endsWith(".dfxp") -> MimeTypes.APPLICATION_TTML
             else -> MimeTypes.APPLICATION_SUBRIP
         }
     }

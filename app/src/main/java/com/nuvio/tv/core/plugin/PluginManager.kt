@@ -100,12 +100,20 @@ class PluginManager @Inject constructor(
     private var syncJob: kotlinx.coroutines.Job? = null
 
     private fun triggerRemoteSync() {
-        if (isSyncingFromRemote) return
-        if (!authManager.isAuthenticated) return
+        if (isSyncingFromRemote) {
+            Log.d(TAG, "triggerRemoteSync: skipped (syncing from remote)")
+            return
+        }
+        if (!authManager.isAuthenticated) {
+            Log.d(TAG, "triggerRemoteSync: skipped (not authenticated, state=${authManager.authState.value})")
+            return
+        }
+        Log.d(TAG, "triggerRemoteSync: scheduling push in 500ms")
         syncJob?.cancel()
         syncJob = syncScope.launch {
             kotlinx.coroutines.delay(500)
-            pluginSyncService.pushToRemote()
+            val result = pluginSyncService.pushToRemote()
+            Log.d(TAG, "triggerRemoteSync: push result=${result.isSuccess} ${result.exceptionOrNull()?.message ?: ""}")
         }
     }
 

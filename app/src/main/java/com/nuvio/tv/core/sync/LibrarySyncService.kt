@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.sync
 
 import android.util.Log
+import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.LibraryPreferences
 import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.remote.supabase.SupabaseLibraryItem
@@ -23,7 +24,8 @@ private const val TAG = "LibrarySyncService"
 class LibrarySyncService @Inject constructor(
     private val postgrest: Postgrest,
     private val libraryPreferences: LibraryPreferences,
-    private val traktAuthDataStore: TraktAuthDataStore
+    private val traktAuthDataStore: TraktAuthDataStore,
+    private val profileManager: ProfileManager
 ) {
     suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
@@ -35,6 +37,7 @@ class LibrarySyncService @Inject constructor(
             val items = libraryPreferences.getAllItems()
             Log.d(TAG, "pushToRemote: ${items.size} local library items to push")
 
+            val profileId = profileManager.activeProfileId.value
             val params = buildJsonObject {
                 put("p_items", buildJsonArray {
                     items.forEach { item ->
@@ -55,10 +58,11 @@ class LibrarySyncService @Inject constructor(
                         }
                     }
                 })
+                put("p_profile_id", profileId)
             }
             postgrest.rpc("sync_push_library", params)
 
-            Log.d(TAG, "Pushed ${items.size} library items to remote")
+            Log.d(TAG, "Pushed ${items.size} library items to remote for profile $profileId")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to push library to remote", e)
@@ -73,10 +77,14 @@ class LibrarySyncService @Inject constructor(
                 return@withContext Result.success(emptyList())
             }
 
-            val response = postgrest.rpc("sync_pull_library")
+            val profileId = profileManager.activeProfileId.value
+            val params = buildJsonObject {
+                put("p_profile_id", profileId)
+            }
+            val response = postgrest.rpc("sync_pull_library", params)
             val remote = response.decodeList<SupabaseLibraryItem>()
 
-            Log.d(TAG, "pullFromRemote: fetched ${remote.size} library items from Supabase")
+            Log.d(TAG, "pullFromRemote: fetched ${remote.size} library items from Supabase for profile $profileId")
 
             Result.success(remote.map { entry ->
                 SavedLibraryItem(

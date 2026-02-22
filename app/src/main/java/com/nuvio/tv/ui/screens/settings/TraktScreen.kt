@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -37,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -45,6 +45,7 @@ import androidx.tv.material3.Text
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.rememberAsyncImagePainter
@@ -62,7 +63,7 @@ fun TraktScreen(
     viewModel: TraktViewModel = hiltViewModel(),
     onBackPress: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val primaryFocusRequester = remember { FocusRequester() }
     var showDisconnectConfirm by remember { mutableStateOf(false) }
     var showDaysCapDialog by remember { mutableStateOf(false) }
@@ -496,12 +497,17 @@ private fun TraktStatItem(
 }
 
 @Composable
-private fun rememberRawSvgPainter(@RawRes iconRes: Int) = rememberAsyncImagePainter(
-    model = ImageRequest.Builder(LocalContext.current)
-        .data(iconRes)
-        .decoderFactory(SvgDecoder.Factory())
-        .build()
-)
+private fun rememberRawSvgPainter(@RawRes iconRes: Int): Painter {
+    val context = LocalContext.current
+    val request = remember(iconRes, context) {
+        ImageRequest.Builder(context)
+            .data(iconRes)
+            .decoderFactory(SvgDecoder.Factory())
+            .crossfade(false)
+            .build()
+    }
+    return rememberAsyncImagePainter(model = request)
+}
 
 private fun formatDuration(valueMs: Long): String {
     val totalSeconds = (valueMs / 1000L).coerceAtLeast(0L)

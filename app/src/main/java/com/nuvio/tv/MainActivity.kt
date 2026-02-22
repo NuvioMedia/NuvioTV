@@ -84,13 +84,19 @@ import androidx.tv.material3.ModalNavigationDrawer
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import androidx.tv.material3.rememberDrawerState
+import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.data.local.AppOnboardingDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.ThemeDataStore
 import com.nuvio.tv.data.repository.TraktProgressService
 import com.nuvio.tv.domain.model.AppTheme
+import com.nuvio.tv.core.sync.ProfileSyncService
 import com.nuvio.tv.core.sync.StartupSyncService
 import com.nuvio.tv.ui.navigation.NuvioNavHost
 import com.nuvio.tv.ui.navigation.Screen
+import com.nuvio.tv.ui.components.ProfileAvatarCircle
+import com.nuvio.tv.ui.screens.account.AuthQrSignInScreen
+import com.nuvio.tv.ui.screens.profile.ProfileSelectionScreen
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.updater.UpdateViewModel
@@ -137,10 +143,32 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var startupSyncService: StartupSyncService
 
+    @Inject
+    lateinit var profileSyncService: ProfileSyncService
+
+    @Inject
+    lateinit var profileManager: ProfileManager
+
+    @Inject
+    lateinit var appOnboardingDataStore: AppOnboardingDataStore
+
     @OptIn(ExperimentalTvMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            var hasSelectedProfileThisSession by remember { mutableStateOf(false) }
+            var onboardingCompletedThisSession by remember { mutableStateOf(false) }
+            var onboardingProfileSyncInProgress by remember { mutableStateOf(false) }
+            val hasSeenAuthQrOnFirstLaunch by appOnboardingDataStore
+                .hasSeenAuthQrOnFirstLaunch
+                .collectAsState(initial = false)
+
+            val activeProfileId by profileManager.activeProfileId.collectAsState()
+            val profiles by profileManager.profiles.collectAsState()
+            val activeProfile = remember(activeProfileId, profiles) {
+                profiles.firstOrNull { it.id == activeProfileId }
+            }
+
             val mainUiPrefsFlow = remember(themeDataStore, layoutPreferenceDataStore) {
                 combine(
                     themeDataStore.selectedTheme,
@@ -165,6 +193,51 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
+                    if (!hasSeenAuthQrOnFirstLaunch && !onboardingCompletedThisSession) {
+                        AuthQrSignInScreen(
+                            onBackPress = {},
+                            onContinue = {
+                                lifecycleScope.launch {
+                                    if (onboardingProfileSyncInProgress) return@launch
+                                    onboardingProfileSyncInProgress = true
+                                    val maxAttempts = 3
+                                    var synced = false
+                                    for (attempt in 0 until maxAttempts) {
+                                        val result = profileSyncService.pullFromRemote()
+                                        if (result.isSuccess) {
+                                            synced = true
+                                            break
+                                        }
+                                        if (attempt < maxAttempts - 1) {
+                                            delay(1_000)
+                                        }
+                                    }
+                                    if (!synced) {
+                                        android.util.Log.w(
+                                            "MainActivity",
+                                            "Onboarding profile sync failed after retries; continuing"
+                                        )
+                                    }
+                                    appOnboardingDataStore.setHasSeenAuthQrOnFirstLaunch(true)
+                                    onboardingCompletedThisSession = true
+                                    onboardingProfileSyncInProgress = false
+                                }
+                                startupSyncService.requestSyncNow()
+                            }
+                        )
+                        return@Surface
+                    }
+
+                    if (!hasSelectedProfileThisSession) {
+                        ProfileSelectionScreen(
+                            onProfileSelected = {
+                                hasSelectedProfileThisSession = true
+                                startupSyncService.requestSyncNow()
+                            }
+                        )
+                        return@Surface
+                    }
+
                     val layoutChosen = mainUiPrefs.hasChosenLayout
                     if (layoutChosen == null) {
                         Box(
@@ -243,7 +316,14 @@ class MainActivity : ComponentActivity() {
                             selectedDrawerItem = selectedDrawerItem,
                             sidebarCollapsed = sidebarCollapsed,
                             modernSidebarBlurEnabled = modernSidebarBlurEnabled,
-                            hideBuiltInHeaders = hideBuiltInHeadersForFloatingPill
+                            hideBuiltInHeaders = hideBuiltInHeadersForFloatingPill,
+                            activeProfileName = activeProfile?.name ?: "",
+                            activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
+                            onSwitchProfile = { hasSelectedProfileThisSession = false },
+                            onExitApp = {
+                                finishAffinity()
+                                finishAndRemoveTask()
+                            }
                         )
                     } else {
                         LegacySidebarScaffold(
@@ -254,7 +334,14 @@ class MainActivity : ComponentActivity() {
                             drawerItems = drawerItems,
                             selectedDrawerRoute = selectedDrawerRoute,
                             sidebarCollapsed = sidebarCollapsed,
-                            hideBuiltInHeaders = false
+                            hideBuiltInHeaders = false,
+                            activeProfileName = activeProfile?.name ?: "",
+                            activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
+                            onSwitchProfile = { hasSelectedProfileThisSession = false },
+                            onExitApp = {
+                                finishAffinity()
+                                finishAndRemoveTask()
+                            }
                         )
                     }
 
@@ -290,7 +377,11 @@ private fun LegacySidebarScaffold(
     drawerItems: List<DrawerItem>,
     selectedDrawerRoute: String?,
     sidebarCollapsed: Boolean,
-    hideBuiltInHeaders: Boolean
+    hideBuiltInHeaders: Boolean,
+    activeProfileName: String,
+    activeProfileColorHex: String,
+    onSwitchProfile: () -> Unit,
+    onExitApp: () -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val drawerItemFocusRequesters = remember(drawerItems) {
@@ -312,6 +403,10 @@ private fun LegacySidebarScaffold(
     BackHandler(enabled = currentRoute in rootRoutes && drawerState.currentValue == DrawerValue.Closed) {
         pendingSidebarFocusRequest = true
         drawerState.setValue(DrawerValue.Open)
+    }
+
+    BackHandler(enabled = currentRoute in rootRoutes && drawerState.currentValue == DrawerValue.Open) {
+        onExitApp()
     }
 
     LaunchedEffect(drawerState.currentValue, pendingContentFocusTransfer) {
@@ -407,6 +502,47 @@ private fun LegacySidebarScaffold(
                     }
 
                     Spacer(modifier = Modifier.weight(1f))
+
+                    if (isExpanded && activeProfileName.isNotEmpty()) {
+                        var isProfileFocused by remember { mutableStateOf(false) }
+                        val profileItemShape = RoundedCornerShape(32.dp)
+                        val profileBgColor by animateColorAsState(
+                            targetValue = if (isProfileFocused) NuvioColors.FocusBackground else Color.Transparent,
+                            label = "legacyProfileItemBg"
+                        )
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .width(itemWidth)
+                                    .height(52.dp)
+                                    .clip(profileItemShape)
+                                    .background(color = profileBgColor, shape = profileItemShape)
+                                    .onFocusChanged { isProfileFocused = it.isFocused }
+                                    .clickable {
+                                        onSwitchProfile()
+                                        drawerState.setValue(DrawerValue.Closed)
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Spacer(modifier = Modifier.width(10.dp))
+                                ProfileAvatarCircle(
+                                    name = activeProfileName,
+                                    colorHex = activeProfileColorHex,
+                                    size = 34.dp
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = activeProfileName,
+                                    color = if (isProfileFocused) NuvioColors.TextPrimary else NuvioColors.TextSecondary,
+                                    maxLines = 1,
+                                    textAlign = TextAlign.Start
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -523,7 +659,11 @@ private fun ModernSidebarScaffold(
     selectedDrawerItem: DrawerItem,
     sidebarCollapsed: Boolean,
     modernSidebarBlurEnabled: Boolean,
-    hideBuiltInHeaders: Boolean
+    hideBuiltInHeaders: Boolean,
+    activeProfileName: String,
+    activeProfileColorHex: String,
+    onSwitchProfile: () -> Unit,
+    onExitApp: () -> Unit
 ) {
     val showSidebar = currentRoute in rootRoutes
     val collapsedSidebarWidth = if (sidebarCollapsed) 0.dp else 184.dp
@@ -564,6 +704,10 @@ private fun ModernSidebarScaffold(
         isSidebarExpanded = true
         sidebarCollapsePending = false
         pendingSidebarFocusRequest = true
+    }
+
+    BackHandler(enabled = currentRoute in rootRoutes && isSidebarExpanded && !sidebarCollapsePending) {
+        onExitApp()
     }
 
     LaunchedEffect(sidebarCollapsePending, isSidebarExpanded, showSidebar) {
@@ -795,7 +939,7 @@ private fun ModernSidebarScaffold(
                             }
 
                             Key.DirectionDown -> {
-                                focusedDrawerIndex == drawerItems.lastIndex
+                                focusedDrawerIndex > drawerItems.lastIndex
                             }
 
                             Key.DirectionRight -> {
@@ -833,7 +977,10 @@ private fun ModernSidebarScaffold(
                             isSidebarExpanded = false
                             sidebarCollapsePending = false
                             pendingContentFocusTransfer = true
-                        }
+                        },
+                        activeProfileName = activeProfileName,
+                        activeProfileColorHex = activeProfileColorHex,
+                        onSwitchProfile = onSwitchProfile
                     )
                 }
             }
