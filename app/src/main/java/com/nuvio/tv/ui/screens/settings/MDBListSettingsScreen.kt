@@ -53,8 +53,8 @@ fun MDBListSettingsContent(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         SettingsDetailHeader(
-            title = "MDBList Ratings",
-            subtitle = "Configure external ratings shown in the detail hero"
+            title = "Puntuaciones MDBList",
+            subtitle = "Configura las puntuaciones externas que se muestran en la pantalla de detalles"
         )
 
         SettingsGroupCard(
@@ -68,8 +68,8 @@ fun MDBListSettingsContent(
             ) {
                 item {
                     SettingsToggleRow(
-                        title = "Enable MDBList Ratings",
-                        subtitle = "Fetch ratings from external providers in metadata detail screen",
+                        title = "Activar Puntuaciones MDBList",
+                        subtitle = "Obtener puntuaciones de proveedores externos en la pantalla de detalles de metadatos",
                         checked = uiState.enabled,
                         onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleEnabled(!uiState.enabled)) },
                         modifier = if (initialFocusRequester != null) {
@@ -82,8 +82,8 @@ fun MDBListSettingsContent(
 
                 item {
                     SettingsActionRow(
-                        title = "API Key",
-                        subtitle = "Required to fetch ratings from MDBList",
+                        title = "Clave API (API Key)",
+                        subtitle = "Requerida para obtener puntuaciones desde MDBList",
                         value = maskApiKey(uiState.apiKey),
                         onClick = { showApiKeyDialog = true },
                         enabled = uiState.enabled
@@ -93,7 +93,7 @@ fun MDBListSettingsContent(
                 item {
                     SettingsToggleRow(
                         title = "Trakt",
-                        subtitle = "Show Trakt score",
+                        subtitle = "Mostrar puntuación de Trakt",
                         checked = uiState.showTrakt,
                         enabled = uiState.enabled,
                         onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleTrakt(!uiState.showTrakt)) }
@@ -103,7 +103,7 @@ fun MDBListSettingsContent(
                 item {
                     SettingsToggleRow(
                         title = "IMDb",
-                        subtitle = "Show IMDb score (and hide default IMDb line when available)",
+                        subtitle = "Mostrar puntuación de IMDb (oculta la línea predeterminada de IMDb cuando está disponible)",
                         checked = uiState.showImdb,
                         enabled = uiState.enabled,
                         onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleImdb(!uiState.showImdb)) }
@@ -113,7 +113,7 @@ fun MDBListSettingsContent(
                 item {
                     SettingsToggleRow(
                         title = "TMDB",
-                        subtitle = "Show TMDB score",
+                        subtitle = "Mostrar puntuación de TMDB",
                         checked = uiState.showTmdb,
                         enabled = uiState.enabled,
                         onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleTmdb(!uiState.showTmdb)) }
@@ -123,7 +123,7 @@ fun MDBListSettingsContent(
                 item {
                     SettingsToggleRow(
                         title = "Letterboxd",
-                        subtitle = "Show Letterboxd score",
+                        subtitle = "Mostrar puntuación de Letterboxd",
                         checked = uiState.showLetterboxd,
                         enabled = uiState.enabled,
                         onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleLetterboxd(!uiState.showLetterboxd)) }
@@ -133,7 +133,7 @@ fun MDBListSettingsContent(
                 item {
                     SettingsToggleRow(
                         title = "Rotten Tomatoes",
-                        subtitle = "Show critics score",
+                        subtitle = "Mostrar puntuación de la crítica (Tomatometer)",
                         checked = uiState.showTomatoes,
                         enabled = uiState.enabled,
                         onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleTomatoes(!uiState.showTomatoes)) }
@@ -143,7 +143,7 @@ fun MDBListSettingsContent(
                 item {
                     SettingsToggleRow(
                         title = "Audience Score",
-                        subtitle = "Show audience score",
+                        subtitle = "Mostrar puntuación de la audiencia",
                         checked = uiState.showAudience,
                         enabled = uiState.enabled,
                         onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleAudience(!uiState.showAudience)) }
@@ -153,7 +153,7 @@ fun MDBListSettingsContent(
                 item {
                     SettingsToggleRow(
                         title = "Metacritic",
-                        subtitle = "Show Metacritic score",
+                        subtitle = "Mostrar puntuación de Metacritic",
                         checked = uiState.showMetacritic,
                         enabled = uiState.enabled,
                         onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleMetacritic(!uiState.showMetacritic)) }
@@ -193,8 +193,8 @@ private fun MDBListApiKeyDialog(
 
     NuvioDialog(
         onDismiss = onDismiss,
-        title = "MDBList API Key",
-        subtitle = "Enter your API key to fetch external ratings",
+        title = "Clave API de MDBList",
+        subtitle = "Introduce tu API Key para obtener puntuaciones externas",
         width = 700.dp
     ) {
         Card(
@@ -242,7 +242,7 @@ private fun MDBListApiKeyDialog(
                     decorationBox = { innerTextField ->
                         if (value.isBlank()) {
                             Text(
-                                text = "Enter MDBList API key",
+                                text = "Introduce la clave API de MDBList",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = NuvioColors.TextTertiary
                             )
@@ -264,7 +264,7 @@ private fun MDBListApiKeyDialog(
                     contentColor = NuvioColors.TextPrimary
                 )
             ) {
-                Text("Cancel")
+                Text("Cancelar")
             }
             Spacer(modifier = Modifier.width(8.dp))
             Button(
@@ -274,7 +274,7 @@ private fun MDBListApiKeyDialog(
                     contentColor = NuvioColors.TextPrimary
                 )
             ) {
-                Text("Clear")
+                Text("Limpiar")
             }
             Spacer(modifier = Modifier.width(8.dp))
             Button(
@@ -284,7 +284,7 @@ private fun MDBListApiKeyDialog(
                     contentColor = NuvioColors.TextPrimary
                 )
             ) {
-                Text("Save")
+                Text("Guardar")
             }
         }
     }
@@ -292,6 +292,6 @@ private fun MDBListApiKeyDialog(
 
 private fun maskApiKey(key: String): String {
     val trimmed = key.trim()
-    if (trimmed.isBlank()) return "Not set"
+    if (trimmed.isBlank()) return "No configurada"
     return if (trimmed.length <= 4) "••••" else "••••••${trimmed.takeLast(4)}"
 }
