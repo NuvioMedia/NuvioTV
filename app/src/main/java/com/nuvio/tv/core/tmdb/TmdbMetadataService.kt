@@ -504,7 +504,7 @@ class TmdbMetadataService @Inject constructor(
 
                 val detail = PersonDetail(
                     tmdbId = person.id,
-                    name = person.name ?: "Unknown",
+                    name = person.name ?: "Desconocido",
                     biography = person.biography?.takeIf { it.isNotBlank() },
                     birthday = person.birthday?.takeIf { it.isNotBlank() },
                     deathday = person.deathday?.takeIf { it.isNotBlank() },
