@@ -110,72 +110,72 @@ fun SettingsScreen(
         listOf(
             SettingsSectionSpec(
                 category = SettingsCategory.ACCOUNT,
-                title = "Account",
+                title = "Cuenta",
                 icon = Icons.Default.Person,
-                subtitle = "Account and sync status.",
+                subtitle = "Estado de cuenta y sincronización.",
                 destination = SettingsSectionDestination.Inline
             ),
             SettingsSectionSpec(
                 category = SettingsCategory.PROFILES,
-                title = "Profiles",
+                title = "Perfiles",
                 icon = Icons.Default.People,
-                subtitle = "Manage user profiles.",
+                subtitle = "Gestionar perfiles de usuario.",
                 destination = SettingsSectionDestination.Inline
             ),
             SettingsSectionSpec(
                 category = SettingsCategory.APPEARANCE,
-                title = "Appearance",
+                title = "Apariencia",
                 icon = Icons.Default.Palette,
-                subtitle = "Theme and color tuning.",
+                subtitle = "Ajustes de tema y color.",
                 destination = SettingsSectionDestination.Inline
             ),
             SettingsSectionSpec(
                 category = SettingsCategory.LAYOUT,
-                title = "Layout",
+                title = "Diseño",
                 icon = Icons.Default.GridView,
-                subtitle = "Home structure and poster styles.",
+                subtitle = "Estructura de Inicio y estilos de póster.",
                 destination = SettingsSectionDestination.Inline
             ),
             SettingsSectionSpec(
                 category = SettingsCategory.PLUGINS,
                 title = "Plugins",
                 icon = Icons.Default.Build,
-                subtitle = "Repositories and providers.",
+                subtitle = "Repositorios y proveedores.",
                 destination = SettingsSectionDestination.Inline
             ),
             SettingsSectionSpec(
                 category = SettingsCategory.INTEGRATION,
-                title = "Integration",
+                title = "Integración",
                 icon = Icons.Default.Link,
-                subtitle = "TMDB and MDBList controls.",
+                subtitle = "Controles de TMDB y MDBList.",
                 destination = SettingsSectionDestination.Inline
             ),
             SettingsSectionSpec(
                 category = SettingsCategory.PLAYBACK,
-                title = "Playback",
+                title = "Reproducción",
                 icon = Icons.Default.Settings,
-                subtitle = "Player, subtitles, and auto-play.",
+                subtitle = "Reproductor, subtítulos y auto-reproducción.",
                 destination = SettingsSectionDestination.Inline
             ),
             SettingsSectionSpec(
                 category = SettingsCategory.TRAKT,
                 title = "Trakt",
                 rawIconRes = R.raw.trakt_tv_glyph,
-                subtitle = "Open Trakt connection screen.",
+                subtitle = "Abrir pantalla de conexión de Trakt.",
                 destination = SettingsSectionDestination.External
             ),
             SettingsSectionSpec(
                 category = SettingsCategory.ABOUT,
-                title = "About",
+                title = "Acerca de",
                 icon = Icons.Default.Info,
-                subtitle = "Version and policies.",
+                subtitle = "Versión y políticas.",
                 destination = SettingsSectionDestination.Inline
             ),
             SettingsSectionSpec(
                 category = SettingsCategory.DEBUG,
-                title = "Debug",
+                title = "Depuración",
                 icon = Icons.Default.BugReport,
-                subtitle = "Developer tools and feature flags.",
+                subtitle = "Herramientas de desarrollo.",
                 destination = SettingsSectionDestination.Inline
             )
         )
@@ -385,7 +385,7 @@ private fun PluginsSettingsContent() {
     ) {
         SettingsDetailHeader(
             title = "Plugins",
-            subtitle = "Manage repositories, providers, and plugin states."
+            subtitle = "Gestiona repositorios, proveedores y estados de plugins."
         )
         SettingsGroupCard(modifier = Modifier.fillMaxSize()) {
             Box(
@@ -416,8 +416,8 @@ private fun AccountSettingsInline(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SettingsDetailHeader(
-            title = "Account",
-            subtitle = "Account and sync status."
+            title = "Cuenta",
+            subtitle = "Estado de cuenta y sincronización."
         )
         SettingsGroupCard(modifier = Modifier.fillMaxSize()) {
             com.nuvio.tv.ui.screens.account.AccountSettingsContent(
@@ -459,8 +459,8 @@ private fun IntegrationSettingsContent(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 SettingsDetailHeader(
-                    title = "Integrations",
-                    subtitle = "Choose TMDB or MDBList settings"
+                    title = "Integraciones",
+                    subtitle = "Elige los ajustes de TMDB o MDBList"
                 )
 
                 SettingsGroupCard(
@@ -474,7 +474,7 @@ private fun IntegrationSettingsContent(
                         item {
                             SettingsActionRow(
                                 title = "TMDB",
-                                subtitle = "Metadata enrichment controls",
+                                subtitle = "Controles de enriquecimiento de metadatos",
                                 onClick = { onSelectSection(IntegrationSettingsSection.Tmdb) },
                                 modifier = Modifier.focusRequester(hubEntryFocusRequester)
                             )
@@ -482,7 +482,7 @@ private fun IntegrationSettingsContent(
                         item {
                             SettingsActionRow(
                                 title = "MDBList",
-                                subtitle = "External ratings providers",
+                                subtitle = "Proveedores externos de calificaciones",
                                 onClick = { onSelectSection(IntegrationSettingsSection.MdbList) }
                             )
                         }
