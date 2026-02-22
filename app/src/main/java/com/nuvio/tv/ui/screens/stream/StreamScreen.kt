@@ -167,7 +167,7 @@ fun StreamScreen(
             .fillMaxSize()
             .background(NuvioColors.Background)
     ) {
-        // Full screen backdrop
+        // Fondo de pantalla completa
         StreamBackdrop(
             backdrop = uiState.backdrop ?: uiState.poster,
             isLoading = uiState.isLoading
@@ -192,11 +192,11 @@ fun StreamScreen(
                 )
             }
         } else {
-            // Content overlay
+            // Capa de contenido
             Row(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Left side - Title/Logo (centered vertically)
+                // Lado izquierdo - Título/Logo (centrado verticalmente)
                 LeftContentSection(
                     title = uiState.title,
                     logo = uiState.logo,
@@ -212,7 +212,7 @@ fun StreamScreen(
                         .fillMaxHeight()
                 )
 
-                // Right side - Streams container
+                // Lado derecho - Contenedor de enlaces
                 RightStreamSection(
                     isLoading = uiState.isLoading,
                     error = uiState.error,
@@ -247,7 +247,7 @@ fun StreamScreen(
             }
         }
 
-        // Player choice dialog for "Ask every time" preference
+        // Diálogo de elección de reproductor para la preferencia "Preguntar siempre"
         if (showPlayerChoiceDialog && pendingPlaybackInfo != null) {
             PlayerChoiceDialog(
                 onInternalSelected = {
@@ -290,7 +290,7 @@ private fun StreamBackdrop(
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Backdrop image
+        // Imagen de fondo
         if (backdrop != null) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
@@ -303,14 +303,14 @@ private fun StreamBackdrop(
             )
         }
 
-        // Dark overlay
+        // Capa oscura
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(NuvioColors.Background.copy(alpha = alpha))
         )
 
-        // Left gradient for text readability
+        // Degradado izquierdo para legibilidad del texto
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -328,7 +328,7 @@ private fun StreamBackdrop(
                 )
         )
 
-        // Right gradient for streams panel
+        // Degradado derecho para el panel de enlaces
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -394,9 +394,9 @@ private fun LeftContentSection(
                 )
             }
 
-            // Show episode info or movie info
+            // Mostrar información del episodio o de la película
             if (isEpisode && season != null && episode != null) {
-                // Episode info
+                // Información del episodio
                 Text(
                     text = "S$season E$episode",
                     style = MaterialTheme.typography.titleLarge,
@@ -424,7 +424,7 @@ private fun LeftContentSection(
                     )
                 }
             } else {
-                // Movie info - genres and year
+                // Información de la película - géneros y año
                 val infoText = listOfNotNull(genres, year).joinToString(" • ")
                 if (infoText.isNotEmpty()) {
                     Text(
@@ -478,7 +478,7 @@ private fun RightStreamSection(
     ) {
         val chipRowHeight = 56.dp
 
-        // Addon filter chips
+        // Chips de filtro de addons
         Box(modifier = Modifier.height(chipRowHeight)) {
             androidx.compose.animation.AnimatedVisibility(
                 visible = !isLoading && availableAddons.isNotEmpty(),
@@ -488,7 +488,7 @@ private fun RightStreamSection(
                 AddonFilterChips(
                     addons = availableAddons,
                     selectedAddon = selectedAddonFilter,
-                    onAddonSelected = onAddonFilterSelected
+                    onAddonFilterSelected = onAddonFilterSelected
                 )
             }
         }
@@ -504,7 +504,7 @@ private fun RightStreamSection(
                 ),
             exit = fadeOut(animationSpec = tween(120))
         ) {
-            // Content area
+            // Área de contenido
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -548,18 +548,18 @@ private fun RightStreamSection(
 private fun AddonFilterChips(
     addons: List<String>,
     selectedAddon: String?,
-    onAddonSelected: (String?) -> Unit
+    onAddonFilterSelected: (String?) -> Unit
 ) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        // "All" chip
+        // Chip "Todos"
         item {
             AddonChip(
-                name = "All",
+                name = "Todos",
                 isSelected = selectedAddon == null,
-                onClick = { onAddonSelected(null) }
+                onClick = { onAddonFilterSelected(null) }
             )
         }
 
@@ -567,7 +567,7 @@ private fun AddonFilterChips(
             AddonChip(
                 name = addon,
                 isSelected = selectedAddon == addon,
-                onClick = { onAddonSelected(addon) }
+                onClick = { onAddonFilterSelected(addon) }
             )
         }
     }
@@ -681,7 +681,7 @@ private fun ErrorState(
             scale = CardDefaults.scale(focusedScale = 1.02f)
         ) {
             Text(
-                text = "Retry",
+                text = "Reintentar",
                 style = MaterialTheme.typography.labelLarge,
                 color = if (isFocused) NuvioColors.OnPrimary else NuvioColors.TextPrimary,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
@@ -698,7 +698,7 @@ private fun EmptyState() {
         modifier = Modifier.padding(32.dp)
     ) {
         Text(
-            text = "No streams found",
+            text = "No se encontraron enlaces",
             style = MaterialTheme.typography.bodyLarge,
             color = NuvioTheme.extendedColors.textSecondary,
             textAlign = TextAlign.Center
@@ -707,7 +707,7 @@ private fun EmptyState() {
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Try installing more addons to find streams",
+            text = "Prueba instalando más addons para encontrar enlaces",
             style = MaterialTheme.typography.bodyMedium,
             color = NuvioTheme.extendedColors.textSecondary,
             textAlign = TextAlign.Center
@@ -841,7 +841,7 @@ private fun StreamCard(
                         StreamTypeChip(text = "YouTube", color = Color(0xFFFF0000))
                     }
                     if (stream.isExternal()) {
-                        StreamTypeChip(text = "External", color = NuvioColors.Primary)
+                        StreamTypeChip(text = "Externo", color = NuvioColors.Primary)
                     }
                 }
             }
@@ -920,7 +920,7 @@ private fun PlayerChoiceDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "What player should be used?",
+                    text = "¿Qué reproductor deseas usar?",
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary,
                     textAlign = TextAlign.Center
@@ -953,7 +953,7 @@ private fun PlayerChoiceDialog(
                         scale = CardDefaults.scale(focusedScale = 1.05f)
                     ) {
                         Text(
-                            text = "Internal",
+                            text = "Interno",
                             style = MaterialTheme.typography.titleMedium,
                             color = if (internalFocused) NuvioColors.OnPrimary else NuvioColors.TextPrimary,
                             modifier = Modifier
@@ -983,7 +983,7 @@ private fun PlayerChoiceDialog(
                         scale = CardDefaults.scale(focusedScale = 1.05f)
                     ) {
                         Text(
-                            text = "External",
+                            text = "Externo",
                             style = MaterialTheme.typography.titleMedium,
                             color = if (externalFocused) NuvioColors.OnPrimary else NuvioColors.TextPrimary,
                             modifier = Modifier
