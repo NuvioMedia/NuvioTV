@@ -31,8 +31,8 @@ fun TmdbSettingsScreen(
     BackHandler { onBackPress() }
 
     SettingsStandaloneScaffold(
-        title = "Datos desde TMDB",
-        subtitle = "Elige qué información se obtendrá desde TMDB"
+        title = "Enriquecimiento TMDB",
+        subtitle = "Elige qué campos de metadatos deben provenir de TMDB"
     ) {
         TmdbSettingsContent(viewModel = viewModel)
     }
@@ -51,8 +51,8 @@ fun TmdbSettingsContent(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         SettingsDetailHeader(
-            title = "Datos desde TMDB",
-            subtitle = "Elige qué información se obtendrá desde TMDB"
+            title = "Enriquecimiento TMDB",
+            subtitle = "Elige qué campos de metadatos deben provenir de TMDB"
         )
 
         SettingsGroupCard(
@@ -64,17 +64,12 @@ fun TmdbSettingsContent(
                 contentPadding = PaddingValues(bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-
                 item {
                     SettingsToggleRow(
-                        title = "Usar datos de TMDB",
-                        subtitle = "Obtiene información adicional desde TMDB para mejorar el contenido",
+                        title = "Activar Enriquecimiento TMDB",
+                        subtitle = "Usa TMDB como fuente de metadatos para mejorar los datos de los addons",
                         checked = uiState.enabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                TmdbSettingsEvent.ToggleEnabled(!uiState.enabled)
-                            )
-                        },
+                        onToggle = { viewModel.onEvent(TmdbSettingsEvent.ToggleEnabled(!uiState.enabled)) },
                         modifier = if (initialFocusRequester != null) {
                             Modifier.focusRequester(initialFocusRequester)
                         } else {
@@ -88,10 +83,9 @@ fun TmdbSettingsContent(
                         .find { it.code == uiState.language }
                         ?.name
                         ?: uiState.language.uppercase()
-
                     SettingsActionRow(
                         title = "Idioma",
-                        subtitle = "Idioma de los datos (título, logo y campos activados)",
+                        subtitle = "Idioma de metadatos de TMDB para títulos, logos y campos activos",
                         value = languageName,
                         enabled = uiState.enabled,
                         onClick = { showLanguageDialog = true }
@@ -100,106 +94,78 @@ fun TmdbSettingsContent(
 
                 item {
                     SettingsToggleRow(
-                        title = "Imágenes",
-                        subtitle = "Logos e imágenes de fondo",
+                        title = "Arte (Artwork)",
+                        subtitle = "Logos e imágenes de fondo desde TMDB",
                         checked = uiState.useArtwork,
                         enabled = uiState.enabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                TmdbSettingsEvent.ToggleArtwork(!uiState.useArtwork)
-                            )
-                        }
+                        onToggle = { viewModel.onEvent(TmdbSettingsEvent.ToggleArtwork(!uiState.useArtwork)) }
                     )
                 }
 
                 item {
                     SettingsToggleRow(
-                        title = "Información básica",
-                        subtitle = "Sinopsis, géneros y puntuación",
+                        title = "Información Básica",
+                        subtitle = "Descripción, géneros y calificación desde TMDB",
                         checked = uiState.useBasicInfo,
                         enabled = uiState.enabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                TmdbSettingsEvent.ToggleBasicInfo(!uiState.useBasicInfo)
-                            )
-                        }
+                        onToggle = { viewModel.onEvent(TmdbSettingsEvent.ToggleBasicInfo(!uiState.useBasicInfo)) }
                     )
                 }
 
                 item {
                     SettingsToggleRow(
                         title = "Detalles",
-                        subtitle = "Duración, fecha de estreno, país e idioma",
+                        subtitle = "Duración, fecha de estreno, país e idioma desde TMDB",
                         checked = uiState.useDetails,
                         enabled = uiState.enabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                TmdbSettingsEvent.ToggleDetails(!uiState.useDetails)
-                            )
-                        }
+                        onToggle = { viewModel.onEvent(TmdbSettingsEvent.ToggleDetails(!uiState.useDetails)) }
                     )
                 }
 
                 item {
                     SettingsToggleRow(
                         title = "Créditos",
-                        subtitle = "Reparto con fotos, director y guionista",
+                        subtitle = "Reparto con fotos, director y guionista desde TMDB",
                         checked = uiState.useCredits,
                         enabled = uiState.enabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                TmdbSettingsEvent.ToggleCredits(!uiState.useCredits)
-                            )
-                        }
+                        onToggle = { viewModel.onEvent(TmdbSettingsEvent.ToggleCredits(!uiState.useCredits)) }
                     )
                 }
 
                 item {
                     SettingsToggleRow(
                         title = "Productoras",
-                        subtitle = "Compañías productoras",
+                        subtitle = "Compañías productoras desde TMDB",
                         checked = uiState.useProductions,
                         enabled = uiState.enabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                TmdbSettingsEvent.ToggleProductions(!uiState.useProductions)
-                            )
-                        }
+                        onToggle = { viewModel.onEvent(TmdbSettingsEvent.ToggleProductions(!uiState.useProductions)) }
                     )
                 }
 
                 item {
                     SettingsToggleRow(
-                        title = "Canales",
-                        subtitle = "Canales con logo",
+                        title = "Cadenas/Networks",
+                        subtitle = "Cadenas de TV con logos desde TMDB",
                         checked = uiState.useNetworks,
                         enabled = uiState.enabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                TmdbSettingsEvent.ToggleNetworks(!uiState.useNetworks)
-                            )
-                        }
+                        onToggle = { viewModel.onEvent(TmdbSettingsEvent.ToggleNetworks(!uiState.useNetworks)) }
                     )
                 }
 
                 item {
                     SettingsToggleRow(
                         title = "Episodios",
-                        subtitle = "Títulos, sinopsis, miniaturas y duración",
+                        subtitle = "Títulos de episodios, sinopsis, miniaturas y duración desde TMDB",
                         checked = uiState.useEpisodes,
                         enabled = uiState.enabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                TmdbSettingsEvent.ToggleEpisodes(!uiState.useEpisodes)
-                            )
-                        }
+                        onToggle = { viewModel.onEvent(TmdbSettingsEvent.ToggleEpisodes(!uiState.useEpisodes)) }
                     )
                 }
 
                 item {
                     SettingsToggleRow(
                         title = "Más como esto",
-                        subtitle = "Recomendaciones en la página de detalles",
+                        subtitle = "Fondos de recomendaciones de TMDB en la página de detalles",
                         checked = uiState.useMoreLikeThis,
                         enabled = uiState.enabled,
                         onToggle = {
@@ -209,6 +175,7 @@ fun TmdbSettingsContent(
                         }
                     )
                 }
+
             }
         }
     }
@@ -219,9 +186,7 @@ fun TmdbSettingsContent(
             selectedLanguage = uiState.language,
             showNoneOption = false,
             onLanguageSelected = { language ->
-                viewModel.onEvent(
-                    TmdbSettingsEvent.SetLanguage(language ?: "en")
-                )
+                viewModel.onEvent(TmdbSettingsEvent.SetLanguage(language ?: "es"))
                 showLanguageDialog = false
             },
             onDismiss = { showLanguageDialog = false }
