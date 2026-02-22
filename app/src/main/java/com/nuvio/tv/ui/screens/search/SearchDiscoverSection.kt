@@ -86,8 +86,8 @@ internal fun DiscoverSection(
         uiState.discoverCatalogs.map { it.type }.distinct()
     }
     val selectedTypeLabel = uiState.selectedDiscoverType.replaceFirstChar { it.uppercase() }
-    val selectedCatalogLabel = selectedCatalog?.catalogName ?: "Select"
-    val selectedGenreLabel = uiState.selectedDiscoverGenre ?: "Default"
+    val selectedCatalogLabel = selectedCatalog?.catalogName ?: "Seleccionar"
+    val selectedGenreLabel = uiState.selectedDiscoverGenre ?: "Predeterminado"
 
     Column(
         modifier = modifier
@@ -96,7 +96,7 @@ internal fun DiscoverSection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "Discover",
+            text = "Explorar",
             style = MaterialTheme.typography.headlineMedium,
             color = NuvioColors.TextPrimary
         )
@@ -107,7 +107,7 @@ internal fun DiscoverSection(
         ) {
             DiscoverDropdownPicker(
                 modifier = Modifier.weight(1f),
-                title = "Type",
+                title = "Tipo",
                 value = selectedTypeLabel,
                 expanded = expandedPicker == "type",
                 options = availableTypes.map { type ->
@@ -124,7 +124,7 @@ internal fun DiscoverSection(
 
             DiscoverDropdownPicker(
                 modifier = Modifier.weight(1f),
-                title = "Catalog",
+                title = "Catálogo",
                 value = selectedCatalogLabel,
                 expanded = expandedPicker == "catalog",
                 options = filteredCatalogs.map { DiscoverOption(it.catalogName, it.key) },
@@ -139,11 +139,11 @@ internal fun DiscoverSection(
 
             DiscoverDropdownPicker(
                 modifier = Modifier.weight(1f),
-                title = "Genre",
+                title = "Género",
                 value = selectedGenreLabel,
                 expanded = expandedPicker == "genre",
                 options = buildList {
-                    add(DiscoverOption("Default", "__default__"))
+                    add(DiscoverOption("Predeterminado", "__default__"))
                     addAll(genres.map { DiscoverOption(it, it) })
                 },
                 onExpandedChange = { shouldExpand ->
@@ -210,16 +210,16 @@ internal fun DiscoverSection(
 
             uiState.discoverInitialized && selectedCatalog == null -> {
                 EmptyScreenState(
-                    title = "Select a catalog",
-                    subtitle = "Choose a discover catalog to browse",
+                    title = "Selecciona un catálogo",
+                    subtitle = "Elige un catálogo para explorar su contenido",
                     icon = Icons.Default.Search
                 )
             }
 
             uiState.discoverInitialized && !uiState.discoverLoading && selectedCatalog != null -> {
                 EmptyScreenState(
-                    title = "No content found",
-                    subtitle = "Try a different genre or catalog",
+                    title = "No se encontró contenido",
+                    subtitle = "Intenta con un género o catálogo distinto",
                     icon = Icons.Default.Search
                 )
             }
@@ -295,7 +295,7 @@ private fun DiscoverDropdownPicker(
                     )
                     Icon(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (expanded) "Collapse $title" else "Expand $title",
+                        contentDescription = if (expanded) "Contraer $title" else "Expandir $title",
                         modifier = Modifier.size(20.dp),
                         tint = if (isFocused) NuvioColors.FocusRing else NuvioColors.TextSecondary
                     )
@@ -505,9 +505,9 @@ private fun DiscoverActionCard(
 ) {
     val cardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
     val title = when (actionType) {
-        DiscoverGridAction.ShowMore -> "Load more"
-        DiscoverGridAction.LoadMore -> "Load more"
-        DiscoverGridAction.Loading -> "Loading..."
+        DiscoverGridAction.ShowMore -> "Cargar más"
+        DiscoverGridAction.LoadMore -> "Cargar más"
+        DiscoverGridAction.Loading -> "Cargando..."
         DiscoverGridAction.None -> ""
     }
 
