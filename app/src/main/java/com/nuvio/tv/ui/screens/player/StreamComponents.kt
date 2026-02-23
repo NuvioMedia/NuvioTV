@@ -101,7 +101,7 @@ internal fun StreamItem(
                         StreamTypeChip(text = "YouTube", color = Color(0xFFFF0000))
                     }
                     if (stream.isExternal()) {
-                        StreamTypeChip(text = "External", color = NuvioColors.Primary)
+                        StreamTypeChip(text = "Externo", color = NuvioColors.Primary)
                     }
                 }
             }
@@ -169,7 +169,7 @@ internal fun AddonFilterChips(
     ) {
         item {
             AddonChip(
-                name = "All",
+                name = "Todos",
                 isSelected = selectedAddon == null,
                 onClick = { onAddonSelected(null) }
             )
