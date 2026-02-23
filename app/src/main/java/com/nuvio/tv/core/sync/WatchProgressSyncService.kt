@@ -27,10 +27,13 @@ class WatchProgressSyncService @Inject constructor(
     private val traktAuthDataStore: TraktAuthDataStore,
     private val profileManager: ProfileManager
 ) {
+    /**
+     * Elimina entradas de progreso de reproducción en el servidor.
+     */
     suspend fun deleteFromRemote(keys: Collection<String>): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (traktAuthDataStore.isAuthenticated.first()) {
-                Log.d(TAG, "Trakt connected, skipping watch progress delete")
+                Log.d(TAG, "Trakt conectado, omitiendo eliminación de progreso en Supabase")
                 return@withContext Result.success(Unit)
             }
 
@@ -50,30 +53,31 @@ class WatchProgressSyncService @Inject constructor(
                 put("p_profile_id", profileId)
             }
             postgrest.rpc("sync_delete_watch_progress", params)
-            Log.d(TAG, "Deleted ${distinctKeys.size} watch progress entries from remote for profile $profileId")
+            Log.d(TAG, "Se eliminaron ${distinctKeys.size} entradas de progreso para el perfil $profileId")
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to delete watch progress from remote", e)
+            Log.e(TAG, "Error al eliminar el progreso de la nube", e)
             Result.failure(e)
         }
     }
 
     /**
-     * Push all local watch progress to Supabase via RPC.
-     * Skips if Trakt is connected (Trakt handles progress when active).
+     * Sube todo el progreso de reproducción local a Supabase.
+     * Se omite si Trakt está conectado, ya que Trakt gestiona el progreso cuando está activo.
      */
     suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (traktAuthDataStore.isAuthenticated.first()) {
-                Log.d(TAG, "Trakt connected, skipping watch progress push")
+                Log.d(TAG, "Trakt conectado, omitiendo subida de progreso a Supabase")
                 return@withContext Result.success(Unit)
             }
 
             val rawEntries = watchProgressPreferences.getAllRawEntries()
             val entries = canonicalizeForRemote(rawEntries)
-            Log.d(TAG, "pushToRemote: ${rawEntries.size} local entries, ${entries.size} canonical entries to push")
+            Log.d(TAG, "pushToRemote: ${rawEntries.size} entradas locales, ${entries.size} entradas canónicas para subir")
+            
             entries.forEach { (key, progress) ->
-                Log.d(TAG, "  push entry: key=$key contentId=${progress.contentId} type=${progress.contentType} pos=${progress.position} dur=${progress.duration} lastWatched=${progress.lastWatched}")
+                Log.d(TAG, "  subiendo: clave=$key contentId=${progress.contentId} pos=${progress.position} dur=${progress.duration}")
             }
 
             val profileId = profileManager.activeProfileId.value
@@ -97,24 +101,23 @@ class WatchProgressSyncService @Inject constructor(
             }
             postgrest.rpc("sync_push_watch_progress", params)
 
-            Log.d(TAG, "Pushed ${entries.size} watch progress entries to remote for profile $profileId")
+            Log.d(TAG, "Se subieron ${entries.size} entradas de progreso para el perfil $profileId")
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to push watch progress to remote", e)
+            Log.e(TAG, "Error al subir el progreso a la nube", e)
             Result.failure(e)
         }
     }
 
     /**
-     * Pull watch progress from Supabase via SECURITY DEFINER RPC.
-     * Uses get_sync_owner() server-side to fetch the correct user's data,
-     * bypassing RLS (which would block linked devices from reading owner data).
-     * Skips if Trakt is connected. Caller is responsible for merging into local.
+     * Descarga el progreso de reproducción desde Supabase mediante RPC.
+     * Utiliza get_sync_owner() en el lado del servidor para obtener los datos correctos del usuario,
+     * evitando que el RLS bloquee la lectura de datos del propietario desde dispositivos vinculados.
      */
     suspend fun pullFromRemote(): Result<List<Pair<String, WatchProgress>>> = withContext(Dispatchers.IO) {
         try {
             if (traktAuthDataStore.isAuthenticated.first()) {
-                Log.d(TAG, "Trakt connected, skipping watch progress pull")
+                Log.d(TAG, "Trakt conectado, omitiendo descarga de progreso desde Supabase")
                 return@withContext Result.success(emptyList())
             }
 
@@ -125,10 +128,7 @@ class WatchProgressSyncService @Inject constructor(
             val response = postgrest.rpc("sync_pull_watch_progress", params)
             val remote = response.decodeList<SupabaseWatchProgress>()
 
-            Log.d(TAG, "pullFromRemote: fetched ${remote.size} entries from Supabase via RPC for profile $profileId")
-            remote.forEach { entry ->
-                Log.d(TAG, "  pull entry: key=${entry.progressKey} contentId=${entry.contentId} type=${entry.contentType} pos=${entry.position} dur=${entry.duration} lastWatched=${entry.lastWatched}")
-            }
+            Log.d(TAG, "pullFromRemote: se obtuvieron ${remote.size} entradas desde Supabase para el perfil $profileId")
 
             val pulled = remote.map { entry ->
                 entry.progressKey to WatchProgress(
@@ -150,10 +150,10 @@ class WatchProgressSyncService @Inject constructor(
             }
 
             val normalized = normalizePulledEntries(pulled)
-            Log.d(TAG, "pullFromRemote: normalized ${pulled.size} -> ${normalized.size} entries")
+            Log.d(TAG, "pullFromRemote: normalización completada (${pulled.size} -> ${normalized.size} entradas)")
             Result.success(normalized)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to pull watch progress from remote", e)
+            Log.e(TAG, "Error al descargar el progreso desde la nube", e)
             Result.failure(e)
         }
     }
@@ -175,8 +175,8 @@ class WatchProgressSyncService @Inject constructor(
             val episode = progress.episode
             val episodeKey = episodeKey(
                 contentId = progress.contentId,
-                season = season,
-                episode = episode
+                season = season!!,
+                episode = episode!!
             )
             val episodeProgress = rawEntries[episodeKey] ?: return@forEach
 
