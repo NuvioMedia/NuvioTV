@@ -27,15 +27,19 @@ class LibrarySyncService @Inject constructor(
     private val traktAuthDataStore: TraktAuthDataStore,
     private val profileManager: ProfileManager
 ) {
+    /**
+     * Sube la biblioteca local a Supabase si el usuario no usa Trakt.
+     */
     suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
+            // Si Trakt está conectado, delegamos la sincronización a ellos
             if (traktAuthDataStore.isAuthenticated.first()) {
-                Log.d(TAG, "Trakt connected, skipping library push")
+                Log.d(TAG, "Trakt conectado, omitiendo subida de biblioteca a Supabase")
                 return@withContext Result.success(Unit)
             }
 
             val items = libraryPreferences.getAllItems()
-            Log.d(TAG, "pushToRemote: ${items.size} local library items to push")
+            Log.d(TAG, "pushToRemote: Sincronizando ${items.size} elementos locales")
 
             val profileId = profileManager.activeProfileId.value
             val params = buildJsonObject {
@@ -62,18 +66,21 @@ class LibrarySyncService @Inject constructor(
             }
             postgrest.rpc("sync_push_library", params)
 
-            Log.d(TAG, "Pushed ${items.size} library items to remote for profile $profileId")
+            Log.d(TAG, "Biblioteca sincronizada (${items.size} elementos) para el perfil $profileId")
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to push library to remote", e)
+            Log.e(TAG, "Error al subir la biblioteca a la nube", e)
             Result.failure(e)
         }
     }
 
+    /**
+     * Descarga la biblioteca desde Supabase para el perfil activo.
+     */
     suspend fun pullFromRemote(): Result<List<SavedLibraryItem>> = withContext(Dispatchers.IO) {
         try {
             if (traktAuthDataStore.isAuthenticated.first()) {
-                Log.d(TAG, "Trakt connected, skipping library pull")
+                Log.d(TAG, "Trakt conectado, omitiendo descarga de biblioteca desde Supabase")
                 return@withContext Result.success(emptyList())
             }
 
@@ -84,7 +91,7 @@ class LibrarySyncService @Inject constructor(
             val response = postgrest.rpc("sync_pull_library", params)
             val remote = response.decodeList<SupabaseLibraryItem>()
 
-            Log.d(TAG, "pullFromRemote: fetched ${remote.size} library items from Supabase for profile $profileId")
+            Log.d(TAG, "pullFromRemote: Se obtuvieron ${remote.size} elementos desde Supabase para el perfil $profileId")
 
             Result.success(remote.map { entry ->
                 SavedLibraryItem(
@@ -102,7 +109,7 @@ class LibrarySyncService @Inject constructor(
                 )
             })
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to pull library from remote", e)
+            Log.e(TAG, "Error al descargar la biblioteca desde la nube", e)
             Result.failure(e)
         }
     }
