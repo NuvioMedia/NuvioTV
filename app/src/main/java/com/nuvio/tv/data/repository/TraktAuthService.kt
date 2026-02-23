@@ -19,13 +19,16 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Representa el resultado del sondeo del token durante la autenticación del dispositivo.
+ */
 sealed interface TraktTokenPollResult {
-    data object Pending : TraktTokenPollResult
-    data object Expired : TraktTokenPollResult
-    data object Denied : TraktTokenPollResult
-    data class SlowDown(val pollIntervalSeconds: Int) : TraktTokenPollResult
-    data class Approved(val username: String?) : TraktTokenPollResult
-    data class Failed(val reason: String) : TraktTokenPollResult
+    data object Pending : TraktTokenPollResult // Esperando que el usuario autorice
+    data object Expired : TraktTokenPollResult // El código ha expirado
+    data object Denied : TraktTokenPollResult  // El usuario denegó el acceso
+    data class SlowDown(val pollIntervalSeconds: Int) : TraktTokenPollResult // Requisito de esperar más entre intentos
+    data class Approved(val username: String?) : TraktTokenPollResult // Autorización exitosa
+    data class Failed(val reason: String) : TraktTokenPollResult // Fallo genérico
 }
 
 @Singleton
@@ -44,9 +47,12 @@ class TraktAuthService @Inject constructor(
 
     suspend fun getCurrentAuthState(): TraktAuthState = traktAuthDataStore.state.first()
 
+    /**
+     * Inicia el flujo de autenticación solicitando un código para mostrar en pantalla.
+     */
     suspend fun startDeviceAuth(): Result<TraktDeviceCodeResponseDto> {
         if (!hasRequiredCredentials()) {
-            return Result.failure(IllegalStateException("Missing TRAKT credentials"))
+            return Result.failure(IllegalStateException("Faltan las credenciales de TRAKT en el archivo de configuración"))
         }
 
         val response = traktApi.requestDeviceCode(
@@ -55,7 +61,7 @@ class TraktAuthService @Inject constructor(
         val body = response.body()
         if (!response.isSuccessful || body == null) {
             return Result.failure(
-                IllegalStateException("Failed to start Trakt auth (${response.code()})")
+                IllegalStateException("Error al iniciar autenticación en Trakt (Código: ${response.code()})")
             )
         }
 
@@ -63,15 +69,18 @@ class TraktAuthService @Inject constructor(
         return Result.success(body)
     }
 
+    /**
+     * Consulta si el usuario ya ingresó el código en el sitio de Trakt.
+     */
     suspend fun pollDeviceToken(): TraktTokenPollResult {
         if (!hasRequiredCredentials()) {
-            return TraktTokenPollResult.Failed("Missing TRAKT credentials")
+            return TraktTokenPollResult.Failed("Faltan las credenciales de TRAKT")
         }
 
         val state = getCurrentAuthState()
         val deviceCode = state.deviceCode
         if (deviceCode.isNullOrBlank()) {
-            return TraktTokenPollResult.Failed("No active Trakt device code")
+            return TraktTokenPollResult.Failed("No hay un código de dispositivo activo")
         }
 
         val response = traktApi.requestDeviceToken(
@@ -94,7 +103,7 @@ class TraktAuthService @Inject constructor(
             400, 409 -> TraktTokenPollResult.Pending
             404 -> {
                 traktAuthDataStore.clearDeviceFlow()
-                TraktTokenPollResult.Failed("Invalid device code")
+                TraktTokenPollResult.Failed("Código de dispositivo no válido")
             }
             410 -> {
                 traktAuthDataStore.clearDeviceFlow()
@@ -109,10 +118,13 @@ class TraktAuthService @Inject constructor(
                 traktAuthDataStore.updatePollInterval(nextInterval)
                 TraktTokenPollResult.SlowDown(nextInterval)
             }
-            else -> TraktTokenPollResult.Failed("Token polling failed (${response.code()})")
+            else -> TraktTokenPollResult.Failed("Error en el sondeo del token (Código: ${response.code()})")
         }
     }
 
+    /**
+     * Renueva el token de acceso si ha expirado o está cerca de hacerlo.
+     */
     suspend fun refreshTokenIfNeeded(force: Boolean = false): Boolean {
         if (!hasRequiredCredentials()) return false
 
@@ -131,13 +143,14 @@ class TraktAuthService @Inject constructor(
                 )
             )
         } catch (e: IOException) {
-            Log.w("TraktAuthService", "Network error while refreshing token", e)
+            Log.w("TraktAuthService", "Error de red al intentar renovar el token", e)
             return false
         }
 
         val tokenBody = response.body()
         if (!response.isSuccessful || tokenBody == null) {
             if (response.code() == 401 || response.code() == 403) {
+                // Si la renovación falla por falta de autorización, cerramos la sesión
                 traktAuthDataStore.clearAuth()
             }
             return false
@@ -178,6 +191,9 @@ class TraktAuthService @Inject constructor(
         return username
     }
 
+    /**
+     * Ejecuta una petición que requiere token Bearer, manejando automáticamente la renovación si falla.
+     */
     suspend fun <T> executeAuthorizedRequest(
         call: suspend (authorizationHeader: String) -> Response<T>
     ): Response<T>? {
@@ -189,16 +205,18 @@ class TraktAuthService @Inject constructor(
             val response = try {
                 call("Bearer $token")
             } catch (e: IOException) {
-                Log.w("TraktAuthService", "Network error during authorized request", e)
+                Log.w("TraktAuthService", "Error de red durante una petición autorizada", e)
                 return null
             }
 
+            // Manejo de token expirado
             if (response.code() == 401 && !retriedAuth && refreshTokenIfNeeded(force = true)) {
                 token = getCurrentAuthState().accessToken ?: return response
                 retriedAuth = true
                 continue
             }
 
+            // Manejo de límite de peticiones (Rate Limit)
             if (response.code() == 429 && !retriedRateLimit) {
                 val retryAfterSeconds = response.headers()["Retry-After"]
                     ?.toLongOrNull()
@@ -213,6 +231,9 @@ class TraktAuthService @Inject constructor(
         }
     }
 
+    /**
+     * Ejecuta una petición de escritura (POST/DELETE) con control de intervalos para evitar colisiones.
+     */
     suspend fun <T> executeAuthorizedWriteRequest(
         call: suspend (authorizationHeader: String) -> Response<T>
     ): Response<T>? {
