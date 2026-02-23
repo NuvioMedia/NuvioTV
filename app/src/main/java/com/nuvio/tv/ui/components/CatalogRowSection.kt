@@ -66,7 +66,7 @@ fun CatalogRowSection(
     focusedPosterBackdropTrailerMuted: Boolean = true,
     trailerPreviewUrls: Map<String, String> = emptyMap(),
     onRequestTrailerPreview: (MetaPreview) -> Unit = {},
-    onItemFocus: (MetaPreview) -> Unit = {},
+    onFocus: (MetaPreview) -> Unit = {},
     modifier: Modifier = Modifier,
     enableRowFocusRestorer: Boolean = true,
     initialScrollIndex: Int = 0,
@@ -84,6 +84,7 @@ fun CatalogRowSection(
     val itemFocusRequestersById = remember { mutableMapOf<String, FocusRequester>() }
     var lastRequestedFocusItemId by remember { mutableStateOf<String?>(null) }
     var lastFocusedItemIndex by remember { mutableIntStateOf(-1) }
+    
     LaunchedEffect(catalogRow.items) {
         val validIds = catalogRow.items.mapTo(mutableSetOf()) { it.id }
         itemFocusRequestersById.keys.retainAll(validIds)
@@ -140,7 +141,7 @@ fun CatalogRowSection(
                 )
                 if (showAddonName) {
                     Text(
-                        text = "from ${catalogRow.addonName}",
+                        text = "de ${catalogRow.addonName}",
                         style = MaterialTheme.typography.labelMedium,
                         color = NuvioColors.TextTertiary
                     )
@@ -189,7 +190,7 @@ fun CatalogRowSection(
                     focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
                     trailerPreviewUrl = trailerPreviewUrls[item.id],
                     onRequestTrailerPreview = onRequestTrailerPreview,
-                    onFocus = onItemFocus,
+                    onFocus = onFocus,
                     onClick = { onItemClick(item.id, item.apiType, catalogRow.addonBaseUrl) },
                     modifier = Modifier
                         .onFocusChanged { focusState ->
@@ -236,13 +237,13 @@ fun CatalogRowSection(
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = "See All",
+                                    contentDescription = "Ver todo",
                                     modifier = Modifier.size(32.dp),
                                     tint = NuvioColors.TextSecondary
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "See All",
+                                    text = "Ver todo",
                                     style = MaterialTheme.typography.titleSmall,
                                     color = NuvioColors.TextSecondary
                                 )
