@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -93,11 +92,10 @@ internal fun EpisodesSidePanel(
                 episodesFocusRequester.requestFocus()
             }
         } catch (_: Exception) {
-            // Focus requester may not be ready yet
+            // El focus requester puede no estar listo todavía
         }
     }
 
-   
     LaunchedEffect(
         uiState.showEpisodeStreams,
         uiState.isLoadingEpisodeStreams,
@@ -109,7 +107,7 @@ internal fun EpisodesSidePanel(
         runCatching { streamsFocusRequester.requestFocus() }
     }
 
-    // Right panel only (scrim is handled in PlayerScreen)
+    // Panel derecho únicamente
     Box(
         modifier = modifier
             .fillMaxHeight()
@@ -118,45 +116,45 @@ internal fun EpisodesSidePanel(
             .background(NuvioColors.BackgroundElevated)
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (uiState.showEpisodeStreams) "Streams" else "Episodes",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = NuvioColors.TextPrimary
-                    )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (uiState.showEpisodeStreams) "Enlaces" else "Episodios",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = NuvioColors.TextPrimary
+                )
 
-                    DialogButton(
-                        text = "Close",
-                        onClick = onClose,
-                        isPrimary = false
-                    )
-                }
+                DialogButton(
+                    text = "Cerrar",
+                    onClick = onClose,
+                    isPrimary = false
+                )
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                if (uiState.showEpisodeStreams) {
-                    EpisodeStreamsView(
-                        uiState = uiState,
-                        streamsFocusRequester = streamsFocusRequester,
-                        onBackToEpisodes = onBackToEpisodes,
-                        onReload = onReloadEpisodeStreams,
-                        onAddonFilterSelected = onAddonFilterSelected,
-                        onStreamSelected = onStreamSelected
-                    )
-                } else {
-                    EpisodesListView(
-                        uiState = uiState,
-                        episodesFocusRequester = episodesFocusRequester,
-                        onSeasonSelected = onSeasonSelected,
-                        onEpisodeSelected = onEpisodeSelected
-                    )
-                }
+            if (uiState.showEpisodeStreams) {
+                EpisodeStreamsView(
+                    uiState = uiState,
+                    streamsFocusRequester = streamsFocusRequester,
+                    onBackToEpisodes = onBackToEpisodes,
+                    onReload = onReloadEpisodeStreams,
+                    onAddonFilterSelected = onAddonFilterSelected,
+                    onStreamSelected = onStreamSelected
+                )
+            } else {
+                EpisodesListView(
+                    uiState = uiState,
+                    episodesFocusRequester = episodesFocusRequester,
+                    onSeasonSelected = onSeasonSelected,
+                    onEpisodeSelected = onEpisodeSelected
+                )
             }
         }
+    }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -169,18 +167,18 @@ private fun EpisodeStreamsView(
     onAddonFilterSelected: (String?) -> Unit,
     onStreamSelected: (Stream) -> Unit
 ) {
-    // Streams for selected episode
+    // Enlaces para el episodio seleccionado
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         DialogButton(
-            text = "Back",
+            text = "Atrás",
             onClick = onBackToEpisodes,
             isPrimary = false
         )
         DialogButton(
-            text = "Reload",
+            text = "Recargar",
             onClick = onReload,
             isPrimary = false
         )
@@ -233,7 +231,7 @@ private fun EpisodeStreamsView(
 
         uiState.episodeStreamsError != null -> {
             Text(
-                text = uiState.episodeStreamsError ?: "Failed to load streams",
+                text = uiState.episodeStreamsError ?: "Error al cargar los enlaces",
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.85f)
             )
@@ -241,7 +239,7 @@ private fun EpisodeStreamsView(
 
         uiState.episodeFilteredStreams.isEmpty() -> {
             Text(
-                text = "No streams found",
+                text = "No se encontraron enlaces",
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.7f)
             )
@@ -318,7 +316,7 @@ private fun EpisodesListView(
 
         uiState.episodesError != null -> {
             Text(
-                text = uiState.episodesError ?: "Failed to load episodes",
+                text = uiState.episodesError ?: "Error al cargar los episodios",
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.85f)
             )
@@ -326,7 +324,7 @@ private fun EpisodesListView(
 
         uiState.episodes.isEmpty() -> {
             Text(
-                text = "No episodes available",
+                text = "No hay episodios disponibles",
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.7f)
             )
@@ -495,7 +493,7 @@ private fun EpisodeItem(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.Top
         ) {
-            // Thumbnail with episode badge
+            // Miniatura con distintivo de episodio
             Box(
                 modifier = Modifier
                     .width(130.dp)
@@ -547,7 +545,7 @@ private fun EpisodeItem(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "Current",
+                            contentDescription = "Actual",
                             tint = Color.White,
                             modifier = Modifier.size(14.dp)
                         )
@@ -555,7 +553,7 @@ private fun EpisodeItem(
                 }
             }
 
-            // Episode info
+            // Información del episodio
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
