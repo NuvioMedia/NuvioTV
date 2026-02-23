@@ -46,6 +46,7 @@ class TraktLibraryService @Inject constructor(
     private val traktAuthService: TraktAuthService,
     private val metaRepository: MetaRepository
 ) {
+    // Metadatos adicionales para enriquecer los elementos de Trakt (que suelen venir solo con IDs)
     private data class LibraryMetadata(
         val name: String?,
         val poster: String?,
@@ -74,9 +75,9 @@ class TraktLibraryService @Inject constructor(
     private val inFlightMetadataKeys = mutableSetOf<String>()
     private var lastRefreshMs: Long = 0L
 
-    private val cacheTtlMs = 60_000L
-    private val metadataHydrationLimit = 30
-    private val listFetchConcurrency = 3
+    private val cacheTtlMs = 60_000L // Tiempo de vida de la caché (1 minuto)
+    private val metadataHydrationLimit = 30 // Límite de elementos a hidratar
+    private val listFetchConcurrency = 3 // Máximo de peticiones paralelas para listas
 
     fun observeListTabs(): Flow<List<LibraryListTab>> {
         return snapshotState
@@ -120,6 +121,7 @@ class TraktLibraryService @Inject constructor(
         val key = contentKey(item.itemId, item.itemType)
         val currentMembership = snapshotState.value.membershipByContent[key].orEmpty()
         val isInWatchlist = currentMembership.contains(WATCHLIST_KEY)
+        
         if (isInWatchlist) {
             performOptimisticMutation(
                 optimistic = { snapshot -> removeItemFromList(snapshot, item, WATCHLIST_KEY) }
@@ -197,10 +199,10 @@ class TraktLibraryService @Inject constructor(
                     privacy = privacy.apiValue
                 )
             )
-        } ?: throw IllegalStateException("Trakt request failed")
+        } ?: throw IllegalStateException("Petición a Trakt fallida")
 
         if (!response.isSuccessful) {
-            throw IllegalStateException(errorMessageForCode(response.code(), "Failed to create list"))
+            throw IllegalStateException(errorMessageForCode(response.code(), "Error al crear la lista"))
         }
 
         val createdTab = response.body()?.let(::mapListTab)
@@ -249,10 +251,10 @@ class TraktLibraryService @Inject constructor(
                         privacy = privacy.apiValue
                     )
                 )
-            } ?: throw IllegalStateException("Trakt request failed")
+            } ?: throw IllegalStateException("Petición a Trakt fallida")
 
             if (!response.isSuccessful) {
-                throw IllegalStateException(errorMessageForCode(response.code(), "Failed to update list"))
+                throw IllegalStateException(errorMessageForCode(response.code(), "Error al actualizar la lista"))
             }
         }
     }
@@ -275,10 +277,10 @@ class TraktLibraryService @Inject constructor(
                     id = ME_PATH,
                     listId = listId
                 )
-            } ?: throw IllegalStateException("Trakt request failed")
+            } ?: throw IllegalStateException("Petición a Trakt fallida")
 
             if (!response.isSuccessful && response.code() != 204) {
-                throw IllegalStateException(errorMessageForCode(response.code(), "Failed to delete list"))
+                throw IllegalStateException(errorMessageForCode(response.code(), "Error al eliminar la lista"))
             }
         }
     }
@@ -310,10 +312,10 @@ class TraktLibraryService @Inject constructor(
                     id = ME_PATH,
                     body = TraktReorderListsRequestDto(rank = rank)
                 )
-            } ?: throw IllegalStateException("Trakt request failed")
+            } ?: throw IllegalStateException("Petición a Trakt fallida")
 
             if (!response.isSuccessful) {
-                throw IllegalStateException(errorMessageForCode(response.code(), "Failed to reorder lists"))
+                throw IllegalStateException(errorMessageForCode(response.code(), "Error al reordenar las listas"))
             }
         }
     }
@@ -348,6 +350,7 @@ class TraktLibraryService @Inject constructor(
         }
     }
 
+    // Procesa el cambio visual antes de que la API responda para una UI instantánea
     private suspend fun performOptimisticMutation(
         optimistic: (Snapshot) -> Snapshot,
         mutation: suspend () -> Unit
@@ -359,7 +362,7 @@ class TraktLibraryService @Inject constructor(
         try {
             mutation()
         } catch (error: Throwable) {
-            snapshotState.value = before
+            snapshotState.value = before // Revertir si la petición falla
             throw error
         }
     }
@@ -369,6 +372,7 @@ class TraktLibraryService @Inject constructor(
         val normalizedType = normalizeItemType(item.itemType)
         val normalizedId = normalizeContentId(resolveIds(item), fallback = item.itemId.trim())
             .ifBlank { item.itemId.trim() }
+        
         val existing = snapshot.allEntries.firstOrNull { contentKey(it.id, it.type) == key }
         val entry = (existing ?: LibraryEntry(
             id = normalizedId,
@@ -450,7 +454,7 @@ class TraktLibraryService @Inject constructor(
             add(
                 LibraryListTab(
                     key = WATCHLIST_KEY,
-                    title = "Watchlist",
+                    title = "Lista de seguimiento",
                     type = LibraryListTab.Type.WATCHLIST,
                     sortBy = "rank",
                     sortHow = "asc"
@@ -503,21 +507,15 @@ class TraktLibraryService @Inject constructor(
 
     private suspend fun fetchWatchlistEntries(): List<LibraryEntry> {
         val moviesResponse = traktAuthService.executeAuthorizedRequest { authHeader ->
-            traktApi.getWatchlist(
-                authorization = authHeader,
-                type = "movies"
-            )
-        } ?: throw IllegalStateException("Failed to fetch watchlist movies")
+            traktApi.getWatchlist(authorization = authHeader, type = "movies")
+        } ?: throw IllegalStateException("Error al obtener películas de la watchlist")
 
         val showsResponse = traktAuthService.executeAuthorizedRequest { authHeader ->
-            traktApi.getWatchlist(
-                authorization = authHeader,
-                type = "shows"
-            )
-        } ?: throw IllegalStateException("Failed to fetch watchlist shows")
+            traktApi.getWatchlist(authorization = authHeader, type = "shows")
+        } ?: throw IllegalStateException("Error al obtener series de la watchlist")
 
         if (!moviesResponse.isSuccessful || !showsResponse.isSuccessful) {
-            throw IllegalStateException("Failed to fetch watchlist")
+            throw IllegalStateException("Error al obtener la watchlist")
         }
 
         return (moviesResponse.body().orEmpty() + showsResponse.body().orEmpty())
@@ -531,14 +529,11 @@ class TraktLibraryService @Inject constructor(
 
     private suspend fun fetchPersonalLists(): PersonalListFetchResult {
         val response = traktAuthService.executeAuthorizedRequest { authHeader ->
-            traktApi.getUserLists(
-                authorization = authHeader,
-                id = ME_PATH
-            )
-        } ?: throw IllegalStateException("Failed to fetch personal lists")
+            traktApi.getUserLists(authorization = authHeader, id = ME_PATH)
+        } ?: throw IllegalStateException("Error al obtener listas personales")
 
         if (!response.isSuccessful) {
-            throw IllegalStateException("Failed to fetch personal lists (${response.code()})")
+            throw IllegalStateException("Error al obtener listas personales (${response.code()})")
         }
 
         val personal = response.body().orEmpty()
@@ -563,10 +558,7 @@ class TraktLibraryService @Inject constructor(
             }.map { it.await() }.toMap()
         }
 
-        return PersonalListFetchResult(
-            tabs = tabs,
-            entriesByList = entriesByList
-        )
+        return PersonalListFetchResult(tabs = tabs, entriesByList = entriesByList)
     }
 
     private suspend fun fetchPersonalListItems(
@@ -581,10 +573,10 @@ class TraktLibraryService @Inject constructor(
                 listId = listIdPath,
                 type = type
             )
-        } ?: throw IllegalStateException("Failed to fetch list items")
+        } ?: throw IllegalStateException("Error al obtener elementos de la lista")
 
         if (!response.isSuccessful) {
-            throw IllegalStateException("Failed to fetch list items (${response.code()})")
+            throw IllegalStateException("Error al obtener elementos (${response.code()})")
         }
         return response.body().orEmpty()
             .mapNotNull { mapListItem(listKey = listKey, item = it) }
@@ -597,7 +589,7 @@ class TraktLibraryService @Inject constructor(
 
         return LibraryListTab(
             key = PERSONAL_KEY_PREFIX + listIdPath,
-            title = dto.name?.takeIf { it.isNotBlank() } ?: "List",
+            title = dto.name?.takeIf { it.isNotBlank() } ?: "Lista",
             type = LibraryListTab.Type.PERSONAL,
             traktListId = traktId,
             slug = slug,
@@ -660,28 +652,22 @@ class TraktLibraryService @Inject constructor(
     private suspend fun addToWatchlist(item: LibraryEntryInput) {
         val body = buildMutationBody(item)
         val response = traktAuthService.executeAuthorizedRequest { authHeader ->
-            traktApi.addToWatchlist(
-                authorization = authHeader,
-                body = body
-            )
-        } ?: throw IllegalStateException("Trakt request failed")
+            traktApi.addToWatchlist(authorization = authHeader, body = body)
+        } ?: throw IllegalStateException("Petición a Trakt fallida")
 
         if (!response.isSuccessful || !isSuccessfulAddResponse(response.body())) {
-            throw IllegalStateException(errorMessageForCode(response.code(), "Failed to add to watchlist"))
+            throw IllegalStateException(errorMessageForCode(response.code(), "Error al añadir a la watchlist"))
         }
     }
 
     private suspend fun removeFromWatchlist(item: LibraryEntryInput) {
         val body = buildMutationBody(item)
         val response = traktAuthService.executeAuthorizedRequest { authHeader ->
-            traktApi.removeFromWatchlist(
-                authorization = authHeader,
-                body = body
-            )
-        } ?: throw IllegalStateException("Trakt request failed")
+            traktApi.removeFromWatchlist(authorization = authHeader, body = body)
+        } ?: throw IllegalStateException("Petición a Trakt fallida")
 
         if (!response.isSuccessful) {
-            throw IllegalStateException(errorMessageForCode(response.code(), "Failed to remove from watchlist"))
+            throw IllegalStateException(errorMessageForCode(response.code(), "Error al quitar de la watchlist"))
         }
     }
 
@@ -694,10 +680,10 @@ class TraktLibraryService @Inject constructor(
                 listId = listId,
                 body = body
             )
-        } ?: throw IllegalStateException("Trakt request failed")
+        } ?: throw IllegalStateException("Petición a Trakt fallida")
 
         if (!response.isSuccessful || !isSuccessfulAddResponse(response.body())) {
-            throw IllegalStateException(errorMessageForCode(response.code(), "Failed to add to list"))
+            throw IllegalStateException(errorMessageForCode(response.code(), "Error al añadir a la lista"))
         }
     }
 
@@ -710,39 +696,27 @@ class TraktLibraryService @Inject constructor(
                 listId = listId,
                 body = body
             )
-        } ?: throw IllegalStateException("Trakt request failed")
+        } ?: throw IllegalStateException("Petición a Trakt fallida")
 
         if (!response.isSuccessful) {
-            throw IllegalStateException(errorMessageForCode(response.code(), "Failed to remove from list"))
+            throw IllegalStateException(errorMessageForCode(response.code(), "Error al quitar de la lista"))
         }
     }
 
     private fun buildMutationBody(item: LibraryEntryInput): TraktListItemsMutationRequestDto {
         val ids = resolveIds(item)
         if (!ids.hasAnyId()) {
-            throw IllegalStateException("Missing compatible IDs for Trakt list operation")
+            throw IllegalStateException("Faltan IDs compatibles para la operación en Trakt")
         }
 
         val normalizedType = normalizeItemType(item.itemType)
         return if (normalizedType == "movie") {
             TraktListItemsMutationRequestDto(
-                movies = listOf(
-                    TraktListMovieRequestItemDto(
-                        title = item.title,
-                        year = item.year,
-                        ids = ids
-                    )
-                )
+                movies = listOf(TraktListMovieRequestItemDto(title = item.title, year = item.year, ids = ids))
             )
         } else {
             TraktListItemsMutationRequestDto(
-                shows = listOf(
-                    TraktListShowRequestItemDto(
-                        title = item.title,
-                        year = item.year,
-                        ids = ids
-                    )
-                )
+                shows = listOf(TraktListShowRequestItemDto(title = item.title, year = item.year, ids = ids))
             )
         }
     }
@@ -766,9 +740,9 @@ class TraktLibraryService @Inject constructor(
 
     private fun errorMessageForCode(code: Int, defaultMessage: String): String {
         return when (code) {
-            401, 403 -> "Trakt authentication expired"
-            404 -> "Trakt list not found"
-            420 -> "Trakt list limit reached. Upgrade required."
+            401, 403 -> "La autenticación de Trakt ha expirado"
+            404 -> "Lista de Trakt no encontrada"
+            420 -> "Límite de listas de Trakt alcanzado. Se requiere suscripción VIP."
             else -> "$defaultMessage ($code)"
         }
     }
@@ -851,12 +825,7 @@ class TraktLibraryService @Inject constructor(
     }
 
     private suspend fun fetchMetadata(entry: LibraryEntry): LibraryMetadata? {
-        val typeCandidates = if (entry.type == "movie") {
-            listOf("movie")
-        } else {
-            listOf("series", "tv")
-        }
-
+        val typeCandidates = if (entry.type == "movie") listOf("movie") else listOf("series", "tv")
         val idCandidates = buildList {
             add(entry.id)
             if (entry.id.startsWith("tmdb:")) add(entry.id.substringAfter(':'))
@@ -882,7 +851,6 @@ class TraktLibraryService @Inject constructor(
                 )
             }
         }
-
         return null
     }
 
