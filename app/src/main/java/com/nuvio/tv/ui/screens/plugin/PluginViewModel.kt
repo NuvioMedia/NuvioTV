@@ -97,7 +97,7 @@ class PluginViewModel @Inject constructor(
 
     private fun addRepository(url: String) {
         if (url.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Please enter a valid URL") }
+            _uiState.update { it.copy(errorMessage = "Por favor, introduce una URL válida") }
             return
         }
 
@@ -111,7 +111,7 @@ class PluginViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isAddingRepo = false,
-                            successMessage = "Added ${repo.name} with ${repo.scraperCount} providers"
+                            successMessage = "Se añadió ${repo.name} con ${repo.scraperCount} proveedores"
                         )
                     }
                 },
@@ -119,7 +119,7 @@ class PluginViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isAddingRepo = false,
-                            errorMessage = "Failed to add repository: ${e.message}"
+                            errorMessage = "Error al añadir el repositorio: ${e.message}"
                         )
                     }
                 }
@@ -131,7 +131,7 @@ class PluginViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             pluginManager.removeRepository(repoId)
-            _uiState.update { it.copy(isLoading = false, successMessage = "Repository removed") }
+            _uiState.update { it.copy(isLoading = false, successMessage = "Repositorio eliminado") }
         }
     }
 
@@ -143,13 +143,13 @@ class PluginViewModel @Inject constructor(
 
             result.fold(
                 onSuccess = {
-                    _uiState.update { it.copy(isLoading = false, successMessage = "Repository refreshed") }
+                    _uiState.update { it.copy(isLoading = false, successMessage = "Repositorio actualizado") }
                 },
                 onFailure = { e ->
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = "Failed to refresh: ${e.message}"
+                            errorMessage = "Error al actualizar: ${e.message}"
                         )
                     }
                 }
@@ -181,7 +181,7 @@ class PluginViewModel @Inject constructor(
                         it.copy(
                             isTesting = false,
                             testResults = results,
-                            successMessage = if (results.isEmpty()) "No results found" else "Found ${results.size} streams"
+                            successMessage = if (results.isEmpty()) "No se encontraron resultados" else "Se encontraron ${results.size} enlaces"
                         )
                     }
                 },
@@ -190,7 +190,7 @@ class PluginViewModel @Inject constructor(
                         it.copy(
                             isTesting = false,
                             testResults = emptyList(),
-                            errorMessage = "Test failed: ${e.message}"
+                            errorMessage = "Error en la prueba: ${e.message}"
                         )
                     }
                 }
@@ -205,7 +205,7 @@ class PluginViewModel @Inject constructor(
     private fun startQrMode() {
         val ip = DeviceIpAddress.get(context)
         if (ip == null) {
-            _uiState.update { it.copy(errorMessage = "Connect to Wi-Fi or Ethernet to use this feature") }
+            _uiState.update { it.copy(errorMessage = "Conéctate a Wi-Fi o Ethernet para usar esta función") }
             return
         }
 
@@ -228,7 +228,7 @@ class PluginViewModel @Inject constructor(
 
         val activeServer = repoServer
         if (activeServer == null) {
-            _uiState.update { it.copy(errorMessage = "Could not start server. All ports in use.") }
+            _uiState.update { it.copy(errorMessage = "No se pudo iniciar el servidor. Todos los puertos están en uso.") }
             return
         }
 
