@@ -69,13 +69,13 @@ class AddonManagerViewModel @Inject constructor(
     fun installAddon() {
         val rawUrl = uiState.value.installUrl.trim()
         if (rawUrl.isBlank()) {
-            _uiState.update { it.copy(error = "Enter a valid addon URL") }
+            _uiState.update { it.copy(error = "Introduce una URL de addon válida") }
             return
         }
 
         val normalizedUrl = normalizeAddonUrl(rawUrl)
         if (normalizedUrl == null) {
-            _uiState.update { it.copy(error = "Addon URL must start with http or https") }
+            _uiState.update { it.copy(error = "La URL del addon debe comenzar con http o https") }
             return
         }
 
@@ -91,7 +91,7 @@ class AddonManagerViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isInstalling = false,
-                            error = result.message ?: "Unable to install addon"
+                            error = result.message ?: "No se pudo instalar el addon"
                         )
                     }
                 }
@@ -159,7 +159,7 @@ class AddonManagerViewModel @Inject constructor(
     fun startQrMode() {
         val ip = DeviceIpAddress.get(context)
         if (ip == null) {
-            _uiState.update { it.copy(error = "Connect to Wi-Fi or Ethernet to use this feature") }
+            _uiState.update { it.copy(error = "Conéctate a Wi-Fi o Ethernet para usar esta función") }
             return
         }
 
@@ -200,7 +200,7 @@ class AddonManagerViewModel @Inject constructor(
 
         val activeServer = server
         if (activeServer == null) {
-            _uiState.update { it.copy(error = "Could not start server. All ports in use.") }
+            _uiState.update { it.copy(error = "No se pudo iniciar el servidor. Todos los puertos están en uso.") }
             return
         }
 
