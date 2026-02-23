@@ -27,15 +27,19 @@ class WatchedItemsSyncService @Inject constructor(
     private val traktAuthDataStore: TraktAuthDataStore,
     private val profileManager: ProfileManager
 ) {
+    /**
+     * Sube los elementos vistos localmente a Supabase si Trakt no está conectado.
+     */
     suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
+            // Si Trakt está autenticado, omitimos la subida a Supabase para evitar duplicidad
             if (traktAuthDataStore.isAuthenticated.first()) {
-                Log.d(TAG, "Trakt connected, skipping watched items push")
+                Log.d(TAG, "Trakt conectado, omitiendo subida de elementos vistos a Supabase")
                 return@withContext Result.success(Unit)
             }
 
             val items = watchedItemsPreferences.getAllItems()
-            Log.d(TAG, "pushToRemote: ${items.size} watched items to push")
+            Log.d(TAG, "pushToRemote: Sincronizando ${items.size} elementos vistos")
 
             val profileId = profileManager.activeProfileId.value
             val params = buildJsonObject {
@@ -45,10 +49,13 @@ class WatchedItemsSyncService @Inject constructor(
                             put("content_id", item.contentId)
                             put("content_type", item.contentType)
                             put("title", item.title)
+                            // Manejo de nulos para temporada y episodio (importante para series vs películas)
                             if (item.season != null) put("season", item.season)
                             else put("season", JsonPrimitive(null as Int?))
+                            
                             if (item.episode != null) put("episode", item.episode)
                             else put("episode", JsonPrimitive(null as Int?))
+                            
                             put("watched_at", item.watchedAt)
                         }
                     }
@@ -57,18 +64,21 @@ class WatchedItemsSyncService @Inject constructor(
             }
             postgrest.rpc("sync_push_watched_items", params)
 
-            Log.d(TAG, "Pushed ${items.size} watched items to remote for profile $profileId")
+            Log.d(TAG, "Se subieron ${items.size} elementos vistos a la nube para el perfil $profileId")
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to push watched items to remote", e)
+            Log.e(TAG, "Error al subir los elementos vistos a la nube", e)
             Result.failure(e)
         }
     }
 
+    /**
+     * Descarga el historial de elementos vistos desde Supabase.
+     */
     suspend fun pullFromRemote(): Result<List<WatchedItem>> = withContext(Dispatchers.IO) {
         try {
             if (traktAuthDataStore.isAuthenticated.first()) {
-                Log.d(TAG, "Trakt connected, skipping watched items pull")
+                Log.d(TAG, "Trakt conectado, omitiendo descarga de elementos vistos desde Supabase")
                 return@withContext Result.success(emptyList())
             }
 
@@ -79,7 +89,7 @@ class WatchedItemsSyncService @Inject constructor(
             val response = postgrest.rpc("sync_pull_watched_items", params)
             val remote = response.decodeList<SupabaseWatchedItem>()
 
-            Log.d(TAG, "pullFromRemote: fetched ${remote.size} watched items from Supabase for profile $profileId")
+            Log.d(TAG, "pullFromRemote: Se obtuvieron ${remote.size} elementos vistos desde Supabase para el perfil $profileId")
 
             Result.success(remote.map { entry ->
                 WatchedItem(
@@ -92,7 +102,7 @@ class WatchedItemsSyncService @Inject constructor(
                 )
             })
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to pull watched items from remote", e)
+            Log.e(TAG, "Error al descargar los elementos vistos desde la nube", e)
             Result.failure(e)
         }
     }
