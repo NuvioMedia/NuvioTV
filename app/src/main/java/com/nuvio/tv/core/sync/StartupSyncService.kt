@@ -55,11 +55,6 @@ class StartupSyncService @Inject constructor(
         scope.launch {
             authManager.authState.collect { state ->
                 when (state) {
-                    is AuthState.Anonymous -> {
-                        val force = forceSyncRequested
-                        val started = scheduleStartupPull(state.userId, force = force)
-                        if (force && started) forceSyncRequested = false
-                    }
                     is AuthState.FullAccount -> {
                         val force = forceSyncRequested
                         val started = scheduleStartupPull(state.userId, force = force)
@@ -81,10 +76,6 @@ class StartupSyncService @Inject constructor(
     fun requestSyncNow() {
         forceSyncRequested = true
         when (val state = authManager.authState.value) {
-            is AuthState.Anonymous -> {
-                val started = scheduleStartupPull(state.userId, force = true)
-                if (started) forceSyncRequested = false
-            }
             is AuthState.FullAccount -> {
                 val started = scheduleStartupPull(state.userId, force = true)
                 if (started) forceSyncRequested = false

@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.sync
 
 import android.util.Log
+import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.WatchedItemsPreferences
@@ -22,11 +23,21 @@ private const val TAG = "WatchedItemsSyncService"
 
 @Singleton
 class WatchedItemsSyncService @Inject constructor(
+    private val authManager: AuthManager,
     private val postgrest: Postgrest,
     private val watchedItemsPreferences: WatchedItemsPreferences,
     private val traktAuthDataStore: TraktAuthDataStore,
     private val profileManager: ProfileManager
 ) {
+    private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
+        return try {
+            block()
+        } catch (e: Exception) {
+            if (!authManager.refreshSessionIfJwtExpired(e)) throw e
+            block()
+        }
+    }
+
     suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (traktAuthDataStore.isAuthenticated.first()) {
@@ -55,7 +66,9 @@ class WatchedItemsSyncService @Inject constructor(
                 })
                 put("p_profile_id", profileId)
             }
-            postgrest.rpc("sync_push_watched_items", params)
+            withJwtRefreshRetry {
+                postgrest.rpc("sync_push_watched_items", params)
+            }
 
             Log.d(TAG, "Pushed ${items.size} watched items to remote for profile $profileId")
             Result.success(Unit)
@@ -76,7 +89,9 @@ class WatchedItemsSyncService @Inject constructor(
             val params = buildJsonObject {
                 put("p_profile_id", profileId)
             }
-            val response = postgrest.rpc("sync_pull_watched_items", params)
+            val response = withJwtRefreshRetry {
+                postgrest.rpc("sync_pull_watched_items", params)
+            }
             val remote = response.decodeList<SupabaseWatchedItem>()
 
             Log.d(TAG, "pullFromRemote: fetched ${remote.size} watched items from Supabase for profile $profileId")

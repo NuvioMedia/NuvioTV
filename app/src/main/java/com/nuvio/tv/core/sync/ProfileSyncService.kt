@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.sync
 
 import android.util.Log
+import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.ProfileDataStore
 import com.nuvio.tv.data.remote.supabase.SupabaseProfile
@@ -19,10 +20,20 @@ private const val TAG = "ProfileSyncService"
 
 @Singleton
 class ProfileSyncService @Inject constructor(
+    private val authManager: AuthManager,
     private val postgrest: Postgrest,
     private val profileDataStore: ProfileDataStore,
     private val profileManager: ProfileManager
 ) {
+    private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
+        return try {
+            block()
+        } catch (e: Exception) {
+            if (!authManager.refreshSessionIfJwtExpired(e)) throw e
+            block()
+        }
+    }
+
     suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val profiles = profileManager.profiles.value
@@ -40,7 +51,9 @@ class ProfileSyncService @Inject constructor(
                     }
                 })
             }
-            postgrest.rpc("sync_push_profiles", params)
+            withJwtRefreshRetry {
+                postgrest.rpc("sync_push_profiles", params)
+            }
 
             Log.d(TAG, "Pushed ${profiles.size} profiles to remote")
             Result.success(Unit)
@@ -52,7 +65,9 @@ class ProfileSyncService @Inject constructor(
 
     suspend fun pullFromRemote(): Result<List<UserProfile>> = withContext(Dispatchers.IO) {
         try {
-            val response = postgrest.rpc("sync_pull_profiles")
+            val response = withJwtRefreshRetry {
+                postgrest.rpc("sync_pull_profiles")
+            }
             val remote = response.decodeList<SupabaseProfile>()
 
             Log.d(TAG, "pullFromRemote: fetched ${remote.size} profiles from Supabase")
@@ -84,7 +99,9 @@ class ProfileSyncService @Inject constructor(
             val params = buildJsonObject {
                 put("p_profile_id", profileId)
             }
-            postgrest.rpc("sync_delete_profile_data", params)
+            withJwtRefreshRetry {
+                postgrest.rpc("sync_delete_profile_data", params)
+            }
 
             Log.d(TAG, "Deleted remote data for profile $profileId")
             Result.success(Unit)

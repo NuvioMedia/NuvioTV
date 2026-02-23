@@ -213,6 +213,13 @@ fun ContinueWatchingCard(
     val progress = (item as? ContinueWatchingItem.InProgress)?.progress
     val nextUp = (item as? ContinueWatchingItem.NextUp)?.info
     val episodeStr = progress?.episodeDisplayString ?: nextUp?.let { "S${it.season}E${it.episode}" }
+    val nextUpBadgeText = nextUp?.let { info ->
+        if (!info.hasAired) {
+            info.airDateLabel?.let { "Airs $it" } ?: "Upcoming"
+        } else {
+            "Next Up"
+        }
+    }
     val remainingText = progress?.let {
         remember(it.position, it.duration, it.progressPercent) {
             when {
@@ -229,12 +236,31 @@ fun ContinueWatchingCard(
     val badgeText = if (BuildConfig.IS_DEBUG_BUILD && watchedPercentText != null) {
         remainingText?.let { "$it · $watchedPercentText" } ?: watchedPercentText
     } else {
-        remainingText ?: "Next Up"
+        remainingText ?: nextUpBadgeText ?: "Next Up"
     }
     val progressFraction = progress?.progressPercentage ?: 0f
-    val imageModel = nextUp?.thumbnail ?: progress?.backdrop ?: progress?.poster ?: nextUp?.backdrop ?: nextUp?.poster
+    val imageModel = when {
+        nextUp != null && !nextUp.hasAired -> firstNonBlank(
+            nextUp.backdrop,
+            nextUp.poster,
+            nextUp.thumbnail,
+            progress?.backdrop,
+            progress?.poster
+        )
+        else -> firstNonBlank(
+            nextUp?.thumbnail,
+            progress?.backdrop,
+            progress?.poster,
+            nextUp?.backdrop,
+            nextUp?.poster
+        )
+    }
     val titleText = progress?.name ?: nextUp?.name.orEmpty()
-    val episodeTitle = progress?.episodeTitle ?: nextUp?.episodeTitle
+    val episodeTitle = when {
+        progress != null -> progress.episodeTitle
+        nextUp != null && !nextUp.hasAired -> nextUp.episodeTitle ?: nextUp.airDateLabel?.let { "Airs $it" }
+        else -> nextUp?.episodeTitle
+    }
     val context = LocalContext.current
     val density = LocalDensity.current
     val requestWidthPx = remember(cardWidth, density) {
@@ -456,6 +482,10 @@ private fun isSelectKey(keyCode: Int): Boolean {
     return keyCode == AndroidKeyEvent.KEYCODE_DPAD_CENTER ||
         keyCode == AndroidKeyEvent.KEYCODE_ENTER ||
         keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER
+}
+
+private fun firstNonBlank(vararg candidates: String?): String? {
+    return candidates.firstOrNull { !it.isNullOrBlank() }?.trim()
 }
 
 internal fun formatRemainingTime(remainingMs: Long): String {

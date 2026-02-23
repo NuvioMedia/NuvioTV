@@ -85,11 +85,13 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import androidx.tv.material3.rememberDrawerState
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.data.local.AppOnboardingDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.ThemeDataStore
 import com.nuvio.tv.data.repository.TraktProgressService
 import com.nuvio.tv.domain.model.AppTheme
+import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.core.sync.ProfileSyncService
 import com.nuvio.tv.core.sync.StartupSyncService
 import com.nuvio.tv.ui.navigation.NuvioNavHost
@@ -108,6 +110,7 @@ import dev.chrisbanes.haze.hazeChild
 import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import coil.compose.rememberAsyncImagePainter
 import coil.decode.SvgDecoder
@@ -150,6 +153,9 @@ class MainActivity : ComponentActivity() {
     lateinit var profileManager: ProfileManager
 
     @Inject
+    lateinit var authManager: AuthManager
+
+    @Inject
     lateinit var appOnboardingDataStore: AppOnboardingDataStore
 
     @OptIn(ExperimentalTvMaterial3Api::class)
@@ -161,7 +167,16 @@ class MainActivity : ComponentActivity() {
             var onboardingProfileSyncInProgress by remember { mutableStateOf(false) }
             val hasSeenAuthQrOnFirstLaunch by appOnboardingDataStore
                 .hasSeenAuthQrOnFirstLaunch
-                .collectAsState(initial = false)
+                .map<Boolean, Boolean?> { it }
+                .collectAsState(initial = null)
+            val authState by authManager.authState.collectAsState()
+
+            LaunchedEffect(hasSeenAuthQrOnFirstLaunch, authState) {
+                if (hasSeenAuthQrOnFirstLaunch == false && authState is AuthState.FullAccount) {
+                    appOnboardingDataStore.setHasSeenAuthQrOnFirstLaunch(true)
+                    onboardingCompletedThisSession = true
+                }
+            }
 
             val activeProfileId by profileManager.activeProfileId.collectAsState()
             val profiles by profileManager.profiles.collectAsState()
@@ -193,46 +208,71 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
-                    if (!hasSeenAuthQrOnFirstLaunch && !onboardingCompletedThisSession) {
+                    if (hasSeenAuthQrOnFirstLaunch == null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(NuvioColors.Background)
+                        )
+                        return@Surface
+                    }
+
+                    if (
+                        hasSeenAuthQrOnFirstLaunch == false &&
+                        authState !is AuthState.FullAccount &&
+                        !onboardingCompletedThisSession
+                    ) {
                         AuthQrSignInScreen(
                             onBackPress = {},
                             onContinue = {
                                 lifecycleScope.launch {
-                                    if (onboardingProfileSyncInProgress) return@launch
-                                    onboardingProfileSyncInProgress = true
-                                    val maxAttempts = 3
-                                    var synced = false
-                                    for (attempt in 0 until maxAttempts) {
-                                        val result = profileSyncService.pullFromRemote()
-                                        if (result.isSuccess) {
-                                            synced = true
-                                            break
+                                    val shouldRunRemoteOnboardingSync =
+                                        authManager.authState.value is AuthState.FullAccount
+
+                                    if (shouldRunRemoteOnboardingSync) {
+                                        if (onboardingProfileSyncInProgress) return@launch
+                                        onboardingProfileSyncInProgress = true
+                                        val maxAttempts = 3
+                                        var synced = false
+                                        for (attempt in 0 until maxAttempts) {
+                                            val result = profileSyncService.pullFromRemote()
+                                            if (result.isSuccess) {
+                                                synced = true
+                                                break
+                                            }
+                                            if (attempt < maxAttempts - 1) {
+                                                delay(1_000)
+                                            }
                                         }
-                                        if (attempt < maxAttempts - 1) {
-                                            delay(1_000)
+                                        if (!synced) {
+                                            android.util.Log.w(
+                                                "MainActivity",
+                                                "Onboarding profile sync failed after retries; continuing"
+                                            )
                                         }
-                                    }
-                                    if (!synced) {
-                                        android.util.Log.w(
-                                            "MainActivity",
-                                            "Onboarding profile sync failed after retries; continuing"
-                                        )
                                     }
                                     appOnboardingDataStore.setHasSeenAuthQrOnFirstLaunch(true)
                                     onboardingCompletedThisSession = true
                                     onboardingProfileSyncInProgress = false
                                 }
-                                startupSyncService.requestSyncNow()
+                                if (authManager.authState.value is AuthState.FullAccount) {
+                                    startupSyncService.requestSyncNow()
+                                }
                             }
                         )
                         return@Surface
                     }
 
-                    if (!hasSelectedProfileThisSession) {
+                    val shouldShowProfileSelection =
+                        !hasSelectedProfileThisSession && profiles.size > 1
+
+                    if (shouldShowProfileSelection) {
                         ProfileSelectionScreen(
                             onProfileSelected = {
                                 hasSelectedProfileThisSession = true
-                                startupSyncService.requestSyncNow()
+                                if (authManager.authState.value is AuthState.FullAccount) {
+                                    startupSyncService.requestSyncNow()
+                                }
                             }
                         )
                         return@Surface

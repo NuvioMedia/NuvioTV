@@ -327,7 +327,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
             }
     }
 
-    override suspend fun saveProgress(progress: WatchProgress) {
+    override suspend fun saveProgress(progress: WatchProgress, syncRemote: Boolean) {
         if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
             traktProgressService.applyOptimisticProgress(progress)
             watchProgressPreferences.saveProgress(progress)
@@ -336,7 +336,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
         watchProgressPreferences.saveProgress(progress)
         
         
-        if (authManager.isAuthenticated) {
+        if (syncRemote && authManager.isAuthenticated) {
             syncScope.launch {
                 watchProgressSyncService.pushSingleToRemote(progressKey(progress), progress)
                     .onFailure { error ->

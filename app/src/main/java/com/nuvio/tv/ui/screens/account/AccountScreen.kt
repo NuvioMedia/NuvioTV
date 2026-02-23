@@ -61,7 +61,7 @@ fun AccountScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(uiState.authState) {
-        if (uiState.authState is AuthState.Anonymous || uiState.authState is AuthState.FullAccount) {
+        if (uiState.authState is AuthState.FullAccount) {
             viewModel.loadLinkedDevices()
         }
     }
@@ -179,41 +179,6 @@ fun AccountScreen(
                 }
             }
 
-            is AuthState.Anonymous -> {
-                item {
-                    AccountInfoCard(
-                        label = "Signed in anonymously",
-                        value = "Using sync code for cross-device sync"
-                    )
-                }
-                item {
-                    LinkedDevicesSection(
-                        devices = uiState.linkedDevices,
-                        onUnlink = { viewModel.unlinkDevice(it) }
-                    )
-                }
-                if (SHOW_SYNC_CODE_FEATURES) {
-                    item {
-                        AccountActionCard(
-                            icon = Icons.Default.VpnKey,
-                            title = "Generate Sync Code",
-                            description = "Create a new sync code for linking devices.",
-                            onClick = onNavigateToSyncGenerate
-                        )
-                    }
-                }
-                item {
-                    AccountActionCard(
-                        icon = Icons.Default.Person,
-                        title = "Upgrade to Full Account",
-                        description = "Create an email account to keep your data permanently.",
-                        onClick = onNavigateToAuthSignIn
-                    )
-                }
-                item {
-                    SignOutButton(onClick = { viewModel.signOut() })
-                }
-            }
         }
     }
 }

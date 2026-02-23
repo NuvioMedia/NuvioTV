@@ -90,7 +90,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 private val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
 private const val MODERN_HERO_TEXT_WIDTH_FRACTION = 0.42f
-private const val MODERN_HERO_BACKDROP_HEIGHT_FRACTION = 0.72f
+private const val MODERN_HERO_BACKDROP_HEIGHT_FRACTION = 0.62f
 private const val MODERN_TRAILER_OVERSCAN_ZOOM = 1.35f
 private const val MODERN_HERO_FOCUS_DEBOUNCE_MS = 90L
 
@@ -468,7 +468,7 @@ fun ModernHomeContent(
     val portraitBaseWidth = uiState.posterCardWidthDp.dp
     val portraitBaseHeight = uiState.posterCardHeightDp.dp
     val modernPosterScale = if (useLandscapePosters) {
-        if (showNextRowPreview) 1.08f else 1.34f
+        if (showNextRowPreview) 1.18f else 1.34f
     } else {
         if (showNextRowPreview) 1.14f else 1.08f
     }
@@ -482,7 +482,7 @@ fun ModernHomeContent(
     } else {
         portraitBaseHeight * 0.84f * modernPosterScale
     }
-    val previewVisibleHeightFraction = if (useLandscapePosters) 0.24f else 0.18f
+    val previewVisibleHeightFraction = if (useLandscapePosters) 0.18f else 0.15f
 
     @Composable
     fun ModernActiveRowContent(activeRowStateKey: String?, activeRowTitleBottom: Dp) {
@@ -774,9 +774,9 @@ fun ModernHomeContent(
         val heroBackdropAlpha = 1f - heroTransitionProgress
         val heroTrailerAlpha = heroTransitionProgress
         val shouldRenderPreviewRow = showNextRowPreview && nextRow != null
-        val catalogBottomPadding = if (shouldRenderPreviewRow) 20.dp else 30.dp
-        val heroToCatalogGap = if (shouldRenderPreviewRow) 8.dp else 18.dp
-        val activeRowTitleBottom = if (shouldRenderPreviewRow) 2.dp else 6.dp
+        val catalogBottomPadding = if (shouldRenderPreviewRow) 0.dp else 30.dp
+        val heroToCatalogGap = if (shouldRenderPreviewRow) 16.dp else 28.dp
+        val activeRowTitleBottom = if (shouldRenderPreviewRow) 10.dp else 14.dp
         val localDensity = LocalDensity.current
         val bgColor = NuvioColors.Background
         val heroMediaWidthPx = remember(maxWidth, localDensity) {
@@ -809,12 +809,12 @@ fun ModernHomeContent(
             Brush.horizontalGradient(
                 colorStops = arrayOf(
                     0.0f to bgColor.copy(alpha = 0.96f),
-                    0.20f to bgColor.copy(alpha = 0.86f),
-                    0.35f to bgColor.copy(alpha = 0.70f),
-                    0.45f to bgColor.copy(alpha = 0.55f),
-                    0.55f to bgColor.copy(alpha = 0.38f),
-                    0.65f to bgColor.copy(alpha = 0.22f),
-                    0.75f to Color.Transparent,
+                    0.18f to bgColor.copy(alpha = 0.86f),
+                    0.31f to bgColor.copy(alpha = 0.70f),
+                    0.40f to bgColor.copy(alpha = 0.55f),
+                    0.48f to bgColor.copy(alpha = 0.38f),
+                    0.56f to bgColor.copy(alpha = 0.22f),
+                    0.66f to Color.Transparent,
                     1.0f to Color.Transparent
                 )
             )
@@ -823,10 +823,10 @@ fun ModernHomeContent(
             Brush.verticalGradient(
                 colorStops = arrayOf(
                     0.0f to Color.Transparent,
-                    0.38f to Color.Transparent,
-                    0.56f to bgColor.copy(alpha = 0.38f),
-                    0.72f to bgColor.copy(alpha = 0.74f),
-                    0.86f to bgColor.copy(alpha = 0.94f),
+                    0.44f to Color.Transparent,
+                    0.62f to bgColor.copy(alpha = 0.38f),
+                    0.78f to bgColor.copy(alpha = 0.74f),
+                    0.92f to bgColor.copy(alpha = 0.94f),
                     1.0f to bgColor.copy(alpha = 1.0f)
                 )
             )
@@ -954,7 +954,9 @@ private fun buildContinueWatchingItem(
         is ContinueWatchingItem.NextUp -> HeroPreview(
             title = item.info.name,
             logo = item.info.logo,
-            description = item.info.episodeDescription ?: item.info.episodeTitle,
+            description = item.info.episodeDescription
+                ?: item.info.episodeTitle
+                ?: item.info.airDateLabel?.let { "Airs $it" },
             contentTypeText = item.info.contentType.replaceFirstChar { ch -> ch.uppercase() },
             yearText = null,
             imdbText = null,
@@ -962,9 +964,9 @@ private fun buildContinueWatchingItem(
             poster = item.info.poster,
             backdrop = item.info.backdrop,
             imageUrl = if (useLandscapePosters) {
-                item.info.backdrop ?: item.info.poster
+                firstNonBlank(item.info.backdrop, item.info.poster, item.info.thumbnail)
             } else {
-                item.info.poster ?: item.info.backdrop
+                firstNonBlank(item.info.poster, item.info.backdrop, item.info.thumbnail)
             }
         )
     }
@@ -972,21 +974,25 @@ private fun buildContinueWatchingItem(
     val imageUrl = when (item) {
         is ContinueWatchingItem.InProgress -> if (useLandscapePosters) {
             if (isSeriesType(item.progress.contentType)) {
-                item.episodeThumbnail ?: item.progress.poster ?: item.progress.backdrop
+                firstNonBlank(item.episodeThumbnail, item.progress.poster, item.progress.backdrop)
             } else {
-                item.progress.backdrop ?: item.progress.poster
+                firstNonBlank(item.progress.backdrop, item.progress.poster)
             }
         } else {
             if (isSeriesType(item.progress.contentType)) {
-                heroPreview.poster ?: item.progress.poster
+                firstNonBlank(heroPreview.poster, item.progress.poster, item.progress.backdrop)
             } else {
-                item.progress.poster ?: item.progress.backdrop
+                firstNonBlank(item.progress.poster, item.progress.backdrop)
             }
         }
         is ContinueWatchingItem.NextUp -> if (useLandscapePosters) {
-            item.info.thumbnail ?: item.info.poster ?: item.info.backdrop
+            if (item.info.hasAired) {
+                firstNonBlank(item.info.thumbnail, item.info.poster, item.info.backdrop)
+            } else {
+                firstNonBlank(item.info.backdrop, item.info.poster, item.info.thumbnail)
+            }
         } else {
-            item.info.poster ?: item.info.backdrop
+            firstNonBlank(item.info.poster, item.info.backdrop, item.info.thumbnail)
         }
     }
 
@@ -998,7 +1004,14 @@ private fun buildContinueWatchingItem(
         },
         subtitle = when (item) {
             is ContinueWatchingItem.InProgress -> item.progress.episodeDisplayString ?: item.progress.episodeTitle
-            is ContinueWatchingItem.NextUp -> "S${item.info.season}E${item.info.episode}"
+            is ContinueWatchingItem.NextUp -> {
+                val code = "S${item.info.season}E${item.info.episode}"
+                if (item.info.hasAired) {
+                    code
+                } else {
+                    item.info.airDateLabel?.let { "$code • Airs $it" } ?: "$code • Upcoming"
+                }
+            }
         },
         imageUrl = imageUrl,
         heroPreview = heroPreview.copy(imageUrl = imageUrl ?: heroPreview.imageUrl),
@@ -1081,6 +1094,10 @@ private fun CatalogRow.key(): String {
 
 private fun isSeriesType(type: String?): Boolean {
     return type.equals("series", ignoreCase = true) || type.equals("tv", ignoreCase = true)
+}
+
+private fun firstNonBlank(vararg candidates: String?): String? {
+    return candidates.firstOrNull { !it.isNullOrBlank() }?.trim()
 }
 
 private fun extractYear(releaseInfo: String?): String? {
@@ -1351,7 +1368,7 @@ private fun ModernHeroMediaLayer(
                 model = imageModel,
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit,
+                contentScale = ContentScale.Crop,
                 alignment = Alignment.TopEnd
             )
         }
@@ -1455,28 +1472,39 @@ private fun ModernNextRowPreviewStrip(
     previewCardHeight: Dp
 ) {
     if (previewRow == null) return
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 16.dp)
-            .height(previewVisibleHeight)
-            .clipToBounds()
     ) {
-        LazyRow(
-            userScrollEnabled = false,
-            contentPadding = PaddingValues(horizontal = rowHorizontalPadding),
-            horizontalArrangement = Arrangement.spacedBy(rowItemSpacing)
+        Text(
+            text = previewRow.title,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = NuvioColors.TextPrimary,
+            modifier = Modifier.padding(start = rowHorizontalPadding, bottom = 10.dp)
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(previewVisibleHeight)
+                .clipToBounds()
         ) {
-            itemsIndexed(
-                previewRow.items.take(12),
-                key = { _, item -> item.key },
-                contentType = { _, _ -> "modern_preview_card" }
-            ) { _, item ->
-                PreviewCarouselCard(
-                    imageUrl = item.imageUrl ?: item.heroPreview.poster ?: item.heroPreview.backdrop,
-                    cardWidth = previewCardWidth,
-                    cardHeight = previewCardHeight
-                )
+            LazyRow(
+                userScrollEnabled = false,
+                contentPadding = PaddingValues(horizontal = rowHorizontalPadding),
+                horizontalArrangement = Arrangement.spacedBy(rowItemSpacing)
+            ) {
+                itemsIndexed(
+                    previewRow.items.take(12),
+                    key = { _, item -> item.key },
+                    contentType = { _, _ -> "modern_preview_card" }
+                ) { _, item ->
+                    PreviewCarouselCard(
+                        imageUrl = item.imageUrl ?: item.heroPreview.poster ?: item.heroPreview.backdrop,
+                        cardWidth = previewCardWidth,
+                        cardHeight = previewCardHeight
+                    )
+                }
             }
         }
     }

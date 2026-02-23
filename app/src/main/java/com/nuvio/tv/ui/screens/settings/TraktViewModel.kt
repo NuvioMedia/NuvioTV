@@ -11,6 +11,7 @@ import com.nuvio.tv.data.repository.TraktTokenPollResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +39,7 @@ data class TraktUiState(
     val pollIntervalSeconds: Int = 5,
     val deviceCodeExpiresAtMillis: Long? = null,
     val continueWatchingDaysCap: Int = TraktSettingsDataStore.DEFAULT_CONTINUE_WATCHING_DAYS_CAP,
+    val showUnairedNextUp: Boolean = TraktSettingsDataStore.DEFAULT_SHOW_UNAIRED_NEXT_UP,
     val connectedStats: TraktProgressService.TraktCachedStats? = null,
     val statusMessage: String? = null,
     val errorMessage: String? = null
@@ -73,6 +75,22 @@ class TraktViewModel @Inject constructor(
                 it.copy(
                     continueWatchingDaysCap = days,
                     statusMessage = "Continue watching window updated"
+                )
+            }
+        }
+    }
+
+    fun onShowUnairedNextUpChanged(enabled: Boolean) {
+        viewModelScope.launch {
+            traktSettingsDataStore.setShowUnairedNextUp(enabled)
+            _uiState.update {
+                it.copy(
+                    showUnairedNextUp = enabled,
+                    statusMessage = if (enabled) {
+                        "Unaired Next Up episodes are now shown"
+                    } else {
+                        "Unaired Next Up episodes are now hidden"
+                    }
                 )
             }
         }
@@ -172,8 +190,18 @@ class TraktViewModel @Inject constructor(
 
     private fun observeSettings() {
         viewModelScope.launch {
-            traktSettingsDataStore.continueWatchingDaysCap.collectLatest { daysCap ->
-                _uiState.update { it.copy(continueWatchingDaysCap = daysCap) }
+            combine(
+                traktSettingsDataStore.continueWatchingDaysCap,
+                traktSettingsDataStore.showUnairedNextUp
+            ) { daysCap, showUnairedNextUp ->
+                daysCap to showUnairedNextUp
+            }.collectLatest { (daysCap, showUnairedNextUp) ->
+                _uiState.update {
+                    it.copy(
+                        continueWatchingDaysCap = daysCap,
+                        showUnairedNextUp = showUnairedNextUp
+                    )
+                }
             }
         }
     }

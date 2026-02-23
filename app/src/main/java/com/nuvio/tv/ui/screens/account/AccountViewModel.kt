@@ -83,7 +83,7 @@ class AccountViewModel @Inject constructor(
                     )
                 }
                 updateEffectiveOwnerId(state)
-                if (state is AuthState.FullAccount || state is AuthState.Anonymous) {
+                if (state is AuthState.FullAccount) {
                     loadConnectedStats()
                     loadSyncOverview()
                 }
@@ -145,10 +145,8 @@ class AccountViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             if (!authManager.isAuthenticated) {
-                authManager.signInAnonymously().onFailure { e ->
-                    _uiState.update { it.copy(isLoading = false, error = userFriendlyError(e)) }
-                    return@launch
-                }
+                _uiState.update { it.copy(isLoading = false, error = "Sign in with an account first.") }
+                return@launch
             }
             pushLocalDataToRemote()
             syncRepository.generateSyncCode(pin).fold(
@@ -180,10 +178,8 @@ class AccountViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             if (!authManager.isAuthenticated) {
-                authManager.signInAnonymously().onFailure { e ->
-                    _uiState.update { it.copy(isLoading = false, error = userFriendlyError(e)) }
-                    return@launch
-                }
+                _uiState.update { it.copy(isLoading = false, error = "Sign in with an account first.") }
+                return@launch
             }
             syncRepository.claimSyncCode(code, pin, Build.MODEL).fold(
                 onSuccess = { result ->
@@ -260,17 +256,15 @@ class AccountViewModel @Inject constructor(
                     qrLoginExpiresAtMillis = null
                 )
             }
-            if (!authManager.isAuthenticated) {
-                authManager.signInAnonymously().onFailure { e ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = userFriendlyError(e),
-                            qrLoginStatus = "Failed to authenticate device"
-                        )
-                    }
-                    return@launch
+            authManager.ensureQrSessionAuthenticated().onFailure { e ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = userFriendlyError(e),
+                        qrLoginStatus = "Failed to authenticate device"
+                    )
                 }
+                return@launch
             }
             authManager.startTvLoginSession(
                 deviceNonce = nonce,
@@ -355,7 +349,6 @@ class AccountViewModel @Inject constructor(
 
     private suspend fun updateEffectiveOwnerId(state: AuthState) {
         val currentUserId = when (state) {
-            is AuthState.Anonymous -> state.userId
             is AuthState.FullAccount -> state.userId
             else -> null
         }

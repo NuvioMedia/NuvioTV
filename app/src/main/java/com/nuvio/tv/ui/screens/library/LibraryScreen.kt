@@ -172,8 +172,10 @@ fun LibraryScreen(
                 sourceMode = uiState.sourceMode,
                 listTabs = uiState.listTabs,
                 typeTabs = uiState.availableTypeTabs,
+                sortOptions = uiState.availableSortOptions,
                 selectedListKey = uiState.selectedListKey,
                 selectedTypeTab = uiState.selectedTypeTab,
+                selectedSortOption = uiState.selectedSortOption,
                 primaryFocusRequester = primaryFocusRequester,
                 expandedPicker = expandedPicker,
                 onExpandedChange = { picker, shouldExpand ->
@@ -185,6 +187,10 @@ fun LibraryScreen(
                 },
                 onSelectType = { type ->
                     viewModel.onSelectTypeTab(type)
+                    expandedPicker = null
+                },
+                onSelectSort = { sort ->
+                    viewModel.onSelectSortOption(sort)
                     expandedPicker = null
                 }
             )
@@ -308,16 +314,20 @@ private fun LibrarySelectorsRow(
     sourceMode: LibrarySourceMode,
     listTabs: List<LibraryListTab>,
     typeTabs: List<LibraryTypeTab>,
+    sortOptions: List<LibrarySortOption>,
     selectedListKey: String?,
     selectedTypeTab: LibraryTypeTab?,
+    selectedSortOption: LibrarySortOption,
     primaryFocusRequester: FocusRequester,
     expandedPicker: String?,
     onExpandedChange: (String, Boolean) -> Unit,
     onSelectList: (String) -> Unit,
-    onSelectType: (LibraryTypeTab) -> Unit
+    onSelectType: (LibraryTypeTab) -> Unit,
+    onSelectSort: (LibrarySortOption) -> Unit
 ) {
     val selectedListLabel = listTabs.firstOrNull { it.key == selectedListKey }?.title ?: "Select"
     val selectedTypeLabel = selectedTypeTab?.label ?: "All"
+    val selectedSortLabel = selectedSortOption.label
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -340,9 +350,7 @@ private fun LibrarySelectorsRow(
 
         LibraryDropdownPicker(
             modifier = if (sourceMode == LibrarySourceMode.TRAKT) {
-                Modifier
-                    .weight(1f)
-                    .padding(end = 48.dp)
+                Modifier.weight(1f)
             } else {
                 Modifier
                     .width(420.dp)
@@ -358,6 +366,22 @@ private fun LibrarySelectorsRow(
                 typeTabs.firstOrNull { it.key == option.value }?.let(onSelectType)
             }
         )
+
+        if (sourceMode == LibrarySourceMode.TRAKT) {
+            LibraryDropdownPicker(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 48.dp),
+                title = "Sort",
+                value = selectedSortLabel,
+                expanded = expandedPicker == "sort",
+                options = sortOptions.map { LibraryOption(it.label, it.key) },
+                onExpandedChange = { onExpandedChange("sort", it) },
+                onSelect = { option ->
+                    sortOptions.firstOrNull { it.key == option.value }?.let(onSelectSort)
+                }
+            )
+        }
     }
 }
 

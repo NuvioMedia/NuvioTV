@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.local
 
+import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
@@ -19,6 +20,7 @@ class LibraryPreferences @Inject constructor(
 ) {
     companion object {
         private const val FEATURE = "library_preferences"
+        private const val TAG = "LibraryPrefs"
     }
 
     private fun store(profileId: Int = profileManager.activeProfileId.value) =
@@ -76,6 +78,11 @@ class LibraryPreferences @Inject constructor(
 
     suspend fun mergeRemoteItems(remoteItems: List<SavedLibraryItem>) {
         store().edit { preferences ->
+            val current = preferences[libraryItemsKey] ?: emptySet()
+            if (remoteItems.isEmpty() && current.isNotEmpty()) {
+                Log.w(TAG, "mergeRemoteItems: remote list empty while local has ${current.size} entries; preserving local library")
+                return@edit
+            }
             val dedupedRemote = linkedMapOf<Pair<String, String>, SavedLibraryItem>()
             remoteItems.forEach { item ->
                 dedupedRemote[item.id to item.type.lowercase()] = item

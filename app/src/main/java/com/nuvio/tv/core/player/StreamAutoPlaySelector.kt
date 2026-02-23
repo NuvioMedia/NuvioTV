@@ -49,21 +49,46 @@ object StreamAutoPlaySelector {
             StreamAutoPlayMode.REGEX_MATCH -> {
                 val pattern = regexPattern.trim()
                 if (pattern.isBlank()) return null
-                val regex = runCatching { Regex(pattern, RegexOption.IGNORE_CASE) }.getOrNull() ?: return null
+ 
+                // Try to compile the user regex
+                val userRegex = runCatching { Regex(pattern, RegexOption.IGNORE_CASE) }.getOrNull() ?: return null
+
+                // Auto-extract exclusion patterns from negative lookaheads
+                val exclusionMatches = Regex("\\(\\?![^)]*?\\(([^)]+)\\)").findAll(pattern)
+
+                val exclusionWords = exclusionMatches
+                    .flatMap { match -> match.groupValues[1].split("|") }
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() }
+                    .toList()
+
+                val excludeRegex = if (exclusionWords.isNotEmpty()) {
+                    Regex("\\b(${exclusionWords.joinToString("|")})\\b", RegexOption.IGNORE_CASE)
+                } else null
+
 
                 candidateStreams.firstOrNull { stream ->
+                    val url = stream.getStreamUrl() ?: return@firstOrNull false
+
                     val searchableText = buildString {
-                        append(stream.addonName)
-                        append(' ')
-                        append(stream.name.orEmpty())
-                        append(' ')
-                        append(stream.title.orEmpty())
-                        append(' ')
-                        append(stream.description.orEmpty())
-                        append(' ')
-                        append(stream.getStreamUrl().orEmpty())
+                        append(stream.addonName).append(' ')
+                        append(stream.name.orEmpty()).append(' ')
+                        append(stream.title.orEmpty()).append(' ')
+                        append(stream.description.orEmpty()).append(' ')
+                        append(url)
                     }
-                    stream.getStreamUrl() != null && regex.containsMatchIn(searchableText)
+                    
+                    // Must match user include pattern
+                    if (!userRegex.containsMatchIn(searchableText)) return@firstOrNull false
+
+                    // Must NOT match user exclusion pattern (if any)
+                    if (excludeRegex != null && excludeRegex.containsMatchIn(searchableText)) {
+                        return@firstOrNull false
+                    }
+
+                    true
+
+
                 }
             }
         }

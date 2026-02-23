@@ -343,8 +343,7 @@ private fun SearchInputField(
                             return@onPreviewKeyEvent true
                         }
 
-                        KeyEvent.KEYCODE_DPAD_DOWN,
-                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        KeyEvent.KEYCODE_DPAD_DOWN -> {
                             if (canMoveToResults) {
                                 onMoveToResults()
                                 return@onPreviewKeyEvent true

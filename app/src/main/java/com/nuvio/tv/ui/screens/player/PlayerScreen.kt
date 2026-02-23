@@ -940,14 +940,13 @@ fun PlayerScreen(
         if (uiState.showMoreDialog) {
             val context = LocalContext.current
             MoreActionsDialog(
-                showSourcesAction = uiState.currentSeason != null && uiState.currentEpisode != null,
-                onSources = {
-                    viewModel.onEvent(PlayerEvent.OnDismissMoreDialog)
-                    viewModel.onEvent(PlayerEvent.OnShowSourcesPanel)
-                },
                 onPlaybackSpeed = {
                     viewModel.onEvent(PlayerEvent.OnDismissMoreDialog)
                     viewModel.onEvent(PlayerEvent.OnShowSpeedDialog)
+                },
+                onToggleAspectRatio = {
+                    viewModel.onEvent(PlayerEvent.OnDismissMoreDialog)
+                    viewModel.onEvent(PlayerEvent.OnToggleAspectRatio)
                 },
                 onOpenInExternalPlayer = {
                     viewModel.onEvent(PlayerEvent.OnDismissMoreDialog)
@@ -1158,22 +1157,12 @@ private fun PlayerControlsOverlay(
                     }
 
                     ControlButton(
-                        icon = Icons.Default.AspectRatio,
-                        iconPainter = customAspectPainter,
-                        contentDescription = "Aspect ratio",
-                        onClick = onToggleAspectRatio,
+                        icon = Icons.Default.SwapHoriz,
+                        iconPainter = customSourcePainter,
+                        contentDescription = "Sources",
+                        onClick = onShowSourcesPanel,
                         onFocused = onResetHideTimer
                     )
-
-                    if (!hasEpisodeContext) {
-                        ControlButton(
-                            icon = Icons.Default.SwapHoriz,
-                            iconPainter = customSourcePainter,
-                            contentDescription = "Sources",
-                            onClick = onShowSourcesPanel,
-                            onFocused = onResetHideTimer
-                        )
-                    }
 
                     if (hasEpisodeContext) {
                         ControlButton(
@@ -1619,9 +1608,8 @@ private fun SpeedSelectionDialog(
 
 @Composable
 private fun MoreActionsDialog(
-    showSourcesAction: Boolean,
-    onSources: () -> Unit,
     onPlaybackSpeed: () -> Unit,
+    onToggleAspectRatio: () -> Unit,
     onOpenInExternalPlayer: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -1647,12 +1635,10 @@ private fun MoreActionsDialog(
                     text = "Playback Speed",
                     onClick = onPlaybackSpeed
                 )
-                if (showSourcesAction) {
-                    MoreActionItem(
-                        text = "Sources",
-                        onClick = onSources
-                    )
-                }
+                MoreActionItem(
+                    text = "Aspect Ratio",
+                    onClick = onToggleAspectRatio
+                )
                 MoreActionItem(
                     text = "Open in External Player",
                     onClick = onOpenInExternalPlayer

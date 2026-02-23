@@ -100,26 +100,6 @@ fun AccountSettingsContent(
                 item { SignOutSettingsButton(onClick = { viewModel.signOut() }) }
             }
 
-            is AuthState.Anonymous -> {
-                item { StatusCard(label = "Anonymous", value = "Upgrade with QR to link an email") }
-
-                val overview = uiState.syncOverview
-                if (overview != null) {
-                    item { SyncOverviewCard(overview) }
-                } else if (uiState.isSyncOverviewLoading) {
-                    item { SyncOverviewLoadingCard() }
-                }
-
-                item {
-                    SettingsActionButton(
-                        icon = Icons.Default.VpnKey,
-                        title = "Upgrade with QR",
-                        subtitle = "Scan a QR code and sign in from your phone",
-                        onClick = onNavigateToAuthQrSignIn
-                    )
-                }
-                item { SignOutSettingsButton(onClick = { viewModel.signOut() }) }
-            }
         }
     }
 }

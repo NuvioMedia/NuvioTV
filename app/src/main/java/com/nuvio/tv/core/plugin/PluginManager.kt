@@ -196,8 +196,17 @@ class PluginManager @Inject constructor(
 
         val initialLocalRepos = dataStore.repositories.first()
         val initialLocalByNormalizedUrl = initialLocalRepos.associateBy { normalizeUrl(it.url) }
+        val shouldRemoveMissingLocal = if (removeMissingLocal && normalizedRemote.isEmpty() && initialLocalRepos.isNotEmpty()) {
+            Log.w(
+                TAG,
+                "reconcileWithRemoteRepoUrls: remote list empty while local has ${initialLocalRepos.size} repos; preserving local plugins"
+            )
+            false
+        } else {
+            removeMissingLocal
+        }
 
-        if (removeMissingLocal) {
+        if (shouldRemoveMissingLocal) {
             initialLocalRepos
                 .filter { normalizeUrl(it.url) !in remoteUrlSet }
                 .forEach { repo -> removeRepository(repo.id) }
@@ -216,7 +225,7 @@ class PluginManager @Inject constructor(
         val extras = currentRepos
             .filter { normalizeUrl(it.url) !in remoteUrlSet }
 
-        val reordered = if (removeMissingLocal) remoteOrderedRepos else remoteOrderedRepos + extras
+        val reordered = if (shouldRemoveMissingLocal) remoteOrderedRepos else remoteOrderedRepos + extras
         if (reordered.map { it.id } != currentRepos.map { it.id }) {
             dataStore.saveRepositories(reordered)
         }

@@ -126,11 +126,11 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     val modernLandscapePostersEnabled: Flow<Boolean> = profileFlow { prefs ->
-        prefs[modernLandscapePostersEnabledKey] ?: true
+        prefs[modernLandscapePostersEnabledKey] ?: false
     }
 
     val modernNextRowPreviewEnabled: Flow<Boolean> = profileFlow { prefs ->
-        prefs[modernNextRowPreviewEnabledKey] ?: false
+        prefs[modernNextRowPreviewEnabledKey] ?: true
     }
 
     val heroSectionEnabled: Flow<Boolean> = profileFlow { prefs ->
