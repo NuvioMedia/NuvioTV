@@ -1,6 +1,7 @@
 package com.nuvio.tv
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -295,6 +296,22 @@ class MainActivity : ComponentActivity() {
 
                     val updateViewModel: UpdateViewModel = hiltViewModel(this@MainActivity)
                     val updateState by updateViewModel.uiState.collectAsState()
+
+                    var backPressedOnce by remember { mutableStateOf(false) }
+                    BackHandler(enabled = true) {
+                        if (backPressedOnce) {
+                            this@MainActivity.finish()
+                        } else {
+                            backPressedOnce = true
+                            Toast.makeText(this@MainActivity, "Press back one more time to close the app", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    LaunchedEffect(backPressedOnce) {
+                        if (backPressedOnce) {
+                            delay(2000L)
+                            backPressedOnce = false
+                        }
+                    }
 
                     val startDestination = if (layoutChosen) Screen.Home.route else Screen.LayoutSelection.route
                     val navController = rememberNavController()
