@@ -19,10 +19,10 @@ data class PlayerUiState(
     val currentPosition: Long = 0L,
     val duration: Long = 0L,
     val title: String = "",
-    val contentName: String? = null, // Series/show name (for series content)
-    val releaseYear: String? = null, // Release year for movies
+    val contentName: String? = null, // Nombre de la serie/programa
+    val releaseYear: String? = null, // Año de lanzamiento para películas
     val contentType: String? = null,
-    val currentStreamName: String? = null, // Name of the current stream source
+    val currentStreamName: String? = null, // Nombre de la fuente de streaming actual
     val backdrop: String? = null,
     val logo: String? = null,
     val description: String? = null,
@@ -46,15 +46,15 @@ data class PlayerUiState(
     val subtitleDelayMs: Int = 0,
     val showSpeedDialog: Boolean = false,
     val showMoreDialog: Boolean = false,
-    // Subtitle style settings
+    // Ajustes de estilo de subtítulos
     val subtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(),
     val subtitleOrganizationMode: SubtitleOrganizationMode = SubtitleOrganizationMode.NONE,
-    // Addon subtitles
+    // Subtítulos de Addons
     val addonSubtitles: List<Subtitle> = emptyList(),
     val isLoadingAddonSubtitles: Boolean = false,
     val selectedAddonSubtitle: Subtitle? = null,
     val addonSubtitlesError: String? = null,
-    // Episodes/streams side panel (for series)
+    // Panel lateral de episodios/enlaces (para series)
     val showEpisodesPanel: Boolean = false,
     val isLoadingEpisodes: Boolean = false,
     val episodesError: String? = null,
@@ -72,48 +72,48 @@ data class PlayerUiState(
     val isLoadingEpisodeStreams: Boolean = false,
     val episodeStreamsError: String? = null,
     val episodeAllStreams: List<Stream> = emptyList(),
-    val episodeSelectedAddonFilter: String? = null, // null means "All"
+    val episodeSelectedAddonFilter: String? = null, // null significa "Todos"
     val episodeFilteredStreams: List<Stream> = emptyList(),
     val episodeAvailableAddons: List<String> = emptyList(),
     val episodeStreamsForVideoId: String? = null,
     val episodeStreamsSeason: Int? = null,
     val episodeStreamsEpisode: Int? = null,
     val episodeStreamsTitle: String? = null,
-    // Stream sources side panel (for switching streams during playback)
+    // Panel lateral de fuentes (para cambiar enlaces durante la reproducción)
     val showSourcesPanel: Boolean = false,
     val isLoadingSourceStreams: Boolean = false,
     val sourceStreamsError: String? = null,
     val sourceAllStreams: List<Stream> = emptyList(),
-    val sourceSelectedAddonFilter: String? = null, // null means "All"
+    val sourceSelectedAddonFilter: String? = null, // null significa "Todos"
     val sourceFilteredStreams: List<Stream> = emptyList(),
     val sourceAvailableAddons: List<String> = emptyList(),
     val error: String? = null,
-    val pendingSeekPosition: Long? = null,  // For resuming from saved progress
-    // Parental guide overlay
+    val pendingSeekPosition: Long? = null,  // Para reanudar desde el progreso guardado
+    // Capa de guía parental
     val parentalWarnings: List<ParentalWarning> = emptyList(),
     val showParentalGuide: Boolean = false,
     val parentalGuideHasShown: Boolean = false,
-    // Skip intro
+    // Omitir intro
     val activeSkipInterval: SkipInterval? = null,
     val skipIntervalDismissed: Boolean = false,
-    // Next episode card
+    // Tarjeta de siguiente episodio
     val nextEpisode: NextEpisodeInfo? = null,
     val showNextEpisodeCard: Boolean = false,
     val nextEpisodeCardDismissed: Boolean = false,
     val nextEpisodeAutoPlaySearching: Boolean = false,
     val nextEpisodeAutoPlaySourceName: String? = null,
     val nextEpisodeAutoPlayCountdownSec: Int? = null,
-    // Stream source badge
+    // Indicador de fuente de stream
     val showStreamSourceIndicator: Boolean = false,
     val streamSourceIndicatorText: String = "",
-    // Frame rate matching
+    // Ajuste de frecuencia de actualización (Frame rate matching)
     val detectedFrameRateRaw: Float = 0f,
     val detectedFrameRateSource: FrameRateSource? = null,
     val detectedFrameRate: Float = 0f,
     val frameRateMatchingMode: FrameRateMatchingMode = FrameRateMatchingMode.OFF,
     val displayModeInfo: DisplayModeInfo? = null,
     val showDisplayModeInfo: Boolean = false,
-    // Aspect ratio / resize mode
+    // Relación de aspecto / modo de redimensionado
     val resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
     val showAspectRatioIndicator: Boolean = false,
     val aspectRatioIndicatorText: String = ""
@@ -188,7 +188,7 @@ sealed class PlayerEvent {
     data object OnDismissSkipIntro : PlayerEvent()
     data object OnPlayNextEpisode : PlayerEvent()
     data object OnDismissNextEpisodeCard : PlayerEvent()
-    // Subtitle style events (for in-player style tab)
+    // Eventos de estilo de subtítulos (para la pestaña de estilo en el reproductor)
     data class OnSetSubtitleSize(val size: Int) : PlayerEvent()
     data class OnSetSubtitleTextColor(val color: Int) : PlayerEvent()
     data class OnSetSubtitleBold(val bold: Boolean) : PlayerEvent()
