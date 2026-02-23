@@ -135,7 +135,7 @@ private fun CastDetailContent(
     val firstPosterFocusRequester = remember { FocusRequester() }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Left accent gradient overlay
+        // Superposición de gradiente de acento izquierdo
         val accentGradient = remember(accentColor, backgroundColor) {
             Brush.horizontalGradient(
                 colorStops = arrayOf(
@@ -147,7 +147,7 @@ private fun CastDetailContent(
                 )
             )
         }
-        // Left-to-right dark gradient for readability
+        // Gradiente oscuro de izquierda a derecha para legibilidad
         val leftGradient = remember(backgroundColor) {
             Brush.horizontalGradient(
                 colorStops = arrayOf(
@@ -166,14 +166,13 @@ private fun CastDetailContent(
                 .background(leftGradient)
         )
 
-        // Accent goes on top of the dark gradient so it stays visible.
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(accentGradient)
         )
 
-        // Bottom gradient
+        // Gradiente inferior
         val bottomGradient = remember(backgroundColor) {
             Brush.verticalGradient(
                 colorStops = arrayOf(
@@ -190,7 +189,7 @@ private fun CastDetailContent(
                 .background(bottomGradient)
         )
 
-        // Main content
+        // Contenido principal
         AnimatedVisibility(
             visible = true,
             enter = fadeIn()
@@ -200,7 +199,7 @@ private fun CastDetailContent(
 
                 if (allCredits.isNotEmpty()) {
                     SectionHeader(
-                        title = "Filmography",
+                        title = "Filmografía",
                         count = allCredits.size
                     )
                     FilmographyRow(
@@ -234,7 +233,7 @@ private fun HeroSection(person: PersonDetail) {
             .padding(start = 48.dp, end = 48.dp, top = 32.dp, bottom = 8.dp),
         verticalAlignment = Alignment.Top
     ) {
-        // Avatar / Profile Photo
+        // Foto de perfil
         Card(
             onClick = { },
             modifier = Modifier
@@ -292,13 +291,13 @@ private fun HeroSection(person: PersonDetail) {
 
         Spacer(modifier = Modifier.width(24.dp))
 
-        // Bio Column
+        // Columna de Biografía
         Column(
             modifier = Modifier
                 .weight(1f)
                 .padding(top = 4.dp)
         ) {
-            // Name
+            // Nombre
             Text(
                 text = person.name,
                 style = MaterialTheme.typography.headlineLarge.copy(
@@ -310,19 +309,17 @@ private fun HeroSection(person: PersonDetail) {
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Personal Info Row
+            // Fila de Información Personal
             val infoItems = buildList {
                 person.birthday?.let { bday ->
                     val age = calculateAge(bday, person.deathday)
-                    val ageStr = if (age != null) " (age $age)" else ""
+                    val ageStr = if (age != null) " ($age años)" else ""
                     val bdayDisplay = formatDateForDisplay(bday) ?: bday
                     val deathDisplay = person.deathday?.let { formatDateForDisplay(it) ?: it }
                     val deathStr = deathDisplay?.let { " — †$it" } ?: ""
-                    add("Born: $bdayDisplay$deathStr$ageStr")
+                    add("Nacimiento: $bdayDisplay$deathStr$ageStr")
                 }
                 person.placeOfBirth?.let { add(it) }
             }
@@ -340,7 +337,7 @@ private fun HeroSection(person: PersonDetail) {
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Biography
+            // Biografía
             person.biography?.let { bio ->
                 Text(
                     text = bio,
@@ -426,7 +423,7 @@ private fun FilmographyRow(
     }
 }
 
-// ─── Loading / Error States ───
+// ─── Estados de Carga / Error ───
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -475,7 +472,6 @@ private fun CastDetailSkeleton(personName: String) {
         Box(modifier = Modifier.fillMaxSize().background(bottomGradient))
 
         Column(modifier = Modifier.fillMaxSize()) {
-            // Hero skeleton
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -528,7 +524,7 @@ private fun CastDetailSkeleton(personName: String) {
                 }
             }
 
-            // Filmography header skeleton
+            // Esqueleto del encabezado de filmografía
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -552,7 +548,7 @@ private fun CastDetailSkeleton(personName: String) {
                 )
             }
 
-            // Filmography row skeleton
+            // Esqueleto de la fila de filmografía
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -595,7 +591,7 @@ private fun CastDetailError(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "Something went wrong",
+                text = "Algo salió mal",
                 style = MaterialTheme.typography.titleLarge,
                 color = NuvioColors.TextPrimary
             )
@@ -615,13 +611,13 @@ private fun CastDetailError(
                     focusedContentColor = Color.White
                 )
             ) {
-                Text("Retry")
+                Text("Reintentar")
             }
         }
     }
 }
 
-// ─── Utility ───
+// ─── Utilidades ───
 
 private fun calculateAge(birthday: String, deathday: String?): Int? {
     val birth = parseDateFlexible(birthday) ?: return null
@@ -650,7 +646,7 @@ private fun parseDateFlexible(date: String?): Date? {
             val sdf = SimpleDateFormat(pattern, Locale.US).apply { isLenient = false }
             return sdf.parse(raw)
         } catch (_: Exception) {
-            // try next
+            // intentar el siguiente
         }
     }
     return null
@@ -659,6 +655,7 @@ private fun parseDateFlexible(date: String?): Date? {
 private fun formatDateForDisplay(date: String?): String? {
     val parsed = parseDateFlexible(date) ?: return null
     return try {
+        // Usar formato local para la visualización (ej: 22 feb 2026)
         SimpleDateFormat("d MMM yyyy", Locale.getDefault()).format(parsed)
     } catch (_: Exception) {
         null
