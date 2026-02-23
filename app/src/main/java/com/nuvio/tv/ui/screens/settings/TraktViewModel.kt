@@ -20,9 +20,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 enum class TraktConnectionMode {
-    DISCONNECTED,
-    AWAITING_APPROVAL,
-    CONNECTED
+    DISCONNECTED,      // Desconectado
+    AWAITING_APPROVAL, // Esperando aprobación (mostrando código)
+    CONNECTED          // Conectado
 }
 
 data class TraktUiState(
@@ -72,7 +72,7 @@ class TraktViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     continueWatchingDaysCap = days,
-                    statusMessage = "Continue watching window updated"
+                    statusMessage = "Ventana de 'Continuar viendo' actualizada"
                 )
             }
         }
@@ -82,7 +82,7 @@ class TraktViewModel @Inject constructor(
         if (!traktAuthService.hasRequiredCredentials()) {
             _uiState.update {
                 it.copy(
-                    errorMessage = "Missing TRAKT_CLIENT_ID or TRAKT_CLIENT_SECRET in local.properties",
+                    errorMessage = "Faltan TRAKT_CLIENT_ID o TRAKT_CLIENT_SECRET en local.properties",
                     credentialsConfigured = false
                 )
             }
@@ -96,12 +96,12 @@ class TraktViewModel @Inject constructor(
                 if (result.isSuccess) {
                     state.copy(
                         isLoading = false,
-                        statusMessage = "Enter code on trakt.tv/activate"
+                        statusMessage = "Ingresa el código en trakt.tv/activate"
                     )
                 } else {
                     state.copy(
                         isLoading = false,
-                        errorMessage = result.exceptionOrNull()?.message ?: "Failed to start Trakt auth"
+                        errorMessage = result.exceptionOrNull()?.message ?: "Error al iniciar autenticación en Trakt"
                     )
                 }
             }
@@ -139,7 +139,7 @@ class TraktViewModel @Inject constructor(
                     isPolling = false,
                     isStatsLoading = false,
                     connectedStats = null,
-                    statusMessage = "Disconnected from Trakt"
+                    statusMessage = "Sesión de Trakt cerrada"
                 )
             }
         }
@@ -147,7 +147,7 @@ class TraktViewModel @Inject constructor(
 
     fun onSyncNow() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null, statusMessage = "Syncing...") }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, statusMessage = "Sincronizando...") }
             traktProgressService.refreshNow()
             traktAuthService.fetchUserSettings()
             val stats = traktProgressService.getCachedStats(forceRefresh = true)
@@ -156,7 +156,7 @@ class TraktViewModel @Inject constructor(
                     isLoading = false,
                     isStatsLoading = false,
                     connectedStats = stats ?: it.connectedStats,
-                    statusMessage = "Sync completed"
+                    statusMessage = "Sincronización completada"
                 )
             }
         }
@@ -270,7 +270,7 @@ class TraktViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isPolling = false,
-                            errorMessage = "Device code expired. Start again.",
+                            errorMessage = "El código ha expirado. Inténtalo de nuevo.",
                             statusMessage = null
                         )
                     }
@@ -283,7 +283,7 @@ class TraktViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isPolling = true,
-                                statusMessage = "Waiting for approval..."
+                                statusMessage = "Esperando aprobación en Trakt..."
                             )
                         }
                     }
@@ -292,7 +292,7 @@ class TraktViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isPolling = false,
-                                errorMessage = "Device code expired. Start again.",
+                                errorMessage = "El código ha expirado. Inténtalo de nuevo.",
                                 statusMessage = null
                             )
                         }
@@ -303,7 +303,7 @@ class TraktViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isPolling = false,
-                                errorMessage = "Authorization denied on Trakt.",
+                                errorMessage = "Autorización denegada en Trakt.",
                                 statusMessage = null
                             )
                         }
@@ -315,7 +315,7 @@ class TraktViewModel @Inject constructor(
                             it.copy(
                                 isPolling = true,
                                 pollIntervalSeconds = poll.pollIntervalSeconds,
-                                statusMessage = "Rate limited, slowing down polling..."
+                                statusMessage = "Límite excedido, reduciendo frecuencia de sondeo..."
                             )
                         }
                     }
@@ -325,7 +325,7 @@ class TraktViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isPolling = false,
-                                statusMessage = "Connected as ${poll.username ?: "Trakt user"}",
+                                statusMessage = "Conectado como ${poll.username ?: "usuario de Trakt"}",
                                 errorMessage = null
                             )
                         }
