@@ -168,7 +168,7 @@ class TmdbMetadataService @Inject constructor(
                             val name = creator.name?.trim()?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
                             MetaCastMember(
                                 name = name,
-                                character = "Creator",
+                                character = "Creador",
                                 photo = buildImageUrl(creator.profilePath, size = "w500"),
                                 tmdbId = tmdbPersonId
                             )
@@ -219,7 +219,7 @@ class TmdbMetadataService @Inject constructor(
                         val name = member.name?.trim()?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
                         MetaCastMember(
                             name = name,
-                            character = "Writer",
+                            character = "Escritor",
                             photo = buildImageUrl(member.profilePath, size = "w500"),
                             tmdbId = tmdbPersonId
                         )
@@ -288,7 +288,7 @@ class TmdbMetadataService @Inject constructor(
                 enrichmentCache[cacheKey] = enrichment
                 enrichment
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to fetch TMDB enrichment: ${e.message}", e)
+                Log.e(TAG, "Error al obtener el enriquecimiento de TMDB: ${e.message}", e)
                 null
             }
         }
@@ -428,7 +428,7 @@ class TmdbMetadataService @Inject constructor(
             moreLikeThisCache[cacheKey] = items
             items
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to fetch recommendations for $tmdbId: ${e.message}")
+            Log.w(TAG, "Error al obtener recomendaciones para $tmdbId: ${e.message}")
             emptyList()
         }
     }
@@ -517,7 +517,7 @@ class TmdbMetadataService @Inject constructor(
                 personCache[cacheKey] = detail
                 detail
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to fetch person detail: ${e.message}", e)
+                Log.e(TAG, "Error al obtener el detalle de la persona: ${e.message}", e)
                 null
             }
         }
