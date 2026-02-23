@@ -218,6 +218,7 @@ class StreamScreenViewModel @Inject constructor(
             updateUiStateIfChanged {
                 it.copy(
                     isLoading = true,
+                    isMoreAddonsLoading = true,
                     error = null,
                     showDirectAutoPlayOverlay = if (directFlowActive) true else it.showDirectAutoPlayOverlay
                 )
@@ -265,6 +266,7 @@ class StreamScreenViewModel @Inject constructor(
                         updateUiStateIfChanged {
                             it.copy(
                                 isLoading = false,
+                                isMoreAddonsLoading = true,
                                 addonStreams = addonStreams,
                                 allStreams = allStreams,
                                 filteredStreams = filteredStreams,
@@ -286,6 +288,7 @@ class StreamScreenViewModel @Inject constructor(
                         updateUiStateIfChanged {
                             it.copy(
                                 isLoading = false,
+                                isMoreAddonsLoading = false,
                                 error = result.message,
                                 isDirectAutoPlayFlow = false,
                                 showDirectAutoPlayOverlay = false,
@@ -297,6 +300,7 @@ class StreamScreenViewModel @Inject constructor(
                         updateUiStateIfChanged {
                             it.copy(
                                 isLoading = true,
+                                isMoreAddonsLoading = true,
                                 showDirectAutoPlayOverlay = if (directAutoPlayFlowEnabledForSession) {
                                     true
                                 } else {
@@ -307,6 +311,8 @@ class StreamScreenViewModel @Inject constructor(
                     }
                 }
             }
+
+            _uiState.update { it.copy(isMoreAddonsLoading = false) }
 
             if (directAutoPlayFlowEnabledForSession && !resolvedAutoPlayTarget) {
                 directAutoPlayFlowEnabledForSession = false

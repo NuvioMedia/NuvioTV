@@ -80,6 +80,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import androidx.compose.material3.CircularProgressIndicator
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -219,6 +220,7 @@ fun StreamScreen(
                 // Right side - Streams container
                 RightStreamSection(
                     isLoading = uiState.isLoading,
+                    isMoreAddonsLoading = uiState.isMoreAddonsLoading,
                     error = uiState.error,
                     streams = uiState.filteredStreams,
                     availableAddons = uiState.availableAddons,
@@ -465,6 +467,7 @@ private fun LeftContentSection(
 @Composable
 private fun RightStreamSection(
     isLoading: Boolean,
+    isMoreAddonsLoading: Boolean,
     error: String?,
     streams: List<Stream>,
     availableAddons: List<String>,
@@ -500,14 +503,15 @@ private fun RightStreamSection(
         // Addon filter chips
         Box(modifier = Modifier.height(chipRowHeight)) {
             androidx.compose.animation.AnimatedVisibility(
-                visible = !isLoading && availableAddons.isNotEmpty(),
+                visible = !isLoading && (availableAddons.isNotEmpty() || isMoreAddonsLoading),
                 enter = fadeIn(animationSpec = tween(300)),
                 exit = fadeOut(animationSpec = tween(300))
             ) {
                 AddonFilterChips(
                     addons = availableAddons,
                     selectedAddon = selectedAddonFilter,
-                    onAddonSelected = onAddonFilterSelected
+                    onAddonSelected = onAddonFilterSelected,
+                    isMoreAddonsLoading = isMoreAddonsLoading
                 )
             }
         }
@@ -566,11 +570,13 @@ private fun RightStreamSection(
 private fun AddonFilterChips(
     addons: List<String>,
     selectedAddon: String?,
-    onAddonSelected: (String?) -> Unit
+    onAddonSelected: (String?) -> Unit,
+    isMoreAddonsLoading: Boolean
 ) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         // "All" chip
         item {
@@ -587,6 +593,27 @@ private fun AddonFilterChips(
                 isSelected = selectedAddon == addon,
                 onClick = { onAddonSelected(addon) }
             )
+        }
+
+        if (isMoreAddonsLoading) {
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(start = 8.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = NuvioColors.Primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Addons loading...",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = NuvioTheme.extendedColors.textSecondary
+                    )
+                }
+            }
         }
     }
 }

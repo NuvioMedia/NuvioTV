@@ -5,6 +5,7 @@ import com.nuvio.tv.domain.model.Stream
 
 data class StreamScreenUiState(
     val isLoading: Boolean = true,
+    val isMoreAddonsLoading: Boolean = false,
     val isDirectAutoPlayFlow: Boolean = false,
     val showDirectAutoPlayOverlay: Boolean = false,
     val directAutoPlayMessage: String? = null,

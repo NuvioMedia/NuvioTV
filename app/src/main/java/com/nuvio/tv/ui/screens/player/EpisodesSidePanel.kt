@@ -215,7 +215,8 @@ private fun EpisodeStreamsView(
         AddonFilterChips(
             addons = uiState.episodeAvailableAddons,
             selectedAddon = uiState.episodeSelectedAddonFilter,
-            onAddonSelected = onAddonFilterSelected
+            onAddonSelected = onAddonFilterSelected,
+            isMoreAddonsLoading = uiState.isMoreEpisodeAddonsLoading
         )
     }
 

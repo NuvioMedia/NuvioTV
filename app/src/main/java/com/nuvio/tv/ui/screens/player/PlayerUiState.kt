@@ -70,6 +70,7 @@ data class PlayerUiState(
     val watchedEpisodeKeys: Set<Pair<Int, Int>> = emptySet(),
     val showEpisodeStreams: Boolean = false,
     val isLoadingEpisodeStreams: Boolean = false,
+    val isMoreEpisodeAddonsLoading: Boolean = false,
     val episodeStreamsError: String? = null,
     val episodeAllStreams: List<Stream> = emptyList(),
     val episodeSelectedAddonFilter: String? = null, // null means "All"
@@ -82,6 +83,7 @@ data class PlayerUiState(
     // Stream sources side panel (for switching streams during playback)
     val showSourcesPanel: Boolean = false,
     val isLoadingSourceStreams: Boolean = false,
+    val isMoreSourceAddonsLoading: Boolean = false,
     val sourceStreamsError: String? = null,
     val sourceAllStreams: List<Stream> = emptyList(),
     val sourceSelectedAddonFilter: String? = null, // null means "All"

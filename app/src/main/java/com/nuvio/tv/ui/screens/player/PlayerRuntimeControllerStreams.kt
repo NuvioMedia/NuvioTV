@@ -92,6 +92,7 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
         _uiState.update {
             it.copy(
                 isLoadingSourceStreams = true,
+                isMoreSourceAddonsLoading = true,
                 sourceStreamsError = null,
                 sourceAllStreams = if (forceRefresh || targetChanged) emptyList() else it.sourceAllStreams,
                 sourceSelectedAddonFilter = if (forceRefresh || targetChanged) null else it.sourceSelectedAddonFilter,
@@ -105,38 +106,42 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
             videoId = vid,
             season = seasonArg,
             episode = episodeArg
-        ).collect { result ->
-            when (result) {
-                is NetworkResult.Success -> {
-                    val addonStreams = result.data
-                    val allStreams = addonStreams.flatMap { it.streams }
-                    val availableAddons = addonStreams.map { it.addonName }
-                    _uiState.update {
-                        it.copy(
-                            isLoadingSourceStreams = false,
-                            sourceAllStreams = allStreams,
-                            sourceSelectedAddonFilter = null,
-                            sourceFilteredStreams = allStreams,
-                            sourceAvailableAddons = availableAddons,
-                            sourceStreamsError = null
-                        )
+        )
+            .collect { result ->
+                when (result) {
+                    is NetworkResult.Success -> {
+                        val addonStreams = result.data
+                        val allStreams = addonStreams.flatMap { it.streams }
+                        val availableAddons = addonStreams.map { it.addonName }
+                        _uiState.update {
+                            it.copy(
+                                isLoadingSourceStreams = false,
+                                isMoreSourceAddonsLoading = true,
+                                sourceAllStreams = allStreams,
+                                sourceSelectedAddonFilter = null,
+                                sourceFilteredStreams = allStreams,
+                                sourceAvailableAddons = availableAddons,
+                                sourceStreamsError = null
+                            )
+                        }
                     }
-                }
 
-                is NetworkResult.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoadingSourceStreams = false,
-                            sourceStreamsError = result.message
-                        )
+                    is NetworkResult.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoadingSourceStreams = false,
+                                isMoreSourceAddonsLoading = false,
+                                sourceStreamsError = result.message
+                            )
+                        }
                     }
-                }
 
-                NetworkResult.Loading -> {
-                    _uiState.update { it.copy(isLoadingSourceStreams = true) }
+                    NetworkResult.Loading -> {
+                        _uiState.update { it.copy(isLoadingSourceStreams = true, isMoreSourceAddonsLoading = true) }
+                    }
                 }
             }
-        }
+        _uiState.update { it.copy(isMoreSourceAddonsLoading = false) }
     }
 }
 
@@ -144,7 +149,8 @@ internal fun PlayerRuntimeController.dismissSourcesPanel() {
     _uiState.update {
         it.copy(
             showSourcesPanel = false,
-            isLoadingSourceStreams = false
+            isLoadingSourceStreams = false,
+            isMoreSourceAddonsLoading = false
         )
     }
     scheduleHideControls()
@@ -232,7 +238,8 @@ internal fun PlayerRuntimeController.dismissEpisodesPanel() {
         it.copy(
             showEpisodesPanel = false,
             showEpisodeStreams = false,
-            isLoadingEpisodeStreams = false
+            isLoadingEpisodeStreams = false,
+            isMoreEpisodeAddonsLoading = false
         )
     }
     scheduleHideControls()
@@ -343,6 +350,7 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(video: Video, forceRe
             it.copy(
                 showEpisodeStreams = true,
                 isLoadingEpisodeStreams = false,
+                isMoreEpisodeAddonsLoading = false,
                 episodeStreamsForVideoId = video.id,
                 episodeStreamsSeason = video.season,
                 episodeStreamsEpisode = video.episode,
@@ -361,6 +369,7 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(video: Video, forceRe
             it.copy(
                 showEpisodeStreams = true,
                 isLoadingEpisodeStreams = true,
+                isMoreEpisodeAddonsLoading = true,
                 episodeStreamsError = null,
                 episodeAllStreams = if (forceRefresh || targetChanged) emptyList() else it.episodeAllStreams,
                 episodeSelectedAddonFilter = if (forceRefresh || targetChanged) null else it.episodeSelectedAddonFilter,
@@ -378,44 +387,48 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(video: Video, forceRe
             videoId = video.id,
             season = video.season,
             episode = video.episode
-        ).collect { result ->
-            when (result) {
-                is NetworkResult.Success -> {
-                    val addonStreams = result.data
-                    val allStreams = addonStreams.flatMap { it.streams }
-                    val availableAddons = addonStreams.map { it.addonName }
-                    val selectedAddon = previousAddonFilter?.takeIf { it in availableAddons }
-                    val filteredStreams = if (selectedAddon == null) {
-                        allStreams
-                    } else {
-                        allStreams.filter { it.addonName == selectedAddon }
+        )
+            .collect { result ->
+                when (result) {
+                    is NetworkResult.Success -> {
+                        val addonStreams = result.data
+                        val allStreams = addonStreams.flatMap { it.streams }
+                        val availableAddons = addonStreams.map { it.addonName }
+                        val selectedAddon = previousAddonFilter?.takeIf { it in availableAddons }
+                        val filteredStreams = if (selectedAddon == null) {
+                            allStreams
+                        } else {
+                            allStreams.filter { it.addonName == selectedAddon }
+                        }
+                        _uiState.update {
+                            it.copy(
+                                isLoadingEpisodeStreams = false,
+                                isMoreEpisodeAddonsLoading = true,
+                                episodeAllStreams = allStreams,
+                                episodeSelectedAddonFilter = selectedAddon,
+                                episodeFilteredStreams = filteredStreams,
+                                episodeAvailableAddons = availableAddons,
+                                episodeStreamsError = null
+                            )
+                        }
                     }
-                    _uiState.update {
-                        it.copy(
-                            isLoadingEpisodeStreams = false,
-                            episodeAllStreams = allStreams,
-                            episodeSelectedAddonFilter = selectedAddon,
-                            episodeFilteredStreams = filteredStreams,
-                            episodeAvailableAddons = availableAddons,
-                            episodeStreamsError = null
-                        )
-                    }
-                }
 
-                is NetworkResult.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoadingEpisodeStreams = false,
-                            episodeStreamsError = result.message
-                        )
+                    is NetworkResult.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoadingEpisodeStreams = false,
+                                isMoreEpisodeAddonsLoading = false,
+                                episodeStreamsError = result.message
+                            )
+                        }
                     }
-                }
 
-                NetworkResult.Loading -> {
-                    _uiState.update { it.copy(isLoadingEpisodeStreams = true) }
+                    NetworkResult.Loading -> {
+                        _uiState.update { it.copy(isLoadingEpisodeStreams = true, isMoreEpisodeAddonsLoading = true) }
+                    }
                 }
             }
-        }
+        _uiState.update { it.copy(isMoreEpisodeAddonsLoading = false) }
     }
 }
 

@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -163,11 +165,13 @@ private fun StreamTypeChip(
 internal fun AddonFilterChips(
     addons: List<String>,
     selectedAddon: String?,
-    onAddonSelected: (String?) -> Unit
+    onAddonSelected: (String?) -> Unit,
+    isMoreAddonsLoading: Boolean = false
 ) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         item {
             AddonChip(
@@ -183,6 +187,27 @@ internal fun AddonFilterChips(
                 isSelected = selectedAddon == addon,
                 onClick = { onAddonSelected(addon) }
             )
+        }
+
+        if (isMoreAddonsLoading) {
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(start = 8.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = NuvioColors.Primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Addons loading...",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = NuvioTheme.extendedColors.textSecondary
+                    )
+                }
+            }
         }
     }
 }

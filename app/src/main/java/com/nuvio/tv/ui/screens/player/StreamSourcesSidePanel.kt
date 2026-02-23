@@ -126,7 +126,8 @@ internal fun StreamSourcesSidePanel(
                 AddonFilterChips(
                     addons = uiState.sourceAvailableAddons,
                     selectedAddon = uiState.sourceSelectedAddonFilter,
-                    onAddonSelected = onAddonFilterSelected
+                    onAddonSelected = onAddonFilterSelected,
+                    isMoreAddonsLoading = uiState.isMoreSourceAddonsLoading
                 )
             }
 
