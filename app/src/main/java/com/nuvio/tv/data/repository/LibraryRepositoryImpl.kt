@@ -44,12 +44,17 @@ class LibraryRepositoryImpl @Inject constructor(
     var isSyncingFromRemote = false
     var hasCompletedInitialPull = false
 
+    /**
+     * Activa la sincronización remota con Supabase para la biblioteca local.
+     */
     private fun triggerRemoteSync() {
         if (isSyncingFromRemote) return
         if (!hasCompletedInitialPull) return
         if (!authManager.isAuthenticated) return
+        
         syncJob?.cancel()
         syncJob = syncScope.launch {
+            // Pequeño retraso para evitar múltiples llamadas seguidas
             delay(500)
             librarySyncService.pushToRemote()
         }
@@ -206,7 +211,7 @@ class LibraryRepositoryImpl @Inject constructor(
 
     private suspend fun requireTraktAuth() {
         if (!traktAuthDataStore.isEffectivelyAuthenticated.first()) {
-            throw IllegalStateException("Trakt authentication required")
+            throw IllegalStateException("Se requiere autenticación en Trakt")
         }
     }
 
