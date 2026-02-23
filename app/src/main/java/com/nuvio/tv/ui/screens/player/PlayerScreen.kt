@@ -40,13 +40,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ClosedCaption
-import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -124,7 +127,7 @@ fun PlayerScreen(
     val skipIntroFocusRequester = remember { FocusRequester() }
     val nextEpisodeFocusRequester = remember { FocusRequester() }
 
-    BackHandler {
+    val handleBackPress = {
         if (uiState.error != null) {
             onPlaybackErrorBack()
         } else if (uiState.showPauseOverlay) {
@@ -150,6 +153,10 @@ fun PlayerScreen(
             // If controls are hidden, go back
             onBackPress()
         }
+    }
+
+    BackHandler {
+        handleBackPress()
     }
 
     // Handle lifecycle events
@@ -280,12 +287,11 @@ fun PlayerScreen(
         uiState.showAudioDialog,
         uiState.showSubtitleDialog,
         uiState.showSpeedDialog,
-        uiState.showMoreDialog
     ) {
         if (uiState.showControls && !uiState.showEpisodesPanel && !uiState.showSourcesPanel &&
             !uiState.showAudioDialog && !uiState.showSubtitleDialog &&
             !uiState.showSubtitleStylePanel && !uiState.showSubtitleDelayOverlay &&
-            !uiState.showSpeedDialog && !uiState.showMoreDialog
+            !uiState.showSpeedDialog
         ) {
             // Wait for AnimatedVisibility animation to complete before focusing play/pause button
             kotlinx.coroutines.delay(250)
@@ -321,6 +327,20 @@ fun PlayerScreen(
             .focusRequester(containerFocusRequester)
             .focusable()
             .onPreviewKeyEvent { keyEvent ->
+                if (
+                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BACK ||
+                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE
+                ) {
+                    return@onPreviewKeyEvent when (keyEvent.nativeKeyEvent.action) {
+                        KeyEvent.ACTION_DOWN -> true
+                        KeyEvent.ACTION_UP -> {
+                            handleBackPress()
+                            true
+                        }
+                        else -> true
+                    }
+                }
+
                 if (keyEvent.nativeKeyEvent.keyCode != KeyEvent.KEYCODE_CAPTIONS) {
                     return@onPreviewKeyEvent false
                 }
@@ -697,11 +717,11 @@ fun PlayerScreen(
                 !uiState.showSourcesPanel &&
                 !uiState.showAudioDialog &&
                 !uiState.showSubtitleDialog &&
-                !uiState.showSpeedDialog &&
-                !uiState.showMoreDialog,
+                !uiState.showSpeedDialog,
             enter = fadeIn(animationSpec = tween(200)),
             exit = fadeOut(animationSpec = tween(200))
         ) {
+            val context = LocalContext.current
             PlayerControlsOverlay(
                 uiState = uiState,
                 playPauseFocusRequester = playPauseFocusRequester,
@@ -713,11 +733,31 @@ fun PlayerScreen(
                 onShowSourcesPanel = { viewModel.onEvent(PlayerEvent.OnShowSourcesPanel) },
                 onShowAudioDialog = { viewModel.onEvent(PlayerEvent.OnShowAudioDialog) },
                 onShowSubtitleDialog = { viewModel.onEvent(PlayerEvent.OnShowSubtitleDialog) },
+                onShowSpeedDialog = { viewModel.onEvent(PlayerEvent.OnShowSpeedDialog) },
                 onToggleAspectRatio = {
                     Log.d("PlayerScreen", "onToggleAspectRatio called - dispatching event")
                     viewModel.onEvent(PlayerEvent.OnToggleAspectRatio)
                 },
-                onShowMoreDialog = { viewModel.onEvent(PlayerEvent.OnShowMoreDialog) },
+                onToggleMoreActions = {
+                    if (uiState.showMoreDialog) {
+                        viewModel.onEvent(PlayerEvent.OnDismissMoreDialog)
+                    } else {
+                        viewModel.onEvent(PlayerEvent.OnShowMoreDialog)
+                    }
+                },
+                onOpenInExternalPlayer = {
+                    val url = viewModel.getCurrentStreamUrl()
+                    val title = uiState.title
+                    val headers = viewModel.getCurrentHeaders()
+                    viewModel.stopAndRelease()
+                    onBackPress()
+                    ExternalPlayerLauncher.launch(
+                        context = context,
+                        url = url,
+                        title = title,
+                        headers = headers
+                    )
+                },
                 onResetHideTimer = { viewModel.scheduleHideControls() },
                 onBack = onBackPress
             )
@@ -938,34 +978,6 @@ fun PlayerScreen(
             )
         }
 
-        if (uiState.showMoreDialog) {
-            val context = LocalContext.current
-            MoreActionsDialog(
-                onPlaybackSpeed = {
-                    viewModel.onEvent(PlayerEvent.OnDismissMoreDialog)
-                    viewModel.onEvent(PlayerEvent.OnShowSpeedDialog)
-                },
-                onToggleAspectRatio = {
-                    viewModel.onEvent(PlayerEvent.OnDismissMoreDialog)
-                    viewModel.onEvent(PlayerEvent.OnToggleAspectRatio)
-                },
-                onOpenInExternalPlayer = {
-                    viewModel.onEvent(PlayerEvent.OnDismissMoreDialog)
-                    val url = viewModel.getCurrentStreamUrl()
-                    val title = uiState.title
-                    val headers = viewModel.getCurrentHeaders()
-                    viewModel.stopAndRelease()
-                    onBackPress()
-                    ExternalPlayerLauncher.launch(
-                        context = context,
-                        url = url,
-                        title = title,
-                        headers = headers
-                    )
-                },
-                onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissMoreDialog) }
-            )
-        }
     }
 }
 
@@ -981,8 +993,10 @@ private fun PlayerControlsOverlay(
     onShowSourcesPanel: () -> Unit,
     onShowAudioDialog: () -> Unit,
     onShowSubtitleDialog: () -> Unit,
+    onShowSpeedDialog: () -> Unit,
     onToggleAspectRatio: () -> Unit,
-    onShowMoreDialog: () -> Unit,
+    onToggleMoreActions: () -> Unit,
+    onOpenInExternalPlayer: () -> Unit,
     onResetHideTimer: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -1175,10 +1189,57 @@ private fun PlayerControlsOverlay(
                         )
                     }
 
+                    AnimatedVisibility(
+                        visible = uiState.showMoreDialog,
+                        enter = slideInHorizontally(
+                            animationSpec = tween(180),
+                            initialOffsetX = { it / 2 }
+                        ) + fadeIn(animationSpec = tween(180)),
+                        exit = slideOutHorizontally(
+                            animationSpec = tween(160),
+                            targetOffsetX = { it / 2 }
+                        ) + fadeOut(animationSpec = tween(160))
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ControlButton(
+                                icon = Icons.Default.Speed,
+                                contentDescription = "Playback speed",
+                                onClick = {
+                                    onShowSpeedDialog()
+                                },
+                                onFocused = onResetHideTimer
+                            )
+                            ControlButton(
+                                icon = Icons.Default.AspectRatio,
+                                iconPainter = customAspectPainter,
+                                contentDescription = "Aspect ratio",
+                                onClick = {
+                                    onToggleAspectRatio()
+                                },
+                                onFocused = onResetHideTimer
+                            )
+                            ControlButton(
+                                icon = Icons.AutoMirrored.Filled.OpenInNew,
+                                contentDescription = "Open in external player",
+                                onClick = {
+                                    onOpenInExternalPlayer()
+                                },
+                                onFocused = onResetHideTimer
+                            )
+                        }
+                    }
+
                     ControlButton(
-                        icon = Icons.Default.MoreHoriz,
-                        contentDescription = "More options",
-                        onClick = onShowMoreDialog,
+                        icon = if (uiState.showMoreDialog) {
+                            Icons.AutoMirrored.Filled.KeyboardArrowLeft
+                        } else {
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight
+                        },
+                        contentDescription = if (uiState.showMoreDialog) "Close more actions" else "More actions",
+                        onClick = onToggleMoreActions,
                         onFocused = onResetHideTimer
                     )
                 }

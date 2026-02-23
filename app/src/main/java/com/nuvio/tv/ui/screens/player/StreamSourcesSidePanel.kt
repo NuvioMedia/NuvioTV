@@ -164,7 +164,12 @@ internal fun StreamSourcesSidePanel(
                 else -> {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(
+                            start = 8.dp,
+                            top = 14.dp,
+                            end = 8.dp,
+                            bottom = 8.dp
+                        ),
                         modifier = Modifier.fillMaxHeight()
                     ) {
                         items(uiState.sourceFilteredStreams) { stream ->

@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -218,7 +219,12 @@ class WatchProgressRepositoryImpl @Inject constructor(
             .flatMapLatest { isAuthenticated ->
                 if (isAuthenticated) {
                     combine(
-                        traktProgressService.observeAllProgress(),
+                        traktProgressService.observeAllProgress()
+                            .onStart {
+                                // Emit local-cache-backed continue watching immediately on app start
+                                // while the first Trakt snapshot is still loading.
+                                emit(emptyList())
+                            },
                         watchProgressPreferences.allRawProgress,
                         metadataState
                     ) { remoteItems, localItems, metadataMap ->
