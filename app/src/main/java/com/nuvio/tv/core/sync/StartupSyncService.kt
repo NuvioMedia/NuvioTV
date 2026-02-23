@@ -46,8 +46,10 @@ class StartupSyncService @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var startupPullJob: Job? = null
     private var lastPulledKey: String? = null
+    
     @Volatile
     private var forceSyncRequested: Boolean = false
+    
     @Volatile
     private var pendingResyncKey: String? = null
 
@@ -101,8 +103,9 @@ class StartupSyncService @Inject constructor(
     private fun scheduleStartupPull(userId: String, force: Boolean = false): Boolean {
         val key = pullKey(userId)
         if (!force && lastPulledKey == key) return false
-        // Never cancel an active sync — it may be mid-write to DataStore.
-        // Instead, schedule a follow-up sync after the current one finishes.
+        
+        // Nunca cancelamos una sincronización activa para evitar errores de escritura en DataStore.
+        // En su lugar, programamos una sincronización de seguimiento cuando termine la actual.
         if (startupPullJob?.isActive == true) {
             if (force) pendingResyncKey = key
             return false
@@ -112,26 +115,26 @@ class StartupSyncService @Inject constructor(
             val maxAttempts = 3
             repeat(maxAttempts) { index ->
                 val attempt = index + 1
-                Log.d(TAG, "Startup sync attempt $attempt/$maxAttempts for key=$key")
+                Log.d(TAG, "Intento de sincronización inicial $attempt/$maxAttempts para la clave=$key")
                 val result = pullRemoteData()
                 if (result.isSuccess) {
                     lastPulledKey = key
-                    Log.d(TAG, "Startup sync completed for key=$key")
+                    Log.d(TAG, "Sincronización inicial completada para la clave=$key")
                     return@repeat
                 }
 
-                Log.w(TAG, "Startup sync attempt $attempt failed for key=$key", result.exceptionOrNull())
+                Log.w(TAG, "El intento $attempt de sincronización falló para la clave=$key", result.exceptionOrNull())
                 if (attempt < maxAttempts) {
                     delay(3000)
                 }
             }
 
-            // After completing, check if a re-sync was requested while we were running
+            // Tras completar, verificamos si se solicitó una re-sincronización mientras corríamos
             val resyncKey = pendingResyncKey
             if (resyncKey != null) {
                 pendingResyncKey = null
                 if (resyncKey != lastPulledKey) {
-                    Log.d(TAG, "Running pending re-sync for key=$resyncKey")
+                    Log.d(TAG, "Ejecutando re-sincronización pendiente para la clave=$resyncKey")
                     scheduleStartupPull(userId, force = true)
                 }
             }
@@ -142,12 +145,13 @@ class StartupSyncService @Inject constructor(
     private suspend fun pullRemoteData(): Result<Unit> {
         try {
             val profileId = profileManager.activeProfileId.value
-            Log.d(TAG, "Pulling remote data for profile $profileId")
+            Log.d(TAG, "Obteniendo datos remotos para el perfil $profileId")
 
-            // Pull profiles list first so profile selection stays up-to-date
+            // Primero obtenemos la lista de perfiles para mantener la selección actualizada
             profileSyncService.pullFromRemote().getOrElse { throw it }
-            Log.d(TAG, "Pulled profiles from remote")
+            Log.d(TAG, "Perfiles obtenidos desde la nube")
 
+            // Sincronización de repositorios de plugins
             pluginManager.isSyncingFromRemote = true
             val remotePluginUrls = pluginSyncService.getRemoteRepoUrls().getOrElse { throw it }
             pluginManager.reconcileWithRemoteRepoUrls(
@@ -155,8 +159,9 @@ class StartupSyncService @Inject constructor(
                 removeMissingLocal = false
             )
             pluginManager.isSyncingFromRemote = false
-            Log.d(TAG, "Pulled ${remotePluginUrls.size} plugin repos from remote for profile $profileId")
+            Log.d(TAG, "Se obtuvieron ${remotePluginUrls.size} repositorios de plugins para el perfil $profileId")
 
+            // Sincronización de addons instalados
             addonRepository.isSyncingFromRemote = true
             val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
             addonRepository.reconcileWithRemoteAddonUrls(
@@ -164,53 +169,55 @@ class StartupSyncService @Inject constructor(
                 removeMissingLocal = false
             )
             addonRepository.isSyncingFromRemote = false
-            Log.d(TAG, "Pulled ${remoteAddonUrls.size} addons from remote for profile $profileId")
+            Log.d(TAG, "Se obtuvieron ${remoteAddonUrls.size} addons para el perfil $profileId")
 
             val isPrimaryProfile = profileManager.activeProfileId.value == 1
             val isTraktConnected = isPrimaryProfile && traktAuthDataStore.isAuthenticated.first()
-            Log.d(TAG, "Watch progress sync: isTraktConnected=$isTraktConnected isPrimaryProfile=$isPrimaryProfile")
+            
+            Log.d(TAG, "Sincronización de progreso: TraktConectado=$isTraktConnected PerfilPrincipal=$isPrimaryProfile")
+            
             if (!isTraktConnected) {
-                // Pull library and watched items first — these are lightweight and critical.
-                // Watch progress is pulled last because the table is large and may time out;
-                // a failure there must not block the other syncs.
+                // Sincronizamos biblioteca y elementos vistos primero (son ligeros y críticos).
+                // El progreso de reproducción se deja al final porque la tabla es grande y puede fallar;
+                // un error allí no debe bloquear el resto de la sincronización.
 
                 libraryRepository.isSyncingFromRemote = true
                 try {
                     val remoteLibraryItems = librarySyncService.pullFromRemote().getOrElse { throw it }
-                    Log.d(TAG, "Pulled ${remoteLibraryItems.size} library items from remote")
+                    Log.d(TAG, "Se obtuvieron ${remoteLibraryItems.size} elementos de la biblioteca")
                     libraryPreferences.mergeRemoteItems(remoteLibraryItems)
                     libraryRepository.hasCompletedInitialPull = true
-                    Log.d(TAG, "Reconciled local library with ${remoteLibraryItems.size} remote items")
+                    Log.d(TAG, "Biblioteca local reconciliada con ${remoteLibraryItems.size} elementos remotos")
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to pull library, continuing with other syncs", e)
+                    Log.e(TAG, "Error al obtener la biblioteca, continuando con el resto", e)
                 } finally {
                     libraryRepository.isSyncingFromRemote = false
                 }
 
                 try {
                     val remoteWatchedItems = watchedItemsSyncService.pullFromRemote().getOrElse { throw it }
-                    Log.d(TAG, "Pulled ${remoteWatchedItems.size} watched items from remote")
+                    Log.d(TAG, "Se obtuvieron ${remoteWatchedItems.size} elementos vistos")
                     watchedItemsPreferences.replaceWithRemoteItems(remoteWatchedItems)
                     watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
-                    Log.d(TAG, "Reconciled local watched items with ${remoteWatchedItems.size} remote items")
+                    Log.d(TAG, "Elementos vistos reconciliados con ${remoteWatchedItems.size} remotos")
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to pull watched items, continuing with other syncs", e)
+                    Log.e(TAG, "Error al obtener elementos vistos, continuando con el resto", e)
                 }
 
                 watchProgressRepository.isSyncingFromRemote = true
                 try {
                     val remoteEntries = watchProgressSyncService.pullFromRemote().getOrElse { throw it }
-                    Log.d(TAG, "Pulled ${remoteEntries.size} watch progress entries from remote")
+                    Log.d(TAG, "Se obtuvieron ${remoteEntries.size} entradas de progreso de reproducción")
                     watchProgressPreferences.mergeRemoteEntries(remoteEntries.toMap())
                     watchProgressRepository.hasCompletedInitialPull = true
-                    Log.d(TAG, "Merged local watch progress with ${remoteEntries.size} remote entries")
+                    Log.d(TAG, "Progreso local mezclado con ${remoteEntries.size} entradas remotas")
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to pull watch progress, continuing", e)
+                    Log.e(TAG, "Error al obtener el progreso de reproducción, continuando", e)
                 } finally {
                     watchProgressRepository.isSyncingFromRemote = false
                 }
             } else {
-                Log.d(TAG, "Skipping watch progress & library sync (Trakt connected)")
+                Log.d(TAG, "Omitiendo sincronización de biblioteca y progreso (Trakt está conectado)")
             }
             return Result.success(Unit)
         } catch (e: Exception) {
@@ -218,7 +225,7 @@ class StartupSyncService @Inject constructor(
             addonRepository.isSyncingFromRemote = false
             watchProgressRepository.isSyncingFromRemote = false
             libraryRepository.isSyncingFromRemote = false
-            Log.e(TAG, "Startup sync failed", e)
+            Log.e(TAG, "La sincronización inicial falló", e)
             return Result.failure(e)
         }
     }
