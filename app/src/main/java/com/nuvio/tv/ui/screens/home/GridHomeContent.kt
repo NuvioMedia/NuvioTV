@@ -1,3 +1,8 @@
+@file:OptIn(
+    androidx.tv.material3.ExperimentalTvMaterial3Api::class,
+    androidx.compose.ui.ExperimentalComposeUiApi::class
+)
+
 package com.nuvio.tv.ui.screens.home
 
 import androidx.compose.animation.AnimatedVisibility
@@ -13,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -38,7 +44,6 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.tv.material3.Card
@@ -68,7 +73,7 @@ fun GridHomeContent(
         initialFirstVisibleItemScrollOffset = gridFocusState.verticalScrollOffset
     )
 
-    // Save scroll state when leaving
+    // Guardar el estado del scroll al salir
     DisposableEffect(Unit) {
         onDispose {
             onSaveGridFocusState(
@@ -78,12 +83,12 @@ fun GridHomeContent(
         }
     }
 
-    // Offset for section indices when continue watching is present
+    // Desplazamiento para los índices de sección cuando hay contenido en "Continuar viendo"
     val gridItems = uiState.gridItems
     val continueWatchingItems = uiState.continueWatchingItems
     val continueWatchingOffset = if (continueWatchingItems.isNotEmpty()) 1 else 0
 
-    // Build index-to-section mapping for sticky header
+    // Construir el mapeo de índice a sección para el encabezado persistente (sticky header)
     val sectionMapping = remember(gridItems, continueWatchingOffset) {
         buildSectionMapping(gridItems, continueWatchingOffset)
     }
@@ -94,13 +99,13 @@ fun GridHomeContent(
         }
     }
 
-    // Pre-compute whether hero exists to avoid repeated list scan in derivedStateOf
+    // Pre-calcular si existe el Hero para evitar escaneos de lista repetidos
     val hasHero = remember(gridItems) {
         gridItems.firstOrNull() is GridItem.Hero
     }
     val topPadding = if (hasHero) 0.dp else 24.dp
 
-    // Determine if hero is scrolled past
+    // Determinar si se ha hecho scroll pasando el Hero
     val isScrolledPastHero by remember(hasHero) {
         derivedStateOf {
             if (hasHero) {
@@ -183,7 +188,7 @@ fun GridHomeContent(
                     }
 
                     is GridItem.SectionDivider -> {
-                        // Insert continue watching before the first section divider
+                        // Insertar "Continuar viendo" antes del primer divisor de sección
                         if (!continueWatchingInserted && continueWatchingItems.isNotEmpty()) {
                             continueWatchingInserted = true
                             item(
@@ -356,7 +361,7 @@ fun GridHomeContent(
             }
         }
 
-        // Sticky header overlay
+        // Superposición del encabezado persistente (Sticky header)
         AnimatedVisibility(
             visible = isScrolledPastHero && currentSectionName != null,
             enter = fadeIn(),
@@ -459,13 +464,13 @@ private fun SeeAllGridCard(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "See All",
+                    contentDescription = "Ver todo",
                     modifier = Modifier.size(32.dp),
                     tint = NuvioColors.TextSecondary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "See All",
+                    text = "Ver todo",
                     style = MaterialTheme.typography.titleSmall,
                     color = NuvioColors.TextSecondary
                 )
@@ -474,7 +479,7 @@ private fun SeeAllGridCard(
     }
 }
 
-// Section mapping utilities
+// Utilidades de mapeo de secciones
 
 private data class SectionInfo(
     val catalogName: String,
