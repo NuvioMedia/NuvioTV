@@ -14,17 +14,17 @@ data class StreamScreenUiState(
     val poster: String? = null,
     val backdrop: String? = null,
     val logo: String? = null,
-    // Episode-specific fields
+    // Campos específicos para episodios
     val season: Int? = null,
     val episode: Int? = null,
     val episodeName: String? = null,
     val runtime: Int? = null,
-    // Movie-specific fields
+    // Campos específicos para películas
     val genres: String? = null,
     val year: String? = null,
     val addonStreams: List<AddonStreams> = emptyList(),
     val allStreams: List<Stream> = emptyList(),
-    val selectedAddonFilter: String? = null, // null means "All"
+    val selectedAddonFilter: String? = null, // null significa "Todos"
     val filteredStreams: List<Stream> = emptyList(),
     val availableAddons: List<String> = emptyList(),
     val autoPlayStream: Stream? = null,
