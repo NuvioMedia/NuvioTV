@@ -27,7 +27,7 @@ data class LibraryTypeTab(
 ) {
     companion object {
         const val ALL_KEY = "__all__"
-        val All = LibraryTypeTab(key = ALL_KEY, label = "All")
+        val All = LibraryTypeTab(key = ALL_KEY, label = "Todo")
     }
 }
 
@@ -93,12 +93,12 @@ class LibraryViewModel @Inject constructor(
     fun onRefresh() {
         if (_uiState.value.isSyncing) return
         viewModelScope.launch {
-            setTransientMessage("Syncing Trakt library...")
+            setTransientMessage("Sincronizando biblioteca de Trakt...")
             runCatching {
                 libraryRepository.refreshNow()
-                setTransientMessage("Library synced")
+                setTransientMessage("Biblioteca sincronizada")
             }.onFailure { error ->
-                setError(error.message ?: "Failed to refresh library")
+                setError(error.message ?: "Error al actualizar la biblioteca")
             }
         }
     }
@@ -184,7 +184,7 @@ class LibraryViewModel @Inject constructor(
         val editor = _uiState.value.listEditorState ?: return
         val name = editor.name.trim()
         if (name.isBlank()) {
-            setError("List name is required")
+            setError("El nombre de la lista es obligatorio")
             return
         }
         if (_uiState.value.pendingOperation) return
@@ -199,25 +199,25 @@ class LibraryViewModel @Inject constructor(
                             description = editor.description.trim().ifBlank { null },
                             privacy = editor.privacy
                         )
-                        setTransientMessage("List created")
+                        setTransientMessage("Lista creada")
                     }
                     LibraryListEditorState.Mode.EDIT -> {
                         val listId = editor.listId
-                            ?: throw IllegalStateException("Invalid list")
+                            ?: throw IllegalStateException("Lista no válida")
                         libraryRepository.updatePersonalList(
                             listId = listId,
                             name = name,
                             description = editor.description.trim().ifBlank { null },
                             privacy = editor.privacy
                         )
-                        setTransientMessage("List updated")
+                        setTransientMessage("Lista actualizada")
                     }
                 }
             }.onSuccess {
                 _uiState.update { it.copy(listEditorState = null, pendingOperation = false) }
             }.onFailure { error ->
                 _uiState.update { it.copy(pendingOperation = false) }
-                setError(error.message ?: "Failed to save list")
+                setError(error.message ?: "Error al guardar la lista")
             }
         }
     }
@@ -231,12 +231,12 @@ class LibraryViewModel @Inject constructor(
             _uiState.update { it.copy(pendingOperation = true, errorMessage = null) }
             runCatching {
                 libraryRepository.deletePersonalList(listId)
-                setTransientMessage("List deleted")
+                setTransientMessage("Lista eliminada")
             }.onSuccess {
                 _uiState.update { it.copy(pendingOperation = false) }
             }.onFailure { error ->
                 _uiState.update { it.copy(pendingOperation = false) }
-                setError(error.message ?: "Failed to delete list")
+                setError(error.message ?: "Error al eliminar la lista")
             }
         }
     }
@@ -342,12 +342,12 @@ class LibraryViewModel @Inject constructor(
             _uiState.update { it.copy(pendingOperation = true, errorMessage = null) }
             runCatching {
                 libraryRepository.reorderPersonalLists(orderedIds)
-                setTransientMessage("List order updated")
+                setTransientMessage("Orden de las listas actualizado")
             }.onSuccess {
                 _uiState.update { it.copy(pendingOperation = false) }
             }.onFailure { error ->
                 _uiState.update { it.copy(pendingOperation = false) }
-                setError(error.message ?: "Failed to reorder lists")
+                setError(error.message ?: "Error al reordenar las listas")
             }
         }
     }
@@ -400,7 +400,7 @@ class LibraryViewModel @Inject constructor(
                     if (ch.isLowerCase()) ch.titlecase(Locale.ROOT) else ch.toString()
                 }
             }
-            .ifBlank { "Unknown" }
+            .ifBlank { "Desconocido" }
     }
 
     private fun LibraryUiState.withVisibleItems(): LibraryUiState {
