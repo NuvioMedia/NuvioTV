@@ -43,14 +43,14 @@ fun EpisodeRatingsSection(
     isLoading: Boolean,
     error: String?,
     modifier: Modifier = Modifier,
-    title: String = "Ratings",
+    title: String = "Calificaciones",
     upFocusRequester: FocusRequester? = null,
     firstItemFocusRequester: FocusRequester? = null
 ) {
     val seasonNumbers = remember(episodes) {
         episodes
             .mapNotNull { it.season }
-            .filter { it > 0 } // Never show specials season (S0)
+            .filter { it > 0 } // Nunca mostrar la temporada de especiales (S0)
             .distinct()
             .sorted()
     }
@@ -99,7 +99,7 @@ fun EpisodeRatingsSection(
         when {
             isLoading -> {
                 Text(
-                    text = "Loading episode ratings...",
+                    text = "Cargando calificaciones de los episodios...",
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary,
                     modifier = Modifier.padding(horizontal = 48.dp, vertical = 12.dp)
@@ -115,7 +115,7 @@ fun EpisodeRatingsSection(
             }
             seasonNumbers.isEmpty() -> {
                 Text(
-                    text = "Episode ratings are unavailable.",
+                    text = "Las calificaciones de los episodios no están disponibles.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary,
                     modifier = Modifier.padding(horizontal = 48.dp, vertical = 12.dp)
@@ -172,7 +172,7 @@ fun EpisodeRatingsSection(
                 }
 
                 Text(
-                    text = "Season $selectedSeason • ${episodesForSeason.size} episodes",
+                    text = "Temporada $selectedSeason • ${episodesForSeason.size} episodios",
                     style = MaterialTheme.typography.labelSmall,
                     color = NuvioColors.TextTertiary,
                     modifier = Modifier.padding(horizontal = 48.dp, vertical = 2.dp)
