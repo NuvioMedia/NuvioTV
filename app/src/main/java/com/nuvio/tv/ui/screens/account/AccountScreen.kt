@@ -76,7 +76,7 @@ fun AccountScreen(
     ) {
         item {
             Text(
-                text = "Account",
+                text = "Cuenta",
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioColors.TextPrimary,
                 fontWeight = FontWeight.SemiBold
@@ -92,7 +92,7 @@ fun AccountScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Loading...",
+                            text = "Cargando...",
                             style = MaterialTheme.typography.bodyLarge,
                             color = NuvioColors.TextSecondary
                         )
@@ -103,7 +103,7 @@ fun AccountScreen(
             is AuthState.SignedOut -> {
                 item {
                     Text(
-                        text = "Sign in to sync your library, watch progress, addons, and plugins across devices. Library and watch progress sync only when Trakt is not connected.",
+                        text = "Inicia sesión para sincronizar tu biblioteca, progreso, addons y plugins entre dispositivos. La biblioteca y el progreso solo se sincronizan cuando Trakt no está conectado.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = NuvioColors.TextSecondary
                     )
@@ -111,8 +111,8 @@ fun AccountScreen(
                 item {
                     AccountActionCard(
                         icon = Icons.Default.Person,
-                        title = "Sign In / Create Account",
-                        description = "Use email and password to create or sign into your account.",
+                        title = "Iniciar Sesión / Crear Cuenta",
+                        description = "Usa tu correo y contraseña para acceder o crear una cuenta nueva.",
                         onClick = onNavigateToAuthSignIn
                     )
                 }
@@ -120,14 +120,14 @@ fun AccountScreen(
                     item {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Sync Code",
+                            text = "Código de Sincronización",
                             style = MaterialTheme.typography.titleLarge,
                             color = NuvioColors.TextPrimary,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Sync across devices without creating an account.",
+                            text = "Sincroniza tus dispositivos sin necesidad de crear una cuenta.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = NuvioColors.TextSecondary
                         )
@@ -135,16 +135,16 @@ fun AccountScreen(
                     item {
                         AccountActionCard(
                             icon = Icons.Default.VpnKey,
-                            title = "Generate Sync Code",
-                            description = "Create a code on this device so other devices can link to it.",
+                            title = "Generar Código de Sincronización",
+                            description = "Crea un código en este dispositivo para que otros puedan vincularse.",
                             onClick = onNavigateToSyncGenerate
                         )
                     }
                     item {
                         AccountActionCard(
                             icon = Icons.Default.Sync,
-                            title = "Enter Sync Code",
-                            description = "Link this device to another device using a sync code.",
+                            title = "Ingresar Código de Sincronización",
+                            description = "Vincula este dispositivo a otro usando un código de sincronización.",
                             onClick = onNavigateToSyncClaim
                         )
                     }
@@ -154,7 +154,7 @@ fun AccountScreen(
             is AuthState.FullAccount -> {
                 item {
                     AccountInfoCard(
-                        label = "Signed in as",
+                        label = "Sesión iniciada como",
                         value = authState.email
                     )
                 }
@@ -168,8 +168,8 @@ fun AccountScreen(
                     item {
                         AccountActionCard(
                             icon = Icons.Default.VpnKey,
-                            title = "Generate Sync Code",
-                            description = "Create a code so other devices can sync with this account.",
+                            title = "Generar Código de Sincronización",
+                            description = "Crea un código para que otros dispositivos se sincronicen con esta cuenta.",
                             onClick = onNavigateToSyncGenerate
                         )
                     }
@@ -182,8 +182,8 @@ fun AccountScreen(
             is AuthState.Anonymous -> {
                 item {
                     AccountInfoCard(
-                        label = "Signed in anonymously",
-                        value = "Using sync code for cross-device sync"
+                        label = "Sesión iniciada de forma anónima",
+                        value = "Usando código para sincronización entre dispositivos"
                     )
                 }
                 item {
@@ -196,8 +196,8 @@ fun AccountScreen(
                     item {
                         AccountActionCard(
                             icon = Icons.Default.VpnKey,
-                            title = "Generate Sync Code",
-                            description = "Create a new sync code for linking devices.",
+                            title = "Generar Código de Sincronización",
+                            description = "Crea un nuevo código para vincular más dispositivos.",
                             onClick = onNavigateToSyncGenerate
                         )
                     }
@@ -205,8 +205,8 @@ fun AccountScreen(
                 item {
                     AccountActionCard(
                         icon = Icons.Default.Person,
-                        title = "Upgrade to Full Account",
-                        description = "Create an email account to keep your data permanently.",
+                        title = "Actualizar a Cuenta Completa",
+                        description = "Crea una cuenta con correo para conservar tus datos permanentemente.",
                         onClick = onNavigateToAuthSignIn
                     )
                 }
@@ -308,7 +308,7 @@ private fun LinkedDevicesSection(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Linked Devices (${devices.size})",
+                text = "Dispositivos Vinculados (${devices.size})",
                 style = MaterialTheme.typography.titleMedium,
                 color = NuvioColors.TextPrimary,
                 fontWeight = FontWeight.Medium
@@ -317,7 +317,7 @@ private fun LinkedDevicesSection(
         Spacer(modifier = Modifier.height(8.dp))
         if (devices.isEmpty()) {
             Text(
-                text = "No linked devices",
+                text = "No hay dispositivos vinculados",
                 style = MaterialTheme.typography.bodyMedium,
                 color = NuvioColors.TextTertiary
             )
@@ -335,7 +335,7 @@ private fun LinkedDevicesSection(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = device.deviceName ?: "Unknown Device",
+                        text = device.deviceName ?: "Dispositivo Desconocido",
                         style = MaterialTheme.typography.bodyMedium,
                         color = NuvioColors.TextPrimary,
                         modifier = Modifier.weight(1f)
@@ -352,15 +352,15 @@ private fun LinkedDevicesSection(
                     ) {
                         Icon(
                             imageVector = Icons.Default.LinkOff,
-                            contentDescription = "Unlink",
+                            contentDescription = "Desvincular",
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Unlink", style = MaterialTheme.typography.labelSmall)
+                        Text("Desvincular", style = MaterialTheme.typography.labelSmall)
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
             }
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
@@ -388,7 +388,7 @@ private fun SignOutButton(onClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Sign Out",
+                text = "Cerrar Sesión",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
