@@ -580,7 +580,7 @@ private fun AddonFilterChips(
             // "All" chip
             item {
                 AddonChip(
-                    name = "All",
+                    name = stringResource(R.string.stream_chip_all),
                     isSelected = selectedAddon == null,
                     onClick = { onAddonSelected(null) }
                 )
@@ -607,7 +607,7 @@ private fun AddonFilterChips(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = stringResource(R.string.fetching_more_addons),
+                    text = stringResource(R.string.stream_fetching_more_addons),
                     style = MaterialTheme.typography.labelMedium,
                     color = NuvioTheme.extendedColors.textSecondary
                 )
