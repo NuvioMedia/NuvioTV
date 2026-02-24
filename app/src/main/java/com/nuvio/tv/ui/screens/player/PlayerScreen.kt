@@ -235,11 +235,18 @@ fun PlayerScreen(
             com.nuvio.tv.core.player.FrameRateUtils.matchFrameRate(
                 activity,
                 targetFrameRate,
-                onBeforeSwitch = { if (wasPlaying) viewModel.exoPlayer?.pause() },
+                onBeforeSwitch = { 
+                    viewModel.exoPlayer?.let { player ->
+                        if (wasPlaying) player.pause()
+                        // Suspend decoders to avoid 0x80001001 (MediaCodec Tunneled Playback) crash during HDMI surface swap
+                        player.stop()
+                    }
+                },
                 onAfterSwitch = { result ->
+                    viewModel.exoPlayer?.prepare()
                     if (wasPlaying) {
                         coroutineScope.launch {
-                            kotlinx.coroutines.delay(2000)
+                            kotlinx.coroutines.delay(1000)
                             viewModel.exoPlayer?.play()
                         }
                     }

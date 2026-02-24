@@ -293,6 +293,30 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                             retryCurrentStreamFromStartAfter416()
                             return
                         }
+                        
+                        // Handle Audio Track Init Failed (e.g. TrueHD 7.1 PCM playback crashing on FireStick)
+                        if (error.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED) {
+                            val audioTracks = _uiState.value.audioTracks
+                            val currentAudioIndex = _uiState.value.selectedAudioTrackIndex
+                            if (audioTracks.size > 1 && currentAudioIndex >= 0) {
+                                // Find an alternative audio track (preferably AC3 or something else standard)
+                                val fallbackIndex = audioTracks.indexOfFirst {
+                                    it.index != currentAudioIndex && (it.codec?.contains("ac3", ignoreCase = true) == true || it.codec?.contains("aac", ignoreCase = true) == true)
+                                }.takeIf { it >= 0 } ?: audioTracks.indexOfFirst { it.index != currentAudioIndex }
+                                
+                                if (fallbackIndex >= 0 && fallbackIndex != currentAudioIndex) {
+                                    Log.w(
+                                        "PlayerRuntimeController",
+                                        "Audio track init failed [5001] for track index $currentAudioIndex. Falling back to alternative track index $fallbackIndex."
+                                    )
+                                    selectAudioTrack(fallbackIndex)
+                                    _exoPlayer?.prepare()
+                                    _exoPlayer?.play()
+                                    return
+                                }
+                            }
+                        }
+
                         _uiState.update {
                             it.copy(
                                 error = detailedError,
