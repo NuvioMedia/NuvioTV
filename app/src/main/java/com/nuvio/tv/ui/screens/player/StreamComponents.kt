@@ -205,7 +205,7 @@ internal fun AddonFilterChips(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Fetching more addon(s)...",
+                    text = stringResource(R.string.fetching_more_addons),
                     style = MaterialTheme.typography.labelMedium,
                     color = NuvioTheme.extendedColors.textSecondary
                 )

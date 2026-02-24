@@ -506,6 +506,7 @@
     <string name="stream_player_picker_title">What player should be used?</string>
     <string name="stream_player_internal">Internal</string>
     <string name="stream_player_external">External</string>
+    <string name="fetching_more_addons">Fetching more addon(s)...</string>
 
     <!-- PlayerScreen -->
     <string name="player_ends_at">Ends at: %1$s</string>

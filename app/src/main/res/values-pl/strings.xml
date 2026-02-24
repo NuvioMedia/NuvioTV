@@ -505,6 +505,7 @@
     <string name="stream_player_picker_title">Którego odtwarzacza użyć?</string>
     <string name="stream_player_internal">Wbudowany</string>
     <string name="stream_player_external">Zewnętrzny</string>
+    <string name="fetching_more_addons">Ładowanie kolejnych dodatków...</string>
 
     <!-- PlayerScreen -->
     <string name="player_ends_at">Koniec o: %1$s</string>
