@@ -25,6 +25,19 @@ val devProperties = Properties().apply {
     }
 }
 
+fun resolveConfig(name: String, defaultValue: String = ""): String {
+    return (project.findProperty(name) as String?)
+        ?: System.getenv(name)
+        ?: localProperties.getProperty(name, defaultValue)
+}
+
+val releaseKeystorePath = resolveConfig("NUVIO_KEYSTORE_FILE", "../nuviotv.jks")
+val hasReleaseSigning = resolveConfig("NUVIO_KEY_ALIAS").isNotBlank() &&
+    resolveConfig("NUVIO_KEY_PASSWORD").isNotBlank() &&
+    resolveConfig("NUVIO_STORE_PASSWORD").isNotBlank() &&
+    releaseKeystorePath.isNotBlank() &&
+    file(releaseKeystorePath).exists()
+
 android {
     namespace = "com.nuvio.tv"
     compileSdk = 36
@@ -52,17 +65,18 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            keyAlias = "nuviotv"
-            keyPassword = "815787"
-            storeFile = file("../nuviotv.jks")
-            storePassword = "815787"
+        if (hasReleaseSigning) {
+            create("release") {
+                keyAlias = resolveConfig("NUVIO_KEY_ALIAS")
+                keyPassword = resolveConfig("NUVIO_KEY_PASSWORD")
+                storePassword = resolveConfig("NUVIO_STORE_PASSWORD")
+                storeFile = file(releaseKeystorePath)
+            }
         }
     }
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("release")
             isDebuggable = true
             isMinifyEnabled = false
 
@@ -84,7 +98,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
 
             buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
 
@@ -140,7 +156,9 @@ configurations.all {
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2025.02.00")
 
-    baselineProfile(project(":benchmark"))
+    if (rootProject.findProject(":benchmark") != null) {
+        baselineProfile(project(":benchmark"))
+    }
     implementation(libs.androidx.core.ktx)
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation(libs.androidx.appcompat)

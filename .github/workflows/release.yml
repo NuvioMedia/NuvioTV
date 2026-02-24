@@ -1,0 +1,142 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to release (e.g. v0.4.5-beta)'
+        required: false
+        type: string
+      draft:
+        description: 'Create as draft release'
+        required: false
+        default: false
+        type: boolean
+      prerelease:
+        description: 'Mark as prerelease'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: release-${{ github.ref_name || inputs.version }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="${{ inputs.version }}"
+          fi
+
+          if [[ -z "$TAG" ]]; then
+            echo "Manual run requires 'version' input (e.g. v0.4.5-beta)." >&2
+            exit 1
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Configure optional signing key
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          NUVIO_KEY_ALIAS: ${{ secrets.NUVIO_KEY_ALIAS }}
+          NUVIO_KEY_PASSWORD: ${{ secrets.NUVIO_KEY_PASSWORD }}
+          NUVIO_STORE_PASSWORD: ${{ secrets.NUVIO_STORE_PASSWORD }}
+        run: |
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" && -n "$NUVIO_KEY_ALIAS" && -n "$NUVIO_KEY_PASSWORD" && -n "$NUVIO_STORE_PASSWORD" ]]; then
+            KEYSTORE_PATH="$RUNNER_TEMP/nuvio-release.jks"
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
+
+            {
+              echo "NUVIO_KEYSTORE_FILE=$KEYSTORE_PATH"
+              echo "NUVIO_KEY_ALIAS=$NUVIO_KEY_ALIAS"
+              echo "NUVIO_KEY_PASSWORD=$NUVIO_KEY_PASSWORD"
+              echo "NUVIO_STORE_PASSWORD=$NUVIO_STORE_PASSWORD"
+            } >> "$GITHUB_ENV"
+
+            echo "Configured signing key from secrets."
+          else
+            echo "Signing secrets not fully configured. Building unsigned release artifacts."
+          fi
+
+      - name: Generate local.properties
+        shell: bash
+        run: |
+          cat > local.properties <<EOF
+          SUPABASE_URL=${SUPABASE_URL}
+          SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+          PARENTAL_GUIDE_API_URL=${PARENTAL_GUIDE_API_URL}
+          INTRODB_API_URL=${INTRODB_API_URL}
+          TRAILER_API_URL=${TRAILER_API_URL}
+          IMDB_RATINGS_API_BASE_URL=${IMDB_RATINGS_API_BASE_URL}
+          IMDB_TAPFRAME_API_BASE_URL=${IMDB_TAPFRAME_API_BASE_URL}
+          TRAKT_CLIENT_ID=${TRAKT_CLIENT_ID}
+          TRAKT_CLIENT_SECRET=${TRAKT_CLIENT_SECRET}
+          TRAKT_API_URL=${TRAKT_API_URL:-https://api.trakt.tv/}
+          TV_LOGIN_WEB_BASE_URL=${TV_LOGIN_WEB_BASE_URL:-https://app.nuvio.tv/tv-login}
+          EOF
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          PARENTAL_GUIDE_API_URL: ${{ secrets.PARENTAL_GUIDE_API_URL }}
+          INTRODB_API_URL: ${{ secrets.INTRODB_API_URL }}
+          TRAILER_API_URL: ${{ secrets.TRAILER_API_URL }}
+          IMDB_RATINGS_API_BASE_URL: ${{ secrets.IMDB_RATINGS_API_BASE_URL }}
+          IMDB_TAPFRAME_API_BASE_URL: ${{ secrets.IMDB_TAPFRAME_API_BASE_URL }}
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
+          TRAKT_API_URL: ${{ secrets.TRAKT_API_URL }}
+          TV_LOGIN_WEB_BASE_URL: ${{ secrets.TV_LOGIN_WEB_BASE_URL }}
+
+      - name: Build release artifacts
+        run: ./gradlew :app:assembleRelease :app:bundleRelease --stacktrace
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ steps.tag.outputs.tag }}
+          if-no-files-found: error
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
+          draft: ${{ inputs.draft || false }}
+          prerelease: ${{ inputs.prerelease || true }}
+          files: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab

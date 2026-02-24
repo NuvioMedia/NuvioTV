@@ -21,5 +21,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "My Application"
 include(":app")
-include(":benchmark")
+if (file("benchmark").exists()) {
+    include(":benchmark")
+}
  
