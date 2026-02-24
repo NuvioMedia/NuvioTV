@@ -181,6 +181,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
         .filterKeys { !it.equals("Range", ignoreCase = true) }
     currentStreamUrl = url
     currentHeaders = newHeaders
+    currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
     pendingAddonSubtitleLanguage = null
     pendingAddonSubtitleTrackId = null
     pendingAudioSelectionAfterSubtitleRefresh = null
@@ -455,6 +456,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
 
     currentStreamUrl = url
     currentHeaders = newHeaders
+    currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
     pendingAddonSubtitleLanguage = null
     pendingAddonSubtitleTrackId = null
     pendingAudioSelectionAfterSubtitleRefresh = null
@@ -613,7 +615,12 @@ internal fun PlayerRuntimeController.playNextEpisode() {
                             source = playerSettings.streamAutoPlaySource,
                             installedAddonNames = installedAddonOrder.toSet(),
                             selectedAddons = playerSettings.streamAutoPlaySelectedAddons,
-                            selectedPlugins = playerSettings.streamAutoPlaySelectedPlugins
+                            selectedPlugins = playerSettings.streamAutoPlaySelectedPlugins,
+                            preferredBingeGroup = if (playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode) {
+                                currentStreamBingeGroup
+                            } else {
+                                null
+                            }
                         )
                         selectedStream != null
                     }

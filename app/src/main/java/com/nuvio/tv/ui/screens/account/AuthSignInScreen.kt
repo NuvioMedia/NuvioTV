@@ -25,6 +25,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.ui.theme.NuvioColors
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @Composable
 fun AuthSignInScreen(
@@ -51,14 +53,14 @@ fun AuthSignInScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Sign In",
+                text = stringResource(R.string.auth_signin_title),
                 style = MaterialTheme.typography.headlineSmall,
                 color = NuvioColors.TextPrimary,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "Email/password entry on TV is disabled. Continue with QR sign in.",
+                text = stringResource(R.string.auth_signin_tv_disabled),
                 style = MaterialTheme.typography.bodyMedium,
                 color = NuvioColors.TextSecondary,
                 textAlign = TextAlign.Center
@@ -69,14 +71,14 @@ fun AuthSignInScreen(
                 colors = ButtonDefaults.colors(
                     containerColor = NuvioColors.Secondary,
                     focusedContainerColor = NuvioColors.SecondaryVariant,
-                    contentColor = Color.White,
-                    focusedContentColor = Color.White
+                    contentColor = NuvioColors.OnSecondary,
+                    focusedContentColor = NuvioColors.OnSecondaryVariant
                 ),
                 shape = ButtonDefaults.shape(RoundedCornerShape(50)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Continue with QR",
+                    text = stringResource(R.string.auth_signin_qr_btn),
                     modifier = Modifier.padding(vertical = 4.dp),
                     fontWeight = FontWeight.Medium
                 )
@@ -84,4 +86,3 @@ fun AuthSignInScreen(
         }
     }
 }
-

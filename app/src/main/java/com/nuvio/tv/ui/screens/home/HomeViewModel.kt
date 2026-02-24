@@ -54,7 +54,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
-import java.time.ZoneOffset
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import java.util.Locale
@@ -527,7 +527,7 @@ class HomeViewModel @Inject constructor(
                 val metaCache = mutableMapOf<String, Meta?>()
                 val inProgressOnly = buildList {
                     deduplicateInProgress(
-                        recentItems.filter { it.isInProgress() }
+                        recentItems.filter { shouldTreatAsInProgressForContinueWatching(it) }
                     ).forEach { progress ->
                         add(
                             ContinueWatchingItem.InProgress(
@@ -581,6 +581,18 @@ class HomeViewModel @Inject constructor(
             .sortedByDescending { it.lastWatched }
             .distinctBy { it.contentId }
         return (nonSeries + latestPerShow).sortedByDescending { it.lastWatched }
+    }
+
+    private fun shouldTreatAsInProgressForContinueWatching(progress: WatchProgress): Boolean {
+        if (progress.isInProgress()) return true
+        if (progress.isCompleted()) return false
+
+        // Rewatch edge case: a started replay can be below the default 2% "in progress"
+        // threshold, but should still suppress Next Up and appear as resume.
+        val hasStartedPlayback = progress.position > 0L || progress.progressPercent?.let { it > 0f } == true
+        return hasStartedPlayback &&
+            progress.source != WatchProgress.SOURCE_TRAKT_HISTORY &&
+            progress.source != WatchProgress.SOURCE_TRAKT_SHOW_PROGRESS
     }
 
     private suspend fun resolveCurrentEpisodeDescription(
@@ -752,6 +764,18 @@ class HomeViewModel @Inject constructor(
         ) ?: return null
         val meta = nextEpisode.first
         val video = nextEpisode.second
+        val nextSeason = requireNotNull(video.season)
+        val nextEpisodeNumber = requireNotNull(video.episode)
+
+        val isNextEpisodeAlreadyWatched = runCatching {
+            watchProgressRepository.isWatched(
+                contentId = progress.contentId,
+                season = nextSeason,
+                episode = nextEpisodeNumber
+            ).first()
+        }.getOrDefault(false)
+        if (isNextEpisodeAlreadyWatched) return null
+
         val existingPoster = meta.poster.normalizeImageUrl()
         val existingBackdrop = meta.background.normalizeImageUrl()
         val existingLogo = meta.logo.normalizeImageUrl()
@@ -764,8 +788,8 @@ class HomeViewModel @Inject constructor(
             resolveNextUpArtworkFallback(
                 progress = progress,
                 meta = meta,
-                season = video.season ?: return null,
-                episode = video.episode ?: return null
+                season = nextSeason,
+                episode = nextEpisodeNumber
             )
         } else {
             null
@@ -773,8 +797,8 @@ class HomeViewModel @Inject constructor(
         val released = video.released?.trim()?.takeIf { it.isNotEmpty() }
             ?: artworkFallback?.airDate
         val releaseDate = parseEpisodeReleaseDate(released)
-        val todayUtc = LocalDate.now(ZoneOffset.UTC)
-        val hasAired = releaseDate?.let { !it.isAfter(todayUtc) } ?: true
+        val todayLocal = LocalDate.now(ZoneId.systemDefault())
+        val hasAired = releaseDate?.let { !it.isAfter(todayLocal) } ?: true
         val info = NextUpInfo(
             contentId = progress.contentId,
             contentType = progress.contentType,
@@ -783,8 +807,8 @@ class HomeViewModel @Inject constructor(
             backdrop = existingBackdrop ?: artworkFallback?.backdrop,
             logo = existingLogo,
             videoId = video.id,
-            season = video.season ?: return null,
-            episode = video.episode ?: return null,
+            season = nextSeason,
+            episode = nextEpisodeNumber,
             episodeTitle = video.title,
             episodeDescription = video.overview?.takeIf { it.isNotBlank() },
             thumbnail = existingThumbnail ?: artworkFallback?.thumbnail,
@@ -886,18 +910,19 @@ class HomeViewModel @Inject constructor(
         if (showUnairedNextUp) return true
         val releaseDate = parseEpisodeReleaseDate(nextEpisode.released)
             ?: return true
-        val todayUtc = LocalDate.now(ZoneOffset.UTC)
-        return !releaseDate.isAfter(todayUtc)
+        val todayLocal = LocalDate.now(ZoneId.systemDefault())
+        return !releaseDate.isAfter(todayLocal)
     }
 
     private fun parseEpisodeReleaseDate(raw: String?): LocalDate? {
         if (raw.isNullOrBlank()) return null
         val value = raw.trim()
+        val zone = ZoneId.systemDefault()
 
         return runCatching {
-            Instant.parse(value).atOffset(ZoneOffset.UTC).toLocalDate()
+            Instant.parse(value).atZone(zone).toLocalDate()
         }.getOrNull() ?: runCatching {
-            OffsetDateTime.parse(value).toLocalDate()
+            OffsetDateTime.parse(value).toInstant().atZone(zone).toLocalDate()
         }.getOrNull() ?: runCatching {
             LocalDateTime.parse(value).toLocalDate()
         }.getOrNull() ?: runCatching {
@@ -976,8 +1001,8 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun formatEpisodeAirDateLabel(releaseDate: LocalDate): String {
-        val todayUtc = LocalDate.now(ZoneOffset.UTC)
-        val formatter = if (releaseDate.year == todayUtc.year) {
+        val todayLocal = LocalDate.now(ZoneId.systemDefault())
+        val formatter = if (releaseDate.year == todayLocal.year) {
             DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())
         } else {
             DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault())
@@ -1195,13 +1220,26 @@ class HomeViewModel @Inject constructor(
     private fun scheduleUpdateCatalogRows() {
         catalogUpdateJob?.cancel()
         catalogUpdateJob = viewModelScope.launch {
-            // Render immediately for the first catalog arrival, debounce subsequent updates
+            val currentLayout = _uiState.value.homeLayout
+            val preferSmootherBatching = currentLayout == HomeLayout.CLASSIC || currentLayout == HomeLayout.GRID
+            val loadedContentRowCount = catalogsMap.values.count { it.items.isNotEmpty() }
+
+           
             if (!hasRenderedFirstCatalog && catalogsMap.isNotEmpty()) {
-                hasRenderedFirstCatalog = true
-                updateCatalogRows()
-                return@launch
+                val shouldHoldFirstRenderForBatch =
+                    preferSmootherBatching &&
+                        pendingCatalogLoads > 0 &&
+                        loadedContentRowCount in 0..2
+
+                if (!shouldHoldFirstRenderForBatch) {
+                    hasRenderedFirstCatalog = true
+                    updateCatalogRows()
+                    return@launch
+                }
             }
             val debounceMs = when {
+                preferSmootherBatching && pendingCatalogLoads > 5 -> 650L
+                preferSmootherBatching && pendingCatalogLoads > 0 -> 380L
                 pendingCatalogLoads > 5 -> 450L
                 pendingCatalogLoads > 0 -> 250L
                 else -> 100L

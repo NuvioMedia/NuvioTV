@@ -67,6 +67,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -130,7 +132,7 @@ internal fun EpisodesSidePanel(
                     )
 
                     DialogButton(
-                        text = "Close",
+                        text = stringResource(R.string.episodes_panel_close),
                         onClick = onClose,
                         isPrimary = false
                     )
@@ -175,12 +177,12 @@ private fun EpisodeStreamsView(
         verticalAlignment = Alignment.CenterVertically
     ) {
         DialogButton(
-            text = "Back",
+            text = stringResource(R.string.episodes_panel_back),
             onClick = onBackToEpisodes,
             isPrimary = false
         )
         DialogButton(
-            text = "Reload",
+            text = stringResource(R.string.episodes_panel_reload),
             onClick = onReload,
             isPrimary = false
         )
@@ -241,7 +243,7 @@ private fun EpisodeStreamsView(
 
         uiState.episodeFilteredStreams.isEmpty() -> {
             Text(
-                text = "No streams found",
+                text = stringResource(R.string.episodes_panel_no_streams),
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.7f)
             )
@@ -326,7 +328,7 @@ private fun EpisodesListView(
 
         uiState.episodes.isEmpty() -> {
             Text(
-                text = "No episodes available",
+                text = stringResource(R.string.episodes_panel_no_episodes),
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.7f)
             )
@@ -436,7 +438,7 @@ private fun EpisodesSeasonTabs(
                     style = MaterialTheme.typography.labelLarge,
                     color = when {
                         isSelected -> Color.Black
-                        isFocused -> NuvioColors.OnPrimary
+                        isFocused -> NuvioColors.OnSecondary
                         else -> NuvioTheme.extendedColors.textSecondary
                     },
                     modifier = Modifier.padding(vertical = 10.dp, horizontal = 20.dp)

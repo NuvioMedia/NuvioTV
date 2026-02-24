@@ -162,9 +162,11 @@ class PlayerRuntimeController(
     internal var streamReuseLastLinkEnabled: Boolean = false
     internal var streamAutoPlayModeSetting: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL
     internal var streamAutoPlayNextEpisodeEnabledSetting: Boolean = false
+    internal var streamAutoPlayPreferBingeGroupForNextEpisodeSetting: Boolean = false
     internal var nextEpisodeThresholdModeSetting: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE
     internal var nextEpisodeThresholdPercentSetting: Float = 98f
     internal var nextEpisodeThresholdMinutesBeforeEndSetting: Float = 2f
+    internal var currentStreamBingeGroup: String? = navigationArgs.bingeGroup
     internal var hasAppliedRememberedAudioSelection: Boolean = false
 
     internal var lastBufferLogTimeMs: Long = 0L

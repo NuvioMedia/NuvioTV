@@ -52,12 +52,15 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.EmptyScreenState
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.util.formatAddonTypeLabel
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -85,9 +88,9 @@ internal fun DiscoverSection(
     val availableTypes = remember(uiState.discoverCatalogs) {
         uiState.discoverCatalogs.map { it.type }.distinct()
     }
-    val selectedTypeLabel = uiState.selectedDiscoverType.replaceFirstChar { it.uppercase() }
-    val selectedCatalogLabel = selectedCatalog?.catalogName ?: "Select"
-    val selectedGenreLabel = uiState.selectedDiscoverGenre ?: "Default"
+    val selectedTypeLabel = formatAddonTypeLabel(uiState.selectedDiscoverType)
+    val selectedCatalogLabel = selectedCatalog?.catalogName ?: stringResource(R.string.discover_select_catalog)
+    val selectedGenreLabel = uiState.selectedDiscoverGenre ?: stringResource(R.string.discover_genre_default)
 
     Column(
         modifier = modifier
@@ -96,7 +99,7 @@ internal fun DiscoverSection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "Discover",
+            text = stringResource(R.string.discover_title),
             style = MaterialTheme.typography.headlineMedium,
             color = NuvioColors.TextPrimary
         )
@@ -107,11 +110,12 @@ internal fun DiscoverSection(
         ) {
             DiscoverDropdownPicker(
                 modifier = Modifier.weight(1f),
-                title = "Type",
+                title = stringResource(R.string.discover_filter_type),
                 value = selectedTypeLabel,
                 expanded = expandedPicker == "type",
                 options = availableTypes.map { type ->
-                    DiscoverOption(type.replaceFirstChar { it.uppercase() }, type)
+                    val label = formatAddonTypeLabel(type)
+                    DiscoverOption(label, type)
                 },
                 onExpandedChange = { shouldExpand ->
                     expandedPicker = if (shouldExpand) "type" else null
@@ -124,7 +128,7 @@ internal fun DiscoverSection(
 
             DiscoverDropdownPicker(
                 modifier = Modifier.weight(1f),
-                title = "Catalog",
+                title = stringResource(R.string.discover_filter_catalog),
                 value = selectedCatalogLabel,
                 expanded = expandedPicker == "catalog",
                 options = filteredCatalogs.map { DiscoverOption(it.catalogName, it.key) },
@@ -139,11 +143,11 @@ internal fun DiscoverSection(
 
             DiscoverDropdownPicker(
                 modifier = Modifier.weight(1f),
-                title = "Genre",
+                title = stringResource(R.string.discover_filter_genre),
                 value = selectedGenreLabel,
                 expanded = expandedPicker == "genre",
                 options = buildList {
-                    add(DiscoverOption("Default", "__default__"))
+                    add(DiscoverOption(stringResource(R.string.discover_genre_default), "__default__"))
                     addAll(genres.map { DiscoverOption(it, it) })
                 },
                 onExpandedChange = { shouldExpand ->
@@ -160,7 +164,9 @@ internal fun DiscoverSection(
             val metadataSegments = buildList {
                 add(catalog.addonName)
                 if (uiState.catalogTypeSuffixEnabled) {
-                    add(catalog.type.replaceFirstChar { c -> c.uppercase() })
+                    formatAddonTypeLabel(catalog.type)
+                        .takeIf { it.isNotEmpty() }
+                        ?.let(::add)
                 }
                 uiState.selectedDiscoverGenre?.let(::add)
             }
@@ -210,16 +216,16 @@ internal fun DiscoverSection(
 
             uiState.discoverInitialized && selectedCatalog == null -> {
                 EmptyScreenState(
-                    title = "Select a catalog",
-                    subtitle = "Choose a discover catalog to browse",
+                    title = stringResource(R.string.discover_empty_no_catalog_title),
+                    subtitle = stringResource(R.string.discover_empty_no_catalog_subtitle),
                     icon = Icons.Default.Search
                 )
             }
 
             uiState.discoverInitialized && !uiState.discoverLoading && selectedCatalog != null -> {
                 EmptyScreenState(
-                    title = "No content found",
-                    subtitle = "Try a different genre or catalog",
+                    title = stringResource(R.string.discover_empty_no_content_title),
+                    subtitle = stringResource(R.string.discover_empty_no_content_subtitle),
                     icon = Icons.Default.Search
                 )
             }
@@ -505,9 +511,9 @@ private fun DiscoverActionCard(
 ) {
     val cardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
     val title = when (actionType) {
-        DiscoverGridAction.ShowMore -> "Load more"
-        DiscoverGridAction.LoadMore -> "Load more"
-        DiscoverGridAction.Loading -> "Loading..."
+        DiscoverGridAction.ShowMore -> stringResource(R.string.discover_load_more)
+        DiscoverGridAction.LoadMore -> stringResource(R.string.discover_load_more)
+        DiscoverGridAction.Loading -> stringResource(R.string.discover_loading)
         DiscoverGridAction.None -> ""
     }
 

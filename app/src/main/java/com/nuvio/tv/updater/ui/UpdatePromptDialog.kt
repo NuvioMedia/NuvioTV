@@ -45,6 +45,8 @@ import com.mikepenz.markdown.m3.markdownTypography
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.updater.UpdateUiState
 import kotlinx.coroutines.delay
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -91,7 +93,7 @@ fun UpdatePromptDialog(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
-                    text = "App Update",
+                    text = stringResource(R.string.update_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary
                 )
@@ -165,7 +167,7 @@ fun UpdatePromptDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Downloading update",
+                                text = stringResource(R.string.update_downloading),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = NuvioColors.TextSecondary
                             )
@@ -204,7 +206,7 @@ fun UpdatePromptDialog(
 
                 if (state.showUnknownSourcesDialog) {
                     Text(
-                        text = "Allow installs from unknown sources to continue.",
+                        text = stringResource(R.string.update_unknown_sources),
                         style = MaterialTheme.typography.bodyMedium,
                         color = NuvioColors.TextSecondary
                     )
@@ -225,7 +227,7 @@ fun UpdatePromptDialog(
                         ),
                         shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                     ) {
-                        Text("Close")
+                        Text(stringResource(R.string.update_close))
                     }
 
                     if (state.showUnknownSourcesDialog) {
@@ -240,7 +242,7 @@ fun UpdatePromptDialog(
                             ),
                             shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                         ) {
-                            Text("Open Settings")
+                            Text(stringResource(R.string.update_open_settings))
                         }
                     } else if (state.downloadedApkPath != null) {
                         Button(
@@ -255,7 +257,7 @@ fun UpdatePromptDialog(
                             ),
                             shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                         ) {
-                            Text("Install")
+                            Text(stringResource(R.string.update_install))
                         }
                     } else if (canDownload) {
                         Button(
@@ -283,7 +285,7 @@ fun UpdatePromptDialog(
                             ),
                             shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                         ) {
-                            Text("Ignore")
+                            Text(stringResource(R.string.update_ignore))
                         }
                     }
                 }

@@ -35,7 +35,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import com.nuvio.tv.R
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyRow
@@ -114,7 +116,7 @@ fun ContinueWatchingSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Continue Watching",
+                text = stringResource(R.string.continue_watching),
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioColors.TextPrimary
             )
@@ -213,11 +215,15 @@ fun ContinueWatchingCard(
     val progress = (item as? ContinueWatchingItem.InProgress)?.progress
     val nextUp = (item as? ContinueWatchingItem.NextUp)?.info
     val episodeStr = progress?.episodeDisplayString ?: nextUp?.let { "S${it.season}E${it.episode}" }
+    val strAirsDate = stringResource(R.string.cw_airs_date, nextUp?.airDateLabel ?: "")
+    val strUpcoming = stringResource(R.string.cw_upcoming)
+    val strNextUp = stringResource(R.string.cw_next_up)
+    val strResume = stringResource(R.string.cw_resume)
     val nextUpBadgeText = nextUp?.let { info ->
         if (!info.hasAired) {
-            info.airDateLabel?.let { "Airs $it" } ?: "Upcoming"
+            info.airDateLabel?.let { strAirsDate } ?: strUpcoming
         } else {
-            "Next Up"
+            strNextUp
         }
     }
     val remainingText = progress?.let {
@@ -225,7 +231,7 @@ fun ContinueWatchingCard(
             when {
                 it.duration > 0L -> formatRemainingTime(it.remainingTime)
                 it.progressPercent != null -> "${it.progressPercent.toInt().coerceIn(0, 100)}% watched"
-                else -> "Resume"
+                else -> strResume
             }
         }
     }
@@ -236,7 +242,7 @@ fun ContinueWatchingCard(
     val badgeText = if (BuildConfig.IS_DEBUG_BUILD && watchedPercentText != null) {
         remainingText?.let { "$it · $watchedPercentText" } ?: watchedPercentText
     } else {
-        remainingText ?: nextUpBadgeText ?: "Next Up"
+        remainingText ?: nextUpBadgeText ?: strNextUp
     }
     val progressFraction = progress?.progressPercentage ?: 0f
     val imageModel = when {
@@ -258,7 +264,7 @@ fun ContinueWatchingCard(
     val titleText = progress?.name ?: nextUp?.name.orEmpty()
     val episodeTitle = when {
         progress != null -> progress.episodeTitle
-        nextUp != null && !nextUp.hasAired -> nextUp.episodeTitle ?: nextUp.airDateLabel?.let { "Airs $it" }
+        nextUp != null && !nextUp.hasAired -> nextUp.episodeTitle ?: nextUp.airDateLabel?.let { stringResource(R.string.cw_airs_date, it) }
         else -> nextUp?.episodeTitle
     }
     val context = LocalContext.current
@@ -343,12 +349,16 @@ fun ContinueWatchingCard(
                     .clip(CwClipShape)
             ) {
                 // Background image with size hints for efficient decoding
-                AsyncImage(
-                    model = imageRequest,
-                    contentDescription = titleText,
-                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                if (imageModel.isNullOrBlank()) {
+                    MonochromePosterPlaceholder()
+                } else {
+                    AsyncImage(
+                        model = imageRequest,
+                        contentDescription = titleText,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
 
                 // Gradient overlay for text readability
                 Box(
@@ -450,7 +460,7 @@ fun ContinueWatchingOptionsDialog(
     NuvioDialog(
         onDismiss = onDismiss,
         title = title,
-        subtitle = "Choose what you want to do with this item."
+        subtitle = stringResource(R.string.cw_dialog_subtitle)
     ) {
         Button(
             onClick = onDetails,
@@ -462,7 +472,7 @@ fun ContinueWatchingOptionsDialog(
                 contentColor = NuvioColors.TextPrimary
             )
         ) {
-            Text("Go to details")
+            Text(stringResource(R.string.cw_action_go_to_details))
         }
 
         Button(
@@ -473,7 +483,7 @@ fun ContinueWatchingOptionsDialog(
             ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Remove")
+            Text(stringResource(R.string.cw_action_remove))
         }
     }
 }

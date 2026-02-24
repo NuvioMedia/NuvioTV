@@ -47,6 +47,8 @@ import com.nuvio.tv.ui.components.ModernLayoutPreview
 import com.nuvio.tv.ui.screens.settings.LayoutSettingsEvent
 import com.nuvio.tv.ui.screens.settings.LayoutSettingsViewModel
 import com.nuvio.tv.ui.theme.NuvioColors
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @Composable
 fun LayoutSelectionScreen(
@@ -72,7 +74,7 @@ fun LayoutSelectionScreen(
         ) {
             // Header
             Text(
-                text = "Welcome to Nuvio",
+                text = stringResource(R.string.layout_selection_welcome),
                 style = MaterialTheme.typography.headlineLarge,
                 color = NuvioColors.TextPrimary
             )
@@ -80,7 +82,7 @@ fun LayoutSelectionScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Choose your home screen layout",
+                text = stringResource(R.string.layout_selection_subtitle),
                 style = MaterialTheme.typography.bodyLarge,
                 color = NuvioColors.TextSecondary
             )
@@ -146,7 +148,7 @@ fun LayoutSelectionScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Continue",
+                        text = stringResource(R.string.layout_selection_continue),
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White
                     )
@@ -212,7 +214,11 @@ private fun LayoutOptionCard(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = layout.displayName,
+                    text = when (layout) {
+                        HomeLayout.CLASSIC -> stringResource(R.string.layout_classic)
+                        HomeLayout.GRID -> stringResource(R.string.layout_grid)
+                        HomeLayout.MODERN -> stringResource(R.string.layout_modern)
+                    },
                     style = MaterialTheme.typography.titleLarge,
                     color = if (isSelected || isFocused) NuvioColors.TextPrimary else NuvioColors.TextSecondary
                 )
@@ -221,9 +227,9 @@ private fun LayoutOptionCard(
 
             Text(
                 text = when (layout) {
-                    HomeLayout.CLASSIC -> "Scroll through categories horizontally"
-                    HomeLayout.GRID -> "Browse everything in a vertical grid with a hero section"
-                    HomeLayout.MODERN -> "Fixed hero with a single active row for faster browsing"
+                    HomeLayout.CLASSIC -> stringResource(R.string.layout_classic_desc)
+                    HomeLayout.GRID -> stringResource(R.string.layout_grid_desc)
+                    HomeLayout.MODERN -> stringResource(R.string.layout_modern_desc)
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = NuvioColors.TextTertiary

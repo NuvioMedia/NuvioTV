@@ -68,9 +68,23 @@ class AuthManager @Inject constructor(
                         }
                     }
                     is SessionStatus.NotAuthenticated -> {
-                        cachedEffectiveUserId = null
-                        cachedEffectiveUserSourceUserId = null
-                        _authState.value = AuthState.SignedOut
+                        val session = auth.currentSessionOrNull()
+                        val hasRefreshToken = session?.refreshToken?.isNotBlank() == true
+                        if (hasRefreshToken) {
+                            scope.launch {
+                                try {
+                                    auth.refreshCurrentSession()
+                                } catch (e: Exception) {
+                                    cachedEffectiveUserId = null
+                                    cachedEffectiveUserSourceUserId = null
+                                    _authState.value = AuthState.SignedOut
+                                }
+                            }
+                        } else {
+                            cachedEffectiveUserId = null
+                            cachedEffectiveUserSourceUserId = null
+                            _authState.value = AuthState.SignedOut
+                        }
                     }
                     is SessionStatus.Initializing -> {
                         _authState.value = AuthState.Loading

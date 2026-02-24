@@ -22,33 +22,13 @@
         android:largeHeap="true"
         android:usesCleartextTraffic="true"
         android:supportsRtl="true"
+        android:localeConfig="@xml/locale_config"
         android:theme="@style/Theme.MyApplication">
         <meta-data
             android:name="io.sentry.dsn"
             android:value="https://151aefbf907d5fd4a6c8533d9d064441@o4510894222278656.ingest.us.sentry.io/4510894227259392" />
         <meta-data
             android:name="io.sentry.send-default-pii"
-            android:value="true" />
-        <meta-data
-            android:name="io.sentry.traces.user-interaction.enable"
-            android:value="true" />
-        <meta-data
-            android:name="io.sentry.attach-screenshot"
-            android:value="true" />
-        <meta-data
-            android:name="io.sentry.attach-view-hierarchy"
-            android:value="true" />
-        <meta-data
-            android:name="io.sentry.traces.sample-rate"
-            android:value="1.0" />
-        <meta-data
-            android:name="io.sentry.traces.profiling.session-sample-rate"
-            android:value="1.0" />
-        <meta-data
-            android:name="io.sentry.traces.profiling.lifecycle"
-            android:value="trace" />
-        <meta-data
-            android:name="io.sentry.traces.profiling.start-on-app-start"
             android:value="true" />
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -62,7 +42,8 @@
 
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@style/Theme.MyApplication.Launcher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

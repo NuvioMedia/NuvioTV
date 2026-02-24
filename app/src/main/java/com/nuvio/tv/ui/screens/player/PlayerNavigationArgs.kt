@@ -19,6 +19,7 @@ internal data class PlayerNavigationArgs(
     val initialSeason: Int?,
     val initialEpisode: Int?,
     val initialEpisodeTitle: String?,
+    val bingeGroup: String?,
     val rememberedAudioLanguage: String?,
     val rememberedAudioName: String?
 ) {
@@ -46,6 +47,7 @@ internal data class PlayerNavigationArgs(
                 initialSeason = savedStateHandle.get<String>("season")?.toIntOrNull(),
                 initialEpisode = savedStateHandle.get<String>("episode")?.toIntOrNull(),
                 initialEpisodeTitle = decodedOrNull("episodeTitle"),
+                bingeGroup = decodedOrNull("bingeGroup"),
                 rememberedAudioLanguage = decodedOrNull("rememberedAudioLanguage"),
                 rememberedAudioName = decodedOrNull("rememberedAudioName")
             )

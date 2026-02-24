@@ -59,10 +59,13 @@ import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 // Subtitle text color options (matching mobile app)
 private val SUBTITLE_TEXT_COLORS = listOf(
     Color.White,
+    Color(0xFFD9D9D9),  // Light gray
     Color(0xFFFFD700),  // Yellow/Gold
     Color(0xFF00E5FF),  // Cyan
     Color(0xFFFF5C5C),  // Red
@@ -119,7 +122,7 @@ internal fun SubtitleSelectionDialog(
                 modifier = Modifier.padding(24.dp)
             ) {
                 Text(
-                    text = "Subtitles",
+                    text = stringResource(R.string.subtitle_dialog_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color.White,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -237,7 +240,7 @@ private fun SubtitleTab(
                     Text(
                         text = badgeCount.toString(),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White
+                        color = if (isSelected) Color.White else NuvioColors.OnSecondary
                     )
                 }
             }
@@ -280,7 +283,7 @@ private fun InternalSubtitlesContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No built-in subtitles available",
+                        text = stringResource(R.string.subtitle_no_builtin),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.5f)
                     )
@@ -342,7 +345,7 @@ private fun AddonSubtitlesContent(
                     ) {
                         LoadingIndicator(modifier = Modifier.size(24.dp))
                         Text(
-                            text = "Loading subtitles from addons...",
+                            text = stringResource(R.string.subtitle_loading_addon),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(alpha = 0.5f)
                         )
@@ -358,7 +361,7 @@ private fun AddonSubtitlesContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No addon subtitles available",
+                        text = stringResource(R.string.subtitle_no_addon),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.5f)
                     )
@@ -713,7 +716,7 @@ private fun SubtitleStyleContent(
                 // Text Color
                 Column {
                     Text(
-                        text = "Text Color",
+                        text = stringResource(R.string.subtitle_text_color),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -745,7 +748,7 @@ private fun SubtitleStyleContent(
 
                     Column {
                         Text(
-                            text = "Outline Color",
+                            text = stringResource(R.string.subtitle_outline_color),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White,
                             modifier = Modifier.padding(bottom = 8.dp)
@@ -792,7 +795,7 @@ private fun SubtitleStyleContent(
                 shape = CardDefaults.shape(RoundedCornerShape(12.dp))
             ) {
                 Text(
-                    text = "Reset Defaults",
+                    text = stringResource(R.string.subtitle_reset_defaults),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.7f),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)

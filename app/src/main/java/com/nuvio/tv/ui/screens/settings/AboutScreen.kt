@@ -24,6 +24,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -42,8 +43,8 @@ fun AboutScreen(
     BackHandler { onBackPress() }
 
     SettingsStandaloneScaffold(
-        title = "About",
-        subtitle = "App information, updates, and legal links"
+        title = stringResource(R.string.about_title),
+        subtitle = stringResource(R.string.about_subtitle)
     ) {
         AboutSettingsContent()
     }
@@ -61,8 +62,8 @@ fun AboutSettingsContent(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         SettingsDetailHeader(
-            title = "About",
-            subtitle = "App information, updates, and legal links"
+            title = stringResource(R.string.about_title),
+            subtitle = stringResource(R.string.about_subtitle)
         )
 
         SettingsGroupCard(
@@ -86,14 +87,14 @@ fun AboutSettingsContent(
                 )
 
                 Text(
-                    text = "Made with \u2764\uFE0F by Tapframe and friends",
+                    text = stringResource(R.string.about_made_with_love),
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextSecondary,
                     textAlign = TextAlign.Center
                 )
 
                 Text(
-                    text = "Version ${BuildConfig.VERSION_NAME}",
+                    text = stringResource(R.string.about_version, BuildConfig.VERSION_NAME),
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextSecondary,
                     textAlign = TextAlign.Center
@@ -102,8 +103,8 @@ fun AboutSettingsContent(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 SettingsActionRow(
-                    title = "Check for updates",
-                    subtitle = "Download latest release",
+                    title = stringResource(R.string.about_check_updates),
+                    subtitle = stringResource(R.string.about_check_updates_subtitle),
                     trailingIcon = Icons.Default.OpenInNew,
                     modifier = if (initialFocusRequester != null) {
                         Modifier.focusRequester(initialFocusRequester)
@@ -116,8 +117,8 @@ fun AboutSettingsContent(
                 )
 
                 SettingsActionRow(
-                    title = "Privacy Policy",
-                    subtitle = "View our privacy policy",
+                    title = stringResource(R.string.about_privacy_policy),
+                    subtitle = stringResource(R.string.about_privacy_policy_subtitle),
                     trailingIcon = Icons.Default.OpenInNew,
                     onClick = {
                         val intent = Intent(

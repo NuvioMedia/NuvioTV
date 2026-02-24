@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -254,7 +255,9 @@ class SearchViewModel @Inject constructor(
                         type = catalog.apiType,
                         catalogId = catalog.id
                     )
-                    catalogsMap[key] = result.data
+                    catalogsMap[key] = result.data.copy(
+                        catalogName = searchCatalogLabel(catalog.apiType)
+                    )
                     pendingCatalogResponses = (pendingCatalogResponses - 1).coerceAtLeast(0)
                     scheduleCatalogRowsUpdate()
                 }
@@ -598,12 +601,30 @@ class SearchViewModel @Inject constructor(
     }
 
     private fun buildSearchTargets(addons: List<Addon>): List<Pair<Addon, CatalogDescriptor>> {
-        return addons.flatMap { addon ->
+        val allSearchTargets = addons.flatMap { addon ->
             addon.catalogs
                 .filter { catalog ->
                     catalog.extra.any { it.name == "search" }
                 }
                 .map { catalog -> addon to catalog }
+        }
+
+        val requiredSearchTargets = allSearchTargets.filter { (_, catalog) ->
+            catalog.extra.any { it.name == "search" && it.isRequired }
+        }
+
+        return if (requiredSearchTargets.isNotEmpty()) {
+            requiredSearchTargets
+        } else {
+            allSearchTargets
+        }
+    }
+
+    private fun searchCatalogLabel(apiType: String): String {
+        return when (apiType.lowercase(Locale.ROOT)) {
+            "movie" -> "Search Movies"
+            "series" -> "Search Series"
+            else -> "Search ${apiType.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }}"
         }
     }
 

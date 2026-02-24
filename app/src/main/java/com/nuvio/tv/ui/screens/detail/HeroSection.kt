@@ -55,6 +55,8 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MDBListRatings
 import com.nuvio.tv.domain.model.Video
@@ -113,14 +115,17 @@ fun HeroContentSection(
         context = context,
         rawRes = com.nuvio.tv.R.raw.trailer_play_button
     )
+    val strCreator = stringResource(R.string.hero_creator)
+    val strDirector = stringResource(R.string.hero_director)
+    val strWriter = stringResource(R.string.hero_writer)
     val creditLine = remember(meta.director, meta.writer, isSeriesApi) {
         val directorLine = meta.director.takeIf { it.isNotEmpty() }?.joinToString(", ")
         val writerLine = meta.writer.takeIf { it.isNotEmpty() }?.joinToString(", ")
         when {
             !directorLine.isNullOrBlank() -> {
-                if (isSeriesApi) "Creator: $directorLine" else "Director: $directorLine"
+                if (isSeriesApi) strCreator.format(directorLine) else strDirector.format(directorLine)
             }
-            !writerLine.isNullOrBlank() -> "Writer: $writerLine"
+            !writerLine.isNullOrBlank() -> strWriter.format(writerLine)
             else -> null
         }
     }
@@ -190,7 +195,7 @@ fun HeroContentSection(
                 exit = fadeOut(tween(300))
             ) {
                 Text(
-                    text = "Press back to exit trailer",
+                    text = stringResource(R.string.hero_press_back_trailer),
                     style = MaterialTheme.typography.labelMedium,
                     color = NuvioColors.TextTertiary,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -210,8 +215,8 @@ fun HeroContentSection(
                     ) {
                         PlayButton(
                             text = nextToWatch?.displayText ?: when {
-                                nextEpisode != null -> "Play S${nextEpisode.season}, E${nextEpisode.episode}"
-                                else -> "Play"
+                                nextEpisode != null -> stringResource(R.string.hero_play_episode, nextEpisode.season ?: 0, nextEpisode.episode ?: 0)
+                                else -> stringResource(R.string.hero_play)
                             },
                             onClick = onPlayClick,
                             focusRequester = playButtonFocusRequester,
@@ -226,7 +231,7 @@ fun HeroContentSection(
                             } else {
                                 null
                             },
-                            contentDescription = if (isInLibrary) "Remove from library" else "Add to library",
+                            contentDescription = if (isInLibrary) stringResource(R.string.hero_remove_from_library) else stringResource(R.string.hero_add_to_library),
                             onClick = onToggleLibrary,
                             onLongPress = onLibraryLongPress
                         )
@@ -239,9 +244,9 @@ fun HeroContentSection(
                                     Icons.Default.VisibilityOff
                                 },
                                 contentDescription = if (isMovieWatched) {
-                                    "Mark as unwatched"
+                                    stringResource(R.string.hero_mark_unwatched)
                                 } else {
-                                    "Mark as watched"
+                                    stringResource(R.string.hero_mark_watched)
                                 },
                                 onClick = onToggleMovieWatched,
                                 enabled = !isMovieWatchedPending,
@@ -254,7 +259,7 @@ fun HeroContentSection(
                         if (trailerAvailable) {
                             ActionIconButtonPainter(
                                 painter = trailerPainter,
-                                contentDescription = "Play trailer",
+                                contentDescription = stringResource(R.string.hero_play_trailer),
                                 onClick = onTrailerClick
                             )
                         }
@@ -382,7 +387,7 @@ private fun ActionIconButtonPainter(
             containerColor = NuvioColors.BackgroundCard,
             focusedContainerColor = NuvioColors.Secondary,
             contentColor = NuvioColors.TextPrimary,
-            focusedContentColor = NuvioColors.OnPrimary
+            focusedContentColor = NuvioColors.OnSecondary
         ),
         border = IconButtonDefaults.border(
             focusedBorder = Border(
@@ -461,7 +466,7 @@ private fun ActionIconButton(
             containerColor = if (selected) selectedContainerColor else NuvioColors.BackgroundCard,
             focusedContainerColor = NuvioColors.Secondary,
             contentColor = if (selected) selectedContentColor else NuvioColors.TextPrimary,
-            focusedContentColor = NuvioColors.OnPrimary
+            focusedContentColor = NuvioColors.OnSecondary
         ),
         border = IconButtonDefaults.border(
             focusedBorder = Border(
@@ -560,7 +565,7 @@ private fun MetaInfoRow(
                 ) {
                     AsyncImage(
                         model = imdbModel,
-                        contentDescription = "Rating",
+                        contentDescription = stringResource(R.string.cd_rating),
                         modifier = Modifier.size(30.dp),
                         contentScale = ContentScale.Fit
                     )

@@ -4,18 +4,24 @@ import java.net.URLEncoder
 
 sealed class Screen(val route: String) {
     data object Home : Screen("home")
-    data object Detail : Screen("detail/{itemId}/{itemType}?addonBaseUrl={addonBaseUrl}") {
+    data object Detail : Screen("detail/{itemId}/{itemType}?addonBaseUrl={addonBaseUrl}&returnFocusSeason={returnFocusSeason}&returnFocusEpisode={returnFocusEpisode}") {
         private fun encode(value: String): String =
             URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 
-        fun createRoute(itemId: String, itemType: String, addonBaseUrl: String? = null): String {
+        fun createRoute(
+            itemId: String,
+            itemType: String,
+            addonBaseUrl: String? = null,
+            returnFocusSeason: Int? = null,
+            returnFocusEpisode: Int? = null
+        ): String {
             val encodedItemId = encode(itemId)
             val encodedItemType = encode(itemType)
             val encodedAddon = addonBaseUrl?.let { encode(it) } ?: ""
-            return "detail/$encodedItemId/$encodedItemType?addonBaseUrl=$encodedAddon"
+            return "detail/$encodedItemId/$encodedItemType?addonBaseUrl=$encodedAddon&returnFocusSeason=${returnFocusSeason ?: ""}&returnFocusEpisode=${returnFocusEpisode ?: ""}"
         }
     }
-    data object Stream : Screen("stream/{videoId}/{contentType}/{title}?poster={poster}&backdrop={backdrop}&logo={logo}&season={season}&episode={episode}&episodeName={episodeName}&genres={genres}&year={year}&contentId={contentId}&contentName={contentName}&runtime={runtime}&manualSelection={manualSelection}") {
+    data object Stream : Screen("stream/{videoId}/{contentType}/{title}?poster={poster}&backdrop={backdrop}&logo={logo}&season={season}&episode={episode}&episodeName={episodeName}&genres={genres}&year={year}&contentId={contentId}&contentName={contentName}&runtime={runtime}&manualSelection={manualSelection}&returnToDetailOnBack={returnToDetailOnBack}") {
         private fun encode(value: String): String =
             URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 
@@ -34,7 +40,8 @@ sealed class Screen(val route: String) {
             contentId: String? = null,
             contentName: String? = null,
             runtime: Int? = null,
-            manualSelection: Boolean = false
+            manualSelection: Boolean = false,
+            returnToDetailOnBack: Boolean = false
         ): String {
             val encodedVideoId = encode(videoId)
             val encodedContentTypePath = encode(contentType)
@@ -47,10 +54,10 @@ sealed class Screen(val route: String) {
             val encodedYear = year?.let { encode(it) } ?: ""
             val encodedContentId = contentId?.let { encode(it) } ?: ""
             val encodedContentName = contentName?.let { encode(it) } ?: ""
-            return "stream/$encodedVideoId/$encodedContentTypePath/$encodedTitle?poster=$encodedPoster&backdrop=$encodedBackdrop&logo=$encodedLogo&season=${season ?: ""}&episode=${episode ?: ""}&episodeName=$encodedEpisodeName&genres=$encodedGenres&year=$encodedYear&contentId=$encodedContentId&contentName=$encodedContentName&runtime=${runtime ?: ""}&manualSelection=$manualSelection"
+            return "stream/$encodedVideoId/$encodedContentTypePath/$encodedTitle?poster=$encodedPoster&backdrop=$encodedBackdrop&logo=$encodedLogo&season=${season ?: ""}&episode=${episode ?: ""}&episodeName=$encodedEpisodeName&genres=$encodedGenres&year=$encodedYear&contentId=$encodedContentId&contentName=$encodedContentName&runtime=${runtime ?: ""}&manualSelection=$manualSelection&returnToDetailOnBack=$returnToDetailOnBack"
         }
     }
-    data object Player : Screen("player/{streamUrl}/{title}?streamName={streamName}&year={year}&headers={headers}&contentId={contentId}&contentType={contentType}&contentName={contentName}&poster={poster}&backdrop={backdrop}&logo={logo}&videoId={videoId}&season={season}&episode={episode}&episodeTitle={episodeTitle}&rememberedAudioLanguage={rememberedAudioLanguage}&rememberedAudioName={rememberedAudioName}&autoPlayNav={autoPlayNav}") {
+    data object Player : Screen("player/{streamUrl}/{title}?streamName={streamName}&year={year}&headers={headers}&contentId={contentId}&contentType={contentType}&contentName={contentName}&poster={poster}&backdrop={backdrop}&logo={logo}&videoId={videoId}&season={season}&episode={episode}&episodeTitle={episodeTitle}&bingeGroup={bingeGroup}&rememberedAudioLanguage={rememberedAudioLanguage}&rememberedAudioName={rememberedAudioName}&autoPlayNav={autoPlayNav}&returnToDetailOnBack={returnToDetailOnBack}") {
         private fun encode(value: String): String =
             URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 
@@ -70,9 +77,11 @@ sealed class Screen(val route: String) {
             season: Int? = null,
             episode: Int? = null,
             episodeTitle: String? = null,
+            bingeGroup: String? = null,
             rememberedAudioLanguage: String? = null,
             rememberedAudioName: String? = null,
-            autoPlayNav: Boolean = false
+            autoPlayNav: Boolean = false,
+            returnToDetailOnBack: Boolean = false
         ): String {
             val encodedUrl = encode(streamUrl)
             val encodedTitle = encode(title)
@@ -89,12 +98,14 @@ sealed class Screen(val route: String) {
             val encodedLogo = logo?.let { encode(it) } ?: ""
             val encodedVideoId = videoId?.let { encode(it) } ?: ""
             val encodedEpisodeTitle = episodeTitle?.let { encode(it) } ?: ""
+            val encodedBingeGroup = bingeGroup?.let { encode(it) } ?: ""
             val encodedRememberedAudioLanguage = rememberedAudioLanguage?.let { encode(it) } ?: ""
             val encodedRememberedAudioName = rememberedAudioName?.let { encode(it) } ?: ""
-            return "player/$encodedUrl/$encodedTitle?streamName=$encodedStreamName&year=$encodedYear&headers=$encodedHeaders&contentId=$encodedContentId&contentType=$encodedContentType&contentName=$encodedContentName&poster=$encodedPoster&backdrop=$encodedBackdrop&logo=$encodedLogo&videoId=$encodedVideoId&season=${season ?: ""}&episode=${episode ?: ""}&episodeTitle=$encodedEpisodeTitle&rememberedAudioLanguage=$encodedRememberedAudioLanguage&rememberedAudioName=$encodedRememberedAudioName&autoPlayNav=$autoPlayNav"
+            return "player/$encodedUrl/$encodedTitle?streamName=$encodedStreamName&year=$encodedYear&headers=$encodedHeaders&contentId=$encodedContentId&contentType=$encodedContentType&contentName=$encodedContentName&poster=$encodedPoster&backdrop=$encodedBackdrop&logo=$encodedLogo&videoId=$encodedVideoId&season=${season ?: ""}&episode=${episode ?: ""}&episodeTitle=$encodedEpisodeTitle&bingeGroup=$encodedBingeGroup&rememberedAudioLanguage=$encodedRememberedAudioLanguage&rememberedAudioName=$encodedRememberedAudioName&autoPlayNav=$autoPlayNav&returnToDetailOnBack=$returnToDetailOnBack"
         }
     }
     data object Search : Screen("search")
+    data object Discover : Screen("discover")
     data object Library : Screen("library")
     data object Settings : Screen("settings")
     data object Trakt : Screen("trakt")

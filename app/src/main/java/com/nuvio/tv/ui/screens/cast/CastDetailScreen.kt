@@ -65,6 +65,8 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -200,7 +202,7 @@ private fun CastDetailContent(
 
                 if (allCredits.isNotEmpty()) {
                     SectionHeader(
-                        title = "Filmography",
+                        title = stringResource(R.string.cast_detail_filmography),
                         count = allCredits.size
                     )
                     FilmographyRow(
@@ -595,7 +597,7 @@ private fun CastDetailError(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "Something went wrong",
+                text = stringResource(R.string.cast_detail_error),
                 style = MaterialTheme.typography.titleLarge,
                 color = NuvioColors.TextPrimary
             )
@@ -610,12 +612,12 @@ private fun CastDetailError(
                 onClick = onRetry,
                 colors = ButtonDefaults.colors(
                     containerColor = NuvioColors.Secondary,
-                    contentColor = Color.White,
+                    contentColor = NuvioColors.OnSecondary,
                     focusedContainerColor = NuvioColors.SecondaryVariant,
-                    focusedContentColor = Color.White
+                    focusedContentColor = NuvioColors.OnSecondaryVariant
                 )
             ) {
-                Text("Retry")
+                Text(stringResource(R.string.cast_detail_retry))
             }
         }
     }

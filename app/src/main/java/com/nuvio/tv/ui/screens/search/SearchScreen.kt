@@ -1,7 +1,12 @@
 package com.nuvio.tv.ui.screens.search
 
+import android.app.Activity
+import android.content.Intent
 import android.view.KeyEvent
+import android.speech.RecognizerIntent
+import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,13 +17,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -37,12 +48,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -57,26 +72,95 @@ import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.Locale
 import kotlin.math.roundToInt
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel(),
     onNavigateToDetail: (String, String, String) -> Unit,
-    onNavigateToSeeAll: (catalogId: String, addonId: String, type: String) -> Unit = { _, _, _ -> }
+    onNavigateToSeeAll: (catalogId: String, addonId: String, type: String) -> Unit = { _, _, _ -> },
+    onOpenDiscover: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val voiceFocusRequester = remember { FocusRequester() }
     val searchFocusRequester = remember { FocusRequester() }
     val discoverFirstItemFocusRequester = remember { FocusRequester() }
     var isSearchFieldAttached by remember { mutableStateOf(false) }
     var focusResults by remember { mutableStateOf(false) }
+    var pendingFocusMoveToResultsQuery by remember { mutableStateOf<String?>(null) }
+    var pendingFocusMoveSawSearching by remember { mutableStateOf(false) }
+    var pendingFocusMoveHadExistingSearchRows by remember { mutableStateOf(false) }
+    var pendingVoiceSearchResume by remember { mutableStateOf(false) }
     var discoverFocusedItemIndex by rememberSaveable { mutableStateOf(0) }
     var restoreDiscoverFocus by rememberSaveable { mutableStateOf(false) }
     var pendingDiscoverRestoreOnResume by rememberSaveable { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
+    val onVoiceQueryResultState = rememberUpdatedState<(String) -> Unit> { recognized ->
+        if (recognized.isNotBlank()) {
+            viewModel.onEvent(SearchEvent.QueryChanged(recognized))
+            viewModel.onEvent(SearchEvent.SubmitSearch)
+            focusResults = false
+            pendingFocusMoveToResultsQuery = recognized
+            pendingFocusMoveSawSearching = false
+            pendingFocusMoveHadExistingSearchRows =
+                uiState.submittedQuery.trim().length >= 2 && uiState.catalogRows.any { it.items.isNotEmpty() }
+        } else {
+            Toast.makeText(context, "No speech detected. Try again.", Toast.LENGTH_SHORT).show()
+        }
+    }
+    val voiceLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        pendingVoiceSearchResume = false
+        if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
+        val recognized = result.data
+            ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            ?.firstOrNull()
+            .orEmpty()
+            .trim()
+        onVoiceQueryResultState.value(recognized)
+    }
+    val voiceIntentAction = remember(context) {
+        listOf(
+            RecognizerIntent.ACTION_RECOGNIZE_SPEECH,
+            RecognizerIntent.ACTION_VOICE_SEARCH_HANDS_FREE
+        ).firstOrNull { action ->
+            Intent(action).resolveActivity(context.packageManager) != null
+        }
+    }
+    val isVoiceSearchAvailable = voiceIntentAction != null
+    val topInputFocusRequester = remember(isVoiceSearchAvailable) {
+        if (isVoiceSearchAvailable) voiceFocusRequester else searchFocusRequester
+    }
+    val launchVoiceSearch: () -> Unit = {
+        val action = voiceIntentAction
+        if (action == null) {
+            Toast.makeText(context, "Voice search is unavailable on this device.", Toast.LENGTH_SHORT).show()
+        } else {
+            val intent = Intent(action).apply {
+                putExtra(
+                    RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                )
+                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
+                putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to search")
+            }
+            pendingVoiceSearchResume = true
+            runCatching { voiceLauncher.launch(intent) }.onFailure {
+                pendingVoiceSearchResume = false
+                Toast.makeText(context, "Voice search is unavailable on this device.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     val posterCardStyle = remember(uiState.posterCardWidthDp, uiState.posterCardCornerRadiusDp) {
         val computedHeightDp = (uiState.posterCardWidthDp * 1.5f).roundToInt()
@@ -103,15 +187,7 @@ fun SearchScreen(
         trimmedSubmittedQuery,
         uiState.catalogRows
     ) {
-        if (isDiscoverMode) {
-            uiState.discoverResults.isNotEmpty()
-        } else {
-            trimmedSubmittedQuery.length >= 2 && uiState.catalogRows.any { it.items.isNotEmpty() }
-        }
-    }
-
-    LaunchedEffect(trimmedQuery) {
-        focusResults = false
+        if (isDiscoverMode) false else trimmedSubmittedQuery.length >= 2 && uiState.catalogRows.any { it.items.isNotEmpty() }
     }
 
     LaunchedEffect(focusResults, isDiscoverMode, uiState.discoverResults.size) {
@@ -119,25 +195,73 @@ fun SearchScreen(
             delay(100)
             runCatching { discoverFirstItemFocusRequester.requestFocus() }
             focusResults = false
+            pendingFocusMoveToResultsQuery = null
+            pendingFocusMoveSawSearching = false
+            pendingFocusMoveHadExistingSearchRows = false
         }
+    }
+
+    LaunchedEffect(
+        pendingFocusMoveToResultsQuery,
+        pendingFocusMoveSawSearching,
+        pendingFocusMoveHadExistingSearchRows,
+        uiState.isSearching,
+        uiState.submittedQuery,
+        canMoveToResults,
+        isDiscoverMode
+    ) {
+        val pendingQuery = pendingFocusMoveToResultsQuery ?: return@LaunchedEffect
+        val currentSubmittedQuery = uiState.submittedQuery.trim()
+        if (currentSubmittedQuery != pendingQuery) return@LaunchedEffect
+
+        if (uiState.isSearching) {
+            pendingFocusMoveSawSearching = true
+            return@LaunchedEffect
+        }
+
+        val shouldRequireSeenSearching = pendingFocusMoveHadExistingSearchRows
+        if ((shouldRequireSeenSearching && !pendingFocusMoveSawSearching) || !canMoveToResults) {
+            return@LaunchedEffect
+        }
+
+        if (isDiscoverMode) {
+            focusResults = true
+        } else {
+            // Use explicit first-item focus for deterministic landing on row 1 / column 1.
+            delay(80)
+            focusResults = true
+        }
+        pendingFocusMoveToResultsQuery = null
+        pendingFocusMoveSawSearching = false
+        pendingFocusMoveHadExistingSearchRows = false
     }
 
     LaunchedEffect(Unit) {
         repeat(2) { withFrameNanos { } }
-        runCatching { searchFocusRequester.requestFocus() }
+        runCatching { topInputFocusRequester.requestFocus() }
     }
 
     val latestPendingDiscoverRestore by rememberUpdatedState(pendingDiscoverRestoreOnResume)
+    val latestShouldKeepSearchFocus by rememberUpdatedState(
+        focusResults || uiState.isSearching || pendingVoiceSearchResume
+    )
+    val latestVoiceSearchAvailable by rememberUpdatedState(isVoiceSearchAvailable)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 if (latestPendingDiscoverRestore) {
                     restoreDiscoverFocus = true
                     pendingDiscoverRestoreOnResume = false
-                } else {
+                } else if (!latestShouldKeepSearchFocus) {
                     coroutineScope.launch {
                         repeat(2) { withFrameNanos { } }
-                        runCatching { searchFocusRequester.requestFocus() }
+                        runCatching {
+                            if (latestVoiceSearchAvailable) {
+                                voiceFocusRequester.requestFocus()
+                            } else {
+                                searchFocusRequester.requestFocus()
+                            }
+                        }
                     }
                 }
             }
@@ -163,37 +287,52 @@ fun SearchScreen(
                 SearchInputField(
                     query = uiState.query,
                     canMoveToResults = canMoveToResults,
+                    voiceFocusRequester = if (isVoiceSearchAvailable) voiceFocusRequester else null,
                     searchFocusRequester = searchFocusRequester,
                     onAttached = { isSearchFieldAttached = true },
-                    onQueryChanged = { viewModel.onEvent(SearchEvent.QueryChanged(it)) },
-                    onSubmit = { viewModel.onEvent(SearchEvent.SubmitSearch) },
+                    onQueryChanged = {
+                        focusResults = false
+                        pendingFocusMoveToResultsQuery = null
+                        pendingFocusMoveSawSearching = false
+                        pendingFocusMoveHadExistingSearchRows = false
+                        viewModel.onEvent(SearchEvent.QueryChanged(it))
+                    },
+                    onSubmit = {
+                        val submittedQuery = uiState.query.trim()
+                        viewModel.onEvent(SearchEvent.SubmitSearch)
+                        focusResults = false
+                        if (submittedQuery.length >= 2) {
+                            pendingFocusMoveToResultsQuery = submittedQuery
+                            pendingFocusMoveSawSearching = false
+                            pendingFocusMoveHadExistingSearchRows =
+                                trimmedSubmittedQuery.length >= 2 && uiState.catalogRows.any { row -> row.items.isNotEmpty() }
+                        } else {
+                            pendingFocusMoveToResultsQuery = null
+                            pendingFocusMoveSawSearching = false
+                            pendingFocusMoveHadExistingSearchRows = false
+                        }
+                    },
+                    showVoiceSearch = isVoiceSearchAvailable,
+                    onVoiceSearch = launchVoiceSearch,
                     onMoveToResults = { focusResults = true },
+                    onOpenDiscover = onOpenDiscover,
                     keyboardController = keyboardController
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                DiscoverSection(
-                    uiState = uiState,
-                    posterCardStyle = posterCardStyle,
-                    focusResults = focusResults,
-                    firstItemFocusRequester = discoverFirstItemFocusRequester,
-                    focusedItemIndex = discoverFocusedItemIndex,
-                    shouldRestoreFocusedItem = restoreDiscoverFocus,
-                    onRestoreFocusedItemHandled = { restoreDiscoverFocus = false },
-                    onNavigateToDetail = { id, type, addonBaseUrl ->
-                        pendingDiscoverRestoreOnResume = true
-                        onNavigateToDetail(id, type, addonBaseUrl)
-                    },
-                    onDiscoverItemFocused = { index ->
-                        discoverFocusedItemIndex = index
-                    },
-                    onSelectType = { viewModel.onEvent(SearchEvent.SelectDiscoverType(it)) },
-                    onSelectCatalog = { viewModel.onEvent(SearchEvent.SelectDiscoverCatalog(it)) },
-                    onSelectGenre = { viewModel.onEvent(SearchEvent.SelectDiscoverGenre(it)) },
-                    onLoadMore = { viewModel.onEvent(SearchEvent.LoadNextDiscoverResults) },
-                    modifier = Modifier.weight(1f)
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    EmptyScreenState(
+                        title = "Start Searching",
+                        subtitle = "Enter at least 2 characters",
+                        icon = Icons.Default.Search
+                    )
+                }
             }
         } else {
             LazyColumn(
@@ -205,11 +344,37 @@ fun SearchScreen(
                     SearchInputField(
                         query = uiState.query,
                         canMoveToResults = canMoveToResults,
+                        voiceFocusRequester = if (isVoiceSearchAvailable) voiceFocusRequester else null,
                         searchFocusRequester = searchFocusRequester,
                         onAttached = { isSearchFieldAttached = true },
-                        onQueryChanged = { viewModel.onEvent(SearchEvent.QueryChanged(it)) },
-                        onSubmit = { viewModel.onEvent(SearchEvent.SubmitSearch) },
-                        onMoveToResults = { focusResults = true },
+                        onQueryChanged = {
+                            focusResults = false
+                            pendingFocusMoveToResultsQuery = null
+                            pendingFocusMoveSawSearching = false
+                            pendingFocusMoveHadExistingSearchRows = false
+                            viewModel.onEvent(SearchEvent.QueryChanged(it))
+                        },
+                        onSubmit = {
+                            val submittedQuery = uiState.query.trim()
+                            viewModel.onEvent(SearchEvent.SubmitSearch)
+                            focusResults = false
+                            if (submittedQuery.length >= 2) {
+                                pendingFocusMoveToResultsQuery = submittedQuery
+                                pendingFocusMoveSawSearching = false
+                                pendingFocusMoveHadExistingSearchRows =
+                                    trimmedSubmittedQuery.length >= 2 && uiState.catalogRows.any { row -> row.items.isNotEmpty() }
+                            } else {
+                                pendingFocusMoveToResultsQuery = null
+                                pendingFocusMoveSawSearching = false
+                                pendingFocusMoveHadExistingSearchRows = false
+                            }
+                        },
+                        showVoiceSearch = isVoiceSearchAvailable,
+                        onVoiceSearch = launchVoiceSearch,
+                        onMoveToResults = {
+                            focusResults = true
+                        },
+                        onOpenDiscover = onOpenDiscover,
                         keyboardController = keyboardController
                     )
                 }
@@ -217,7 +382,7 @@ fun SearchScreen(
                 if (trimmedSubmittedQuery.length < 2 || hasPendingUnsubmittedQuery) {
                     item {
                         Text(
-                            text = "Press Done on the keyboard to search",
+                            text = stringResource(R.string.search_keyboard_hint),
                             style = androidx.tv.material3.MaterialTheme.typography.bodySmall,
                             color = NuvioColors.TextSecondary,
                             modifier = Modifier
@@ -295,7 +460,7 @@ fun SearchScreen(
                                         focusResults = false
                                     }
                                 },
-                                upFocusRequester = if (index == 0 && isSearchFieldAttached) searchFocusRequester else null,
+                                upFocusRequester = if (index == 0 && isSearchFieldAttached) topInputFocusRequester else null,
                                 onItemClick = { id, type, addonBaseUrl ->
                                     onNavigateToDetail(id, type, addonBaseUrl)
                                 },
@@ -319,63 +484,135 @@ fun SearchScreen(
 private fun SearchInputField(
     query: String,
     canMoveToResults: Boolean,
+    voiceFocusRequester: FocusRequester?,
     searchFocusRequester: FocusRequester,
     onAttached: () -> Unit,
     onQueryChanged: (String) -> Unit,
     onSubmit: () -> Unit,
+    showVoiceSearch: Boolean,
+    onVoiceSearch: () -> Unit,
     onMoveToResults: () -> Unit,
+    onOpenDiscover: () -> Unit,
     keyboardController: androidx.compose.ui.platform.SoftwareKeyboardController?
 ) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChanged,
+    var isDiscoverButtonFocused by remember { mutableStateOf(false) }
+    var isVoiceButtonFocused by remember { mutableStateOf(false) }
+
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 48.dp)
-            .onGloballyPositioned { onAttached() }
-            .focusRequester(searchFocusRequester)
-            .onPreviewKeyEvent { keyEvent ->
-                if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+            .onGloballyPositioned { onAttached() },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(
+            onClick = onOpenDiscover,
+            modifier = Modifier
+                .onFocusChanged { isDiscoverButtonFocused = it.isFocused }
+                .size(56.dp)
+                .border(
+                    width = if (isDiscoverButtonFocused) 2.dp else 1.dp,
+                    color = if (isDiscoverButtonFocused) NuvioColors.FocusRing else NuvioColors.Border,
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .background(
+                    color = NuvioColors.BackgroundCard,
+                    shape = RoundedCornerShape(12.dp)
+                )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Explore,
+                contentDescription = "Open discover",
+                tint = NuvioColors.TextPrimary
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        if (showVoiceSearch) {
+            IconButton(
+                onClick = onVoiceSearch,
+                modifier = Modifier
+                    .then(
+                        if (voiceFocusRequester != null) {
+                            Modifier.focusRequester(voiceFocusRequester)
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .onFocusChanged { isVoiceButtonFocused = it.isFocused }
+                    .size(56.dp)
+                    .border(
+                        width = if (isVoiceButtonFocused) 2.dp else 1.dp,
+                        color = if (isVoiceButtonFocused) NuvioColors.FocusRing else NuvioColors.Border,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .background(
+                        color = NuvioColors.BackgroundCard,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = "Voice search",
+                    tint = NuvioColors.TextPrimary
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+        }
+
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChanged,
+            modifier = Modifier
+                .weight(1f)
+                .focusRequester(searchFocusRequester)
+                .onPreviewKeyEvent { keyEvent ->
                     when (keyEvent.nativeKeyEvent.keyCode) {
                         KeyEvent.KEYCODE_ENTER,
                         KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                            onSubmit()
+                            if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                                onSubmit()
+                            }
                             return@onPreviewKeyEvent true
                         }
 
                         KeyEvent.KEYCODE_DPAD_DOWN -> {
                             if (canMoveToResults) {
-                                onMoveToResults()
+                                if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                                    onMoveToResults()
+                                }
                                 return@onPreviewKeyEvent true
                             }
                         }
                     }
+                    false
+                },
+            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    onSubmit()
+                    keyboardController?.hide()
                 }
-                false
+            ),
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.search_placeholder),
+                    color = NuvioColors.TextTertiary
+                )
             },
-        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(
-            onDone = {
-                onSubmit()
-                keyboardController?.hide()
-            }
-        ),
-        singleLine = true,
-        shape = RoundedCornerShape(12.dp),
-        placeholder = {
-            Text(
-                text = "Search movies & series",
-                color = NuvioColors.TextTertiary
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = NuvioColors.BackgroundCard,
+                unfocusedContainerColor = NuvioColors.BackgroundCard,
+                focusedIndicatorColor = NuvioColors.FocusRing,
+                unfocusedIndicatorColor = NuvioColors.Border,
+                focusedTextColor = NuvioColors.TextPrimary,
+                unfocusedTextColor = NuvioColors.TextPrimary,
+                cursorColor = NuvioColors.FocusRing
             )
-        },
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = NuvioColors.BackgroundCard,
-            unfocusedContainerColor = NuvioColors.BackgroundCard,
-            focusedIndicatorColor = NuvioColors.FocusRing,
-            unfocusedIndicatorColor = NuvioColors.Border,
-            focusedTextColor = NuvioColors.TextPrimary,
-            unfocusedTextColor = NuvioColors.TextPrimary,
-            cursorColor = NuvioColors.FocusRing
         )
-    )
+    }
 }

@@ -39,6 +39,8 @@ import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @Composable
 internal fun StreamSourcesSidePanel(
@@ -75,19 +77,19 @@ internal fun StreamSourcesSidePanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Sources",
+                    text = stringResource(R.string.sources_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     DialogButton(
-                        text = "Reload",
+                        text = stringResource(R.string.sources_reload),
                         onClick = onReload,
                         isPrimary = false
                     )
                     DialogButton(
-                        text = "Close",
+                        text = stringResource(R.string.sources_close),
                         onClick = onClose,
                         isPrimary = false
                     )
@@ -152,7 +154,7 @@ internal fun StreamSourcesSidePanel(
 
                 uiState.sourceFilteredStreams.isEmpty() -> {
                     Text(
-                        text = "No streams found",
+                        text = stringResource(R.string.sources_no_streams),
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White.copy(alpha = 0.7f)
                     )
@@ -161,7 +163,12 @@ internal fun StreamSourcesSidePanel(
                 else -> {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(
+                            start = 8.dp,
+                            top = 14.dp,
+                            end = 8.dp,
+                            bottom = 8.dp
+                        ),
                         modifier = Modifier.fillMaxHeight()
                     ) {
                         items(uiState.sourceFilteredStreams) { stream ->

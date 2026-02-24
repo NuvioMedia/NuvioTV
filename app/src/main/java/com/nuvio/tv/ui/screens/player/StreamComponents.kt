@@ -44,6 +44,8 @@ import androidx.compose.ui.platform.LocalContext
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @Composable
 internal fun StreamItem(
@@ -62,7 +64,7 @@ internal fun StreamItem(
             focusedContainerColor = NuvioColors.BackgroundElevated
         ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp)),
-        scale = CardDefaults.scale(focusedScale = 1.08f)
+        scale = CardDefaults.scale(focusedScale = 1.04f)
     ) {
         Row(
             modifier = Modifier
@@ -95,13 +97,13 @@ internal fun StreamItem(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     if (stream.isTorrent()) {
-                        StreamTypeChip(text = "Torrent", color = NuvioColors.Secondary)
+                        StreamTypeChip(text = stringResource(R.string.stream_type_torrent), color = NuvioColors.Secondary)
                     }
                     if (stream.isYouTube()) {
-                        StreamTypeChip(text = "YouTube", color = Color(0xFFFF0000))
+                        StreamTypeChip(text = stringResource(R.string.stream_type_youtube), color = Color(0xFFFF0000))
                     }
                     if (stream.isExternal()) {
-                        StreamTypeChip(text = "External", color = NuvioColors.Primary)
+                        StreamTypeChip(text = stringResource(R.string.stream_type_external), color = NuvioColors.Primary)
                     }
                 }
             }
@@ -199,12 +201,12 @@ internal fun AddonChip(
         colors = FilterChipDefaults.colors(
             containerColor = NuvioColors.BackgroundCard,
             focusedContainerColor = NuvioColors.Secondary,
-            selectedContainerColor = NuvioColors.Secondary.copy(alpha = 0.3f),
+            selectedContainerColor = NuvioColors.Secondary,
             focusedSelectedContainerColor = NuvioColors.Secondary,
             contentColor = NuvioColors.TextSecondary,
-            focusedContentColor = NuvioColors.OnPrimary,
-            selectedContentColor = Color.White,
-            focusedSelectedContentColor = NuvioColors.OnPrimary
+            focusedContentColor = NuvioColors.OnSecondary,
+            selectedContentColor = NuvioColors.OnSecondary,
+            focusedSelectedContentColor = NuvioColors.OnSecondary
         ),
         border = FilterChipDefaults.border(
             border = Border(
@@ -228,8 +230,7 @@ internal fun AddonChip(
     ) {
         Text(
             text = name,
-            style = MaterialTheme.typography.labelLarge,
-            color = Color.White
+            style = MaterialTheme.typography.labelLarge
         )
     }
 }

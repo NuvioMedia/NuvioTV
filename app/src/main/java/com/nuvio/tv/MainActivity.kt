@@ -1,10 +1,13 @@
 package com.nuvio.tv
 
 import android.os.Bundle
+import android.content.Context
+import android.content.res.Configuration
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
+import java.util.Locale
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDp
@@ -38,6 +41,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -77,6 +81,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.tv.material3.DrawerValue
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
@@ -115,6 +120,8 @@ import kotlinx.coroutines.launch
 import coil.compose.rememberAsyncImagePainter
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 data class DrawerItem(
     val route: String,
@@ -124,7 +131,7 @@ data class DrawerItem(
 )
 
 private data class MainUiPrefs(
-    val theme: AppTheme = AppTheme.OCEAN,
+    val theme: AppTheme = AppTheme.WHITE,
     val hasChosenLayout: Boolean? = null,
     val sidebarCollapsed: Boolean = false,
     val modernSidebarEnabled: Boolean = false,
@@ -159,7 +166,22 @@ class MainActivity : ComponentActivity() {
     lateinit var appOnboardingDataStore: AppOnboardingDataStore
 
     @OptIn(ExperimentalTvMaterial3Api::class)
+    override fun attachBaseContext(newBase: Context) {
+        val tag = newBase.getSharedPreferences("app_locale", Context.MODE_PRIVATE)
+            .getString("locale_tag", null)
+        if (!tag.isNullOrEmpty()) {
+            val locale = Locale.forLanguageTag(tag)
+            Locale.setDefault(locale)
+            val config = Configuration(newBase.resources.configuration)
+            config.setLocale(locale)
+            super.attachBaseContext(newBase.createConfigurationContext(config))
+        } else {
+            super.attachBaseContext(newBase)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         setContent {
             var hasSelectedProfileThisSession by remember { mutableStateOf(false) }
@@ -311,31 +333,42 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    val drawerItems = remember {
+                    val strNavHome = stringResource(R.string.nav_home)
+                    val strNavSearch = stringResource(R.string.nav_search)
+                    val strNavLibrary = stringResource(R.string.nav_library)
+                    val strNavAddons = stringResource(R.string.nav_addons)
+                    val strNavSettings = stringResource(R.string.nav_settings)
+                    val drawerItems = remember(
+                        strNavHome,
+                        strNavSearch,
+                        strNavLibrary,
+                        strNavAddons,
+                        strNavSettings
+                    ) {
                         listOf(
                             DrawerItem(
                                 route = Screen.Home.route,
-                                label = "Home",
+                                label = strNavHome,
                                 icon = Icons.Default.Home
                             ),
                             DrawerItem(
                                 route = Screen.Search.route,
-                                label = "Search",
+                                label = strNavSearch,
                                 iconRes = R.raw.sidebar_search
                             ),
                             DrawerItem(
                                 route = Screen.Library.route,
-                                label = "Library",
+                                label = strNavLibrary,
                                 iconRes = R.raw.sidebar_library
                             ),
                             DrawerItem(
                                 route = Screen.AddonManager.route,
-                                label = "Addons",
+                                label = strNavAddons,
                                 iconRes = R.raw.sidebar_plugin
                             ),
                             DrawerItem(
                                 route = Screen.Settings.route,
-                                label = "Settings",
+                                label = strNavSettings,
                                 iconRes = R.raw.sidebar_settings
                             )
                         )
@@ -678,6 +711,7 @@ private fun LegacySidebarButton(
                 text = label,
                 color = contentColor,
                 maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 textAlign = TextAlign.Start,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
@@ -1086,7 +1120,7 @@ private fun CollapsedSidebarPill(
         if (!iconOnly) {
             Image(
                 painter = painterResource(id = R.drawable.ic_chevron_compact_left),
-                contentDescription = "Expand sidebar",
+                contentDescription = stringResource(R.string.cd_expand_sidebar),
                 modifier = Modifier
                     .width(8.5.dp)
                     .height(16.dp)

@@ -44,6 +44,8 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyRow
@@ -150,10 +152,10 @@ fun SeasonTabs(
                 scale = CardDefaults.scale(focusedScale = 1.0f)
             ) {
                 Text(
-                    text = if (season == 0) "Specials" else "Season $season",
+                    text = if (season == 0) stringResource(R.string.episodes_specials) else stringResource(R.string.episodes_season, season),
                     style = MaterialTheme.typography.titleMedium,
                     color = when {
-                        isFocused -> NuvioColors.OnPrimary
+                        isFocused -> NuvioColors.OnSecondary
                         isSelected -> NuvioColors.TextPrimary
                         else -> NuvioTheme.extendedColors.textSecondary
                     },
@@ -300,11 +302,12 @@ private fun EpisodeCard(
         animationSpec = tween(durationMillis = 180),
         label = "watchedIconEndPadding"
     )
+    val strEpisode = stringResource(R.string.episodes_episode)
     val episodeCode = remember(episode.season, episode.episode) {
         if (episode.season != null && episode.episode != null) {
             "S${episode.season.toString().padStart(2, '0')}E${episode.episode.toString().padStart(2, '0')}"
         } else {
-            "Episode"
+            strEpisode
         }
     }
     val textMeasurer = rememberTextMeasurer()
@@ -534,7 +537,7 @@ private fun EpisodeCard(
                         )
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Watched",
+                            contentDescription = stringResource(R.string.episodes_cd_watched),
                             tint = androidx.compose.ui.graphics.Color.White,
                             modifier = Modifier.size(21.dp)
                         )
@@ -628,7 +631,7 @@ private fun EpisodeOptionsDialog(
     NuvioDialog(
         onDismiss = onDismiss,
         title = episode.title,
-        subtitle = "Episode actions"
+        subtitle = stringResource(R.string.episodes_dialog_subtitle)
     ) {
         Button(
             onClick = onToggleWatched,
@@ -641,7 +644,7 @@ private fun EpisodeOptionsDialog(
                 contentColor = NuvioColors.TextPrimary
             )
         ) {
-            Text(if (isWatched) "Mark as unwatched" else "Mark as watched")
+            Text(if (isWatched) stringResource(R.string.episodes_mark_unwatched) else stringResource(R.string.episodes_mark_watched))
         }
 
         Button(
@@ -652,7 +655,7 @@ private fun EpisodeOptionsDialog(
             ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(if (isSeasonFullyWatched) "Mark season as unwatched" else "Mark season as watched")
+            Text(if (isSeasonFullyWatched) stringResource(R.string.episodes_mark_season_unwatched) else stringResource(R.string.episodes_mark_season_watched))
         }
 
         if (hasPreviousEpisodes) {
@@ -664,7 +667,7 @@ private fun EpisodeOptionsDialog(
                 ),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Mark previous in this season as watched")
+                Text(stringResource(R.string.episodes_mark_previous_watched))
             }
         }
 
@@ -676,7 +679,7 @@ private fun EpisodeOptionsDialog(
             ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Play")
+            Text(stringResource(R.string.episodes_play))
         }
     }
 }
@@ -698,8 +701,8 @@ fun SeasonOptionsDialog(
 
     NuvioDialog(
         onDismiss = onDismiss,
-        title = if (season == 0) "Specials" else "Season $season",
-        subtitle = "Season actions"
+        title = if (season == 0) stringResource(R.string.episodes_specials) else stringResource(R.string.episodes_season, season),
+        subtitle = stringResource(R.string.episodes_season_actions)
     ) {
         Button(
             onClick = if (isFullyWatched) onMarkSeasonUnwatched else onMarkSeasonWatched,
@@ -711,7 +714,7 @@ fun SeasonOptionsDialog(
                 contentColor = NuvioColors.TextPrimary
             )
         ) {
-            Text(if (isFullyWatched) "Mark season as unwatched" else "Mark season as watched")
+            Text(if (isFullyWatched) stringResource(R.string.episodes_mark_season_unwatched) else stringResource(R.string.episodes_mark_season_watched))
         }
     }
 }

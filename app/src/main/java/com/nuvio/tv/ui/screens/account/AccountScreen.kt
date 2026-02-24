@@ -43,6 +43,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.ui.theme.NuvioColors
 
@@ -76,7 +78,7 @@ fun AccountScreen(
     ) {
         item {
             Text(
-                text = "Account",
+                text = stringResource(R.string.account_title),
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioColors.TextPrimary,
                 fontWeight = FontWeight.SemiBold
@@ -92,7 +94,7 @@ fun AccountScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Loading...",
+                            text = stringResource(R.string.account_loading),
                             style = MaterialTheme.typography.bodyLarge,
                             color = NuvioColors.TextSecondary
                         )
@@ -103,7 +105,7 @@ fun AccountScreen(
             is AuthState.SignedOut -> {
                 item {
                     Text(
-                        text = "Sign in to sync your library, watch progress, addons, and plugins across devices. Library and watch progress sync only when Trakt is not connected.",
+                        text = stringResource(R.string.account_sign_in_description),
                         style = MaterialTheme.typography.bodyLarge,
                         color = NuvioColors.TextSecondary
                     )
@@ -120,14 +122,14 @@ fun AccountScreen(
                     item {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Sync Code",
+                            text = stringResource(R.string.account_sync_code_title),
                             style = MaterialTheme.typography.titleLarge,
                             color = NuvioColors.TextPrimary,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Sync across devices without creating an account.",
+                            text = stringResource(R.string.account_sync_code_description),
                             style = MaterialTheme.typography.bodyMedium,
                             color = NuvioColors.TextSecondary
                         )
@@ -273,7 +275,7 @@ private fun LinkedDevicesSection(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Linked Devices (${devices.size})",
+                text = stringResource(R.string.account_linked_devices, devices.size),
                 style = MaterialTheme.typography.titleMedium,
                 color = NuvioColors.TextPrimary,
                 fontWeight = FontWeight.Medium
@@ -282,7 +284,7 @@ private fun LinkedDevicesSection(
         Spacer(modifier = Modifier.height(8.dp))
         if (devices.isEmpty()) {
             Text(
-                text = "No linked devices",
+                text = stringResource(R.string.account_no_linked_devices),
                 style = MaterialTheme.typography.bodyMedium,
                 color = NuvioColors.TextTertiary
             )
@@ -321,7 +323,7 @@ private fun LinkedDevicesSection(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Unlink", style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(R.string.account_unlink), style = MaterialTheme.typography.labelSmall)
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -353,7 +355,7 @@ private fun SignOutButton(onClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Sign Out",
+                text = stringResource(R.string.account_sign_out),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )

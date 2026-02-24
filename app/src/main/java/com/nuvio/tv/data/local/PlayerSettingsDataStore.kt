@@ -156,6 +156,7 @@ data class PlayerSettings(
     val streamAutoPlaySelectedPlugins: Set<String> = emptySet(),
     val streamAutoPlayRegex: String = "",
     val streamAutoPlayNextEpisodeEnabled: Boolean = false,
+    val streamAutoPlayPreferBingeGroupForNextEpisode: Boolean = false,
     val nextEpisodeThresholdMode: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE,
     val nextEpisodeThresholdPercent: Float = 98f,
     val nextEpisodeThresholdMinutesBeforeEnd: Float = 2f,
@@ -261,6 +262,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val streamAutoPlaySelectedPluginsKey = stringSetPreferencesKey("stream_auto_play_selected_plugins")
     private val streamAutoPlayRegexKey = stringPreferencesKey("stream_auto_play_regex")
     private val streamAutoPlayNextEpisodeEnabledKey = booleanPreferencesKey("stream_auto_play_next_episode_enabled")
+    private val streamAutoPlayPreferBingeGroupForNextEpisodeKey = booleanPreferencesKey("stream_auto_play_prefer_bingegroup_next_episode")
     private val nextEpisodeThresholdModeKey = stringPreferencesKey("next_episode_threshold_mode")
     private val nextEpisodeThresholdPercentLegacyKey = intPreferencesKey("next_episode_threshold_percent")
     private val nextEpisodeThresholdMinutesBeforeEndLegacyKey = intPreferencesKey("next_episode_threshold_minutes_before_end")
@@ -393,6 +395,8 @@ class PlayerSettingsDataStore @Inject constructor(
                 streamAutoPlaySelectedPlugins = prefs[streamAutoPlaySelectedPluginsKey] ?: emptySet(),
                 streamAutoPlayRegex = prefs[streamAutoPlayRegexKey] ?: "",
                 streamAutoPlayNextEpisodeEnabled = prefs[streamAutoPlayNextEpisodeEnabledKey] ?: false,
+                streamAutoPlayPreferBingeGroupForNextEpisode =
+                    prefs[streamAutoPlayPreferBingeGroupForNextEpisodeKey] ?: false,
                 nextEpisodeThresholdMode = prefs[nextEpisodeThresholdModeKey]?.let {
                     runCatching { NextEpisodeThresholdMode.valueOf(it) }.getOrDefault(NextEpisodeThresholdMode.PERCENTAGE)
                 } ?: NextEpisodeThresholdMode.PERCENTAGE,
@@ -569,6 +573,12 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setStreamAutoPlayNextEpisodeEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[streamAutoPlayNextEpisodeEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setStreamAutoPlayPreferBingeGroupForNextEpisode(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[streamAutoPlayPreferBingeGroupForNextEpisodeKey] = enabled
         }
     }
 

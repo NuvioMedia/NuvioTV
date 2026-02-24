@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -30,7 +32,7 @@ private class FocusSnapshot(
     var itemIndex: Int
 )
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ClassicHomeContent(
     uiState: HomeUiState,
@@ -46,13 +48,23 @@ fun ClassicHomeContent(
     onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
 ) {
 
-    val columnListState = rememberLazyListState()
+    val columnListState = rememberLazyListState(
+        initialFirstVisibleItemIndex = focusState.verticalScrollIndex,
+        initialFirstVisibleItemScrollOffset = focusState.verticalScrollOffset
+    )
 
     LaunchedEffect(focusState.verticalScrollIndex, focusState.verticalScrollOffset) {
-        if (focusState.verticalScrollIndex > 0 || focusState.verticalScrollOffset > 0) {
+        val targetIndex = focusState.verticalScrollIndex
+        val targetOffset = focusState.verticalScrollOffset
+        if (columnListState.firstVisibleItemIndex == targetIndex &&
+            columnListState.firstVisibleItemScrollOffset == targetOffset
+        ) {
+            return@LaunchedEffect
+        }
+        if (targetIndex > 0 || targetOffset > 0) {
             columnListState.scrollToItem(
-                focusState.verticalScrollIndex,
-                focusState.verticalScrollOffset
+                targetIndex,
+                targetOffset
             )
         }
     }
@@ -120,6 +132,7 @@ fun ClassicHomeContent(
             item(key = "hero_carousel", contentType = "hero") {
                 HeroCarousel(
                     items = uiState.heroItems,
+                    modifier = Modifier.animateItemPlacement(animationSpec = tween(260)),
                     focusRequester = if (shouldRequestInitialFocus) heroFocusRequester else null,
                     onItemFocus = onItemFocus,
                     onItemClick = { item ->
@@ -137,6 +150,7 @@ fun ClassicHomeContent(
             item(key = "continue_watching", contentType = "continue_watching") {
                 ContinueWatchingSection(
                     items = uiState.continueWatchingItems,
+                    modifier = Modifier.animateItemPlacement(animationSpec = tween(260)),
                     onItemClick = { item ->
                         onContinueWatchingClick(item)
                     },
@@ -209,6 +223,7 @@ fun ClassicHomeContent(
 
             CatalogRowSection(
                 catalogRow = catalogRow,
+                modifier = Modifier.animateItemPlacement(animationSpec = tween(280)),
                 posterCardStyle = posterCardStyle,
                 showPosterLabels = uiState.posterLabelsEnabled,
                 showAddonName = uiState.catalogAddonNameEnabled,

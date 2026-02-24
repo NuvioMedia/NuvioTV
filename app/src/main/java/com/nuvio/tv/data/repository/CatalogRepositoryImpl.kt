@@ -36,7 +36,13 @@ class CatalogRepositoryImpl @Inject constructor(
         extraArgs: Map<String, String>,
         supportsSkip: Boolean
     ): Flow<NetworkResult<CatalogRow>> = flow {
-        val cacheKey = "${addonId}_${type}_${catalogId}_$skip"
+        val cacheKey = buildCacheKey(
+            addonId = addonId,
+            type = type,
+            catalogId = catalogId,
+            skip = skip,
+            extraArgs = extraArgs
+        )
 
         // Emit cached data immediately if available
         val cached = catalogCache[cacheKey]
@@ -128,5 +134,18 @@ class CatalogRepositoryImpl @Inject constructor(
 
     private fun encodeArg(value: String): String {
         return URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+    }
+
+    private fun buildCacheKey(
+        addonId: String,
+        type: String,
+        catalogId: String,
+        skip: Int,
+        extraArgs: Map<String, String>
+    ): String {
+        val normalizedArgs = extraArgs.entries
+            .sortedBy { it.key }
+            .joinToString("&") { "${it.key}=${it.value}" }
+        return "${addonId}_${type}_${catalogId}_${skip}_${normalizedArgs}"
     }
 }

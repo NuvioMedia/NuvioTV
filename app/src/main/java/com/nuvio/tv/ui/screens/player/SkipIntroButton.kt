@@ -117,12 +117,12 @@ fun SkipIntroButton(
                 Icon(
                     imageVector = Icons.Default.SkipNext,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = if (isFocused) NuvioColors.OnSecondary else Color.White,
                     modifier = Modifier.size(20.dp)
                 )
                 Text(
                     text = getSkipLabel(interval?.type),
-                    color = Color.White,
+                    color = if (isFocused) NuvioColors.OnSecondary else Color.White,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(start = 8.dp)
                 )
@@ -132,7 +132,7 @@ fun SkipIntroButton(
                 modifier = Modifier
                     .height(2.dp)
                     .clip(RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
-                    .background(if (isFocused) Color.White else NuvioColors.Secondary)
+                    .background(if (isFocused) NuvioColors.OnSecondary else NuvioColors.Secondary)
                     .align(Alignment.CenterHorizontally)
             )
         }

@@ -48,6 +48,8 @@ import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @Composable
 fun NextEpisodeCardOverlay(
@@ -136,7 +138,7 @@ fun NextEpisodeCardOverlay(
 
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                     Text(
-                        text = "Next Episode",
+                        text = stringResource(R.string.next_episode_label),
                         color = Color.White.copy(alpha = 0.8f),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium

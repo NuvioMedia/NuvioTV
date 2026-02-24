@@ -102,12 +102,16 @@ fun GridContentCard(
                         .memoryCacheKey("${item.poster}_${requestWidthPx}x${requestHeightPx}")
                         .build()
                 }
-                AsyncImage(
-                    model = imageModel,
-                    contentDescription = item.name,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                if (item.poster.isNullOrBlank()) {
+                    MonochromePosterPlaceholder()
+                } else {
+                    AsyncImage(
+                        model = imageModel,
+                        contentDescription = item.name,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
             }
         }
 

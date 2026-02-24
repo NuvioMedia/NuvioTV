@@ -44,6 +44,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.asImageBitmap
@@ -69,6 +70,11 @@ fun TraktScreen(
     var showDisconnectConfirm by remember { mutableStateOf(false) }
     var showDaysCapDialog by remember { mutableStateOf(false) }
     var showUnairedNextUpDialog by remember { mutableStateOf(false) }
+    val strAllHistory = stringResource(R.string.trakt_all_history)
+    val strDaysFormat = stringResource(R.string.trakt_days_format)
+    val cwWindowFormatter: (Int) -> String = { days ->
+        formatContinueWatchingWindow(days, strAllHistory) { strDaysFormat.format(it) }
+    }
     val continueWatchingDayOptions = remember {
         listOf(
             14,
@@ -129,14 +135,14 @@ fun TraktScreen(
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Sync your watchlist, watch progress, continue watching, scrobbles, and personal lists with Trakt.",
+                text = stringResource(R.string.trakt_description),
                 style = MaterialTheme.typography.bodyLarge,
                 color = NuvioColors.TextSecondary
             )
             if (uiState.mode == TraktConnectionMode.CONNECTED) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Connected as ${uiState.username ?: "Trakt user"}",
+                    text = stringResource(R.string.trakt_connected_as, uiState.username ?: "Trakt user"),
                     style = MaterialTheme.typography.titleMedium,
                     color = Color(0xFF7CFF9B)
                 )
@@ -161,7 +167,7 @@ fun TraktScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Account Login",
+                    text = stringResource(R.string.trakt_account_login),
                     style = MaterialTheme.typography.titleLarge,
                     color = NuvioColors.TextPrimary
                 )
@@ -173,14 +179,14 @@ fun TraktScreen(
                             contentColor = NuvioColors.TextPrimary
                         )
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.action_cancel))
                     }
                 }
             }
 
             if (uiState.mode == TraktConnectionMode.AWAITING_APPROVAL) {
                 Text(
-                    text = "Go to trakt.tv/activate and enter this code:",
+                    text = stringResource(R.string.trakt_awaiting_instruction),
                     style = MaterialTheme.typography.bodyLarge,
                     color = NuvioColors.TextSecondary
                 )
@@ -200,14 +206,14 @@ fun TraktScreen(
                     )
                 }
                 Text(
-                    text = "Code expires in ${formatDuration(remaining)}",
+                    text = stringResource(R.string.trakt_code_expires, formatDuration(remaining)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
             } else if (uiState.mode == TraktConnectionMode.CONNECTED) {
                 uiState.tokenExpiresAtMillis?.let { expiresAtMillis ->
                     Text(
-                        text = "Trakt access token refreshes in ${formatDuration((expiresAtMillis - nowMillis).coerceAtLeast(0L))}",
+                        text = stringResource(R.string.trakt_token_refreshes, formatDuration((expiresAtMillis - nowMillis).coerceAtLeast(0L))),
                         style = MaterialTheme.typography.bodyMedium,
                         color = NuvioColors.TextSecondary
                     )
@@ -220,7 +226,7 @@ fun TraktScreen(
                         contentColor = NuvioColors.TextPrimary
                     )
                 ) {
-                    Text("Disconnect")
+                    Text(stringResource(R.string.trakt_disconnect))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 TraktConnectedStatsStrip(
@@ -229,7 +235,7 @@ fun TraktScreen(
                 )
             } else {
                 Text(
-                    text = "Press Login to start Trakt device authentication. A QR code will appear here.",
+                    text = stringResource(R.string.trakt_login_instruction),
                     style = MaterialTheme.typography.bodyLarge,
                     color = NuvioColors.TextSecondary
                 )
@@ -242,11 +248,11 @@ fun TraktScreen(
                         contentColor = Color.Black
                     )
                 ) {
-                    Text("Login")
+                    Text(stringResource(R.string.trakt_login))
                 }
                 if (!uiState.credentialsConfigured) {
                     Text(
-                        text = "Missing TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET in local.properties.",
+                        text = stringResource(R.string.trakt_missing_credentials),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFFFFB74D)
                     )
@@ -255,15 +261,15 @@ fun TraktScreen(
 
             if (uiState.mode == TraktConnectionMode.CONNECTED) {
                 SettingsActionRow(
-                    title = "Continue Watching Window",
-                    subtitle = "Trakt history considered for continue watching",
-                    value = formatContinueWatchingWindow(uiState.continueWatchingDaysCap),
+                    title = stringResource(R.string.trakt_continue_watching_window),
+                    subtitle = stringResource(R.string.trakt_continue_watching_subtitle),
+                    value = cwWindowFormatter(uiState.continueWatchingDaysCap),
                     onClick = { showDaysCapDialog = true }
                 )
                 SettingsActionRow(
-                    title = "Unaired Next Up Episodes",
-                    subtitle = "Show upcoming episodes before they air",
-                    value = if (uiState.showUnairedNextUp) "Shown" else "Hidden",
+                    title = stringResource(R.string.trakt_unaired_next_up),
+                    subtitle = stringResource(R.string.trakt_unaired_next_up_subtitle),
+                    value = if (uiState.showUnairedNextUp) stringResource(R.string.trakt_unaired_shown) else stringResource(R.string.trakt_unaired_hidden),
                     onClick = { showUnairedNextUpDialog = true }
                 )
             }
@@ -295,7 +301,7 @@ fun TraktScreen(
                         enabled = !uiState.isLoading,
                         modifier = Modifier.focusRequester(primaryFocusRequester)
                     ) {
-                        Text("Retry")
+                        Text(stringResource(R.string.trakt_retry))
                     }
                 }
                 Button(
@@ -305,7 +311,7 @@ fun TraktScreen(
                         contentColor = NuvioColors.TextPrimary
                     )
                 ) {
-                    Text("Back")
+                    Text(stringResource(R.string.trakt_back))
                 }
             }
         }
@@ -322,12 +328,12 @@ fun TraktScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Continue Watching Window",
+                    text = stringResource(R.string.trakt_cw_window_title),
                     style = MaterialTheme.typography.titleLarge,
                     color = NuvioColors.TextPrimary
                 )
                 Text(
-                    text = "Choose how much Trakt activity should appear in continue watching.",
+                    text = stringResource(R.string.trakt_cw_window_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
@@ -350,7 +356,7 @@ fun TraktScreen(
                                     contentColor = if (selected) Color.Black else NuvioColors.TextPrimary
                                 )
                             ) {
-                                Text(formatContinueWatchingWindow(days))
+                                Text(cwWindowFormatter(days))
                             }
                         }
                         if (rowOptions.size == 1) {
@@ -370,7 +376,7 @@ fun TraktScreen(
                             contentColor = NuvioColors.TextPrimary
                         )
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.action_cancel))
                     }
                 }
             }
@@ -388,12 +394,12 @@ fun TraktScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Unaired Next Up Episodes",
+                    text = stringResource(R.string.trakt_unaired_dialog_title),
                     style = MaterialTheme.typography.titleLarge,
                     color = NuvioColors.TextPrimary
                 )
                 Text(
-                    text = "Choose whether Continue Watching should include upcoming episodes before release.",
+                    text = stringResource(R.string.trakt_unaired_dialog_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
@@ -408,7 +414,7 @@ fun TraktScreen(
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Show unaired episodes")
+                    Text(stringResource(R.string.trakt_show_unaired))
                 }
                 Button(
                     onClick = {
@@ -421,7 +427,7 @@ fun TraktScreen(
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Hide unaired episodes")
+                    Text(stringResource(R.string.trakt_hide_unaired))
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -434,7 +440,7 @@ fun TraktScreen(
                             contentColor = NuvioColors.TextPrimary
                         )
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.action_cancel))
                     }
                 }
             }
@@ -452,12 +458,12 @@ fun TraktScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Disconnect Trakt?",
+                    text = stringResource(R.string.trakt_disconnect_title),
                     style = MaterialTheme.typography.titleLarge,
                     color = NuvioColors.TextPrimary
                 )
                 Text(
-                    text = "This will disconnect your Trakt account from Nuvio.",
+                    text = stringResource(R.string.trakt_disconnect_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
@@ -474,7 +480,7 @@ fun TraktScreen(
                             contentColor = NuvioColors.TextPrimary
                         )
                     ) {
-                        Text("Disconnect")
+                        Text(stringResource(R.string.trakt_disconnect))
                     }
                     Button(
                         onClick = { showDisconnectConfirm = false },
@@ -483,7 +489,7 @@ fun TraktScreen(
                             contentColor = NuvioColors.TextPrimary
                         )
                     ) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.action_cancel))
                     }
                 }
             }
@@ -506,14 +512,19 @@ private fun TraktConnectedStatsStrip(
             stats?.totalWatchedHours?.let { "${it}h" } ?: "-"
         )
     }
-    val labels = listOf("Movies", "Shows", "Episodes", "Watched Hours")
+    val labels = listOf(
+        stringResource(R.string.trakt_stat_movies),
+        stringResource(R.string.trakt_stat_shows),
+        stringResource(R.string.trakt_stat_episodes),
+        stringResource(R.string.trakt_stat_watched_hours)
+    )
 
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = "Cached",
+            text = stringResource(R.string.trakt_cached_label),
             style = MaterialTheme.typography.labelMedium,
             color = NuvioColors.TextTertiary
         )
@@ -605,10 +616,10 @@ private fun formatDuration(valueMs: Long): String {
     }
 }
 
-private fun formatContinueWatchingWindow(days: Int): String {
+private fun formatContinueWatchingWindow(days: Int, allHistoryLabel: String, daysFormat: (Int) -> String): String {
     return if (days == TraktSettingsDataStore.CONTINUE_WATCHING_DAYS_CAP_ALL) {
-        "All history"
+        allHistoryLabel
     } else {
-        "$days days"
+        daysFormat(days)
     }
 }

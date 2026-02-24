@@ -58,6 +58,7 @@ import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 
 private const val BACKDROP_ASPECT_RATIO = 16f / 9f
+private const val TRAILER_PREVIEW_REQUEST_FOCUS_DEBOUNCE_MS = 140L
 private val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -129,6 +130,8 @@ fun ContentCard(
         ) {
             if (!isFocused) return@LaunchedEffect
             if (trailerPreviewUrl != null) return@LaunchedEffect
+            delay(TRAILER_PREVIEW_REQUEST_FOCUS_DEBOUNCE_MS)
+            if (!isFocused) return@LaunchedEffect
             onRequestTrailerPreview(item)
         }
     }
@@ -163,13 +166,14 @@ fun ContentCard(
     ) {
         val context = LocalContext.current
         val density = LocalDensity.current
-        val requestCardWidth = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
-            expandedCardWidth
+        // Keep decode size stable during width animation to avoid recreating requests/painters every frame.
+        val maxRequestCardWidth = if (focusedPosterBackdropExpandEnabled) {
+            maxOf(baseCardWidth, expandedCardWidth)
         } else {
             baseCardWidth
         }
-        val requestWidthPx = remember(requestCardWidth, density) {
-            with(density) { requestCardWidth.roundToPx() }
+        val requestWidthPx = remember(maxRequestCardWidth, density) {
+            with(density) { maxRequestCardWidth.roundToPx() }
         }
         val requestHeightPx = remember(baseCardHeight, density) {
             with(density) { baseCardHeight.roundToPx() }
@@ -179,12 +183,24 @@ fun ContentCard(
         } else {
             item.poster
         }
-        val imageModel = remember(imageUrl, requestWidthPx, requestHeightPx) {
+        val imageModel = remember(context, imageUrl, requestWidthPx, requestHeightPx) {
             ImageRequest.Builder(context)
                 .data(imageUrl)
                 .crossfade(false)
                 .size(width = requestWidthPx, height = requestHeightPx)
                 .build()
+        }
+        val logoRequestHeightPx = remember(density) {
+            with(density) { 48.dp.roundToPx() }
+        }
+        val logoModel = remember(context, item.logo, requestWidthPx, logoRequestHeightPx) {
+            item.logo?.let { logoUrl ->
+                ImageRequest.Builder(context)
+                    .data(logoUrl)
+                    .crossfade(false)
+                    .size(width = requestWidthPx, height = logoRequestHeightPx)
+                    .build()
+            }
         }
 
         Card(
@@ -242,13 +258,15 @@ fun ContentCard(
                     .height(baseCardHeight)
                     .clip(cardShape)
             ) {
-                if (imageUrl != null) {
+                if (!imageUrl.isNullOrBlank()) {
                     AsyncImage(
                         model = imageModel,
                         contentDescription = item.name,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
+                } else {
+                    MonochromePosterPlaceholder()
                 }
 
                 val shouldPlayTrailerPreview = isBackdropExpanded &&
@@ -291,7 +309,7 @@ fun ContentCard(
                     )
                 }
 
-                if (shouldPlayTrailerPreview && imageUrl != null) {
+                if (shouldPlayTrailerPreview && !imageUrl.isNullOrBlank()) {
                     AsyncImage(
                         model = imageModel,
                         contentDescription = null,
@@ -328,14 +346,7 @@ fun ContentCard(
                     ) {
                         if (item.logo != null) {
                             AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(item.logo)
-                                    .crossfade(false)
-                                    .size(
-                                        width = requestWidthPx,
-                                        height = with(density) { 48.dp.roundToPx() }
-                                    )
-                                    .build(),
+                                model = logoModel,
                                 contentDescription = item.name,
                                 modifier = Modifier
                                     .height(48.dp)

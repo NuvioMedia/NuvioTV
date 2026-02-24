@@ -23,11 +23,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
+import com.nuvio.tv.R
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -48,7 +50,7 @@ fun DebugSettingsContent(
 
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
-            text = "Debug",
+            text = stringResource(R.string.debug_title),
             style = MaterialTheme.typography.headlineMedium,
             color = NuvioColors.Secondary
         )
@@ -56,7 +58,7 @@ fun DebugSettingsContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Developer tools and feature flags (debug builds only)",
+            text = stringResource(R.string.debug_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = NuvioColors.TextSecondary
         )
@@ -68,64 +70,64 @@ fun DebugSettingsContent(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // ── Popup / Dialog Testing ──
-            item {
+            item(key = "debug_popup_header") {
                 Text(
-                    text = "Popup / Dialog Testing",
+                    text = stringResource(R.string.debug_section_popup),
                     style = MaterialTheme.typography.titleSmall,
                     color = NuvioColors.TextTertiary,
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
             }
 
-            item {
+            item(key = "debug_playback_error") {
                 DebugActionCard(
-                    title = "Playback Error Screen",
-                    subtitle = "Show a simulated playback error popup",
+                    title = stringResource(R.string.debug_playback_error_title),
+                    subtitle = stringResource(R.string.debug_playback_error_subtitle),
                     onClick = { showErrorDialog = true }
                 )
             }
 
             // ── Feature Toggles ──
-            item {
+            item(key = "debug_feature_toggles_header") {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Feature Toggles",
+                    text = stringResource(R.string.debug_section_features),
                     style = MaterialTheme.typography.titleSmall,
                     color = NuvioColors.TextTertiary,
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
             }
 
-            item {
+            item(key = "debug_toggle_account_tab") {
                 DebugToggleCard(
-                    title = "Account Tab",
-                    subtitle = "Show the Account tab in Settings navigation",
+                    title = stringResource(R.string.debug_account_tab_title),
+                    subtitle = stringResource(R.string.debug_account_tab_subtitle),
                     checked = uiState.accountTabEnabled,
                     onToggle = { viewModel.onEvent(DebugSettingsEvent.ToggleAccountTab(it)) }
                 )
             }
 
-            item {
+            item(key = "debug_toggle_sync_code") {
                 DebugToggleCard(
-                    title = "Sync Code Features",
-                    subtitle = "Show Generate/Enter Sync Code buttons in Account settings",
+                    title = stringResource(R.string.debug_sync_code_title),
+                    subtitle = stringResource(R.string.debug_sync_code_subtitle),
                     checked = uiState.syncCodeFeaturesEnabled,
                     onToggle = { viewModel.onEvent(DebugSettingsEvent.ToggleSyncCodeFeatures(it)) }
                 )
             }
 
             // ── Manual Sign In ──
-            item {
+            item(key = "debug_account_header") {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Account",
+                    text = stringResource(R.string.debug_section_account),
                     style = MaterialTheme.typography.titleSmall,
                     color = NuvioColors.TextTertiary,
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
             }
 
-            item {
+            item(key = "debug_sign_in_card") {
                 DebugSignInCard(
                     isLoading = uiState.signInLoading,
                     result = uiState.signInResult,
@@ -140,13 +142,11 @@ fun DebugSettingsContent(
     if (showErrorDialog) {
         NuvioDialog(
             onDismiss = { showErrorDialog = false },
-            title = "Playback Error",
-            subtitle = "An error occurred during playback.\n\n" +
-                "Error: Test simulated error — this is not a real failure. " +
-                "Source returned HTTP 503 (Service Unavailable)."
+            title = stringResource(R.string.debug_error_dialog_title),
+            subtitle = stringResource(R.string.debug_error_dialog_subtitle)
         ) {
             DebugDialogButton(
-                text = "Dismiss",
+                text = stringResource(R.string.debug_dismiss),
                 onClick = { showErrorDialog = false }
             )
         }
@@ -307,12 +307,12 @@ private fun DebugSignInCard(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Text(
-            text = "Manual Sign In",
+            text = stringResource(R.string.debug_manual_signin_title),
             style = MaterialTheme.typography.titleMedium,
             color = NuvioColors.TextPrimary
         )
         Text(
-            text = "Sign in with email and password (Supabase auth)",
+            text = stringResource(R.string.debug_manual_signin_subtitle),
             style = MaterialTheme.typography.bodySmall,
             color = NuvioColors.TextSecondary
         )
@@ -320,14 +320,14 @@ private fun DebugSignInCard(
         InputField(
             value = email,
             onValueChange = { email = it },
-            placeholder = "Email",
+            placeholder = stringResource(R.string.debug_email_placeholder),
             keyboardType = KeyboardType.Email
         )
 
         InputField(
             value = password,
             onValueChange = { password = it },
-            placeholder = "Password",
+            placeholder = stringResource(R.string.debug_password_placeholder),
             isPassword = true
         )
 
@@ -340,7 +340,7 @@ private fun DebugSignInCard(
         }
 
         DebugDialogButton(
-            text = if (isLoading) "Signing in..." else "Sign In",
+            text = if (isLoading) stringResource(R.string.debug_signing_in) else stringResource(R.string.debug_sign_in),
             onClick = {
                 if (!isLoading && email.isNotBlank() && password.isNotBlank()) {
                     onSignIn(email.trim(), password)

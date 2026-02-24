@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -218,7 +219,12 @@ class WatchProgressRepositoryImpl @Inject constructor(
             .flatMapLatest { isAuthenticated ->
                 if (isAuthenticated) {
                     combine(
-                        traktProgressService.observeAllProgress(),
+                        traktProgressService.observeAllProgress()
+                            .onStart {
+                                // Emit local-cache-backed continue watching immediately on app start
+                                // while the first Trakt snapshot is still loading.
+                                emit(emptyList())
+                            },
                         watchProgressPreferences.allRawProgress,
                         metadataState
                     ) { remoteItems, localItems, metadataMap ->
@@ -304,15 +310,24 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 if (!isAuthenticated) {
                     val progressFlow = if (season != null && episode != null) {
                         watchProgressPreferences.getEpisodeProgress(contentId, season, episode)
-                            .map { it?.isCompleted() == true }
                     } else {
                         watchProgressPreferences.getProgress(contentId)
-                            .map { it?.isCompleted() == true }
                     }
                     return@flatMapLatest combine(
                         progressFlow,
                         watchedItemsPreferences.isWatched(contentId, season, episode)
-                    ) { progressWatched, itemWatched -> progressWatched || itemWatched }
+                    ) { progressEntry, itemWatched ->
+                        val hasStartedReplay = progressEntry?.let { entry ->
+                            !entry.isCompleted() &&
+                                (entry.position > 0L || entry.progressPercent?.let { it > 0f } == true)
+                        } == true
+
+                        if (hasStartedReplay) {
+                            false
+                        } else {
+                            (progressEntry?.isCompleted() == true) || itemWatched
+                        }
+                    }
                 }
 
                 if (season != null && episode != null) {

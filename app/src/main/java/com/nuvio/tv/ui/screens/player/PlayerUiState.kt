@@ -16,6 +16,7 @@ import com.nuvio.tv.domain.model.WatchProgress
 data class PlayerUiState(
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = true,
+    val playbackEnded: Boolean = false,
     val currentPosition: Long = 0L,
     val duration: Long = 0L,
     val title: String = "",
