@@ -467,6 +467,15 @@ fun ModernHomeContent(
             }
         }
     }
+    // OPTIMIZATION: Cache row index lookup to avoid repeated map access
+    val activeRowIndex by remember(activeRow) {
+        derivedStateOf {
+            activeRow?.let { row ->
+                carouselRows.indexOfFirst { it.key == row.key }.takeIf { it >= 0 }
+            } ?: -1
+        }
+    }
+    
     val clampedActiveItemIndex by remember(activeRow, activeItemIndex) {
         derivedStateOf {
             activeRow?.let { row ->
@@ -494,7 +503,7 @@ fun ModernHomeContent(
     val latestHeroIndex by rememberUpdatedState(clampedActiveItemIndex)
     LaunchedEffect(activeHeroItemKey) {
         val targetHeroKey = activeHeroItemKey ?: return@LaunchedEffect
-        delay(MODERN_HERO_FOCUS_DEBOUNCE_MS)
+        delay(16L) // Reduced from 90ms for better responsiveness
         val row = latestHeroRow ?: return@LaunchedEffect
         val latestKey = row.items.getOrNull(latestHeroIndex)?.key ?: row.items.firstOrNull()?.key
         if (latestKey != targetHeroKey) return@LaunchedEffect
@@ -504,11 +513,12 @@ fun ModernHomeContent(
             heroItem = latestHero
         }
     }
-    val nextRow by remember(carouselRows, activeRow?.key, rowIndexByKey) {
+    // OPTIMIZATION: Use cached activeRowIndex instead of map lookup
+    val nextRow by remember(activeRowIndex, carouselRows) {
         derivedStateOf {
-            val index = activeRow?.key?.let { key -> rowIndexByKey[key] ?: -1 } ?: -1
-            if (index in carouselRows.indices && index + 1 < carouselRows.size) {
-                carouselRows[index + 1]
+            val nextIndex = activeRowIndex + 1
+            if (nextIndex in carouselRows.indices) {
+                carouselRows[nextIndex]
             } else {
                 null
             }
@@ -686,7 +696,7 @@ fun ModernHomeContent(
         }
         val heroTransitionProgress by animateFloatAsState(
             targetValue = if (shouldPlayHeroTrailer && heroTrailerFirstFrameRendered) 1f else 0f,
-            animationSpec = tween(durationMillis = 480),
+            animationSpec = tween(durationMillis = 150), // Reduced from 480ms for faster transitions
             label = "heroBackdropTrailerCrossfadeProgress"
         )
         val heroBackdropAlpha = 1f - heroTransitionProgress
@@ -1660,7 +1670,7 @@ private fun ModernHeroMediaLayer(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { alpha = heroBackdropAlpha },
-            animationSpec = tween(durationMillis = 350),
+            animationSpec = tween(durationMillis = 50), // Reduced from 350ms for faster transitions
             label = "modernHeroBackground"
         ) { imageUrl ->
             val imageModel = remember(localContext, imageUrl, requestWidthPx, requestHeightPx) {
