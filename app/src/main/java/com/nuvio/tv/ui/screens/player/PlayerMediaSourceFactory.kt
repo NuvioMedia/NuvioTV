@@ -88,7 +88,7 @@ internal class PlayerMediaSourceFactory {
                 val url = request.url
                 // Some addons (like nzbdav, real-debrid, WebDAV servers) provide stream URLs containing Basic Auth credentials.
                 // OkHttp does not automatically convert http://user:pass@host/ into an Authorization header,
-                // which leads to HTTP 401 errors. This interceptor fixes it natively.
+                // which leads to HTTP 401 errors. This interceptor fixes it for the initial request natively.
                 if (url.username.isNotEmpty() && url.password.isNotEmpty() && request.header("Authorization") == null) {
                     val credential = okhttp3.Credentials.basic(url.username, url.password)
                     request = request.newBuilder()
@@ -96,6 +96,40 @@ internal class PlayerMediaSourceFactory {
                         .build()
                 }
                 chain.proceed(request)
+            }
+            .authenticator { _, response ->
+                // If a redirect occurs (e.g. nzbdav.com -> stream1.nzbdav.com), OkHttp drops the Authorization
+                // header. Then the new host returns a 401. This authenticator traverses the prior response chain
+                // to find the original URL containing the basic auth credentials, and retries the request with them.
+                var priorResponse: okhttp3.Response? = response
+                var originalUrlWithAuth: okhttp3.HttpUrl? = null
+
+                while (priorResponse != null) {
+                    val url = priorResponse.request.url
+                    if (url.username.isNotEmpty() && url.password.isNotEmpty()) {
+                        originalUrlWithAuth = url
+                        break
+                    }
+                    priorResponse = priorResponse.priorResponse
+                }
+
+                if (originalUrlWithAuth != null) {
+                    val credential = okhttp3.Credentials.basic(
+                        originalUrlWithAuth.username, 
+                        originalUrlWithAuth.password
+                    )
+                    
+                    // If we already sent this exact credential for this specific 401 response and it still failed,
+                    // we must return null to prevent an infinite loop.
+                    if (response.request.header("Authorization") == credential) {
+                        return@authenticator null
+                    }
+                    
+                    return@authenticator response.request.newBuilder()
+                        .header("Authorization", credential)
+                        .build()
+                }
+                null
             }
             .build()
             .also { okHttpClient = it }
