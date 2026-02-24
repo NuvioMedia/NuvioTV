@@ -53,6 +53,9 @@ class ParallelRangeDataSource(
     private var bytesRemaining: Long = C.LENGTH_UNSET.toLong()
     private val closed = AtomicBoolean(false)
 
+    // Timeout scales with chunk size: 8s per MB with a 60s floor (assumes ~1 Mbps worst case)
+    private val chunkTimeoutSeconds: Long = maxOf(60L, chunkSize / (1024 * 1024) * 8)
+
     // Chunk download state
     private val chunks = ConcurrentHashMap<Long, CompletableFuture<DownloadedChunk>>()
     private var executor = Executors.newFixedThreadPool(parallelConnections)
@@ -146,7 +149,7 @@ class ParallelRangeDataSource(
             ensureChunkScheduled(chunkIndex)
             val future = chunks[chunkIndex] ?: return C.RESULT_END_OF_INPUT
             try {
-                currentChunk = future.get(60, TimeUnit.SECONDS)
+                currentChunk = future.get(chunkTimeoutSeconds, TimeUnit.SECONDS)
             } catch (e: Exception) {
                 if (closed.get()) return C.RESULT_END_OF_INPUT
                 throw IOException("Failed to download chunk $chunkIndex", e)
