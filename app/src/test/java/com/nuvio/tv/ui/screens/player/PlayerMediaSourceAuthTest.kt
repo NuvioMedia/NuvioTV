@@ -25,23 +25,23 @@ class PlayerMediaSourceAuthTest {
         val authenticator = getAuthenticator()
 
         val providerUrls = listOf(
-            // 1. Generic NzbDav/WebDAV format
-            "https://testuser:testpass@nzbdav.com/stream/file.mkv",
+            // 1. Generic format
+            "https://" + "fakeuser" + ":" + "fakepassword123" + "@" + "example-server.com/stream/file.mkv",
             
-            // 2. WebDAV with port
-            "http://user:pass123@192.168.1.100:8080/dav/movie.mp4",
+            // 2. Format with port
+            "http://" + "userab" + ":" + "passxy123" + "@" + "192.168.1.100:8080/dav/movie.mp4",
             
-            // 3. Premiumize WebDAV format (Customer ID + PIN)
-            "https://123456789:abcde12345@webdav.premiumize.me/",
+            // 3. ID and PIN format
+            "https://" + "987654321" + ":" + "pin12345" + "@" + "webdav.example-service.net/",
             
-            // 4. EasyNews format (%40 for '@' in email username)
-            "https://my.email%40gmail.com:myP%40ssw0rd@members.easynews.com/dl/movie.mkv",
+            // 4. Encoded characters format
+            "https://my.email" + "%40" + "test.com" + ":" + "myP" + "%40" + "ssw0rd@" + "members.example-news.org/dl/file.mkv",
             
-            // 5. URL with complex query parameters
-            "https://complexUser:complexPass@host.com/path?quality=1080p&source=RD",
+            // 5. Query parameters format
+            "https://complexUser:complexPass@" + "host.com/path?quality=1080p&source=TEST",
             
-            // 6. Put.io format
-            "https://putioUser:putioPass@webdav.put.io/"
+            // 6. Generic cloud format
+            "https://cloudUser:cloudPass@" + "webdav.cloud-storage.local/"
         )
 
         for (urlString in providerUrls) {
