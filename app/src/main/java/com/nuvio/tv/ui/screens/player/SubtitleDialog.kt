@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,6 +47,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -59,6 +61,7 @@ import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 
@@ -216,6 +219,12 @@ private fun SubtitleTab(
                 else -> Color.White.copy(alpha = 0.06f)
             },
             focusedContainerColor = if (isSelected) Color.White.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.12f)
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
+                shape = RoundedCornerShape(12.dp)
+            )
         ),
         shape = CardDefaults.shape(RoundedCornerShape(12.dp))
     ) {
@@ -453,6 +462,12 @@ private fun FilterChip(
             },
             focusedContainerColor = if (isSelected) Color.White.copy(alpha = 0.24f) else Color.White.copy(alpha = 0.12f)
         ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
+                shape = RoundedCornerShape(10.dp)
+            )
+        ),
         shape = CardDefaults.shape(RoundedCornerShape(10.dp))
     ) {
         Text(
@@ -630,6 +645,12 @@ private fun AddonSubtitleItem(
             },
             focusedContainerColor = Color.White.copy(alpha = 0.15f)
         ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
+                shape = RoundedCornerShape(12.dp)
+            )
+        ),
         shape = CardDefaults.shape(RoundedCornerShape(12.dp))
     ) {
         Row(
@@ -792,6 +813,12 @@ private fun SubtitleStyleContent(
                     containerColor = Color.White.copy(alpha = 0.1f),
                     focusedContainerColor = Color.White.copy(alpha = 0.18f)
                 ),
+                border = CardDefaults.border(
+                    focusedBorder = Border(
+                        border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                ),
                 shape = CardDefaults.shape(RoundedCornerShape(12.dp))
             ) {
                 Text(
@@ -911,7 +938,7 @@ private fun StyleColorChip(
     var isFocused by remember { mutableStateOf(false) }
 
     val borderModifier = when {
-        isFocused -> Modifier.border(2.dp, NuvioColors.FocusRing, CircleShape)
+        isFocused -> Modifier.border(2.dp, rememberPulsingFocusBorderColor(isFocused = true), CircleShape)
         isSelected -> Modifier.border(2.dp, Color.White, CircleShape)
         else -> Modifier
     }
@@ -977,6 +1004,12 @@ internal fun TrackItem(
         colors = CardDefaults.colors(
             containerColor = if (isSelected) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.05f),
             focusedContainerColor = Color.White.copy(alpha = 0.15f)
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
+                shape = RoundedCornerShape(12.dp)
+            )
         ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp))
     ) {

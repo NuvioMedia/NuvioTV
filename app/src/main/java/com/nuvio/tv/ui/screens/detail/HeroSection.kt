@@ -63,6 +63,7 @@ import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.NextToWatch
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Visibility
@@ -325,11 +326,15 @@ private fun PlayButton(
         rawRes = com.nuvio.tv.R.raw.ic_player_play
     )
 
+    var isFocused by remember { mutableStateOf(false) }
+    val animatedBorderColor = rememberPulsingFocusBorderColor(isFocused = isFocused)
+
     Button(
         onClick = onClick,
         modifier = Modifier
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged {
+                isFocused = it.isFocused
                 if (it.isFocused) {
                     onFocusRestored()
                 }
@@ -346,7 +351,7 @@ private fun PlayButton(
         ),
         border = ButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, animatedBorderColor),
                 shape = RoundedCornerShape(32.dp)
             )
         ),
@@ -377,11 +382,15 @@ private fun ActionIconButtonPainter(
     onClick: () -> Unit,
     enabled: Boolean = true
 ) {
+    var isFocused by remember { mutableStateOf(false) }
+    val animatedBorderColor = rememberPulsingFocusBorderColor(isFocused = isFocused)
+
     IconButton(
         onClick = onClick,
         enabled = enabled,
         modifier = Modifier
             .size(48.dp)
+            .onFocusChanged { isFocused = it.isFocused }
             .focusProperties { up = FocusRequester.Cancel },
         colors = IconButtonDefaults.colors(
             containerColor = NuvioColors.BackgroundCard,
@@ -391,7 +400,7 @@ private fun ActionIconButtonPainter(
         ),
         border = IconButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, animatedBorderColor),
                 shape = CircleShape
             )
         ),
@@ -422,6 +431,9 @@ private fun ActionIconButton(
 ) {
     var longPressTriggered by remember { mutableStateOf(false) }
 
+    var isFocused by remember { mutableStateOf(false) }
+    val animatedBorderColor = rememberPulsingFocusBorderColor(isFocused = isFocused)
+
     IconButton(
         onClick = {
             if (longPressTriggered) {
@@ -433,6 +445,7 @@ private fun ActionIconButton(
         enabled = enabled,
         modifier = Modifier
             .size(48.dp)
+            .onFocusChanged { isFocused = it.isFocused }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
                 if (onLongPress != null && native.action == AndroidKeyEvent.ACTION_DOWN) {
@@ -470,7 +483,7 @@ private fun ActionIconButton(
         ),
         border = IconButtonDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, animatedBorderColor),
                 shape = CircleShape
             )
         ),

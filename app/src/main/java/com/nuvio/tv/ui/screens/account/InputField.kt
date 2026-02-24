@@ -33,6 +33,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 
 @Composable
 internal fun InputField(
@@ -55,8 +56,10 @@ internal fun InputField(
         }
     }
 
+    var isFocused by remember { mutableStateOf(false) }
     Surface(
         onClick = { isEditing = true },
+        modifier = Modifier.onFocusChanged { isFocused = it.isFocused },
         colors = ClickableSurfaceDefaults.colors(
             containerColor = NuvioColors.BackgroundCard,
             focusedContainerColor = NuvioColors.BackgroundCard
@@ -67,7 +70,7 @@ internal fun InputField(
                 shape = RoundedCornerShape(12.dp)
             ),
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(12.dp)
             )
         ),

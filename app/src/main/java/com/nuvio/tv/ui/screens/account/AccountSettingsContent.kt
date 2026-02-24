@@ -46,6 +46,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 
@@ -287,7 +288,7 @@ private fun SettingsActionButton(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(8.dp)
             )
         ),
@@ -359,16 +360,17 @@ private fun StatusCard(label: String, value: String) {
 
 @Composable
 private fun SignOutSettingsButton(onClick: () -> Unit) {
+    var isFocused by remember { mutableStateOf(false) }
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
             containerColor = Color(0xFFC62828).copy(alpha = 0.12f),
             focusedContainerColor = Color(0xFFC62828).copy(alpha = 0.25f)
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, Color(0xFFF44336).copy(alpha = 0.5f)),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(8.dp)
             )
         ),

@@ -111,7 +111,8 @@ class PlayerRuntimeController(
             showLoadingOverlay = true,
             currentSeason = currentSeason,
             currentEpisode = currentEpisode,
-            currentEpisodeTitle = currentEpisodeTitle
+            currentEpisodeTitle = currentEpisodeTitle,
+            currentStreamUrl = initialStreamUrl
         )
     )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()

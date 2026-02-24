@@ -46,6 +46,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 
@@ -367,7 +368,7 @@ private fun SubtitleStyleColorChip(
     var isFocused by remember { mutableStateOf(false) }
 
     val borderModifier = when {
-        isFocused -> Modifier.border(2.dp, NuvioColors.FocusRing, CircleShape)
+        isFocused -> Modifier.border(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused), CircleShape)
         isSelected -> Modifier.border(2.dp, Color.White, CircleShape)
         else -> Modifier
     }

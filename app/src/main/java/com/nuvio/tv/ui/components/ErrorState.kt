@@ -19,6 +19,15 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.theme.NuvioColors
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.tv.material3.Border
+import androidx.compose.foundation.BorderStroke
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun ErrorState(
@@ -37,15 +46,8 @@ fun ErrorState(
             color = NuvioColors.TextSecondary
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = onRetry,
-            colors = ButtonDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                contentColor = NuvioColors.TextPrimary,
-                focusedContainerColor = NuvioColors.FocusBackground,
-                focusedContentColor = NuvioColors.Primary
-            ),
-            shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+        NuvioButton(
+            onClick = onRetry
         ) {
             Text(stringResource(R.string.action_retry))
         }

@@ -59,6 +59,7 @@ import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.screens.detail.formatReleaseDate
 import androidx.compose.material.icons.Icons
@@ -192,9 +193,13 @@ private fun EpisodeStreamsView(
         val title = uiState.episodeStreamsTitle
         Text(
             text = buildString {
+                if (!uiState.contentName.isNullOrBlank()) {
+                    append(uiState.contentName)
+                    append(" • ")
+                }
                 if (season != null && episode != null) append("S$season E$episode")
                 if (!title.isNullOrBlank()) {
-                    if (isNotEmpty()) append(" • ")
+                    if (isNotEmpty() && !endsWith(" • ")) append(" • ")
                     append(title)
                 }
             },
@@ -260,6 +265,7 @@ private fun EpisodeStreamsView(
                         stream = stream,
                         focusRequester = streamsFocusRequester,
                         requestInitialFocus = stream == uiState.episodeFilteredStreams.firstOrNull(),
+                        isSelected = stream.getStreamUrl() == uiState.currentStreamUrl,
                         onClick = { onStreamSelected(stream) }
                     )
                 }
@@ -427,7 +433,7 @@ private fun EpisodesSeasonTabs(
                         shape = RoundedCornerShape(24.dp)
                     ),
                     focusedBorder = Border(
-                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                        border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = true)),
                         shape = RoundedCornerShape(24.dp)
                     )
                 ),
@@ -483,7 +489,7 @@ private fun EpisodeItem(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = true)),
                 shape = RoundedCornerShape(16.dp)
             )
         ),

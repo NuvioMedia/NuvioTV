@@ -96,6 +96,7 @@ import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.PauseCircle
@@ -360,7 +361,7 @@ internal fun ToggleSettingsItem(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, if (enabled) NuvioColors.FocusRing else NuvioColors.FocusRing.copy(alpha = 0.3f)),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused).copy(alpha = if (enabled) 1f else 0.3f)),
                 shape = RoundedCornerShape(SettingsPillRadius)
             )
         ),
@@ -453,7 +454,7 @@ internal fun RenderTypeSettingsItem(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing.copy(alpha = contentAlpha)),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused).copy(alpha = contentAlpha)),
                 shape = RoundedCornerShape(SettingsSecondaryCardRadius)
             ),
             border = if (isSelected) Border(
@@ -530,7 +531,7 @@ internal fun NavigationSettingsItem(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, if (enabled) NuvioColors.FocusRing else NuvioColors.FocusRing.copy(alpha = 0.3f)),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused).copy(alpha = if (enabled) 1f else 0.3f)),
                 shape = RoundedCornerShape(SettingsPillRadius)
             )
         ),
@@ -631,7 +632,7 @@ internal fun SliderSettingsItem(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, if (enabled) NuvioColors.FocusRing else NuvioColors.FocusRing.copy(alpha = 0.3f)),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused).copy(alpha = if (enabled) 1f else 0.3f)),
                 shape = RoundedCornerShape(SettingsSecondaryCardRadius)
             )
         ),
@@ -716,7 +717,7 @@ internal fun SliderSettingsItem(
                     ),
                     border = CardDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = decreaseFocused)),
                             shape = CircleShape
                         )
                     ),
@@ -777,7 +778,7 @@ internal fun SliderSettingsItem(
                     ),
                     border = CardDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = increaseFocused)),
                             shape = CircleShape
                         )
                     ),
@@ -831,7 +832,7 @@ internal fun ColorSettingsItem(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, if (enabled) NuvioColors.FocusRing else NuvioColors.FocusRing.copy(alpha = 0.3f)),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused).copy(alpha = if (enabled) 1f else 0.3f)),
                 shape = RoundedCornerShape(SettingsPillRadius)
             )
         ),
@@ -990,7 +991,7 @@ private fun LanguageOptionItem(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(8.dp)
             )
         ),
@@ -1086,7 +1087,7 @@ internal fun ColorSelectionDialog(
                 ),
                 border = CardDefaults.border(
                     focusedBorder = Border(
-                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                        border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = true)), // Focused when active
                         shape = RoundedCornerShape(8.dp)
                     )
                 ),
@@ -1130,7 +1131,7 @@ private fun ColorOption(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(3.dp, NuvioColors.FocusRing),
+                border = BorderStroke(3.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = CircleShape
             ),
             border = if (isSelected) Border(

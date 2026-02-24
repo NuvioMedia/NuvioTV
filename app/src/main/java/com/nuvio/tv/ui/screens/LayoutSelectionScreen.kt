@@ -47,7 +47,10 @@ import com.nuvio.tv.ui.components.ModernLayoutPreview
 import com.nuvio.tv.ui.screens.settings.LayoutSettingsEvent
 import com.nuvio.tv.ui.screens.settings.LayoutSettingsViewModel
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import com.nuvio.tv.R
 
 @Composable
@@ -121,6 +124,7 @@ fun LayoutSelectionScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Continue button
+            var isContinueFocused by remember { mutableStateOf(false) }
             Button(
                 onClick = {
                     viewModel.onEvent(LayoutSettingsEvent.SelectLayout(selectedLayout))
@@ -128,7 +132,8 @@ fun LayoutSelectionScreen(
                 },
                 modifier = Modifier
                     .width(200.dp)
-                    .height(48.dp),
+                    .height(48.dp)
+                    .onFocusChanged { isContinueFocused = it.isFocused },
                 shape = ButtonDefaults.shape(
                     shape = RoundedCornerShape(24.dp)
                 ),
@@ -138,7 +143,7 @@ fun LayoutSelectionScreen(
                 ),
                 border = ButtonDefaults.border(
                     focusedBorder = Border(
-                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                        border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isContinueFocused)),
                         shape = RoundedCornerShape(24.dp)
                     )
                 )
@@ -178,7 +183,7 @@ private fun LayoutOptionCard(
         border = CardDefaults.border(
             border = Border.None,
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(16.dp)
             )
         ),
@@ -240,7 +245,7 @@ private fun LayoutOptionCard(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = "Selected",
-                    tint = NuvioColors.FocusRing,
+                    tint = rememberPulsingFocusBorderColor(isFocused = isFocused || isSelected),
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp)

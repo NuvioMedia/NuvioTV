@@ -36,6 +36,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import com.nuvio.tv.R
@@ -50,6 +51,7 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
@@ -208,11 +210,15 @@ fun CatalogRowSection(
 
             if (catalogRow.items.size >= 15) {
                 item(key = "${catalogRow.type}_${catalogRow.catalogId}_see_all") {
+                    var isSeeAllFocused by remember { mutableStateOf(false) }
+                    val animatedSeeAllBorderColor = rememberPulsingFocusBorderColor(isFocused = isSeeAllFocused)
+
                     Card(
                         onClick = onSeeAll,
                         modifier = Modifier
                             .width(posterCardStyle.width)
                             .height(posterCardStyle.height)
+                            .onFocusChanged { isSeeAllFocused = it.isFocused }
                             .then(directionalFocusModifier),
                         shape = CardDefaults.shape(shape = seeAllCardShape),
                         colors = CardDefaults.colors(
@@ -221,7 +227,7 @@ fun CatalogRowSection(
                         ),
                         border = CardDefaults.border(
                             focusedBorder = Border(
-                                border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioColors.FocusRing),
+                                border = BorderStroke(posterCardStyle.focusedBorderWidth, animatedSeeAllBorderColor),
                                 shape = seeAllCardShape
                             )
                         ),

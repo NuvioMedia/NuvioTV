@@ -101,13 +101,20 @@ internal fun StreamSourcesSidePanel(
             // Current content info
             Text(
                 text = buildString {
-                    if (uiState.currentSeason != null && uiState.currentEpisode != null) {
+                    if (uiState.contentType in listOf("series", "tv") && uiState.currentSeason != null) {
+                        if (!uiState.contentName.isNullOrBlank()) {
+                            append(uiState.contentName)
+                            append(" • ")
+                        }
                         append("S${uiState.currentSeason} E${uiState.currentEpisode}")
                         if (!uiState.currentEpisodeTitle.isNullOrBlank()) {
                             append(" • ${uiState.currentEpisodeTitle}")
                         }
                     } else {
                         append(uiState.title)
+                        if (!uiState.releaseYear.isNullOrBlank()) {
+                            append(" (${uiState.releaseYear})")
+                        }
                     }
                 },
                 style = MaterialTheme.typography.bodyLarge,
@@ -176,6 +183,7 @@ internal fun StreamSourcesSidePanel(
                                 stream = stream,
                                 focusRequester = streamsFocusRequester,
                                 requestInitialFocus = stream == uiState.sourceFilteredStreams.firstOrNull(),
+                                isSelected = stream.getStreamUrl() == uiState.currentStreamUrl,
                                 onClick = { onStreamSelected(stream) }
                             )
                         }

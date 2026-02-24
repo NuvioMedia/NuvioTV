@@ -50,6 +50,7 @@ import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import kotlinx.coroutines.delay
 
 private const val AUTO_ADVANCE_INTERVAL_MS = 5000L
@@ -144,6 +145,11 @@ fun HeroCarousel(
                     else -> 12.dp
                 }
                 val dotHeight = if (isFocused && isActive) 6.dp else 4.dp
+                val pulsingColor = rememberPulsingFocusBorderColor(isFocused = isFocused && isActive)
+                
+                val inactiveDotColor = rememberPulsingFocusBorderColor(isFocused = false).copy(alpha = 0.4f)
+                val activeDotColorStatic = rememberPulsingFocusBorderColor(isFocused = false)
+                
                 Box(
                     modifier = Modifier
                         .width(dotWidth)
@@ -151,9 +157,9 @@ fun HeroCarousel(
                         .clip(RoundedCornerShape(3.dp))
                         .background(
                             when {
-                                isFocused && isActive -> NuvioColors.FocusRing
-                                isFocused -> NuvioColors.FocusRing.copy(alpha = 0.4f)
-                                isActive -> NuvioColors.FocusRing
+                                isFocused && isActive -> pulsingColor
+                                isFocused -> inactiveDotColor
+                                isActive -> activeDotColorStatic
                                 else -> Color.White.copy(alpha = 0.3f)
                             }
                         )

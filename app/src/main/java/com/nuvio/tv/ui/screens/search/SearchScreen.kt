@@ -70,6 +70,7 @@ import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -511,7 +512,7 @@ private fun SearchInputField(
                 .size(56.dp)
                 .border(
                     width = if (isDiscoverButtonFocused) 2.dp else 1.dp,
-                    color = if (isDiscoverButtonFocused) NuvioColors.FocusRing else NuvioColors.Border,
+                    color = if (isDiscoverButtonFocused) rememberPulsingFocusBorderColor(isFocused = isDiscoverButtonFocused) else NuvioColors.Border,
                     shape = RoundedCornerShape(12.dp)
                 )
                 .background(
@@ -543,7 +544,7 @@ private fun SearchInputField(
                     .size(56.dp)
                     .border(
                         width = if (isVoiceButtonFocused) 2.dp else 1.dp,
-                        color = if (isVoiceButtonFocused) NuvioColors.FocusRing else NuvioColors.Border,
+                        color = if (isVoiceButtonFocused) rememberPulsingFocusBorderColor(isFocused = isVoiceButtonFocused) else NuvioColors.Border,
                         shape = RoundedCornerShape(12.dp)
                     )
                     .background(
@@ -606,11 +607,11 @@ private fun SearchInputField(
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = NuvioColors.BackgroundCard,
                 unfocusedContainerColor = NuvioColors.BackgroundCard,
-                focusedIndicatorColor = NuvioColors.FocusRing,
+                focusedIndicatorColor = rememberPulsingFocusBorderColor(isFocused = true),
                 unfocusedIndicatorColor = NuvioColors.Border,
                 focusedTextColor = NuvioColors.TextPrimary,
                 unfocusedTextColor = NuvioColors.TextPrimary,
-                cursorColor = NuvioColors.FocusRing
+                cursorColor = rememberPulsingFocusBorderColor(isFocused = true)
             )
         )
     }

@@ -83,6 +83,7 @@ import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -210,25 +211,27 @@ fun AddonManagerScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 // Surface always stays in the tree for stable D-pad focus
-                                Surface(
-                                    onClick = { isEditing = true },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .focusRequester(surfaceFocusRequester),
-                                    colors = ClickableSurfaceDefaults.colors(
-                                        containerColor = NuvioColors.BackgroundElevated,
-                                        focusedContainerColor = NuvioColors.BackgroundElevated
-                                    ),
-                                    border = ClickableSurfaceDefaults.border(
-                                        border = Border(
-                                            border = BorderStroke(1.dp, NuvioColors.Border),
-                                            shape = RoundedCornerShape(12.dp)
+                                    var isUrlBarFocused by remember { mutableStateOf(false) }
+                                    Surface(
+                                        onClick = { isEditing = true },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .focusRequester(surfaceFocusRequester)
+                                            .onFocusChanged { isUrlBarFocused = it.isFocused },
+                                        colors = ClickableSurfaceDefaults.colors(
+                                            containerColor = NuvioColors.BackgroundElevated,
+                                            focusedContainerColor = NuvioColors.BackgroundElevated
                                         ),
-                                        focusedBorder = Border(
-                                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
-                                    ),
+                                        border = ClickableSurfaceDefaults.border(
+                                            border = Border(
+                                                border = BorderStroke(1.dp, NuvioColors.Border),
+                                                shape = RoundedCornerShape(12.dp)
+                                            ),
+                                            focusedBorder = Border(
+                                                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isUrlBarFocused)),
+                                                shape = RoundedCornerShape(12.dp)
+                                            )
+                                        ),
                                     shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
                                     scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
                                 ) {
@@ -407,7 +410,7 @@ private fun ManageFromPhoneCard(onClick: () -> Unit) {
         ),
         border = ClickableSurfaceDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(18.dp)
             )
         ),
@@ -468,7 +471,7 @@ private fun CatalogOrderEntryCard(onClick: () -> Unit) {
         ),
         border = ClickableSurfaceDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(18.dp)
             )
         ),
@@ -571,19 +574,20 @@ private fun QrCodeOverlay(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Surface(
-                onClick = onClose,
-                modifier = Modifier.focusRequester(focusRequester),
-                colors = ClickableSurfaceDefaults.colors(
-                    containerColor = NuvioColors.Surface,
-                    focusedContainerColor = NuvioColors.FocusBackground
-                ),
-                border = ClickableSurfaceDefaults.border(
-                    focusedBorder = Border(
-                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                        shape = RoundedCornerShape(50)
-                    )
-                ),
+                var isCloseFocused by remember { mutableStateOf(false) }
+                Surface(
+                    onClick = onClose,
+                    modifier = Modifier.focusRequester(focusRequester).onFocusChanged { isCloseFocused = it.isFocused },
+                    colors = ClickableSurfaceDefaults.colors(
+                        containerColor = NuvioColors.Surface,
+                        focusedContainerColor = NuvioColors.FocusBackground
+                    ),
+                    border = ClickableSurfaceDefaults.border(
+                        focusedBorder = Border(
+                            border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isCloseFocused)),
+                            shape = RoundedCornerShape(50)
+                        )
+                    ),
                 shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50)),
                 scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
             ) {
@@ -813,15 +817,17 @@ private fun ConfirmAddonChangesDialog(
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        var isRejectFocused by remember { mutableStateOf(false) }
                         Surface(
                             onClick = onReject,
+                            modifier = Modifier.onFocusChanged { isRejectFocused = it.isFocused },
                             colors = ClickableSurfaceDefaults.colors(
                                 containerColor = NuvioColors.Surface,
                                 focusedContainerColor = NuvioColors.FocusBackground
                             ),
                             border = ClickableSurfaceDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isRejectFocused)),
                                     shape = RoundedCornerShape(50)
                                 )
                             ),
@@ -845,16 +851,17 @@ private fun ConfirmAddonChangesDialog(
                             }
                         }
 
+                        var isConfirmFocused by remember { mutableStateOf(false) }
                         Surface(
                             onClick = onConfirm,
-                            modifier = Modifier.focusRequester(focusRequester),
+                            modifier = Modifier.focusRequester(focusRequester).onFocusChanged { isConfirmFocused = it.isFocused },
                             colors = ClickableSurfaceDefaults.colors(
                                 containerColor = NuvioColors.Secondary,
                                 focusedContainerColor = NuvioColors.SecondaryVariant
                             ),
                             border = ClickableSurfaceDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isConfirmFocused)),
                                     shape = RoundedCornerShape(50)
                                 )
                             ),
@@ -885,21 +892,23 @@ private fun AddonCard(
     isReadOnly: Boolean = false
 ) {
     if (isReadOnly) {
-        Surface(
-            onClick = { },
-            modifier = Modifier
-                .fillMaxWidth()
-                .animateContentSize(),
-            colors = ClickableSurfaceDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                focusedContainerColor = NuvioColors.BackgroundCard
-            ),
-            border = ClickableSurfaceDefaults.border(
-                focusedBorder = Border(
-                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                    shape = RoundedCornerShape(12.dp)
-                )
-            ),
+            var isReadOnlyFocused by remember { mutableStateOf(false) }
+            Surface(
+                onClick = { },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize()
+                    .onFocusChanged { isReadOnlyFocused = it.isFocused },
+                colors = ClickableSurfaceDefaults.colors(
+                    containerColor = NuvioColors.BackgroundCard,
+                    focusedContainerColor = NuvioColors.BackgroundCard
+                ),
+                border = ClickableSurfaceDefaults.border(
+                    focusedBorder = Border(
+                        border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isReadOnlyFocused)),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                ),
             shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
             scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
         ) {

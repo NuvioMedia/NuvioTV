@@ -4,6 +4,7 @@ package com.nuvio.tv.ui.screens.settings
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,7 +59,9 @@ import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.ui.components.ClassicLayoutPreview
 import com.nuvio.tv.ui.components.GridLayoutPreview
 import com.nuvio.tv.ui.components.ModernLayoutPreview
+import com.nuvio.tv.ui.screens.settings.CatalogInfo
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 
 @Composable
 fun LayoutSettingsScreen(
@@ -686,11 +689,11 @@ private fun LayoutCard(
         ),
         border = CardDefaults.border(
             border = if (isSelected) Border(
-                border = BorderStroke(1.dp, NuvioColors.FocusRing),
+                border = BorderStroke(1.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(SettingsSecondaryCardRadius)
             ) else Border.None,
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(SettingsSecondaryCardRadius)
             )
         ),
@@ -729,7 +732,7 @@ private fun LayoutCard(
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = stringResource(R.string.cd_selected),
-                        tint = NuvioColors.FocusRing,
+                        tint = rememberPulsingFocusBorderColor(isFocused = isFocused),
                         modifier = Modifier
                             .size(16.dp)
                             .padding(end = 6.dp)
@@ -846,9 +849,11 @@ private fun PosterCardStyleControls(
             onFocused = onFocused
         )
 
+        var isResetFocused by remember { mutableStateOf(false) }
         Button(
             onClick = onReset,
             modifier = Modifier.onFocusChanged {
+                isResetFocused = it.isFocused
                 if (it.isFocused) onFocused()
             },
             shape = ButtonDefaults.shape(shape = RoundedCornerShape(SettingsPillRadius)),
@@ -858,7 +863,7 @@ private fun PosterCardStyleControls(
             ),
             border = ButtonDefaults.border(
                 focusedBorder = Border(
-                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isResetFocused)),
                     shape = RoundedCornerShape(SettingsPillRadius)
                 )
             )

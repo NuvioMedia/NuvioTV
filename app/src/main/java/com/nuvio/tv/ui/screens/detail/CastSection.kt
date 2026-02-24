@@ -15,6 +15,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +46,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.MetaCastMember
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -234,12 +239,14 @@ private fun CastMemberItem(
         modifier = Modifier.width(itemWidth),
         horizontalAlignment = Alignment.Start
     ) {
+        var isFocused by remember { mutableStateOf(false) }
         Card(
             onClick = onClick,
             modifier = modifier
                 .size(cardSize)
                 .align(Alignment.Start)
                 .onFocusChanged { state ->
+                    isFocused = state.isFocused
                     if (state.isFocused) onFocused()
                 },
             shape = CardDefaults.shape(
@@ -251,7 +258,7 @@ private fun CastMemberItem(
             ),
             border = CardDefaults.border(
                 focusedBorder = Border(
-                    border = androidx.compose.foundation.BorderStroke(2.dp, NuvioColors.FocusRing),
+                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                     shape = CircleShape
                 )
             )

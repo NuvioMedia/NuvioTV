@@ -48,6 +48,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -593,6 +594,7 @@ private fun AddonChip(
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    val animatedBorderColor = rememberPulsingFocusBorderColor(isFocused = isFocused)
 
     FilterChip(
         selected = isSelected,
@@ -620,7 +622,7 @@ private fun AddonChip(
                 shape = RoundedCornerShape(20.dp)
             ),
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, animatedBorderColor),
                 shape = RoundedCornerShape(20.dp)
             ),
             selectedBorder = Border(
@@ -628,7 +630,7 @@ private fun AddonChip(
                 shape = RoundedCornerShape(20.dp)
             ),
             focusedSelectedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, animatedBorderColor),
                 shape = RoundedCornerShape(20.dp)
             )
         ),
@@ -676,6 +678,7 @@ private fun ErrorState(
         Spacer(modifier = Modifier.height(24.dp))
 
         var isFocused by remember { mutableStateOf(false) }
+        val animatedBorderColor = rememberPulsingFocusBorderColor(isFocused = isFocused)
         Card(
             onClick = onRetry,
             modifier = Modifier.onFocusChanged { isFocused = it.isFocused },
@@ -685,7 +688,7 @@ private fun ErrorState(
             ),
             border = CardDefaults.border(
                 focusedBorder = Border(
-                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                    border = BorderStroke(2.dp, animatedBorderColor),
                     shape = RoundedCornerShape(8.dp)
                 )
             ),
@@ -960,7 +963,7 @@ private fun PlayerChoiceDialog(
                         ),
                         border = CardDefaults.border(
                             focusedBorder = Border(
-                                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = internalFocused)),
                                 shape = RoundedCornerShape(12.dp)
                             )
                         ),
@@ -990,7 +993,7 @@ private fun PlayerChoiceDialog(
                         ),
                         border = CardDefaults.border(
                             focusedBorder = Border(
-                                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = externalFocused)),
                                 shape = RoundedCornerShape(12.dp)
                             )
                         ),

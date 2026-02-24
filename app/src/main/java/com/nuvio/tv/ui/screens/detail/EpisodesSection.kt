@@ -68,6 +68,7 @@ import androidx.tv.material3.ButtonDefaults
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import com.nuvio.tv.ui.theme.NuvioTheme
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -145,7 +146,7 @@ fun SeasonTabs(
                 ),
                 border = CardDefaults.border(
                     focusedBorder = Border(
-                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                        border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                         shape = RoundedCornerShape(20.dp)
                     )
                 ),
@@ -475,7 +476,7 @@ private fun EpisodeCard(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(8.dp)
             )
         ),

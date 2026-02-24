@@ -49,6 +49,7 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
@@ -215,6 +216,7 @@ private fun ThemeCard(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val palette = ThemeColors.getColorPalette(theme)
+    val animatedBorderColor = rememberPulsingFocusBorderColor(isFocused = isFocused)
 
     Card(
         onClick = onClick,
@@ -232,11 +234,11 @@ private fun ThemeCard(
         ),
         border = CardDefaults.border(
             border = if (isSelected) Border(
-                border = BorderStroke(1.dp, NuvioColors.FocusRing),
+                border = BorderStroke(1.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(SettingsSecondaryCardRadius)
             ) else Border.None,
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, animatedBorderColor),
                 shape = RoundedCornerShape(SettingsSecondaryCardRadius)
             )
         ),

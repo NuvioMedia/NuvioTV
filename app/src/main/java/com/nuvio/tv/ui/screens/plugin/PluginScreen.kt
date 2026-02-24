@@ -87,6 +87,7 @@ import com.nuvio.tv.domain.model.PluginRepository
 import com.nuvio.tv.domain.model.ScraperInfo
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -311,15 +312,17 @@ private fun PluginHeader(
             )
         }
 
+        var isFocused by remember { mutableStateOf(false) }
         Surface(
             onClick = { onPluginsEnabledChange(!pluginsEnabled) },
+            modifier = Modifier.onFocusChanged { isFocused = it.isFocused },
             colors = ClickableSurfaceDefaults.colors(
                 containerColor = NuvioColors.BackgroundCard,
                 focusedContainerColor = NuvioColors.FocusBackground
             ),
             border = ClickableSurfaceDefaults.border(
                 focusedBorder = Border(
-                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                     shape = RoundedCornerShape(12.dp)
                 )
             ),
@@ -387,9 +390,12 @@ private fun AddRepositoryInline(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Surface always stays in the tree for stable D-pad focus
+                var isInputSurfaceFocused by remember { mutableStateOf(false) }
                 Surface(
                     onClick = { isEditing = true },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .onFocusChanged { isInputSurfaceFocused = it.isFocused },
                     colors = ClickableSurfaceDefaults.colors(
                         containerColor = NuvioColors.BackgroundElevated,
                         focusedContainerColor = NuvioColors.BackgroundElevated
@@ -400,7 +406,7 @@ private fun AddRepositoryInline(
                             shape = RoundedCornerShape(12.dp)
                         ),
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isInputSurfaceFocused)),
                             shape = RoundedCornerShape(12.dp)
                         )
                     ),
@@ -451,6 +457,7 @@ private fun AddRepositoryInline(
                     }
                 }
 
+                var isAddButtonFocused by remember { mutableStateOf(false) }
                 Button(
                     onClick = {
                         onConfirm()
@@ -458,6 +465,7 @@ private fun AddRepositoryInline(
                         keyboardController?.hide()
                         focusManager.clearFocus(force = true)
                     },
+                    modifier = Modifier.onFocusChanged { isAddButtonFocused = it.isFocused },
                     enabled = !isLoading && url.isNotBlank(),
                     colors = ButtonDefaults.colors(
                         containerColor = NuvioColors.Secondary,
@@ -467,7 +475,7 @@ private fun AddRepositoryInline(
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isAddButtonFocused)),
                             shape = RoundedCornerShape(50)
                         )
                     )
@@ -504,7 +512,7 @@ private fun ManageFromPhoneCard(onClick: () -> Unit) {
         ),
         border = ClickableSurfaceDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(18.dp)
             )
         ),
@@ -606,16 +614,19 @@ private fun QrCodeOverlay(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            var isCloseFocused by remember { mutableStateOf(false) }
             Surface(
                 onClick = onClose,
-                modifier = Modifier.focusRequester(focusRequester),
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { isCloseFocused = it.isFocused },
                 colors = ClickableSurfaceDefaults.colors(
                     containerColor = NuvioColors.Surface,
                     focusedContainerColor = NuvioColors.FocusBackground
                 ),
                 border = ClickableSurfaceDefaults.border(
                     focusedBorder = Border(
-                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                        border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isCloseFocused)),
                         shape = RoundedCornerShape(50)
                     )
                 ),
@@ -778,15 +789,17 @@ private fun ConfirmRepoChangesDialog(
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        var isRejectFocused by remember { mutableStateOf(false) }
                         Surface(
                             onClick = onReject,
+                            modifier = Modifier.onFocusChanged { isRejectFocused = it.isFocused },
                             colors = ClickableSurfaceDefaults.colors(
                                 containerColor = NuvioColors.Surface,
                                 focusedContainerColor = NuvioColors.FocusBackground
                             ),
                             border = ClickableSurfaceDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isRejectFocused)),
                                     shape = RoundedCornerShape(50)
                                 )
                             ),
@@ -810,16 +823,19 @@ private fun ConfirmRepoChangesDialog(
                             }
                         }
 
+                        var isConfirmFocused by remember { mutableStateOf(false) }
                         Surface(
                             onClick = onConfirm,
-                            modifier = Modifier.focusRequester(focusRequester),
+                            modifier = Modifier
+                                .focusRequester(focusRequester)
+                                .onFocusChanged { isConfirmFocused = it.isFocused },
                             colors = ClickableSurfaceDefaults.colors(
                                 containerColor = NuvioColors.Secondary,
                                 focusedContainerColor = NuvioColors.SecondaryVariant
                             ),
                             border = ClickableSurfaceDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isConfirmFocused)),
                                     shape = RoundedCornerShape(50)
                                 )
                             ),

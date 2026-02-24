@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.library
 
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -68,8 +69,10 @@ import com.nuvio.tv.ui.components.ContentCard
 import com.nuvio.tv.ui.components.EmptyScreenState
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.components.NuvioButton
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
 import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
@@ -426,7 +429,7 @@ private fun LibraryDropdownPicker(
                     shape = RoundedCornerShape(14.dp)
                 ),
                 focusedBorder = androidx.tv.material3.Border(
-                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                     shape = RoundedCornerShape(14.dp)
                 )
             ),
@@ -461,7 +464,7 @@ private fun LibraryDropdownPicker(
                     Icon(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                         contentDescription = if (expanded) "Collapse $title" else "Expand $title",
-                        tint = if (isFocused) NuvioColors.FocusRing else NuvioColors.TextSecondary
+                        tint = if (isFocused) rememberPulsingFocusBorderColor(isFocused = isFocused) else NuvioColors.TextSecondary
                     )
                 }
             }
@@ -519,23 +522,15 @@ private fun LibraryActionsRow(
             .padding(horizontal = 48.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Button(
+        NuvioButton(
             onClick = onManageLists,
             enabled = !pending && !isSyncing,
-            colors = ButtonDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                contentColor = NuvioColors.TextPrimary
-            )
         ) {
             Text(stringResource(R.string.library_manage_lists))
         }
-        Button(
+        NuvioButton(
             onClick = onRefresh,
             enabled = !pending && !isSyncing,
-            colors = ButtonDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                contentColor = NuvioColors.TextPrimary
-            )
         ) {
             Text(if (isSyncing) "Syncing..." else "Sync")
         }
@@ -571,11 +566,13 @@ private fun ManageListsDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
+        val shape = RoundedCornerShape(16.dp)
         Box(
             modifier = Modifier
                 .width(620.dp)
-                .background(NuvioColors.BackgroundElevated, RoundedCornerShape(16.dp))
-                .padding(24.dp)
+                .background(NuvioColors.BackgroundCard, shape)
+                .border(BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = true)), shape)
+                .padding(32.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(
@@ -607,7 +604,7 @@ private fun ManageListsDialog(
                     ) {
                         items(personalTabs, key = { it.key }) { tab ->
                             val selected = tab.key == selectedKey
-                            Button(
+                            NuvioButton(
                                 onClick = { onSelect(tab.key) },
                                 enabled = !pending,
                                 modifier = if (tab.key == personalTabs.firstOrNull()?.key) {
@@ -619,7 +616,9 @@ private fun ManageListsDialog(
                                 },
                                 colors = ButtonDefaults.colors(
                                     containerColor = if (selected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
-                                    contentColor = NuvioColors.TextPrimary
+                                    contentColor = NuvioColors.TextPrimary,
+                                    focusedContainerColor = NuvioColors.FocusBackground,
+                                    focusedContentColor = NuvioColors.Primary
                                 )
                             ) {
                                 Text(
@@ -633,57 +632,39 @@ private fun ManageListsDialog(
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(
+                    NuvioButton(
                         onClick = onCreate,
                         enabled = !pending,
-                        colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
-                            contentColor = NuvioColors.TextPrimary
-                        )
                     ) { Text(stringResource(R.string.library_list_create)) }
-                    Button(
+                    NuvioButton(
                         onClick = onEdit,
                         enabled = !pending && selectedKey != null,
-                        colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
-                            contentColor = NuvioColors.TextPrimary
-                        )
                     ) { Text(stringResource(R.string.library_list_edit)) }
-                    Button(
+                    NuvioButton(
                         onClick = onMoveUp,
                         enabled = !pending && selectedKey != null,
-                        colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
-                            contentColor = NuvioColors.TextPrimary
-                        )
                     ) { Text(stringResource(R.string.library_list_move_up)) }
-                    Button(
+                    NuvioButton(
                         onClick = onMoveDown,
                         enabled = !pending && selectedKey != null,
-                        colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
-                            contentColor = NuvioColors.TextPrimary
-                        )
                     ) { Text(stringResource(R.string.library_list_move_down)) }
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(
+                    NuvioButton(
                         onClick = onDelete,
                         enabled = !pending && selectedKey != null,
                         colors = ButtonDefaults.colors(
                             containerColor = Color(0xFF4A2323),
-                            contentColor = NuvioColors.TextPrimary
+                            contentColor = NuvioColors.TextPrimary,
+                            focusedContainerColor = Color(0xFF632E2E),
+                            focusedContentColor = Color.White
                         )
                     ) { Text(stringResource(R.string.library_list_delete)) }
-                    Button(
+                    NuvioButton(
                         onClick = onDismiss,
                         enabled = !pending,
                         modifier = Modifier.focusRequester(closeFocusRequester),
-                        colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
-                            contentColor = NuvioColors.TextPrimary
-                        )
                     ) { Text(stringResource(R.string.library_list_close)) }
                 }
             }
@@ -760,11 +741,11 @@ private fun ListEditorDialog(
                 unfocusedTextColor = NuvioColors.TextPrimary,
                 focusedContainerColor = NuvioColors.BackgroundCard,
                 unfocusedContainerColor = NuvioColors.BackgroundCard,
-                focusedBorderColor = NuvioColors.FocusRing,
+                focusedBorderColor = rememberPulsingFocusBorderColor(isFocused = true),
                 unfocusedBorderColor = NuvioColors.Border,
                 focusedLabelColor = NuvioColors.TextSecondary,
                 unfocusedLabelColor = NuvioColors.TextTertiary,
-                cursorColor = NuvioColors.FocusRing
+                cursorColor = rememberPulsingFocusBorderColor(isFocused = true)
             )
         )
 
@@ -798,11 +779,11 @@ private fun ListEditorDialog(
                 unfocusedTextColor = NuvioColors.TextPrimary,
                 focusedContainerColor = NuvioColors.BackgroundCard,
                 unfocusedContainerColor = NuvioColors.BackgroundCard,
-                focusedBorderColor = NuvioColors.FocusRing,
+                focusedBorderColor = rememberPulsingFocusBorderColor(isFocused = true),
                 unfocusedBorderColor = NuvioColors.Border,
                 focusedLabelColor = NuvioColors.TextSecondary,
                 unfocusedLabelColor = NuvioColors.TextTertiary,
-                cursorColor = NuvioColors.FocusRing
+                cursorColor = rememberPulsingFocusBorderColor(isFocused = true)
             )
         )
 

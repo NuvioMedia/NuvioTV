@@ -25,7 +25,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +47,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import kotlinx.coroutines.launch
@@ -183,9 +188,11 @@ private fun CatalogOrderCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                var isUpFocused by remember { mutableStateOf(false) }
                 Button(
                     onClick = onMoveUp,
                     enabled = item.canMoveUp,
+                    modifier = Modifier.onFocusChanged { isUpFocused = it.isFocused },
                     colors = ButtonDefaults.colors(
                         containerColor = NuvioColors.BackgroundCard,
                         contentColor = NuvioColors.TextSecondary,
@@ -194,7 +201,7 @@ private fun CatalogOrderCard(
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isUpFocused)),
                             shape = RoundedCornerShape(12.dp)
                         )
                     ),
@@ -206,9 +213,11 @@ private fun CatalogOrderCard(
                     )
                 }
 
+                var isDownFocused by remember { mutableStateOf(false) }
                 Button(
                     onClick = onMoveDown,
                     enabled = item.canMoveDown,
+                    modifier = Modifier.onFocusChanged { isDownFocused = it.isFocused },
                     colors = ButtonDefaults.colors(
                         containerColor = NuvioColors.BackgroundCard,
                         contentColor = NuvioColors.TextSecondary,
@@ -217,7 +226,7 @@ private fun CatalogOrderCard(
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isDownFocused)),
                             shape = RoundedCornerShape(12.dp)
                         )
                     ),
@@ -229,8 +238,10 @@ private fun CatalogOrderCard(
                     )
                 }
 
+                var isToggleFocused by remember { mutableStateOf(false) }
                 Button(
                     onClick = onToggleEnabled,
+                    modifier = Modifier.onFocusChanged { isToggleFocused = it.isFocused },
                     colors = ButtonDefaults.colors(
                         containerColor = NuvioColors.BackgroundCard,
                         contentColor = if (item.isDisabled) NuvioColors.Success else NuvioColors.TextSecondary,
@@ -239,7 +250,7 @@ private fun CatalogOrderCard(
                     ),
                     border = ButtonDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isToggleFocused)),
                             shape = RoundedCornerShape(12.dp)
                         )
                     ),

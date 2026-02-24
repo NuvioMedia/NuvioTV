@@ -57,6 +57,7 @@ import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 
 private enum class PlaybackSection {
     GENERAL,
@@ -637,19 +638,20 @@ private fun PlayerPreferenceDialog(
                     ) { index ->
                         val (preference, title, description) = options[index]
                         val isSelected = preference == currentPreference
-
+                        var isFocused by remember { mutableStateOf(false) }
                         Card(
                             onClick = { onPreferenceSelected(preference) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
+                                .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier)
+                                .onFocusChanged { isFocused = it.isFocused },
                             colors = CardDefaults.colors(
                                 containerColor = if (isSelected) NuvioColors.Primary.copy(alpha = 0.2f) else NuvioColors.BackgroundElevated,
                                 focusedContainerColor = NuvioColors.FocusBackground
                             ),
                             border = CardDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                                     shape = RoundedCornerShape(8.dp)
                                 )
                             ),

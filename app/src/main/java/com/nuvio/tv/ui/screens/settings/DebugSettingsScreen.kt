@@ -40,6 +40,7 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.screens.account.InputField
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 
 @Composable
 fun DebugSettingsContent(
@@ -160,17 +161,19 @@ private fun DebugToggleCard(
     checked: Boolean,
     onToggle: (Boolean) -> Unit
 ) {
+    var isFocused by remember { mutableStateOf(false) }
     Card(
         onClick = { onToggle(!checked) },
         modifier = Modifier
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
             containerColor = NuvioColors.BackgroundCard,
             focusedContainerColor = NuvioColors.FocusBackground
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(12.dp)
             )
         ),
@@ -233,7 +236,7 @@ private fun DebugActionCard(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(12.dp)
             )
         ),

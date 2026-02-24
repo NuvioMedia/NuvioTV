@@ -48,6 +48,8 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
@@ -295,6 +297,7 @@ fun ContinueWatchingCard(
         )
     }
     val badgeBackground = remember(bgColor) { bgColor.copy(alpha = 0.8f) }
+    val animatedBorderColor = rememberPulsingFocusBorderColor(isFocused = isFocused)
 
     Card(
         onClick = {
@@ -334,7 +337,7 @@ fun ContinueWatchingCard(
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, animatedBorderColor),
                 shape = CwCardShape
             )
         ),
@@ -462,25 +465,17 @@ fun ContinueWatchingOptionsDialog(
         title = title,
         subtitle = stringResource(R.string.cw_dialog_subtitle)
     ) {
-        Button(
+        NuvioButton(
             onClick = onDetails,
             modifier = Modifier
                 .fillMaxWidth()
-                .focusRequester(detailsFocusRequester),
-            colors = ButtonDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                contentColor = NuvioColors.TextPrimary
-            )
+                .focusRequester(detailsFocusRequester)
         ) {
             Text(stringResource(R.string.cw_action_go_to_details))
         }
 
-        Button(
+        NuvioButton(
             onClick = onRemove,
-            colors = ButtonDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                contentColor = NuvioColors.TextPrimary
-            ),
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(stringResource(R.string.cw_action_remove))

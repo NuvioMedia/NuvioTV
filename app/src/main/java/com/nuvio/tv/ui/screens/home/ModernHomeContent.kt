@@ -4,6 +4,11 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -52,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
@@ -1509,11 +1515,14 @@ private fun ModernCarouselCard(
     val hasImage = !imageUrl.isNullOrBlank()
     val hasLandscapeLogo = useLandscapePosters && !item.heroPreview.logo.isNullOrBlank()
     val backgroundCardColor = NuvioColors.BackgroundCard
-    val focusRingColor = NuvioColors.FocusRing
     val titleMedium = MaterialTheme.typography.titleMedium
-    val focusedBorder = remember(cardShape, focusRingColor) {
+    
+    // Pulsing focus border
+    var isCardFocused by remember { mutableStateOf(false) }
+    val animatedFocusRingColor = rememberPulsingFocusBorderColor(isFocused = isCardFocused)
+    val focusedBorder = remember(cardShape, animatedFocusRingColor) {
         Border(
-            border = BorderStroke(2.dp, focusRingColor),
+            border = BorderStroke(2.dp, animatedFocusRingColor),
             shape = cardShape
         )
     }
@@ -1532,6 +1541,7 @@ private fun ModernCarouselCard(
                 .height(cardHeight)
                 .focusRequester(focusRequester)
                 .onFocusChanged {
+                    isCardFocused = it.isFocused
                     if (it.isFocused) {
                         onFocused()
                     }

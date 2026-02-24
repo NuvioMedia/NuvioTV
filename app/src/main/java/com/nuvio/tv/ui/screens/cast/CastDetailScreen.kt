@@ -61,6 +61,7 @@ import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -256,7 +257,7 @@ private fun HeroSection(person: PersonDetail) {
                     shape = RoundedCornerShape(16.dp)
                 ),
                 focusedBorder = Border(
-                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = false)), // focusable(false)
                     shape = RoundedCornerShape(16.dp)
                 )
             )

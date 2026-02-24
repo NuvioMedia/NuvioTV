@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +48,7 @@ import com.nuvio.tv.domain.model.UserProfile
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
 import com.nuvio.tv.ui.screens.account.InputField
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import com.nuvio.tv.R
 
 private enum class ProfileSettingsMode {
@@ -149,18 +151,21 @@ private fun ProfileListItem(
     profile: UserProfile,
     onClick: () -> Unit
 ) {
+    var isFocused by remember { mutableStateOf(false) }
+    
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 62.dp),
+            .heightIn(min = 62.dp)
+            .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
             containerColor = NuvioColors.BackgroundElevated,
             focusedContainerColor = NuvioColors.BackgroundElevated
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(SettingsPillRadius)
             )
         ),
@@ -222,11 +227,13 @@ private fun ProfileListItem(
 private fun AddProfileButton(
     onClick: () -> Unit
 ) {
+    var isFocused by remember { mutableStateOf(false) }
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp),
+            .height(56.dp)
+            .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
             containerColor = NuvioColors.Background,
             focusedContainerColor = NuvioColors.Background
@@ -237,7 +244,7 @@ private fun AddProfileButton(
                 shape = RoundedCornerShape(SettingsPillRadius)
             ),
             focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(SettingsPillRadius)
             )
         ),
@@ -497,16 +504,17 @@ private fun ProfileFormButton(
         else -> NuvioColors.FocusBackground
     }
 
+    var isFocused by remember { mutableStateOf(false) }
     Card(
         onClick = { if (enabled) onClick() },
-        modifier = modifier.height(44.dp),
+        modifier = modifier.height(44.dp).onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
             containerColor = containerColor,
             focusedContainerColor = focusedColor
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
-                border = BorderStroke(2.dp, if (isDestructive) Color(0xFFD32F2F) else NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, if (isDestructive) Color(0xFFD32F2F) else rememberPulsingFocusBorderColor(isFocused = isFocused)),
                 shape = RoundedCornerShape(SettingsPillRadius)
             )
         ),

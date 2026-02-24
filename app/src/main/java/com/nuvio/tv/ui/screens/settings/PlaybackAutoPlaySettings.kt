@@ -65,6 +65,7 @@ import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import kotlin.math.roundToInt
 import java.util.Locale
 
@@ -426,19 +427,21 @@ private fun NextEpisodeThresholdModeDialog(
                     ) { index ->
                         val (mode, title, description) = options[index]
                         val isSelected = mode == selectedMode
+                        var isFocused by remember { mutableStateOf(false) }
 
                         Card(
                             onClick = { onModeSelected(mode) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
+                                .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier)
+                                .onFocusChanged { isFocused = it.isFocused },
                             colors = CardDefaults.colors(
                                 containerColor = if (isSelected) NuvioColors.Primary.copy(alpha = 0.2f) else NuvioColors.BackgroundElevated,
                                 focusedContainerColor = NuvioColors.FocusBackground
                             ),
                             border = CardDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                                     shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                                 )
                             ),
@@ -553,7 +556,7 @@ private fun StreamAutoPlayModeDialog(
                             ),
                             border = CardDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                                     shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                                 )
                             ),
@@ -641,18 +644,20 @@ private fun StreamReuseLastLinkCacheDurationDialog(
                         key = { _, hours -> hours }
                     ) { index, hours ->
                         val isSelected = hours == selectedHours
+                        var isFocused by remember { mutableStateOf(false) }
                         Card(
                             onClick = { onDurationSelected(hours) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
+                                .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier)
+                                .onFocusChanged { isFocused = it.isFocused },
                             colors = CardDefaults.colors(
                                 containerColor = if (isSelected) NuvioColors.Primary.copy(alpha = 0.2f) else NuvioColors.BackgroundElevated,
                                 focusedContainerColor = NuvioColors.FocusBackground
                             ),
                             border = CardDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                                     shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                                 )
                             ),
@@ -743,19 +748,21 @@ private fun StreamAutoPlaySourceDialog(
                     ) { index ->
                         val (source, title, description) = options[index]
                         val isSelected = source == selectedSource
+                        var isFocused by remember { mutableStateOf(false) }
 
                         Card(
                             onClick = { onSourceSelected(source) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
+                                .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier)
+                                .onFocusChanged { isFocused = it.isFocused },
                             colors = CardDefaults.colors(
                                 containerColor = if (isSelected) NuvioColors.Primary.copy(alpha = 0.2f) else NuvioColors.BackgroundElevated,
                                 focusedContainerColor = NuvioColors.FocusBackground
                             ),
                             border = CardDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                                     shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                                 )
                             ),
@@ -840,18 +847,20 @@ private fun StreamAutoPlayProviderSelectionDialog(
                     color = NuvioColors.TextPrimary
                 )
 
+                var isAllFocused by remember { mutableStateOf(false) }
                 Card(
                     onClick = { selected = emptySet() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .focusRequester(focusRequester),
+                        .focusRequester(focusRequester)
+                        .onFocusChanged { isAllFocused = it.isFocused },
                     colors = CardDefaults.colors(
                         containerColor = if (selected.isEmpty()) NuvioColors.Primary.copy(alpha = 0.2f) else NuvioColors.BackgroundElevated,
                         focusedContainerColor = NuvioColors.FocusBackground
                     ),
                     border = CardDefaults.border(
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isAllFocused)),
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                         )
                     ),
@@ -897,6 +906,7 @@ private fun StreamAutoPlayProviderSelectionDialog(
                             key = { it }
                         ) { item ->
                             val isSelected = item in selected
+                            var isFocused by remember { mutableStateOf(false) }
                             Card(
                                 onClick = {
                                     selected = if (isSelected) {
@@ -905,14 +915,16 @@ private fun StreamAutoPlayProviderSelectionDialog(
                                         selected + item
                                     }
                                 },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onFocusChanged { isFocused = it.isFocused },
                                 colors = CardDefaults.colors(
                                     containerColor = if (isSelected) NuvioColors.Primary.copy(alpha = 0.2f) else NuvioColors.BackgroundElevated,
                                     focusedContainerColor = NuvioColors.FocusBackground
                                 ),
                                 border = CardDefaults.border(
                                     focusedBorder = Border(
-                                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                        border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                                         shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                                     )
                                 ),
@@ -1029,7 +1041,7 @@ private fun StreamRegexDialog(
                             ),
                             border = CardDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                                     shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
                                 )
                             ),
@@ -1061,7 +1073,7 @@ private fun StreamRegexDialog(
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
                         ),
                         focusedBorder = Border(
-                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isInputFocused)),
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
                         )
                     ),

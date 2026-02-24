@@ -60,6 +60,7 @@ import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -267,7 +268,7 @@ private fun DiscoverDropdownPicker(
                     shape = RoundedCornerShape(14.dp)
                 ),
                 focusedBorder = Border(
-                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isFocused)),
                     shape = RoundedCornerShape(14.dp)
                 )
             ),
@@ -303,7 +304,7 @@ private fun DiscoverDropdownPicker(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                         contentDescription = if (expanded) "Collapse $title" else "Expand $title",
                         modifier = Modifier.size(20.dp),
-                        tint = if (isFocused) NuvioColors.FocusRing else NuvioColors.TextSecondary
+                        tint = if (isFocused) rememberPulsingFocusBorderColor(isFocused = isFocused) else NuvioColors.TextSecondary
                     )
                 }
             }
@@ -517,35 +518,41 @@ private fun DiscoverActionCard(
         DiscoverGridAction.None -> ""
     }
 
-    Card(
-        onClick = onClick,
-        modifier = modifier
-            .width(posterCardStyle.width)
-            .onPreviewKeyEvent { event ->
-                actionType != DiscoverGridAction.None &&
-                    event.nativeKeyEvent.action == AndroidKeyEvent.ACTION_DOWN &&
-                    event.nativeKeyEvent.keyCode == AndroidKeyEvent.KEYCODE_DPAD_RIGHT
-            }
-            .onFocusChanged { state -> if (state.isFocused) onFocused() }
-            .then(
-                if (focusRequester != null) Modifier.focusRequester(focusRequester)
-                else Modifier
+        var isFocused by remember { mutableStateOf(false) }
+        val animatedBorderColor = rememberPulsingFocusBorderColor(isFocused = isFocused)
+
+        Card(
+            onClick = onClick,
+            modifier = modifier
+                .width(posterCardStyle.width)
+                .onPreviewKeyEvent { event ->
+                    actionType != DiscoverGridAction.None &&
+                        event.nativeKeyEvent.action == AndroidKeyEvent.ACTION_DOWN &&
+                        event.nativeKeyEvent.keyCode == AndroidKeyEvent.KEYCODE_DPAD_RIGHT
+                }
+                .onFocusChanged { state -> 
+                    isFocused = state.isFocused
+                    if (state.isFocused) onFocused() 
+                }
+                .then(
+                    if (focusRequester != null) Modifier.focusRequester(focusRequester)
+                    else Modifier
+                ),
+            shape = CardDefaults.shape(shape = cardShape),
+            colors = CardDefaults.colors(
+                containerColor = NuvioColors.BackgroundCard,
+                focusedContainerColor = NuvioColors.FocusBackground
             ),
-        shape = CardDefaults.shape(shape = cardShape),
-        colors = CardDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.FocusBackground
-        ),
-        border = CardDefaults.border(
-            border = Border(
-                border = BorderStroke(1.dp, NuvioColors.Border),
-                shape = cardShape
+            border = CardDefaults.border(
+                border = Border(
+                    border = BorderStroke(1.dp, NuvioColors.Border),
+                    shape = cardShape
+                ),
+                focusedBorder = Border(
+                    border = BorderStroke(posterCardStyle.focusedBorderWidth, animatedBorderColor),
+                    shape = cardShape
+                )
             ),
-            focusedBorder = Border(
-                border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioColors.FocusRing),
-                shape = cardShape
-            )
-        ),
         scale = CardDefaults.scale(focusedScale = posterCardStyle.focusedScale)
     ) {
         Box(

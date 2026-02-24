@@ -43,6 +43,7 @@ import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.m3.markdownTypography
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 import com.nuvio.tv.updater.UpdateUiState
 import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
@@ -88,7 +89,7 @@ fun UpdatePromptDialog(
             modifier = Modifier
                 .fillMaxWidth(0.9f)
                 .background(NuvioColors.BackgroundCard, shape)
-                .border(BorderStroke(2.dp, NuvioColors.FocusRing), shape)
+                .border(BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = true)), shape)
                 .padding(32.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {

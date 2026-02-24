@@ -38,6 +38,9 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
+import androidx.compose.foundation.BorderStroke
+import androidx.tv.material3.Border
 import kotlinx.coroutines.delay
 
 /**
@@ -99,6 +102,8 @@ fun SkipIntroButton(
         exit = fadeOut(tween(200)) + scaleOut(tween(200), targetScale = 0.8f),
         modifier = modifier
     ) {
+        val animatedBorderColor = rememberPulsingFocusBorderColor(isFocused = isFocused)
+
         Card(
             onClick = onSkip,
             modifier = Modifier
@@ -108,7 +113,13 @@ fun SkipIntroButton(
                 containerColor = Color(0xFF1E1E1E).copy(alpha = 0.85f),
                 focusedContainerColor = NuvioColors.Secondary
             ),
-            shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp))
+            shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp)),
+            border = CardDefaults.border(
+                focusedBorder = Border(
+                    border = BorderStroke(2.dp, animatedBorderColor),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            )
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),

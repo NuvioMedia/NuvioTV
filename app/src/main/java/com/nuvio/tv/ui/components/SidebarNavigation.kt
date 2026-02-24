@@ -42,6 +42,9 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.ui.theme.NuvioColors
 
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
+import androidx.tv.material3.Border
+
 private val NavItemShape = RoundedCornerShape(14.dp)
 private val NavItemIconShape = RoundedCornerShape(10.dp)
 
@@ -113,10 +116,7 @@ private fun SidebarNavItem(
         targetValue = if (isFocused || isSelected) NuvioColors.FocusBackground else Color.Transparent,
         label = "navItemBackground"
     )
-    val borderColor by animateColorAsState(
-        targetValue = if (isFocused) NuvioColors.FocusRing else Color.Transparent,
-        label = "navItemBorder"
-    )
+    val animatedBorderColor = rememberPulsingFocusBorderColor(isFocused = isFocused)
 
     Row(
         modifier = Modifier
@@ -124,7 +124,7 @@ private fun SidebarNavItem(
             .height(56.dp)
             .clip(NavItemShape)
             .background(backgroundColor)
-            .border(width = 2.dp, color = borderColor, shape = NavItemShape)
+            .border(width = 2.dp, color = animatedBorderColor, shape = NavItemShape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged { state ->
                 isFocused = state.isFocused

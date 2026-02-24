@@ -18,6 +18,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.rememberPulsingFocusBorderColor
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -157,11 +160,13 @@ fun EpisodeRatingsSection(
                             Modifier.focusRequester(seasonFocusRequesters.getValue(season))
                         }
 
+                        var isSeasonFocused by remember { mutableStateOf(false) }
                         Card(
                             onClick = { selectedSeason = season },
                             modifier = modifierWithRequester
                                 .then(upFocusModifier)
                                 .onFocusChanged { state ->
+                                    isSeasonFocused = state.isFocused
                                     if (state.isFocused && selectedSeason != season) {
                                         selectedSeason = season
                                     }
@@ -177,7 +182,7 @@ fun EpisodeRatingsSection(
                             ),
                             border = CardDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isSeasonFocused)),
                                     shape = RoundedCornerShape(14.dp)
                                 )
                             ),
@@ -208,13 +213,14 @@ fun EpisodeRatingsSection(
                     items(seasonRatings, key = { it.id }) { episodeRating ->
                         val selectedSeasonUpRequester = firstItemFocusRequester ?: seasonFocusRequesters[selectedSeason]
 
+                        var isRatingFocused by remember { mutableStateOf(false) }
                         Card(
                             onClick = { },
-                            modifier = if (selectedSeasonUpRequester != null) {
+                            modifier = (if (selectedSeasonUpRequester != null) {
                                 Modifier.focusProperties { up = selectedSeasonUpRequester }
                             } else {
                                 Modifier
-                            },
+                            }).onFocusChanged { isRatingFocused = it.isFocused },
                             shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
                             colors = CardDefaults.colors(
                                 containerColor = episodeRating.chipColor,
@@ -222,7 +228,7 @@ fun EpisodeRatingsSection(
                             ),
                             border = CardDefaults.border(
                                 focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                    border = BorderStroke(2.dp, rememberPulsingFocusBorderColor(isFocused = isRatingFocused)),
                                     shape = RoundedCornerShape(14.dp)
                                 )
                             ),
