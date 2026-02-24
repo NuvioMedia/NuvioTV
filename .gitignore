@@ -2,12 +2,8 @@
 .gradle
 /local.properties
 /local.dev.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+/.idea/
+.kotlin/
 .DS_Store
 /build
 **/build/
