@@ -498,22 +498,18 @@ private fun RightStreamSection(
         modifier = modifier
             .padding(top = 48.dp, end = 48.dp, bottom = 48.dp)
     ) {
-        val chipRowHeight = 56.dp
-
-        // Addon filter chips
-        Box(modifier = Modifier.height(chipRowHeight)) {
-            androidx.compose.animation.AnimatedVisibility(
-                visible = !isLoading && (availableAddons.isNotEmpty() || isMoreAddonsLoading),
-                enter = fadeIn(animationSpec = tween(300)),
-                exit = fadeOut(animationSpec = tween(300))
-            ) {
-                AddonFilterChips(
-                    addons = availableAddons,
-                    selectedAddon = selectedAddonFilter,
-                    onAddonSelected = onAddonFilterSelected,
-                    isMoreAddonsLoading = isMoreAddonsLoading
-                )
-            }
+        // Addon filter chips + loading indicator
+        androidx.compose.animation.AnimatedVisibility(
+            visible = !isLoading && (availableAddons.isNotEmpty() || isMoreAddonsLoading),
+            enter = fadeIn(animationSpec = tween(300)),
+            exit = fadeOut(animationSpec = tween(300))
+        ) {
+            AddonFilterChips(
+                addons = availableAddons,
+                selectedAddon = selectedAddonFilter,
+                onAddonSelected = onAddonFilterSelected,
+                isMoreAddonsLoading = isMoreAddonsLoading
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -573,46 +569,48 @@ private fun AddonFilterChips(
     onAddonSelected: (String?) -> Unit,
     isMoreAddonsLoading: Boolean
 ) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // "All" chip
-        item {
-            AddonChip(
-                name = "All",
-                isSelected = selectedAddon == null,
-                onClick = { onAddonSelected(null) }
-            )
-        }
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // "All" chip
+            item {
+                AddonChip(
+                    name = "All",
+                    isSelected = selectedAddon == null,
+                    onClick = { onAddonSelected(null) }
+                )
+            }
 
-        items(addons) { addon ->
-            AddonChip(
-                name = addon,
-                isSelected = selectedAddon == addon,
-                onClick = { onAddonSelected(addon) }
-            )
+            items(addons) { addon ->
+                AddonChip(
+                    name = addon,
+                    isSelected = selectedAddon == addon,
+                    onClick = { onAddonSelected(addon) }
+                )
+            }
         }
 
         if (isMoreAddonsLoading) {
-            item {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(start = 8.dp)
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = NuvioColors.Primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Addons loading...",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = NuvioTheme.extendedColors.textSecondary
-                    )
-                }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(start = 16.dp)
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = NuvioColors.Primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Fetching more addon(s)...",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = NuvioTheme.extendedColors.textSecondary
+                )
             }
         }
     }

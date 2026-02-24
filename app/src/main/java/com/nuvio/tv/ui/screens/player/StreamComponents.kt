@@ -168,45 +168,47 @@ internal fun AddonFilterChips(
     onAddonSelected: (String?) -> Unit,
     isMoreAddonsLoading: Boolean = false
 ) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        item {
-            AddonChip(
-                name = "All",
-                isSelected = selectedAddon == null,
-                onClick = { onAddonSelected(null) }
-            )
-        }
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            item {
+                AddonChip(
+                    name = "All",
+                    isSelected = selectedAddon == null,
+                    onClick = { onAddonSelected(null) }
+                )
+            }
 
-        items(addons) { addon ->
-            AddonChip(
-                name = addon,
-                isSelected = selectedAddon == addon,
-                onClick = { onAddonSelected(addon) }
-            )
+            items(addons) { addon ->
+                AddonChip(
+                    name = addon,
+                    isSelected = selectedAddon == addon,
+                    onClick = { onAddonSelected(addon) }
+                )
+            }
         }
 
         if (isMoreAddonsLoading) {
-            item {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(start = 8.dp)
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = NuvioColors.Primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Addons loading...",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = NuvioTheme.extendedColors.textSecondary
-                    )
-                }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(start = 16.dp)
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = NuvioColors.Primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Fetching more addon(s)...",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = NuvioTheme.extendedColors.textSecondary
+                )
             }
         }
     }
