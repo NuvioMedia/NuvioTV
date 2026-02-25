@@ -98,12 +98,10 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             val wasFrameRateMatchingEnabled =
                 _uiState.value.frameRateMatchingMode != FrameRateMatchingMode.OFF
             _uiState.update { state ->
-                val shouldShowOverlay = if (settings.loadingOverlayEnabled && !hasRenderedFirstFrame) {
-                    true
-                } else if (!settings.loadingOverlayEnabled) {
-                    false
-                } else {
-                    state.showLoadingOverlay
+                val shouldShowOverlay = when {
+                    !settings.loadingOverlayEnabled -> false
+                    !hasRenderedFirstFrame && state.isBuffering -> true
+                    else -> false
                 }
 
                 state.copy(
@@ -292,6 +290,37 @@ internal fun PlayerRuntimeController.retryCurrentStreamAfterTimeout(fromPosition
             "host=${Uri.parse(currentStreamUrl).host ?: "unknown"} " +
             "fromPositionMs=$fromPositionMs"
     )
+    _uiState.update {
+        it.copy(
+            error = null,
+            showLoadingOverlay = it.loadingOverlayEnabled
+        )
+    }
+    _exoPlayer?.let { player ->
+        runCatching {
+            player.stop()
+            player.clearMediaItems()
+            player.setMediaSource(mediaSourceFactory.createMediaSource(currentStreamUrl, currentHeaders))
+            if (fromPositionMs > 0L) {
+                player.seekTo(fromPositionMs)
+            }
+            player.prepare()
+            player.playWhenReady = true
+        }.onFailure { e ->
+            _uiState.update {
+                it.copy(
+                    error = e.message ?: "Playback error",
+                    showLoadingOverlay = false,
+                    showPauseOverlay = false
+                )
+            }
+        }
+    }
+}
+
+@androidx.annotation.OptIn(UnstableApi::class)
+@OptIn(UnstableApi::class)
+internal fun PlayerRuntimeController.retryCurrentStreamAfterUnexpectedNpe(fromPositionMs: Long) {
     _uiState.update {
         it.copy(
             error = null,

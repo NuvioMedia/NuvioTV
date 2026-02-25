@@ -255,6 +255,14 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                     
                         
                         if (playbackState == Player.STATE_READY) {
+                            if (!hasRenderedFirstFrame) {
+                                _uiState.update { state ->
+                                    state.copy(
+                                        showLoadingOverlay = false,
+                                        showControls = true
+                                    )
+                                }
+                            }
                             if (shouldEnforceAutoplayOnFirstReady) {
                                 shouldEnforceAutoplayOnFirstReady = false
                                 if (!userPausedManually && !isPlaying) {
@@ -347,6 +355,20 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                             return
                         }
 
+                        if (error.isUnexpectedLoaderNullPointer() &&
+                            !hasRetriedCurrentStreamAfterUnexpectedNpe
+                        ) {
+                            hasRetriedCurrentStreamAfterUnexpectedNpe = true
+                            Log.w(
+                                PlayerRuntimeController.TAG,
+                                "Unexpected source NPE detected, retrying stream once " +
+                                    "host=${Uri.parse(currentStreamUrl).host ?: "unknown"} " +
+                                    "positionMs=$currentPosition"
+                            )
+                            retryCurrentStreamAfterUnexpectedNpe(currentPosition)
+                            return
+                        }
+
                         val detailedError = buildString {
                             append(error.message ?: "Playback error")
                             val cause = error.cause
@@ -389,6 +411,7 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     shouldEnforceAutoplayOnFirstReady = true
     userPausedManually = false
     timeoutRecoveryAttempts = 0
+    hasRetriedCurrentStreamAfterUnexpectedNpe = false
     lastKnownDuration = 0L
     _uiState.update { state ->
         state.copy(
@@ -449,6 +472,20 @@ private fun PlaybackException.isDolbyVisionDecoderFailure(): Boolean {
     }
     return details.contains("dolby-vision", ignoreCase = true) &&
         details.contains("decoder failed", ignoreCase = true)
+}
+
+private fun PlaybackException.isUnexpectedLoaderNullPointer(): Boolean {
+    if (errorCode != PlaybackException.ERROR_CODE_IO_UNSPECIFIED) return false
+    val details = buildString {
+        append(message ?: "")
+        append(' ')
+        append(cause?.message ?: "")
+        append(' ')
+        append(cause?.cause?.message ?: "")
+    }
+    return details.contains("unexpected nullpointerexception", ignoreCase = true) ||
+        (details.contains("nullpointerexception", ignoreCase = true) &&
+            details.contains("matroskaextractor", ignoreCase = true))
 }
 
 private fun createDolbyVisionFallbackCodecSelector(

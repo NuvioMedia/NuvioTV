@@ -182,6 +182,7 @@ class PlayerRuntimeController(
     internal var pendingPreviewSeekPosition: Long? = null
     internal var pendingResumeProgress: WatchProgress? = null
     internal var hasRetriedCurrentStreamAfter416: Boolean = false
+    internal var hasRetriedCurrentStreamAfterUnexpectedNpe: Boolean = false
     internal var timeoutRecoveryAttempts: Int = 0
     internal val dv7ToHevcForcedStreamUrls: MutableSet<String> = mutableSetOf()
     internal var isMapDv7ToHevcActiveForCurrentPlayback: Boolean = false

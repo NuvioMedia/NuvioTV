@@ -29,6 +29,7 @@ import java.net.URLDecoder
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.Executors
+import kotlin.math.abs
 
 internal class PlayerMediaSourceFactory(private val context: Context) {
     private var okHttpClient: OkHttpClient? = null
@@ -86,6 +87,21 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         val progressiveFactory = if (useVodCache && !isVodCacheDisabled) {
             startVodCacheInitialization(context, vodCacheMaxBytes)
             val cache = getReadySimpleCache(vodCacheMaxBytes)
+                ?: getAnySimpleCache()?.also {
+                    Log.d(
+                        TAG,
+                        "Using existing VOD cache instance with cap=${configuredVodCacheMaxBytes / 1024L / 1024L}MB " +
+                            "while requested cap=${vodCacheMaxBytes / 1024L / 1024L}MB"
+                    )
+                }
+                ?: runCatching {
+                    // Ensure first playback can attach cache even if async warmup has not completed yet.
+                    getOrCreateSimpleCache(context, vodCacheMaxBytes)
+                }.getOrElse { error ->
+                    isVodCacheDisabled = true
+                    Log.e(TAG, "Disabling VOD cache after synchronous initialization failure", error)
+                    null
+                }
             if (cache != null) {
                 runCatching {
                     Log.d(TAG, "Using VOD cache for host=${Uri.parse(url).host ?: "unknown"}")
@@ -192,22 +208,39 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         val manualBytes = vodCacheSizeMb
             .coerceIn(PlayerSettings.MIN_VOD_CACHE_SIZE_MB, PlayerSettings.MAX_VOD_CACHE_SIZE_MB)
             .toLong() * 1024L * 1024L
-        if (vodCacheSizeMode == VodCacheSizeMode.MANUAL) return manualBytes
+        if (vodCacheSizeMode == VodCacheSizeMode.MANUAL) {
+            lastResolvedAutoCacheMaxBytes = -1L
+            return manualBytes
+        }
 
         val freeSpaceBytes = context.cacheDir.usableSpace
         if (freeSpaceBytes <= 0L) return manualBytes
         val autoBytes = freeSpaceBytes / 10L
         val minBytes = PlayerSettings.MIN_VOD_CACHE_SIZE_MB.toLong() * 1024L * 1024L
         val maxBytes = PlayerSettings.MAX_VOD_CACHE_SIZE_MB.toLong() * 1024L * 1024L
-        return autoBytes.coerceIn(minBytes, maxBytes)
+        val quantizedAutoBytes = ((autoBytes.coerceIn(minBytes, maxBytes) / AUTO_CACHE_STEP_BYTES)
+            * AUTO_CACHE_STEP_BYTES).coerceIn(minBytes, maxBytes)
+        val previous = lastResolvedAutoCacheMaxBytes
+        val resolved = if (previous > 0L &&
+            abs(quantizedAutoBytes - previous) < AUTO_CACHE_RECONFIGURE_DELTA_BYTES
+        ) {
+            previous
+        } else {
+            quantizedAutoBytes
+        }
+        lastResolvedAutoCacheMaxBytes = resolved
+        return resolved
     }
 
     companion object {
         private const val TAG = "PlayerMediaSource"
         private const val ENABLE_VOD_CACHE = true
         private const val VOD_CACHE_DIR = "player_vod_cache"
+        private const val AUTO_CACHE_STEP_BYTES = 64L * 1024L * 1024L
+        private const val AUTO_CACHE_RECONFIGURE_DELTA_BYTES = 256L * 1024L * 1024L
         @Volatile private var sharedSimpleCache: SimpleCache? = null
         @Volatile private var configuredVodCacheMaxBytes: Long = -1L
+        @Volatile private var lastResolvedAutoCacheMaxBytes: Long = -1L
         @Volatile private var isVodCacheDisabled: Boolean = false
         @Volatile private var hasLoggedVodCacheNotReady: Boolean = false
         private val cacheInitStarted = AtomicBoolean(false)
@@ -236,6 +269,8 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
             val cache = sharedSimpleCache ?: return null
             return if (configuredVodCacheMaxBytes == expectedMaxBytes) cache else null
         }
+
+        private fun getAnySimpleCache(): SimpleCache? = sharedSimpleCache
 
         private fun getOrCreateSimpleCache(context: Context, maxBytes: Long): SimpleCache {
             sharedSimpleCache?.let {
