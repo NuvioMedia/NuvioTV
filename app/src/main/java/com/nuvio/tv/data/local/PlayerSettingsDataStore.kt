@@ -568,12 +568,6 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
-    suspend fun setOsdClockEnabled(enabled: Boolean) {
-        store().edit { prefs ->
-            prefs[osdClockEnabledKey] = enabled
-        }
-    }
-
     suspend fun setFrameRateMatchingMode(mode: FrameRateMatchingMode) {
         store().edit { prefs ->
             prefs[frameRateMatchingModeKey] = mode.name

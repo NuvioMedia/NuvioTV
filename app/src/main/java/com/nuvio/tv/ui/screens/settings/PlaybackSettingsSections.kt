@@ -262,18 +262,6 @@ internal fun PlaybackSettingsSections(
 
             item(key = "general_skip_intro") {
                 ToggleSettingsItem(
-                    icon = Icons.Default.Timer,
-                    title = "OSD Clock",
-                    subtitle = "Show local time and remaining playback time while controls are visible.",
-                    isChecked = playerSettings.osdClockEnabled,
-                    onCheckedChange = onSetOsdClockEnabled,
-                    onFocused = { focusedSection = PlaybackSection.GENERAL },
-                    enabled = !isExternalPlayer
-                )
-            }
-
-            item {
-                ToggleSettingsItem(
                     icon = Icons.Default.History,
                     title = stringResource(R.string.playback_skip_intro),
                     subtitle = stringResource(R.string.playback_skip_intro_sub),
