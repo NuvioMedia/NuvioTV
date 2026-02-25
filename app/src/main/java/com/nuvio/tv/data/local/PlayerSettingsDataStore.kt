@@ -165,7 +165,7 @@ data class PlayerSettings(
     companion object {
         const val DEFAULT_VOD_CACHE_SIZE_MB = 500
         const val MIN_VOD_CACHE_SIZE_MB = 100
-        const val MAX_VOD_CACHE_SIZE_MB = 8_192
+        const val MAX_VOD_CACHE_SIZE_MB = 65_536
         val DEFAULT_VOD_CACHE_SIZE_MODE: VodCacheSizeMode = VodCacheSizeMode.AUTO
         const val DEFAULT_USE_PARALLEL_CONNECTIONS = false
         const val DEFAULT_PARALLEL_CONNECTION_COUNT = 2

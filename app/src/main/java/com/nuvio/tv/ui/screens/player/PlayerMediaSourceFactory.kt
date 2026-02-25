@@ -222,21 +222,34 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
     }
 
     private fun resolveVodCacheMaxBytes(context: Context): Long {
+        val minBytes = PlayerSettings.MIN_VOD_CACHE_SIZE_MB.toLong() * 1024L * 1024L
+        val maxBytes = PlayerSettings.MAX_VOD_CACHE_SIZE_MB.toLong() * 1024L * 1024L
+        val runtimeMaxBytes = resolveRuntimeVodCacheUpperBoundBytes(context, maxBytes)
         val manualBytes = vodCacheSizeMb
             .coerceIn(PlayerSettings.MIN_VOD_CACHE_SIZE_MB, PlayerSettings.MAX_VOD_CACHE_SIZE_MB)
             .toLong() * 1024L * 1024L
+        val resolvedManualBytes = manualBytes.coerceAtMost(runtimeMaxBytes)
         if (vodCacheSizeMode == VodCacheSizeMode.MANUAL) {
             lastResolvedAutoCacheMaxBytes = -1L
-            return manualBytes
+            if (resolvedManualBytes < manualBytes) {
+                Log.w(
+                    TAG,
+                    "Manual VOD cache cap clamped from ${manualBytes / 1024L / 1024L}MB " +
+                        "to ${resolvedManualBytes / 1024L / 1024L}MB due to free-space headroom"
+                )
+            }
+            return resolvedManualBytes
         }
 
         val freeSpaceBytes = context.cacheDir.usableSpace
-        if (freeSpaceBytes <= 0L) return manualBytes
+        if (freeSpaceBytes <= 0L) return resolvedManualBytes
+        if (runtimeMaxBytes < minBytes) {
+            lastResolvedAutoCacheMaxBytes = runtimeMaxBytes
+            return runtimeMaxBytes
+        }
         val autoBytes = freeSpaceBytes / 10L
-        val minBytes = PlayerSettings.MIN_VOD_CACHE_SIZE_MB.toLong() * 1024L * 1024L
-        val maxBytes = PlayerSettings.MAX_VOD_CACHE_SIZE_MB.toLong() * 1024L * 1024L
-        val quantizedAutoBytes = ((autoBytes.coerceIn(minBytes, maxBytes) / AUTO_CACHE_STEP_BYTES)
-            * AUTO_CACHE_STEP_BYTES).coerceIn(minBytes, maxBytes)
+        val quantizedAutoBytes = ((autoBytes.coerceIn(minBytes, runtimeMaxBytes) / AUTO_CACHE_STEP_BYTES)
+            * AUTO_CACHE_STEP_BYTES).coerceIn(minBytes, runtimeMaxBytes)
         val previous = lastResolvedAutoCacheMaxBytes
         val resolved = if (previous > 0L &&
             abs(quantizedAutoBytes - previous) < AUTO_CACHE_RECONFIGURE_DELTA_BYTES
@@ -245,8 +258,22 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         } else {
             quantizedAutoBytes
         }
-        lastResolvedAutoCacheMaxBytes = resolved
-        return resolved
+        val boundedResolved = resolved.coerceAtMost(runtimeMaxBytes).coerceAtLeast(minBytes)
+        lastResolvedAutoCacheMaxBytes = boundedResolved
+        return boundedResolved
+    }
+
+    private fun resolveRuntimeVodCacheUpperBoundBytes(context: Context, hardMaxBytes: Long): Long {
+        val freeSpaceBytes = context.cacheDir.usableSpace
+        if (freeSpaceBytes <= 0L) return hardMaxBytes
+        val headroomAdjusted = if (freeSpaceBytes > VOD_CACHE_FREE_SPACE_RESERVE_BYTES) {
+            freeSpaceBytes - VOD_CACHE_FREE_SPACE_RESERVE_BYTES
+        } else {
+            (freeSpaceBytes * 8L) / 10L
+        }
+        return headroomAdjusted
+            .coerceAtLeast(MIN_RUNTIME_VOD_CACHE_BYTES)
+            .coerceAtMost(hardMaxBytes)
     }
 
     companion object {
@@ -255,6 +282,8 @@ internal class PlayerMediaSourceFactory(private val context: Context) {
         private const val VOD_CACHE_DIR = "player_vod_cache"
         private const val AUTO_CACHE_STEP_BYTES = 64L * 1024L * 1024L
         private const val AUTO_CACHE_RECONFIGURE_DELTA_BYTES = 256L * 1024L * 1024L
+        private const val VOD_CACHE_FREE_SPACE_RESERVE_BYTES = 1024L * 1024L * 1024L
+        private const val MIN_RUNTIME_VOD_CACHE_BYTES = 1L * 1024L * 1024L
         @Volatile private var sharedSimpleCache: SimpleCache? = null
         @Volatile private var configuredVodCacheMaxBytes: Long = -1L
         @Volatile private var lastResolvedAutoCacheMaxBytes: Long = -1L

@@ -206,11 +206,8 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
     if (playerSettings.vodCacheSizeMode == VodCacheSizeMode.MANUAL) {
         item {
             val context = LocalContext.current
-            val freeDiskMb = (context.cacheDir.usableSpace.coerceAtLeast(0L) / (1024L * 1024L)).toInt()
-            val maxManualCacheMb = min(
-                PlayerSettings.MAX_VOD_CACHE_SIZE_MB,
-                freeDiskMb.coerceAtLeast(PlayerSettings.MIN_VOD_CACHE_SIZE_MB)
-            )
+            val freeDiskBytes = context.cacheDir.usableSpace.coerceAtLeast(0L)
+            val maxManualCacheMb = resolveManualVodCacheMaxMb(freeDiskBytes)
             val manualCacheMb = playerSettings.vodCacheSizeMb.coerceIn(
                 PlayerSettings.MIN_VOD_CACHE_SIZE_MB,
                 maxManualCacheMb
@@ -233,15 +230,12 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
         val context = LocalContext.current
         val freeDiskBytes = context.cacheDir.usableSpace.coerceAtLeast(0L)
         val freeDiskLabel = formatStorageSize(freeDiskBytes)
-        val freeDiskMb = (freeDiskBytes / (1024L * 1024L)).toInt()
-        val maxManualCacheMb = min(
-            PlayerSettings.MAX_VOD_CACHE_SIZE_MB,
-            freeDiskMb.coerceAtLeast(PlayerSettings.MIN_VOD_CACHE_SIZE_MB)
-        )
+        val maxManualCacheMb = resolveManualVodCacheMaxMb(freeDiskBytes)
         val manualMode = playerSettings.vodCacheSizeMode == VodCacheSizeMode.MANUAL
         val infoText = buildString {
             append("Range: ${PlayerSettings.MIN_VOD_CACHE_SIZE_MB}-${maxManualCacheMb} MB. ")
             append("Auto mode targets about 10% of free space.")
+            append(" Manual mode keeps about ${VOD_CACHE_FREE_SPACE_RESERVE_MB}MB headroom.")
             if (manualMode) {
                 append(" Free disk available: $freeDiskLabel.")
                 append(" New cache cap applies after app restart when changing between modes/sizes.")
@@ -339,3 +333,18 @@ private fun formatStorageSize(bytes: Long): String {
     val mb = bytes / (1024.0 * 1024.0)
     return String.format("%.0f MB", mb)
 }
+
+private fun resolveManualVodCacheMaxMb(freeDiskBytes: Long): Int {
+    val freeDiskMb = freeDiskBytes.coerceAtLeast(0L) / (1024L * 1024L)
+    val dynamicMaxMb = when {
+        freeDiskMb > VOD_CACHE_FREE_SPACE_RESERVE_MB -> freeDiskMb - VOD_CACHE_FREE_SPACE_RESERVE_MB
+        else -> (freeDiskMb * 8L) / 10L
+    }
+    val boundedMb = min(
+        PlayerSettings.MAX_VOD_CACHE_SIZE_MB.toLong(),
+        dynamicMaxMb.coerceAtLeast(PlayerSettings.MIN_VOD_CACHE_SIZE_MB.toLong())
+    )
+    return boundedMb.toInt()
+}
+
+private const val VOD_CACHE_FREE_SPACE_RESERVE_MB = 1024L
