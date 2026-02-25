@@ -28,6 +28,7 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.VodCacheSizeMode
 import com.nuvio.tv.ui.theme.NuvioColors
+import kotlin.math.min
 
 @androidx.annotation.OptIn(UnstableApi::class)
 internal fun LazyListScope.bufferAndNetworkSettingsItems(
@@ -204,14 +205,24 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
     if (playerSettings.vodCacheSizeMode == VodCacheSizeMode.MANUAL) {
         item {
+            val context = LocalContext.current
+            val freeDiskMb = (context.cacheDir.usableSpace.coerceAtLeast(0L) / (1024L * 1024L)).toInt()
+            val maxManualCacheMb = min(
+                PlayerSettings.MAX_VOD_CACHE_SIZE_MB,
+                freeDiskMb.coerceAtLeast(PlayerSettings.MIN_VOD_CACHE_SIZE_MB)
+            )
+            val manualCacheMb = playerSettings.vodCacheSizeMb.coerceIn(
+                PlayerSettings.MIN_VOD_CACHE_SIZE_MB,
+                maxManualCacheMb
+            )
             SliderSettingsItem(
                 icon = Icons.Default.Storage,
                 title = "VOD Cache Size",
                 subtitle = "Maximum disk usage for progressive VOD cache (LRU-evicted).",
-                value = playerSettings.vodCacheSizeMb,
-                valueText = "${playerSettings.vodCacheSizeMb} MB",
+                value = manualCacheMb,
+                valueText = "${manualCacheMb} MB",
                 minValue = PlayerSettings.MIN_VOD_CACHE_SIZE_MB,
-                maxValue = PlayerSettings.MAX_VOD_CACHE_SIZE_MB,
+                maxValue = maxManualCacheMb,
                 step = 50,
                 onValueChange = onSetVodCacheSizeMb
             )
@@ -222,12 +233,18 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
         val context = LocalContext.current
         val freeDiskBytes = context.cacheDir.usableSpace.coerceAtLeast(0L)
         val freeDiskLabel = formatStorageSize(freeDiskBytes)
+        val freeDiskMb = (freeDiskBytes / (1024L * 1024L)).toInt()
+        val maxManualCacheMb = min(
+            PlayerSettings.MAX_VOD_CACHE_SIZE_MB,
+            freeDiskMb.coerceAtLeast(PlayerSettings.MIN_VOD_CACHE_SIZE_MB)
+        )
         val manualMode = playerSettings.vodCacheSizeMode == VodCacheSizeMode.MANUAL
         val infoText = buildString {
-            append("Range: ${PlayerSettings.MIN_VOD_CACHE_SIZE_MB}-${PlayerSettings.MAX_VOD_CACHE_SIZE_MB} MB. ")
+            append("Range: ${PlayerSettings.MIN_VOD_CACHE_SIZE_MB}-${maxManualCacheMb} MB. ")
             append("Auto mode targets about 10% of free space.")
             if (manualMode) {
                 append(" Free disk available: $freeDiskLabel.")
+                append(" New cache cap applies after app restart when changing between modes/sizes.")
             }
         }
         Text(
