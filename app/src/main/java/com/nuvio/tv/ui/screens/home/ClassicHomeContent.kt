@@ -41,6 +41,8 @@ fun ClassicHomeContent(
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
+    isCatalogItemWatched: (MetaPreview) -> Boolean = { false },
+    onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     onRequestTrailerPreview: (MetaPreview) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {},
     onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
@@ -230,6 +232,8 @@ fun ClassicHomeContent(
                 trailerPreviewUrls = trailerPreviewUrls,
                 onRequestTrailerPreview = onRequestTrailerPreview,
                 onItemFocus = onItemFocus,
+                isItemWatched = isCatalogItemWatched,
+                onItemLongPress = onCatalogItemLongPress,
                 onItemClick = { id, type, addonBaseUrl ->
                     onNavigateToDetail(id, type, addonBaseUrl)
                 },

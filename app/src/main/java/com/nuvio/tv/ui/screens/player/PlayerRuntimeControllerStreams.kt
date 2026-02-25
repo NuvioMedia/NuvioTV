@@ -100,6 +100,9 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
             )
         }
 
+        val installedAddons = addonRepository.getInstalledAddons().first()
+        val installedAddonOrder = installedAddons.map { it.displayName }
+
         streamRepository.getStreamsFromAllAddons(
             type = type,
             videoId = vid,
@@ -108,7 +111,7 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {
-                    val addonStreams = result.data
+                    val addonStreams = StreamAutoPlaySelector.orderAddonStreams(result.data, installedAddonOrder)
                     val allStreams = addonStreams.flatMap { it.streams }
                     val availableAddons = addonStreams.map { it.addonName }
                     _uiState.update {
@@ -374,6 +377,9 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(video: Video, forceRe
             )
         }
 
+        val installedAddons = addonRepository.getInstalledAddons().first()
+        val installedAddonOrder = installedAddons.map { it.displayName }
+
         streamRepository.getStreamsFromAllAddons(
             type = type,
             videoId = video.id,
@@ -382,7 +388,7 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(video: Video, forceRe
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {
-                    val addonStreams = result.data
+                    val addonStreams = StreamAutoPlaySelector.orderAddonStreams(result.data, installedAddonOrder)
                     val allStreams = addonStreams.flatMap { it.streams }
                     val availableAddons = addonStreams.map { it.addonName }
                     val selectedAddon = previousAddonFilter?.takeIf { it in availableAddons }

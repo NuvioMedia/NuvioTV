@@ -24,7 +24,7 @@ data class PlayerUiState(
     val releaseYear: String? = null, // Release year for movies
     val contentType: String? = null,
     val currentStreamName: String? = null, // Name of the current stream source
-    val currentStreamUrl: String? = null, // URL of the current stream source (for highlighting)
+    val currentStreamUrl: String? = null,
     val backdrop: String? = null,
     val logo: String? = null,
     val description: String? = null,

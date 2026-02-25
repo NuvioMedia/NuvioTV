@@ -34,7 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
@@ -101,20 +101,13 @@ internal fun StreamSourcesSidePanel(
             // Current content info
             Text(
                 text = buildString {
-                    if (uiState.contentType in listOf("series", "tv") && uiState.currentSeason != null) {
-                        if (!uiState.contentName.isNullOrBlank()) {
-                            append(uiState.contentName)
-                            append(" • ")
-                        }
+                    if (uiState.currentSeason != null && uiState.currentEpisode != null) {
                         append("S${uiState.currentSeason} E${uiState.currentEpisode}")
                         if (!uiState.currentEpisodeTitle.isNullOrBlank()) {
                             append(" • ${uiState.currentEpisodeTitle}")
                         }
                     } else {
                         append(uiState.title)
-                        if (!uiState.releaseYear.isNullOrBlank()) {
-                            append(" (${uiState.releaseYear})")
-                        }
                     }
                 },
                 style = MaterialTheme.typography.bodyLarge,
@@ -168,6 +161,16 @@ internal fun StreamSourcesSidePanel(
                 }
 
                 else -> {
+                    val currentStreamUrl = uiState.currentStreamUrl
+                    val currentStreamName = uiState.currentStreamName
+                    val currentStreamIndex = findCurrentStreamIndex(
+                        streams = uiState.sourceFilteredStreams,
+                        currentStreamUrl = currentStreamUrl,
+                        currentStreamName = currentStreamName
+                    )
+                    val initialFocusStream = uiState.sourceFilteredStreams.getOrNull(currentStreamIndex)
+                        ?: uiState.sourceFilteredStreams.firstOrNull()
+
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(
@@ -178,12 +181,12 @@ internal fun StreamSourcesSidePanel(
                         ),
                         modifier = Modifier.fillMaxHeight()
                     ) {
-                        items(uiState.sourceFilteredStreams) { stream ->
+                        itemsIndexed(uiState.sourceFilteredStreams) { index, stream ->
                             StreamItem(
                                 stream = stream,
                                 focusRequester = streamsFocusRequester,
-                                requestInitialFocus = stream == uiState.sourceFilteredStreams.firstOrNull(),
-                                isSelected = stream.getStreamUrl() == uiState.currentStreamUrl,
+                                requestInitialFocus = stream == initialFocusStream,
+                                isCurrentStream = index == currentStreamIndex,
                                 onClick = { onStreamSelected(stream) }
                             )
                         }
@@ -192,4 +195,39 @@ internal fun StreamSourcesSidePanel(
             }
         }
     }
+}
+
+private fun findCurrentStreamIndex(
+    streams: List<Stream>,
+    currentStreamUrl: String?,
+    currentStreamName: String?
+): Int {
+    if (streams.isEmpty()) return -1
+
+    val hasUrl = !currentStreamUrl.isNullOrBlank()
+    val hasName = !currentStreamName.isNullOrBlank()
+
+    if (hasUrl && hasName) {
+        val bothMatch = streams.indexOfFirst { stream ->
+            stream.getStreamUrl() == currentStreamUrl &&
+                stream.getDisplayName().equals(currentStreamName, ignoreCase = true)
+        }
+        if (bothMatch >= 0) return bothMatch
+    }
+
+    if (hasUrl) {
+        val urlMatch = streams.indexOfFirst { stream ->
+            stream.getStreamUrl() == currentStreamUrl
+        }
+        if (urlMatch >= 0) return urlMatch
+    }
+
+    if (hasName) {
+        val nameMatch = streams.indexOfFirst { stream ->
+            stream.getDisplayName().equals(currentStreamName, ignoreCase = true)
+        }
+        if (nameMatch >= 0) return nameMatch
+    }
+
+    return -1
 }

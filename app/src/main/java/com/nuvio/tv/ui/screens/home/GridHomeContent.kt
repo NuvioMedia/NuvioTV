@@ -49,6 +49,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Icon
+import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.GridContinueWatchingSection
 import com.nuvio.tv.ui.components.HeroCarousel
@@ -66,6 +67,8 @@ fun GridHomeContent(
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
+    isCatalogItemWatched: (MetaPreview) -> Boolean = { false },
+    onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
     onItemFocus: (com.nuvio.tv.domain.model.MetaPreview) -> Unit = {},
     onSaveGridFocusState: (Int, Int) -> Unit
@@ -273,6 +276,7 @@ fun GridHomeContent(
                                 focusRequester = focusRequester,
                                 posterCardStyle = posterCardStyle,
                                 showLabel = uiState.posterLabelsEnabled,
+                                isWatched = isCatalogItemWatched(gridItem.item),
                                 onFocused = { onItemFocus(gridItem.item) },
                                 onClick = {
                                     onNavigateToDetail(
@@ -280,6 +284,9 @@ fun GridHomeContent(
                                         gridItem.item.apiType,
                                         gridItem.addonBaseUrl
                                     )
+                                },
+                                onLongPress = {
+                                    onCatalogItemLongPress(gridItem.item, gridItem.addonBaseUrl)
                                 }
                             )
                         }

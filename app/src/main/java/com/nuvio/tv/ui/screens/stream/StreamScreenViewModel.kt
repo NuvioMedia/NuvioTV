@@ -1,16 +1,18 @@
 package com.nuvio.tv.ui.screens.stream
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
-import com.nuvio.tv.core.player.StreamAutoPlaySelector
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.player.StreamAutoPlaySelector
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
+import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.repository.AddonRepository
@@ -29,6 +31,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val TAG = "StreamScreenViewModel"
+private const val EMBEDDED_STREAM_GROUP_NAME = "Embedded Streams"
+private const val EMBEDDED_STREAM_FALLBACK_NAME = "Embed Stream"
 
 @HiltViewModel
 class StreamScreenViewModel @Inject constructor(
@@ -230,6 +236,76 @@ class StreamScreenViewModel @Inject constructor(
             val installedAddons = addonRepository.getInstalledAddons().first()
             val installedAddonOrder = installedAddons.map { it.displayName }
 
+            fun applySuccess(addonStreamGroups: List<AddonStreams>) {
+                val orderedAddonStreams = StreamAutoPlaySelector.orderAddonStreams(
+                    addonStreamGroups,
+                    installedAddonOrder
+                )
+                val allStreams = orderedAddonStreams.flatMap { it.streams }
+                val availableAddons = orderedAddonStreams.map { it.addonName }
+                val selectedAutoPlayStream = if (autoPlayHandledForSession) {
+                    null
+                } else {
+                    StreamAutoPlaySelector.selectAutoPlayStream(
+                        streams = allStreams,
+                        mode = playerSettings.streamAutoPlayMode,
+                        regexPattern = playerSettings.streamAutoPlayRegex,
+                        source = playerSettings.streamAutoPlaySource,
+                        installedAddonNames = installedAddonOrder.toSet(),
+                        selectedAddons = playerSettings.streamAutoPlaySelectedAddons,
+                        selectedPlugins = playerSettings.streamAutoPlaySelectedPlugins
+                    )
+                }
+                if (selectedAutoPlayStream != null) {
+                    resolvedAutoPlayTarget = true
+                }
+
+                val currentFilter = _uiState.value.selectedAddonFilter
+                val filteredStreams = if (currentFilter == null) {
+                    allStreams
+                } else {
+                    allStreams.filter { it.addonName == currentFilter }
+                }
+
+                updateUiStateIfChanged {
+                    it.copy(
+                        isLoading = false,
+                        addonStreams = orderedAddonStreams,
+                        allStreams = allStreams,
+                        filteredStreams = filteredStreams,
+                        availableAddons = availableAddons,
+                        autoPlayStream = selectedAutoPlayStream,
+                        error = null,
+                        showDirectAutoPlayOverlay = if (directAutoPlayFlowEnabledForSession) {
+                            true
+                        } else {
+                            false
+                        }
+                    )
+                }
+            }
+
+            if (shouldAttemptEmbeddedMetaStreamLookup()) {
+                getEmbeddedStreamsFromMeta()?.let { embeddedAddonStreams ->
+                    Log.d(
+                        TAG,
+                        "Using embedded video streams for videoId=$videoId count=${embeddedAddonStreams.streams.size}"
+                    )
+                    applySuccess(listOf(embeddedAddonStreams))
+                    if (directAutoPlayFlowEnabledForSession && !resolvedAutoPlayTarget) {
+                        directAutoPlayFlowEnabledForSession = false
+                        updateUiStateIfChanged {
+                            it.copy(
+                                isDirectAutoPlayFlow = false,
+                                showDirectAutoPlayOverlay = false,
+                                directAutoPlayMessage = null
+                            )
+                        }
+                    }
+                    return@launch
+                }
+            }
+
             streamRepository.getStreamsFromAllAddons(
                 type = contentType,
                 videoId = videoId,
@@ -238,50 +314,7 @@ class StreamScreenViewModel @Inject constructor(
             ).collectLatest { result ->
                 when (result) {
                     is NetworkResult.Success -> {
-                        val addonStreams = StreamAutoPlaySelector.orderAddonStreams(result.data, installedAddonOrder)
-                        val allStreams = addonStreams.flatMap { it.streams }
-                        val availableAddons = addonStreams.map { it.addonName }
-                        val selectedAutoPlayStream = if (autoPlayHandledForSession) {
-                            null
-                        } else {
-                            StreamAutoPlaySelector.selectAutoPlayStream(
-                                streams = allStreams,
-                                mode = playerSettings.streamAutoPlayMode,
-                                regexPattern = playerSettings.streamAutoPlayRegex,
-                                source = playerSettings.streamAutoPlaySource,
-                                installedAddonNames = installedAddonOrder.toSet(),
-                                selectedAddons = playerSettings.streamAutoPlaySelectedAddons,
-                                selectedPlugins = playerSettings.streamAutoPlaySelectedPlugins
-                            )
-                        }
-                        if (selectedAutoPlayStream != null) {
-                            resolvedAutoPlayTarget = true
-                        }
-                        
-                        // Apply current filter if one is selected
-                        val currentFilter = _uiState.value.selectedAddonFilter
-                        val filteredStreams = if (currentFilter == null) {
-                            allStreams
-                        } else {
-                            allStreams.filter { it.addonName == currentFilter }
-                        }
-
-                        updateUiStateIfChanged {
-                            it.copy(
-                                isLoading = false,
-                                addonStreams = addonStreams,
-                                allStreams = allStreams,
-                                filteredStreams = filteredStreams,
-                                availableAddons = availableAddons,
-                                autoPlayStream = selectedAutoPlayStream,
-                                error = null,
-                                showDirectAutoPlayOverlay = if (directAutoPlayFlowEnabledForSession) {
-                                    true
-                                } else {
-                                    false
-                                }
-                            )
-                        }
+                        applySuccess(result.data)
                     }
                     is NetworkResult.Error -> {
                         if (directAutoPlayFlowEnabledForSession) {
@@ -323,6 +356,38 @@ class StreamScreenViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun shouldAttemptEmbeddedMetaStreamLookup(): Boolean {
+        val metaId = contentId?.takeIf { it.isNotBlank() } ?: return false
+        if (contentType.isBlank()) return false
+        if (contentType.equals("other", ignoreCase = true)) return true
+
+        val canonicalVideoMetaId = videoId.substringBefore(":")
+        return !metaId.equals(canonicalVideoMetaId, ignoreCase = true)
+    }
+
+    private suspend fun getEmbeddedStreamsFromMeta(): AddonStreams? {
+        val metaId = contentId?.takeIf { it.isNotBlank() } ?: return null
+        val result = metaRepository.getMetaFromAllAddons(type = contentType, id = metaId)
+            .first { it !is NetworkResult.Loading }
+        val meta = (result as? NetworkResult.Success)?.data ?: return null
+        val video = meta.videos.firstOrNull { it.id == videoId } ?: return null
+        if (video.streams.isEmpty()) return null
+
+        val streams = video.streams.map { stream ->
+            stream.copy(
+                name = stream.name ?: stream.title ?: stream.description ?: EMBEDDED_STREAM_FALLBACK_NAME,
+                addonName = EMBEDDED_STREAM_GROUP_NAME,
+                addonLogo = null
+            )
+        }
+
+        return AddonStreams(
+            addonName = EMBEDDED_STREAM_GROUP_NAME,
+            addonLogo = null,
+            streams = streams
+        )
     }
 
     private fun loadMissingMetaDetailsIfNeeded() {

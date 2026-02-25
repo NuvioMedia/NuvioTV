@@ -104,6 +104,7 @@ class PlayerRuntimeController(
             title = title,
             contentName = contentName,
             currentStreamName = streamName,
+            currentStreamUrl = currentStreamUrl,
             releaseYear = year,
             contentType = contentType,
             backdrop = backdrop,

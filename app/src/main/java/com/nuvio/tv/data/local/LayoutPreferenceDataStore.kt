@@ -45,7 +45,6 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val legacyModernSidebarEnabledKey = booleanPreferencesKey("glass_sidepanel_enabled")
     private val modernSidebarBlurEnabledKey = booleanPreferencesKey("modern_sidebar_blur_enabled")
     private val modernLandscapePostersEnabledKey = booleanPreferencesKey("modern_landscape_posters_enabled")
-    private val modernNextRowPreviewEnabledKey = booleanPreferencesKey("modern_next_row_preview_enabled")
     private val heroSectionEnabledKey = booleanPreferencesKey("hero_section_enabled")
     private val searchDiscoverEnabledKey = booleanPreferencesKey("search_discover_enabled")
     private val posterLabelsEnabledKey = booleanPreferencesKey("poster_labels_enabled")
@@ -127,10 +126,6 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     val modernLandscapePostersEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[modernLandscapePostersEnabledKey] ?: false
-    }
-
-    val modernNextRowPreviewEnabled: Flow<Boolean> = profileFlow { prefs ->
-        prefs[modernNextRowPreviewEnabledKey] ?: true
     }
 
     val heroSectionEnabled: Flow<Boolean> = profileFlow { prefs ->
@@ -285,12 +280,6 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setModernLandscapePostersEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[modernLandscapePostersEnabledKey] = enabled
-        }
-    }
-
-    suspend fun setModernNextRowPreviewEnabled(enabled: Boolean) {
-        store().edit { prefs ->
-            prefs[modernNextRowPreviewEnabledKey] = enabled
         }
     }
 
