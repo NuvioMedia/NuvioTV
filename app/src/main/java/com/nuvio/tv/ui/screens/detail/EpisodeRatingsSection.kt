@@ -32,6 +32,8 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.theme.NuvioColors
 
@@ -119,7 +121,7 @@ fun EpisodeRatingsSection(
         when {
             isLoading -> {
                 Text(
-                    text = "Loading episode ratings...",
+                    text = stringResource(R.string.ratings_loading),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary,
                     modifier = Modifier.padding(horizontal = 48.dp, vertical = 12.dp)
@@ -135,7 +137,7 @@ fun EpisodeRatingsSection(
             }
             seasonNumbers.isEmpty() -> {
                 Text(
-                    text = "Episode ratings are unavailable.",
+                    text = stringResource(R.string.ratings_unavailable),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary,
                     modifier = Modifier.padding(horizontal = 48.dp, vertical = 12.dp)
@@ -192,7 +194,7 @@ fun EpisodeRatingsSection(
                 }
 
                 Text(
-                    text = "Season $selectedSeason • ${episodesForSeason.size} episodes",
+                    text = stringResource(R.string.ratings_season_summary, selectedSeason, episodesForSeason.size),
                     style = MaterialTheme.typography.labelSmall,
                     color = NuvioColors.TextTertiary,
                     modifier = Modifier.padding(horizontal = 48.dp, vertical = 2.dp)

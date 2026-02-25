@@ -54,6 +54,7 @@ data class Video(
     val title: String,
     val released: String?,
     val thumbnail: String?,
+    val streams: List<Stream> = emptyList(),
     val season: Int?,
     val episode: Int?,
     val overview: String?,

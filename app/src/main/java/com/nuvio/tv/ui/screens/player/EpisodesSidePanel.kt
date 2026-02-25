@@ -37,12 +37,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -67,6 +69,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -124,13 +128,13 @@ internal fun EpisodesSidePanel(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (uiState.showEpisodeStreams) "Streams" else "Episodes",
+                        text = if (uiState.showEpisodeStreams) stringResource(R.string.episodes_panel_streams_title) else stringResource(R.string.episodes_panel_title),
                         style = MaterialTheme.typography.headlineSmall,
                         color = NuvioColors.TextPrimary
                     )
 
                     DialogButton(
-                        text = "Close",
+                        text = stringResource(R.string.episodes_panel_close),
                         onClick = onClose,
                         isPrimary = false
                     )
@@ -175,12 +179,12 @@ private fun EpisodeStreamsView(
         verticalAlignment = Alignment.CenterVertically
     ) {
         DialogButton(
-            text = "Back",
+            text = stringResource(R.string.episodes_panel_back),
             onClick = onBackToEpisodes,
             isPrimary = false
         )
         DialogButton(
-            text = "Reload",
+            text = stringResource(R.string.episodes_panel_reload),
             onClick = onReload,
             isPrimary = false
         )
@@ -241,7 +245,7 @@ private fun EpisodeStreamsView(
 
         uiState.episodeFilteredStreams.isEmpty() -> {
             Text(
-                text = "No streams found",
+                text = stringResource(R.string.episodes_panel_no_streams),
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.7f)
             )
@@ -326,7 +330,7 @@ private fun EpisodesListView(
 
         uiState.episodes.isEmpty() -> {
             Text(
-                text = "No episodes available",
+                text = stringResource(R.string.episodes_panel_no_episodes),
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.7f)
             )
@@ -436,7 +440,7 @@ private fun EpisodesSeasonTabs(
                     style = MaterialTheme.typography.labelLarge,
                     color = when {
                         isSelected -> Color.Black
-                        isFocused -> NuvioColors.OnPrimary
+                        isFocused -> NuvioColors.OnSecondary
                         else -> NuvioTheme.extendedColors.textSecondary
                     },
                     modifier = Modifier.padding(vertical = 10.dp, horizontal = 20.dp)
@@ -523,8 +527,16 @@ private fun EpisodeItem(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(8.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color.Black.copy(alpha = 0.75f))
+                            .drawWithCache {
+                                val radius = 6.dp.toPx()
+                                val bgColor = Color.Black.copy(alpha = 0.75f)
+                                onDrawBehind {
+                                    drawRoundRect(
+                                        color = bgColor,
+                                        cornerRadius = CornerRadius(radius, radius)
+                                    )
+                                }
+                            }
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
@@ -541,8 +553,16 @@ private fun EpisodeItem(
                             .align(Alignment.TopEnd)
                             .padding(6.dp)
                             .size(22.dp)
-                            .clip(RoundedCornerShape(11.dp))
-                            .background(NuvioColors.Primary),
+                            .drawWithCache {
+                                val radius = size.minDimension / 2f
+                                val bgColor = NuvioColors.Primary
+                                onDrawBehind {
+                                    drawRoundRect(
+                                        color = bgColor,
+                                        cornerRadius = CornerRadius(radius, radius)
+                                    )
+                                }
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(

@@ -4,13 +4,6 @@ package com.nuvio.tv.ui.screens.settings
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RawRes
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,6 +33,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -50,6 +44,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
@@ -100,75 +95,76 @@ private const val SETTINGS_DETAIL_FOCUS_DELAY_MS = 120L
 private const val SETTINGS_DETAIL_ANIM_IN_DURATION_MS = 200
 private const val SETTINGS_DETAIL_ANIM_OUT_DURATION_MS = 180
 
-private val SETTINGS_SECTION_SPECS = listOf(
+@Composable
+private fun rememberSettingsSectionSpecs() = listOf(
     SettingsSectionSpec(
         category = SettingsCategory.ACCOUNT,
-        title = "Account",
+        title = stringResource(R.string.settings_account),
         icon = Icons.Default.Person,
-        subtitle = "Account and sync status.",
+        subtitle = stringResource(R.string.settings_account_subtitle),
         destination = SettingsSectionDestination.Inline
     ),
     SettingsSectionSpec(
         category = SettingsCategory.PROFILES,
-        title = "Profiles",
+        title = stringResource(R.string.settings_profiles),
         icon = Icons.Default.People,
-        subtitle = "Manage user profiles.",
+        subtitle = stringResource(R.string.settings_profiles_subtitle),
         destination = SettingsSectionDestination.Inline
     ),
     SettingsSectionSpec(
         category = SettingsCategory.APPEARANCE,
-        title = "Appearance",
+        title = stringResource(R.string.appearance_title),
         icon = Icons.Default.Palette,
-        subtitle = "Theme and color tuning.",
+        subtitle = stringResource(R.string.appearance_subtitle),
         destination = SettingsSectionDestination.Inline
     ),
     SettingsSectionSpec(
         category = SettingsCategory.LAYOUT,
-        title = "Layout",
+        title = stringResource(R.string.settings_layout),
         icon = Icons.Default.GridView,
-        subtitle = "Home structure and poster styles.",
+        subtitle = stringResource(R.string.settings_layout_subtitle),
         destination = SettingsSectionDestination.Inline
     ),
     SettingsSectionSpec(
         category = SettingsCategory.PLUGINS,
-        title = "Plugins",
+        title = stringResource(R.string.settings_plugins),
         icon = Icons.Default.Build,
-        subtitle = "Repositories and providers.",
+        subtitle = stringResource(R.string.settings_plugins_subtitle),
         destination = SettingsSectionDestination.Inline
     ),
     SettingsSectionSpec(
         category = SettingsCategory.INTEGRATION,
-        title = "Integration",
+        title = stringResource(R.string.settings_integration),
         icon = Icons.Default.Link,
-        subtitle = "TMDB and MDBList controls.",
+        subtitle = "",
         destination = SettingsSectionDestination.Inline
     ),
     SettingsSectionSpec(
         category = SettingsCategory.PLAYBACK,
-        title = "Playback",
+        title = stringResource(R.string.settings_playback),
         icon = Icons.Default.Settings,
-        subtitle = "Player, subtitles, and auto-play.",
+        subtitle = stringResource(R.string.settings_playback_subtitle),
         destination = SettingsSectionDestination.Inline
     ),
     SettingsSectionSpec(
         category = SettingsCategory.TRAKT,
         title = "Trakt",
         rawIconRes = R.raw.trakt_tv_glyph,
-        subtitle = "Open Trakt connection screen.",
+        subtitle = stringResource(R.string.settings_trakt_subtitle),
         destination = SettingsSectionDestination.External
     ),
     SettingsSectionSpec(
         category = SettingsCategory.ABOUT,
-        title = "About",
+        title = stringResource(R.string.about_title),
         icon = Icons.Default.Info,
-        subtitle = "Version and policies.",
+        subtitle = stringResource(R.string.settings_about_subtitle),
         destination = SettingsSectionDestination.Inline
     ),
     SettingsSectionSpec(
         category = SettingsCategory.DEBUG,
-        title = "Debug",
+        title = stringResource(R.string.settings_debug),
         icon = Icons.Default.BugReport,
-        subtitle = "Developer tools and feature flags.",
+        subtitle = stringResource(R.string.settings_debug_subtitle),
         destination = SettingsSectionDestination.Inline
     )
 )
@@ -182,8 +178,9 @@ fun SettingsScreen(
 ) {
     val isPrimaryProfileActive by profileViewModel.isPrimaryProfileActive.collectAsStateWithLifecycle()
 
-    val visibleSections = remember(isPrimaryProfileActive) {
-        SETTINGS_SECTION_SPECS.filter { section ->
+    val allSectionSpecs = rememberSettingsSectionSpecs()
+    val visibleSections = remember(isPrimaryProfileActive, allSectionSpecs) {
+        allSectionSpecs.filter { section ->
             when (section.category) {
                 SettingsCategory.DEBUG -> BuildConfig.IS_DEBUG_BUILD
                 SettingsCategory.PROFILES -> isPrimaryProfileActive
@@ -194,7 +191,11 @@ fun SettingsScreen(
         }
     }
 
-    var selectedCategory by remember { mutableStateOf(SettingsCategory.APPEARANCE) }
+    var selectedCategory by remember(visibleSections) {
+        mutableStateOf(
+            visibleSections.firstOrNull()?.category ?: SettingsCategory.APPEARANCE
+        )
+    }
     val railFocusRequesters = remember(visibleSections) {
         visibleSections.associate { it.category to FocusRequester() }
     }
@@ -207,25 +208,25 @@ fun SettingsScreen(
                 SettingsCategory.ABOUT to FocusRequester()
             )
     }
+    val railContainerFocusRequester = remember { FocusRequester() }
     val integrationHubFocusRequester = remember { FocusRequester() }
     val integrationTmdbFocusRequester = remember { FocusRequester() }
     val integrationMdbListFocusRequester = remember { FocusRequester() }
     var integrationSection by remember { mutableStateOf(IntegrationSettingsSection.Hub) }
     var pendingContentFocusCategory by remember { mutableStateOf<SettingsCategory?>(null) }
     var pendingContentFocusRequestId by remember { mutableLongStateOf(0L) }
+    var allowDetailAutofocus by remember { mutableStateOf(false) }
 
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(visibleSections) {
         if (visibleSections.none { it.category == selectedCategory }) {
-            selectedCategory = SettingsCategory.APPEARANCE
+            selectedCategory = visibleSections.firstOrNull()?.category ?: SettingsCategory.APPEARANCE
         }
     }
 
     LaunchedEffect(Unit) {
-        railFocusRequesters[selectedCategory]?.let { requester ->
-            runCatching { requester.requestFocus() }
-        }
+        runCatching { railContainerFocusRequester.requestFocus() }
     }
 
     LaunchedEffect(pendingContentFocusRequestId) {
@@ -266,6 +267,7 @@ fun SettingsScreen(
 
                 LazyColumn(
                     modifier = Modifier
+                        .focusRequester(railContainerFocusRequester)
                         .width(282.dp)
                         .fillMaxHeight()
                         .onFocusChanged { state ->
@@ -285,7 +287,9 @@ fun SettingsScreen(
                         }
                         .onPreviewKeyEvent { event ->
                             if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionRight) {
-                                focusManager.moveFocus(FocusDirection.Right)
+                                allowDetailAutofocus = true
+                                pendingContentFocusCategory = selectedCategory
+                                pendingContentFocusRequestId += 1L
                                 true
                             } else {
                                 false
@@ -314,6 +318,7 @@ fun SettingsScreen(
                                     if (section.category == SettingsCategory.INTEGRATION) {
                                         integrationSection = IntegrationSettingsSection.Hub
                                     }
+                                    allowDetailAutofocus = true
                                     selectedCategory = section.category
                                     pendingContentFocusCategory = section.category
                                     pendingContentFocusRequestId += 1L
@@ -327,53 +332,77 @@ fun SettingsScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                ) {
-                    AnimatedContent(
-                        targetState = selectedCategory,
-                        transitionSpec = {
-                            val direction = if (targetState.ordinal >= initialState.ordinal) 1 else -1
-                            (slideInHorizontally(
-                                initialOffsetX = { fullWidth -> direction * (fullWidth / 6) },
-                                animationSpec = tween(SETTINGS_DETAIL_ANIM_IN_DURATION_MS)
-                            ) + fadeIn(animationSpec = tween(SETTINGS_DETAIL_ANIM_IN_DURATION_MS)))
-                                .togetherWith(
-                                    slideOutHorizontally(
-                                        targetOffsetX = { fullWidth -> -direction * (fullWidth / 6) },
-                                        animationSpec = tween(SETTINGS_DETAIL_ANIM_OUT_DURATION_MS)
-                                    ) + fadeOut(animationSpec = tween(SETTINGS_DETAIL_ANIM_OUT_DURATION_MS))
-                                )
-                        },
-                        label = "settings_split_detail"
-                    ) { category ->
-                        when (category) {
-                            SettingsCategory.PROFILES -> ProfileSettingsContent()
-                            SettingsCategory.APPEARANCE -> ThemeSettingsContent(
-                                initialFocusRequester = contentFocusRequesters[SettingsCategory.APPEARANCE]
-                            )
-                            SettingsCategory.LAYOUT -> LayoutSettingsContent(
-                                initialFocusRequester = contentFocusRequesters[SettingsCategory.LAYOUT]
-                            )
-                            SettingsCategory.PLAYBACK -> PlaybackSettingsContent(
-                                initialFocusRequester = contentFocusRequesters[SettingsCategory.PLAYBACK]
-                            )
-                            SettingsCategory.INTEGRATION -> IntegrationSettingsContent(
-                                selectedSection = integrationSection,
-                                onSelectSection = { integrationSection = it },
-                                initialFocusRequester = contentFocusRequesters[SettingsCategory.INTEGRATION],
-                                hubFocusRequester = integrationHubFocusRequester,
-                                tmdbFocusRequester = integrationTmdbFocusRequester,
-                                mdbListFocusRequester = integrationMdbListFocusRequester
-                            )
-                            SettingsCategory.ABOUT -> AboutSettingsContent(
-                                initialFocusRequester = contentFocusRequesters[SettingsCategory.ABOUT]
-                            )
-                            SettingsCategory.PLUGINS -> PluginsSettingsContent()
-                            SettingsCategory.ACCOUNT -> AccountSettingsInline(
-                                onNavigateToAuthQrSignIn = onNavigateToAuthQrSignIn
-                            )
-                            SettingsCategory.DEBUG -> DebugSettingsContent()
-                            SettingsCategory.TRAKT -> Unit
+                        .onKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft) {
+                                allowDetailAutofocus = false
+                                val requested = railFocusRequesters[selectedCategory]?.let { requester ->
+                                    runCatching { requester.requestFocus() }.isSuccess
+                                } ?: false
+                                if (!requested) {
+                                    runCatching { railContainerFocusRequester.requestFocus() }
+                                }
+                                true
+                            } else {
+                                false
+                            }
                         }
+                        .onFocusChanged { state ->
+                            if (state.hasFocus && !allowDetailAutofocus) {
+                                railFocusRequesters[selectedCategory]?.let { requester ->
+                                    runCatching { requester.requestFocus() }
+                                }
+                            }
+                        }
+                ) {
+                    when (selectedCategory) {
+                        SettingsCategory.PROFILES -> ProfileSettingsContent()
+                        SettingsCategory.APPEARANCE -> ThemeSettingsContent(
+                            initialFocusRequester = if (allowDetailAutofocus) {
+                                contentFocusRequesters[SettingsCategory.APPEARANCE]
+                            } else {
+                                null
+                            }
+                        )
+                        SettingsCategory.LAYOUT -> LayoutSettingsContent(
+                            initialFocusRequester = if (allowDetailAutofocus) {
+                                contentFocusRequesters[SettingsCategory.LAYOUT]
+                            } else {
+                                null
+                            }
+                        )
+                        SettingsCategory.PLAYBACK -> PlaybackSettingsContent(
+                            initialFocusRequester = if (allowDetailAutofocus) {
+                                contentFocusRequesters[SettingsCategory.PLAYBACK]
+                            } else {
+                                null
+                            }
+                        )
+                        SettingsCategory.INTEGRATION -> IntegrationSettingsContent(
+                            selectedSection = integrationSection,
+                            onSelectSection = { integrationSection = it },
+                            initialFocusRequester = if (allowDetailAutofocus) {
+                                contentFocusRequesters[SettingsCategory.INTEGRATION]
+                            } else {
+                                null
+                            },
+                            hubFocusRequester = integrationHubFocusRequester,
+                            tmdbFocusRequester = integrationTmdbFocusRequester,
+                            mdbListFocusRequester = integrationMdbListFocusRequester,
+                            autoFocusEnabled = allowDetailAutofocus
+                        )
+                        SettingsCategory.ABOUT -> AboutSettingsContent(
+                            initialFocusRequester = if (allowDetailAutofocus) {
+                                contentFocusRequesters[SettingsCategory.ABOUT]
+                            } else {
+                                null
+                            }
+                        )
+                        SettingsCategory.PLUGINS -> PluginsSettingsContent()
+                        SettingsCategory.ACCOUNT -> AccountSettingsInline(
+                            onNavigateToAuthQrSignIn = onNavigateToAuthQrSignIn
+                        )
+                        SettingsCategory.DEBUG -> DebugSettingsContent()
+                        SettingsCategory.TRAKT -> Unit
                     }
                 }
             }
@@ -391,8 +420,8 @@ private fun PluginsSettingsContent() {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SettingsDetailHeader(
-            title = "Plugins",
-            subtitle = "Manage repositories, providers, and plugin states."
+            title = stringResource(R.string.settings_plugins),
+            subtitle = stringResource(R.string.settings_plugins_section_subtitle)
         )
         SettingsGroupCard(modifier = Modifier.fillMaxSize()) {
             Box(
@@ -423,8 +452,8 @@ private fun AccountSettingsInline(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SettingsDetailHeader(
-            title = "Account",
-            subtitle = "Account and sync status."
+            title = stringResource(R.string.settings_account),
+            subtitle = stringResource(R.string.settings_account_section_subtitle)
         )
         SettingsGroupCard(modifier = Modifier.fillMaxSize()) {
             com.nuvio.tv.ui.screens.account.AccountSettingsContent(
@@ -443,14 +472,16 @@ private fun IntegrationSettingsContent(
     initialFocusRequester: FocusRequester?,
     hubFocusRequester: FocusRequester,
     tmdbFocusRequester: FocusRequester,
-    mdbListFocusRequester: FocusRequester
+    mdbListFocusRequester: FocusRequester,
+    autoFocusEnabled: Boolean
 ) {
     BackHandler(enabled = selectedSection != IntegrationSettingsSection.Hub) {
         onSelectSection(IntegrationSettingsSection.Hub)
     }
     val hubEntryFocusRequester = initialFocusRequester ?: hubFocusRequester
 
-    LaunchedEffect(selectedSection) {
+    LaunchedEffect(selectedSection, autoFocusEnabled) {
+        if (!autoFocusEnabled) return@LaunchedEffect
         val requester = when (selectedSection) {
             IntegrationSettingsSection.Hub -> hubEntryFocusRequester
             IntegrationSettingsSection.Tmdb -> tmdbFocusRequester
@@ -466,8 +497,8 @@ private fun IntegrationSettingsContent(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 SettingsDetailHeader(
-                    title = "Integrations",
-                    subtitle = "Choose TMDB or MDBList settings"
+                    title = stringResource(R.string.settings_integrations_section),
+                    subtitle = stringResource(R.string.settings_integrations_section_subtitle)
                 )
 
                 SettingsGroupCard(
@@ -478,18 +509,18 @@ private fun IntegrationSettingsContent(
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        item {
+                        item(key = "integration_hub_tmdb") {
                             SettingsActionRow(
                                 title = "TMDB",
-                                subtitle = "Metadata enrichment controls",
+                                subtitle = stringResource(R.string.settings_tmdb_subtitle),
                                 onClick = { onSelectSection(IntegrationSettingsSection.Tmdb) },
                                 modifier = Modifier.focusRequester(hubEntryFocusRequester)
                             )
                         }
-                        item {
+                        item(key = "integration_hub_mdblist") {
                             SettingsActionRow(
                                 title = "MDBList",
-                                subtitle = "External ratings providers",
+                                subtitle = stringResource(R.string.settings_mdblist_subtitle),
                                 onClick = { onSelectSection(IntegrationSettingsSection.MdbList) }
                             )
                         }

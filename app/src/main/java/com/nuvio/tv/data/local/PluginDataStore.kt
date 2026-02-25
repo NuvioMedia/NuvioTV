@@ -10,7 +10,10 @@ import com.nuvio.tv.domain.model.ScraperInfo
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -19,6 +22,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
+@OptIn(ExperimentalCoroutinesApi::class)
 class PluginDataStore @Inject constructor(
     @ApplicationContext private val context: Context,
     private val moshi: Moshi,
@@ -36,6 +40,14 @@ class PluginDataStore @Inject constructor(
 
     private fun store(profileId: Int = effectiveProfileId()) =
         factory.get(profileId, FEATURE)
+
+    private val effectiveProfileIdFlow: Flow<Int> = combine(
+        profileManager.activeProfileId,
+        profileManager.profiles
+    ) { activeProfileId, profiles ->
+        val activeProfile = profiles.firstOrNull { it.id == activeProfileId }
+        if (activeProfile?.usesPrimaryPlugins == true) 1 else activeProfileId
+    }.distinctUntilChanged()
 
     private val repositoriesKey = stringPreferencesKey("repositories")
     private val scrapersKey = stringPreferencesKey("scrapers")
@@ -59,8 +71,7 @@ class PluginDataStore @Inject constructor(
         }
 
     // Repositories
-    val repositories: Flow<List<PluginRepository>> = profileManager.activeProfileId.flatMapLatest { _ ->
-        val pid = effectiveProfileId()
+    val repositories: Flow<List<PluginRepository>> = effectiveProfileIdFlow.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             prefs[repositoriesKey]?.let { json ->
                 try {
@@ -108,8 +119,7 @@ class PluginDataStore @Inject constructor(
     }
 
     // Scrapers
-    val scrapers: Flow<List<ScraperInfo>> = profileManager.activeProfileId.flatMapLatest { _ ->
-        val pid = effectiveProfileId()
+    val scrapers: Flow<List<ScraperInfo>> = effectiveProfileIdFlow.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             prefs[scrapersKey]?.let { json ->
                 try {
@@ -122,6 +132,7 @@ class PluginDataStore @Inject constructor(
     }
 
     suspend fun saveScrapers(scrapers: List<ScraperInfo>) {
+        if (profileManager.activeProfile?.usesPrimaryPlugins == true) return
         val json = moshi.adapter<List<ScraperInfo>>(scraperListType).toJson(scrapers)
         store().edit { prefs ->
             prefs[scrapersKey] = json
@@ -141,13 +152,14 @@ class PluginDataStore @Inject constructor(
     }
 
     // Plugins enabled global toggle
-    val pluginsEnabled: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
+    val pluginsEnabled: Flow<Boolean> = effectiveProfileIdFlow.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             prefs[pluginsEnabledKey] ?: true
         }
     }
 
     suspend fun setPluginsEnabled(enabled: Boolean) {
+        if (profileManager.activeProfile?.usesPrimaryPlugins == true) return
         store().edit { prefs ->
             prefs[pluginsEnabledKey] = enabled
         }

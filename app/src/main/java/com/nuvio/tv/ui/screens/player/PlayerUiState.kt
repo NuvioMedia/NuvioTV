@@ -12,10 +12,12 @@ import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
+import com.nuvio.tv.ui.components.SourceChipItem
 
 data class PlayerUiState(
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = true,
+    val playbackEnded: Boolean = false,
     val currentPosition: Long = 0L,
     val duration: Long = 0L,
     val title: String = "",
@@ -23,6 +25,7 @@ data class PlayerUiState(
     val releaseYear: String? = null, // Release year for movies
     val contentType: String? = null,
     val currentStreamName: String? = null, // Name of the current stream source
+    val currentStreamUrl: String? = null,
     val backdrop: String? = null,
     val logo: String? = null,
     val description: String? = null,
@@ -87,6 +90,7 @@ data class PlayerUiState(
     val sourceSelectedAddonFilter: String? = null, // null means "All"
     val sourceFilteredStreams: List<Stream> = emptyList(),
     val sourceAvailableAddons: List<String> = emptyList(),
+    val sourceChips: List<SourceChipItem> = emptyList(),
     val error: String? = null,
     val pendingSeekPosition: Long? = null,  // For resuming from saved progress
     // Parental guide overlay
@@ -126,6 +130,7 @@ data class TrackInfo(
     val trackId: String? = null,
     val codec: String? = null,
     val channelCount: Int? = null,
+    val isForced: Boolean = false,
     val isSelected: Boolean = false
 )
 

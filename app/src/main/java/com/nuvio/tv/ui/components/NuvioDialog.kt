@@ -34,9 +34,10 @@ fun NuvioDialog(
     title: String,
     subtitle: String? = null,
     width: Dp = 520.dp,
+    suppressFirstKeyUp: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    var suppressNextKeyUp by remember { mutableStateOf(true) }
+    var suppressNextKeyUp by remember { mutableStateOf(suppressFirstKeyUp) }
 
     Dialog(onDismissRequest = onDismiss) {
         Box(

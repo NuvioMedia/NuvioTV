@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.core.player.OpenSubtitlesHasher
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.data.local.FrameRateMatchingMode
@@ -11,22 +12,27 @@ import kotlinx.coroutines.launch
 internal fun PlayerRuntimeController.fetchAddonSubtitles() {
     val id = contentId ?: return
     val type = contentType ?: return
-    
+
     scope.launch {
         _uiState.update { it.copy(isLoadingAddonSubtitles = true, addonSubtitlesError = null) }
-        
-        try {
-            
-            val videoId = if (type == "series" && currentSeason != null && currentEpisode != null) {
-                "${id.split(":").firstOrNull() ?: id}:$currentSeason:$currentEpisode"
-            } else {
-                null
+
+        // Compute hash if not already available from stream behaviorHints
+        if (currentVideoHash == null && currentStreamUrl.isNotBlank()) {
+            val result = OpenSubtitlesHasher.compute(currentStreamUrl, currentHeaders)
+            if (result != null) {
+                currentVideoHash = result.hash
+                if (currentVideoSize == null) currentVideoSize = result.fileSize
             }
-            
+        }
+
+        try {
             val subtitles = subtitleRepository.getSubtitles(
                 type = type,
-                id = id.split(":").firstOrNull() ?: id, 
-                videoId = videoId
+                id = id,
+                videoId = currentVideoId,
+                videoHash = currentVideoHash,
+                videoSize = currentVideoSize,
+                filename = currentFilename
             )
             
             _uiState.update { 
@@ -143,6 +149,8 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             streamReuseLastLinkEnabled = settings.streamReuseLastLinkEnabled
             streamAutoPlayModeSetting = settings.streamAutoPlayMode
             streamAutoPlayNextEpisodeEnabledSetting = settings.streamAutoPlayNextEpisodeEnabled
+            streamAutoPlayPreferBingeGroupForNextEpisodeSetting =
+                settings.streamAutoPlayPreferBingeGroupForNextEpisode
             nextEpisodeThresholdModeSetting = settings.nextEpisodeThresholdMode
             nextEpisodeThresholdPercentSetting = settings.nextEpisodeThresholdPercent
             nextEpisodeThresholdMinutesBeforeEndSetting = settings.nextEpisodeThresholdMinutesBeforeEnd

@@ -33,6 +33,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.tv.material3.Text
+import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.UserProfile
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
@@ -94,22 +96,20 @@ fun ProfileSelectionScreen(
     val gradientMid = lerp(NuvioColors.Background, animatedAvatarColor, 0.14f)
     val halfFadeStrong = animatedAvatarColor.copy(alpha = 0.26f)
     val halfFadeSoft = animatedAvatarColor.copy(alpha = 0.08f)
+    val backgroundColor = NuvioColors.Background
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioColors.Background)
-            .background(
-                brush = Brush.verticalGradient(
+            .drawWithCache {
+                val verticalGradient = Brush.verticalGradient(
                     colorStops = arrayOf(
                         0f to gradientTop,
                         0.42f to gradientMid,
-                        1f to NuvioColors.Background
+                        1f to backgroundColor
                     )
                 )
-            )
-            .background(
-                brush = Brush.horizontalGradient(
+                val horizontalGradient = Brush.horizontalGradient(
                     colorStops = arrayOf(
                         0f to halfFadeStrong,
                         0.45f to halfFadeSoft,
@@ -117,7 +117,12 @@ fun ProfileSelectionScreen(
                         1f to Color.Transparent
                     )
                 )
-            )
+                onDrawBehind {
+                    drawRect(color = backgroundColor, size = size)
+                    drawRect(brush = verticalGradient, size = size)
+                    drawRect(brush = horizontalGradient, size = size)
+                }
+            }
     ) {
         Column(
             modifier = Modifier
@@ -140,7 +145,7 @@ fun ProfileSelectionScreen(
             Spacer(modifier = Modifier.height(ProfileSelectionSpacing.LogoToHeading))
 
             Text(
-                text = "Who's watching?",
+                text = stringResource(R.string.profile_selection_title),
                 color = NuvioColors.TextPrimary,
                 fontSize = 44.sp,
                 fontWeight = FontWeight.Bold,
@@ -150,7 +155,7 @@ fun ProfileSelectionScreen(
             Spacer(modifier = Modifier.height(ProfileSelectionSpacing.HeadingToSubheading))
 
             Text(
-                text = "Select a profile to continue",
+                text = stringResource(R.string.profile_selection_subtitle),
                 color = NuvioColors.TextSecondary,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium
@@ -171,7 +176,7 @@ fun ProfileSelectionScreen(
             Spacer(modifier = Modifier.weight(1f, fill = true))
 
             Text(
-                text = "Use D-pad to choose a profile",
+                text = stringResource(R.string.profile_selection_hint),
                 color = NuvioColors.TextTertiary.copy(alpha = 0.9f),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
@@ -199,7 +204,7 @@ private fun ProfileGrid(
 
     if (profiles.isEmpty()) {
         Text(
-            text = "No profiles found",
+            text = stringResource(R.string.profile_selection_empty),
             color = NuvioColors.TextSecondary,
             fontSize = 18.sp,
             fontWeight = FontWeight.Medium
@@ -354,7 +359,7 @@ private fun ProfileCard(
         ) {
             if (profile.isPrimary) {
                 Text(
-                    text = "PRIMARY",
+                    text = stringResource(R.string.profile_selection_primary_badge),
                     color = Color(0xFFFFB300),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,

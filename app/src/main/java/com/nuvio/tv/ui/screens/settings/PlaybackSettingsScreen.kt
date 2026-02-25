@@ -63,6 +63,8 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 import androidx.compose.ui.text.input.KeyboardType
 import android.view.KeyEvent
 import androidx.compose.ui.input.key.onKeyEvent
@@ -112,8 +114,8 @@ fun PlaybackSettingsScreen(
     BackHandler { onBackPress() }
 
     SettingsStandaloneScaffold(
-        title = "Playback Settings",
-        subtitle = "Configure video playback and subtitle options"
+        title = stringResource(R.string.playback_title),
+        subtitle = stringResource(R.string.playback_subtitle)
     ) {
         PlaybackSettingsContent(viewModel = viewModel)
     }
@@ -177,8 +179,8 @@ fun PlaybackSettingsContent(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         SettingsDetailHeader(
-            title = "Playback Settings",
-            subtitle = "Configure video playback and subtitle options"
+            title = stringResource(R.string.playback_title),
+            subtitle = stringResource(R.string.playback_subtitle)
         )
 
         SettingsGroupCard(
@@ -208,6 +210,11 @@ fun PlaybackSettingsContent(
                 onShowReuseLastLinkCacheDialog = { openDialog { showReuseLastLinkCacheDialog = true } },
                 onSetStreamAutoPlayNextEpisodeEnabled = { enabled ->
                     coroutineScope.launch { viewModel.setStreamAutoPlayNextEpisodeEnabled(enabled) }
+                },
+                onSetStreamAutoPlayPreferBingeGroupForNextEpisode = { enabled ->
+                    coroutineScope.launch {
+                        viewModel.setStreamAutoPlayPreferBingeGroupForNextEpisode(enabled)
+                    }
                 },
                 onSetNextEpisodeThresholdPercent = { percent ->
                     coroutineScope.launch { viewModel.setNextEpisodeThresholdPercent(percent) }
@@ -340,9 +347,12 @@ internal fun ToggleSettingsItem(
         onClick = { if (enabled) onCheckedChange(!isChecked) },
         modifier = Modifier
             .fillMaxWidth()
-            .onFocusChanged {
-                isFocused = it.isFocused
-                if (it.isFocused) onFocused()
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                    if (nowFocused) onFocused()
+                }
             },
         colors = CardDefaults.colors(
             containerColor = NuvioColors.Background,
@@ -422,9 +432,12 @@ internal fun RenderTypeSettingsItem(
         onClick = { if (enabled) onClick() },
         modifier = Modifier
             .fillMaxWidth()
-            .onFocusChanged {
-                isFocused = it.isFocused
-                if (it.isFocused) onFocused()
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                    if (nowFocused) onFocused()
+                }
             },
         colors = CardDefaults.colors(
             containerColor = if (isSelected) {
@@ -479,7 +492,7 @@ internal fun RenderTypeSettingsItem(
                 Spacer(modifier = Modifier.width(16.dp))
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.cd_selected),
                     tint = NuvioColors.Primary.copy(alpha = contentAlpha),
                     modifier = Modifier.size(24.dp)
                 )
@@ -504,9 +517,12 @@ internal fun NavigationSettingsItem(
         onClick = { if (enabled) onClick() },
         modifier = Modifier
             .fillMaxWidth()
-            .onFocusChanged {
-                isFocused = it.isFocused
-                if (it.isFocused) onFocused()
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                    if (nowFocused) onFocused()
+                }
             },
         colors = CardDefaults.colors(
             containerColor = NuvioColors.Background,
@@ -585,9 +601,12 @@ internal fun SliderSettingsItem(
         onClick = { },
         modifier = Modifier
             .fillMaxWidth()
-            .onFocusChanged {
-                isFocused = it.isFocused
-                if (it.isFocused) onFocused()
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                    if (nowFocused) onFocused()
+                }
             }
             .onKeyEvent { event ->
                 if (!enabled) return@onKeyEvent false
@@ -684,9 +703,12 @@ internal fun SliderSettingsItem(
                         }
                     },
                     modifier = Modifier
-                        .onFocusChanged {
-                            decreaseFocused = it.isFocused
-                            if (it.isFocused) onFocused()
+                        .onFocusChanged { state ->
+                            val nowFocused = state.isFocused
+                            if (decreaseFocused != nowFocused) {
+                                decreaseFocused = nowFocused
+                                if (nowFocused) onFocused()
+                            }
                         },
                     colors = CardDefaults.colors(
                         containerColor = NuvioColors.Background,
@@ -707,7 +729,7 @@ internal fun SliderSettingsItem(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Remove,
-                            contentDescription = "Decrease",
+                            contentDescription = stringResource(R.string.cd_decrease),
                             tint = (if (decreaseFocused) NuvioColors.OnPrimary else NuvioColors.TextPrimary).copy(alpha = contentAlpha),
                             modifier = Modifier.size(20.dp)
                         )
@@ -742,9 +764,12 @@ internal fun SliderSettingsItem(
                         }
                     },
                     modifier = Modifier
-                        .onFocusChanged {
-                            increaseFocused = it.isFocused
-                            if (it.isFocused) onFocused()
+                        .onFocusChanged { state ->
+                            val nowFocused = state.isFocused
+                            if (increaseFocused != nowFocused) {
+                                increaseFocused = nowFocused
+                                if (nowFocused) onFocused()
+                            }
                         },
                     colors = CardDefaults.colors(
                         containerColor = NuvioColors.Background,
@@ -765,7 +790,7 @@ internal fun SliderSettingsItem(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Increase",
+                            contentDescription = stringResource(R.string.cd_increase),
                             tint = (if (increaseFocused) NuvioColors.OnPrimary else NuvioColors.TextPrimary).copy(alpha = contentAlpha),
                             modifier = Modifier.size(20.dp)
                         )
@@ -793,9 +818,12 @@ internal fun ColorSettingsItem(
         onClick = { if (enabled) onClick() },
         modifier = Modifier
             .fillMaxWidth()
-            .onFocusChanged {
-                isFocused = it.isFocused
-                if (it.isFocused) onFocused()
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                    if (nowFocused) onFocused()
+                }
             },
         colors = CardDefaults.colors(
             containerColor = NuvioColors.Background,
@@ -873,6 +901,7 @@ internal fun LanguageSelectionDialog(
     title: String,
     selectedLanguage: String?,
     showNoneOption: Boolean,
+    extraOptions: List<Pair<String, String>> = emptyList(),
     onLanguageSelected: (String?) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -906,9 +935,9 @@ internal fun LanguageSelectionDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     if (showNoneOption) {
-                        item {
+                        item(key = "language_none_option") {
                             LanguageOptionItem(
-                                name = "None",
+                                name = stringResource(R.string.action_none),
                                 code = null,
                                 isSelected = selectedLanguage == null,
                                 onClick = { onLanguageSelected(null) },
@@ -916,8 +945,28 @@ internal fun LanguageSelectionDialog(
                             )
                         }
                     }
+
+                    items(
+                        items = extraOptions,
+                        key = { (code, _) -> "language_extra_$code" }
+                    ) { (code, name) ->
+                        LanguageOptionItem(
+                            name = name,
+                            code = code,
+                            isSelected = selectedLanguage == code,
+                            onClick = { onLanguageSelected(code) },
+                            modifier = if (!showNoneOption && extraOptions.firstOrNull()?.first == code) {
+                                Modifier.focusRequester(focusRequester)
+                            } else {
+                                Modifier
+                            }
+                        )
+                    }
                     
-                    items(AVAILABLE_SUBTITLE_LANGUAGES.size) { index ->
+                    items(
+                        count = AVAILABLE_SUBTITLE_LANGUAGES.size,
+                        key = { index -> AVAILABLE_SUBTITLE_LANGUAGES[index].code }
+                    ) { index ->
                         val language = AVAILABLE_SUBTITLE_LANGUAGES[index]
                         LanguageOptionItem(
                             name = language.name,
@@ -991,7 +1040,7 @@ private fun LanguageOptionItem(
                 Spacer(modifier = Modifier.width(12.dp))
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.cd_selected),
                     tint = NuvioColors.Primary,
                     modifier = Modifier.size(20.dp)
                 )
@@ -1030,7 +1079,10 @@ internal fun ColorSelectionDialog(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.focusRequester(focusRequester)
             ) {
-                items(colors.size) { index ->
+                items(
+                    count = colors.size,
+                    key = { index -> colors[index].toArgb() }
+                ) { index ->
                     val color = colors[index]
                     ColorOption(
                         color = color,
@@ -1060,7 +1112,7 @@ internal fun ColorSelectionDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Cancel",
+                    text = stringResource(R.string.action_cancel),
                     style = MaterialTheme.typography.bodyLarge,
                     color = NuvioColors.TextPrimary,
                     modifier = Modifier
@@ -1133,7 +1185,7 @@ private fun ColorOption(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.cd_selected),
                     tint = if (color == Color.White || color == Color.Yellow) Color.Black else Color.White,
                     modifier = Modifier.size(20.dp)
                 )

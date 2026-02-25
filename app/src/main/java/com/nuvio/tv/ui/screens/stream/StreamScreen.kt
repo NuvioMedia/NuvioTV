@@ -39,6 +39,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -70,6 +71,9 @@ import coil.compose.AsyncImage
 import com.nuvio.tv.core.player.ExternalPlayerLauncher
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.domain.model.Stream
+import com.nuvio.tv.ui.components.SourceChipItem
+import com.nuvio.tv.ui.components.SourceChipStatus
+import com.nuvio.tv.ui.components.SourceStatusFilterChip
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.components.StreamsSkeletonList
 import com.nuvio.tv.ui.screens.player.LoadingOverlay
@@ -78,6 +82,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -180,19 +186,13 @@ fun StreamScreen(
                 visible = true,
                 backdropUrl = uiState.backdrop ?: uiState.poster,
                 logoUrl = uiState.logo,
+                message = if (uiState.directAutoPlayMessage != null) {
+                    stringResource(R.string.stream_finding_source)
+                } else {
+                    null
+                },
                 modifier = Modifier.fillMaxSize()
             )
-            uiState.directAutoPlayMessage?.let { message ->
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.72f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(top = 144.dp)
-                )
-            }
         } else {
             // Content overlay
             Row(
@@ -220,6 +220,7 @@ fun StreamScreen(
                     error = uiState.error,
                     streams = uiState.filteredStreams,
                     availableAddons = uiState.availableAddons,
+                    sourceChips = uiState.sourceChips,
                     selectedAddonFilter = uiState.selectedAddonFilter,
                     onAddonFilterSelected = { viewModel.onEvent(StreamScreenEvent.OnAddonFilterSelected(it)) },
                     onStreamSelected = { stream ->
@@ -335,25 +336,18 @@ private fun StreamBackdrop(
             )
         }
 
-        // Dark overlay
+        // Single overlay draw pass keeps the same visual layering with less overdraw nodes.
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(NuvioColors.Background.copy(alpha = alpha))
-        )
-
-        // Left gradient for text readability
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(leftGradient)
-        )
-
-        // Right gradient for streams panel
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(rightGradient)
+                .drawWithCache {
+                    val dimColor = backgroundColor.copy(alpha = alpha)
+                    onDrawBehind {
+                        drawRect(color = dimColor, size = size)
+                        drawRect(brush = leftGradient, size = size)
+                        drawRect(brush = rightGradient, size = size)
+                    }
+                }
         )
     }
 }
@@ -466,6 +460,7 @@ private fun RightStreamSection(
     error: String?,
     streams: List<Stream>,
     availableAddons: List<String>,
+    sourceChips: List<SourceChipItem>,
     selectedAddonFilter: String?,
     onAddonFilterSelected: (String?) -> Unit,
     onStreamSelected: (Stream) -> Unit,
@@ -498,12 +493,13 @@ private fun RightStreamSection(
         // Addon filter chips
         Box(modifier = Modifier.height(chipRowHeight)) {
             androidx.compose.animation.AnimatedVisibility(
-                visible = !isLoading && availableAddons.isNotEmpty(),
+                visible = sourceChips.isNotEmpty() || (!isLoading && availableAddons.isNotEmpty()),
                 enter = fadeIn(animationSpec = tween(300)),
                 exit = fadeOut(animationSpec = tween(300))
             ) {
                 AddonFilterChips(
                     addons = availableAddons,
+                    sourceChips = sourceChips,
                     selectedAddon = selectedAddonFilter,
                     onAddonSelected = onAddonFilterSelected
                 )
@@ -563,85 +559,45 @@ private fun RightStreamSection(
 @Composable
 private fun AddonFilterChips(
     addons: List<String>,
+    sourceChips: List<SourceChipItem>,
     selectedAddon: String?,
     onAddonSelected: (String?) -> Unit
 ) {
+    val chipMap = sourceChips.associateBy { it.name }
+    val orderedNames = buildList {
+        addAll(addons)
+        sourceChips.forEach { chip ->
+            if (chip.name !in this) add(chip.name)
+        }
+    }
+
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
     ) {
         // "All" chip
         item {
-            AddonChip(
+            SourceStatusFilterChip(
                 name = "All",
                 isSelected = selectedAddon == null,
+                status = SourceChipStatus.SUCCESS,
+                isSelectable = true,
                 onClick = { onAddonSelected(null) }
             )
         }
 
-        items(addons) { addon ->
-            AddonChip(
+        items(orderedNames) { addon ->
+            val chipStatus = chipMap[addon]?.status ?: SourceChipStatus.SUCCESS
+            val isSelectable = addon in addons && chipStatus == SourceChipStatus.SUCCESS
+            SourceStatusFilterChip(
                 name = addon,
                 isSelected = selectedAddon == addon,
-                onClick = { onAddonSelected(addon) }
+                status = chipStatus,
+                isSelectable = isSelectable,
+                onClick = { if (isSelectable) onAddonSelected(addon) },
+                onFocusSelect = { if (isSelectable) onAddonSelected(addon) }
             )
         }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun AddonChip(
-    name: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    var isFocused by remember { mutableStateOf(false) }
-
-    FilterChip(
-        selected = isSelected,
-        onClick = onClick,
-        modifier = Modifier.onFocusChanged {
-            val nowFocused = it.isFocused
-            isFocused = nowFocused
-            if (nowFocused && !isSelected) {
-                onClick()
-            }
-        },
-        colors = FilterChipDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.Secondary,
-            selectedContainerColor = NuvioColors.Secondary,
-            focusedSelectedContainerColor = NuvioColors.Secondary,
-            contentColor = NuvioColors.TextSecondary,
-            focusedContentColor = NuvioColors.OnPrimary,
-            selectedContentColor = NuvioColors.OnPrimary,
-            focusedSelectedContentColor = NuvioColors.OnPrimary
-        ),
-        border = FilterChipDefaults.border(
-            border = Border(
-                border = BorderStroke(1.dp, NuvioColors.Border),
-                shape = RoundedCornerShape(20.dp)
-            ),
-            focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(20.dp)
-            ),
-            selectedBorder = Border(
-                border = BorderStroke(1.dp, NuvioColors.Primary),
-                shape = RoundedCornerShape(20.dp)
-            ),
-            focusedSelectedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(20.dp)
-            )
-        ),
-        shape = FilterChipDefaults.shape(shape = RoundedCornerShape(20.dp))
-    ) {
-        Text(
-            text = name,
-            style = MaterialTheme.typography.labelLarge
-        )
     }
 }
 
@@ -697,9 +653,9 @@ private fun ErrorState(
             scale = CardDefaults.scale(focusedScale = 1.02f)
         ) {
             Text(
-                text = "Retry",
+                text = stringResource(R.string.stream_retry),
                 style = MaterialTheme.typography.labelLarge,
-                color = if (isFocused) NuvioColors.OnPrimary else NuvioColors.TextPrimary,
+                color = if (isFocused) NuvioColors.OnSecondary else NuvioColors.TextPrimary,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
             )
         }
@@ -714,7 +670,7 @@ private fun EmptyState() {
         modifier = Modifier.padding(32.dp)
     ) {
         Text(
-            text = "No streams found",
+            text = stringResource(R.string.stream_no_streams),
             style = MaterialTheme.typography.bodyLarge,
             color = NuvioTheme.extendedColors.textSecondary,
             textAlign = TextAlign.Center
@@ -723,7 +679,7 @@ private fun EmptyState() {
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Try installing more addons to find streams",
+            text = stringResource(R.string.stream_no_streams_hint),
             style = MaterialTheme.typography.bodyMedium,
             color = NuvioTheme.extendedColors.textSecondary,
             textAlign = TextAlign.Center
@@ -857,13 +813,13 @@ private fun StreamCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     if (stream.isTorrent()) {
-                        StreamTypeChip(text = "Torrent", color = NuvioColors.Secondary)
+                        StreamTypeChip(text = stringResource(R.string.stream_type_torrent), color = NuvioColors.Secondary)
                     }
                     if (stream.isYouTube()) {
-                        StreamTypeChip(text = "YouTube", color = Color(0xFFFF0000))
+                        StreamTypeChip(text = stringResource(R.string.stream_type_youtube), color = Color(0xFFFF0000))
                     }
                     if (stream.isExternal()) {
-                        StreamTypeChip(text = "External", color = NuvioColors.Primary)
+                        StreamTypeChip(text = stringResource(R.string.stream_type_external), color = NuvioColors.Primary)
                     }
                 }
             }
@@ -939,7 +895,7 @@ private fun PlayerChoiceDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "What player should be used?",
+                    text = stringResource(R.string.stream_player_picker_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary,
                     textAlign = TextAlign.Center
@@ -972,9 +928,9 @@ private fun PlayerChoiceDialog(
                         scale = CardDefaults.scale(focusedScale = 1.05f)
                     ) {
                         Text(
-                            text = "Internal",
+                            text = stringResource(R.string.stream_player_internal),
                             style = MaterialTheme.typography.titleMedium,
-                            color = if (internalFocused) NuvioColors.OnPrimary else NuvioColors.TextPrimary,
+                            color = if (internalFocused) NuvioColors.OnSecondary else NuvioColors.TextPrimary,
                             modifier = Modifier
                                 .padding(horizontal = 16.dp, vertical = 14.dp)
                                 .fillMaxWidth(),
@@ -1002,9 +958,9 @@ private fun PlayerChoiceDialog(
                         scale = CardDefaults.scale(focusedScale = 1.05f)
                     ) {
                         Text(
-                            text = "External",
+                            text = stringResource(R.string.stream_player_external),
                             style = MaterialTheme.typography.titleMedium,
-                            color = if (externalFocused) NuvioColors.OnPrimary else NuvioColors.TextPrimary,
+                            color = if (externalFocused) NuvioColors.OnSecondary else NuvioColors.TextPrimary,
                             modifier = Modifier
                                 .padding(horizontal = 16.dp, vertical = 14.dp)
                                 .fillMaxWidth(),

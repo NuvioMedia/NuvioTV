@@ -42,7 +42,7 @@ interface WatchProgressRepository {
     /**
      * Save or update watch progress
      */
-    suspend fun saveProgress(progress: WatchProgress)
+    suspend fun saveProgress(progress: WatchProgress, syncRemote: Boolean = true)
     
     /**
      * Remove watch progress (playback only, does not affect Trakt history)

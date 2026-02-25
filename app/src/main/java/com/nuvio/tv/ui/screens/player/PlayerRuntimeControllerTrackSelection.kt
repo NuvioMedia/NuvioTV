@@ -84,6 +84,28 @@ internal fun PlayerRuntimeController.persistRememberedLinkAudioSelection(trackIn
     }
 }
 
+internal fun PlayerRuntimeController.applyAddonSubtitleOverride(addonTrackId: String): Boolean {
+    val player = _exoPlayer ?: return false
+    player.currentTracks.groups.forEach { trackGroup ->
+        if (trackGroup.type != C.TRACK_TYPE_TEXT) return@forEach
+        for (i in 0 until trackGroup.length) {
+            val format = trackGroup.getTrackFormat(i)
+            if (format.id?.contains(addonTrackId) == true || format.id == addonTrackId) {
+                val override = TrackSelectionOverride(trackGroup.mediaTrackGroup, i)
+                player.trackSelectionParameters = player.trackSelectionParameters
+                    .buildUpon()
+                    .setOverrideForType(override)
+                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                    .build()
+                Log.d(PlayerRuntimeController.TAG, "applyAddonSubtitleOverride: found id=${format.id} at group/track $i")
+                return true
+            }
+        }
+    }
+    Log.d(PlayerRuntimeController.TAG, "applyAddonSubtitleOverride: track not found yet for id=$addonTrackId")
+    return false
+}
+
 internal fun PlayerRuntimeController.selectSubtitleTrack(trackIndex: Int) {
     _exoPlayer?.let { player ->
         Log.d(PlayerRuntimeController.TAG, "Selecting INTERNAL subtitle trackIndex=$trackIndex")
@@ -93,6 +115,8 @@ internal fun PlayerRuntimeController.selectSubtitleTrack(trackIndex: Int) {
         tracks.groups.forEach { trackGroup ->
             if (trackGroup.type == C.TRACK_TYPE_TEXT) {
                 for (i in 0 until trackGroup.length) {
+                    val format = trackGroup.getTrackFormat(i)
+                    if (format.id?.contains(PlayerRuntimeController.ADDON_SUBTITLE_TRACK_ID_PREFIX) == true) continue
                     if (currentSubIndex == trackIndex) {
                         val override = TrackSelectionOverride(trackGroup.mediaTrackGroup, i)
                         player.trackSelectionParameters = player.trackSelectionParameters
@@ -140,7 +164,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: com.nuvio.tv.
             .setId(addonTrackId)
             .setLanguage(normalizedLang)
             .setMimeType(subtitleMimeType)
-            .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+            .setSelectionFlags(0)
         val subtitleConfig = subtitleConfigBuilder.build()
 
         val currentPosition = player.currentPosition
@@ -161,7 +185,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: com.nuvio.tv.
         player.trackSelectionParameters = player.trackSelectionParameters
             .buildUpon()
             .clearOverridesOfType(C.TRACK_TYPE_TEXT)
-            .setPreferredTextLanguage(null)
+            .setPreferredTextLanguage(normalizedLang)
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
             .build()
         

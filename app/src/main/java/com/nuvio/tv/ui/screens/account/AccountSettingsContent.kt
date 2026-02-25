@@ -46,6 +46,8 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.ui.theme.NuvioColors
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @Composable
 fun AccountSettingsContent(
@@ -60,9 +62,9 @@ fun AccountSettingsContent(
     ) {
         when (val authState = uiState.authState) {
             is AuthState.Loading -> {
-                item {
+                item(key = "account_loading") {
                     Text(
-                        text = "Loading...",
+                        text = stringResource(R.string.account_loading),
                         style = MaterialTheme.typography.bodyMedium,
                         color = NuvioColors.TextSecondary
                     )
@@ -70,56 +72,38 @@ fun AccountSettingsContent(
             }
 
             is AuthState.SignedOut -> {
-                item {
+                item(key = "account_signed_out_info") {
                     Text(
-                        text = "Sync your library, watch progress, addons, and plugins across devices.",
+                        text = stringResource(R.string.account_sync_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )
                 }
-                item {
+                item(key = "account_sign_in_qr") {
                     SettingsActionButton(
                         icon = Icons.Default.VpnKey,
-                        title = "Sign In with QR",
-                        subtitle = "Scan a QR code and complete email login on your phone",
+                        title = stringResource(R.string.account_signin_qr_title),
+                        subtitle = stringResource(R.string.account_signin_qr_subtitle),
                         onClick = onNavigateToAuthQrSignIn
                     )
                 }
             }
 
             is AuthState.FullAccount -> {
-                item { StatusCard(label = "Signed in", value = authState.email) }
+                item(key = "account_status") {
+                    StatusCard(label = stringResource(R.string.account_signed_in_label), value = authState.email)
+                }
 
                 val overview = uiState.syncOverview
                 if (overview != null) {
-                    item { SyncOverviewCard(overview) }
+                    item(key = "account_sync_overview") { SyncOverviewCard(overview) }
                 } else if (uiState.isSyncOverviewLoading) {
-                    item { SyncOverviewLoadingCard() }
+                    item(key = "account_sync_overview_loading") { SyncOverviewLoadingCard() }
                 }
 
-                item { SignOutSettingsButton(onClick = { viewModel.signOut() }) }
+                item(key = "account_sign_out") { SignOutSettingsButton(onClick = { viewModel.signOut() }) }
             }
 
-            is AuthState.Anonymous -> {
-                item { StatusCard(label = "Anonymous", value = "Upgrade with QR to link an email") }
-
-                val overview = uiState.syncOverview
-                if (overview != null) {
-                    item { SyncOverviewCard(overview) }
-                } else if (uiState.isSyncOverviewLoading) {
-                    item { SyncOverviewLoadingCard() }
-                }
-
-                item {
-                    SettingsActionButton(
-                        icon = Icons.Default.VpnKey,
-                        title = "Upgrade with QR",
-                        subtitle = "Scan a QR code and sign in from your phone",
-                        onClick = onNavigateToAuthQrSignIn
-                    )
-                }
-                item { SignOutSettingsButton(onClick = { viewModel.signOut() }) }
-            }
         }
     }
 }
@@ -148,7 +132,7 @@ private fun SyncOverviewCard(overview: SyncOverview) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Total",
+                    text = stringResource(R.string.account_total_label),
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.Secondary,
                     fontWeight = FontWeight.Bold,
@@ -158,11 +142,11 @@ private fun SyncOverviewCard(overview: SyncOverview) {
                     modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    ProfileStatValue(overview.totalAddons, "addons")
-                    ProfileStatValue(overview.totalPlugins, "plugins")
-                    ProfileStatValue(overview.totalLibrary, "library")
-                    ProfileStatValue(overview.totalWatchProgress, "progress")
-                    ProfileStatValue(overview.totalWatchedItems, "watched")
+                    ProfileStatValue(overview.totalAddons, stringResource(R.string.account_stat_addons))
+                    ProfileStatValue(overview.totalPlugins, stringResource(R.string.account_stat_plugins))
+                    ProfileStatValue(overview.totalLibrary, stringResource(R.string.account_stat_library))
+                    ProfileStatValue(overview.totalWatchProgress, stringResource(R.string.account_stat_progress))
+                    ProfileStatValue(overview.totalWatchedItems, stringResource(R.string.account_stat_watched))
                 }
             }
 
@@ -237,11 +221,11 @@ private fun ProfileSyncRow(profile: ProfileSyncStats) {
             modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            ProfileStatValue(profile.addons, "addons")
-            ProfileStatValue(profile.plugins, "plugins")
-            ProfileStatValue(profile.library, "library")
-            ProfileStatValue(profile.watchProgress, "progress")
-            ProfileStatValue(profile.watchedItems, "watched")
+            ProfileStatValue(profile.addons, stringResource(R.string.account_stat_addons))
+            ProfileStatValue(profile.plugins, stringResource(R.string.account_stat_plugins))
+            ProfileStatValue(profile.library, stringResource(R.string.account_stat_library))
+            ProfileStatValue(profile.watchProgress, stringResource(R.string.account_stat_progress))
+            ProfileStatValue(profile.watchedItems, stringResource(R.string.account_stat_watched))
         }
     }
 }
@@ -276,7 +260,7 @@ private fun SyncOverviewLoadingCard() {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "Loading sync data...",
+            text = stringResource(R.string.account_loading_sync),
             style = MaterialTheme.typography.bodySmall,
             color = NuvioColors.TextSecondary
         )
@@ -403,7 +387,7 @@ private fun SignOutSettingsButton(onClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = "Sign Out",
+                text = stringResource(R.string.account_sign_out),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFFF44336),
                 fontWeight = FontWeight.Medium

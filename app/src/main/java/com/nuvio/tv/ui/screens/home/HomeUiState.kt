@@ -16,8 +16,7 @@ data class HomeUiState(
     val selectedItemId: String? = null,
     val installedAddonsCount: Int = 0,
     val homeLayout: HomeLayout = HomeLayout.MODERN,
-    val modernLandscapePostersEnabled: Boolean = true,
-    val modernNextRowPreviewEnabled: Boolean = false,
+    val modernLandscapePostersEnabled: Boolean = false,
     val heroItems: List<MetaPreview> = emptyList(),
     val heroCatalogKeys: List<String> = emptyList(),
     val heroSectionEnabled: Boolean = true,
@@ -33,6 +32,10 @@ data class HomeUiState(
     val posterCardWidthDp: Int = 126,
     val posterCardHeightDp: Int = 189,
     val posterCardCornerRadiusDp: Int = 12,
+    val posterLibraryMembership: Map<String, Boolean> = emptyMap(),
+    val movieWatchedStatus: Map<String, Boolean> = emptyMap(),
+    val posterLibraryPending: Set<String> = emptySet(),
+    val movieWatchedPending: Set<String> = emptySet(),
     val gridItems: List<GridItem> = emptyList()
 )
 
@@ -63,6 +66,9 @@ data class NextUpInfo(
     val episodeTitle: String?,
     val episodeDescription: String? = null,
     val thumbnail: String?,
+    val released: String? = null,
+    val hasAired: Boolean = true,
+    val airDateLabel: String? = null,
     val lastWatched: Long
 )
 
@@ -103,4 +109,8 @@ sealed class HomeEvent {
         val isNextUp: Boolean = false
     ) : HomeEvent()
     data object OnRetry : HomeEvent()
+}
+
+fun homeItemStatusKey(itemId: String, itemType: String): String {
+    return "${itemType.lowercase()}|$itemId"
 }

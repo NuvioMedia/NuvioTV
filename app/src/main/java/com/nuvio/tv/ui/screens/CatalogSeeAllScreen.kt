@@ -52,6 +52,8 @@ import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.roundToInt
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @Composable
 fun CatalogSeeAllScreen(
@@ -158,7 +160,7 @@ fun CatalogSeeAllScreen(
         if (uiState.catalogAddonNameEnabled) {
             catalogRow?.addonName?.let { addonName ->
                 Text(
-                    text = "from $addonName",
+                    text = stringResource(R.string.catalog_see_all_from, addonName),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
@@ -227,8 +229,8 @@ fun CatalogSeeAllScreen(
             }
         } else {
             EmptyScreenState(
-                title = "No items available",
-                subtitle = "Try a different catalog or check back later",
+                title = stringResource(R.string.catalog_see_all_empty_title),
+                subtitle = stringResource(R.string.catalog_see_all_empty_subtitle),
                 icon = Icons.Default.GridView
             )
         }

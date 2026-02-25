@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -52,6 +53,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.delay
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @Composable
 fun PauseOverlay(
@@ -80,32 +83,33 @@ fun PauseOverlay(
                 .fillMaxSize()
                 .clickable(onClick = onClose)
         ) {
+            val leftGradient = remember {
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        Color.Black.copy(alpha = 0.88f),
+                        Color.Transparent
+                    )
+                )
+            }
+            val topGradient = remember {
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0f to Color.Black.copy(alpha = 0.6f),
+                        0.3f to Color.Black.copy(alpha = 0.4f),
+                        0.6f to Color.Black.copy(alpha = 0.2f),
+                        1f to Color.Transparent
+                    )
+                )
+            }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(
-                                Color.Black.copy(alpha = 0.88f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0f to Color.Black.copy(alpha = 0.6f),
-                                0.3f to Color.Black.copy(alpha = 0.4f),
-                                0.6f to Color.Black.copy(alpha = 0.2f),
-                                1f to Color.Transparent
-                            )
-                        )
-                    )
+                    .drawWithCache {
+                        onDrawBehind {
+                            drawRect(brush = leftGradient, size = size)
+                            drawRect(brush = topGradient, size = size)
+                        }
+                    }
             )
 
             Box(
@@ -186,7 +190,7 @@ private fun PauseMetadataView(
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = "You're watching",
+                text = stringResource(R.string.pause_you_are_watching),
                 style = MaterialTheme.typography.bodyLarge,
                 color = NuvioColors.TextTertiary
             )
@@ -242,7 +246,7 @@ private fun PauseMetadataView(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
-                    text = "Cast",
+                    text = stringResource(R.string.pause_cast_label),
                     style = MaterialTheme.typography.titleSmall,
                     color = NuvioColors.TextTertiary
                 )
@@ -309,7 +313,7 @@ private fun CastDetailView(
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = "Back to details",
+                text = stringResource(R.string.pause_back_to_details),
                 style = MaterialTheme.typography.bodyMedium,
                 color = NuvioColors.TextSecondary,
                 modifier = Modifier.clickable(onClick = onBack)
@@ -347,7 +351,7 @@ private fun CastDetailView(
 
                 if (!member.character.isNullOrBlank()) {
                     Text(
-                        text = "as ${member.character}",
+                        text = stringResource(R.string.pause_as_character, member.character ?: ""),
                         style = MaterialTheme.typography.bodyLarge,
                         color = NuvioColors.TextSecondary,
                         modifier = Modifier.padding(top = 8.dp),

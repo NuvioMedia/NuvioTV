@@ -25,6 +25,15 @@ class AddonSyncService @Inject constructor(
     private val addonPreferences: AddonPreferences,
     private val profileManager: ProfileManager
 ) {
+    private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
+        return try {
+            block()
+        } catch (e: Exception) {
+            if (!authManager.refreshSessionIfJwtExpired(e)) throw e
+            block()
+        }
+    }
+
     /**
      * Push local addon URLs to Supabase via RPC.
      * Uses a SECURITY DEFINER function to handle RLS for linked devices.
@@ -55,7 +64,9 @@ class AddonSyncService @Inject constructor(
                 put("p_profile_id", profileId)
             }
             Log.d(TAG, "pushToRemote: calling RPC sync_push_addons with profile_id=$profileId")
-            postgrest.rpc("sync_push_addons", params)
+            withJwtRefreshRetry {
+                postgrest.rpc("sync_push_addons", params)
+            }
 
             Log.d(TAG, "Pushed ${localUrls.size} addons to remote for profile $profileId")
             Result.success(Unit)
@@ -67,19 +78,23 @@ class AddonSyncService @Inject constructor(
 
     suspend fun getRemoteAddonUrls(): Result<List<String>> = withContext(Dispatchers.IO) {
         try {
-            val effectiveUserId = authManager.getEffectiveUserId()
-                ?: return@withContext Result.success(emptyList())
+            val effectiveUserId = authManager.getEffectiveUserId(fallbackToOwnIdOnFailure = false)
+                ?: return@withContext Result.failure(
+                    IllegalStateException("Unable to resolve sync owner for addon sync")
+                )
 
             val activeProfile = profileManager.activeProfile
             val profileId = if (activeProfile != null && !activeProfile.isPrimary && activeProfile.usesPrimaryAddons) 1
                             else profileManager.activeProfileId.value
 
-            val remoteAddons = postgrest.from("addons")
-                .select { filter {
-                    eq("user_id", effectiveUserId)
-                    eq("profile_id", profileId)
-                } }
-                .decodeList<SupabaseAddon>()
+            val remoteAddons = withJwtRefreshRetry {
+                postgrest.from("addons")
+                    .select { filter {
+                        eq("user_id", effectiveUserId)
+                        eq("profile_id", profileId)
+                    } }
+                    .decodeList<SupabaseAddon>()
+            }
 
             Result.success(
                 remoteAddons

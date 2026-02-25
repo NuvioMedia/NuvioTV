@@ -152,7 +152,14 @@ class TraktProgressService @Inject constructor(
         }
     }
 
-    private fun recentWatchWindowMs(): Long = continueWatchingWindowDays.toLong() * 24L * 60L * 60L * 1000L
+    private fun isAllHistoryWindow(): Boolean {
+        return continueWatchingWindowDays == TraktSettingsDataStore.CONTINUE_WATCHING_DAYS_CAP_ALL
+    }
+
+    private fun recentWatchWindowMs(): Long? {
+        if (isAllHistoryWindow()) return null
+        return continueWatchingWindowDays.toLong() * 24L * 60L * 60L * 1000L
+    }
 
     suspend fun refreshNow() {
         forceRefreshUntilMs = System.currentTimeMillis() + 30_000L
@@ -462,7 +469,9 @@ class TraktProgressService @Inject constructor(
 
     private suspend fun fetchAllProgressSnapshot(force: Boolean = false): List<WatchProgress> {
         val recentCompletedEpisodes = fetchRecentEpisodeHistorySnapshot()
-        val playbackStartAt = toTraktUtcDateTime(System.currentTimeMillis() - recentWatchWindowMs())
+        val playbackStartAt = recentWatchWindowMs()?.let { windowMs ->
+            toTraktUtcDateTime(System.currentTimeMillis() - windowMs)
+        }
         val inProgressMovies = getPlayback("movies", force = force, startAt = playbackStartAt).mapNotNull { mapPlaybackMovie(it) }
         val inProgressEpisodes = getPlayback("episodes", force = force, startAt = playbackStartAt).mapNotNull { mapPlaybackEpisode(it) }
 
@@ -484,11 +493,13 @@ class TraktProgressService @Inject constructor(
     }
 
     private suspend fun fetchRecentEpisodeHistorySnapshot(): List<WatchProgress> {
-        val cutoffMs = System.currentTimeMillis() - recentWatchWindowMs()
+        val cutoffMs = recentWatchWindowMs()?.let { windowMs ->
+            System.currentTimeMillis() - windowMs
+        }
         val results = linkedMapOf<String, WatchProgress>()
         var page = 1
         val pageLimit = 100
-        val maxPages = 5
+        val maxPages = if (isAllHistoryWindow()) 20 else 5
 
         while (page <= maxPages) {
             val response = traktAuthService.executeAuthorizedRequest { authHeader ->
@@ -496,7 +507,7 @@ class TraktProgressService @Inject constructor(
                     authorization = authHeader,
                     page = page,
                     limit = pageLimit,
-                    startAt = toTraktUtcDateTime(cutoffMs)
+                    startAt = cutoffMs?.let(::toTraktUtcDateTime)
                 )
             } ?: break
 
@@ -507,11 +518,11 @@ class TraktProgressService @Inject constructor(
             var shouldStop = false
             items.forEach { item ->
                 val mapped = mapEpisodeHistoryItem(item) ?: return@forEach
-                if (mapped.lastWatched < cutoffMs) {
+                if (cutoffMs != null && mapped.lastWatched < cutoffMs) {
                     shouldStop = true
                     return@forEach
                 }
-                results.putIfAbsent(progressKey(mapped), mapped)
+                results.putIfAbsent(mapped.contentId, mapped)
                 if (results.size >= maxRecentEpisodeHistoryEntries) {
                     shouldStop = true
                     return@forEach
@@ -586,7 +597,9 @@ class TraktProgressService @Inject constructor(
 
         val inProgress = getPlayback(
             type = "episodes",
-            startAt = toTraktUtcDateTime(System.currentTimeMillis() - recentWatchWindowMs())
+            startAt = recentWatchWindowMs()?.let { windowMs ->
+                toTraktUtcDateTime(System.currentTimeMillis() - windowMs)
+            }
         )
             .mapNotNull { mapPlaybackEpisode(it) }
             .filter { it.contentId == contentId }

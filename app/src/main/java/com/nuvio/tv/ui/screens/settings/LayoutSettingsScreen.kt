@@ -3,9 +3,6 @@
 package com.nuvio.tv.ui.screens.settings
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +40,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
@@ -69,8 +68,8 @@ fun LayoutSettingsScreen(
     BackHandler { onBackPress() }
 
     SettingsStandaloneScaffold(
-        title = "Layout Settings",
-        subtitle = "Adjust home layout, content visibility, and poster behavior"
+        title = stringResource(R.string.layout_title),
+        subtitle = stringResource(R.string.layout_subtitle)
     ) {
         LayoutSettingsContent(viewModel = viewModel)
     }
@@ -105,6 +104,7 @@ fun LayoutSettingsContent(
     val homeLayoutHeaderFocus = initialFocusRequester ?: defaultHomeLayoutHeaderFocus
 
     var focusedSection by remember { mutableStateOf<LayoutSettingsSection?>(null) }
+    var activePreviewLayout by remember(uiState.selectedLayout) { mutableStateOf(uiState.selectedLayout) }
 
     LaunchedEffect(homeLayoutExpanded, focusedSection) {
         if (!homeLayoutExpanded && focusedSection == LayoutSettingsSection.HOME_LAYOUT) {
@@ -137,8 +137,8 @@ fun LayoutSettingsContent(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         SettingsDetailHeader(
-            title = "Layout Settings",
-            subtitle = "Adjust home layout, content visibility, and poster behavior"
+            title = stringResource(R.string.layout_title),
+            subtitle = stringResource(R.string.layout_subtitle)
         )
 
         SettingsGroupCard(
@@ -153,10 +153,10 @@ fun LayoutSettingsContent(
             contentPadding = PaddingValues(bottom = 18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
+            item(key = "home_layout_section") {
                 CollapsibleSectionCard(
-                    title = "Home Layout",
-                    description = "Choose structure and hero source.",
+                    title = stringResource(R.string.layout_section_home),
+                    description = stringResource(R.string.layout_section_home_desc),
                     expanded = homeLayoutExpanded,
                     onToggle = { homeLayoutExpanded = !homeLayoutExpanded },
                     focusRequester = homeLayoutHeaderFocus,
@@ -169,36 +169,48 @@ fun LayoutSettingsContent(
                         LayoutCard(
                             layout = HomeLayout.MODERN,
                             isSelected = uiState.selectedLayout == HomeLayout.MODERN,
+                            showLivePreview = activePreviewLayout == HomeLayout.MODERN || uiState.selectedLayout == HomeLayout.MODERN,
                             onClick = {
                                 viewModel.onEvent(LayoutSettingsEvent.SelectLayout(HomeLayout.MODERN))
                             },
-                            onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT },
+                            onFocused = {
+                                focusedSection = LayoutSettingsSection.HOME_LAYOUT
+                                activePreviewLayout = HomeLayout.MODERN
+                            },
                             modifier = Modifier.weight(1f)
                         )
                         LayoutCard(
                             layout = HomeLayout.GRID,
                             isSelected = uiState.selectedLayout == HomeLayout.GRID,
+                            showLivePreview = activePreviewLayout == HomeLayout.GRID || uiState.selectedLayout == HomeLayout.GRID,
                             onClick = {
                                 viewModel.onEvent(LayoutSettingsEvent.SelectLayout(HomeLayout.GRID))
                             },
-                            onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT },
+                            onFocused = {
+                                focusedSection = LayoutSettingsSection.HOME_LAYOUT
+                                activePreviewLayout = HomeLayout.GRID
+                            },
                             modifier = Modifier.weight(1f)
                         )
                         LayoutCard(
                             layout = HomeLayout.CLASSIC,
                             isSelected = uiState.selectedLayout == HomeLayout.CLASSIC,
+                            showLivePreview = activePreviewLayout == HomeLayout.CLASSIC || uiState.selectedLayout == HomeLayout.CLASSIC,
                             onClick = {
                                 viewModel.onEvent(LayoutSettingsEvent.SelectLayout(HomeLayout.CLASSIC))
                             },
-                            onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT },
+                            onFocused = {
+                                focusedSection = LayoutSettingsSection.HOME_LAYOUT
+                                activePreviewLayout = HomeLayout.CLASSIC
+                            },
                             modifier = Modifier.weight(1f)
                         )
                     }
 
                     if (uiState.selectedLayout == HomeLayout.MODERN) {
                         CompactToggleRow(
-                            title = "Landscape Posters",
-                            subtitle = "Switch between portrait and landscape cards for Modern view.",
+                            title = stringResource(R.string.layout_landscape_posters),
+                            subtitle = stringResource(R.string.layout_landscape_posters_sub),
                             checked = uiState.modernLandscapePostersEnabled,
                             onToggle = {
                                 viewModel.onEvent(
@@ -209,29 +221,16 @@ fun LayoutSettingsContent(
                             },
                             onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
                         )
-                        CompactToggleRow(
-                            title = "Show Preview Row",
-                            subtitle = "Show a partial preview of the row below in Modern Home layout.",
-                            checked = uiState.modernNextRowPreviewEnabled,
-                            onToggle = {
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetModernNextRowPreviewEnabled(
-                                        !uiState.modernNextRowPreviewEnabled
-                                    )
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
-                        )
                     }
 
                     if (uiState.heroSectionEnabled && uiState.availableCatalogs.isNotEmpty()) {
                         Text(
-                            text = "Hero Catalogs",
+                            text = stringResource(R.string.layout_hero_catalogs),
                             style = MaterialTheme.typography.labelLarge,
                             color = NuvioColors.TextSecondary
                         )
                         Text(
-                            text = "Select one or more catalogs for hero content.",
+                            text = stringResource(R.string.layout_hero_catalogs_sub),
                             style = MaterialTheme.typography.bodySmall,
                             color = NuvioColors.TextTertiary
                         )
@@ -257,10 +256,10 @@ fun LayoutSettingsContent(
                 }
             }
 
-            item {
+            item(key = "home_content_section") {
                 CollapsibleSectionCard(
-                    title = "Home Content",
-                    description = "Control what appears on home and search.",
+                    title = stringResource(R.string.layout_section_content),
+                    description = stringResource(R.string.layout_section_content_desc),
                     expanded = homeContentExpanded,
                     onToggle = { homeContentExpanded = !homeContentExpanded },
                     focusRequester = homeContentHeaderFocus,
@@ -268,8 +267,8 @@ fun LayoutSettingsContent(
                 ) {
                     if (!uiState.modernSidebarEnabled) {
                         CompactToggleRow(
-                            title = "Collapse Sidebar",
-                            subtitle = "Hide sidebar by default; show when focused.",
+                            title = stringResource(R.string.layout_collapse_sidebar),
+                            subtitle = stringResource(R.string.layout_collapse_sidebar_sub),
                             checked = uiState.sidebarCollapsedByDefault,
                             onToggle = {
                                 viewModel.onEvent(
@@ -280,8 +279,8 @@ fun LayoutSettingsContent(
                         )
                     }
                     CompactToggleRow(
-                        title = "Modern Sidebar ON/OFF",
-                        subtitle = "Enable floating sidebar navigation.",
+                        title = stringResource(R.string.layout_modern_sidebar),
+                        subtitle = stringResource(R.string.layout_modern_sidebar_sub),
                         checked = uiState.modernSidebarEnabled,
                         onToggle = {
                             viewModel.onEvent(
@@ -292,8 +291,8 @@ fun LayoutSettingsContent(
                     )
                     if (uiState.modernSidebarEnabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                         CompactToggleRow(
-                            title = "Modern Sidebar Blur",
-                            subtitle = "Toggle blur effect for modern sidebar surfaces.",
+                            title = stringResource(R.string.layout_modern_sidebar_blur),
+                            subtitle = stringResource(R.string.layout_modern_sidebar_blur_sub),
                             checked = uiState.modernSidebarBlurEnabled,
                             onToggle = {
                                 viewModel.onEvent(
@@ -304,8 +303,8 @@ fun LayoutSettingsContent(
                         )
                     }
                     CompactToggleRow(
-                        title = "Show Hero Section",
-                        subtitle = "Display hero carousel at top of home.",
+                        title = stringResource(R.string.layout_show_hero),
+                        subtitle = stringResource(R.string.layout_show_hero_sub),
                         checked = uiState.heroSectionEnabled,
                         onToggle = {
                             viewModel.onEvent(
@@ -315,8 +314,8 @@ fun LayoutSettingsContent(
                         onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                     )
                     CompactToggleRow(
-                        title = "Show Discover in Search",
-                        subtitle = "Show browse section when search is empty.",
+                        title = stringResource(R.string.layout_show_discover),
+                        subtitle = stringResource(R.string.layout_show_discover_sub),
                         checked = uiState.searchDiscoverEnabled,
                         onToggle = {
                             viewModel.onEvent(
@@ -327,8 +326,8 @@ fun LayoutSettingsContent(
                     )
                     if (uiState.selectedLayout != HomeLayout.MODERN) {
                         CompactToggleRow(
-                            title = "Show Poster Labels",
-                            subtitle = "Show titles under posters in rows, grid, and see-all.",
+                            title = stringResource(R.string.layout_poster_labels),
+                            subtitle = stringResource(R.string.layout_poster_labels_sub),
                             checked = uiState.posterLabelsEnabled,
                             onToggle = {
                                 viewModel.onEvent(
@@ -340,8 +339,8 @@ fun LayoutSettingsContent(
                     }
                     if (uiState.selectedLayout != HomeLayout.MODERN) {
                         CompactToggleRow(
-                            title = "Show Addon Name",
-                            subtitle = "Show source name under catalog titles.",
+                            title = stringResource(R.string.layout_addon_name),
+                            subtitle = stringResource(R.string.layout_addon_name_sub),
                             checked = uiState.catalogAddonNameEnabled,
                             onToggle = {
                                 viewModel.onEvent(
@@ -352,8 +351,8 @@ fun LayoutSettingsContent(
                         )
                     }
                     CompactToggleRow(
-                        title = "Show Catalog Type",
-                        subtitle = "Show type suffix next to catalog name (Movie/Series).",
+                        title = stringResource(R.string.layout_catalog_type),
+                        subtitle = stringResource(R.string.layout_catalog_type_sub),
                         checked = uiState.catalogTypeSuffixEnabled,
                         onToggle = {
                             viewModel.onEvent(
@@ -365,18 +364,18 @@ fun LayoutSettingsContent(
                 }
             }
 
-            item {
+            item(key = "detail_page_section") {
                 CollapsibleSectionCard(
-                    title = "Detail Page",
-                    description = "Settings for the detail and episode screens.",
+                    title = stringResource(R.string.layout_section_detail),
+                    description = stringResource(R.string.layout_section_detail_desc),
                     expanded = detailPageExpanded,
                     onToggle = { detailPageExpanded = !detailPageExpanded },
                     focusRequester = detailPageHeaderFocus,
                     onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
                 ) {
                     CompactToggleRow(
-                        title = "Blur Unwatched Episodes",
-                        subtitle = "Blur episode thumbnails until watched to avoid spoilers.",
+                        title = stringResource(R.string.layout_blur_unwatched),
+                        subtitle = stringResource(R.string.layout_blur_unwatched_sub),
                         checked = uiState.blurUnwatchedEpisodes,
                         onToggle = {
                             viewModel.onEvent(
@@ -387,8 +386,8 @@ fun LayoutSettingsContent(
                     )
 
                     CompactToggleRow(
-                        title = "Show Trailer Button",
-                        subtitle = "Show trailer button on detail page (only when trailer is available).",
+                        title = stringResource(R.string.layout_trailer_button),
+                        subtitle = stringResource(R.string.layout_trailer_button_sub),
                         checked = uiState.detailPageTrailerButtonEnabled,
                         onToggle = {
                             viewModel.onEvent(
@@ -401,8 +400,8 @@ fun LayoutSettingsContent(
                     )
 
                     CompactToggleRow(
-                        title = "Prefer meta from external addon",
-                        subtitle = "Use metadata from external addon instead of catalog addon.",
+                        title = stringResource(R.string.layout_prefer_external_meta),
+                        subtitle = stringResource(R.string.layout_prefer_external_meta_sub),
                         checked = uiState.preferExternalMetaAddonDetail,
                         onToggle = {
                             viewModel.onEvent(
@@ -416,10 +415,10 @@ fun LayoutSettingsContent(
                 }
             }
 
-            item {
+            item(key = "focused_poster_section") {
                 CollapsibleSectionCard(
-                    title = "Focused Poster",
-                    description = "Advanced behavior for focused poster cards.",
+                    title = stringResource(R.string.layout_section_focused),
+                    description = stringResource(R.string.layout_section_focused_desc),
                     expanded = focusedPosterExpanded,
                     onToggle = { focusedPosterExpanded = !focusedPosterExpanded },
                     focusRequester = focusedPosterHeaderFocus,
@@ -431,8 +430,8 @@ fun LayoutSettingsContent(
 
                     if (!isModernLandscape) {
                         CompactToggleRow(
-                            title = "Expand Focused Poster to Backdrop",
-                            subtitle = "Expand focused poster after idle delay.",
+                            title = stringResource(R.string.layout_expand_poster),
+                            subtitle = stringResource(R.string.layout_expand_poster_sub),
                             checked = uiState.focusedPosterBackdropExpandEnabled,
                             onToggle = {
                                 viewModel.onEvent(
@@ -448,8 +447,8 @@ fun LayoutSettingsContent(
                     if (!isModernLandscape && uiState.focusedPosterBackdropExpandEnabled) {
                         SliderSettingsItem(
                             icon = Icons.Default.Timer,
-                            title = "Backdrop Expand Delay",
-                            subtitle = "How long to wait before expanding focused cards.",
+                            title = stringResource(R.string.layout_expand_delay),
+                            subtitle = stringResource(R.string.layout_expand_delay_sub),
                             value = uiState.focusedPosterBackdropExpandDelaySeconds,
                             valueText = "${uiState.focusedPosterBackdropExpandDelaySeconds}s",
                             minValue = 1,
@@ -467,14 +466,14 @@ fun LayoutSettingsContent(
                     if (showAutoplayRow) {
                         CompactToggleRow(
                             title = if (isModern) {
-                                "Autoplay Trailer"
+                                stringResource(R.string.layout_autoplay_trailer)
                             } else {
-                                "Autoplay Trailer in Expanded Card"
+                                stringResource(R.string.layout_autoplay_trailer_expanded)
                             },
                             subtitle = if (isModern) {
-                                "Play trailer preview for focused content when available."
+                                stringResource(R.string.layout_autoplay_trailer_sub)
                             } else {
-                                "Play trailer inside expanded backdrop when available."
+                                stringResource(R.string.layout_autoplay_trailer_expanded_sub)
                             },
                             checked = uiState.focusedPosterBackdropTrailerEnabled,
                             onToggle = {
@@ -490,11 +489,11 @@ fun LayoutSettingsContent(
 
                     if (showAutoplayRow && uiState.focusedPosterBackdropTrailerEnabled) {
                         CompactToggleRow(
-                            title = "Play Trailer Muted",
+                            title = stringResource(R.string.layout_trailer_muted),
                             subtitle = if (isModern) {
-                                "Mute trailer audio during autoplay preview."
+                                stringResource(R.string.layout_trailer_muted_sub_preview)
                             } else {
-                                "Mute trailer audio in expanded cards."
+                                stringResource(R.string.layout_trailer_muted_sub_expanded)
                             },
                             checked = uiState.focusedPosterBackdropTrailerMuted,
                             onToggle = {
@@ -526,10 +525,10 @@ fun LayoutSettingsContent(
                 }
             }
 
-            item {
+            item(key = "poster_style_section") {
                 CollapsibleSectionCard(
-                    title = "Poster Card Style",
-                    description = "Tune card width and corner radius.",
+                    title = stringResource(R.string.layout_section_card_style),
+                    description = stringResource(R.string.layout_section_card_style_desc),
                     expanded = posterCardStyleExpanded,
                     onToggle = { posterCardStyleExpanded = !posterCardStyleExpanded },
                     focusRequester = posterCardStyleHeaderFocus,
@@ -573,18 +572,14 @@ private fun CollapsibleSectionCard(
         SettingsActionRow(
             title = title,
             subtitle = description,
-            value = if (expanded) "Open" else "Closed",
+            value = if (expanded) stringResource(R.string.layout_open) else stringResource(R.string.layout_closed),
             onClick = onToggle,
             trailingIcon = if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
             modifier = Modifier.focusRequester(focusRequester),
             onFocused = onFocused
         )
 
-        AnimatedVisibility(
-            visible = expanded,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
+        if (expanded) {
             SettingsGroupCard {
                 content()
             }
@@ -616,12 +611,12 @@ private fun ModernTrailerPlaybackTargetRow(
     onFocused: () -> Unit
 ) {
     Text(
-        text = "Modern Trailer Playback Location",
+        text = stringResource(R.string.layout_trailer_location),
         style = MaterialTheme.typography.labelLarge,
         color = NuvioColors.TextSecondary
     )
     Text(
-        text = "Choose where trailer preview plays in Modern Home.",
+        text = stringResource(R.string.layout_trailer_location_sub),
         style = MaterialTheme.typography.bodySmall,
         color = NuvioColors.TextTertiary
     )
@@ -629,9 +624,9 @@ private fun ModernTrailerPlaybackTargetRow(
         contentPadding = PaddingValues(end = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        item {
+        item(key = "trailer_target_expanded_card") {
             SettingsChoiceChip(
-                label = "Expanded Card",
+                label = stringResource(R.string.layout_trailer_expanded_card),
                 selected = selectedTarget == FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD,
                 onClick = {
                     onTargetSelected(FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD)
@@ -639,9 +634,9 @@ private fun ModernTrailerPlaybackTargetRow(
                 onFocused = onFocused
             )
         }
-        item {
+        item(key = "trailer_target_hero_media") {
             SettingsChoiceChip(
-                label = "Hero Media",
+                label = stringResource(R.string.layout_trailer_hero_media),
                 selected = selectedTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA,
                 onClick = {
                     onTargetSelected(FocusedPosterTrailerPlaybackTarget.HERO_MEDIA)
@@ -656,6 +651,7 @@ private fun ModernTrailerPlaybackTargetRow(
 private fun LayoutCard(
     layout: HomeLayout,
     isSelected: Boolean,
+    showLivePreview: Boolean,
     onClick: () -> Unit,
     onFocused: () -> Unit,
     modifier: Modifier = Modifier
@@ -699,10 +695,14 @@ private fun LayoutCard(
                     .fillMaxWidth()
                     .height(112.dp)
             ) {
-                when (layout) {
-                    HomeLayout.CLASSIC -> ClassicLayoutPreview(modifier = Modifier.fillMaxWidth())
-                    HomeLayout.GRID -> GridLayoutPreview(modifier = Modifier.fillMaxWidth())
-                    HomeLayout.MODERN -> ModernLayoutPreview(modifier = Modifier.fillMaxWidth())
+                if (showLivePreview) {
+                    when (layout) {
+                        HomeLayout.CLASSIC -> ClassicLayoutPreview(modifier = Modifier.fillMaxWidth())
+                        HomeLayout.GRID -> GridLayoutPreview(modifier = Modifier.fillMaxWidth())
+                        HomeLayout.MODERN -> ModernLayoutPreview(modifier = Modifier.fillMaxWidth())
+                    }
+                } else {
+                    LayoutPreviewPlaceholder()
                 }
             }
 
@@ -715,7 +715,7 @@ private fun LayoutCard(
                 if (isSelected) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "Selected",
+                        contentDescription = stringResource(R.string.cd_selected),
                         tint = NuvioColors.FocusRing,
                         modifier = Modifier
                             .size(16.dp)
@@ -723,9 +723,51 @@ private fun LayoutCard(
                     )
                 }
                 Text(
-                    text = layout.displayName,
+                    text = when (layout) {
+                        HomeLayout.CLASSIC -> stringResource(R.string.layout_classic)
+                        HomeLayout.GRID -> stringResource(R.string.layout_grid)
+                        HomeLayout.MODERN -> stringResource(R.string.layout_modern)
+                    },
                     style = MaterialTheme.typography.labelLarge,
                     color = if (isSelected || isFocused) NuvioColors.TextPrimary else NuvioColors.TextSecondary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LayoutPreviewPlaceholder() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(112.dp)
+            .background(
+                color = NuvioColors.BackgroundCard,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.7f)
+                .height(10.dp)
+                .background(NuvioColors.Border, RoundedCornerShape(999.dp))
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .background(NuvioColors.BackgroundElevated, RoundedCornerShape(10.dp))
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            repeat(3) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(10.dp)
+                        .background(NuvioColors.Border, RoundedCornerShape(999.dp))
                 )
             }
         }
@@ -757,19 +799,19 @@ private fun PosterCardStyleControls(
     onFocused: () -> Unit
 ) {
     val widthOptions = listOf(
-        PresetOption("Compact", 104),
-        PresetOption("Dense", 112),
-        PresetOption("Standard", 120),
-        PresetOption("Balanced", 126),
-        PresetOption("Comfort", 134),
-        PresetOption("Large", 140)
+        PresetOption(stringResource(R.string.layout_preset_compact), 104),
+        PresetOption(stringResource(R.string.layout_preset_dense), 112),
+        PresetOption(stringResource(R.string.layout_preset_standard), 120),
+        PresetOption(stringResource(R.string.layout_preset_balanced), 126),
+        PresetOption(stringResource(R.string.layout_preset_comfort), 134),
+        PresetOption(stringResource(R.string.layout_preset_large), 140)
     )
     val radiusOptions = listOf(
-        PresetOption("Sharp", 0),
-        PresetOption("Subtle", 4),
-        PresetOption("Classic", 8),
-        PresetOption("Rounded", 12),
-        PresetOption("Pill", 16)
+        PresetOption(stringResource(R.string.layout_preset_sharp), 0),
+        PresetOption(stringResource(R.string.layout_preset_subtle), 4),
+        PresetOption(stringResource(R.string.layout_preset_classic), 8),
+        PresetOption(stringResource(R.string.layout_preset_rounded), 12),
+        PresetOption(stringResource(R.string.layout_preset_pill), 16)
     )
 
     Column(
@@ -777,14 +819,14 @@ private fun PosterCardStyleControls(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         OptionRow(
-            title = "Width",
+            title = stringResource(R.string.layout_card_width),
             selectedValue = widthDp,
             options = widthOptions,
             onSelected = onWidthSelected,
             onFocused = onFocused
         )
         OptionRow(
-            title = "Corner Radius",
+            title = stringResource(R.string.layout_card_radius),
             selectedValue = cornerRadiusDp,
             options = radiusOptions,
             onSelected = onCornerRadiusSelected,
@@ -809,7 +851,7 @@ private fun PosterCardStyleControls(
             )
         ) {
             Text(
-                text = "Reset to Default",
+                text = stringResource(R.string.layout_reset_default),
                 style = MaterialTheme.typography.labelLarge,
                 color = NuvioColors.TextPrimary
             )
@@ -825,7 +867,7 @@ private fun OptionRow(
     onSelected: (Int) -> Unit,
     onFocused: () -> Unit
 ) {
-    val selectedLabel = options.firstOrNull { it.value == selectedValue }?.label ?: "Custom"
+    val selectedLabel = options.firstOrNull { it.value == selectedValue }?.label ?: stringResource(R.string.layout_custom)
 
     Text(
         text = "$title ($selectedLabel)",

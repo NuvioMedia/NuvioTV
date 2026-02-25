@@ -198,6 +198,7 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                         _uiState.update { 
                             it.copy(
                                 isBuffering = isBuffering,
+                                playbackEnded = playbackState == Player.STATE_ENDED,
                                 duration = playerDuration.coerceAtLeast(0L)
                             )
                         }

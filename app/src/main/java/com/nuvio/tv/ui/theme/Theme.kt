@@ -36,12 +36,12 @@ val LocalNuvioExtendedColors = staticCompositionLocalOf {
     )
 }
 
-val LocalAppTheme = staticCompositionLocalOf { AppTheme.OCEAN }
+val LocalAppTheme = staticCompositionLocalOf { AppTheme.WHITE }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun NuvioTheme(
-    appTheme: AppTheme = AppTheme.OCEAN,
+    appTheme: AppTheme = AppTheme.WHITE,
     content: @Composable () -> Unit
 ) {
     val palette = ThemeColors.getColorPalette(appTheme)
@@ -51,6 +51,7 @@ fun NuvioTheme(
         primary = colorScheme.Primary,
         onPrimary = colorScheme.OnPrimary,
         secondary = colorScheme.Secondary,
+        onSecondary = colorScheme.OnSecondary,
         background = colorScheme.Background,
         surface = colorScheme.Surface,
         surfaceVariant = colorScheme.SurfaceVariant,

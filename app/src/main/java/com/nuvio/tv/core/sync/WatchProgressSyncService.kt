@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.sync
 
 import android.util.Log
+import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.WatchProgressPreferences
@@ -22,11 +23,21 @@ private const val TAG = "WatchProgressSyncService"
 
 @Singleton
 class WatchProgressSyncService @Inject constructor(
+    private val authManager: AuthManager,
     private val postgrest: Postgrest,
     private val watchProgressPreferences: WatchProgressPreferences,
     private val traktAuthDataStore: TraktAuthDataStore,
     private val profileManager: ProfileManager
 ) {
+    private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
+        return try {
+            block()
+        } catch (e: Exception) {
+            if (!authManager.refreshSessionIfJwtExpired(e)) throw e
+            block()
+        }
+    }
+
     suspend fun deleteFromRemote(keys: Collection<String>): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (traktAuthDataStore.isAuthenticated.first()) {
@@ -49,7 +60,9 @@ class WatchProgressSyncService @Inject constructor(
                 })
                 put("p_profile_id", profileId)
             }
-            postgrest.rpc("sync_delete_watch_progress", params)
+            withJwtRefreshRetry {
+                postgrest.rpc("sync_delete_watch_progress", params)
+            }
             Log.d(TAG, "Deleted ${distinctKeys.size} watch progress entries from remote for profile $profileId")
             Result.success(Unit)
         } catch (e: Exception) {
@@ -95,7 +108,9 @@ class WatchProgressSyncService @Inject constructor(
                 })
                 put("p_profile_id", profileId)
             }
-            postgrest.rpc("sync_push_watch_progress", params)
+            withJwtRefreshRetry {
+                postgrest.rpc("sync_push_watch_progress", params)
+            }
 
             Log.d(TAG, "Pushed ${entries.size} watch progress entries to remote for profile $profileId")
             Result.success(Unit)
@@ -131,7 +146,9 @@ class WatchProgressSyncService @Inject constructor(
                 })
                 put("p_profile_id", profileId)
             }
-            postgrest.rpc("sync_push_watch_progress", params)
+            withJwtRefreshRetry {
+                postgrest.rpc("sync_push_watch_progress", params)
+            }
 
             Log.d(TAG, "Pushed single watch progress entry to remote for profile $profileId (key=$key)")
             Result.success(Unit)
@@ -158,7 +175,9 @@ class WatchProgressSyncService @Inject constructor(
             val params = buildJsonObject {
                 put("p_profile_id", profileId)
             }
-            val response = postgrest.rpc("sync_pull_watch_progress", params)
+            val response = withJwtRefreshRetry {
+                postgrest.rpc("sync_pull_watch_progress", params)
+            }
             val remote = response.decodeList<SupabaseWatchProgress>()
 
             Log.d(TAG, "pullFromRemote: fetched ${remote.size} entries from Supabase via RPC for profile $profileId")

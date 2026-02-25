@@ -28,6 +28,8 @@ class NuvioColorScheme(palette: ThemeColorPalette) {
     // Secondary accent - Theme dependent
     val Secondary = palette.secondary
     val SecondaryVariant = palette.secondaryVariant
+    val OnSecondary = palette.onSecondary
+    val OnSecondaryVariant = palette.onSecondaryVariant
 
     // Text colors (constant)
     val TextPrimary = Color(0xFFFFFFFF)
@@ -104,6 +106,16 @@ object NuvioColors {
         @Composable
         @ReadOnlyComposable
         get() = NuvioTheme.colors.SecondaryVariant
+
+    val OnSecondary: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = NuvioTheme.colors.OnSecondary
+
+    val OnSecondaryVariant: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = NuvioTheme.colors.OnSecondaryVariant
 
     val FocusRing: Color
         @Composable

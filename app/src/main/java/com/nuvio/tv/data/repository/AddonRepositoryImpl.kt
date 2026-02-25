@@ -183,8 +183,17 @@ class AddonRepositoryImpl @Inject constructor(
 
         val initialLocalUrls = preferences.installedAddonUrls.first()
         val initialLocalSet = initialLocalUrls.map { normalizeUrl(it) }.toSet()
+        val shouldRemoveMissingLocal = if (removeMissingLocal && normalizedRemote.isEmpty() && initialLocalUrls.isNotEmpty()) {
+            Log.w(
+                TAG,
+                "reconcileWithRemoteAddonUrls: remote list empty while local has ${initialLocalUrls.size} entries; preserving local addons"
+            )
+            false
+        } else {
+            removeMissingLocal
+        }
 
-        if (removeMissingLocal) {
+        if (shouldRemoveMissingLocal) {
             initialLocalUrls
                 .filter { normalizeUrl(it) !in remoteSet }
                 .forEach { removeAddon(it) }
@@ -205,7 +214,7 @@ class AddonRepositoryImpl @Inject constructor(
             .map { canonicalizeUrl(it) }
             .filter { normalizeUrl(it) !in remoteSet }
 
-        val reordered = if (removeMissingLocal) remoteOrdered else remoteOrdered + extras
+        val reordered = if (shouldRemoveMissingLocal) remoteOrdered else remoteOrdered + extras
         if (reordered != currentUrls.map { canonicalizeUrl(it) }) {
             preferences.setAddonOrder(reordered)
         }

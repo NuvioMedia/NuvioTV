@@ -1,4 +1,8 @@
 <resources>
 
     <style name="Theme.MyApplication" parent="Theme.AppCompat.DayNight.NoActionBar" />
+
+    <style name="Theme.MyApplication.Launcher" parent="Theme.MyApplication">
+        <item name="android:windowBackground">@drawable/splash_screen_background</item>
+    </style>
 </resources>

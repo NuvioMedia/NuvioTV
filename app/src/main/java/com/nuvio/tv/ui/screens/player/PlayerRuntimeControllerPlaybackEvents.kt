@@ -82,7 +82,7 @@ internal fun PlayerRuntimeController.saveWatchProgressIfNeeded() {
     
     if (kotlin.math.abs(currentPosition - lastSavedPosition) >= saveThresholdMs) {
         lastSavedPosition = currentPosition
-        saveWatchProgressInternal(currentPosition, duration)
+        saveWatchProgressInternal(currentPosition, duration, syncRemote = false)
     }
 }
 
@@ -103,7 +103,7 @@ internal fun PlayerRuntimeController.getEffectiveDuration(position: Long): Long 
     return effectiveDuration
 }
 
-internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, duration: Long) {
+internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, duration: Long, syncRemote: Boolean = true) {
     
     if (contentId.isNullOrEmpty() || contentType.isNullOrEmpty()) return
     
@@ -129,7 +129,7 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, d
     )
 
     scope.launch {
-        watchProgressRepository.saveProgress(progress)
+        watchProgressRepository.saveProgress(progress, syncRemote = syncRemote)
     }
 }
 
@@ -207,7 +207,7 @@ internal fun PlayerRuntimeController.emitPauseScrobbleStop(progressPercent: Floa
     if (!hasSentScrobbleStartForCurrentItem) return
 
     scope.launch {
-        traktScrobbleService.scrobblePause(
+        traktScrobbleService.scrobbleStop(
             item = item,
             progressPercent = progressPercent
         )
@@ -711,7 +711,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         PlayerEvent.OnToggleAspectRatio -> {
             val currentMode = _uiState.value.resizeMode
             val newMode = PlayerDisplayModeUtils.nextResizeMode(currentMode)
-            val modeText = PlayerDisplayModeUtils.resizeModeLabel(newMode)
+            val modeText = PlayerDisplayModeUtils.resizeModeLabel(newMode, context)
             Log.d("PlayerViewModel", "Aspect ratio toggled: $currentMode -> $newMode")
             _uiState.update { 
                 it.copy(

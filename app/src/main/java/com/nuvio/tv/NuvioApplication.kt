@@ -43,6 +43,10 @@ class NuvioApplication : Application(), ImageLoaderFactory, Configuration.Provid
         initializeTvRecommendations()
     }
 
+    override fun onCreate() {
+        super.onCreate()
+    }
+
     override fun newImageLoader(): ImageLoader {
         return ImageLoader.Builder(this)
             .memoryCache {
