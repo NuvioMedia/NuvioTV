@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
@@ -331,6 +332,20 @@ fun SettingsScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
+                        .onKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft) {
+                                allowDetailAutofocus = false
+                                val requested = railFocusRequesters[selectedCategory]?.let { requester ->
+                                    runCatching { requester.requestFocus() }.isSuccess
+                                } ?: false
+                                if (!requested) {
+                                    runCatching { railContainerFocusRequester.requestFocus() }
+                                }
+                                true
+                            } else {
+                                false
+                            }
+                        }
                         .onFocusChanged { state ->
                             if (state.hasFocus && !allowDetailAutofocus) {
                                 railFocusRequesters[selectedCategory]?.let { requester ->

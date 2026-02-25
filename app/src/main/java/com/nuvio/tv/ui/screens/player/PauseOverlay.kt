@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -82,32 +83,33 @@ fun PauseOverlay(
                 .fillMaxSize()
                 .clickable(onClick = onClose)
         ) {
+            val leftGradient = remember {
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        Color.Black.copy(alpha = 0.88f),
+                        Color.Transparent
+                    )
+                )
+            }
+            val topGradient = remember {
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0f to Color.Black.copy(alpha = 0.6f),
+                        0.3f to Color.Black.copy(alpha = 0.4f),
+                        0.6f to Color.Black.copy(alpha = 0.2f),
+                        1f to Color.Transparent
+                    )
+                )
+            }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(
-                                Color.Black.copy(alpha = 0.88f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0f to Color.Black.copy(alpha = 0.6f),
-                                0.3f to Color.Black.copy(alpha = 0.4f),
-                                0.6f to Color.Black.copy(alpha = 0.2f),
-                                1f to Color.Transparent
-                            )
-                        )
-                    )
+                    .drawWithCache {
+                        onDrawBehind {
+                            drawRect(brush = leftGradient, size = size)
+                            drawRect(brush = topGradient, size = size)
+                        }
+                    }
             )
 
             Box(

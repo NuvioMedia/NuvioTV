@@ -55,6 +55,7 @@ data class VideoDto(
     @Json(name = "title") val title: String? = null,
     @Json(name = "released") val released: String? = null,
     @Json(name = "thumbnail") val thumbnail: String? = null,
+    @Json(name = "streams") val streams: List<StreamDto>? = null,
     @Json(name = "season") val season: Int? = null,
     @Json(name = "episode") val episode: Int? = null,
     @Json(name = "number") val number: Int? = null,

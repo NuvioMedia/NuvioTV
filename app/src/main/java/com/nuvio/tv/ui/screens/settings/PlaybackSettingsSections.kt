@@ -251,7 +251,7 @@ internal fun PlaybackSettingsSections(
             item(key = "general_osd_clock") {
                 ToggleSettingsItem(
                     icon = Icons.Default.Timer,
-                    title = "OSD Clock",
+                    title = stringResource(R.string.playback_osd_clock),
                     subtitle = stringResource(R.string.playback_show_clock_sub),
                     isChecked = playerSettings.osdClockEnabled,
                     onCheckedChange = onSetOsdClockEnabled,

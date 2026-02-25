@@ -63,9 +63,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -828,17 +831,24 @@ fun PlayerScreen(
             SeekOverlay(uiState = uiState)
         }
 
-        // Episodes/streams side panel (slides in from right)
-        AnimatedVisibility(
-            visible = uiState.showEpisodesPanel && uiState.error == null,
-            enter = fadeIn(animationSpec = tween(120)),
-            exit = fadeOut(animationSpec = tween(120))
-        ) {
-            // Scrim (fades in/out, no slide)
+        val panelScrimAlpha by animateFloatAsState(
+            targetValue = when {
+                uiState.error != null -> 0f
+                uiState.showSubtitleStylePanel -> 0.35f
+                uiState.showEpisodesPanel || uiState.showSourcesPanel -> 0.45f
+                else -> 0f
+            },
+            animationSpec = tween(120),
+            label = "panelScrimAlpha"
+        )
+        if (panelScrimAlpha > 0f) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.45f))
+                    .drawWithCache {
+                        val scrimColor = Color.Black.copy(alpha = panelScrimAlpha)
+                        onDrawBehind { drawRect(color = scrimColor, size = size) }
+                    }
             )
         }
 
@@ -871,19 +881,6 @@ fun PlayerScreen(
             }
         }
 
-        // Sources panel scrim
-        AnimatedVisibility(
-            visible = uiState.showSourcesPanel && uiState.error == null,
-            enter = fadeIn(animationSpec = tween(120)),
-            exit = fadeOut(animationSpec = tween(120))
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.45f))
-            )
-        }
-
         // Sources panel (slides in from right)
         AnimatedVisibility(
             visible = uiState.showSourcesPanel && uiState.error == null,
@@ -907,19 +904,6 @@ fun PlayerScreen(
                     modifier = Modifier.align(Alignment.CenterEnd)
                 )
             }
-        }
-
-        // Subtitle style panel scrim
-        AnimatedVisibility(
-            visible = uiState.showSubtitleStylePanel && uiState.error == null,
-            enter = fadeIn(animationSpec = tween(120)),
-            exit = fadeOut(animationSpec = tween(120))
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.35f))
-            )
         }
 
         // Subtitle style panel
@@ -1013,38 +997,44 @@ private fun PlayerControlsOverlay(
     val customSourcePainter = rememberRawSvgPainter(R.raw.ic_player_source)
     val customAspectPainter = rememberRawSvgPainter(R.raw.ic_player_aspect_ratio)
     val customEpisodesPainter = rememberRawSvgPainter(R.raw.ic_player_episodes)
-
     Box(modifier = Modifier.fillMaxSize()) {
-        // Top gradient
+        // Single draw pass for top/bottom control gradients.
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(150.dp)
-                .align(Alignment.TopCenter)
-                .background(
-                    Brush.verticalGradient(
+                .fillMaxSize()
+                .drawWithCache {
+                    val topHeightPx = 150.dp.toPx()
+                    val bottomHeightPx = 200.dp.toPx()
+                    val topOverlayGradient = Brush.verticalGradient(
                         colors = listOf(
                             Color.Black.copy(alpha = 0.7f),
                             Color.Transparent
-                        )
+                        ),
+                        startY = 0f,
+                        endY = topHeightPx
                     )
-                )
-        )
-
-        // Bottom gradient
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .align(Alignment.BottomCenter)
-                .background(
-                    Brush.verticalGradient(
+                    val bottomTop = (size.height - bottomHeightPx).coerceAtLeast(0f)
+                    val bottomOverlayGradient = Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
                             Color.Black.copy(alpha = 0.8f)
-                        )
+                        ),
+                        startY = bottomTop,
+                        endY = size.height
                     )
-                )
+                    onDrawBehind {
+                        drawRect(
+                            brush = topOverlayGradient,
+                            topLeft = Offset.Zero,
+                            size = Size(size.width, topHeightPx)
+                        )
+                        drawRect(
+                            brush = bottomOverlayGradient,
+                            topLeft = Offset(0f, bottomTop),
+                            size = Size(size.width, bottomHeightPx)
+                        )
+                    }
+                }
         )
 
         Column(
@@ -1770,7 +1760,7 @@ private fun SpeedItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (speed == 1f) "Normal" else "${speed}x",
+                text = if (speed == 1f) stringResource(R.string.player_speed_normal) else "${speed}x",
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary
             )

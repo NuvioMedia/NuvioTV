@@ -89,50 +89,39 @@ internal fun ModernSidebarBlurPanel(
     } else {
         Modifier
     }
+    val bgElevated = NuvioColors.BackgroundElevated
+    val bgCard = NuvioColors.BackgroundCard
+    val borderBase = NuvioColors.Border
+    val panelBackgroundBrush = remember(blurEnabled, bgElevated, bgCard) {
+        if (blurEnabled) {
+            Brush.verticalGradient(listOf(Color(0xD64A4F59), Color(0xCC3F454F), Color(0xC640474F)))
+        } else {
+            Brush.verticalGradient(listOf(bgElevated, bgCard))
+        }
+    }
+    val panelBorderColor = remember(blurEnabled, borderBase) {
+        if (blurEnabled) Color.White.copy(alpha = 0.14f) else borderBase.copy(alpha = 0.9f)
+    }
 
     Column(
         modifier = Modifier
             .fillMaxHeight()
-            .graphicsLayer(
-                alpha = sidebarExpandProgress,
-                scaleX = 0.97f + (0.03f * sidebarExpandProgress),
-                scaleY = 0.97f + (0.03f * sidebarExpandProgress),
+            .graphicsLayer {
+                val p = sidebarExpandProgress
+                alpha = p
+                val s = 0.97f + (0.03f * p)
+                scaleX = s
+                scaleY = s
                 transformOrigin = TransformOrigin(0f, 0f)
-            )
+            }
             .then(expandedPanelBlurModifier)
             .graphicsLayer {
                 shape = panelShape
                 clip = true
             }
             .clip(panelShape)
-            .background(
-                brush = if (blurEnabled) {
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xD64A4F59),
-                            Color(0xCC3F454F),
-                            Color(0xC640474F)
-                        )
-                    )
-                } else {
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            NuvioColors.BackgroundElevated,
-                            NuvioColors.BackgroundCard
-                        )
-                    )
-                },
-                shape = panelShape
-            )
-            .border(
-                width = 1.dp,
-                color = if (blurEnabled) {
-                    Color.White.copy(alpha = 0.14f)
-                } else {
-                    NuvioColors.Border.copy(alpha = 0.9f)
-                },
-                shape = panelShape
-            )
+            .background(brush = panelBackgroundBrush, shape = panelShape)
+            .border(width = 1.dp, color = panelBorderColor, shape = panelShape)
             .padding(horizontal = 12.dp, vertical = 14.dp)
     ) {
         val headerLogoRes = if (isSidebarExpanded) R.drawable.app_logo_wordmark else R.drawable.app_logo_mark
@@ -262,10 +251,10 @@ private fun SidebarNavigationItem(
                 .clip(CircleShape)
                 .background(iconCircleColor)
                 .padding(6.dp)
-                .graphicsLayer(
-                    scaleX = iconScale,
+                .graphicsLayer {
+                    scaleX = iconScale
                     scaleY = iconScale
-                ),
+                },
             contentAlignment = Alignment.Center
         ) {
             when {
@@ -291,7 +280,7 @@ private fun SidebarNavigationItem(
             color = contentColor,
             modifier = Modifier
                 .weight(1f)
-                .graphicsLayer(alpha = labelAlpha),
+                .graphicsLayer { alpha = labelAlpha },
             style = androidx.tv.material3.MaterialTheme.typography.titleLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -349,7 +338,7 @@ private fun SidebarProfileItem(
             text = profileName,
             color = Color.White,
             modifier = Modifier
-                .graphicsLayer(alpha = labelAlpha),
+                .graphicsLayer { alpha = labelAlpha },
             style = androidx.tv.material3.MaterialTheme.typography.titleLarge,
             maxLines = 1
         )

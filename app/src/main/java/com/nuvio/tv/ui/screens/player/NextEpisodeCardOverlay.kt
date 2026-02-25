@@ -9,7 +9,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,10 +30,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -116,21 +117,24 @@ fun NextEpisodeCardOverlay(
                     modifier = Modifier
                         .size(width = 112.dp, height = 64.dp)
                         .clip(RoundedCornerShape(9.dp))
+                        .drawWithCache {
+                            val overlayBrush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.32f)
+                                )
+                            )
+                            onDrawWithContent {
+                                drawContent()
+                                drawRect(brush = overlayBrush)
+                            }
+                        }
                 ) {
                     AsyncImage(
                         model = nextEpisode.thumbnail,
                         contentDescription = "Next episode thumbnail",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.32f))
-                                )
-                            )
                     )
                 }
 
@@ -174,11 +178,20 @@ fun NextEpisodeCardOverlay(
                 Row(
                     modifier = Modifier
                         .padding(start = 8.dp)
-                        .clip(CircleShape)
-                        .border(
-                            BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
-                            CircleShape
-                        )
+                        .drawWithCache {
+                            val strokeWidth = 1.dp.toPx()
+                            val strokeColor = Color.White.copy(alpha = 0.2f)
+                            onDrawBehind {
+                                drawRoundRect(
+                                    color = strokeColor,
+                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(
+                                        x = size.height / 2f,
+                                        y = size.height / 2f
+                                    ),
+                                    style = Stroke(width = strokeWidth)
+                                )
+                            }
+                        }
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {

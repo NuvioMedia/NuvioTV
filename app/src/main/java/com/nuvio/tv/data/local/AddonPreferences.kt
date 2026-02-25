@@ -7,7 +7,10 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -15,6 +18,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
+@OptIn(ExperimentalCoroutinesApi::class)
 class AddonPreferences @Inject constructor(
     private val factory: ProfileDataStoreFactory,
     private val profileManager: ProfileManager
@@ -31,6 +35,14 @@ class AddonPreferences @Inject constructor(
     private fun store(profileId: Int = effectiveProfileId()) =
         factory.get(profileId, FEATURE)
 
+    private val effectiveProfileIdFlow: Flow<Int> = combine(
+        profileManager.activeProfileId,
+        profileManager.profiles
+    ) { activeProfileId, profiles ->
+        val activeProfile = profiles.firstOrNull { it.id == activeProfileId }
+        if (activeProfile?.usesPrimaryAddons == true) 1 else activeProfileId
+    }.distinctUntilChanged()
+
     private val gson = Gson()
     private val orderedUrlsKey = stringPreferencesKey("installed_addon_urls_ordered")
     private val legacyUrlsKey = stringSetPreferencesKey("installed_addon_urls")
@@ -45,8 +57,7 @@ class AddonPreferences @Inject constructor(
         }
     }
 
-    val installedAddonUrls: Flow<List<String>> = profileManager.activeProfileId.flatMapLatest { _ ->
-        val pid = effectiveProfileId()
+    val installedAddonUrls: Flow<List<String>> = effectiveProfileIdFlow.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { preferences ->
             val json = preferences[orderedUrlsKey]
             if (json != null) {

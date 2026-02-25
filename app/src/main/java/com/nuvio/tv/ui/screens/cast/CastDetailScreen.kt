@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.FocusRequester
@@ -162,20 +163,6 @@ private fun CastDetailContent(
                 )
             )
         }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(leftGradient)
-        )
-
-        // Accent goes on top of the dark gradient so it stays visible.
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(accentGradient)
-        )
-
-        // Bottom gradient
         val bottomGradient = remember(backgroundColor) {
             Brush.verticalGradient(
                 colorStops = arrayOf(
@@ -189,7 +176,13 @@ private fun CastDetailContent(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(bottomGradient)
+                .drawWithCache {
+                    onDrawBehind {
+                        drawRect(brush = leftGradient, size = size)
+                        drawRect(brush = accentGradient, size = size)
+                        drawRect(brush = bottomGradient, size = size)
+                    }
+                }
         )
 
         // Main content
@@ -460,10 +453,6 @@ private fun CastDetailSkeleton(personName: String) {
                 )
             )
         }
-        Box(modifier = Modifier.fillMaxSize().background(leftGradient))
-
-        Box(modifier = Modifier.fillMaxSize().background(accentGradient))
-
         val bottomGradient = remember(backgroundColor) {
             Brush.verticalGradient(
                 colorStops = arrayOf(
@@ -474,7 +463,17 @@ private fun CastDetailSkeleton(personName: String) {
                 )
             )
         }
-        Box(modifier = Modifier.fillMaxSize().background(bottomGradient))
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .drawWithCache {
+                    onDrawBehind {
+                        drawRect(brush = leftGradient, size = size)
+                        drawRect(brush = accentGradient, size = size)
+                        drawRect(brush = bottomGradient, size = size)
+                    }
+                }
+        )
 
         Column(modifier = Modifier.fillMaxSize()) {
             // Hero skeleton

@@ -16,10 +16,14 @@
     <string name="cw_upcoming">Upcoming</string>
     <string name="cw_next_up">Next Up</string>
     <string name="cw_resume">Resume</string>
+    <string name="cw_hours_min_left">%1$dh %2$dm left</string>
+    <string name="cw_min_left">%1$dm left</string>
+    <string name="cw_almost_done">Almost done</string>
     <string name="cw_airs_date">Airs %1$s</string>
     <string name="cw_action_go_to_details">Go to details</string>
     <string name="cw_action_remove">Remove</string>
     <string name="cw_dialog_subtitle">Choose what you want to do with this item.</string>
+    <string name="home_poster_dialog_subtitle">Title actions</string>
 
     <!-- CatalogRowSection -->
     <string name="catalog_from_addon">from %1$s</string>
@@ -54,7 +58,15 @@
     <string name="episodes_season_actions">Season actions</string>
 
     <!-- MetaDetailsScreen -->
+    <string name="detail_btn_play">Play</string>
+    <string name="detail_btn_resume">Resume</string>
+    <string name="detail_btn_play_episode">Play S%1$dE%2$d</string>
+    <string name="detail_btn_resume_episode">Resume S%1$dE%2$d</string>
+    <string name="detail_btn_next_episode">Next S%1$dE%2$d</string>
     <string name="detail_tab_cast">Creator and Cast</string>
+    <string name="cast_role_creator">Creator</string>
+    <string name="cast_role_director">Director</string>
+    <string name="cast_role_writer">Writer</string>
     <string name="detail_tab_ratings">Ratings</string>
     <string name="detail_tab_more_like_this">More like this</string>
     <string name="detail_section_network">Network</string>
@@ -104,6 +116,11 @@
     <string name="settings_debug_subtitle">Developer tools and feature flags.</string>
     <string name="settings_plugins_section_subtitle">Manage repositories, providers, and plugin states.</string>
     <string name="settings_account_section_subtitle">Account and sync status.</string>
+    <string name="account_stat_addons">addons</string>
+    <string name="account_stat_plugins">plugins</string>
+    <string name="account_stat_library">library</string>
+    <string name="account_stat_progress">progress</string>
+    <string name="account_stat_watched">watched</string>
     <string name="settings_integrations_section">Integrations</string>
     <string name="settings_integrations_section_subtitle">Choose TMDB or MDBList settings</string>
     <string name="settings_tmdb_subtitle">Metadata enrichment controls</string>
@@ -125,6 +142,7 @@
     <string name="playback_pause_overlay">Pause Overlay</string>
     <string name="playback_pause_overlay_sub">Show details overlay after 5 seconds while paused.</string>
     <string name="playback_show_clock_sub">Show current time and end time while controls are visible.</string>
+    <string name="playback_osd_clock">OSD Clock</string>
     <string name="playback_skip_intro">Skip Intro</string>
     <string name="playback_skip_intro_sub">Use introdb.app to detect intros and recaps.</string>
     <string name="playback_auto_frame_rate">Auto Frame Rate</string>
@@ -177,6 +195,7 @@
     <!-- PlaybackSubtitleSettings -->
     <string name="sub_section">Subtitles</string>
     <string name="sub_not_set">Not set</string>
+    <string name="sub_forced_lang">Forced</string>
     <string name="sub_preferred_lang">Preferred Language</string>
     <string name="sub_secondary_lang">Secondary Preferred Language</string>
     <string name="sub_organization">Subtitle Organization</string>
@@ -387,6 +406,10 @@
     <string name="trakt_connected_as">Connected as %1$s</string>
     <string name="trakt_account_login">Account Login</string>
     <string name="trakt_awaiting_instruction">Go to trakt.tv/activate and enter this code:</string>
+    <string name="trakt_waiting_approval">Waiting for approval…</string>
+    <string name="qr_login_approved">Login approved. Finishing sign in…</string>
+    <string name="qr_login_pending">Waiting for approval on your phone…</string>
+    <string name="qr_login_expired">QR login expired. Generate a new code.</string>
     <string name="trakt_code_expires">Code expires in %1$s</string>
     <string name="trakt_token_refreshes">Trakt access token refreshes in %1$s</string>
     <string name="trakt_login_instruction">Press Login to start Trakt device authentication. A QR code will appear here.</string>
@@ -509,7 +532,7 @@
     <string name="stream_player_external">External</string>
 
     <!-- PlayerScreen -->
-    <string name="player_ends_at">Ends at: %1$s</string>
+    <string name="player_ends_at">Ends at %1$s</string>
     <string name="player_via">via %1$s</string>
     <string name="player_subtitle_delay">Subtitles Delay</string>
     <string name="player_error_title">Playback Error</string>
@@ -524,6 +547,7 @@
     <string name="sources_title">Sources</string>
     <string name="sources_reload">Reload</string>
     <string name="sources_close">Close</string>
+    <string name="sources_playing">Playing</string>
     <string name="sources_no_streams">No streams found</string>
 
     <!-- EpisodesSidePanel -->
@@ -532,6 +556,14 @@
     <string name="episodes_panel_reload">Reload</string>
     <string name="episodes_panel_no_streams">No streams found</string>
     <string name="episodes_panel_no_episodes">No episodes available</string>
+    <string name="episodes_panel_title">Episodes</string>
+    <string name="episodes_panel_streams_title">Streams</string>
+    <string name="player_speed_normal">Normal</string>
+    <string name="player_aspect_fit">Fit (Original)</string>
+    <string name="player_aspect_stretch">Stretch</string>
+    <string name="player_aspect_fit_width">Fit Width</string>
+    <string name="player_aspect_fit_height">Fit Height</string>
+    <string name="player_aspect_crop">Crop</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
@@ -544,6 +576,21 @@
     <string name="subtitle_text_color">Text Color</string>
     <string name="subtitle_outline_color">Outline Color</string>
     <string name="subtitle_reset_defaults">Reset Defaults</string>
+    <string name="subtitle_tab_builtin">Built-in</string>
+    <string name="subtitle_tab_addons">Addons</string>
+    <string name="subtitle_tab_languages">Languages</string>
+    <string name="subtitle_tab_style">Style</string>
+    <string name="subtitle_tab_delay">Delay</string>
+    <string name="subtitle_none">None</string>
+    <string name="subtitle_all">All</string>
+    <string name="subtitle_section_core">Core</string>
+    <string name="subtitle_section_advanced">Advanced</string>
+    <string name="subtitle_font_size">Font Size</string>
+    <string name="subtitle_bold">Bold</string>
+    <string name="subtitle_outline">Outline</string>
+    <string name="subtitle_bottom_offset">Bottom Offset</string>
+    <string name="subtitle_on">On</string>
+    <string name="subtitle_off">Off</string>
     <string name="subtitle_style_title">Subtitle Style</string>
     <string name="subtitle_style_color">Color</string>
     <string name="subtitle_style_reset">Reset</string>
@@ -561,6 +608,9 @@
     <!-- SearchScreen -->
     <string name="search_keyboard_hint">Press Done on the keyboard to search</string>
     <string name="search_placeholder">Search movies &amp; series</string>
+    <string name="search_start_title">Start Searching</string>
+    <string name="search_start_subtitle">Enter at least 2 characters</string>
+    <string name="search_start_subtitle_no_discover">Discover is disabled. Enter at least 2 characters</string>
 
     <!-- LibraryScreen -->
     <string name="library_syncing">Syncing Trakt library\u2026</string>

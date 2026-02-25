@@ -21,7 +21,10 @@ internal data class PlayerNavigationArgs(
     val initialEpisodeTitle: String?,
     val bingeGroup: String?,
     val rememberedAudioLanguage: String?,
-    val rememberedAudioName: String?
+    val rememberedAudioName: String?,
+    val filename: String?,
+    val videoHash: String?,
+    val videoSize: Long?
 ) {
     companion object {
         fun from(savedStateHandle: SavedStateHandle): PlayerNavigationArgs {
@@ -49,7 +52,10 @@ internal data class PlayerNavigationArgs(
                 initialEpisodeTitle = decodedOrNull("episodeTitle"),
                 bingeGroup = decodedOrNull("bingeGroup"),
                 rememberedAudioLanguage = decodedOrNull("rememberedAudioLanguage"),
-                rememberedAudioName = decodedOrNull("rememberedAudioName")
+                rememberedAudioName = decodedOrNull("rememberedAudioName"),
+                filename = decodedOrNull("filename"),
+                videoHash = savedStateHandle.get<String>("videoHash")?.takeIf { it.isNotEmpty() },
+                videoSize = savedStateHandle.get<String>("videoSize")?.toLongOrNull()
             )
         }
     }

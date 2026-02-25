@@ -989,6 +989,7 @@ internal fun LanguageSelectionDialog(
     title: String,
     selectedLanguage: String?,
     showNoneOption: Boolean,
+    extraOptions: List<Pair<String, String>> = emptyList(),
     onLanguageSelected: (String?) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -1031,6 +1032,23 @@ internal fun LanguageSelectionDialog(
                                 modifier = Modifier.focusRequester(focusRequester)
                             )
                         }
+                    }
+
+                    items(
+                        items = extraOptions,
+                        key = { (code, _) -> "language_extra_$code" }
+                    ) { (code, name) ->
+                        LanguageOptionItem(
+                            name = name,
+                            code = code,
+                            isSelected = selectedLanguage == code,
+                            onClick = { onLanguageSelected(code) },
+                            modifier = if (!showNoneOption && extraOptions.firstOrNull()?.first == code) {
+                                Modifier.focusRequester(focusRequester)
+                            } else {
+                                Modifier
+                            }
+                        )
                     }
                     
                     items(

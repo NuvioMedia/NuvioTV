@@ -24,4 +24,11 @@ class ProfileDataStoreFactory @Inject constructor(
             }
         }
     }
+
+    fun clearProfile(profileId: Int) {
+        if (profileId == 1) return
+        val suffix = "_p${profileId}"
+        val keysToRemove = cache.keys.filter { key -> key.endsWith(suffix) }
+        keysToRemove.forEach { key -> cache.remove(key) }
+    }
 }

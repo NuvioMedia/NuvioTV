@@ -31,6 +31,7 @@ import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.SubtitleOrganizationMode
+import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
 import com.nuvio.tv.ui.theme.NuvioColors
 
 private val subtitleColors = listOf(
@@ -90,6 +91,8 @@ internal fun LazyListScope.subtitleSettingsItems(
     item(key = "subtitle_preferred_language") {
         val languageName = if (playerSettings.subtitleStyle.preferredLanguage == "none") {
             stringResource(R.string.action_none)
+        } else if (playerSettings.subtitleStyle.preferredLanguage == SUBTITLE_LANGUAGE_FORCED) {
+            stringResource(R.string.sub_forced_lang)
         } else {
             AVAILABLE_SUBTITLE_LANGUAGES.find {
                 it.code == playerSettings.subtitleStyle.preferredLanguage
@@ -108,7 +111,8 @@ internal fun LazyListScope.subtitleSettingsItems(
 
     item(key = "subtitle_secondary_language") {
         val secondaryLanguageName = playerSettings.subtitleStyle.secondaryPreferredLanguage?.let { code ->
-            AVAILABLE_SUBTITLE_LANGUAGES.find { it.code == code }?.name
+            if (code == SUBTITLE_LANGUAGE_FORCED) stringResource(R.string.sub_forced_lang)
+            else AVAILABLE_SUBTITLE_LANGUAGES.find { it.code == code }?.name
         } ?: stringResource(R.string.sub_not_set)
 
         NavigationSettingsItem(
@@ -333,6 +337,7 @@ internal fun SubtitleSettingsDialogs(
             title = stringResource(R.string.sub_preferred_lang),
             selectedLanguage = if (playerSettings.subtitleStyle.preferredLanguage == "none") null else playerSettings.subtitleStyle.preferredLanguage,
             showNoneOption = true,
+            extraOptions = listOf(SUBTITLE_LANGUAGE_FORCED to stringResource(R.string.sub_forced_lang)),
             onLanguageSelected = {
                 onSetPreferredLanguage(it)
                 onDismissLanguageDialog()
@@ -346,6 +351,7 @@ internal fun SubtitleSettingsDialogs(
             title = stringResource(R.string.sub_secondary_lang),
             selectedLanguage = playerSettings.subtitleStyle.secondaryPreferredLanguage,
             showNoneOption = true,
+            extraOptions = listOf(SUBTITLE_LANGUAGE_FORCED to stringResource(R.string.sub_forced_lang)),
             onLanguageSelected = {
                 onSetSecondaryLanguage(it)
                 onDismissSecondaryLanguageDialog()

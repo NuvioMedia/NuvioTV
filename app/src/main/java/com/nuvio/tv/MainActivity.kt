@@ -3,6 +3,10 @@ package com.nuvio.tv
 import android.os.Bundle
 import android.content.Context
 import android.content.res.Configuration
+import android.util.Log
+import androidx.compose.ui.platform.LocalView
+import androidx.metrics.performance.JankStats
+import androidx.metrics.performance.PerformanceMetricsState
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -19,7 +23,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,6 +54,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -75,6 +83,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -101,6 +110,7 @@ import com.nuvio.tv.core.sync.ProfileSyncService
 import com.nuvio.tv.core.sync.StartupSyncService
 import com.nuvio.tv.ui.navigation.NuvioNavHost
 import com.nuvio.tv.ui.navigation.Screen
+import com.nuvio.tv.ui.components.NuvioScrollDefaults
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
 import com.nuvio.tv.ui.screens.account.AuthQrSignInScreen
 import com.nuvio.tv.ui.screens.profile.ProfileSelectionScreen
@@ -111,7 +121,6 @@ import com.nuvio.tv.updater.ui.UpdatePromptDialog
 import dagger.hilt.android.AndroidEntryPoint
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
-import dev.chrisbanes.haze.hazeChild
 import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
@@ -165,7 +174,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var appOnboardingDataStore: AppOnboardingDataStore
 
-    @OptIn(ExperimentalTvMaterial3Api::class)
+    private lateinit var jankStats: JankStats
+
+    @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
     override fun attachBaseContext(newBase: Context) {
         val tag = newBase.getSharedPreferences("app_locale", Context.MODE_PRIVATE)
             .getString("locale_tag", null)
@@ -180,6 +191,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -226,6 +238,9 @@ class MainActivity : ComponentActivity() {
             val mainUiPrefs by mainUiPrefsFlow.collectAsState(initial = MainUiPrefs(hasChosenLayout = null))
 
             NuvioTheme(appTheme = mainUiPrefs.theme) {
+                CompositionLocalProvider(
+                    LocalBringIntoViewSpec provides NuvioScrollDefaults.smoothScrollSpec
+                ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
@@ -322,6 +337,14 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
+
+                    val view = LocalView.current
+                    LaunchedEffect(currentRoute) {
+                        val holder = PerformanceMetricsState.getHolderForHierarchy(view)
+                        if (currentRoute != null) {
+                            holder.state?.putState("Screen", currentRoute)
+                        }
+                    }
 
                     val rootRoutes = remember {
                         setOf(
@@ -428,7 +451,27 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+            }
         }
+
+        jankStats = JankStats.createAndTrack(window) { frameData ->
+            if (frameData.isJank) {
+                Log.w(
+                    "JankStats",
+                    "JANK: ${frameData.frameDurationUiNanos / 1_000_000}ms | states: ${frameData.states}"
+                )
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::jankStats.isInitialized) jankStats.isTrackingEnabled = true
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (::jankStats.isInitialized) jankStats.isTrackingEnabled = false
     }
 
     override fun onStart() {
@@ -826,11 +869,8 @@ private fun ModernSidebarScaffold(
         animationSpec = tween(durationMillis = 135, easing = FastOutSlowInEasing),
         label = "sidebarSurfaceAlpha"
     )
-    val shouldApplySidebarHaze = showSidebar && (
-        sidebarVisible ||
-            isSidebarExpanded ||
-            sidebarCollapsePending ||
-            sidebarWidth > 0.dp
+    val shouldApplySidebarHaze = showSidebar && modernSidebarBlurEnabled && (
+        isSidebarExpanded || sidebarCollapsePending
         )
     val sidebarTransition = updateTransition(
         targetState = isSidebarExpanded,
@@ -860,6 +900,12 @@ private fun ModernSidebarScaffold(
     ) { expanded ->
         if (expanded) 1f else 0f
     }
+
+    // derivedStateOf prevents per-frame recomposition — only triggers when the boolean crosses the threshold
+    val sidebarBlocksContentKeys by remember { derivedStateOf { sidebarExpandProgress > 0.2f } }
+    val sidebarShowExpandedPanel by remember { derivedStateOf { sidebarExpandProgress > 0.01f } }
+    val sidebarShowCollapsedPill by remember { derivedStateOf { sidebarExpandProgress < 0.98f } }
+
     val sidebarIconScale by sidebarTransition.animateFloat(
         transitionSpec = { tween(durationMillis = 145, easing = FastOutSlowInEasing) },
         label = "sidebarIconScale"
@@ -944,7 +990,7 @@ private fun ModernSidebarScaffold(
                     if (
                         isSidebarExpanded &&
                         !sidebarCollapsePending &&
-                        sidebarExpandProgress > 0.2f &&
+                        sidebarBlocksContentKeys &&
                         keyEvent.type == KeyEventType.KeyDown &&
                         isBlockedContentKey(keyEvent.key)
                     ) {
@@ -988,20 +1034,25 @@ private fun ModernSidebarScaffold(
 
         if (showSidebar && (sidebarVisible || sidebarWidth > 0.dp)) {
             val panelShape = RoundedCornerShape(30.dp)
-            val showExpandedPanel = isSidebarExpanded || sidebarExpandProgress > 0.01f
+            val showExpandedPanel = isSidebarExpanded || sidebarShowExpandedPanel
 
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .width(sidebarWidth)
                     .padding(start = 14.dp, top = 16.dp, bottom = 12.dp, end = 8.dp)
-                    .offset(x = sidebarSlideX + sidebarDeflateOffsetX, y = sidebarDeflateOffsetY)
-                    .graphicsLayer(
-                        alpha = sidebarSurfaceAlpha,
-                        scaleX = sidebarBloomScale,
-                        scaleY = sidebarBloomScale,
+                    .offset {
+                        IntOffset(
+                            (sidebarSlideX + sidebarDeflateOffsetX).roundToPx(),
+                            sidebarDeflateOffsetY.roundToPx()
+                        )
+                    }
+                    .graphicsLayer {
+                        alpha = sidebarSurfaceAlpha
+                        scaleX = sidebarBloomScale
+                        scaleY = sidebarBloomScale
                         transformOrigin = TransformOrigin(0f, 0f)
-                    )
+                    }
                     .selectableGroup()
                     .onPreviewKeyEvent { keyEvent ->
                         if (!isSidebarExpanded || keyEvent.type != KeyEventType.KeyDown) {
@@ -1061,7 +1112,7 @@ private fun ModernSidebarScaffold(
 
             if (
                 !sidebarCollapsed &&
-                sidebarExpandProgress < 0.98f &&
+                sidebarShowCollapsedPill &&
                 selectedDrawerRoute != Screen.Search.route
             ) {
                 CollapsedSidebarPill(
@@ -1069,20 +1120,23 @@ private fun ModernSidebarScaffold(
                     iconRes = selectedDrawerItem.iconRes,
                     icon = selectedDrawerItem.icon,
                     iconOnly = isFloatingPillIconOnly && !keepFloatingPillExpanded,
-                    hazeState = sidebarHazeState,
                     blurEnabled = modernSidebarBlurEnabled,
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .offset(
-                            x = 40.dp + sidebarSlideX + sidebarDeflateOffsetX,
-                            y = 16.dp + sidebarDeflateOffsetY
-                        )
-                        .graphicsLayer(
-                            alpha = 1f - sidebarExpandProgress,
-                            scaleX = 0.9f + (0.1f * (1f - sidebarExpandProgress)),
-                            scaleY = 0.9f + (0.1f * (1f - sidebarExpandProgress)),
+                        .offset {
+                            IntOffset(
+                                (40.dp + sidebarSlideX + sidebarDeflateOffsetX).roundToPx(),
+                                (16.dp + sidebarDeflateOffsetY).roundToPx()
+                            )
+                        }
+                        .graphicsLayer {
+                            val progress = sidebarExpandProgress
+                            alpha = 1f - progress
+                            val s = 0.9f + (0.1f * (1f - progress))
+                            scaleX = s
+                            scaleY = s
                             transformOrigin = TransformOrigin(0f, 0f)
-                        ),
+                        },
                     onExpand = {
                         isSidebarExpanded = true
                         sidebarCollapsePending = false
@@ -1100,13 +1154,24 @@ private fun CollapsedSidebarPill(
     iconRes: Int?,
     icon: ImageVector?,
     iconOnly: Boolean,
-    hazeState: HazeState,
     blurEnabled: Boolean,
     modifier: Modifier = Modifier,
     onExpand: () -> Unit
 ) {
     val pillShape = RoundedCornerShape(999.dp)
-    val innerBlurShape = RoundedCornerShape(999.dp)
+    val bgElevated = NuvioColors.BackgroundElevated
+    val bgCard = NuvioColors.BackgroundCard
+    val borderBase = NuvioColors.Border
+    val pillBackgroundBrush = remember(blurEnabled, bgElevated, bgCard) {
+        if (blurEnabled) {
+            Brush.verticalGradient(listOf(Color(0xD1424851), Color(0xC73B4149)))
+        } else {
+            Brush.verticalGradient(listOf(bgElevated, bgCard))
+        }
+    }
+    val pillBorderColor = remember(blurEnabled, borderBase) {
+        if (blurEnabled) Color.White.copy(alpha = 0.14f) else borderBase.copy(alpha = 0.9f)
+    }
 
     Row(
         modifier = modifier
@@ -1137,59 +1202,9 @@ private fun CollapsedSidebarPill(
                     compositingStrategy = CompositingStrategy.Offscreen
                 }
                 .clip(pillShape)
-                .background(
-                    brush = if (blurEnabled) {
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color(0xD1424851),
-                                Color(0xC73B4149)
-                            )
-                        )
-                    } else {
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                NuvioColors.BackgroundElevated,
-                                NuvioColors.BackgroundCard
-                            )
-                        )
-                    },
-                    shape = pillShape
-                )
-                .border(
-                    width = 1.dp,
-                    color = if (blurEnabled) {
-                        Color.White.copy(alpha = 0.14f)
-                    } else {
-                        NuvioColors.Border.copy(alpha = 0.9f)
-                    },
-                    shape = pillShape
-                )
+                .background(brush = pillBackgroundBrush, shape = pillShape)
+                .border(width = 1.dp, color = pillBorderColor, shape = pillShape)
         ) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .padding(start = 2.25.dp, top = 2.25.dp, end = 5.dp, bottom = 2.25.dp)
-                    .graphicsLayer {
-                        shape = innerBlurShape
-                        clip = true
-                        compositingStrategy = CompositingStrategy.Offscreen
-                    }
-                    .clip(innerBlurShape)
-                    .then(
-                        if (blurEnabled) {
-                            Modifier.hazeChild(
-                                state = hazeState,
-                                shape = innerBlurShape,
-                                tint = Color.Unspecified,
-                                blurRadius = 3.dp,
-                                noiseFactor = 0f
-                            )
-                        } else {
-                            Modifier
-                        }
-                    )
-            )
-
             Row(
                 modifier = Modifier
                     .align(Alignment.CenterStart)

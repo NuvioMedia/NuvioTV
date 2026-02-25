@@ -37,12 +37,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -126,7 +128,7 @@ internal fun EpisodesSidePanel(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (uiState.showEpisodeStreams) "Streams" else "Episodes",
+                        text = if (uiState.showEpisodeStreams) stringResource(R.string.episodes_panel_streams_title) else stringResource(R.string.episodes_panel_title),
                         style = MaterialTheme.typography.headlineSmall,
                         color = NuvioColors.TextPrimary
                     )
@@ -525,8 +527,16 @@ private fun EpisodeItem(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(8.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color.Black.copy(alpha = 0.75f))
+                            .drawWithCache {
+                                val radius = 6.dp.toPx()
+                                val bgColor = Color.Black.copy(alpha = 0.75f)
+                                onDrawBehind {
+                                    drawRoundRect(
+                                        color = bgColor,
+                                        cornerRadius = CornerRadius(radius, radius)
+                                    )
+                                }
+                            }
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
@@ -543,8 +553,16 @@ private fun EpisodeItem(
                             .align(Alignment.TopEnd)
                             .padding(6.dp)
                             .size(22.dp)
-                            .clip(RoundedCornerShape(11.dp))
-                            .background(NuvioColors.Primary),
+                            .drawWithCache {
+                                val radius = size.minDimension / 2f
+                                val bgColor = NuvioColors.Primary
+                                onDrawBehind {
+                                    drawRoundRect(
+                                        color = bgColor,
+                                        cornerRadius = CornerRadius(radius, radius)
+                                    )
+                                }
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(

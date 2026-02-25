@@ -84,11 +84,13 @@ class ProfileManager @Inject constructor(
     private fun deleteProfileData(profileId: Int) {
         if (profileId == 1) return
 
-        val suffix = "_p${profileId}"
+        factory.clearProfile(profileId)
+
+        val suffixWithExtension = "_p${profileId}.preferences_pb"
         val dataStoreDir = File(context.filesDir, "datastore")
         if (dataStoreDir.exists()) {
             dataStoreDir.listFiles()?.forEach { file ->
-                if (file.nameWithoutExtension.endsWith(suffix)) {
+                if (file.name.endsWith(suffixWithExtension)) {
                     file.delete()
                 }
             }

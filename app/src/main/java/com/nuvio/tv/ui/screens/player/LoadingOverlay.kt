@@ -21,8 +21,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -68,36 +70,41 @@ fun LoadingOverlay(
         modifier = modifier
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
+            modifier = Modifier.fillMaxSize()
         ) {
-            if (!backdropUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(backdropUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Loading backdrop",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+            val overlayGradient = remember {
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0f to Color(0x4D000000),
+                        0.35f to Color(0x99000000),
+                        0.7f to Color(0xCC000000),
+                        1f to Color(0xE6000000)
+                    )
                 )
             }
-
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0f to Color(0x4D000000),
-                                0.35f to Color(0x99000000),
-                                0.7f to Color(0xCC000000),
-                                1f to Color(0xE6000000)
-                            )
-                        )
+                    .drawWithCache {
+                        onDrawWithContent {
+                            drawRect(color = Color.Black, size = size)
+                            drawContent()
+                            drawRect(brush = overlayGradient, size = size)
+                        }
+                    }
+            ) {
+                if (!backdropUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(backdropUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Loading backdrop",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
-            )
+                }
+            }
 
             Box(
                 modifier = Modifier.fillMaxSize(),

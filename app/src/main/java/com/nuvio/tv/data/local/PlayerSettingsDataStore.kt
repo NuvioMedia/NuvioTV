@@ -28,6 +28,8 @@ data class SubtitleLanguage(
     val name: String
 )
 
+const val SUBTITLE_LANGUAGE_FORCED = "forced"
+
 val AVAILABLE_SUBTITLE_LANGUAGES = listOf(
     SubtitleLanguage("en", "English"),
     SubtitleLanguage("es", "Spanish"),
@@ -680,6 +682,7 @@ class PlayerSettingsDataStore @Inject constructor(
         return when (code) {
             "pt-br", "pt_br", "br", "pob" -> "pt-br"
             "pt-pt", "pt_pt", "por" -> "pt"
+            "forced", "force", "forc" -> SUBTITLE_LANGUAGE_FORCED
             else -> code
         }
     }

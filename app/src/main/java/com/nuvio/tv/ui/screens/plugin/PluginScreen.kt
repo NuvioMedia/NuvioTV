@@ -153,6 +153,7 @@ fun PluginScreenContent(
                 item {
                     PluginHeader(
                         pluginsEnabled = uiState.pluginsEnabled,
+                        isReadOnly = viewModel.isReadOnly,
                         onPluginsEnabledChange = { viewModel.onEvent(PluginUiEvent.SetPluginsEnabled(it)) }
                     )
                 }
@@ -288,6 +289,7 @@ fun PluginScreenContent(
 @Composable
 private fun PluginHeader(
     pluginsEnabled: Boolean,
+    isReadOnly: Boolean,
     onPluginsEnabledChange: (Boolean) -> Unit
 ) {
     Row(
@@ -312,7 +314,11 @@ private fun PluginHeader(
         }
 
         Surface(
-            onClick = { onPluginsEnabledChange(!pluginsEnabled) },
+            onClick = {
+                if (!isReadOnly) {
+                    onPluginsEnabledChange(!pluginsEnabled)
+                }
+            },
             colors = ClickableSurfaceDefaults.colors(
                 containerColor = NuvioColors.BackgroundCard,
                 focusedContainerColor = NuvioColors.FocusBackground

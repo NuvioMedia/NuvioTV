@@ -219,6 +219,9 @@ fun ContinueWatchingCard(
     val strUpcoming = stringResource(R.string.cw_upcoming)
     val strNextUp = stringResource(R.string.cw_next_up)
     val strResume = stringResource(R.string.cw_resume)
+    val strHoursMinLeft = stringResource(R.string.cw_hours_min_left)
+    val strMinLeft = stringResource(R.string.cw_min_left)
+    val strAlmostDone = stringResource(R.string.cw_almost_done)
     val nextUpBadgeText = nextUp?.let { info ->
         if (!info.hasAired) {
             info.airDateLabel?.let { strAirsDate } ?: strUpcoming
@@ -229,7 +232,7 @@ fun ContinueWatchingCard(
     val remainingText = progress?.let {
         remember(it.position, it.duration, it.progressPercent) {
             when {
-                it.duration > 0L -> formatRemainingTime(it.remainingTime)
+                it.duration > 0L -> formatRemainingTime(it.remainingTime, strHoursMinLeft, strMinLeft, strAlmostDone)
                 it.progressPercent != null -> "${it.progressPercent.toInt().coerceIn(0, 100)}% watched"
                 else -> strResume
             }
@@ -275,10 +278,11 @@ fun ContinueWatchingCard(
     val requestHeightPx = remember(imageHeight, density) {
         with(density) { imageHeight.roundToPx() }
     }
-    val imageRequest = remember(context, imageModel, requestWidthPx, requestHeightPx) {
+    val imageRequest = remember(imageModel, requestWidthPx, requestHeightPx) {
         ImageRequest.Builder(context)
             .data(imageModel)
             .crossfade(false)
+            .memoryCacheKey("${imageModel}_${requestWidthPx}x${requestHeightPx}")
             .size(width = requestWidthPx, height = requestHeightPx)
             .build()
     }
@@ -498,14 +502,19 @@ private fun firstNonBlank(vararg candidates: String?): String? {
     return candidates.firstOrNull { !it.isNullOrBlank() }?.trim()
 }
 
-internal fun formatRemainingTime(remainingMs: Long): String {
+internal fun formatRemainingTime(
+    remainingMs: Long,
+    strHoursMinLeft: String,
+    strMinLeft: String,
+    strAlmostDone: String
+): String {
     val totalMinutes = TimeUnit.MILLISECONDS.toMinutes(remainingMs)
     val hours = totalMinutes / 60
     val minutes = totalMinutes % 60
 
     return when {
-        hours > 0 -> "${hours}h ${minutes}m left"
-        minutes > 0 -> "${minutes}m left"
-        else -> "Almost done"
+        hours > 0 -> strHoursMinLeft.format(hours, minutes)
+        minutes > 0 -> strMinLeft.format(minutes)
+        else -> strAlmostDone
     }
 }
