@@ -100,8 +100,6 @@ import com.nuvio.tv.R
 import com.nuvio.tv.core.player.ExternalPlayerLauncher
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.launch
@@ -146,12 +144,6 @@ fun PlayerScreen(
             viewModel.hideControls()
         } else {
             // If controls are hidden, go back
-            onBackPress()
-        }
-    }
-
-    LaunchedEffect(uiState.playbackEnded, uiState.error) {
-        if (uiState.playbackEnded && uiState.error == null) {
             onBackPress()
         }
     }
@@ -661,35 +653,6 @@ fun PlayerScreen(
                 .align(Alignment.TopEnd)
                 .zIndex(2.2f)
         )
-
-        val showClockOverlay = uiState.showControls &&
-            uiState.osdClockEnabled &&
-            uiState.error == null &&
-            !uiState.showLoadingOverlay &&
-            !uiState.showPauseOverlay &&
-            !uiState.showEpisodesPanel &&
-            !uiState.showSourcesPanel &&
-            !uiState.showAudioDialog &&
-            !uiState.showSubtitleDialog &&
-            !uiState.showSubtitleStylePanel &&
-            !uiState.showSpeedDialog &&
-            !uiState.showMoreDialog &&
-            !uiState.showDisplayModeInfo
-
-        AnimatedVisibility(
-            visible = showClockOverlay,
-            enter = fadeIn(animationSpec = tween(150)),
-            exit = fadeOut(animationSpec = tween(150)),
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = 28.dp, top = 24.dp)
-                .zIndex(2.15f)
-        ) {
-            PlayerClockOverlay(
-                currentPosition = uiState.currentPosition,
-                duration = uiState.duration
-            )
-        }
 
         // Controls overlay
         AnimatedVisibility(
@@ -1316,45 +1279,6 @@ private fun SeekOverlay(uiState: PlayerUiState) {
                 color = Color.White.copy(alpha = 0.9f)
             )
         }
-    }
-}
-
-@Composable
-private fun PlayerClockOverlay(
-    currentPosition: Long,
-    duration: Long
-) {
-    val formatter = remember { DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()) }
-    val nowText = remember { mutableStateOf(LocalTime.now().format(formatter)) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            nowText.value = LocalTime.now().format(formatter)
-            kotlinx.coroutines.delay(30_000)
-        }
-    }
-
-    val remainingMs = (duration - currentPosition).coerceAtLeast(0L)
-    val remainingText = if (duration > 0L) "-${formatTime(remainingMs)}" else "--:--"
-
-    Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.Black.copy(alpha = 0.72f))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        Text(
-            text = nowText.value,
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = Color.White
-        )
-        Text(
-            text = remainingText,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.8f)
-        )
     }
 }
 

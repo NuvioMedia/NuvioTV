@@ -617,14 +617,7 @@ internal fun PlayerRuntimeController.playNextEpisode() {
                             source = playerSettings.streamAutoPlaySource,
                             installedAddonNames = installedAddonOrder.toSet(),
                             selectedAddons = playerSettings.streamAutoPlaySelectedAddons,
-                            selectedPlugins = playerSettings.streamAutoPlaySelectedPlugins,
-                            preferredBingeGroup = if (
-                                playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode
-                            ) {
-                                currentStreamBingeGroup
-                            } else {
-                                null
-                            }
+                            selectedPlugins = playerSettings.streamAutoPlaySelectedPlugins
                         )
                         selectedStream != null
                     }
