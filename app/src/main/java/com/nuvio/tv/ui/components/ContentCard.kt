@@ -1,6 +1,8 @@
 package com.nuvio.tv.ui.components
 
 import android.view.KeyEvent as AndroidKeyEvent
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.LaunchedEffect
@@ -37,16 +40,20 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import com.nuvio.tv.R
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.MetaPreview
@@ -75,7 +82,9 @@ fun ContentCard(
     focusedPosterBackdropTrailerMuted: Boolean = true,
     trailerPreviewUrl: String? = null,
     onRequestTrailerPreview: (MetaPreview) -> Unit = {},
+    isWatched: Boolean = false,
     onFocus: (MetaPreview) -> Unit = {},
+    onLongPress: (() -> Unit)? = null,
     onClick: () -> Unit = {}
 ) {
     val cardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
@@ -92,9 +101,15 @@ fun ContentCard(
     val expandedCardWidth = baseCardHeight * BACKDROP_ASPECT_RATIO
 
     var isFocused by remember { mutableStateOf(false) }
+    var longPressTriggered by remember { mutableStateOf(false) }
     var interactionNonce by remember { mutableIntStateOf(0) }
     var isBackdropExpanded by remember { mutableStateOf(false) }
     var trailerFirstFrameRendered by remember(trailerPreviewUrl) { mutableStateOf(false) }
+    val watchedIconEndPadding by animateDpAsState(
+        targetValue = if (isFocused) 18.dp else 8.dp,
+        animationSpec = tween(durationMillis = 180),
+        label = "contentCardWatchedIconEndPadding"
+    )
 
     val needsFocusState = focusedPosterBackdropExpandEnabled || focusedPosterBackdropTrailerEnabled
     val lastFocusedRef = remember { booleanArrayOf(false) }
@@ -204,7 +219,13 @@ fun ContentCard(
         }
 
         Card(
-            onClick = onClick,
+            onClick = {
+                if (longPressTriggered) {
+                    longPressTriggered = false
+                } else {
+                    onClick()
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { state ->
@@ -226,16 +247,34 @@ fun ContentCard(
                         }
                     }
                 }
-                .then(
-                    if (focusedPosterBackdropExpandEnabled) {
-                        Modifier.onPreviewKeyEvent { keyEvent ->
-                            if (isFocused && shouldResetBackdropTimer(keyEvent.nativeKeyEvent)) {
-                                interactionNonce++
-                            }
-                            false
+                .onPreviewKeyEvent { keyEvent ->
+                    val native = keyEvent.nativeKeyEvent
+                    if (native.action == AndroidKeyEvent.ACTION_DOWN) {
+                        if (focusedPosterBackdropExpandEnabled && isFocused && shouldResetBackdropTimer(native)) {
+                            interactionNonce++
                         }
-                    } else Modifier
-                )
+                        if (onLongPress != null) {
+                            if (native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
+                                longPressTriggered = true
+                                onLongPress()
+                                return@onPreviewKeyEvent true
+                            }
+                            val isLongPress = native.isLongPress || native.repeatCount > 0
+                            if (isLongPress && isSelectKey(native.keyCode)) {
+                                longPressTriggered = true
+                                onLongPress()
+                                return@onPreviewKeyEvent true
+                            }
+                        }
+                    }
+                    if (native.action == AndroidKeyEvent.ACTION_UP &&
+                        longPressTriggered &&
+                        isSelectKey(native.keyCode)
+                    ) {
+                        return@onPreviewKeyEvent true
+                    }
+                    false
+                }
                 .then(
                     if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
                 ),
@@ -365,6 +404,29 @@ fun ContentCard(
                         }
                     }
                 }
+
+                if (isWatched) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(end = watchedIconEndPadding, top = 8.dp)
+                            .zIndex(2f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color.Black,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = stringResource(R.string.episodes_cd_watched),
+                            tint = Color.White,
+                            modifier = Modifier.size(21.dp)
+                        )
+                    }
+                }
             }
         }
 
@@ -454,4 +516,10 @@ private fun shouldResetBackdropTimer(nativeEvent: AndroidKeyEvent): Boolean {
         AndroidKeyEvent.KEYCODE_BACK -> true
         else -> false
     }
+}
+
+private fun isSelectKey(keyCode: Int): Boolean {
+    return keyCode == AndroidKeyEvent.KEYCODE_DPAD_CENTER ||
+        keyCode == AndroidKeyEvent.KEYCODE_ENTER ||
+        keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER
 }

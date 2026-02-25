@@ -69,6 +69,8 @@ fun CatalogRowSection(
     trailerPreviewUrls: Map<String, String> = emptyMap(),
     onRequestTrailerPreview: (MetaPreview) -> Unit = {},
     onItemFocus: (MetaPreview) -> Unit = {},
+    isItemWatched: (MetaPreview) -> Boolean = { false },
+    onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     enableRowFocusRestorer: Boolean = true,
     initialScrollIndex: Int = 0,
@@ -173,7 +175,7 @@ fun CatalogRowSection(
                         Modifier
                     }
                 ),
-            contentPadding = PaddingValues(horizontal = 48.dp),
+            contentPadding = PaddingValues(start = 48.dp, end = 200.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             itemsIndexed(
@@ -193,6 +195,7 @@ fun CatalogRowSection(
                     focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
                     trailerPreviewUrl = trailerPreviewUrls[item.id],
                     onRequestTrailerPreview = onRequestTrailerPreview,
+                    isWatched = isItemWatched(item),
                     onFocus = { focusedItem ->
                         currentOnItemFocus(focusedItem)
                         if (lastFocusedItemIndex != index) {
@@ -201,6 +204,7 @@ fun CatalogRowSection(
                         }
                     },
                     onClick = { onItemClick(item.id, item.apiType, catalogRow.addonBaseUrl) },
+                    onLongPress = { onItemLongPress(item, catalogRow.addonBaseUrl) },
                     modifier = Modifier.then(directionalFocusModifier),
                     focusRequester = itemFocusRequestersById.getOrPut(item.id) { FocusRequester() }
                 )

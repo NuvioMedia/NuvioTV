@@ -161,7 +161,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: com.nuvio.tv.
         player.trackSelectionParameters = player.trackSelectionParameters
             .buildUpon()
             .clearOverridesOfType(C.TRACK_TYPE_TEXT)
-            .setPreferredTextLanguage(null)
+            .setPreferredTextLanguage(normalizedLang)
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
             .build()
         

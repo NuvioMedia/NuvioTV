@@ -20,6 +20,7 @@
     <string name="cw_action_go_to_details">Go to details</string>
     <string name="cw_action_remove">Remove</string>
     <string name="cw_dialog_subtitle">Choose what you want to do with this item.</string>
+    <string name="home_poster_dialog_subtitle">Title actions</string>
 
     <!-- CatalogRowSection -->
     <string name="catalog_from_addon">from %1$s</string>
@@ -524,6 +525,7 @@
     <string name="sources_title">Sources</string>
     <string name="sources_reload">Reload</string>
     <string name="sources_close">Close</string>
+    <string name="sources_playing">Playing</string>
     <string name="sources_no_streams">No streams found</string>
 
     <!-- EpisodesSidePanel -->

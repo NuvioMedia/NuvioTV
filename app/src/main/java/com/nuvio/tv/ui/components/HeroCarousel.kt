@@ -168,12 +168,30 @@ fun HeroCarousel(
 private fun HeroCarouselSlide(
     item: MetaPreview
 ) {
+    val context = LocalContext.current
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
     val requestWidthPx = remember(configuration.screenWidthDp, density) {
         with(density) { configuration.screenWidthDp.dp.roundToPx() }
     }
     val requestHeightPx = remember(density) { with(density) { 400.dp.roundToPx() } }
+    val logoRequestHeightPx = remember(density) { with(density) { 80.dp.roundToPx() } }
+    val backgroundModel = remember(context, item.background, requestWidthPx, requestHeightPx) {
+        ImageRequest.Builder(context)
+            .data(item.background)
+            .crossfade(false)
+            .size(width = requestWidthPx, height = requestHeightPx)
+            .build()
+    }
+    val logoModel = remember(context, item.logo, requestWidthPx, logoRequestHeightPx) {
+        item.logo?.let {
+            ImageRequest.Builder(context)
+                .data(it)
+                .crossfade(false)
+                .size(width = requestWidthPx, height = logoRequestHeightPx)
+                .build()
+        }
+    }
 
     val bgColor = NuvioColors.Background
     val bottomGradient = remember(bgColor) {
@@ -206,11 +224,7 @@ private fun HeroCarouselSlide(
         // Background image
         // Background image
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(item.background)
-                .crossfade(false)
-                .size(width = requestWidthPx, height = requestHeightPx)
-                .build(),
+            model = backgroundModel,
             contentDescription = item.name,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
@@ -241,11 +255,7 @@ private fun HeroCarouselSlide(
             // Title logo or text title
             if (!item.logo.isNullOrBlank()) {
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(item.logo)
-                        .crossfade(false)
-                        .size(width = requestWidthPx, height = with(density) { 80.dp.roundToPx() })
-                        .build(),
+                    model = logoModel,
                     contentDescription = item.name,
                     modifier = Modifier
                         .height(80.dp)
@@ -275,8 +285,7 @@ private fun HeroCarouselSlide(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        val context = LocalContext.current
-                        val imdbModel = remember {
+                        val imdbModel = remember(context) {
                             ImageRequest.Builder(context)
                                 .data(com.nuvio.tv.R.raw.imdb_logo_2016)
                                 .decoderFactory(SvgDecoder.Factory())

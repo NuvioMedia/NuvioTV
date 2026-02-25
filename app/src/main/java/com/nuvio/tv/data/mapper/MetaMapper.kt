@@ -70,6 +70,7 @@ fun VideoDto.toDomain(): Video {
         title = name ?: title ?: "Episode ${episode ?: number ?: 0}",
         released = released,
         thumbnail = thumbnail,
+        streams = streams?.map { it.toDomain(addonName = "Embedded Streams", addonLogo = null) } ?: emptyList(),
         season = season,
         episode = episode ?: number,
         overview = overview ?: description
