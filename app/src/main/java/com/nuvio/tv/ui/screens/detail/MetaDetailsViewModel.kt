@@ -81,6 +81,37 @@ class MetaDetailsViewModel @Inject constructor(
 
     private var isPlayButtonFocused = false
 
+    /**
+     * Gets a localized string with the current locale configuration.
+     * This ensures that strings are always fetched with the up-to-date locale,
+     * even if the app language was changed after the ViewModel was created.
+     */
+    private fun getLocalizedString(resId: Int, vararg formatArgs: Any?): String {
+        // Read the current locale from SharedPreferences
+        val prefs = context.getSharedPreferences("app_locale", Context.MODE_PRIVATE)
+        val localeTag = prefs.getString("locale_tag", null)
+        
+        return if (!localeTag.isNullOrEmpty()) {
+            // Create a new configuration with the selected locale
+            val locale = java.util.Locale.forLanguageTag(localeTag)
+            val config = android.content.res.Configuration(context.resources.configuration)
+            config.setLocale(locale)
+            val localizedContext = context.createConfigurationContext(config)
+            if (formatArgs.isEmpty()) {
+                localizedContext.getString(resId)
+            } else {
+                localizedContext.getString(resId, *formatArgs)
+            }
+        } else {
+            // Use system default
+            if (formatArgs.isEmpty()) {
+                context.getString(resId)
+            } else {
+                context.getString(resId, *formatArgs)
+            }
+        }
+    }
+
     init {
         observeMetaViewSettings()
         observeTrailerAutoplaySettings()
@@ -747,7 +778,7 @@ class MetaDetailsViewModel @Inject constructor(
                         nextVideoId = meta.id,
                         nextSeason = null,
                         nextEpisode = null,
-                        displayText = context.getString(R.string.detail_btn_resume)
+                        displayText = getLocalizedString(R.string.detail_btn_resume)
                     )
                 } else {
                     NextToWatch(
@@ -756,7 +787,7 @@ class MetaDetailsViewModel @Inject constructor(
                         nextVideoId = meta.id,
                         nextSeason = null,
                         nextEpisode = null,
-                        displayText = context.getString(R.string.detail_btn_play)
+                        displayText = getLocalizedString(R.string.detail_btn_play)
                     )
                 }
                 updateNextToWatch(nextToWatch)
@@ -775,7 +806,7 @@ class MetaDetailsViewModel @Inject constructor(
                         nextVideoId = meta.id,
                         nextSeason = null,
                         nextEpisode = null,
-                        displayText = context.getString(R.string.detail_btn_play)
+                        displayText = getLocalizedString(R.string.detail_btn_play)
                     )
                 )
                 return@launch
@@ -809,7 +840,7 @@ class MetaDetailsViewModel @Inject constructor(
                 nextVideoId = metaId,
                 nextSeason = null,
                 nextEpisode = null,
-                displayText = context.getString(R.string.detail_btn_play)
+                displayText = getLocalizedString(R.string.detail_btn_play)
             )
         }
 
@@ -826,7 +857,7 @@ class MetaDetailsViewModel @Inject constructor(
                     nextVideoId = matchedEpisode?.id ?: latestProgress.videoId,
                     nextSeason = season,
                     nextEpisode = episode,
-                    displayText = context.getString(R.string.detail_btn_resume_episode, season, episode)
+                    displayText = getLocalizedString(R.string.detail_btn_resume_episode, season, episode)
                 )
             }
 
@@ -839,7 +870,7 @@ class MetaDetailsViewModel @Inject constructor(
                         nextVideoId = next.id,
                         nextSeason = next.season,
                         nextEpisode = next.episode,
-                        displayText = context.getString(R.string.detail_btn_next_episode, next.season, next.episode)
+                        displayText = getLocalizedString(R.string.detail_btn_next_episode, next.season, next.episode)
                     )
                 }
             }
@@ -880,7 +911,7 @@ class MetaDetailsViewModel @Inject constructor(
                     nextVideoId = resumeEpisode.id,
                     nextSeason = resumeEpisode.season,
                     nextEpisode = resumeEpisode.episode,
-                    displayText = context.getString(R.string.detail_btn_resume_episode, resumeEpisode.season, resumeEpisode.episode)
+                    displayText = getLocalizedString(R.string.detail_btn_resume_episode, resumeEpisode.season, resumeEpisode.episode)
                 )
             }
             nextUnwatchedEpisode != null -> {
@@ -894,9 +925,9 @@ class MetaDetailsViewModel @Inject constructor(
                     nextSeason = s,
                     nextEpisode = e,
                     displayText = if (hasWatchedSomething) {
-                        context.getString(R.string.detail_btn_next_episode, s, e)
+                        getLocalizedString(R.string.detail_btn_next_episode, s, e)
                     } else {
-                        context.getString(R.string.detail_btn_play_episode, s, e)
+                        getLocalizedString(R.string.detail_btn_play_episode, s, e)
                     }
                 )
             }
@@ -909,9 +940,9 @@ class MetaDetailsViewModel @Inject constructor(
                     nextSeason = firstEpisode?.season,
                     nextEpisode = firstEpisode?.episode,
                     displayText = if (firstEpisode != null) {
-                        context.getString(R.string.detail_btn_play_episode, firstEpisode.season, firstEpisode.episode)
+                        getLocalizedString(R.string.detail_btn_play_episode, firstEpisode.season, firstEpisode.episode)
                     } else {
-                        context.getString(R.string.detail_btn_play)
+                        getLocalizedString(R.string.detail_btn_play)
                     }
                 )
             }

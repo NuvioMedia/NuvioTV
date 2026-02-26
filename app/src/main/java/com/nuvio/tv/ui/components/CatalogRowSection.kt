@@ -36,6 +36,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import com.nuvio.tv.R
@@ -49,6 +50,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.ui.screens.home.catalogRowTitle
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
 
@@ -120,17 +122,16 @@ fun CatalogRowSection(
 
     val strTypeMovie = stringResource(R.string.type_movie)
     val strTypeSeries = stringResource(R.string.type_series)
-    val typeLabel = remember(catalogRow.rawType, catalogRow.apiType, strTypeMovie, strTypeSeries) {
-        val raw = catalogRow.rawType.takeIf { it.isNotBlank() } ?: catalogRow.apiType
-        when (raw.lowercase()) {
-            "movie" -> strTypeMovie
-            "series" -> strTypeSeries
-            else -> formatAddonTypeLabel(raw)
-        }
-    }
-    val catalogTitle = remember(catalogRow.catalogName, typeLabel, showCatalogTypeSuffix) {
-        val formattedName = catalogRow.catalogName.replaceFirstChar { it.uppercase() }
-        if (showCatalogTypeSuffix && typeLabel.isNotEmpty()) "$formattedName - $typeLabel" else formattedName
+    val context = LocalContext.current
+    
+    val catalogTitle = remember(catalogRow.catalogName, catalogRow.rawType, catalogRow.apiType, showCatalogTypeSuffix, strTypeMovie, strTypeSeries) {
+        catalogRowTitle(
+            row = catalogRow,
+            showCatalogTypeSuffix = showCatalogTypeSuffix,
+            strTypeMovie = strTypeMovie,
+            strTypeSeries = strTypeSeries,
+            context = context
+        )
     }
 
     Column(modifier = modifier.fillMaxWidth()) {

@@ -3,6 +3,52 @@
     <string name="type_series">Series</string>
     <string name="type_unknown">Unknown</string>
 
+    <!-- Common Catalog Names -->
+    <string name="catalog_popular">Popular</string>
+    <string name="catalog_trending">Trending</string>
+    <string name="catalog_new">New</string>
+    <string name="catalog_top_rated">Top Rated</string>
+    <string name="catalog_latest">Latest</string>
+    <string name="catalog_featured">Featured</string>
+    <string name="catalog_recommended">Recommended</string>
+    <string name="catalog_upcoming">Upcoming</string>
+    <string name="catalog_last_videos">Last Videos</string>
+    <string name="catalog_calendar_videos">Calendar Videos</string>
+    <string name="catalog_calendar">Calendar</string>
+    <string name="catalog_last">Last</string>
+    
+    <!-- Anime Catalog Names -->
+    <string name="catalog_top_airing">Top Airing</string>
+    <string name="catalog_most_popular">Most Popular</string>
+    <string name="catalog_most_favorited">Most Favorited</string>
+    <string name="catalog_top_upcoming">Top Upcoming</string>
+    <string name="catalog_airing">Airing</string>
+    <string name="catalog_completed">Completed</string>
+    <string name="catalog_ongoing">Ongoing</string>
+    
+    <!-- Streaming/Debrid Catalog Names -->
+    <string name="catalog_movies">Movies</string>
+    <string name="catalog_series">Series</string>
+    <string name="catalog_tv_shows">TV Shows</string>
+    <string name="catalog_anime">Anime</string>
+    <string name="catalog_4k">4K</string>
+    <string name="catalog_hd">HD</string>
+    <string name="catalog_recently_added">Recently Added</string>
+    <string name="catalog_top_movies">Top Movies</string>
+    <string name="catalog_top_series">Top Series</string>
+    <string name="catalog_top_shows">Top Shows</string>
+    <string name="catalog_now_playing">Now Playing</string>
+    <string name="catalog_on_the_air">On The Air</string>
+    <string name="catalog_popular_movies">Popular Movies</string>
+    <string name="catalog_popular_series">Popular Series</string>
+    <string name="catalog_popular_shows">Popular Shows</string>
+    <string name="catalog_trending_movies">Trending Movies</string>
+    <string name="catalog_trending_series">Trending Series</string>
+    <string name="catalog_trending_shows">Trending Shows</string>
+    <string name="catalog_best">Best</string>
+    <string name="catalog_top">Top</string>
+    <string name="catalog_all">All</string>
+
     <!-- HomeScreen -->
     <string name="home_no_addons">No addons installed. Add one to get started.</string>
     <string name="home_no_catalog_addons">No catalog addons installed. Install a catalog addon to see content.</string>

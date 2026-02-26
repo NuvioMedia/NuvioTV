@@ -62,10 +62,14 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import java.util.Locale
+import android.content.Context
+import com.nuvio.tv.R
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val addonRepository: AddonRepository,
     private val catalogRepository: CatalogRepository,
     private val watchProgressRepository: WatchProgressRepository,

@@ -202,6 +202,8 @@ fun ThemeSettingsContent(
                                     selectedTag = tag
                                     showLanguageDialog = false
                                     if (previousTag != tag) {
+                                        // Sync TMDB language with app language
+                                        viewModel.syncTmdbLanguageWithAppLocale(tag)
                                         pendingLanguageRestart = true
                                     }
                                 },

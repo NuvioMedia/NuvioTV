@@ -3,6 +3,52 @@
     <string name="type_series">Serija</string>
     <string name="type_unknown">Neznano</string>
 
+    <!-- Common Catalog Names -->
+    <string name="catalog_popular">Priljubljeno</string>
+    <string name="catalog_trending">V trendu</string>
+    <string name="catalog_new">Novo</string>
+    <string name="catalog_top_rated">Najbolje ocenjeno</string>
+    <string name="catalog_latest">Najnovejše</string>
+    <string name="catalog_featured">Priporočeno</string>
+    <string name="catalog_recommended">Priporočeno</string>
+    <string name="catalog_upcoming">Prihajajoče</string>
+    <string name="catalog_last_videos">Zadnji videoposnetki</string>
+    <string name="catalog_calendar_videos">Videoposnetki iz koledarja</string>
+    <string name="catalog_calendar">Koledar</string>
+    <string name="catalog_last">Zadnje</string>
+    
+    <!-- Anime Catalog Names -->
+    <string name="catalog_top_airing">Najbolj predvajano</string>
+    <string name="catalog_most_popular">Najbolj priljubljeno</string>
+    <string name="catalog_most_favorited">Najbolj priljubljeno</string>
+    <string name="catalog_top_upcoming">Prihajajoče izdaje</string>
+    <string name="catalog_airing">V predvajanju</string>
+    <string name="catalog_completed">Zaključeno</string>
+    <string name="catalog_ongoing">V teku</string>
+    
+    <!-- Streaming/Debrid Catalog Names -->
+    <string name="catalog_movies">Filmi</string>
+    <string name="catalog_series">Serije</string>
+    <string name="catalog_tv_shows">TV oddaje</string>
+    <string name="catalog_anime">Anime</string>
+    <string name="catalog_4k">4K</string>
+    <string name="catalog_hd">HD</string>
+    <string name="catalog_recently_added">Nedavno dodano</string>
+    <string name="catalog_top_movies">Najboljši filmi</string>
+    <string name="catalog_top_series">Najboljše serije</string>
+    <string name="catalog_top_shows">Najboljše oddaje</string>
+    <string name="catalog_now_playing">Trenutno predvajanje</string>
+    <string name="catalog_on_the_air">Na sporedu</string>
+    <string name="catalog_popular_movies">Priljubljeni filmi</string>
+    <string name="catalog_popular_series">Priljubljene serije</string>
+    <string name="catalog_popular_shows">Priljubljene oddaje</string>
+    <string name="catalog_trending_movies">Filmi v trendu</string>
+    <string name="catalog_trending_series">Serije v trendu</string>
+    <string name="catalog_trending_shows">Oddaje v trendu</string>
+    <string name="catalog_best">Najboljše</string>
+    <string name="catalog_top">Vrh</string>
+    <string name="catalog_all">Vse</string>
+
     <!-- HomeScreen -->
     <string name="home_no_addons">Ni nameščenih dodatkov. Dodajte enega za začetek.</string>
     <string name="home_no_catalog_addons">Ni nameščenih dodatkov za katalog. Namestite dodatek za katalog, da boste videli vsebino.</string>

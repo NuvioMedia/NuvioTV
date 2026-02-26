@@ -142,6 +142,7 @@ fun ModernHomeContent(
     val strUpcoming = stringResource(R.string.cw_upcoming)
     val strTypeMovie = stringResource(R.string.type_movie)
     val strTypeSeries = stringResource(R.string.type_series)
+    val context = LocalContext.current
     val rowBuildCache = remember { ModernCarouselRowBuildCache() }
     val carouselRows = remember(
         uiState.continueWatchingItems,
@@ -215,7 +216,8 @@ fun ModernHomeContent(
                             row = row,
                             showCatalogTypeSuffix = showCatalogTypeSuffixInModern,
                             strTypeMovie = strTypeMovie,
-                            strTypeSeries = strTypeSeries
+                            strTypeSeries = strTypeSeries,
+                            context = context
                         ),
                         globalRowIndex = index,
                         catalogId = row.catalogId,

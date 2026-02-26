@@ -34,6 +34,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nuvio.tv.R
@@ -264,16 +265,36 @@ fun GridHomeContent(
                         ) {
                             val strTypeMovie = stringResource(R.string.type_movie)
                             val strTypeSeries = stringResource(R.string.type_series)
-                            val typeLabel = when (gridItem.type.lowercase()) {
-                                "movie" -> strTypeMovie
-                                "series" -> strTypeSeries
-                                else -> gridItem.type.replaceFirstChar { it.uppercase() }
+                            val context = LocalContext.current
+                            
+                            // Create a temporary CatalogRow to use catalogRowTitle function
+                            val catalogRow = remember(gridItem) {
+                                com.nuvio.tv.domain.model.CatalogRow(
+                                    addonId = gridItem.addonId,
+                                    addonName = "",
+                                    addonBaseUrl = gridItem.addonBaseUrl,
+                                    catalogId = gridItem.catalogId,
+                                    catalogName = gridItem.catalogName,
+                                    type = when (gridItem.type.lowercase()) {
+                                        "movie" -> com.nuvio.tv.domain.model.ContentType.MOVIE
+                                        "series" -> com.nuvio.tv.domain.model.ContentType.SERIES
+                                        else -> com.nuvio.tv.domain.model.ContentType.UNKNOWN
+                                    },
+                                    rawType = gridItem.type,
+                                    items = emptyList(),
+                                    supportsSkip = false,
+                                    hasMore = false
+                                )
                             }
-                            val displayName = if (uiState.catalogTypeSuffixEnabled && typeLabel.isNotBlank()) {
-                                "${gridItem.catalogName.replaceFirstChar { it.uppercase() }} - $typeLabel"
-                            } else {
-                                gridItem.catalogName.replaceFirstChar { it.uppercase() }
-                            }
+                            
+                            val displayName = catalogRowTitle(
+                                row = catalogRow,
+                                showCatalogTypeSuffix = uiState.catalogTypeSuffixEnabled,
+                                strTypeMovie = strTypeMovie,
+                                strTypeSeries = strTypeSeries,
+                                context = context
+                            )
+                            
                             SectionDivider(
                                 catalogName = displayName
                             )

@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.local.ThemeDataStore
+import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.domain.model.AppTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +26,8 @@ sealed class ThemeSettingsEvent {
 
 @HiltViewModel
 class ThemeSettingsViewModel @Inject constructor(
-    private val themeDataStore: ThemeDataStore
+    private val themeDataStore: ThemeDataStore,
+    private val tmdbSettingsDataStore: TmdbSettingsDataStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ThemeSettingsUiState())
@@ -57,6 +59,29 @@ class ThemeSettingsViewModel @Inject constructor(
         if (currentTheme() == theme) return
         viewModelScope.launch {
             themeDataStore.setTheme(theme)
+        }
+    }
+    
+    /**
+     * Synchronizes TMDB language with app language when user changes the app language.
+     * Maps locale tags to TMDB language codes (ISO 639-1).
+     */
+    fun syncTmdbLanguageWithAppLocale(localeTag: String?) {
+        viewModelScope.launch {
+            val tmdbLanguage = when (localeTag) {
+                null, "" -> "en" // System default or empty -> English
+                "en" -> "en"
+                "fr" -> "fr"
+                "it" -> "it"
+                "pl" -> "pl"
+                "pt-PT" -> "pt"
+                "tr" -> "tr"
+                "sk" -> "sk"
+                "sl" -> "sl"
+                "ro" -> "ro"
+                else -> "en" // Fallback to English for unsupported locales
+            }
+            tmdbSettingsDataStore.setLanguage(tmdbLanguage)
         }
     }
 }

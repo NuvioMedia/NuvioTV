@@ -2,6 +2,53 @@
     <string name="type_movie">Film</string>
     <string name="type_series">Seriale</string>
     <string name="type_unknown">Necunoscut</string>
+
+    <!-- Common Catalog Names -->
+    <string name="catalog_popular">Popular</string>
+    <string name="catalog_trending">În tendințe</string>
+    <string name="catalog_new">Nou</string>
+    <string name="catalog_top_rated">Cele mai bine cotate</string>
+    <string name="catalog_latest">Cele mai recente</string>
+    <string name="catalog_featured">Recomandate</string>
+    <string name="catalog_recommended">Recomandat</string>
+    <string name="catalog_upcoming">În curând</string>
+    <string name="catalog_last_videos">Ultimele videoclipuri</string>
+    <string name="catalog_calendar_videos">Videoclipuri din calendar</string>
+    <string name="catalog_calendar">Calendar</string>
+    <string name="catalog_last">Ultimul</string>
+    
+    <!-- Anime Catalog Names -->
+    <string name="catalog_top_airing">Cele mai difuzate</string>
+    <string name="catalog_most_popular">Cele mai populare</string>
+    <string name="catalog_most_favorited">Cele mai favorite</string>
+    <string name="catalog_top_upcoming">Viitoare lansări</string>
+    <string name="catalog_airing">În difuzare</string>
+    <string name="catalog_completed">Finalizat</string>
+    <string name="catalog_ongoing">În desfășurare</string>
+    
+    <!-- Streaming/Debrid Catalog Names -->
+    <string name="catalog_movies">Filme</string>
+    <string name="catalog_series">Seriale</string>
+    <string name="catalog_tv_shows">Emisiuni TV</string>
+    <string name="catalog_anime">Anime</string>
+    <string name="catalog_4k">4K</string>
+    <string name="catalog_hd">HD</string>
+    <string name="catalog_recently_added">Adăugate recent</string>
+    <string name="catalog_top_movies">Filme de top</string>
+    <string name="catalog_top_series">Seriale de top</string>
+    <string name="catalog_top_shows">Emisiuni de top</string>
+    <string name="catalog_now_playing">Acum în redare</string>
+    <string name="catalog_on_the_air">Pe post</string>
+    <string name="catalog_popular_movies">Filme populare</string>
+    <string name="catalog_popular_series">Seriale populare</string>
+    <string name="catalog_popular_shows">Emisiuni populare</string>
+    <string name="catalog_trending_movies">Filme în tendințe</string>
+    <string name="catalog_trending_series">Seriale în tendințe</string>
+    <string name="catalog_trending_shows">Emisiuni în tendințe</string>
+    <string name="catalog_best">Cel mai bun</string>
+    <string name="catalog_top">Top</string>
+    <string name="catalog_all">Toate</string>
+
     <string name="home_no_addons">Nu sunt instalate addon-uri. Adăugați unul pentru a începe.</string>
     <string name="home_no_catalog_addons">Nu sunt instalate addon-uri de catalog. Instalați un addon de catalog pentru a vedea conținutul.</string>
     <string name="error_generic">A apărut o eroare</string>

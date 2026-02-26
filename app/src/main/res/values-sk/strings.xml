@@ -3,6 +3,52 @@
     <string name="type_series">Seriál</string>
     <string name="type_unknown">Neznáme</string>
 
+    <!-- Common Catalog Names -->
+    <string name="catalog_popular">Populárne</string>
+    <string name="catalog_trending">Trendy</string>
+    <string name="catalog_new">Nové</string>
+    <string name="catalog_top_rated">Najlepšie hodnotené</string>
+    <string name="catalog_latest">Najnovšie</string>
+    <string name="catalog_featured">Odporúčané</string>
+    <string name="catalog_recommended">Odporúčané</string>
+    <string name="catalog_upcoming">Čoskoro</string>
+    <string name="catalog_last_videos">Posledné videá</string>
+    <string name="catalog_calendar_videos">Videá z kalendára</string>
+    <string name="catalog_calendar">Kalendár</string>
+    <string name="catalog_last">Posledné</string>
+    
+    <!-- Anime Catalog Names -->
+    <string name="catalog_top_airing">Najvysielanejšie</string>
+    <string name="catalog_most_popular">Najpopulárnejšie</string>
+    <string name="catalog_most_favorited">Najobľúbenejšie</string>
+    <string name="catalog_top_upcoming">Nadchádzajúce</string>
+    <string name="catalog_airing">Vysiela sa</string>
+    <string name="catalog_completed">Dokončené</string>
+    <string name="catalog_ongoing">Prebiehajúce</string>
+    
+    <!-- Streaming/Debrid Catalog Names -->
+    <string name="catalog_movies">Filmy</string>
+    <string name="catalog_series">Seriály</string>
+    <string name="catalog_tv_shows">TV relácie</string>
+    <string name="catalog_anime">Anime</string>
+    <string name="catalog_4k">4K</string>
+    <string name="catalog_hd">HD</string>
+    <string name="catalog_recently_added">Nedávno pridané</string>
+    <string name="catalog_top_movies">Najlepšie filmy</string>
+    <string name="catalog_top_series">Najlepšie seriály</string>
+    <string name="catalog_top_shows">Najlepšie relácie</string>
+    <string name="catalog_now_playing">Práve sa prehráva</string>
+    <string name="catalog_on_the_air">Vo vysielaní</string>
+    <string name="catalog_popular_movies">Populárne filmy</string>
+    <string name="catalog_popular_series">Populárne seriály</string>
+    <string name="catalog_popular_shows">Populárne relácie</string>
+    <string name="catalog_trending_movies">Trendové filmy</string>
+    <string name="catalog_trending_series">Trendové seriály</string>
+    <string name="catalog_trending_shows">Trendové relácie</string>
+    <string name="catalog_best">Najlepšie</string>
+    <string name="catalog_top">Top</string>
+    <string name="catalog_all">Všetko</string>
+
     <!-- HomeScreen -->
     <string name="home_no_addons">Žiadne doplnky nie sú nainštalované. Pridajte jeden pre začiatok.</string>
     <string name="home_no_catalog_addons">Žiadne katalógové doplnky. Nainštalujte katalógový doplnok pre zobrazenie obsahu.</string>

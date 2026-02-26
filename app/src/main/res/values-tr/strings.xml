@@ -4,6 +4,52 @@
     <string name="type_series">Dizi</string>
     <string name="type_unknown">Bilinmeyen</string>
 
+    <!-- Common Catalog Names -->
+    <string name="catalog_popular">Popüler</string>
+    <string name="catalog_trending">Trendler</string>
+    <string name="catalog_new">Yeni</string>
+    <string name="catalog_top_rated">En Yüksek Puanlı</string>
+    <string name="catalog_latest">En Son</string>
+    <string name="catalog_featured">Öne Çıkanlar</string>
+    <string name="catalog_recommended">Önerilen</string>
+    <string name="catalog_upcoming">Yakında</string>
+    <string name="catalog_last_videos">Son Videolar</string>
+    <string name="catalog_calendar_videos">Yaklaşan İçerikler</string>
+    <string name="catalog_calendar">Takvim</string>
+    <string name="catalog_last">Son</string>
+    
+    <!-- Anime Catalog Names -->
+    <string name="catalog_top_airing">En Çok İzlenen Yayınlar</string>
+    <string name="catalog_most_popular">En Popüler</string>
+    <string name="catalog_most_favorited">En Çok Favorilenen</string>
+    <string name="catalog_top_upcoming">Yakında Gelenler</string>
+    <string name="catalog_airing">Yayında</string>
+    <string name="catalog_completed">Tamamlanmış</string>
+    <string name="catalog_ongoing">Devam Eden</string>
+    
+    <!-- Streaming/Debrid Catalog Names -->
+    <string name="catalog_movies">Filmler</string>
+    <string name="catalog_series">Diziler</string>
+    <string name="catalog_tv_shows">TV Dizileri</string>
+    <string name="catalog_anime">Anime</string>
+    <string name="catalog_4k">4K</string>
+    <string name="catalog_hd">HD</string>
+    <string name="catalog_recently_added">Yeni Eklenenler</string>
+    <string name="catalog_top_movies">En İyi Filmler</string>
+    <string name="catalog_top_series">En İyi Diziler</string>
+    <string name="catalog_top_shows">En İyi Programlar</string>
+    <string name="catalog_now_playing">Şimdi Oynatılıyor</string>
+    <string name="catalog_on_the_air">Yayında</string>
+    <string name="catalog_popular_movies">Popüler Filmler</string>
+    <string name="catalog_popular_series">Popüler Diziler</string>
+    <string name="catalog_popular_shows">Popüler Programlar</string>
+    <string name="catalog_trending_movies">Trend Filmler</string>
+    <string name="catalog_trending_series">Trend Diziler</string>
+    <string name="catalog_trending_shows">Trend Programlar</string>
+    <string name="catalog_best">En İyi</string>
+    <string name="catalog_top">En Üst</string>
+    <string name="catalog_all">Tümü</string>
+
     <!-- HomeScreen -->
     <string name="home_no_addons">Yüklü eklenti yok. Başlamak için bir eklenti ekleyin.</string>
     <string name="home_no_catalog_addons">Katalog eklentisi yok. İçerikleri görmek için bir katalog eklentisi yükleyin.</string>
@@ -63,7 +109,7 @@
     <string name="detail_btn_play_episode">Oynat S%1$dB%2$d</string>
     <string name="detail_btn_resume_episode">Devam Et S%1$dB%2$d</string>
     <string name="detail_btn_next_episode">Sıradaki S%1$dB%2$d</string>
-    <string name="detail_tab_cast">Yaratıcı ve Oyuncular</string>
+    <string name="detail_tab_cast">Yapımcı ve Oyuncular</string>
     <string name="cast_role_creator">Yapımcı</string>
     <string name="cast_role_director">Yönetmen</string>
     <string name="cast_role_writer">Yazar</string>
@@ -741,7 +787,7 @@
     <!-- EpisodeRatingsSection -->
     <string name="ratings_loading">Kullanıcı geri dönüşü verisi sunucu merkezine ulaşıyor.</string>
     <string name="ratings_unavailable">Bu bölüm tablosu için harici Puan formatı bulunmamaktadır.</string>
-    <string name="ratings_season_summary">Sezon %1$d | Toplam %2$d İzlem Tablosu Uzunluğu</string>
+    <string name="ratings_season_summary">Sezon %1$d - %2$d bölüm</string>
 
     <!-- SearchDiscoverSection -->
     <string name="discover_title">Keşfet</string>

@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.home
 
+import android.content.Context
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
@@ -9,6 +10,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.R
+import java.util.Locale
 
 internal val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
 internal const val MODERN_HERO_TEXT_WIDTH_FRACTION = 0.42f
@@ -276,9 +279,17 @@ internal fun catalogRowTitle(
     row: CatalogRow,
     showCatalogTypeSuffix: Boolean,
     strTypeMovie: String = "",
-    strTypeSeries: String = ""
+    strTypeSeries: String = "",
+    context: Context? = null
 ): String {
-    val catalogName = row.catalogName.replaceFirstChar { it.uppercase() }
+    // Translate catalog name if context is provided
+    val translatedName = if (context != null) {
+        translateCatalogName(context, row.catalogName)
+    } else {
+        row.catalogName
+    }
+    
+    val catalogName = translatedName.replaceFirstChar { it.uppercase() }
     if (!showCatalogTypeSuffix) return catalogName
     val typeLabel = when (row.apiType.lowercase()) {
         "movie" -> strTypeMovie.ifBlank { row.apiType.replaceFirstChar { it.uppercase() } }
@@ -286,6 +297,64 @@ internal fun catalogRowTitle(
         else -> row.apiType.replaceFirstChar { it.uppercase() }
     }
     return "$catalogName - $typeLabel"
+}
+
+/**
+ * Translates common catalog names to the current locale.
+ * Falls back to the original name if no translation is found.
+ */
+private fun translateCatalogName(context: Context, catalogName: String): String {
+    val normalizedName = catalogName.trim().lowercase(Locale.ROOT)
+    
+    return when (normalizedName) {
+        // Common catalogs
+        "popular", "populer", "popüler" -> context.getString(R.string.catalog_popular)
+        "trending", "trendler" -> context.getString(R.string.catalog_trending)
+        "new", "yeni" -> context.getString(R.string.catalog_new)
+        "top rated", "top-rated", "en yüksek puanlı" -> context.getString(R.string.catalog_top_rated)
+        "latest", "en son" -> context.getString(R.string.catalog_latest)
+        "featured", "öne çıkanlar" -> context.getString(R.string.catalog_featured)
+        "recommended", "önerilen" -> context.getString(R.string.catalog_recommended)
+        "upcoming", "yakında" -> context.getString(R.string.catalog_upcoming)
+        "last videos", "son videolar" -> context.getString(R.string.catalog_last_videos)
+        "calendar videos", "takvim videoları", "yaklaşan içerikler" -> context.getString(R.string.catalog_calendar_videos)
+        "calendar", "takvim" -> context.getString(R.string.catalog_calendar)
+        "last", "son" -> context.getString(R.string.catalog_last)
+        
+        // Anime catalogs
+        "top airing", "en çok izlenen yayınlar" -> context.getString(R.string.catalog_top_airing)
+        "most popular", "en popüler" -> context.getString(R.string.catalog_most_popular)
+        "most favorited", "en çok favorilenen" -> context.getString(R.string.catalog_most_favorited)
+        "top upcoming", "yakında gelenler" -> context.getString(R.string.catalog_top_upcoming)
+        "airing", "yayında" -> context.getString(R.string.catalog_airing)
+        "completed", "tamamlanmış" -> context.getString(R.string.catalog_completed)
+        "ongoing", "devam eden" -> context.getString(R.string.catalog_ongoing)
+        
+        // Streaming/Debrid catalogs
+        "movies", "filmler" -> context.getString(R.string.catalog_movies)
+        "series", "diziler" -> context.getString(R.string.catalog_series)
+        "tv shows", "tv dizileri" -> context.getString(R.string.catalog_tv_shows)
+        "anime" -> context.getString(R.string.catalog_anime)
+        "4k" -> context.getString(R.string.catalog_4k)
+        "hd" -> context.getString(R.string.catalog_hd)
+        "recently added", "yeni eklenenler" -> context.getString(R.string.catalog_recently_added)
+        "top movies", "en iyi filmler" -> context.getString(R.string.catalog_top_movies)
+        "top series", "en iyi diziler" -> context.getString(R.string.catalog_top_series)
+        "top shows", "en iyi programlar" -> context.getString(R.string.catalog_top_shows)
+        "now playing", "şimdi oynatılıyor" -> context.getString(R.string.catalog_now_playing)
+        "on the air", "yayında" -> context.getString(R.string.catalog_on_the_air)
+        "popular movies", "popüler filmler" -> context.getString(R.string.catalog_popular_movies)
+        "popular series", "popüler diziler" -> context.getString(R.string.catalog_popular_series)
+        "popular shows", "popüler programlar" -> context.getString(R.string.catalog_popular_shows)
+        "trending movies", "trend filmler" -> context.getString(R.string.catalog_trending_movies)
+        "trending series", "trend diziler" -> context.getString(R.string.catalog_trending_series)
+        "trending shows", "trend programlar" -> context.getString(R.string.catalog_trending_shows)
+        "best", "en iyi" -> context.getString(R.string.catalog_best)
+        "top", "en üst" -> context.getString(R.string.catalog_top)
+        "all", "tümü" -> context.getString(R.string.catalog_all)
+        
+        else -> catalogName // Return original if no translation found
+    }
 }
 
 internal fun CatalogRow.key(): String {
