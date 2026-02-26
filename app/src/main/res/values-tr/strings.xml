@@ -1,0 +1,792 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="type_movie">Film</string>
+    <string name="type_series">Dizi</string>
+    <string name="type_unknown">Bilinmeyen</string>
+
+    <!-- HomeScreen -->
+    <string name="home_no_addons">Yüklü eklenti yok. Başlamak için bir eklenti ekleyin.</string>
+    <string name="home_no_catalog_addons">Katalog eklentisi yok. İçerikleri görmek için bir katalog eklentisi yükleyin.</string>
+    <string name="error_generic">Bir hata oluştu</string>
+
+    <!-- ErrorState -->
+    <string name="action_retry">Tekrar Dene</string>
+
+    <!-- ContinueWatchingSection -->
+    <string name="continue_watching">İzlemeye Devam Et</string>
+    <string name="cw_upcoming">Yaklaşanlar</string>
+    <string name="cw_next_up">Sıradaki</string>
+    <string name="cw_resume">Devam Et</string>
+    <string name="cw_hours_min_left">%1$d sa %2$d dk kaldı</string>
+    <string name="cw_min_left">%1$d dk kaldı</string>
+    <string name="cw_almost_done">Neredeyse bitti</string>
+    <string name="cw_airs_date">Yayın tarihi: %1$s</string>
+    <string name="cw_action_go_to_details">Detaylara git</string>
+    <string name="cw_action_remove">Kaldır</string>
+    <string name="cw_dialog_subtitle">Bu öğe ile ne yapmak istediğinizi seçin.</string>
+
+    <!-- CatalogRowSection -->
+    <string name="catalog_from_addon">Kaynak: %1$s</string>
+    <string name="action_see_all">Tümünü Gör</string>
+
+    <!-- HeroSection -->
+    <string name="hero_creator">Yapımcı: %1$s</string>
+    <string name="hero_director">Yönetmen: %1$s</string>
+    <string name="hero_writer">Yazar: %1$s</string>
+    <string name="hero_play">Oynat</string>
+    <string name="hero_play_episode">Oynat S%1$d, B%2$d</string>
+    <string name="hero_add_to_library">Kütüphaneye ekle</string>
+    <string name="hero_remove_from_library">Kütüphaneden kaldır</string>
+    <string name="hero_mark_watched">İzlendi olarak işaretle</string>
+    <string name="hero_mark_unwatched">İzlenmedi olarak işaretle</string>
+    <string name="hero_play_trailer">Fragmanı izle</string>
+    <string name="hero_press_back_trailer">Fragmandan çıkmak için geri tuşuna basın</string>
+    <string name="cd_rating">Değerlendirme</string>
+
+    <!-- EpisodesSection -->
+    <string name="episodes_season">Sezon %1$d</string>
+    <string name="episodes_specials">Özel Bölümler</string>
+    <string name="episodes_episode">Bölüm</string>
+    <string name="episodes_cd_watched">İzlendi</string>
+    <string name="episodes_dialog_subtitle">Bölüm ayarları</string>
+    <string name="episodes_mark_watched">İzlendi olarak işaretle</string>
+    <string name="episodes_mark_unwatched">İzlenmedi olarak işaretle</string>
+    <string name="episodes_mark_season_watched">Sezonu izlendi olarak işaretle</string>
+    <string name="episodes_mark_season_unwatched">Sezonu izlenmedi olarak işaretle</string>
+    <string name="episodes_mark_previous_watched">Bu sezondaki öncekileri izlendi işaretle</string>
+    <string name="episodes_play">Oynat</string>
+    <string name="episodes_season_actions">Sezon ayarları</string>
+
+    <!-- MetaDetailsScreen -->
+    <string name="detail_btn_play">Oynat</string>
+    <string name="detail_btn_resume">Devam Et</string>
+    <string name="detail_btn_play_episode">Oynat S%1$dB%2$d</string>
+    <string name="detail_btn_resume_episode">Devam Et S%1$dB%2$d</string>
+    <string name="detail_btn_next_episode">Sıradaki S%1$dB%2$d</string>
+    <string name="detail_tab_cast">Yaratıcı ve Oyuncular</string>
+    <string name="cast_role_creator">Yapımcı</string>
+    <string name="cast_role_director">Yönetmen</string>
+    <string name="cast_role_writer">Yazar</string>
+    <string name="detail_tab_ratings">Değerlendirmeler</string>
+    <string name="detail_tab_more_like_this">Benzer İçerikler</string>
+    <string name="detail_section_network">Kanal</string>
+    <string name="detail_section_production">Yapım</string>
+    <string name="detail_lists_fallback">Listeler</string>
+    <string name="detail_lists_subtitle">Bu içeriğin hangi listelerde yer alacağını seçin.</string>
+    <string name="action_save">Kaydet</string>
+    <string name="action_saving">Kaydediliyor…</string>
+
+    <!-- AppLanguage -->
+    <string name="appearance_language">Uygulama Dili</string>
+    <string name="appearance_language_subtitle">Sistem dilini geçersiz kıl</string>
+    <string name="appearance_language_system">Sistem varsayılanı</string>
+    <string name="appearance_language_dialog_title">Dil Seçin</string>
+    <string name="appearance_language_restart_hint">Dil değişikliğinin uygulanması için uygulamayı yeniden başlatın.</string>
+
+    <!-- ThemeSettingsScreen -->
+    <string name="appearance_title">Görünüm</string>
+    <string name="appearance_subtitle">Renk temanızı ve dilinizi seçin</string>
+    <string name="cd_selected">Seçili</string>
+
+    <!-- AboutScreen -->
+    <string name="about_title">Hakkında</string>
+    <string name="about_subtitle">Uygulama bilgileri, güncellemeler ve yasal bağlantılar</string>
+    <string name="about_made_with_love">Tapframe ve ekibi tarafından ❤️ ile yapıldı</string>
+    <string name="about_version">Sürüm %1$s</string>
+    <string name="about_check_updates">Güncellemeleri kontrol et</string>
+    <string name="about_check_updates_subtitle">En son sürümü indir</string>
+    <string name="about_privacy_policy">Gizlilik Politikası</string>
+    <string name="about_privacy_policy_subtitle">Gizlilik politikamızı görüntüleyin</string>
+
+    <!-- SettingsScreen categories -->
+    <string name="settings_account">Hesap</string>
+    <string name="settings_account_subtitle">Hesap ve senkronizasyon durumu.</string>
+    <string name="settings_profiles">Profiller</string>
+    <string name="settings_profiles_subtitle">Kullanıcı profillerini yönetin.</string>
+    <string name="settings_layout">Düzen</string>
+    <string name="settings_layout_subtitle">Ana sayfa düzeni ve poster stilleri.</string>
+    <string name="settings_plugins">Eklentiler</string>
+    <string name="settings_plugins_subtitle">Depolar ve sağlayıcılar.</string>
+    <string name="settings_integration">Entegrasyon</string>
+    <string name="settings_playback">Oynatma</string>
+    <string name="settings_playback_subtitle">Oynatıcı, altyazılar ve otomatik oynatma.</string>
+    <string name="settings_trakt_subtitle">Trakt bağlantı ekranını aç.</string>
+    <string name="settings_about_subtitle">Sürüm ve politikalar.</string>
+    <string name="settings_debug">Hata Ayıklama</string>
+    <string name="settings_debug_subtitle">Geliştirici araçları ve özellik bayrakları.</string>
+    <string name="settings_plugins_section_subtitle">Depoları, sağlayıcıları ve eklenti durumlarını yönetin.</string>
+    <string name="settings_account_section_subtitle">Hesap ve senkronizasyon durumu.</string>
+    <string name="account_stat_addons">eklentiler</string>
+    <string name="account_stat_plugins">pluginler</string>
+    <string name="account_stat_library">kütüphane</string>
+    <string name="account_stat_progress">ilerleme</string>
+    <string name="account_stat_watched">izlenen</string>
+    <string name="settings_integrations_section">Entegrasyonlar</string>
+    <string name="settings_integrations_section_subtitle">TMDB veya MDBList ayarlarını seçin</string>
+    <string name="settings_tmdb_subtitle">Meta veri zenginleştirme kontrolleri</string>
+    <string name="settings_mdblist_subtitle">Harici değerlendirme sağlayıcıları</string>
+
+    <!-- PlaybackSettingsScreen -->
+    <string name="playback_title">Oynatma Ayarları</string>
+    <string name="playback_subtitle">Video oynatma ve altyazı seçeneklerini yapılandırın</string>
+    <string name="cd_decrease">Azalt</string>
+    <string name="cd_increase">Artır</string>
+    <string name="action_cancel">İptal</string>
+    <string name="action_none">Hiçbiri</string>
+
+    <!-- PlaybackSettingsSections -->
+    <string name="playback_section_general">Genel</string>
+    <string name="playback_section_general_desc">Temel oynatma davranışı.</string>
+    <string name="playback_loading_overlay">Yükleme Ekranı</string>
+    <string name="playback_loading_overlay_sub">İlk video karesi görünene kadar yükleme ekranını göster.</string>
+    <string name="playback_pause_overlay">Duraklatma Ekranı</string>
+    <string name="playback_pause_overlay_sub">Duraklatıldığında 5 saniye sonra detaylar ekranını göster.</string>
+    <string name="playback_show_clock_sub">Kontroller görünürken mevcut saati ve bitiş saatini göster.</string>
+    <string name="playback_osd_clock">Ekran Saati (OSD)</string>
+    <string name="playback_skip_intro">İntroyu Atla</string>
+    <string name="playback_skip_intro_sub">İntro ve özetleri algılamak için introdb.app kullan.</string>
+    <string name="playback_auto_frame_rate">Otomatik Kare Hızı</string>
+    <string name="playback_section_player">Player &amp; Kaynak Seçimi</string>
+    <string name="playback_section_player_desc">Player tercihi, otomatik oynatma ve kaynak filtreleme.</string>
+    <string name="playback_player">Player</string>
+    <string name="playback_player_internal">Dahili</string>
+    <string name="playback_player_external">Harici</string>
+    <string name="playback_player_ask">Her seferinde sor</string>
+    <string name="playback_section_audio">Ses &amp; Fragman</string>
+    <string name="playback_section_audio_desc">Fragman davranışı ve ses kontrolleri.</string>
+    <string name="playback_section_subtitles">Altyazılar</string>
+    <string name="playback_section_subtitles_desc">Dil, stil ve oluşturma modu.</string>
+    <string name="playback_afr_open">Açık</string>
+    <string name="playback_afr_closed">Kapalı</string>
+    <string name="playback_afr_off">Kapalı</string>
+    <string name="playback_afr_off_sub">Ekran yenileme hızını değiştirme.</string>
+    <string name="playback_afr_on_start">Başlarken</string>
+    <string name="playback_afr_on_start_sub">Oynatma başladığında değiştir.</string>
+    <string name="playback_afr_on_start_stop">Başlarken/Dururken</string>
+    <string name="playback_afr_on_start_stop_sub">Başlarken değiştir ve durduğunda geri yükle.</string>
+    <string name="playback_player_external_desc">Yayınları her zaman harici bir uygulamada aç</string>
+    <string name="playback_player_ask_desc">Her seferinde hangi oynatıcının kullanılacağını seçin</string>
+
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_trailer_section">Fragman</string>
+    <string name="audio_autoplay_trailers">Fragmanları Otomatik Oynat</string>
+    <string name="audio_autoplay_trailers_sub">Bir süre hareketsiz kalındığında detay ekranında fragmanları otomatik oynat</string>
+    <string name="audio_trailer_delay">Fragman Gecikmesi</string>
+    <string name="audio_section">Ses</string>
+    <string name="audio_lang_default">Varsayılan (medya dosyası)</string>
+    <string name="audio_lang_device">Cihaz dili</string>
+    <string name="audio_preferred_lang">Tercih Edilen Ses Dili</string>
+    <string name="audio_skip_silence">Sessizliği Atla</string>
+    <string name="audio_skip_silence_sub">Oynatma sırasında sesin sessiz kısımlarını atla</string>
+    <string name="audio_advanced_section">Gelişmiş Ses</string>
+    <string name="audio_advanced_warning">Bu ayarlar bazı cihazlarda sorunlara neden olabilir. Yalnızca ne yaptığınızı biliyorsanız değiştirin.</string>
+    <string name="audio_decoder_device_only">Sadece cihaz kod çözücüleri</string>
+    <string name="audio_decoder_prefer_device">Cihaz kod çözücülerini tercih et</string>
+    <string name="audio_decoder_prefer_app">Uygulama kod çözücülerini (FFmpeg) tercih et</string>
+    <string name="audio_decoder_priority">Decoder Önceliği</string>
+    <string name="audio_tunneled">Tünelli Oynatma</string>
+    <string name="audio_tunneled_sub">Donanım seviyesinde ses/video senkronizasyonu. Bazı Android TV cihazlarında performansı artırabilir</string>
+    <string name="audio_dv_sub">DV donanım desteği olmayan cihazlar için Dolby Vision Profil 7\'yi standart HEVC\'ye dönüştür</string>
+    <string name="audio_decoder_device_only_desc">Yalnızca yerleşik donanım kod çözücülerini kullan. En uyumlusu ancak tüm formatları desteklemeyebilir.</string>
+    <string name="audio_decoder_prefer_device_desc">Mümkün olduğunda donanım kod çözücülerini kullan, değilse FFmpeg\'e dön. Çoğu cihaz için önerilir.</string>
+    <string name="audio_decoder_prefer_app_desc">Mümkün olduğunda FFmpeg kod çözücülerini kullan. Daha iyi format desteği ancak daha yüksek CPU kullanımı.</string>
+    <string name="audio_decoder_controls">Ses ve video için donanım mı yoksa yazılım (FFmpeg) kod çözücülerinin mi kullanılacağını kontrol eder</string>
+
+    <!-- PlaybackSubtitleSettings -->
+    <string name="sub_section">Altyazılar</string>
+    <string name="sub_not_set">Ayarlanmadı</string>
+    <string name="sub_preferred_lang">Tercih Edilen Dil</string>
+    <string name="sub_secondary_lang">İkinci Tercih Edilen Dil</string>
+    <string name="sub_organization">Altyazı Ayarları</string>
+    <string name="sub_size">Boyut</string>
+    <string name="sub_vertical_offset">Dikey Konum</string>
+    <string name="sub_bold">Kalın</string>
+    <string name="sub_bold_sub">Altyazılar için kalın yazı tipi kullan</string>
+    <string name="sub_text_color">Metin Rengi</string>
+    <string name="sub_bg_color">Arka Plan Rengi</string>
+    <string name="sub_outline">Dış Çizgi</string>
+    <string name="sub_outline_sub">Daha iyi görünürlük için altyazı metninin etrafına dış çizgi ekle</string>
+    <string name="sub_outline_color">Dış Çizgi Rengi</string>
+    <string name="sub_advanced_section">Gelişmiş Altyazı Oluşturma</string>
+    <string name="sub_libass">ASS/SSA altyazıları için libass kullan</string>
+    <string name="sub_libass_sub">Bakım nedeniyle geçici olarak devre dışı bırakıldı</string>
+    <string name="sub_libass_mode">Libass Görüntüleme Modu</string>
+    <string name="sub_mode_overlay_gl">Overlay OpenGL (Önerilen)</string>
+    <string name="sub_mode_overlay_gl_sub">HDR desteğiyle en iyi kalite. Altyazıları ayrı bir iş parçacığında oluşturur.</string>
+    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
+    <string name="sub_mode_effects_gl">Effects OpenGL</string>
+    <string name="sub_mode_effects_gl_sub">Media3 efektlerini kullanan animasyon desteği. Canvas\'tan daha hızlı.</string>
+    <string name="sub_mode_effects_canvas">Effects Canvas</string>
+    <string name="sub_mode_effects_canvas_sub">Canvas görüntüleme ile Media3 animasyon desteği.</string>
+    <string name="sub_mode_standard">Standart</string>
+    <string name="sub_mode_standard_sub">Animasyon desteği olmadan temel altyazı oluşturma. En uyumlu seçenek.</string>
+    <string name="sub_org_none">Hiçbiri (varsayılan sıra)</string>
+    <string name="sub_org_by_lang">Dile göre</string>
+    <string name="sub_org_by_addon">Eklentiye göre</string>
+    <string name="sub_org_none_desc">Altyazıları varsayılan eklenti sırasına göre göster.</string>
+    <string name="sub_org_by_lang_desc">Altyazıları dile göre gruplandır.</string>
+    <string name="sub_org_by_addon_desc">Altyazıları eklenti kaynağına göre gruplandır.</string>
+
+    <!-- PlaybackAutoPlaySettings -->
+    <string name="autoplay_reuse_last_link">Son Bağlantıyı Yeniden Kullan</string>
+    <string name="autoplay_reuse_last_link_sub">Aynı film/bölüm için önbellek hala geçerliyken çalışan son yayınınızı otomatik oynatın</string>
+    <string name="autoplay_last_link_cache">Son Bağlantı Önbellek Süresi</string>
+    <string name="autoplay_mode_manual">Manuel (kaynağı seç)</string>
+    <string name="autoplay_mode_first">İlk kaynağı otomatik oynat</string>
+    <string name="autoplay_mode_regex">Regex eşleşmesini otomatik oynat</string>
+    <string name="autoplay_stream_selection">Otomatik Kaynak Seçimi</string>
+    <string name="autoplay_next_episode">Sonraki Bölümü Otomatik Oynat</string>
+    <string name="autoplay_next_episode_sub">Ekran çıktığında sonraki bölümü otomatik olarak başlat.</string>
+    <string name="autoplay_threshold_pct">Yüzde</string>
+    <string name="autoplay_threshold_min">Bitişten önceki dakika</string>
+    <string name="autoplay_threshold_mode">Sonraki Bölüm Eşiği Mantığı</string>
+    <string name="autoplay_threshold_pct_title">Eşik Yüzdesi</string>
+    <string name="autoplay_threshold_pct_sub">Bitiş zaman damgası olmadığında kullanılacak alternatif oran.</string>
+    <string name="autoplay_threshold_min_title">Eşik Dakikası</string>
+    <string name="autoplay_threshold_min_sub">Bitiş zaman damgası olmadığında kullanılacak alternatif süre.</string>
+    <string name="autoplay_scope_all">Tüm kaynaklar</string>
+    <string name="autoplay_scope_addons">Yalnızca kurulu eklentiler</string>
+    <string name="autoplay_scope_plugins">Yalnızca etkin eklentiler</string>
+    <string name="autoplay_scope">Otomatik Oynatma Kaynak Kapsamı</string>
+    <string name="autoplay_allowed_addons">İzin Verilen Eklentiler</string>
+    <string name="autoplay_all_addons">Tüm kurulu eklentiler</string>
+    <string name="autoplay_allowed_plugins">İzin Verilen Pluginler</string>
+    <string name="autoplay_all_plugins">Tüm etkin pluginler</string>
+    <string name="autoplay_regex_placeholder">Desen ayarlanmadı. Örnek: 4K|2160p|Remux</string>
+    <string name="autoplay_regex_title">Regex Deseni</string>
+    <string name="autoplay_no_items">Öğe bulunamadı</string>
+    <string name="autoplay_mode_manual_desc">Her zaman kaynak listesini göster ve benim seçmeme izin ver.</string>
+    <string name="autoplay_mode_first_desc">Mevcut olan ilk kaynağı otomatik olarak oynat.</string>
+    <string name="autoplay_mode_regex_desc">Metni regex deseninizle eşleşen ilk kaynağı oynat.</string>
+    <string name="autoplay_scope_all_desc">Otomatik oynatma, hem kurulu eklentileri hem de etkin pluginleri kullanabilir.</string>
+    <string name="autoplay_scope_addons_desc">Otomatik oynatma yalnızca kurulu eklentilerinizden gelen yayınları dikkate alır.</string>
+    <string name="autoplay_scope_plugins_desc">Otomatik oynatma yalnızca etkin eklentilerinizden gelen yayınları dikkate alır.</string>
+    <string name="autoplay_threshold_pct_desc">Bitiş zaman damgası mevcut olmadığında yüzdeye göre göster.</string>
+    <string name="autoplay_threshold_min_desc">Bitiş zaman damgası mevcut olmadığında bölümün bitmesine bu kadar dakika kala göster.</string>
+    <string name="autoplay_regex_matches">Yayın adı/başlık/açıklama/eklenti/url ile eşleşir. Örnek: 4K|2160p|Remux</string>
+    <string name="autoplay_regex_presets">Hazır Ayarlar</string>
+    <string name="autoplay_invalid_regex">Geçersiz regex deseni</string>
+
+    <!-- LayoutSettingsScreen -->
+    <string name="layout_title">Düzen Ayarları</string>
+    <string name="layout_subtitle">Ana sayfa düzenini, içerik görünürlüğünü ve poster davranışını ayarlayın</string>
+    <string name="layout_classic">Klasik Görünüm</string>
+    <string name="layout_grid">Izgara Görünümü</string>
+    <string name="layout_modern">Modern Görünüm</string>
+    <string name="layout_classic_desc">Satırlar arasında yatay olarak gezinin</string>
+    <string name="layout_grid_desc">Tüm içerikleri dev bir bölümde dikey ızgara ile inceleyin</string>
+    <string name="layout_modern_desc">Daha hızlı gezinme için tek aktif satırlı sabit hero alanı</string>
+    <string name="layout_section_home">Ana Sayfa Düzeni</string>
+    <string name="layout_section_home_desc">Yapıyı ve ana gösterim (hero) kaynağını seçin.</string>
+    <string name="layout_landscape_posters">Yatay Posterler</string>
+    <string name="layout_landscape_posters_sub">Modern görünüm için dikey ve yatay kartlar arasında geçiş yapın.</string>
+    <string name="layout_preview_row">Önizleme Satırını Göster</string>
+    <string name="layout_preview_row_sub">Modern Ana Sayfa düzeninde aşağıdaki satır için kısmi bir önizleme gösterin.</string>
+    <string name="layout_hero_catalogs">Geniş Gösterim Katalogları (Hero)</string>
+    <string name="layout_hero_catalogs_sub">Ana alandaki içerikler için bir veya daha fazla katalog seçin.</string>
+    <string name="layout_section_content">Ana Sayfa İçeriği</string>
+    <string name="layout_section_content_desc">Ana sayfada ve aramada nelerin görüneceğini kontrol edin.</string>
+    <string name="layout_collapse_sidebar">Yan Menüyü Daralt</string>
+    <string name="layout_collapse_sidebar_sub">Yan menüyü varsayılan olarak gizle; odaklanıldığında göster.</string>
+    <string name="layout_modern_sidebar">Modern Yan Menü</string>
+    <string name="layout_modern_sidebar_sub">Yüzen yan menü gezinmesini etkinleştir.</string>
+    <string name="layout_modern_sidebar_blur">Modern Yan Menü Bulanıklığı</string>
+    <string name="layout_modern_sidebar_blur_sub">Modern yan menü yüzeyleri için bulanıklaştırma efektini değiştirin.</string>
+    <string name="layout_show_hero">Ana Alanı (Hero) Göster</string>
+    <string name="layout_show_hero_sub">Ana sayfanın üstünde dikkat çeken içerikleri göster.</string>
+    <string name="layout_show_discover">Aramada Keşfeti Göster</string>
+    <string name="layout_show_discover_sub">Arama boşken gezinme bölümünü göster.</string>
+    <string name="layout_poster_labels">Poster Etiketlerini Göster</string>
+    <string name="layout_poster_labels_sub">Satırlardaki, ızgaradaki ve tümünü gör listesindeki başlıkları posterlerin altında göster.</string>
+    <string name="layout_addon_name">Eklenti Adını Göster</string>
+    <string name="layout_addon_name_sub">Katalog başlıklarının altında kaynağın (eklenti) adını göster.</string>
+    <string name="layout_catalog_type">Katalog Türünü Göster</string>
+    <string name="layout_catalog_type_sub">Katalog adının yanında tür sonekini (Film/Dizi) göster.</string>
+    <string name="layout_section_detail">Detay Sayfası</string>
+    <string name="layout_section_detail_desc">Detay ve bölüm ekranları için ayarlar.</string>
+    <string name="layout_blur_unwatched">İzlenmemiş Bölümleri Bulanıklaştır</string>
+    <string name="layout_blur_unwatched_sub">Spoiler önlemek için bölüm resimlerini izlenene kadar bulanık tutar.</string>
+    <string name="layout_trailer_button">Fragman Düğmesini Göster</string>
+    <string name="layout_trailer_button_sub">Ayrıntı sayfasında fragman düğmesi göster (sadece fragman mevcutsa).</string>
+    <string name="layout_prefer_external_meta">Harici eklentinin meta verisini tercih et</string>
+    <string name="layout_prefer_external_meta_sub">Katalog eklentisi yerine harici (ekstra) eklentiden gelen meta verileri kullanın.</string>
+    <string name="layout_section_focused">Seçilen Poster</string>
+    <string name="layout_section_focused_desc">Seçilen kartlar için gelişmiş ayarlamalar.</string>
+    <string name="layout_expand_poster">Seçilen Posteri Arkaplana Genişlet</string>
+    <string name="layout_expand_poster_sub">Kısa bir bekleme sonrası seçilen posteri büyütür.</string>
+    <string name="layout_expand_delay">Genişletme Gecikmesi</string>
+    <string name="layout_expand_delay_sub">Seçilen kartların genişletilmesinden önce ne kadar bekleneceği.</string>
+    <string name="layout_autoplay_trailer">Fragmanı Otomatik Oynat</string>
+    <string name="layout_autoplay_trailer_expanded">Genişletilmiş Kartta Fragmanı Otomatik Oynat</string>
+    <string name="layout_autoplay_trailer_sub">Mevcut olduğunda seçilen içerik için fragman önizlemesini oynatın.</string>
+    <string name="layout_autoplay_trailer_expanded_sub">Mevcut Olduğunda fragmanı genişletilmiş arka plan içinde oynatın.</string>
+    <string name="layout_trailer_muted">Fragmanı Sessiz Oynat</string>
+    <string name="layout_trailer_muted_sub_preview">Otomatik oynatma önizlemesi sırasında fragman sesini kapat.</string>
+    <string name="layout_trailer_muted_sub_expanded">Genişletilmiş kartlarda fragman sesini kapat.</string>
+    <string name="layout_section_card_style">Kart Stili</string>
+    <string name="layout_section_card_style_desc">Kart genişliğini ve köşe yarıçapını ayarlayın.</string>
+    <string name="layout_open">Açık</string>
+    <string name="layout_closed">Kapalı</string>
+    <string name="layout_trailer_location">Fragman Oynatma Konumu</string>
+    <string name="layout_trailer_location_sub">Fragman önizlemelerinin Modern Ana düzeninde nerede oynatılacağını seçin.</string>
+    <string name="layout_trailer_expanded_card">Genişletilmiş Kart</string>
+    <string name="layout_trailer_hero_media">Ana Medya</string>
+    <string name="layout_preset_compact">Sıkı</string>
+    <string name="layout_preset_dense">Yoğun</string>
+    <string name="layout_preset_standard">Standart</string>
+    <string name="layout_preset_balanced">Dengeli</string>
+    <string name="layout_preset_comfort">Rahat</string>
+    <string name="layout_preset_large">Büyük</string>
+    <string name="layout_preset_sharp">Keskin</string>
+    <string name="layout_preset_subtle">Hafif</string>
+    <string name="layout_preset_classic">Klasik</string>
+    <string name="layout_preset_rounded">Yuvarlak</string>
+    <string name="layout_preset_pill">Kapsül</string>
+    <string name="layout_card_width">Genişlik</string>
+    <string name="layout_card_radius">Köşe Yarıçapı</string>
+    <string name="layout_reset_default">Varsayılana Sıfırla</string>
+    <string name="layout_custom">Özel</string>
+
+    <!-- MDBListSettingsScreen -->
+    <string name="mdblist_title">MDBList Değerlendirmeleri</string>
+    <string name="mdblist_subtitle">Detaylarda gösterilecek harici derecelendirmeleri yapılandırın</string>
+    <string name="mdblist_enable_title">MDBList Değerlendirmelerini Etkinleştir</string>
+    <string name="mdblist_enable_subtitle">Harici sağlayıcılardan değerlendirme çeker</string>
+    <string name="mdblist_api_key_title">API Anahtarı</string>
+    <string name="mdblist_api_key_subtitle">MDBList\'ten veri alabilmek için gerekli</string>
+    <string name="mdblist_trakt_title">Trakt</string>
+    <string name="mdblist_trakt_subtitle">Trakt puanını göster</string>
+    <string name="mdblist_imdb_title">IMDb</string>
+    <string name="mdblist_imdb_subtitle">IMDb puanını göster</string>
+    <string name="mdblist_tmdb_title">TMDB</string>
+    <string name="mdblist_tmdb_subtitle">TMDB puanını göster</string>
+    <string name="mdblist_letterboxd_title">Letterboxd</string>
+    <string name="mdblist_letterboxd_subtitle">Letterboxd puanını göster</string>
+    <string name="mdblist_tomatoes_title">Rotten Tomatoes</string>
+    <string name="mdblist_tomatoes_subtitle">Eleştirmen puanını göster</string>
+    <string name="mdblist_audience_title">İzleyici Puanı</string>
+    <string name="mdblist_audience_subtitle">İzleyici puanını göster</string>
+    <string name="mdblist_metacritic_title">Metacritic</string>
+    <string name="mdblist_metacritic_subtitle">Metacritic puanını göster</string>
+    <string name="mdblist_dialog_title">MDBList API Key</string>
+    <string name="mdblist_dialog_subtitle">Harici verileri çekmek için API anahtarınızı girin</string>
+    <string name="mdblist_dialog_placeholder">MDBList API Anahtarını Girin</string>
+    <string name="mdblist_not_set">Ayarlanmadı</string>
+    <string name="action_clear">Temizle</string>
+
+    <!-- TmdbSettingsScreen -->
+    <string name="tmdb_title">TMDB Zenginleştirme</string>
+    <string name="tmdb_subtitle">Hangi meta veri alanlarının TMDB\'den geleceğini seçin</string>
+    <string name="tmdb_enable_title">TMDB Zenginleştirmeyi Etkinleştir</string>
+    <string name="tmdb_enable_subtitle">Eklenti verilerini geliştirmek için TMDB\'yi bir meta veri kaynağı olarak kullanın</string>
+    <string name="tmdb_language_title">Dil</string>
+    <string name="tmdb_language_subtitle">TMDB için meta veri dili</string>
+    <string name="tmdb_artwork_title">Görseller</string>
+    <string name="tmdb_artwork_subtitle">TMDB\'den logo ve arka plan resimleri</string>
+    <string name="tmdb_basic_info_title">Temel Bilgiler</string>
+    <string name="tmdb_basic_info_subtitle">TMDB\'den açıklama, türler ve derecelendirme</string>
+    <string name="tmdb_details_title">Detaylar</string>
+    <string name="tmdb_details_subtitle">TMDB\'den çalışma zamanı, çıkış tarihi, ülke ve dil</string>
+    <string name="tmdb_credits_title">Film Ekibi</string>
+    <string name="tmdb_credits_subtitle">TMDB\'den fotoğraflı aktörler, yönetmen ve yazar</string>
+    <string name="tmdb_productions_title">Yapım Şirketleri</string>
+    <string name="tmdb_productions_subtitle">TMDB\'den yapım şirketleri</string>
+    <string name="tmdb_networks_title">Kanallar</string>
+    <string name="tmdb_networks_subtitle">TMDB\'den ağ/kanal logoları</string>
+    <string name="tmdb_episodes_title">Bölümler</string>
+    <string name="tmdb_episodes_subtitle">Bölüm başlıkları, özetler, küçük resimler ve uzunluk</string>
+    <string name="tmdb_more_like_this_title">Benzer İçerikler</string>
+    <string name="tmdb_more_like_this_subtitle">Detaylarda TMDB önerileri</string>
+    <string name="tmdb_language_dialog_title">TMDB Dili</string>
+
+    <!-- TraktScreen -->
+    <string name="trakt_description">İzleme listenizi, oynatma ilerlemenizi, izlemeye devam ettiklerinizi ve kişisel listelerinizi Trakt ile eşitleyin.</string>
+    <string name="trakt_connected_as">%1$s olarak bağlı</string>
+    <string name="trakt_account_login">Hesap Girişi</string>
+    <string name="trakt_awaiting_instruction">trakt.tv/activate adresine gidin ve bu kodu girin:</string>
+    <string name="trakt_waiting_approval">Onay bekleniyor…</string>
+    <string name="qr_login_approved">Giriş onaylandı. Oturum açılıyor…</string>
+    <string name="qr_login_pending">Telefonunuzdan onay vermeniz bekleniyor…</string>
+    <string name="qr_login_expired">QR kodun süresi doldu. Yeni bir kod oluşturun.</string>
+    <string name="trakt_code_expires">Kodun süresi %1$s sonra dolacak</string>
+    <string name="trakt_token_refreshes">Trakt erişim jetonu %1$s içinde yenilenir</string>
+    <string name="trakt_login_instruction">Trakt cihazı kimlik doğrulamasını başlatmak için Giriş\'e basın. Burada bir QR kodu görünecektir.</string>
+    <string name="trakt_missing_credentials">local.properties içinde TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET eksik.</string>
+    <string name="trakt_continue_watching_window">İzlemeye Devam Etme Penceresi</string>
+    <string name="trakt_continue_watching_subtitle">İzlemeye devam etme için dikkate alınan Trakt geçmişi</string>
+    <string name="trakt_unaired_next_up">Yayınlanmamış Sıradaki Bölümler</string>
+    <string name="trakt_unaired_next_up_subtitle">Yaklaşan bölümleri yayınlanmadan önce göster</string>
+    <string name="trakt_unaired_shown">Gösterilen</string>
+    <string name="trakt_unaired_hidden">Gizlenen</string>
+    <string name="trakt_cached_label">Önbellekte</string>
+    <string name="trakt_stat_movies">Filmler</string>
+    <string name="trakt_stat_shows">Diziler</string>
+    <string name="trakt_stat_episodes">Bölümler</string>
+    <string name="trakt_stat_watched_hours">İzlenen Saat</string>
+    <string name="trakt_disconnect">Bağlantıyı Kes</string>
+    <string name="trakt_disconnect_title">Trakt bağlantısı kesilsin mi?</string>
+    <string name="trakt_disconnect_subtitle">Bu işlem Trakt hesabınızın Nuvio ile bağlantısını kesecektir.</string>
+    <string name="trakt_login">Giriş Yap</string>
+    <string name="trakt_retry">Tekrar Dene</string>
+    <string name="trakt_back">Geri</string>
+    <string name="trakt_cw_window_title">İzlemeye Devam Etme Penceresi</string>
+    <string name="trakt_cw_window_subtitle">Trakt aktivitenizin ne kadarının \u0027izlemeye devam ediliyor\u0027 kısmında görüneceğini seçin.</string>
+    <string name="trakt_unaired_dialog_title">Yayınlanmamış Sıradaki Bölümler</string>
+    <string name="trakt_unaired_dialog_subtitle">Yaklaşan bölümlerin yayınlanmadan önce "İzlemeye Devam Et" sekmesine dahil edilip edilmeyeceğini seçin.</string>
+    <string name="trakt_show_unaired">Yayınlanmamış bölümleri göster</string>
+    <string name="trakt_hide_unaired">Yayınlanmamış bölümleri gizle</string>
+    <string name="trakt_all_history">Tüm geçmiş</string>
+    <string name="trakt_days_format">%1$d gün</string>
+
+    <!-- DebugSettingsScreen -->
+    <string name="debug_title">Hata Ayıklama</string>
+    <string name="debug_subtitle">Geliştirici araçları ve özellik bayrakları (sadece hata ayıklama yapıları)</string>
+    <string name="debug_section_popup">Açılır Pencere Testi</string>
+    <string name="debug_playback_error_title">Oynatma Hatası Ekranı</string>
+    <string name="debug_playback_error_subtitle">Simüle edilmiş bir oynatma hatası açılır penceresini göster</string>
+    <string name="debug_section_features">Özellik Anahtarları</string>
+    <string name="debug_account_tab_title">Hesap Sekmesi</string>
+    <string name="debug_account_tab_subtitle">Ayarlar gezintisinde Hesap sekmesini göster</string>
+    <string name="debug_sync_code_title">Senkronizasyon Kodu Özellikleri</string>
+    <string name="debug_sync_code_subtitle">Hesap ayarlarında Senkronizasyon Kodu Oluştur/Gir düğmelerini göster</string>
+    <string name="debug_section_account">Hesap</string>
+    <string name="debug_manual_signin_title">Manuel Giriş Yap</string>
+    <string name="debug_manual_signin_subtitle">E-posta ve parola ile giriş yapın (Supabase yetkilendirmesi)</string>
+    <string name="debug_email_placeholder">E-Posta</string>
+    <string name="debug_password_placeholder">Şifre</string>
+    <string name="debug_signing_in">Giriş yapılıyor\u2026</string>
+    <string name="debug_sign_in">Giriş Yap</string>
+    <string name="debug_error_dialog_title">Oynatma Hatası</string>
+    <string name="debug_error_dialog_subtitle">Oynatma sırasında bir hata oluştu.\n\nHata: Test simülasyon hatası - bu gerçek bir hata değil. Kaynak HTTP 503 döndürdü (Hizmet Kullanılamıyor).</string>
+    <string name="debug_dismiss">Kapat</string>
+
+    <!-- ProfileSettingsContent -->
+    <string name="profile_title">Profiller</string>
+    <string name="profile_subtitle">Bu hesaptaki kullanıcı profillerini yönetin.</string>
+    <string name="profile_primary_label">Birincil</string>
+    <string name="profile_shares_primary">Birincil profilin %1$s verisini kullanır</string>
+    <string name="profile_edit_label">Düzenle</string>
+    <string name="profile_add">Profil Ekle</string>
+    <string name="profile_create_title">Profil Oluştur</string>
+    <string name="profile_edit_title">Profili Düzenle: %1$s</string>
+    <string name="profile_name_placeholder">Profil Adı</string>
+    <string name="profile_avatar_color">Avatar Rengi</string>
+    <string name="profile_use_primary_addons">Birincil profilin eklentilerini kullan</string>
+    <string name="profile_use_primary_plugins">Birincil profilin pluginlerini kullan</string>
+    <string name="profile_creating">Oluşturuluyor\u2026</string>
+    <string name="profile_create_btn">Oluştur</string>
+    <string name="profile_confirm">Onayla</string>
+    <string name="profile_delete">Sil</string>
+    <string name="profile_addons">eklentiler</string>
+    <string name="profile_plugins">pluginler</string>
+
+
+    <!-- AddonManagerScreen -->
+    <string name="addon_title">Eklentiler</string>
+    <string name="addon_readonly_notice">Birincil profilin eklentileri kullanılıyor, değiştirilemez</string>
+    <string name="addon_install_title">Eklenti Kur</string>
+    <string name="addon_install_placeholder">https://example.com</string>
+    <string name="addon_installing">Kuruluyor</string>
+    <string name="addon_install_btn">Kur</string>
+    <string name="addon_installed_section">Kurulu</string>
+    <string name="addon_empty">Kurulu eklenti bulunamadı. Başlamak için bir tane ekleyin.</string>
+    <string name="addon_remove">Kaldır</string>
+    <string name="addon_manage_from_phone_title">Telefondan Yönet</string>
+    <string name="addon_manage_from_phone_subtitle">Telefondan eklentileri ve ana sayfa kataloglarını yönetmek için QR kodunu tarayın</string>
+    <string name="addon_reorder_title">Ana Sayfa Kataloglarını Yeniden Sırala</string>
+    <string name="addon_reorder_subtitle">Ana sayfadaki (Klasik/Modern/Grid) katalog sıralamasını yönet</string>
+    <string name="addon_qr_scan_instruction">Eklenti ve katalogları yönetmek için telefonla bu kodu tarayın</string>
+    <string name="addon_qr_close">Kapat</string>
+    <string name="addon_confirm_title">Eklenti &amp; Katalog Değişikliklerini Onaylayın</string>
+    <string name="addon_confirm_subtitle">Telefonunuzdan şu değişiklikler yapıldı:</string>
+    <string name="addon_confirm_added">Eklenen:</string>
+    <string name="addon_confirm_removed">Kaldırılan:</string>
+    <string name="addon_confirm_catalog_reordered">Katalog düzeni değiştirildi</string>
+    <string name="addon_confirm_catalogs_disabled">Ana sayfada devre dışı bırakılan kataloglar:</string>
+    <string name="addon_confirm_catalogs_enabled">Ana sayfada etkinleştirilen kataloglar:</string>
+    <string name="addon_confirm_no_changes">Okunan yeni bir değişiklik algılanmadı</string>
+    <string name="addon_confirm_reject">Reddet</string>
+    <string name="addon_confirm_confirm">Onayla</string>
+
+    <!-- CatalogOrderScreen -->
+    <string name="catalog_order_title">Ana Sayfa Kataloglarını Yeniden Sırala</string>
+    <string name="catalog_order_subtitle">Bu seçenek, Ana sayfadaki katalog satırı sırasını (Klasik/Modern/Izgara) kontrol eder.</string>
+    <string name="catalog_order_empty">Henüz mevcut ana sayfa kataloğu yok.</string>
+    <string name="catalog_order_disabled_on_home">Ana Sayfada Devre Dışı</string>
+    <string name="catalog_order_enable">Etkinleştir</string>
+    <string name="catalog_order_disable">Devre Dışı</string>
+
+
+    <!-- StreamScreen -->
+    <string name="stream_retry">Yeniden Dene</string>
+    <string name="stream_no_streams">Akış bulunamadı</string>
+    <string name="stream_no_streams_hint">Daha fazla akış bulmak için farklı eklentiler kurmayı deneyin</string>
+    <string name="stream_finding_source">Kaynak aranıyor</string>
+    <string name="stream_type_torrent">Torrent</string>
+    <string name="stream_type_youtube">YouTube</string>
+    <string name="stream_type_external">Harici</string>
+    <string name="stream_player_picker_title">Hangi oynatıcı kullanılsın?</string>
+    <string name="stream_player_internal">Dahili Oynatıcı</string>
+    <string name="stream_player_external">Harici Oynatıcı</string>
+
+    <!-- PlayerScreen -->
+    <string name="player_ends_at">Bitiş saati: %1$s</string>
+    <string name="player_via">Sağlayıcı: %1$s</string>
+    <string name="player_subtitle_delay">Altyazı Gecikmesi</string>
+    <string name="player_error_title">Oynatma Hatası</string>
+    <string name="player_go_back">Geri Git</string>
+    <string name="player_speed_title">Oynatma Hızı</string>
+    <string name="player_more_actions_title">Daha Fazla</string>
+    <string name="player_more_speed">Oynatma Hızı</string>
+    <string name="player_more_aspect_ratio">Görüntü Oranı</string>
+    <string name="player_more_open_external">Harici Oynatıcıda Aç</string>
+
+    <!-- StreamSourcesSidePanel -->
+    <string name="sources_title">Kaynaklar</string>
+    <string name="sources_reload">Yenile</string>
+    <string name="sources_close">Kapat</string>
+    <string name="sources_no_streams">Kaynak bulunamadı</string>
+
+    <!-- EpisodesSidePanel -->
+    <string name="episodes_panel_close">Kapat</string>
+    <string name="episodes_panel_back">Geri</string>
+    <string name="episodes_panel_reload">Yeniden Yükle</string>
+    <string name="episodes_panel_no_streams">Kaynak bulunamadı</string>
+    <string name="episodes_panel_no_episodes">Henüz bölüm yok</string>
+    <string name="episodes_panel_title">Bölümler</string>
+    <string name="episodes_panel_streams_title">Kaynaklar</string>
+    <string name="player_speed_normal">Normal</string>
+    <string name="player_aspect_fit">Sığdır (Orijinal)</string>
+    <string name="player_aspect_stretch">Genişlet</string>
+    <string name="player_aspect_fit_width">Genişliğe Sığdır</string>
+    <string name="player_aspect_fit_height">Yüksekliğe Sığdır</string>
+    <string name="player_aspect_crop">Kırp</string>
+
+    <!-- AudioDialog -->
+    <string name="audio_dialog_title">Ses</string>
+
+    <!-- SubtitleDialog / SubtitleStyleSidePanel -->
+    <string name="subtitle_dialog_title">Altyazılar</string>
+    <string name="subtitle_no_builtin">Dosyaya gömülü altyazı yok</string>
+    <string name="subtitle_loading_addon">Altyazılar eklentilerden yükleniyor\u2026</string>
+    <string name="subtitle_no_addon">Eklentiler aracılığıyla altyazı bulunamadı</string>
+    <string name="subtitle_text_color">Metin Rengi</string>
+    <string name="subtitle_outline_color">Dış Çizgi Rengi</string>
+    <string name="subtitle_reset_defaults">Varsayılanlara Sıfırla</string>
+    <string name="subtitle_tab_builtin">Gömülü</string>
+    <string name="subtitle_tab_addons">Eklentiler</string>
+    <string name="subtitle_tab_languages">Diller</string>
+    <string name="subtitle_tab_style">Stil</string>
+    <string name="subtitle_tab_delay">Gecikme</string>
+    <string name="subtitle_none">Hiçbiri</string>
+    <string name="subtitle_all">Tümü</string>
+    <string name="subtitle_section_core">Temel</string>
+    <string name="subtitle_section_advanced">Gelişmiş</string>
+    <string name="subtitle_font_size">Yazı Tipi Boyutu</string>
+    <string name="subtitle_bold">Kalın</string>
+    <string name="subtitle_outline">Dış Çizgi</string>
+    <string name="subtitle_bottom_offset">Alt Konum</string>
+    <string name="subtitle_on">Açık</string>
+    <string name="subtitle_off">Kapalı</string>
+    <string name="subtitle_style_title">Altyazı Stili</string>
+    <string name="subtitle_style_color">Renk</string>
+    <string name="subtitle_style_reset">Sıfırla</string>
+
+    <!-- PauseOverlay -->
+    <string name="pause_you_are_watching">Şu an izliyorsunuz:</string>
+    <string name="pause_cast_label">Oyuncular</string>
+    <string name="pause_back_to_details">Ayrıntılara dön</string>
+    <string name="pause_as_character">Karakter: %1$s</string>
+
+    <!-- NextEpisodeCardOverlay -->
+    <string name="next_episode_label">Sıradaki Bölüm</string>
+
+    <!-- SearchScreen -->
+    <string name="search_keyboard_hint">Aramak için klavyede Bitti\'ye basın</string>
+    <string name="search_placeholder">Film ve dizi ara</string>
+    <string name="search_start_title">Aramaya Başlayın</string>
+    <string name="search_start_subtitle">En az 2 karakter girin</string>
+    <string name="search_start_subtitle_no_discover">Keşfet kapalı. En az 2 karakter girin</string>
+
+    <!-- LibraryScreen -->
+    <string name="library_syncing">Trakt kütüphanesi senkronize ediliyor\u2026</string>
+    <string name="library_title">Kütüphane</string>
+    <string name="library_filter_list">Yalnızca Liste</string>
+    <string name="library_filter_type">Kategori</string>
+    <string name="library_filter_sort">Sırala</string>
+    <string name="library_manage_lists">Listeleri Yönet</string>
+    <string name="library_manage_trakt_lists">Trakt Listelerini Yönet</string>
+    <string name="library_no_lists">Henüz kişisel liste yok.</string>
+    <string name="library_list_create">Oluştur</string>
+    <string name="library_list_edit">Düzenle</string>
+    <string name="library_list_move_up">Yukarı Taşı</string>
+    <string name="library_list_move_down">Aşağı Taşı</string>
+    <string name="library_list_delete">Sil</string>
+    <string name="library_list_close">Kapat</string>
+    <string name="library_list_name_label">Liste Adı</string>
+    <string name="library_list_description_label">Açıklama</string>
+    <string name="library_list_privacy">Gizlilik</string>
+    <string name="library_delete_title">Listeyi silmek istediğinizden emin misiniz?</string>
+    <string name="library_delete_subtitle">Bu işlem listeyi ve içindeki tüm öğeleri Trakt hesabınızdan kaldırır.</string>
+    <string name="library_delete_confirm">Sil</string>
+    <string name="library_source_local">YEREL</string>
+    <string name="library_type_all">Tümü</string>
+    <string name="library_type_items">içerik bulundu</string>
+    <string name="library_empty_local_title">Henüz içerik eklemediniz</string>
+    <string name="library_empty_trakt_title">Bu listede içerik görünmüyor</string>
+    <string name="library_empty_local_subtitle">İçerik eklemek için içerik detaylarındaki + tuşunu kullanın</string>
+    <string name="library_empty_trakt_subtitle">İçerikleri izleme listenize eklemek için içerik detaylarındaki + tuşunu kullanın</string>
+
+    <!-- AccountSettingsContent -->
+    <string name="account_loading">Yükleniyor\u2026</string>
+    <string name="account_sync_description">Kütüphanenizi, görüntüleme ilerlemenizi, eklentilerinizi ve pluginlerinizi cihazlar arasında eşitleyin.</string>
+    <string name="account_signin_qr_title">QR ile Oturum Aç</string>
+    <string name="account_signin_qr_subtitle">QR kodunu taratıp e-posta ile girişinizi telefondan tamamlayın</string>
+    <string name="account_signed_in_label">Oturum açıldı</string>
+    <string name="account_total_label">Toplam</string>
+    <string name="account_loading_sync">Senkronizasyon verileri yükleniyor\u2026</string>
+    <string name="account_sign_out">Oturumu Kapat</string>
+
+    <!-- AuthSignInScreen -->
+    <string name="auth_signin_title">Oturum Aç</string>
+    <string name="auth_signin_tv_disabled">TV\'de E-Posta / Parola girişi devre dışı. QR ile Giriş sekmesinden devam edin.</string>
+    <string name="auth_signin_qr_btn">QR Kod ile Devam Et</string>
+
+    <!-- AuthQrSignInScreen -->
+    <string name="auth_qr_title">QR Kod ile Oturum Aç</string>
+    <string name="auth_qr_account_login">Oturum Aç</string>
+    <string name="auth_qr_finishing">Hesap doğrulanıyor\u2026</string>
+    <string name="auth_qr_code_label">Kodunuz: %1$s</string>
+    <string name="auth_qr_expires">Geçerlilik süresi doluyor: %1$s</string>
+
+    <!-- SyncCodeGenerateScreen -->
+    <string name="sync_generate_title">Senkronizasyon Kodu Oluştur</string>
+    <string name="sync_generate_subtitle">Senkronizasyon kodunuzu korumak için bir PIN oluşturun. Parolanızı diğer cihazlarda kullanabilirsiniz.</string>
+    <string name="sync_generate_code_label">Cihaz Eşleştirme Kodunuz</string>
+    <string name="sync_generate_instruction">Eşleştirme adresinden diğer cihazınızı bağlamak için bu kodu ve kendinize ait PIN\'i kullanın.</string>
+    <string name="sync_generate_done">Bitti</string>
+    <string name="sync_generate_pin_label">Bir PIN Belirleyin (4 ile 8 karakter arasında)</string>
+    <string name="sync_generate_pin_placeholder">PIN girin</string>
+
+    <!-- SyncCodeClaimScreen -->
+    <string name="sync_claim_title">Cihazı Bağla</string>
+    <string name="sync_claim_subtitle">Cihazınızı eşleştirmek için diğer cihazdan aldığınız senkronizasyon kodunu ve PIN\'i girin.</string>
+    <string name="sync_claim_success">Cihaz eşleştirildi. Eklenti ve pluginleriniz arka planda kopyalanacak.</string>
+    <string name="sync_claim_done">Bitti</string>
+    <string name="sync_claim_code_label">Senkronizasyon Kodu</string>
+    <string name="sync_claim_code_placeholder">XXXX-XXXX-XXXX-XXXX-XXXX</string>
+    <string name="sync_claim_pin_label">PIN</string>
+    <string name="sync_claim_pin_placeholder">PIN numarasını gir</string>
+
+    <!-- PluginScreen -->
+    <string name="plugin_readonly_notice">Birincil profilin eklentileri eşleştirildi. Başka değişiklik yapmanız kısıtlanmıştır.</string>
+    <string name="plugin_repositories_section">Depolar (%1$d)</string>
+    <string name="plugin_providers_section">Sağlayıcılar (%1$d)</string>
+    <string name="plugin_title">Pluginler</string>
+    <string name="plugin_subtitle">Sağlayıcıları ve bağımsız geliştirici depolarını yönet</string>
+    <string name="plugin_add_repository">Depo ekle</string>
+    <string name="plugin_add_btn">Ekle</string>
+    <string name="plugin_manage_from_phone_title">Telefondan Yönet</string>
+    <string name="plugin_manage_from_phone_subtitle">Yeni bir eklenti deposu eklemek ya da silmek için telefondan kodu tarayın</string>
+    <string name="plugin_qr_instruction">Depoları yönetmek için bu adresi açıp kontrol edin.</string>
+    <string name="plugin_qr_close">Kapat</string>
+    <string name="plugin_confirm_title">Depo Değişikliklerini Uygula</string>
+    <string name="plugin_confirm_subtitle">Telefon aracılığıyla aşağıdaki eşitleme başlatıldı:</string>
+    <string name="plugin_confirm_added">Gelenler:</string>
+    <string name="plugin_confirm_removed">Silinenler:</string>
+    <string name="plugin_confirm_no_changes">Durum: Güncel</string>
+    <string name="plugin_confirm_total">Listeye kayıtlı toplam depo: %1$d</string>
+    <string name="plugin_confirm_reject">Reddet</string>
+    <string name="plugin_confirm_confirm">Tamam, Uygula</string>
+    <string name="plugin_updated_format">Güncellenme: %1$s</string>
+    <string name="plugin_test_btn">Test Et</string>
+    <string name="plugin_test_results">Deneme Sonucu (%1$d Bağlantı bulundu)</string>
+
+    <!-- ProfileSelectionScreen -->
+    <string name="profile_selection_title">Kim izliyor?</string>
+    <string name="profile_selection_subtitle">İçeriklere girmek için kullanıcı profilinizden birine tıklayın.</string>
+    <string name="profile_selection_hint">Görmek için uzaktan kumanda D-Pad oklarını tıklatın.</string>
+    <string name="profile_selection_empty">Henüz kaydedilmiş profil bulunamadı.</string>
+    <string name="profile_selection_primary_badge">YÖNETİCİ</string>
+
+    <!-- CastDetailScreen -->
+    <string name="cast_detail_error">İçerik çekilirken bilinmeyen bir sorun ile karşılaşıldı.</string>
+    <string name="cast_detail_retry">Hata oluştu! Tekrar Dene</string>
+    <string name="cast_detail_filmography">Yapımları ve Filmografisi</string>
+
+    <!-- CatalogSeeAllScreen -->
+    <string name="catalog_see_all_from">Kaynak: %1$s</string>
+    <string name="catalog_see_all_empty_title">Görsel öğe bulunamadı</string>
+    <string name="catalog_see_all_empty_subtitle">Daha sonra başka bir alt alan türünü denemek de faydalı olacaktır.</string>
+
+    <!-- LayoutSelectionScreen -->
+    <string name="layout_selection_welcome">Nuvio\'ya Hoş Geldiniz</string>
+    <string name="layout_selection_subtitle">Televizyon boyutuna uygun ideal ekran düzenini oluşturabilirsiniz.</string>
+    <string name="layout_selection_continue">Uygulamaya Devam Et</string>
+
+    <!-- UpdatePromptDialog -->
+    <string name="update_title">Yeni Uygulama Sürümü Mevcut</string>
+    <string name="update_downloading">Güncelleme İnternetten İndiriliyor</string>
+    <string name="update_unknown_sources">Nuvio\'nun indirdiği eklentileri yüklayabilmek adına `Bilinmeyen kaynaklar` veya `Dışarıdan yükleme` iznine ihtiyaç var.</string>
+
+    <!-- AccountScreen -->
+    <string name="account_title">Ana Bilgi Modülleri</string>
+    <string name="account_sign_in_description">Senkron başlatmak için oturumunuzun aktif olduğundan emin olmalısınız. Ayrıca bağlantıların her türlü kopya dosyaları da bulutta bekleyecektir.</string>
+    <string name="account_sync_code_title">Bağlantı Kod Değeriniz</string>
+    <string name="account_sync_code_description">Eşleştirme ile hesap kullanmadan bağlantı gerçekleştirebilirsiniz.</string>
+    <string name="account_linked_devices">Eşleştirilen Uygulamalar (%1$d)</string>
+    <string name="account_no_linked_devices">Aktif bağlantı bulunamadı.</string>
+    <string name="account_unlink">Bağlantıyı Sil</string>
+
+    <!-- EpisodeRatingsSection -->
+    <string name="ratings_loading">Kullanıcı geri dönüşü verisi sunucu merkezine ulaşıyor.</string>
+    <string name="ratings_unavailable">Bu bölüm tablosu için harici Puan formatı bulunmamaktadır.</string>
+    <string name="ratings_season_summary">Sezon %1$d | Toplam %2$d İzlem Tablosu Uzunluğu</string>
+
+    <!-- SearchDiscoverSection -->
+    <string name="discover_title">Keşfet</string>
+    <string name="discover_load_more">Daha Fazla Sonuç</string>
+    <string name="discover_loading">Arama çalıştırılıyor...</string>
+    <string name="discover_filter_type">Tür filtresi</string>
+    <string name="discover_filter_catalog">Katalog filtresi</string>
+    <string name="discover_filter_genre">Kategori filtresi</string>
+    <string name="discover_select_catalog">Türünü Seçin</string>
+    <string name="discover_genre_default">Varsayılan Filtre</string>
+    <string name="discover_empty_no_catalog_title">Bir eklenti katalog tablosuna işaret oluşturun</string>
+    <string name="discover_empty_no_catalog_subtitle">Keşfetmeye başlamanın temel başlangıcı bu kısımdandır.</string>
+    <string name="discover_empty_no_content_title">Girdiğiniz kelimeyle eşleşen içerik bulunamadı</string>
+    <string name="discover_empty_no_content_subtitle">Kelimenizi tekrar değerlendirin.</string>
+
+    <!-- AddonManagerScreen -->
+    <string name="addon_confirm_total_addons">Mevcut toplam eklenti adedi: %1$d</string>
+    <string name="addon_confirm_total_catalogs">Görüntüleme sayısı: %1$d</string>
+    <string name="addon_catalogs_types">%1$d Katalog | Tür: %2$s</string>
+
+    <!-- PluginScreen -->
+    <string name="plugin_and_more">... ve geriye kalan %1$d tanesi daha</string>
+    <string name="plugin_providers_count">%1$d yayıncı sistem servisi</string>
+    <string name="plugin_enabled">Aktif Edilmiş</string>
+    <string name="plugin_disabled">Kapalı veya Sorunlu</string>
+    <string name="plugin_no_repos">Aktif paket depo klasörünüz boş.\\nHemen yükleme için devam edin.</string>
+
+    <!-- ProfileSettingsContent -->
+    <string name="profile_edit_title_id">Profil Düzenleyici | KOD: %1$d</string>
+
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_passthrough_info">Yüksek kaliteli ses geçidi (TrueHD, DTS, AC-3) desteklenen HDMI veya uyumlu ses alıcı / arayüz bar donanımlarına bağlanıldığında yazılımın çözümüne bırakılmadan direkt doğrudan iletilir.</string>
+    <string name="audio_dv_title">DV7 - HEVC Geri Yansıması</string>
+
+    <!-- SidebarNavigation / MainActivity -->
+    <string name="nav_home">Ana Menü</string>
+    <string name="nav_discover">Keşfet</string>
+    <string name="nav_search">Ara</string>
+    <string name="nav_library">Kütüphanem</string>
+    <string name="nav_addons">Eklentiler</string>
+    <string name="nav_settings">Ayarlar</string>
+    <string name="cd_expand_sidebar">Panel Sekmesini Büyüt</string>
+
+    <string name="update_close">Kapat</string>
+    <string name="update_open_settings">Ayarları Aç</string>
+    <string name="update_install">Yükle</string>
+    <string name="update_ignore">Atla</string>
+</resources>

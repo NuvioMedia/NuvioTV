@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -93,6 +94,8 @@ fun ThemeSettingsContent(
             "fr" to "Français",
             "it" to "Italiano",
             "pl" to "Polski",
+            "pt-PT" to "Português (Portugal)",
+            "tr" to "Türkçe",
             "sk" to "Slovensky",
             "sl" to "Slovenščina",
             "ro" to "Română"
@@ -177,28 +180,43 @@ fun ThemeSettingsContent(
             width = 400.dp,
             suppressFirstKeyUp = false
         ) {
-            supportedLocales.forEachIndexed { index, (tag, name) ->
-                val isSelected = tag == selectedTag
-                Button(
-                    onClick = {
-                        val previousTag = selectedTag
-                        context.getSharedPreferences("app_locale", android.content.Context.MODE_PRIVATE)
-                            .edit().putString("locale_tag", tag ?: "").apply()
-                        selectedTag = tag
-                        showLanguageDialog = false
-                        if (previousTag != tag) {
-                            pendingLanguageRestart = true
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(if (index == 0) Modifier.focusRequester(firstFocusRequester) else Modifier),
-                    colors = ButtonDefaults.colors(
-                        containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
-                        contentColor = NuvioColors.TextPrimary
-                    )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(280.dp)
+            ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 2.dp)
                 ) {
-                    Text(name)
+                    for (index in supportedLocales.indices) {
+                        val (tag, name) = supportedLocales[index]
+                        item {
+                            val isSelected = tag == selectedTag
+                            Button(
+                                onClick = {
+                                    val previousTag = selectedTag
+                                    context.getSharedPreferences("app_locale", android.content.Context.MODE_PRIVATE)
+                                        .edit().putString("locale_tag", tag ?: "").apply()
+                                    selectedTag = tag
+                                    showLanguageDialog = false
+                                    if (previousTag != tag) {
+                                        pendingLanguageRestart = true
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(if (index == 0) Modifier.focusRequester(firstFocusRequester) else Modifier),
+                                colors = ButtonDefaults.colors(
+                                    containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
+                                    contentColor = NuvioColors.TextPrimary
+                                )
+                            ) {
+                                Text(name)
+                            }
+                        }
+                    }
                 }
             }
         }

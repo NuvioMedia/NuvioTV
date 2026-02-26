@@ -3,7 +3,9 @@
 package com.nuvio.tv.ui.screens.settings
 
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
@@ -11,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ClosedCaption
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Language
@@ -32,6 +35,7 @@ import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.SubtitleOrganizationMode
 import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
+import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
 
 private val subtitleColors = listOf(
@@ -433,40 +437,68 @@ private fun SubtitleOrganizationModeDialog(
         Triple(SubtitleOrganizationMode.BY_ADDON, stringResource(R.string.sub_org_by_addon), stringResource(R.string.sub_org_by_addon_desc))
     )
 
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.sub_organization),
+        width = 460.dp,
+        suppressFirstKeyUp = false
+    ) {
         androidx.compose.foundation.layout.Box(
             modifier = androidx.compose.ui.Modifier
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
-                .background(NuvioColors.BackgroundCard)
+                .fillMaxWidth()
+                .heightIn(max = 320.dp)
         ) {
-            androidx.compose.foundation.layout.Column(
-                modifier = androidx.compose.ui.Modifier
-                    .width(460.dp)
-                    .padding(24.dp)
+            androidx.compose.foundation.lazy.LazyColumn(
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.sub_organization),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = NuvioColors.TextPrimary
-                )
-                Spacer(modifier = androidx.compose.ui.Modifier.height(16.dp))
+                items(
+                    items = options,
+                    key = { it.first.name }
+                ) { (mode, title, description) ->
+                    val isSelected = mode == selectedMode
 
-                androidx.compose.foundation.lazy.LazyColumn(
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
-                ) {
-                    items(
-                        items = options,
-                        key = { it.first.name }
-                    ) { (mode, title, description) ->
-                        val isSelected = mode == selectedMode
-
-                        RenderTypeSettingsItem(
-                            title = title,
-                            subtitle = description,
-                            isSelected = isSelected,
-                            onClick = { onModeSelected(mode) },
-                            onFocused = {}
-                        )
+                    androidx.tv.material3.Card(
+                        onClick = { onModeSelected(mode) },
+                        modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                        colors = androidx.tv.material3.CardDefaults.colors(
+                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
+                            focusedContainerColor = NuvioColors.FocusBackground
+                        ),
+                        shape = androidx.tv.material3.CardDefaults.shape(
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
+                        ),
+                        scale = androidx.tv.material3.CardDefaults.scale(focusedScale = 1f)
+                    ) {
+                        androidx.compose.foundation.layout.Row(
+                            modifier = androidx.compose.ui.Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                        ) {
+                            androidx.compose.foundation.layout.Column(
+                                modifier = androidx.compose.ui.Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary
+                                )
+                                Spacer(modifier = androidx.compose.ui.Modifier.height(4.dp))
+                                Text(
+                                    text = description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = NuvioColors.TextSecondary
+                                )
+                            }
+                            if (isSelected) {
+                                androidx.tv.material3.Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = stringResource(R.string.cd_selected),
+                                    tint = NuvioColors.Primary
+                                )
+                            }
+                        }
                     }
                 }
             }

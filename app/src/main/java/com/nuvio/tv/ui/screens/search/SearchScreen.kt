@@ -1,9 +1,13 @@
 package com.nuvio.tv.ui.screens.search
 
-import android.app.Activity
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Bundle
 import android.view.KeyEvent
+import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -62,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -76,7 +81,6 @@ import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.Locale
 import kotlin.math.roundToInt
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
@@ -100,7 +104,7 @@ fun SearchScreen(
     var pendingFocusMoveToResultsQuery by remember { mutableStateOf<String?>(null) }
     var pendingFocusMoveSawSearching by remember { mutableStateOf(false) }
     var pendingFocusMoveHadExistingSearchRows by remember { mutableStateOf(false) }
-    var pendingVoiceSearchResume by remember { mutableStateOf(false) }
+    var isVoiceListening by remember { mutableStateOf(false) }
     var discoverFocusedItemIndex by rememberSaveable { mutableStateOf(0) }
     var restoreDiscoverFocus by rememberSaveable { mutableStateOf(false) }
     var pendingDiscoverRestoreOnResume by rememberSaveable { mutableStateOf(false) }
@@ -119,48 +123,103 @@ fun SearchScreen(
             Toast.makeText(context, "No speech detected. Try again.", Toast.LENGTH_SHORT).show()
         }
     }
-    val voiceLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        pendingVoiceSearchResume = false
-        if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
-        val recognized = result.data
-            ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            ?.firstOrNull()
-            .orEmpty()
-            .trim()
-        onVoiceQueryResultState.value(recognized)
-    }
-    val voiceIntentAction = remember(context) {
-        listOf(
-            RecognizerIntent.ACTION_RECOGNIZE_SPEECH,
-            RecognizerIntent.ACTION_VOICE_SEARCH_HANDS_FREE
-        ).firstOrNull { action ->
-            Intent(action).resolveActivity(context.packageManager) != null
+    val isVoiceSearchAvailable = remember(context) { SpeechRecognizer.isRecognitionAvailable(context) }
+    val speechRecognizer = remember(context, isVoiceSearchAvailable) {
+        if (isVoiceSearchAvailable) {
+            runCatching { SpeechRecognizer.createSpeechRecognizer(context) }.getOrNull()
+        } else {
+            null
         }
     }
-    val isVoiceSearchAvailable = voiceIntentAction != null
+    val hasRecordAudioPermission by remember(context) {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+        )
+    }
+    var recordAudioPermissionGranted by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val requestAudioPermission = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        recordAudioPermissionGranted = granted
+        if (granted) {
+            isVoiceListening = true
+            speechRecognizer?.startListening(
+                Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                    putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to search")
+                }
+            )
+        } else {
+            Toast.makeText(context, "Microphone permission is required for voice search.", Toast.LENGTH_SHORT).show()
+        }
+    }
+    LaunchedEffect(hasRecordAudioPermission) {
+        recordAudioPermissionGranted = hasRecordAudioPermission
+    }
+    DisposableEffect(speechRecognizer) {
+        val listener = object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) = Unit
+            override fun onBeginningOfSpeech() = Unit
+            override fun onRmsChanged(rmsdB: Float) = Unit
+            override fun onBufferReceived(buffer: ByteArray?) = Unit
+            override fun onEndOfSpeech() = Unit
+            override fun onEvent(eventType: Int, params: Bundle?) = Unit
+
+            override fun onError(error: Int) {
+                isVoiceListening = false
+                if (error != SpeechRecognizer.ERROR_CLIENT) {
+                    Toast.makeText(context, "Voice recognition failed. Try again.", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onResults(results: Bundle?) {
+                isVoiceListening = false
+                val recognized = results
+                    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    ?.firstOrNull()
+                    .orEmpty()
+                    .trim()
+                onVoiceQueryResultState.value(recognized)
+            }
+
+            override fun onPartialResults(partialResults: Bundle?) = Unit
+        }
+
+        speechRecognizer?.setRecognitionListener(listener)
+        onDispose {
+            speechRecognizer?.setRecognitionListener(null)
+            speechRecognizer?.destroy()
+        }
+    }
     val topInputFocusRequester = remember(isVoiceSearchAvailable) {
         if (isVoiceSearchAvailable) voiceFocusRequester else searchFocusRequester
     }
     val launchVoiceSearch: () -> Unit = {
-        val action = voiceIntentAction
-        if (action == null) {
+        if (!isVoiceSearchAvailable || speechRecognizer == null) {
             Toast.makeText(context, "Voice search is unavailable on this device.", Toast.LENGTH_SHORT).show()
+        } else if (!recordAudioPermissionGranted) {
+            requestAudioPermission.launch(Manifest.permission.RECORD_AUDIO)
         } else {
-            val intent = Intent(action).apply {
-                putExtra(
-                    RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+            isVoiceListening = true
+            runCatching {
+                speechRecognizer.startListening(
+                    Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+                        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                        putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to search")
+                    }
                 )
-                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
-                putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to search")
-            }
-            pendingVoiceSearchResume = true
-            runCatching { voiceLauncher.launch(intent) }.onFailure {
-                pendingVoiceSearchResume = false
+            }.onFailure {
+                isVoiceListening = false
                 Toast.makeText(context, "Voice search is unavailable on this device.", Toast.LENGTH_SHORT).show()
             }
         }
@@ -247,7 +306,7 @@ fun SearchScreen(
 
     val latestPendingDiscoverRestore by rememberUpdatedState(pendingDiscoverRestoreOnResume)
     val latestShouldKeepSearchFocus by rememberUpdatedState(
-        focusResults || uiState.isSearching || pendingVoiceSearchResume
+        focusResults || uiState.isSearching || isVoiceListening
     )
     val latestVoiceSearchAvailable by rememberUpdatedState(isVoiceSearchAvailable)
     DisposableEffect(lifecycleOwner) {
