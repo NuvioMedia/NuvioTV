@@ -98,18 +98,67 @@ class CatalogOrderViewModel @Inject constructor(
         val availableMap = defaultEntries.associateBy { it.key }
         val defaultOrderKeys = defaultEntries.map { it.key }
 
-        val savedValid = savedOrderKeys
-            .asSequence()
-            .filter { it in availableMap }
-            .distinct()
-            .toList()
+        // Build a map of catalog key patterns for fuzzy matching
+        val keyToAddonAndType = mutableMapOf<String, Pair<String, String>>()
+        defaultEntries.forEach { entry ->
+            // Key format: ${addonId}_${type}_${catalogId}
+            // We need to extract addonId and type, but catalogId can contain underscores
+            val firstUnderscore = entry.key.indexOf('_')
+            if (firstUnderscore > 0) {
+                val addonId = entry.key.substring(0, firstUnderscore)
+                val remaining = entry.key.substring(firstUnderscore + 1)
+                val secondUnderscore = remaining.indexOf('_')
+                if (secondUnderscore > 0) {
+                    val type = remaining.substring(0, secondUnderscore)
+                    keyToAddonAndType[entry.key] = addonId to type
+                }
+            }
+        }
 
-        val savedKeySet = savedValid.toSet()
-        val missing = defaultOrderKeys.filterNot { it in savedKeySet }
-        val effectiveOrder = savedValid + missing
+        // Build final order with fuzzy matching for dynamic catalogs
+        val finalOrder = mutableListOf<String>()
+        val usedKeys = mutableSetOf<String>()
 
-        return effectiveOrder.mapIndexedNotNull { index, key ->
-            val entry = availableMap[key] ?: return@mapIndexedNotNull null
+        savedOrderKeys.forEach { savedKey ->
+            if (savedKey in availableMap) {
+                // Exact match found
+                if (savedKey !in usedKeys) {
+                    finalOrder.add(savedKey)
+                    usedKeys.add(savedKey)
+                }
+            } else {
+                // Try fuzzy match: find a catalog from same addon+type that hasn't been used
+                val firstUnderscore = savedKey.indexOf('_')
+                if (firstUnderscore > 0) {
+                    val addonId = savedKey.substring(0, firstUnderscore)
+                    val remaining = savedKey.substring(firstUnderscore + 1)
+                    val secondUnderscore = remaining.indexOf('_')
+                    if (secondUnderscore > 0) {
+                        val type = remaining.substring(0, secondUnderscore)
+                        val matchingKey = defaultOrderKeys.firstOrNull { availableKey ->
+                            availableKey !in usedKeys &&
+                            keyToAddonAndType[availableKey]?.let { (aid, t) ->
+                                aid == addonId && t == type
+                            } == true
+                        }
+                        if (matchingKey != null) {
+                            finalOrder.add(matchingKey)
+                            usedKeys.add(matchingKey)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Add any remaining catalogs that weren't matched
+        defaultOrderKeys.forEach { key ->
+            if (key !in usedKeys) {
+                finalOrder.add(key)
+            }
+        }
+
+        return finalOrder.mapIndexed { index, key ->
+            val entry = availableMap[key]!!
             CatalogOrderItem(
                 key = entry.key,
                 disableKey = entry.disableKey,
@@ -118,7 +167,7 @@ class CatalogOrderViewModel @Inject constructor(
                 typeLabel = entry.typeLabel,
                 isDisabled = entry.disableKey in disabledKeys,
                 canMoveUp = index > 0,
-                canMoveDown = index < effectiveOrder.lastIndex
+                canMoveDown = index < finalOrder.lastIndex
             )
         }
     }

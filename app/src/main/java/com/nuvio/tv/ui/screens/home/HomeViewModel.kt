@@ -1772,17 +1772,68 @@ class HomeViewModel @Inject constructor(
         val defaultOrder = buildDefaultCatalogOrder(addons)
         val availableSet = defaultOrder.toSet()
 
-        val savedValid = homeCatalogOrderKeys
-            .asSequence()
-            .filter { it in availableSet }
-            .distinct()
-            .toList()
+        // Build a map of catalog key patterns for fuzzy matching
+        // This helps match catalogs even if their IDs change (e.g., dynamic catalogs from Watchly)
+        val keyToAddonAndType = mutableMapOf<String, Pair<String, String>>()
+        defaultOrder.forEach { key ->
+            // Key format: ${addonId}_${type}_${catalogId}
+            // We need to extract addonId and type, but catalogId can contain underscores
+            val firstUnderscore = key.indexOf('_')
+            if (firstUnderscore > 0) {
+                val addonId = key.substring(0, firstUnderscore)
+                val remaining = key.substring(firstUnderscore + 1)
+                val secondUnderscore = remaining.indexOf('_')
+                if (secondUnderscore > 0) {
+                    val type = remaining.substring(0, secondUnderscore)
+                    keyToAddonAndType[key] = addonId to type
+                }
+            }
+        }
 
-        val savedSet = savedValid.toSet()
-        val mergedOrder = savedValid + defaultOrder.filterNot { it in savedSet }
+        // For each position in saved order, try to find a matching catalog
+        val finalOrder = mutableListOf<String>()
+        val usedKeys = mutableSetOf<String>()
+
+        homeCatalogOrderKeys.forEach { savedKey ->
+            if (savedKey in availableSet) {
+                // Exact match found
+                if (savedKey !in usedKeys) {
+                    finalOrder.add(savedKey)
+                    usedKeys.add(savedKey)
+                }
+            } else {
+                // Try fuzzy match: find a catalog from same addon+type that hasn't been used
+                val firstUnderscore = savedKey.indexOf('_')
+                if (firstUnderscore > 0) {
+                    val addonId = savedKey.substring(0, firstUnderscore)
+                    val remaining = savedKey.substring(firstUnderscore + 1)
+                    val secondUnderscore = remaining.indexOf('_')
+                    if (secondUnderscore > 0) {
+                        val type = remaining.substring(0, secondUnderscore)
+                        val matchingKey = defaultOrder.firstOrNull { availableKey ->
+                            availableKey !in usedKeys &&
+                            keyToAddonAndType[availableKey]?.let { (aid, t) ->
+                                aid == addonId && t == type
+                            } == true
+                        }
+                        if (matchingKey != null) {
+                            finalOrder.add(matchingKey)
+                            usedKeys.add(matchingKey)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Add any remaining catalogs that weren't matched
+        defaultOrder.forEach { key ->
+            if (key !in usedKeys) {
+                finalOrder.add(key)
+            }
+        }
 
         catalogOrder.clear()
-        catalogOrder.addAll(mergedOrder)
+        catalogOrder.addAll(finalOrder)
     }
 
     private fun buildDefaultCatalogOrder(addons: List<Addon>): List<String> {
