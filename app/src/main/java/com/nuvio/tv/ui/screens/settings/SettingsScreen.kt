@@ -334,6 +334,10 @@ fun SettingsScreen(
                         .fillMaxHeight()
                         .onKeyEvent { event ->
                             if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft) {
+                                val movedWithinContent = focusManager.moveFocus(FocusDirection.Left)
+                                if (movedWithinContent) {
+                                    return@onKeyEvent true
+                                }
                                 allowDetailAutofocus = false
                                 val requested = railFocusRequesters[selectedCategory]?.let { requester ->
                                     runCatching { requester.requestFocus() }.isSuccess
