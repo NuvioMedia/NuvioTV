@@ -97,7 +97,8 @@ import kotlinx.coroutines.delay
 import android.view.KeyEvent as AndroidKeyEvent
 import kotlinx.coroutines.flow.distinctUntilChanged
 
-private const val KEY_REPEAT_THROTTLE_MS = 80L
+private const val KEY_REPEAT_THROTTLE_MS_DEFAULT = 80L
+private val HeroTransitionAnimSpec = tween<Float>(durationMillis = 480)
 
 @Composable
 fun ModernHomeContent(
@@ -439,7 +440,9 @@ fun ModernHomeContent(
         }
     }
 
-    val activeRow by remember(carouselRows, rowByKey, activeRowKey) {
+    // Use carouselRows/rowByKey as remember keys (plain collections, not snapshot-observable).
+    // activeRowKey is snapshot-observable via mutableStateOf — derivedStateOf tracks it automatically.
+    val activeRow by remember(carouselRows, rowByKey) {
         derivedStateOf {
             val activeKey = activeRowKey
             if (activeKey == null) {
@@ -449,7 +452,8 @@ fun ModernHomeContent(
             }
         }
     }
-    val clampedActiveItemIndex by remember(activeRow, activeItemIndex) {
+    // activeRow and activeItemIndex are both snapshot-observable — no remember keys needed.
+    val clampedActiveItemIndex by remember {
         derivedStateOf {
             activeRow?.let { row ->
                 activeItemIndex.coerceIn(0, (row.items.size - 1).coerceAtLeast(0))
@@ -466,7 +470,7 @@ fun ModernHomeContent(
         focusedItemByRow[row.key] = clampedIndex
     }
 
-    val activeHeroItemKey by remember(activeRow, clampedActiveItemIndex) {
+    val activeHeroItemKey by remember {
         derivedStateOf {
             val row = activeRow ?: return@derivedStateOf null
             row.items.getOrNull(clampedActiveItemIndex)?.key ?: row.items.firstOrNull()?.key
@@ -532,19 +536,21 @@ fun ModernHomeContent(
     ) {
         val rowHorizontalPadding = 52.dp
 
-        val resolvedHero by remember(heroItem, activeRow, clampedActiveItemIndex) {
+        val resolvedHero by remember {
             derivedStateOf {
                 heroItem
                     ?: activeRow?.items?.getOrNull(clampedActiveItemIndex)?.heroPreview
                     ?: activeRow?.items?.firstOrNull()?.heroPreview
             }
         }
-        val activeRowFallbackBackdrop = remember(activeRow?.key, activeRow?.items) {
-            activeRow?.items?.firstNotNullOfOrNull { item ->
-                item.heroPreview.backdrop?.takeIf { it.isNotBlank() }
+        val activeRowFallbackBackdrop by remember {
+            derivedStateOf {
+                activeRow?.items?.firstNotNullOfOrNull { item ->
+                    item.heroPreview.backdrop?.takeIf { it.isNotBlank() }
+                }
             }
         }
-        val heroBackdrop by remember(heroItem, resolvedHero, activeRowFallbackBackdrop) {
+        val heroBackdrop by remember {
             derivedStateOf {
                 firstNonBlank(
                     resolvedHero?.backdrop,
@@ -554,23 +560,21 @@ fun ModernHomeContent(
                 )
             }
         }
-        val expandedFocusedSelection by remember(focusedCatalogSelection, expandedCatalogFocusKey) {
+        val expandedFocusedSelection by remember {
             derivedStateOf {
                 focusedCatalogSelection?.takeIf { it.focusKey == expandedCatalogFocusKey }
             }
         }
-        val heroTrailerUrl by remember(expandedFocusedSelection, trailerPreviewUrls) {
+        // trailerPreviewUrls is a plain Map parameter — keep as remember key.
+        val heroTrailerUrl by remember(trailerPreviewUrls) {
             derivedStateOf {
                 expandedFocusedSelection?.payload?.itemId?.let { trailerPreviewUrls[it] }
             }
         }
         val expandedCatalogTrailerUrl = heroTrailerUrl
-        val shouldPlayHeroTrailer by remember(
-            effectiveAutoplayEnabled,
-            trailerPlaybackTarget,
-            heroTrailerUrl,
-            isVerticalRowsScrolling
-        ) {
+        // effectiveAutoplayEnabled and trailerPlaybackTarget are plain vals — keep as keys.
+        // heroTrailerUrl and isVerticalRowsScrolling are snapshot-observable — tracked automatically.
+        val shouldPlayHeroTrailer by remember(effectiveAutoplayEnabled, trailerPlaybackTarget) {
             derivedStateOf {
                 effectiveAutoplayEnabled &&
                     !isVerticalRowsScrolling &&
@@ -586,7 +590,7 @@ fun ModernHomeContent(
         }
         val heroTransitionProgress by animateFloatAsState(
             targetValue = if (shouldPlayHeroTrailer && heroTrailerFirstFrameRendered) 1f else 0f,
-            animationSpec = tween(durationMillis = 480),
+            animationSpec = HeroTransitionAnimSpec,
             label = "heroBackdropTrailerCrossfadeProgress"
         )
         val heroBackdropAlpha = 1f - heroTransitionProgress
@@ -664,7 +668,7 @@ fun ModernHomeContent(
                         val native = event.nativeKeyEvent
                         if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {
                             val now = System.currentTimeMillis()
-                            if (now - lastKeyRepeatTime < KEY_REPEAT_THROTTLE_MS) {
+                            if (now - lastKeyRepeatTime < uiState.keyRepeatThrottleMs) {
                                 return@onPreviewKeyEvent true
                             }
                             lastKeyRepeatTime = now

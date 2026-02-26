@@ -36,7 +36,9 @@ data class HomeUiState(
     val movieWatchedStatus: Map<String, Boolean> = emptyMap(),
     val posterLibraryPending: Set<String> = emptySet(),
     val movieWatchedPending: Set<String> = emptySet(),
-    val gridItems: List<GridItem> = emptyList()
+    val gridItems: List<GridItem> = emptyList(),
+    val keyRepeatThrottleMs: Long = 80L,
+    val nestedPrefetchItemCount: Int = 2
 )
 
 @Immutable

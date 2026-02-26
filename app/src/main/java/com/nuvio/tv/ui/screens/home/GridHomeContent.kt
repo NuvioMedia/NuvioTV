@@ -57,8 +57,8 @@ import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.theme.NuvioColors
 
-/** Minimum interval between processed key repeat events to prevent HWUI overload. */
-private const val KEY_REPEAT_THROTTLE_MS = 80L
+/** Default minimum interval between processed key repeat events to prevent HWUI overload. */
+private const val KEY_REPEAT_THROTTLE_MS_DEFAULT = 80L
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -167,7 +167,7 @@ fun GridHomeContent(
                     val native = event.nativeKeyEvent
                     if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {
                         val now = System.currentTimeMillis()
-                        if (now - lastKeyRepeatTime[0] < KEY_REPEAT_THROTTLE_MS) {
+                        if (now - lastKeyRepeatTime[0] < uiState.keyRepeatThrottleMs) {
                             return@onPreviewKeyEvent true
                         }
                         lastKeyRepeatTime[0] = now

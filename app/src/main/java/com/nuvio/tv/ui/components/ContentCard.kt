@@ -40,6 +40,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.nuvio.tv.R
@@ -61,6 +62,8 @@ import kotlinx.coroutines.delay
 private const val BACKDROP_ASPECT_RATIO = 16f / 9f
 private const val TRAILER_PREVIEW_REQUEST_FOCUS_DEBOUNCE_MS = 140L
 private val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
+private val WatchedIconAnimSpec = tween<Dp>(durationMillis = 180)
+private val TrailerCoverAlphaAnimSpec = tween<Float>(durationMillis = 250)
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -82,6 +85,18 @@ fun ContentCard(
     onClick: () -> Unit = {}
 ) {
     val cardShape = remember(posterCardStyle.cornerRadius) { RoundedCornerShape(posterCardStyle.cornerRadius) }
+    val focusRingColor = NuvioColors.FocusRing
+    val focusedBorder = remember(posterCardStyle.focusedBorderWidth, focusRingColor, cardShape) {
+        Border(
+            border = BorderStroke(posterCardStyle.focusedBorderWidth, focusRingColor),
+            shape = cardShape
+        )
+    }
+    val cardShapeSpec = remember(cardShape) { CardDefaults.shape(shape = cardShape) }
+    val cardScale = remember(posterCardStyle.focusedScale) { CardDefaults.scale(focusedScale = posterCardStyle.focusedScale) }
+    val focusRequesterModifier = remember(focusRequester) {
+        if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
+    }
     val baseCardWidth = when (item.posterShape) {
         PosterShape.POSTER -> posterCardStyle.width
         PosterShape.LANDSCAPE -> 260.dp
@@ -99,11 +114,16 @@ fun ContentCard(
     var interactionNonce by remember { mutableIntStateOf(0) }
     var isBackdropExpanded by remember { mutableStateOf(false) }
     var trailerFirstFrameRendered by remember(trailerPreviewUrl) { mutableStateOf(false) }
-    val watchedIconEndPadding by animateDpAsState(
-        targetValue = if (isFocused) 18.dp else 8.dp,
-        animationSpec = tween(durationMillis = 180),
-        label = "contentCardWatchedIconEndPadding"
-    )
+    val watchedIconEndPadding = if (isWatched) {
+        val padding by animateDpAsState(
+            targetValue = if (isFocused) 18.dp else 8.dp,
+            animationSpec = WatchedIconAnimSpec,
+            label = "contentCardWatchedIconEndPadding"
+        )
+        padding
+    } else {
+        8.dp
+    }
 
     val needsFocusState = focusedPosterBackdropExpandEnabled || focusedPosterBackdropTrailerEnabled
     val lastFocusedRef = remember { booleanArrayOf(false) }
@@ -275,21 +295,16 @@ fun ContentCard(
                     }
                     false
                 }
-                .then(
-                    if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
-                ),
-            shape = CardDefaults.shape(shape = cardShape),
+                .then(focusRequesterModifier),
+            shape = cardShapeSpec,
             colors = CardDefaults.colors(
                 containerColor = NuvioColors.BackgroundCard,
                 focusedContainerColor = NuvioColors.BackgroundCard
             ),
             border = CardDefaults.border(
-                focusedBorder = Border(
-                    border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioColors.FocusRing),
-                    shape = cardShape
-                )
+                focusedBorder = focusedBorder
             ),
-            scale = CardDefaults.scale(focusedScale = posterCardStyle.focusedScale)
+            scale = cardScale
         ) {
             Box(
                 modifier = Modifier
@@ -325,7 +340,7 @@ fun ContentCard(
                 val trailerCoverAlpha = if (shouldPlayTrailerPreview) {
                     val alpha by animateFloatAsState(
                         targetValue = if (!trailerFirstFrameRendered) 1f else 0f,
-                        animationSpec = tween(durationMillis = 250),
+                        animationSpec = TrailerCoverAlphaAnimSpec,
                         label = "trailerCoverAlpha"
                     )
                     alpha

@@ -66,6 +66,7 @@ android {
             isDebuggable = false
             isMinifyEnabled = false
 
+            resValue("string", "app_name", "Nuvio Debug")
             buildConfigField("boolean", "IS_DEBUG_BUILD", "true")
 
             // Dev environment (from local.dev.properties)
@@ -86,6 +87,7 @@ android {
             )
             signingConfig = signingConfigs.getByName("release")
 
+            resValue("string", "app_name", "Nuvio")
             buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
 
             // Production environment (from local.properties)
@@ -124,6 +126,12 @@ android {
     }
 }
 
+androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        variant.applicationId.set("com.nuviodebug.tv")
+    }
+}
+
 composeCompiler {
     // Enable Compose compiler metrics for performance analysis
     metricsDestination = layout.buildDirectory.dir("compose_metrics")
@@ -140,7 +148,7 @@ configurations.all {
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.01.01")
 
-    // baselineProfile(project(":benchmark"))  // TODO: create benchmark module later
+    baselineProfile(project(":benchmark"))
     implementation(libs.androidx.core.ktx)
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation(libs.androidx.appcompat)

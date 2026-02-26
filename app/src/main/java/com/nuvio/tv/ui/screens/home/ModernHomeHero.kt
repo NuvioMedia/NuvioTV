@@ -38,6 +38,8 @@ import coil.request.ImageRequest
 import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.ui.theme.NuvioColors
 
+private val HeroCrossfadeAnimSpec = tween<Float>(durationMillis = 200)
+
 @Composable
 internal fun ModernHeroMediaLayer(
     heroBackdrop: String?,
@@ -60,7 +62,7 @@ internal fun ModernHeroMediaLayer(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { alpha = heroBackdropAlpha },
-            animationSpec = tween(durationMillis = 350),
+            animationSpec = HeroCrossfadeAnimSpec,
             label = "modernHeroBackground"
         ) { imageUrl ->
             val imageModel = remember(localContext, imageUrl, requestWidthPx, requestHeightPx) {
@@ -94,31 +96,35 @@ internal fun ModernHeroMediaLayer(
             )
         }
 
+        // Pre-compute color variants outside drawWithCache to avoid per-frame allocations.
+        val bg096 = remember(bgColor) { bgColor.copy(alpha = 0.96f) }
+        val bg072 = remember(bgColor) { bgColor.copy(alpha = 0.72f) }
+        val bg078 = remember(bgColor) { bgColor.copy(alpha = 0.78f) }
+        val bg052 = remember(bgColor) { bgColor.copy(alpha = 0.52f) }
+        val bg016 = remember(bgColor) { bgColor.copy(alpha = 0.16f) }
+        val bg098 = remember(bgColor) { bgColor.copy(alpha = 0.98f) }
+
+        val horizontalGradientStops = remember(bg096, bg072) {
+            arrayOf(0.0f to bg096, 0.10f to bg072, 0.30f to Color.Transparent)
+        }
+        val radialGradientStops = remember(bg078, bg052, bg016) {
+            arrayOf(0.0f to bg078, 0.55f to bg052, 0.80f to bg016, 1.0f to Color.Transparent)
+        }
+        val verticalGradientStops = remember(bg072, bg098, bgColor) {
+            arrayOf(0.78f to Color.Transparent, 0.90f to bg072, 0.96f to bg098, 1.0f to bgColor)
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .drawWithCache {
-                    val horizontalGradient = Brush.horizontalGradient(
-                        0.0f to bgColor.copy(alpha = 0.96f),
-                        0.10f to bgColor.copy(alpha = 0.72f),
-                        0.30f to Color.Transparent
-                    )
+                    val horizontalGradient = Brush.horizontalGradient(colorStops = horizontalGradientStops)
                     val radialGradient = Brush.radialGradient(
-                        colorStops = arrayOf(
-                            0.0f to bgColor.copy(alpha = 0.78f),
-                            0.55f to bgColor.copy(alpha = 0.52f),
-                            0.80f to bgColor.copy(alpha = 0.16f),
-                            1.0f to Color.Transparent
-                        ),
+                        colorStops = radialGradientStops,
                         center = Offset(0f, size.height / 2f),
                         radius = size.height
                     )
-                    val verticalGradient = Brush.verticalGradient(
-                        0.78f to Color.Transparent,
-                        0.90f to bgColor.copy(alpha = 0.72f),
-                        0.96f to bgColor.copy(alpha = 0.98f),
-                        1.0f to bgColor
-                    )
+                    val verticalGradient = Brush.verticalGradient(colorStops = verticalGradientStops)
                     onDrawBehind {
                         drawRect(brush = horizontalGradient, size = size)
                         drawRect(brush = radialGradient, size = size)
@@ -292,10 +298,11 @@ internal fun HeroTitleBlock(
 
 @Composable
 private fun HeroMetaDivider(scale: Float) {
+    val dividerColor = remember { NuvioColors.TextTertiary.copy(alpha = 0.78f) }
     Box(
         modifier = Modifier
             .size((4.dp * scale).coerceAtLeast(2.dp))
             .clip(RoundedCornerShape(percent = 50))
-            .background(NuvioColors.TextTertiary.copy(alpha = 0.78f))
+            .background(dividerColor)
     )
 }

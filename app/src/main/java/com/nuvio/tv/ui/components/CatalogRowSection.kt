@@ -80,7 +80,13 @@ fun CatalogRowSection(
     upFocusRequester: FocusRequester? = null,
     listState: LazyListState = rememberLazyListState(initialFirstVisibleItemIndex = initialScrollIndex)
 ) {
-    val seeAllCardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
+    val seeAllCardShape = remember(posterCardStyle.cornerRadius) { RoundedCornerShape(posterCardStyle.cornerRadius) }
+    val seeAllFocusRingColor = NuvioColors.FocusRing
+    val seeAllFocusedBorder = remember(posterCardStyle.focusedBorderWidth, seeAllFocusRingColor, seeAllCardShape) {
+        Border(border = BorderStroke(posterCardStyle.focusedBorderWidth, seeAllFocusRingColor), shape = seeAllCardShape)
+    }
+    val seeAllShapeSpec = remember(seeAllCardShape) { CardDefaults.shape(shape = seeAllCardShape) }
+    val seeAllScale = remember(posterCardStyle.focusedScale) { CardDefaults.scale(focusedScale = posterCardStyle.focusedScale) }
     val currentOnItemFocused by rememberUpdatedState(onItemFocused)
     val currentOnItemFocus by rememberUpdatedState(onItemFocus)
 
@@ -185,8 +191,8 @@ fun CatalogRowSection(
         ) {
             itemsIndexed(
                 items = catalogRow.items,
-                key = { index, item ->
-                    "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}_${item.id}_$index"
+                key = { _, item ->
+                    "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}_${item.id}"
                 },
                 contentType = { _, _ -> "content_card" }
             ) { index, item ->
@@ -223,18 +229,15 @@ fun CatalogRowSection(
                             .width(posterCardStyle.width)
                             .height(posterCardStyle.height)
                             .then(directionalFocusModifier),
-                        shape = CardDefaults.shape(shape = seeAllCardShape),
+                        shape = seeAllShapeSpec,
                         colors = CardDefaults.colors(
                             containerColor = NuvioColors.BackgroundCard,
                             focusedContainerColor = NuvioColors.BackgroundCard
                         ),
                         border = CardDefaults.border(
-                            focusedBorder = Border(
-                                border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioColors.FocusRing),
-                                shape = seeAllCardShape
-                            )
+                            focusedBorder = seeAllFocusedBorder
                         ),
-                        scale = CardDefaults.scale(focusedScale = posterCardStyle.focusedScale)
+                        scale = seeAllScale
                     ) {
                         Box(
                             modifier = Modifier.fillMaxSize(),

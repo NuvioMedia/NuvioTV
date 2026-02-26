@@ -3,6 +3,8 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.auth.AuthManager
+import com.nuvio.tv.core.device.DeviceCapabilities
+import com.nuvio.tv.core.device.DeviceTier
 import com.nuvio.tv.data.local.DebugSettingsDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +18,8 @@ import javax.inject.Inject
 @HiltViewModel
 class DebugSettingsViewModel @Inject constructor(
     private val dataStore: DebugSettingsDataStore,
-    private val authManager: AuthManager
+    private val authManager: AuthManager,
+    private val deviceCapabilities: DeviceCapabilities
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DebugSettingsUiState())
@@ -33,6 +36,23 @@ class DebugSettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(syncCodeFeaturesEnabled = enabled) }
             }
         }
+        viewModelScope.launch {
+            dataStore.deviceTierOverride.collectLatest { override ->
+                val tier = when (override) {
+                    "low" -> DeviceTier.LOW
+                    "medium" -> DeviceTier.MEDIUM
+                    "high" -> DeviceTier.HIGH
+                    else -> null
+                }
+                deviceCapabilities.setTierOverride(tier)
+                _uiState.update {
+                    it.copy(
+                        deviceTierOverride = override,
+                        detectedDeviceTier = deviceCapabilities.tier.name
+                    )
+                }
+            }
+        }
     }
 
     fun onEvent(event: DebugSettingsEvent) {
@@ -42,6 +62,9 @@ class DebugSettingsViewModel @Inject constructor(
             }
             is DebugSettingsEvent.ToggleSyncCodeFeatures -> {
                 viewModelScope.launch { dataStore.setSyncCodeFeaturesEnabled(event.enabled) }
+            }
+            is DebugSettingsEvent.SetDeviceTierOverride -> {
+                viewModelScope.launch { dataStore.setDeviceTierOverride(event.value) }
             }
             is DebugSettingsEvent.SignIn -> {
                 viewModelScope.launch {
@@ -63,11 +86,14 @@ data class DebugSettingsUiState(
     val accountTabEnabled: Boolean = false,
     val syncCodeFeaturesEnabled: Boolean = false,
     val signInLoading: Boolean = false,
-    val signInResult: String? = null
+    val signInResult: String? = null,
+    val deviceTierOverride: String = "auto",
+    val detectedDeviceTier: String = "HIGH"
 )
 
 sealed class DebugSettingsEvent {
     data class ToggleAccountTab(val enabled: Boolean) : DebugSettingsEvent()
     data class ToggleSyncCodeFeatures(val enabled: Boolean) : DebugSettingsEvent()
+    data class SetDeviceTierOverride(val value: String) : DebugSettingsEvent()
     data class SignIn(val email: String, val password: String) : DebugSettingsEvent()
 }

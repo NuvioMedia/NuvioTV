@@ -27,7 +27,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,6 +77,8 @@ import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlin.math.abs
 import kotlinx.coroutines.flow.distinctUntilChanged
+
+private val CardWatchedIconAnimSpec = tween<Dp>(durationMillis = 180)
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -229,10 +230,15 @@ internal fun ModernRowSection(
     val rowListStates = uiCaches.rowListStates
     val loadMoreRequestedTotals = uiCaches.loadMoreRequestedTotals
 
+    val titleMedium = MaterialTheme.typography.titleMedium
+    val rowTitleStyle = remember(titleMedium) {
+        titleMedium.copy(fontWeight = FontWeight.SemiBold)
+    }
+
     Column {
         Text(
             text = row.title,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            style = rowTitleStyle,
             color = NuvioColors.TextPrimary,
             modifier = Modifier.padding(start = 52.dp, bottom = rowTitleBottom)
         )
@@ -241,9 +247,6 @@ internal fun ModernRowSection(
             LazyListState(
                 firstVisibleItemIndex = focusStateCatalogRowScrollStates[row.key] ?: 0
             )
-        }
-        val isRowScrolling by remember(rowListState) {
-            derivedStateOf { rowListState.isScrollInProgress }
         }
         val currentRowState = rememberUpdatedState(row)
         val loadMoreCatalogId = row.catalogId
@@ -375,9 +378,12 @@ internal fun ModernRowSection(
                     } else {
                         fallbackIndex
                     }
-                    val visibleIndices = rowListState.layoutInfo.visibleItemsInfo.map { it.index }.toSet()
-                    val safeIndex = if (restoreIndex in visibleIndices) restoreIndex else
-                        visibleIndices.minByOrNull { kotlin.math.abs(it - restoreIndex) } ?: fallbackIndex
+                    val visibleItems = rowListState.layoutInfo.visibleItemsInfo
+                    val safeIndex = if (visibleItems.any { it.index == restoreIndex }) {
+                        restoreIndex
+                    } else {
+                        visibleItems.minByOrNull { kotlin.math.abs(it.index - restoreIndex) }?.index ?: fallbackIndex
+                    }
                     val itemKey = row.items.getOrNull(safeIndex)?.key ?: row.items.first().key
                     itemFocusRequesters[row.key]?.get(itemKey) ?: FocusRequester.Default
                 },
@@ -424,8 +430,8 @@ internal fun ModernRowSection(
                                 modernCatalogCardWidth = modernCatalogCardWidth,
                                 modernCatalogCardHeight = modernCatalogCardHeight,
                                 focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
-                                effectiveExpandEnabled = effectiveExpandEnabled && !isRowScrolling,
-                                effectiveAutoplayEnabled = effectiveAutoplayEnabled && !isRowScrolling,
+                                effectiveExpandEnabled = effectiveExpandEnabled,
+                                effectiveAutoplayEnabled = effectiveAutoplayEnabled,
                                 trailerPlaybackTarget = trailerPlaybackTarget,
                                 expandedCatalogFocusKey = expandedCatalogFocusKey,
                                 expandedTrailerPreviewUrl = expandedTrailerPreviewUrl,
@@ -473,7 +479,7 @@ private fun ModernCarouselCard(
     onBackdropInteraction: () -> Unit,
     onTrailerEnded: () -> Unit
 ) {
-    val cardShape = RoundedCornerShape(cardCornerRadius)
+    val cardShape = remember(cardCornerRadius) { RoundedCornerShape(cardCornerRadius) }
     val context = LocalContext.current
     val density = LocalDensity.current
     val expandedCardWidth = cardHeight * (16f / 9f)
@@ -538,11 +544,16 @@ private fun ModernCarouselCard(
     val hasLandscapeLogo = useLandscapePosters && !item.heroPreview.logo.isNullOrBlank()
     var isFocused by remember { mutableStateOf(false) }
     var longPressTriggered by remember { mutableStateOf(false) }
-    val watchedIconEndPadding by animateDpAsState(
-        targetValue = if (isFocused) 16.dp else 8.dp,
-        animationSpec = tween(durationMillis = 180),
-        label = "modernCardWatchedIconEndPadding"
-    )
+    val watchedIconEndPadding = if (isWatched) {
+        val padding by animateDpAsState(
+            targetValue = if (isFocused) 16.dp else 8.dp,
+            animationSpec = CardWatchedIconAnimSpec,
+            label = "modernCardWatchedIconEndPadding"
+        )
+        padding
+    } else {
+        8.dp
+    }
     val backgroundCardColor = NuvioColors.BackgroundCard
     val focusRingColor = NuvioColors.FocusRing
     val titleMedium = MaterialTheme.typography.titleMedium
@@ -552,6 +563,8 @@ private fun ModernCarouselCard(
             shape = cardShape
         )
     }
+    val cardShapeSpec = remember(cardShape) { CardDefaults.shape(shape = cardShape) }
+    val cardScale = remember { CardDefaults.scale(focusedScale = 1f) }
     val titleStyle = remember(titleMedium) {
         titleMedium.copy(fontWeight = FontWeight.Medium)
     }
@@ -604,7 +617,7 @@ private fun ModernCarouselCard(
                     }
                     false
                 },
-            shape = CardDefaults.shape(shape = cardShape),
+            shape = cardShapeSpec,
             colors = CardDefaults.colors(
                 containerColor = backgroundCardColor,
                 focusedContainerColor = backgroundCardColor
@@ -612,20 +625,22 @@ private fun ModernCarouselCard(
             border = CardDefaults.border(
                 focusedBorder = focusedBorder
             ),
-            scale = CardDefaults.scale(focusedScale = 1f)
+            scale = cardScale
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                val mediaLayerModifier = if (hasLandscapeLogo) {
-                    Modifier
-                        .fillMaxSize()
-                        .drawWithCache {
-                            onDrawWithContent {
-                                drawContent()
-                                drawRect(brush = MODERN_LANDSCAPE_LOGO_GRADIENT, size = size)
+                val mediaLayerModifier = remember(hasLandscapeLogo) {
+                    if (hasLandscapeLogo) {
+                        Modifier
+                            .fillMaxSize()
+                            .drawWithCache {
+                                onDrawWithContent {
+                                    drawContent()
+                                    drawRect(brush = MODERN_LANDSCAPE_LOGO_GRADIENT, size = size)
+                                }
                             }
-                        }
-                } else {
-                    Modifier.fillMaxSize()
+                    } else {
+                        Modifier.fillMaxSize()
+                    }
                 }
 
                 Box(modifier = mediaLayerModifier) {

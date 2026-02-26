@@ -87,6 +87,25 @@ fun DebugSettingsContent(
                 )
             }
 
+            // ── Performance ──
+            item(key = "debug_performance_header") {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Performance",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = NuvioColors.TextTertiary,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+
+            item(key = "debug_device_tier") {
+                DebugDeviceTierSelector(
+                    currentOverride = uiState.deviceTierOverride,
+                    detectedTier = uiState.detectedDeviceTier,
+                    onSelect = { viewModel.onEvent(DebugSettingsEvent.SetDeviceTierOverride(it)) }
+                )
+            }
+
             // ── Feature Toggles ──
             item(key = "debug_feature_toggles_header") {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -288,6 +307,66 @@ private fun DebugDialogButton(
                 .padding(vertical = 12.dp, horizontal = 16.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
+    }
+}
+
+@Composable
+private fun DebugDeviceTierSelector(
+    currentOverride: String,
+    detectedTier: String,
+    onSelect: (String) -> Unit
+) {
+    val options = listOf("auto", "low", "medium", "high")
+
+    Card(
+        onClick = {
+            val currentIndex = options.indexOf(currentOverride)
+            val nextIndex = (currentIndex + 1) % options.size
+            onSelect(options[nextIndex])
+        },
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.colors(
+            containerColor = NuvioColors.BackgroundCard,
+            focusedContainerColor = NuvioColors.FocusBackground
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                shape = RoundedCornerShape(12.dp)
+            )
+        ),
+        shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+        scale = CardDefaults.scale(focusedScale = 1.02f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Device Performance Tier",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = NuvioColors.TextPrimary
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Detected: $detectedTier. Click to cycle override.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioColors.TextSecondary
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Text(
+                text = currentOverride.uppercase(),
+                style = MaterialTheme.typography.titleMedium,
+                color = NuvioColors.Secondary
+            )
+        }
     }
 }
 

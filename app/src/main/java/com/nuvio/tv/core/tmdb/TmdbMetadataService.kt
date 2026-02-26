@@ -7,6 +7,7 @@ import com.nuvio.tv.data.remote.api.TmdbImage
 import com.nuvio.tv.data.remote.api.TmdbPersonCreditCast
 import com.nuvio.tv.data.remote.api.TmdbPersonCreditCrew
 import com.nuvio.tv.data.remote.api.TmdbRecommendationResult
+import com.nuvio.tv.core.device.DeviceCapabilities
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.MetaCastMember
 import com.nuvio.tv.domain.model.MetaCompany
@@ -28,7 +29,8 @@ private const val TMDB_API_KEY = "439c478a771f35c05022f9feabcca01c"
 
 @Singleton
 class TmdbMetadataService @Inject constructor(
-    private val tmdbApi: TmdbApi
+    private val tmdbApi: TmdbApi,
+    private val deviceCapabilities: DeviceCapabilities
 ) {
     // In-memory caches
     private val enrichmentCache = ConcurrentHashMap<String, TmdbEnrichment>()
@@ -120,7 +122,7 @@ class TmdbMetadataService @Inject constructor(
                         val name = company.name?.trim()?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
                         MetaCompany(
                             name = name,
-                            logo = buildImageUrl(company.logoPath, size = "w300")
+                            logo = buildLogoUrl(company.logoPath)
                         )
                     }
                 val networks = details?.networks
@@ -129,11 +131,11 @@ class TmdbMetadataService @Inject constructor(
                         val name = network.name?.trim()?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
                         MetaCompany(
                             name = name,
-                            logo = buildImageUrl(network.logoPath, size = "w300")
+                            logo = buildLogoUrl(network.logoPath)
                         )
                     }
-                val poster = buildImageUrl(details?.posterPath, size = "w500")
-                val backdrop = buildImageUrl(details?.backdropPath, size = "w1280")
+                val poster = buildPosterUrl(details?.posterPath)
+                val backdrop = buildBackdropUrl(details?.backdropPath)
 
                 val logoPath = images?.logos
                     ?.sortedWith(
@@ -146,7 +148,7 @@ class TmdbMetadataService @Inject constructor(
                     ?.firstOrNull()
                     ?.filePath
 
-                val logo = buildImageUrl(logoPath, size = "w500")
+                val logo = buildLogoUrl(logoPath)
 
                 val castMembers = credits?.cast
                     .orEmpty()
@@ -155,7 +157,7 @@ class TmdbMetadataService @Inject constructor(
                         MetaCastMember(
                             name = name,
                             character = member.character?.takeIf { it.isNotBlank() },
-                            photo = buildImageUrl(member.profilePath, size = "w500"),
+                            photo = buildProfileUrl(member.profilePath),
                             tmdbId = member.id
                         )
                     }
@@ -169,7 +171,7 @@ class TmdbMetadataService @Inject constructor(
                             MetaCastMember(
                                 name = name,
                                 character = "Creator",
-                                photo = buildImageUrl(creator.profilePath, size = "w500"),
+                                photo = buildProfileUrl(creator.profilePath),
                                 tmdbId = tmdbPersonId
                             )
                         }
@@ -197,7 +199,7 @@ class TmdbMetadataService @Inject constructor(
                         MetaCastMember(
                             name = name,
                             character = "Director",
-                            photo = buildImageUrl(member.profilePath, size = "w500"),
+                            photo = buildProfileUrl(member.profilePath),
                             tmdbId = tmdbPersonId
                         )
                     }
@@ -220,7 +222,7 @@ class TmdbMetadataService @Inject constructor(
                         MetaCastMember(
                             name = name,
                             character = "Writer",
-                            photo = buildImageUrl(member.profilePath, size = "w500"),
+                            photo = buildProfileUrl(member.profilePath),
                             tmdbId = tmdbPersonId
                         )
                     }
@@ -404,8 +406,8 @@ class TmdbMetadataService @Inject constructor(
                             )
                         }
 
-                        val backdrop = buildImageUrl(localizedBackdropPath ?: rec.backdropPath, size = "w1280")
-                        val fallbackPoster = buildImageUrl(rec.posterPath, size = "w780")
+                        val backdrop = buildBackdropUrl(localizedBackdropPath ?: rec.backdropPath)
+                        val fallbackPoster = buildBackdropUrl(rec.posterPath)
                         val releaseInfo = (rec.releaseDate ?: rec.firstAirDate)?.take(4)
 
                         MetaPreview(
@@ -432,6 +434,21 @@ class TmdbMetadataService @Inject constructor(
             emptyList()
         }
     }
+
+    private fun buildPosterUrl(path: String?): String? =
+        buildImageUrl(path, deviceCapabilities.tmdbPosterSize)
+
+    private fun buildBackdropUrl(path: String?): String? =
+        buildImageUrl(path, deviceCapabilities.tmdbBackdropSize)
+
+    private fun buildProfileUrl(path: String?): String? =
+        buildImageUrl(path, deviceCapabilities.tmdbProfileSize)
+
+    private fun buildLogoUrl(path: String?): String? =
+        buildImageUrl(path, deviceCapabilities.tmdbLogoSize)
+
+    private fun buildStillUrl(path: String?): String? =
+        buildImageUrl(path, deviceCapabilities.tmdbStillSize)
 
     private fun buildImageUrl(path: String?, size: String): String? {
         val clean = path?.trim()?.takeIf { it.isNotBlank() } ?: return null
@@ -509,7 +526,7 @@ class TmdbMetadataService @Inject constructor(
                     birthday = person.birthday?.takeIf { it.isNotBlank() },
                     deathday = person.deathday?.takeIf { it.isNotBlank() },
                     placeOfBirth = person.placeOfBirth?.takeIf { it.isNotBlank() },
-                    profilePhoto = buildImageUrl(person.profilePath, "w500"),
+                    profilePhoto = buildProfileUrl(person.profilePath),
                     knownFor = person.knownForDepartment?.takeIf { it.isNotBlank() },
                     movieCredits = movieCredits,
                     tvCredits = tvCredits
@@ -541,9 +558,9 @@ class TmdbMetadataService @Inject constructor(
                     id = "tmdb:${credit.id}",
                     type = ContentType.MOVIE,
                     name = title,
-                    poster = buildImageUrl(credit.posterPath, "w500"),
+                    poster = buildPosterUrl(credit.posterPath),
                     posterShape = PosterShape.POSTER,
-                    background = buildImageUrl(credit.backdropPath, "w1280"),
+                    background = buildBackdropUrl(credit.backdropPath),
                     logo = null,
                     description = credit.overview?.takeIf { it.isNotBlank() },
                     releaseInfo = year,
@@ -566,9 +583,9 @@ class TmdbMetadataService @Inject constructor(
                     id = "tmdb:${credit.id}",
                     type = ContentType.MOVIE,
                     name = title,
-                    poster = buildImageUrl(credit.posterPath, "w500"),
+                    poster = buildPosterUrl(credit.posterPath),
                     posterShape = PosterShape.POSTER,
-                    background = buildImageUrl(credit.backdropPath, "w1280"),
+                    background = buildBackdropUrl(credit.backdropPath),
                     logo = null,
                     description = credit.overview?.takeIf { it.isNotBlank() },
                     releaseInfo = year,
@@ -591,9 +608,9 @@ class TmdbMetadataService @Inject constructor(
                     id = "tmdb:${credit.id}",
                     type = ContentType.SERIES,
                     name = title,
-                    poster = buildImageUrl(credit.posterPath, "w500"),
+                    poster = buildPosterUrl(credit.posterPath),
                     posterShape = PosterShape.POSTER,
-                    background = buildImageUrl(credit.backdropPath, "w1280"),
+                    background = buildBackdropUrl(credit.backdropPath),
                     logo = null,
                     description = credit.overview?.takeIf { it.isNotBlank() },
                     releaseInfo = year,
@@ -616,9 +633,9 @@ class TmdbMetadataService @Inject constructor(
                     id = "tmdb:${credit.id}",
                     type = ContentType.SERIES,
                     name = title,
-                    poster = buildImageUrl(credit.posterPath, "w500"),
+                    poster = buildPosterUrl(credit.posterPath),
                     posterShape = PosterShape.POSTER,
-                    background = buildImageUrl(credit.backdropPath, "w1280"),
+                    background = buildBackdropUrl(credit.backdropPath),
                     logo = null,
                     description = credit.overview?.takeIf { it.isNotBlank() },
                     releaseInfo = year,
@@ -714,7 +731,7 @@ data class TmdbEpisodeEnrichment(
 private fun TmdbEpisode.toEnrichment(): TmdbEpisodeEnrichment {
     val title = name?.takeIf { it.isNotBlank() }
     val overview = overview?.takeIf { it.isNotBlank() }
-    val thumbnail = stillPath?.takeIf { it.isNotBlank() }?.let { "https://image.tmdb.org/t/p/w500$it" }
+    val thumbnail = stillPath?.takeIf { it.isNotBlank() }?.let { "https://image.tmdb.org/t/p/w300$it" }
     val airDate = airDate?.takeIf { it.isNotBlank() }
     return TmdbEpisodeEnrichment(
         title = title,

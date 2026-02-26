@@ -169,6 +169,15 @@ fun HomeScreen(
                                 animationSpec = tween(320)
                             )
                     ) {
+                        // Stabilize lambda identity — only recompute when the
+                        // watched status map itself changes, not on every uiState update.
+                        val watchedStatus = uiState.movieWatchedStatus
+                        val stableIsWatched = remember(watchedStatus) {
+                            { item: MetaPreview ->
+                                watchedStatus[homeItemStatusKey(item.id, item.apiType)] == true
+                            }
+                        }
+
                         when (uiState.homeLayout) {
                             HomeLayout.CLASSIC -> ClassicHomeRoute(
                                 viewModel = viewModel,
@@ -177,9 +186,7 @@ fun HomeScreen(
                                 onNavigateToDetail = onNavigateToDetail,
                                 onContinueWatchingClick = onContinueWatchingClick,
                                 onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
-                                isCatalogItemWatched = { item ->
-                                    uiState.movieWatchedStatus[homeItemStatusKey(item.id, item.apiType)] == true
-                                },
+                                isCatalogItemWatched = stableIsWatched,
                                 onCatalogItemLongPress = { item, addonBaseUrl ->
                                     posterOptionsTarget = HomePosterOptionsTarget(item, addonBaseUrl)
                                 }
@@ -192,9 +199,7 @@ fun HomeScreen(
                                 onNavigateToDetail = onNavigateToDetail,
                                 onContinueWatchingClick = onContinueWatchingClick,
                                 onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
-                                isCatalogItemWatched = { item ->
-                                    uiState.movieWatchedStatus[homeItemStatusKey(item.id, item.apiType)] == true
-                                },
+                                isCatalogItemWatched = stableIsWatched,
                                 onCatalogItemLongPress = { item, addonBaseUrl ->
                                     posterOptionsTarget = HomePosterOptionsTarget(item, addonBaseUrl)
                                 }
@@ -205,9 +210,7 @@ fun HomeScreen(
                                 uiState = uiState,
                                 onNavigateToDetail = onNavigateToDetail,
                                 onContinueWatchingClick = onContinueWatchingClick,
-                                isCatalogItemWatched = { item ->
-                                    uiState.movieWatchedStatus[homeItemStatusKey(item.id, item.apiType)] == true
-                                },
+                                isCatalogItemWatched = stableIsWatched,
                                 onCatalogItemLongPress = { item, addonBaseUrl ->
                                     posterOptionsTarget = HomePosterOptionsTarget(item, addonBaseUrl)
                                 }

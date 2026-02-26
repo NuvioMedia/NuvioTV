@@ -66,6 +66,8 @@ import java.util.concurrent.TimeUnit
 private val CwCardShape = RoundedCornerShape(12.dp)
 private val CwClipShape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
 private val BadgeShape = RoundedCornerShape(4.dp)
+private val CwCardShapeSpec = CardDefaults.shape(shape = CwCardShape)
+private val CwCardScale = CardDefaults.scale(focusedScale = 1.02f)
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -289,6 +291,13 @@ fun ContinueWatchingCard(
             .build()
     }
 
+    val focusRingColor = NuvioColors.FocusRing
+    val cwFocusedBorder = remember(focusRingColor) {
+        Border(
+            border = BorderStroke(2.dp, focusRingColor),
+            shape = CwCardShape
+        )
+    }
     val bgColor = NuvioColors.Background
     val overlayBrush = remember(bgColor) {
         Brush.verticalGradient(
@@ -333,18 +342,15 @@ fun ContinueWatchingCard(
                 }
                 false
             },
-        shape = CardDefaults.shape(shape = CwCardShape),
+        shape = CwCardShapeSpec,
         colors = CardDefaults.colors(
             containerColor = NuvioColors.BackgroundCard,
             focusedContainerColor = NuvioColors.FocusBackground
         ),
         border = CardDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = CwCardShape
-            )
+            focusedBorder = cwFocusedBorder
         ),
-        scale = CardDefaults.scale(focusedScale = 1.02f)
+        scale = CwCardScale
     ) {
         Column {
             // Thumbnail with progress overlay

@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.core.device.DeviceCapabilities
+import com.nuvio.tv.core.device.DeviceTier
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
@@ -76,7 +78,8 @@ class HomeViewModel @Inject constructor(
     private val traktSettingsDataStore: TraktSettingsDataStore,
     private val tmdbService: TmdbService,
     private val tmdbMetadataService: TmdbMetadataService,
-    private val trailerService: TrailerService
+    private val trailerService: TrailerService,
+    private val deviceCapabilities: DeviceCapabilities
 ) : ViewModel() {
     companion object {
         private const val TAG = "HomeViewModel"
@@ -84,7 +87,7 @@ class HomeViewModel @Inject constructor(
         private const val MAX_RECENT_PROGRESS_ITEMS = 300
         private const val MAX_NEXT_UP_LOOKUPS = 24
         private const val MAX_NEXT_UP_CONCURRENCY = 4
-        private const val MAX_CATALOG_LOAD_CONCURRENCY = 4
+        private const val CATALOG_WAVE_DELAY_MS = 120L
         private const val EXTERNAL_META_PREFETCH_FOCUS_DEBOUNCE_MS = 220L
     }
 
@@ -110,13 +113,21 @@ class HomeViewModel @Inject constructor(
     private var currentHeroCatalogKeys: List<String> = emptyList()
     private var catalogUpdateJob: Job? = null
     private var hasRenderedFirstCatalog = false
-    private val catalogLoadSemaphore = Semaphore(MAX_CATALOG_LOAD_CONCURRENCY)
+    private val catalogLoadSemaphore = Semaphore(
+        when (deviceCapabilities.tier) {
+            DeviceTier.LOW -> 2
+            DeviceTier.MEDIUM -> 3
+            DeviceTier.HIGH -> 4
+        }
+    )
     private var pendingCatalogLoads = 0
     private data class TruncatedRowCacheEntry(
         val sourceRow: CatalogRow,
         val truncatedRow: CatalogRow
     )
     private val truncatedRowCache = mutableMapOf<String, TruncatedRowCacheEntry>()
+    private var catalogVersion = 0L
+    private var lastProcessedCatalogVersion = -1L
     private val trailerPreviewLoadingIds = mutableSetOf<String>()
     private val trailerPreviewNegativeCache = mutableSetOf<String>()
     private val trailerPreviewUrlsState = mutableStateMapOf<String, String>()
@@ -132,6 +143,9 @@ class HomeViewModel @Inject constructor(
     private var pendingExternalMetaPrefetchItemId: String? = null
     private val posterLibraryObserverJobs = mutableMapOf<String, Job>()
     private val movieWatchedObserverJobs = mutableMapOf<String, Job>()
+    private val pendingLibraryStatusUpdates = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+    private val pendingWatchedStatusUpdates = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+    private var posterStatusFlushJob: Job? = null
     @Volatile
     private var externalMetaPrefetchEnabled: Boolean = false
     @Volatile
@@ -243,6 +257,7 @@ class HomeViewModel @Inject constructor(
                         previousState.heroSectionEnabled != prefs.heroSectionEnabled ||
                         previousState.homeLayout != prefs.layout
                 currentHeroCatalogKeys = prefs.heroCatalogKeys
+                val isLowTier = deviceCapabilities.tier == DeviceTier.LOW
                 _uiState.update {
                     it.copy(
                         homeLayout = prefs.layout,
@@ -252,14 +267,16 @@ class HomeViewModel @Inject constructor(
                         catalogAddonNameEnabled = prefs.catalogAddonNameEnabled,
                         catalogTypeSuffixEnabled = prefs.catalogTypeSuffixEnabled,
                         modernLandscapePostersEnabled = prefs.modernLandscapePostersEnabled,
-                        focusedPosterBackdropExpandEnabled = prefs.focusedBackdropExpandEnabled,
+                        focusedPosterBackdropExpandEnabled = if (isLowTier) false else prefs.focusedBackdropExpandEnabled,
                         focusedPosterBackdropExpandDelaySeconds = prefs.focusedBackdropExpandDelaySeconds,
-                        focusedPosterBackdropTrailerEnabled = prefs.focusedBackdropTrailerEnabled,
+                        focusedPosterBackdropTrailerEnabled = if (isLowTier) false else prefs.focusedBackdropTrailerEnabled,
                         focusedPosterBackdropTrailerMuted = prefs.focusedBackdropTrailerMuted,
                         focusedPosterBackdropTrailerPlaybackTarget = prefs.focusedBackdropTrailerPlaybackTarget,
                         posterCardWidthDp = prefs.posterCardWidthDp,
                         posterCardHeightDp = prefs.posterCardHeightDp,
-                        posterCardCornerRadiusDp = prefs.posterCardCornerRadiusDp
+                        posterCardCornerRadiusDp = prefs.posterCardCornerRadiusDp,
+                        keyRepeatThrottleMs = deviceCapabilities.keyRepeatThrottleMs,
+                        nestedPrefetchItemCount = deviceCapabilities.nestedPrefetchItemCount
                     )
                 }
                 if (shouldRefreshCatalogPresentation) {
@@ -376,6 +393,7 @@ class HomeViewModel @Inject constructor(
     fun onItemFocus(item: MetaPreview) {
         if (startupGracePeriodActive) return
         if (!externalMetaPrefetchEnabled) return
+        if (deviceCapabilities.tier == DeviceTier.LOW) return
         if (item.id in prefetchedExternalMetaIds) return
         if (pendingExternalMetaPrefetchItemId == item.id) return
 
@@ -423,6 +441,7 @@ class HomeViewModel @Inject constructor(
                     val mutableItems = row.items.toMutableList()
                     mutableItems[itemIndex] = merged
                     catalogsMap[key] = row.copy(items = mutableItems)
+                    catalogVersion++
                     truncatedRowCache.remove(key)
                 }
             }
@@ -602,6 +621,14 @@ class HomeViewModel @Inject constructor(
                     }
                 }
 
+                // Wait for first catalog to render before enriching, so enrichment
+                // state updates don't compete with the initial catalog paint.
+                if (!hasRenderedFirstCatalog) {
+                    withTimeoutOrNull(5000L) {
+                        while (!hasRenderedFirstCatalog) { delay(100) }
+                    }
+                }
+
                 // Then enrich Next Up and item details in background.
                 enrichContinueWatchingProgressively(
                     allProgress = recentItems,
@@ -741,7 +768,7 @@ class HomeViewModel @Inject constructor(
                     ) ?: return@withPermit
                     mergeMutex.withLock {
                         nextUpByContent[progress.contentId] = nextUp
-                        if (nextUpByContent.size - lastEmittedNextUpCount >= 2) {
+                        if (nextUpByContent.size - lastEmittedNextUpCount >= 4) {
                             val nextUpItems = nextUpByContent.values.toList()
                             _uiState.update {
                                 val mergedItems = mergeContinueWatchingItems(
@@ -802,7 +829,7 @@ class HomeViewModel @Inject constructor(
 
             if (enrichedItem != item) {
                 enrichedByProgress[item.progress] = enrichedItem
-                if (enrichedByProgress.size - lastAppliedCount >= 2) {
+                if (enrichedByProgress.size - lastAppliedCount >= 4) {
                     applyInProgressEpisodeDetailEnrichment(enrichedByProgress)
                     lastAppliedCount = enrichedByProgress.size
                 }
@@ -1188,6 +1215,8 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, error = null, installedAddonsCount = addons.size) }
         catalogOrder.clear()
         catalogsMap.clear()
+        catalogVersion++
+        lastProcessedCatalogVersion = -1L
         reconcilePosterStatusObservers(emptyList())
         _fullCatalogRows.value = emptyList()
         truncatedRowCache.clear()
@@ -1232,8 +1261,25 @@ class HomeViewModel @Inject constructor(
                     .map { catalog -> addon to catalog }
             }
             pendingCatalogLoads = catalogsToLoad.size
-            catalogsToLoad.forEach { (addon, catalog) ->
-                loadCatalog(addon, catalog)
+
+            // Stagger catalog dispatching in waves so the UI thread gets breathing
+            // room between batches to render + start Coil image loads.
+            val firstWaveSize = if (deviceCapabilities.tier == DeviceTier.LOW) 1 else 2
+            val subsequentWaveSize = if (deviceCapabilities.tier == DeviceTier.LOW) 2 else 3
+
+            val firstWave = catalogsToLoad.take(firstWaveSize)
+            val remaining = catalogsToLoad.drop(firstWaveSize)
+
+            firstWave.forEach { (addon, catalog) -> loadCatalog(addon, catalog) }
+
+            val waveDelayMs = if (deviceCapabilities.tier == DeviceTier.LOW) {
+                CATALOG_WAVE_DELAY_MS * 2  // Extra breathing room on constrained devices
+            } else {
+                CATALOG_WAVE_DELAY_MS
+            }
+            remaining.chunked(subsequentWaveSize).forEach { wave ->
+                delay(waveDelayMs)
+                wave.forEach { (addon, catalog) -> loadCatalog(addon, catalog) }
             }
         } catch (e: Exception) {
             _uiState.update { it.copy(isLoading = false, error = e.message) }
@@ -1266,6 +1312,7 @@ class HomeViewModel @Inject constructor(
                                 catalogId = catalog.id
                             )
                             catalogsMap[key] = result.data
+                            catalogVersion++
                             pendingCatalogLoads = (pendingCatalogLoads - 1).coerceAtLeast(0)
                             Log.d(
                                 TAG,
@@ -1297,6 +1344,7 @@ class HomeViewModel @Inject constructor(
 
         // Mark loading via lightweight separate flow — avoids full state cascade
         catalogsMap[key] = currentRow.copy(isLoading = true)
+        catalogVersion++
         _loadingCatalogs.update { it + key }
 
         viewModelScope.launch {
@@ -1318,11 +1366,13 @@ class HomeViewModel @Inject constructor(
                     is NetworkResult.Success -> {
                         val mergedItems = currentRow.items + result.data.items
                         catalogsMap[key] = result.data.copy(items = mergedItems)
+                        catalogVersion++
                         _loadingCatalogs.update { it - key }
                         scheduleUpdateCatalogRows()
                     }
                     is NetworkResult.Error -> {
                         catalogsMap[key] = currentRow.copy(isLoading = false)
+                        catalogVersion++
                         _loadingCatalogs.update { it - key }
                         scheduleUpdateCatalogRows()
                     }
@@ -1342,9 +1392,9 @@ class HomeViewModel @Inject constructor(
                     hasRenderedFirstCatalog = true
                     50L
                 }
-                pendingCatalogLoads > 8 -> 200L
-                pendingCatalogLoads > 3 -> 150L
-                pendingCatalogLoads > 0 -> 100L
+                pendingCatalogLoads > 8 -> 350L
+                pendingCatalogLoads > 3 -> 250L
+                pendingCatalogLoads > 0 -> 150L
                 else -> 50L
             }
             delay(debounceMs)
@@ -1353,6 +1403,11 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun updateCatalogRows() {
+        // Skip expensive recomputation when catalog data hasn't changed.
+        val currentVersion = catalogVersion
+        if (currentVersion == lastProcessedCatalogVersion && !_uiState.value.isLoading) return
+        lastProcessedCatalogVersion = currentVersion
+
         // Snapshot mutable state before entering background context
         val orderedKeys = catalogOrder.toList()
         val catalogSnapshot = catalogsMap.toMap()
@@ -1465,10 +1520,13 @@ class HomeViewModel @Inject constructor(
             Triple(computedDisplayRows, computedHeroItems, computedGridItems)
         }
 
-        // Full (untruncated) rows for CatalogSeeAllScreen
-        val fullRows = orderedKeys.mapNotNull { key -> catalogSnapshot[key] }
-        _fullCatalogRows.update { rows ->
-            if (rows == fullRows) rows else fullRows
+        // Full (untruncated) rows for CatalogSeeAllScreen — only needed when
+        // user navigates to SeeAll, so defer during the initial bulk load.
+        if (pendingCatalogLoads <= 0) {
+            val fullRows = orderedKeys.mapNotNull { key -> catalogSnapshot[key] }
+            _fullCatalogRows.update { rows ->
+                if (rows == fullRows) rows else fullRows
+            }
         }
 
         // Emit un-enriched hero items immediately so the UI renders without waiting for TMDB
@@ -1488,12 +1546,14 @@ class HomeViewModel @Inject constructor(
             )
         }
 
-        // Launch hero enrichment in the background — updates heroItems when done
+        // Launch hero enrichment in the background — updates heroItems when done.
+        // Defer during the initial bulk load to avoid 28 TMDB API calls competing
+        // with catalog network requests and triggering extra recompositions.
         val tmdbSettings = currentTmdbSettings
         val shouldUseEnrichedHeroItems = tmdbSettings.enabled &&
             (tmdbSettings.useArtwork || tmdbSettings.useBasicInfo || tmdbSettings.useDetails)
 
-        if (shouldUseEnrichedHeroItems && baseHeroItems.isNotEmpty()) {
+        if (shouldUseEnrichedHeroItems && baseHeroItems.isNotEmpty() && pendingCatalogLoads <= 0) {
             heroEnrichmentJob?.cancel()
             heroEnrichmentJob = viewModelScope.launch {
                 val enrichmentSignature = heroEnrichmentSignature(baseHeroItems, tmdbSettings)
@@ -1529,10 +1589,54 @@ class HomeViewModel @Inject constructor(
             lastHeroEnrichedItems = emptyList()
         }
 
-        reconcilePosterStatusObservers(displayRows)
+        // Defer poster-status observers during the initial bulk load to avoid
+        // launching hundreds of coroutines that compete with catalog loading + rendering.
+        if (pendingCatalogLoads <= 0) {
+            viewModelScope.launch {
+                delay(50)
+                reconcilePosterStatusObservers(displayRows)
+            }
+        }
     }
 
-    private fun reconcilePosterStatusObservers(rows: List<CatalogRow>) {
+    private fun schedulePosterStatusFlush() {
+        if (posterStatusFlushJob?.isActive == true) return
+        posterStatusFlushJob = viewModelScope.launch {
+            delay(200)
+            flushPosterStatusUpdates()
+        }
+    }
+
+    private fun flushPosterStatusUpdates() {
+        val libraryBatch = HashMap(pendingLibraryStatusUpdates)
+        val watchedBatch = HashMap(pendingWatchedStatusUpdates)
+        if (libraryBatch.isEmpty() && watchedBatch.isEmpty()) return
+        pendingLibraryStatusUpdates.keys.removeAll(libraryBatch.keys)
+        pendingWatchedStatusUpdates.keys.removeAll(watchedBatch.keys)
+
+        _uiState.update { state ->
+            val newLibrary = if (libraryBatch.isEmpty()) {
+                state.posterLibraryMembership
+            } else {
+                state.posterLibraryMembership + libraryBatch
+            }
+            val newWatched = if (watchedBatch.isEmpty()) {
+                state.movieWatchedStatus
+            } else {
+                state.movieWatchedStatus + watchedBatch
+            }
+            if (newLibrary == state.posterLibraryMembership && newWatched == state.movieWatchedStatus) {
+                state
+            } else {
+                state.copy(
+                    posterLibraryMembership = newLibrary,
+                    movieWatchedStatus = newWatched
+                )
+            }
+        }
+    }
+
+    private suspend fun reconcilePosterStatusObservers(rows: List<CatalogRow>) {
         val desiredItemsByKey = linkedMapOf<String, Pair<String, String>>()
         rows.asSequence()
             .flatMap { row -> row.items.asSequence() }
@@ -1558,26 +1662,24 @@ class HomeViewModel @Inject constructor(
                 movieWatchedObserverJobs.remove(staleKey)?.cancel()
             }
 
+        // Launch observers in chunks to avoid a burst of 300+ coroutines
+        // all emitting initial values simultaneously.
+        var launchedInChunk = 0
         desiredItemsByKey.forEach { (statusKey, itemRef) ->
             val itemId = itemRef.first
             val itemType = itemRef.second
+            var launchedAny = false
 
             if (statusKey !in posterLibraryObserverJobs) {
                 posterLibraryObserverJobs[statusKey] = viewModelScope.launch {
                     libraryRepository.isInLibrary(itemId = itemId, itemType = itemType)
                         .distinctUntilChanged()
                         .collectLatest { isInLibrary ->
-                            _uiState.update { state ->
-                                if (state.posterLibraryMembership[statusKey] == isInLibrary) {
-                                    state
-                                } else {
-                                    state.copy(
-                                        posterLibraryMembership = state.posterLibraryMembership + (statusKey to isInLibrary)
-                                    )
-                                }
-                            }
+                            pendingLibraryStatusUpdates[statusKey] = isInLibrary
+                            schedulePosterStatusFlush()
                         }
                 }
+                launchedAny = true
             }
 
             if (itemType.equals("movie", ignoreCase = true)) {
@@ -1586,20 +1688,32 @@ class HomeViewModel @Inject constructor(
                         watchProgressRepository.isWatched(contentId = itemId)
                             .distinctUntilChanged()
                             .collectLatest { watched ->
-                                _uiState.update { state ->
-                                    if (state.movieWatchedStatus[statusKey] == watched) {
-                                        state
-                                    } else {
-                                        state.copy(
-                                            movieWatchedStatus = state.movieWatchedStatus + (statusKey to watched)
-                                        )
-                                    }
-                                }
+                                pendingWatchedStatusUpdates[statusKey] = watched
+                                schedulePosterStatusFlush()
                             }
                     }
+                    launchedAny = true
+                }
+            }
+
+            if (launchedAny) {
+                launchedInChunk++
+                if (launchedInChunk >= 30) {
+                    launchedInChunk = 0
+                    // Yield to let pending coroutines emit their first values
+                    // and batch into a single flush before launching the next chunk.
+                    kotlinx.coroutines.yield()
                 }
             }
         }
+
+        // Flush any buffered updates before trimming stale entries.
+        posterStatusFlushJob?.cancel()
+        flushPosterStatusUpdates()
+
+        // Remove stale entries from pending buffers.
+        pendingLibraryStatusUpdates.keys.retainAll(desiredKeys)
+        pendingWatchedStatusUpdates.keys.retainAll(desiredMovieKeys)
 
         _uiState.update { state ->
             val trimmedLibraryMembership =
@@ -1895,10 +2009,13 @@ class HomeViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        posterStatusFlushJob?.cancel()
         posterLibraryObserverJobs.values.forEach { it.cancel() }
         movieWatchedObserverJobs.values.forEach { it.cancel() }
         posterLibraryObserverJobs.clear()
         movieWatchedObserverJobs.clear()
+        pendingLibraryStatusUpdates.clear()
+        pendingWatchedStatusUpdates.clear()
         super.onCleared()
     }
 }

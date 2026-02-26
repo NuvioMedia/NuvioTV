@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.repository
 
 import android.util.Log
+import com.nuvio.tv.core.image.TmdbImageUrlOptimizer
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.network.safeApiCall
 import com.nuvio.tv.data.mapper.toDomain
@@ -17,7 +18,8 @@ import javax.inject.Singleton
 
 @Singleton
 class CatalogRepositoryImpl @Inject constructor(
-    private val api: AddonApi
+    private val api: AddonApi,
+    private val tmdbImageUrlOptimizer: TmdbImageUrlOptimizer
 ) : CatalogRepository {
     companion object {
         private const val TAG = "CatalogRepository"
@@ -61,7 +63,13 @@ class CatalogRepositoryImpl @Inject constructor(
 
         when (val result = safeApiCall { api.getCatalog(url) }) {
             is NetworkResult.Success -> {
-                val items = result.data.metas.map { it.toDomain() }
+                val items = result.data.metas.map { dto ->
+                    val domain = dto.toDomain()
+                    domain.copy(
+                        poster = tmdbImageUrlOptimizer.optimizePosterUrl(domain.poster) ?: domain.poster,
+                        background = tmdbImageUrlOptimizer.optimizeBackdropUrl(domain.background) ?: domain.background
+                    )
+                }
                 Log.d(
                     TAG,
                     "Catalog fetch success addonId=$addonId type=$type catalogId=$catalogId items=${items.size}"

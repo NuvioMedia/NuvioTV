@@ -29,8 +29,8 @@ import com.nuvio.tv.ui.components.ContinueWatchingSection
 import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.PosterCardStyle
 
-/** Minimum interval between processed key repeat events to prevent HWUI overload. */
-private const val KEY_REPEAT_THROTTLE_MS = 80L
+/** Default minimum interval between processed key repeat events to prevent HWUI overload. */
+private const val KEY_REPEAT_THROTTLE_MS_DEFAULT = 80L
 
 private class FocusSnapshot(
     var rowIndex: Int,
@@ -56,9 +56,12 @@ fun ClassicHomeContent(
 ) {
 
     // Nested prefetch: when LazyColumn prefetches a row ahead of scrolling,
-    // pre-compose up to 2 ContentCards in its nested LazyRow across multiple frames.
-    // This spreads the composition work and prevents frame spikes when a new row scrolls in.
-    val nestedPrefetchStrategy = remember { LazyListPrefetchStrategy(nestedPrefetchItemCount = 2) }
+    // pre-compose ContentCards in its nested LazyRow across multiple frames.
+    // On low-tier devices, prefetch is disabled (0) to avoid decoder contention.
+    val adaptiveNestedPrefetchCount = uiState.nestedPrefetchItemCount
+    val nestedPrefetchStrategy = remember(adaptiveNestedPrefetchCount) {
+        LazyListPrefetchStrategy(nestedPrefetchItemCount = adaptiveNestedPrefetchCount)
+    }
 
     val columnListState = rememberLazyListState(
         initialFirstVisibleItemIndex = focusState.verticalScrollIndex,
@@ -137,6 +140,7 @@ fun ClassicHomeContent(
 
     // Throttle D-pad key repeats to prevent HWUI overload when a key is held down.
     var lastKeyRepeatTime by remember { mutableStateOf(0L) }
+    val keyRepeatThrottle = uiState.keyRepeatThrottleMs
 
     LazyColumn(
         state = columnListState,
@@ -146,7 +150,7 @@ fun ClassicHomeContent(
                 val native = event.nativeKeyEvent
                 if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {
                     val now = System.currentTimeMillis()
-                    if (now - lastKeyRepeatTime < KEY_REPEAT_THROTTLE_MS) {
+                    if (now - lastKeyRepeatTime < keyRepeatThrottle) {
                         return@onPreviewKeyEvent true // consume — too fast
                     }
                     lastKeyRepeatTime = now

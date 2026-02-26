@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -22,6 +23,7 @@ class DebugSettingsDataStore @Inject constructor(
 
     private val accountTabEnabledKey = booleanPreferencesKey("account_tab_enabled")
     private val syncCodeFeaturesEnabledKey = booleanPreferencesKey("sync_code_features_enabled")
+    private val deviceTierOverrideKey = stringPreferencesKey("device_tier_override")
 
     val accountTabEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[accountTabEnabledKey] ?: false
@@ -29,6 +31,10 @@ class DebugSettingsDataStore @Inject constructor(
 
     val syncCodeFeaturesEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[syncCodeFeaturesEnabledKey] ?: false
+    }
+
+    val deviceTierOverride: Flow<String> = dataStore.data.map { prefs ->
+        prefs[deviceTierOverrideKey] ?: "auto"
     }
 
     suspend fun setAccountTabEnabled(enabled: Boolean) {
@@ -40,6 +46,12 @@ class DebugSettingsDataStore @Inject constructor(
     suspend fun setSyncCodeFeaturesEnabled(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[syncCodeFeaturesEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setDeviceTierOverride(value: String) {
+        dataStore.edit { prefs ->
+            prefs[deviceTierOverrideKey] = value
         }
     }
 }
