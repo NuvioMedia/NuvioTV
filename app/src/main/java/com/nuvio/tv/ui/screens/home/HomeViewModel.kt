@@ -10,6 +10,7 @@ import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
+import com.nuvio.tv.data.repository.parseContentIds
 import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
@@ -17,6 +18,7 @@ import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeLayout
+import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.TmdbSettings
@@ -24,6 +26,7 @@ import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.CatalogRepository
+import com.nuvio.tv.domain.repository.LibraryRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,6 +41,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -59,11 +63,13 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import java.util.Locale
 
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
     private val catalogRepository: CatalogRepository,
     private val watchProgressRepository: WatchProgressRepository,
+    private val libraryRepository: LibraryRepository,
     private val metaRepository: MetaRepository,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
@@ -117,14 +123,19 @@ class HomeViewModel @Inject constructor(
     private var activeTrailerPreviewItemId: String? = null
     private var trailerPreviewRequestVersion: Long = 0L
     private var currentTmdbSettings: TmdbSettings = TmdbSettings()
+    private var heroEnrichmentJob: Job? = null
     private var lastHeroEnrichmentSignature: String? = null
     private var lastHeroEnrichedItems: List<MetaPreview> = emptyList()
     private val prefetchedExternalMetaIds = Collections.synchronizedSet(mutableSetOf<String>())
     private val externalMetaPrefetchInFlightIds = Collections.synchronizedSet(mutableSetOf<String>())
     private var externalMetaPrefetchJob: Job? = null
     private var pendingExternalMetaPrefetchItemId: String? = null
+    private val posterLibraryObserverJobs = mutableMapOf<String, Job>()
+    private val movieWatchedObserverJobs = mutableMapOf<String, Job>()
     @Volatile
     private var externalMetaPrefetchEnabled: Boolean = false
+    @Volatile
+    private var startupGracePeriodActive: Boolean = true
     val trailerPreviewUrls: Map<String, String>
         get() = trailerPreviewUrlsState
 
@@ -136,6 +147,10 @@ class HomeViewModel @Inject constructor(
         observeTmdbSettings()
         loadContinueWatching()
         observeInstalledAddons()
+        viewModelScope.launch {
+            delay(3000)
+            startupGracePeriodActive = false
+        }
     }
 
     private fun observeLayoutPreferences() {
@@ -177,12 +192,7 @@ class HomeViewModel @Inject constructor(
             )
         }
 
-        val modernLayoutPrefsFlow = combine(
-            layoutPreferenceDataStore.modernLandscapePostersEnabled,
-            layoutPreferenceDataStore.modernNextRowPreviewEnabled
-        ) { modernLandscapePostersEnabled, modernNextRowPreviewEnabled ->
-            modernLandscapePostersEnabled to modernNextRowPreviewEnabled
-        }
+        val modernLayoutPrefsFlow = layoutPreferenceDataStore.modernLandscapePostersEnabled
 
         val baseLayoutUiPrefsFlow = combine(
             coreLayoutPrefsFlow,
@@ -199,7 +209,6 @@ class HomeViewModel @Inject constructor(
                 catalogAddonNameEnabled = corePrefs.catalogAddonNameEnabled,
                 catalogTypeSuffixEnabled = corePrefs.catalogTypeSuffixEnabled,
                 modernLandscapePostersEnabled = false,
-                modernNextRowPreviewEnabled = true,
                 focusedBackdropExpandEnabled = focusedBackdropPrefs.expandEnabled,
                 focusedBackdropExpandDelaySeconds = focusedBackdropPrefs.expandDelaySeconds,
                 focusedBackdropTrailerEnabled = focusedBackdropPrefs.trailerEnabled,
@@ -217,11 +226,11 @@ class HomeViewModel @Inject constructor(
                 modernLayoutPrefsFlow
             ) { basePrefs, modernPrefs ->
                 basePrefs.copy(
-                    modernLandscapePostersEnabled = modernPrefs.first,
-                    modernNextRowPreviewEnabled = modernPrefs.second
+                    modernLandscapePostersEnabled = modernPrefs
                 )
             }
                 .distinctUntilChanged()
+                .debounce(100)
                 .collectLatest { prefs ->
                 val effectivePosterLabelsEnabled = if (prefs.layout == HomeLayout.MODERN) {
                     false
@@ -243,7 +252,6 @@ class HomeViewModel @Inject constructor(
                         catalogAddonNameEnabled = prefs.catalogAddonNameEnabled,
                         catalogTypeSuffixEnabled = prefs.catalogTypeSuffixEnabled,
                         modernLandscapePostersEnabled = prefs.modernLandscapePostersEnabled,
-                        modernNextRowPreviewEnabled = prefs.modernNextRowPreviewEnabled,
                         focusedPosterBackdropExpandEnabled = prefs.focusedBackdropExpandEnabled,
                         focusedPosterBackdropExpandDelaySeconds = prefs.focusedBackdropExpandDelaySeconds,
                         focusedPosterBackdropTrailerEnabled = prefs.focusedBackdropTrailerEnabled,
@@ -301,7 +309,6 @@ class HomeViewModel @Inject constructor(
         val catalogAddonNameEnabled: Boolean,
         val catalogTypeSuffixEnabled: Boolean,
         val modernLandscapePostersEnabled: Boolean,
-        val modernNextRowPreviewEnabled: Boolean,
         val focusedBackdropExpandEnabled: Boolean,
         val focusedBackdropExpandDelaySeconds: Int,
         val focusedBackdropTrailerEnabled: Boolean,
@@ -327,6 +334,7 @@ class HomeViewModel @Inject constructor(
         releaseInfo: String?,
         apiType: String
     ) {
+        if (startupGracePeriodActive) return
         if (activeTrailerPreviewItemId != itemId) {
             activeTrailerPreviewItemId = itemId
             trailerPreviewRequestVersion++
@@ -366,6 +374,7 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onItemFocus(item: MetaPreview) {
+        if (startupGracePeriodActive) return
         if (!externalMetaPrefetchEnabled) return
         if (item.id in prefetchedExternalMetaIds) return
         if (pendingExternalMetaPrefetchItemId == item.id) return
@@ -490,6 +499,52 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun togglePosterLibrary(item: MetaPreview, addonBaseUrl: String?) {
+        val statusKey = homeItemStatusKey(item.id, item.apiType)
+        if (statusKey in _uiState.value.posterLibraryPending) return
+
+        _uiState.update { state ->
+            state.copy(posterLibraryPending = state.posterLibraryPending + statusKey)
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                libraryRepository.toggleDefault(item.toLibraryEntryInput(addonBaseUrl))
+            }.onFailure { error ->
+                Log.w(TAG, "Failed to toggle poster library for ${item.id}: ${error.message}")
+            }
+            _uiState.update { state ->
+                state.copy(posterLibraryPending = state.posterLibraryPending - statusKey)
+            }
+        }
+    }
+
+    fun togglePosterMovieWatched(item: MetaPreview) {
+        if (!item.apiType.equals("movie", ignoreCase = true)) return
+        val statusKey = homeItemStatusKey(item.id, item.apiType)
+        if (statusKey in _uiState.value.movieWatchedPending) return
+
+        _uiState.update { state ->
+            state.copy(movieWatchedPending = state.movieWatchedPending + statusKey)
+        }
+
+        viewModelScope.launch {
+            val currentlyWatched = _uiState.value.movieWatchedStatus[statusKey] == true
+            runCatching {
+                if (currentlyWatched) {
+                    watchProgressRepository.removeFromHistory(item.id)
+                } else {
+                    watchProgressRepository.markAsCompleted(buildCompletedMovieProgress(item))
+                }
+            }.onFailure { error ->
+                Log.w(TAG, "Failed to toggle poster watched status for ${item.id}: ${error.message}")
+            }
+            _uiState.update { state ->
+                state.copy(movieWatchedPending = state.movieWatchedPending - statusKey)
+            }
+        }
+    }
+
     private fun loadContinueWatching() {
         viewModelScope.launch {
             combine(
@@ -524,16 +579,13 @@ class HomeViewModel @Inject constructor(
 
                 Log.d("HomeViewModel", "allProgress emitted=${items.size} recentWindow=${recentItems.size}")
 
-                val metaCache = mutableMapOf<String, Meta?>()
                 val inProgressOnly = buildList {
                     deduplicateInProgress(
                         recentItems.filter { shouldTreatAsInProgressForContinueWatching(it) }
                     ).forEach { progress ->
                         add(
                             ContinueWatchingItem.InProgress(
-                                progress = progress,
-                                episodeDescription = resolveCurrentEpisodeDescription(progress, metaCache),
-                                episodeThumbnail = resolveCurrentEpisodeThumbnail(progress, metaCache)
+                                progress = progress
                             )
                         )
                     }
@@ -550,13 +602,14 @@ class HomeViewModel @Inject constructor(
                     }
                 }
 
-                // Then enrich Next Up in background with bounded concurrency.
+                // Then enrich Next Up and item details in background.
                 enrichContinueWatchingProgressively(
                     allProgress = recentItems,
                     inProgressItems = inProgressOnly,
                     dismissedNextUp = dismissedNextUp,
                     showUnairedNextUp = showUnairedNextUp
                 )
+                enrichInProgressEpisodeDetailsProgressively(inProgressOnly)
             }
         }
     }
@@ -723,6 +776,69 @@ class HomeViewModel @Inject constructor(
                         it.copy(continueWatchingItems = mergedItems)
                     }
                 }
+            }
+        }
+    }
+
+    private suspend fun enrichInProgressEpisodeDetailsProgressively(
+        inProgressItems: List<ContinueWatchingItem.InProgress>
+    ) = coroutineScope {
+        if (inProgressItems.isEmpty()) return@coroutineScope
+
+        val seriesItems = inProgressItems.filter { isSeriesType(it.progress.contentType) }
+        if (seriesItems.isEmpty()) return@coroutineScope
+
+        val metaCache = mutableMapOf<String, Meta?>()
+        val enrichedByProgress = linkedMapOf<WatchProgress, ContinueWatchingItem.InProgress>()
+        var lastAppliedCount = 0
+
+        for (item in seriesItems) {
+            val description = resolveCurrentEpisodeDescription(item.progress, metaCache)
+            val thumbnail = resolveCurrentEpisodeThumbnail(item.progress, metaCache)
+            val enrichedItem = item.copy(
+                episodeDescription = description,
+                episodeThumbnail = thumbnail
+            )
+
+            if (enrichedItem != item) {
+                enrichedByProgress[item.progress] = enrichedItem
+                if (enrichedByProgress.size - lastAppliedCount >= 2) {
+                    applyInProgressEpisodeDetailEnrichment(enrichedByProgress)
+                    lastAppliedCount = enrichedByProgress.size
+                }
+            }
+        }
+
+        if (enrichedByProgress.isNotEmpty() && enrichedByProgress.size != lastAppliedCount) {
+            applyInProgressEpisodeDetailEnrichment(enrichedByProgress)
+        }
+    }
+
+    private fun applyInProgressEpisodeDetailEnrichment(
+        replacements: Map<WatchProgress, ContinueWatchingItem.InProgress>
+    ) {
+        if (replacements.isEmpty()) return
+
+        _uiState.update { state ->
+            var changed = false
+            val updatedItems = state.continueWatchingItems.map { item ->
+                if (item is ContinueWatchingItem.InProgress) {
+                    val replacement = replacements[item.progress]
+                    if (replacement != null && replacement != item) {
+                        changed = true
+                        replacement
+                    } else {
+                        item
+                    }
+                } else {
+                    item
+                }
+            }
+
+            if (changed) {
+                state.copy(continueWatchingItems = updatedItems)
+            } else {
+                state
             }
         }
     }
@@ -1060,9 +1176,7 @@ class HomeViewModel @Inject constructor(
     private fun observeInstalledAddons() {
         viewModelScope.launch {
             addonRepository.getInstalledAddons()
-                .distinctUntilChanged { old, new ->
-                    old.map { it.id } == new.map { it.id }
-                }
+                .distinctUntilChanged()
                 .collectLatest { addons ->
                     addonsCache = addons
                     loadAllCatalogs(addons)
@@ -1074,6 +1188,7 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, error = null, installedAddonsCount = addons.size) }
         catalogOrder.clear()
         catalogsMap.clear()
+        reconcilePosterStatusObservers(emptyList())
         _fullCatalogRows.value = emptyList()
         truncatedRowCache.clear()
         hasRenderedFirstCatalog = false
@@ -1220,29 +1335,17 @@ class HomeViewModel @Inject constructor(
     private fun scheduleUpdateCatalogRows() {
         catalogUpdateJob?.cancel()
         catalogUpdateJob = viewModelScope.launch {
-            val currentLayout = _uiState.value.homeLayout
-            val preferSmootherBatching = currentLayout == HomeLayout.CLASSIC || currentLayout == HomeLayout.GRID
-            val loadedContentRowCount = catalogsMap.values.count { it.items.isNotEmpty() }
-
-           
-            if (!hasRenderedFirstCatalog && catalogsMap.isNotEmpty()) {
-                val shouldHoldFirstRenderForBatch =
-                    preferSmootherBatching &&
-                        pendingCatalogLoads > 0 &&
-                        loadedContentRowCount in 0..2
-
-                if (!shouldHoldFirstRenderForBatch) {
-                    hasRenderedFirstCatalog = true
-                    updateCatalogRows()
-                    return@launch
-                }
-            }
             val debounceMs = when {
-                preferSmootherBatching && pendingCatalogLoads > 5 -> 650L
-                preferSmootherBatching && pendingCatalogLoads > 0 -> 380L
-                pendingCatalogLoads > 5 -> 450L
-                pendingCatalogLoads > 0 -> 250L
-                else -> 100L
+                // First render: use minimal debounce to show content ASAP while still
+                // batching near-simultaneous arrivals.
+                !hasRenderedFirstCatalog && catalogsMap.isNotEmpty() -> {
+                    hasRenderedFirstCatalog = true
+                    50L
+                }
+                pendingCatalogLoads > 8 -> 200L
+                pendingCatalogLoads > 3 -> 150L
+                pendingCatalogLoads > 0 -> 100L
+                else -> 50L
             }
             delay(debounceMs)
             updateCatalogRows()
@@ -1368,28 +1471,9 @@ class HomeViewModel @Inject constructor(
             if (rows == fullRows) rows else fullRows
         }
 
-        val tmdbSettings = currentTmdbSettings
-        val shouldUseEnrichedHeroItems = tmdbSettings.enabled &&
-            (tmdbSettings.useArtwork || tmdbSettings.useBasicInfo || tmdbSettings.useDetails)
-
-        val resolvedHeroItems = if (shouldUseEnrichedHeroItems) {
-            val enrichmentSignature = heroEnrichmentSignature(baseHeroItems, tmdbSettings)
-            if (lastHeroEnrichmentSignature == enrichmentSignature) {
-                lastHeroEnrichedItems
-            } else {
-                val enrichedItems = enrichHeroItems(baseHeroItems, tmdbSettings)
-                lastHeroEnrichmentSignature = enrichmentSignature
-                lastHeroEnrichedItems = enrichedItems
-                enrichedItems
-            }
-        } else {
-            lastHeroEnrichmentSignature = null
-            lastHeroEnrichedItems = emptyList()
-            baseHeroItems
-        }
-
+        // Emit un-enriched hero items immediately so the UI renders without waiting for TMDB
         val nextGridItems = if (currentLayout == HomeLayout.GRID) {
-            replaceGridHeroItems(baseGridItems, resolvedHeroItems)
+            replaceGridHeroItems(baseGridItems, baseHeroItems)
         } else {
             baseGridItems
         }
@@ -1398,11 +1482,196 @@ class HomeViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(
                 catalogRows = if (state.catalogRows == displayRows) state.catalogRows else displayRows,
-                heroItems = if (state.heroItems == resolvedHeroItems) state.heroItems else resolvedHeroItems,
+                heroItems = if (state.heroItems == baseHeroItems) state.heroItems else baseHeroItems,
                 gridItems = if (state.gridItems == nextGridItems) state.gridItems else nextGridItems,
                 isLoading = false
             )
         }
+
+        // Launch hero enrichment in the background — updates heroItems when done
+        val tmdbSettings = currentTmdbSettings
+        val shouldUseEnrichedHeroItems = tmdbSettings.enabled &&
+            (tmdbSettings.useArtwork || tmdbSettings.useBasicInfo || tmdbSettings.useDetails)
+
+        if (shouldUseEnrichedHeroItems && baseHeroItems.isNotEmpty()) {
+            heroEnrichmentJob?.cancel()
+            heroEnrichmentJob = viewModelScope.launch {
+                val enrichmentSignature = heroEnrichmentSignature(baseHeroItems, tmdbSettings)
+                if (lastHeroEnrichmentSignature == enrichmentSignature) {
+                    // Already enriched with same signature — apply cached result
+                    val cached = lastHeroEnrichedItems
+                    _uiState.update { state ->
+                        state.copy(
+                            heroItems = if (state.heroItems == cached) state.heroItems else cached,
+                            gridItems = if (currentLayout == HomeLayout.GRID) {
+                                val enrichedGrid = replaceGridHeroItems(state.gridItems, cached)
+                                if (state.gridItems == enrichedGrid) state.gridItems else enrichedGrid
+                            } else state.gridItems
+                        )
+                    }
+                } else {
+                    val enrichedItems = enrichHeroItems(baseHeroItems, tmdbSettings)
+                    lastHeroEnrichmentSignature = enrichmentSignature
+                    lastHeroEnrichedItems = enrichedItems
+                    _uiState.update { state ->
+                        state.copy(
+                            heroItems = if (state.heroItems == enrichedItems) state.heroItems else enrichedItems,
+                            gridItems = if (currentLayout == HomeLayout.GRID) {
+                                val enrichedGrid = replaceGridHeroItems(state.gridItems, enrichedItems)
+                                if (state.gridItems == enrichedGrid) state.gridItems else enrichedGrid
+                            } else state.gridItems
+                        )
+                    }
+                }
+            }
+        } else {
+            lastHeroEnrichmentSignature = null
+            lastHeroEnrichedItems = emptyList()
+        }
+
+        reconcilePosterStatusObservers(displayRows)
+    }
+
+    private fun reconcilePosterStatusObservers(rows: List<CatalogRow>) {
+        val desiredItemsByKey = linkedMapOf<String, Pair<String, String>>()
+        rows.asSequence()
+            .flatMap { row -> row.items.asSequence() }
+            .forEach { item ->
+                val key = homeItemStatusKey(item.id, item.apiType)
+                if (key !in desiredItemsByKey) {
+                    desiredItemsByKey[key] = item.id to item.apiType
+                }
+            }
+        val desiredKeys = desiredItemsByKey.keys
+        val desiredMovieKeys = desiredItemsByKey
+            .filterValues { (_, itemType) -> itemType.equals("movie", ignoreCase = true) }
+            .keys
+
+        posterLibraryObserverJobs.keys
+            .filterNot { it in desiredKeys }
+            .forEach { staleKey ->
+                posterLibraryObserverJobs.remove(staleKey)?.cancel()
+            }
+        movieWatchedObserverJobs.keys
+            .filterNot { it in desiredMovieKeys }
+            .forEach { staleKey ->
+                movieWatchedObserverJobs.remove(staleKey)?.cancel()
+            }
+
+        desiredItemsByKey.forEach { (statusKey, itemRef) ->
+            val itemId = itemRef.first
+            val itemType = itemRef.second
+
+            if (statusKey !in posterLibraryObserverJobs) {
+                posterLibraryObserverJobs[statusKey] = viewModelScope.launch {
+                    libraryRepository.isInLibrary(itemId = itemId, itemType = itemType)
+                        .distinctUntilChanged()
+                        .collectLatest { isInLibrary ->
+                            _uiState.update { state ->
+                                if (state.posterLibraryMembership[statusKey] == isInLibrary) {
+                                    state
+                                } else {
+                                    state.copy(
+                                        posterLibraryMembership = state.posterLibraryMembership + (statusKey to isInLibrary)
+                                    )
+                                }
+                            }
+                        }
+                }
+            }
+
+            if (itemType.equals("movie", ignoreCase = true)) {
+                if (statusKey !in movieWatchedObserverJobs) {
+                    movieWatchedObserverJobs[statusKey] = viewModelScope.launch {
+                        watchProgressRepository.isWatched(contentId = itemId)
+                            .distinctUntilChanged()
+                            .collectLatest { watched ->
+                                _uiState.update { state ->
+                                    if (state.movieWatchedStatus[statusKey] == watched) {
+                                        state
+                                    } else {
+                                        state.copy(
+                                            movieWatchedStatus = state.movieWatchedStatus + (statusKey to watched)
+                                        )
+                                    }
+                                }
+                            }
+                    }
+                }
+            }
+        }
+
+        _uiState.update { state ->
+            val trimmedLibraryMembership =
+                state.posterLibraryMembership.filterKeys { it in desiredKeys }
+            val trimmedMovieWatchedStatus =
+                state.movieWatchedStatus.filterKeys { it in desiredMovieKeys }
+            val trimmedLibraryPending =
+                state.posterLibraryPending.filterTo(linkedSetOf()) { it in desiredKeys }
+            val trimmedMovieWatchedPending =
+                state.movieWatchedPending.filterTo(linkedSetOf()) { it in desiredMovieKeys }
+
+            if (
+                trimmedLibraryMembership == state.posterLibraryMembership &&
+                trimmedMovieWatchedStatus == state.movieWatchedStatus &&
+                trimmedLibraryPending == state.posterLibraryPending &&
+                trimmedMovieWatchedPending == state.movieWatchedPending
+            ) {
+                state
+            } else {
+                state.copy(
+                    posterLibraryMembership = trimmedLibraryMembership,
+                    movieWatchedStatus = trimmedMovieWatchedStatus,
+                    posterLibraryPending = trimmedLibraryPending,
+                    movieWatchedPending = trimmedMovieWatchedPending
+                )
+            }
+        }
+    }
+
+    private fun buildCompletedMovieProgress(item: MetaPreview): WatchProgress {
+        return WatchProgress(
+            contentId = item.id,
+            contentType = item.apiType,
+            name = item.name,
+            poster = item.poster,
+            backdrop = item.background,
+            logo = item.logo,
+            videoId = item.id,
+            season = null,
+            episode = null,
+            episodeTitle = null,
+            position = 1L,
+            duration = 1L,
+            lastWatched = System.currentTimeMillis(),
+            progressPercent = 100f
+        )
+    }
+
+    private fun MetaPreview.toLibraryEntryInput(addonBaseUrl: String?): LibraryEntryInput {
+        val year = Regex("(\\d{4})").find(releaseInfo ?: "")
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.toIntOrNull()
+        val parsedIds = parseContentIds(id)
+        return LibraryEntryInput(
+            itemId = id,
+            itemType = apiType,
+            title = name,
+            year = year,
+            traktId = parsedIds.trakt,
+            imdbId = parsedIds.imdb,
+            tmdbId = parsedIds.tmdb,
+            poster = poster,
+            posterShape = posterShape,
+            background = background,
+            logo = logo,
+            description = description,
+            releaseInfo = releaseInfo,
+            imdbRating = imdbRating,
+            genres = genres,
+            addonBaseUrl = addonBaseUrl
+        )
     }
 
     private fun navigateToDetail(itemId: String, itemType: String) {
@@ -1623,5 +1892,13 @@ class HomeViewModel @Inject constructor(
             focusedRowIndex = focusedRowIndex,
             focusedItemIndex = focusedItemIndex
         )
+    }
+
+    override fun onCleared() {
+        posterLibraryObserverJobs.values.forEach { it.cancel() }
+        movieWatchedObserverJobs.values.forEach { it.cancel() }
+        posterLibraryObserverJobs.clear()
+        movieWatchedObserverJobs.clear()
+        super.onCleared()
     }
 }

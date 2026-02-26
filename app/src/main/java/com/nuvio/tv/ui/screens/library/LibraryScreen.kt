@@ -76,8 +76,10 @@ import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 
 @Composable
-private fun localizedTypeLabel(key: String): String = when (key) {
+private fun localizedTypeLabel(key: String): String = when (key.lowercase()) {
     LibraryTypeTab.ALL_KEY -> stringResource(R.string.library_type_all)
+    "movie" -> stringResource(R.string.type_movie)
+    "series" -> stringResource(R.string.type_series)
     else -> formatAddonTypeLabel(key)
 }
 

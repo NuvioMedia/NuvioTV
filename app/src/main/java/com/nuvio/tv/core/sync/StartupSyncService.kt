@@ -118,13 +118,11 @@ class StartupSyncService @Inject constructor(
                     delay(3000)
                 }
             }
-            if (syncCompleted) return@launch
-
-            // After completing, check if a re-sync was requested while we were running
+            
             val resyncKey = pendingResyncKey
             if (resyncKey != null) {
                 pendingResyncKey = null
-                if (resyncKey != lastPulledKey) {
+                if (!syncCompleted || resyncKey != lastPulledKey) {
                     Log.d(TAG, "Running pending re-sync for key=$resyncKey")
                     scheduleStartupPull(userId, force = true)
                 }

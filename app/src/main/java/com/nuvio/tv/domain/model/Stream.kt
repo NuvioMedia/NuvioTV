@@ -55,7 +55,10 @@ data class StreamBehaviorHints(
     val notWebReady: Boolean?,
     val bingeGroup: String?,
     val countryWhitelist: List<String>?,
-    val proxyHeaders: ProxyHeaders?
+    val proxyHeaders: ProxyHeaders?,
+    val videoHash: String? = null,
+    val videoSize: Long? = null,
+    val filename: String? = null
 )
 
 @Immutable

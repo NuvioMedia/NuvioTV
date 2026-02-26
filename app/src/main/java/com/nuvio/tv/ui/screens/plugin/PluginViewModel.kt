@@ -163,6 +163,7 @@ class PluginViewModel @Inject constructor(
     }
 
     private fun setPluginsEnabled(enabled: Boolean) {
+        if (isReadOnly) return
         viewModelScope.launch {
             pluginManager.setPluginsEnabled(enabled)
         }

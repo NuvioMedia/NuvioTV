@@ -144,7 +144,6 @@ class SearchViewModel @Inject constructor(
 
     private fun performSearch(rawQuery: String) {
         val query = rawQuery.trim()
-
         _uiState.update {
             it.copy(
                 submittedQuery = query,
@@ -613,11 +612,7 @@ class SearchViewModel @Inject constructor(
             catalog.extra.any { it.name == "search" && it.isRequired }
         }
 
-        return if (requiredSearchTargets.isNotEmpty()) {
-            requiredSearchTargets
-        } else {
-            allSearchTargets
-        }
+        return allSearchTargets
     }
 
     private fun searchCatalogLabel(apiType: String): String {

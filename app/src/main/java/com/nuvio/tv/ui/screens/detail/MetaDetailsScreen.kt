@@ -95,7 +95,9 @@ import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.window.Dialog
+import androidx.compose.runtime.rememberCoroutineScope
 
 private enum class RestoreTarget {
     HERO,
@@ -598,6 +600,7 @@ private fun MetaDetailsContent(
         mutableStateOf(false)
     }
     val lifecycleOwner = LocalLifecycleOwner.current
+    val coroutineScope = rememberCoroutineScope()
 
     fun clearPendingRestore() {
         pendingRestoreType = null
@@ -916,7 +919,7 @@ private fun MetaDetailsContent(
     ) {
         ImageRequest.Builder(localContext)
             .data(meta.background ?: meta.poster)
-            .crossfade(false)
+            .crossfade(true)
             .size(width = backdropWidthPx, height = backdropHeightPx)
             .build()
     }
@@ -1014,6 +1017,15 @@ private fun MetaDetailsContent(
                         hideLogoDuringTrailer = hideLogoDuringTrailer,
                         isTrailerPlaying = isTrailerPlaying,
                         playButtonFocusRequester = heroPlayFocusRequester,
+                        onHeroActionFocused = {
+                            if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
+                                coroutineScope.launch {
+                                    listState.animateScrollToItem(0)
+                                }
+                            }
+                            initialHeroFocusRequested = true
+                            clearPendingRestore()
+                        },
                         restorePlayFocusToken = (if (pendingRestoreType == RestoreTarget.HERO) restoreFocusToken else 0) +
                                 restorePlayFocusAfterTrailerBackToken,
                         onPlayFocusRestored = {
@@ -1040,6 +1052,7 @@ private fun MetaDetailsContent(
                     EpisodesRow(
                         episodes = episodesForSeason,
                         episodeProgressMap = episodeProgressMap,
+                        episodeRatings = episodeImdbRatings,
                         watchedEpisodes = watchedEpisodes,
                         episodeWatchedPendingKeys = episodeWatchedPendingKeys,
                         blurUnwatchedEpisodes = blurUnwatchedEpisodes,

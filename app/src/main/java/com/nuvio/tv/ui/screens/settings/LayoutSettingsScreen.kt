@@ -221,19 +221,6 @@ fun LayoutSettingsContent(
                             },
                             onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
                         )
-                        CompactToggleRow(
-                            title = stringResource(R.string.layout_preview_row),
-                            subtitle = stringResource(R.string.layout_preview_row_sub),
-                            checked = uiState.modernNextRowPreviewEnabled,
-                            onToggle = {
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetModernNextRowPreviewEnabled(
-                                        !uiState.modernNextRowPreviewEnabled
-                                    )
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
-                        )
                     }
 
                     if (uiState.heroSectionEnabled && uiState.availableCatalogs.isNotEmpty()) {

@@ -76,7 +76,12 @@ class ProfileDataStore @Inject constructor(
 
     suspend fun replaceAllProfiles(profiles: List<UserProfile>) {
         dataStore.edit { prefs ->
-            prefs[profilesJsonKey] = serializeProfiles(profiles)
+            val normalizedProfiles = normalizeProfiles(profiles)
+            prefs[profilesJsonKey] = serializeProfiles(normalizedProfiles)
+            val activeId = prefs[activeProfileIdKey] ?: 1
+            if (normalizedProfiles.none { it.id == activeId }) {
+                prefs[activeProfileIdKey] = 1
+            }
         }
     }
 
@@ -91,10 +96,16 @@ class ProfileDataStore @Inject constructor(
         return try {
             val adapter = moshi.adapter<List<ProfileJson>>(profileListType)
             val parsed = adapter.fromJson(json) ?: return listOf(defaultPrimaryProfile())
-            parsed.map { it.toDomain() }.ifEmpty { listOf(defaultPrimaryProfile()) }
+            normalizeProfiles(parsed.map { it.toDomain() })
         } catch (e: Exception) {
             listOf(defaultPrimaryProfile())
         }
+    }
+
+    private fun normalizeProfiles(profiles: List<UserProfile>): List<UserProfile> {
+        val nonEmpty = profiles.ifEmpty { listOf(defaultPrimaryProfile()) }
+        if (nonEmpty.any { it.id == 1 }) return nonEmpty
+        return listOf(defaultPrimaryProfile()) + nonEmpty
     }
 
     private fun serializeProfiles(profiles: List<UserProfile>): String {

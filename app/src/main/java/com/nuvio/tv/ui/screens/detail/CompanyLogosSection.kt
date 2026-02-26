@@ -22,7 +22,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import coil.compose.AsyncImage
@@ -60,10 +60,12 @@ fun CompanyLogosSection(
             contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(
+            itemsIndexed(
                 items = companies,
-                key = { company -> "$title-${company.name}-${company.logo.orEmpty()}" }
-            ) { company ->
+                key = { index, company ->
+                    "$title-$index-${company.name}-${company.logo.orEmpty()}"
+                }
+            ) { _, company ->
                 CompanyLogoCard(company = company)
             }
         }
@@ -80,7 +82,7 @@ private fun CompanyLogoCard(company: MetaCompany) {
         company.logo?.let { logo ->
             ImageRequest.Builder(context)
                 .data(logo)
-                .crossfade(false)
+                .crossfade(true)
                 .size(width = logoWidthPx, height = logoHeightPx)
                 .build()
         }

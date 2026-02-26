@@ -42,10 +42,11 @@ class ProfileSettingsViewModel @Inject constructor(
         if (_isCreating.value) return
         viewModelScope.launch {
             _isCreating.value = true
+            val existingIds = profileManager.profiles.value.map { it.id }.toSet()
             val success = profileManager.createProfile(name, avatarColorHex)
             if (success) {
                 val profiles = profileManager.profiles.value
-                val newProfile = profiles.lastOrNull { it.name == name }
+                val newProfile = profiles.firstOrNull { it.id !in existingIds }
                 if (newProfile != null && (usesPrimaryAddons || usesPrimaryPlugins)) {
                     profileManager.updateProfile(
                         newProfile.copy(

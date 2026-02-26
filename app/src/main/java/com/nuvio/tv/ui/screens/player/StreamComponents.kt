@@ -36,12 +36,13 @@ import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.FilterChip
-import androidx.tv.material3.FilterChipDefaults
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import com.nuvio.tv.domain.model.Stream
+import com.nuvio.tv.ui.components.SourceChipItem
+import com.nuvio.tv.ui.components.SourceChipStatus
+import com.nuvio.tv.ui.components.SourceStatusFilterChip
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.compose.ui.res.stringResource
@@ -52,6 +53,7 @@ internal fun StreamItem(
     stream: Stream,
     focusRequester: FocusRequester,
     requestInitialFocus: Boolean,
+    isCurrentStream: Boolean = false,
     onClick: () -> Unit
 ) {
     Card(
@@ -64,6 +66,19 @@ internal fun StreamItem(
             focusedContainerColor = NuvioColors.BackgroundElevated
         ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp)),
+        border = CardDefaults.border(
+            border = Border(
+                border = BorderStroke(
+                    1.dp,
+                    if (isCurrentStream) NuvioColors.Primary.copy(alpha = 0.65f) else Color.Transparent
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ),
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                shape = RoundedCornerShape(12.dp)
+            )
+        ),
         scale = CardDefaults.scale(focusedScale = 1.04f)
     ) {
         Row(
@@ -77,11 +92,31 @@ internal fun StreamItem(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    text = stream.getDisplayName(),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = NuvioColors.TextPrimary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = stream.getDisplayName(),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = NuvioColors.TextPrimary
+                    )
+
+                    if (isCurrentStream) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(999.dp))
+                                .background(NuvioColors.Primary.copy(alpha = 0.2f))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.sources_playing),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = NuvioColors.Primary
+                            )
+                        }
+                    }
+                }
 
                 stream.getDisplayDescription()?.let { description ->
                     if (description != stream.getDisplayName()) {
@@ -162,75 +197,41 @@ private fun StreamTypeChip(
 @Composable
 internal fun AddonFilterChips(
     addons: List<String>,
+    sourceChips: List<SourceChipItem> = emptyList(),
     selectedAddon: String?,
     onAddonSelected: (String?) -> Unit
 ) {
+    val chipMap = sourceChips.associateBy { it.name }
+    val orderedNames = buildList {
+        addAll(addons)
+        sourceChips.forEach { chip ->
+            if (chip.name !in this) add(chip.name)
+        }
+    }
+
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
     ) {
         item {
-            AddonChip(
+            SourceStatusFilterChip(
                 name = "All",
                 isSelected = selectedAddon == null,
+                status = SourceChipStatus.SUCCESS,
                 onClick = { onAddonSelected(null) }
             )
         }
 
-        items(addons) { addon ->
-            AddonChip(
+        items(orderedNames) { addon ->
+            val chipStatus = chipMap[addon]?.status ?: SourceChipStatus.SUCCESS
+            val isSelectable = addon in addons && chipStatus == SourceChipStatus.SUCCESS
+            SourceStatusFilterChip(
                 name = addon,
                 isSelected = selectedAddon == addon,
+                status = chipStatus,
+                isSelectable = isSelectable,
                 onClick = { onAddonSelected(addon) }
             )
         }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-internal fun AddonChip(
-    name: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    FilterChip(
-        selected = isSelected,
-        onClick = onClick,
-        modifier = Modifier,
-        colors = FilterChipDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.Secondary,
-            selectedContainerColor = NuvioColors.Secondary,
-            focusedSelectedContainerColor = NuvioColors.Secondary,
-            contentColor = NuvioColors.TextSecondary,
-            focusedContentColor = NuvioColors.OnSecondary,
-            selectedContentColor = NuvioColors.OnSecondary,
-            focusedSelectedContentColor = NuvioColors.OnSecondary
-        ),
-        border = FilterChipDefaults.border(
-            border = Border(
-                border = BorderStroke(1.dp, NuvioColors.Border),
-                shape = RoundedCornerShape(20.dp)
-            ),
-            focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(20.dp)
-            ),
-            selectedBorder = Border(
-                border = BorderStroke(1.dp, NuvioColors.Primary),
-                shape = RoundedCornerShape(20.dp)
-            ),
-            focusedSelectedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(20.dp)
-            )
-        ),
-        shape = FilterChipDefaults.shape(shape = RoundedCornerShape(20.dp))
-    ) {
-        Text(
-            text = name,
-            style = MaterialTheme.typography.labelLarge
-        )
     }
 }

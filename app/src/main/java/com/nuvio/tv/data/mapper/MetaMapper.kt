@@ -10,7 +10,7 @@ import com.nuvio.tv.domain.model.MetaLink
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.model.Video
 
-fun MetaDto.toDomain(): Meta {
+fun MetaDto.toDomain(episodeLabel: String = "Episode"): Meta {
     return Meta(
         id = id,
         type = ContentType.fromString(type),
@@ -39,7 +39,7 @@ fun MetaDto.toDomain(): Meta {
                     photo = castMember.photo?.takeIf { it.isNotBlank() }
                 )
             },
-        videos = videos?.map { it.toDomain() } ?: emptyList(),
+        videos = videos?.map { it.toDomain(episodeLabel) } ?: emptyList(),
         productionCompanies = emptyList(),
         networks = emptyList(),
         ageRating = null,
@@ -64,12 +64,13 @@ private fun coerceStringList(value: Any?): List<String> {
     }
 }
 
-fun VideoDto.toDomain(): Video {
+fun VideoDto.toDomain(episodeLabel: String = "Episode"): Video {
     return Video(
         id = id,
-        title = name ?: title ?: "Episode ${episode ?: number ?: 0}",
+        title = name ?: title ?: "$episodeLabel ${episode ?: number ?: 0}",
         released = released,
         thumbnail = thumbnail,
+        streams = streams?.map { it.toDomain(addonName = "Embedded Streams", addonLogo = null) } ?: emptyList(),
         season = season,
         episode = episode ?: number,
         overview = overview ?: description

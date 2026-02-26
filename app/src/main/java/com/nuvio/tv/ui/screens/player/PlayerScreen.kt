@@ -1770,7 +1770,7 @@ private fun SpeedItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = if (speed == 1f) "Normal" else "${speed}x",
+                text = if (speed == 1f) stringResource(R.string.player_speed_normal) else "${speed}x",
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary
             )

@@ -85,10 +85,18 @@ internal fun DiscoverSection(
     val genres = selectedCatalog?.genres.orEmpty()
     var expandedPicker by remember { mutableStateOf<String?>(null) }
 
+    val strTypeMovie = stringResource(R.string.type_movie)
+    val strTypeSeries = stringResource(R.string.type_series)
+    fun localizedTypeLabel(type: String): String = when (type.lowercase()) {
+        "movie" -> strTypeMovie
+        "series" -> strTypeSeries
+        else -> formatAddonTypeLabel(type)
+    }
+
     val availableTypes = remember(uiState.discoverCatalogs) {
         uiState.discoverCatalogs.map { it.type }.distinct()
     }
-    val selectedTypeLabel = formatAddonTypeLabel(uiState.selectedDiscoverType)
+    val selectedTypeLabel = localizedTypeLabel(uiState.selectedDiscoverType)
     val selectedCatalogLabel = selectedCatalog?.catalogName ?: stringResource(R.string.discover_select_catalog)
     val selectedGenreLabel = uiState.selectedDiscoverGenre ?: stringResource(R.string.discover_genre_default)
 
@@ -114,7 +122,7 @@ internal fun DiscoverSection(
                 value = selectedTypeLabel,
                 expanded = expandedPicker == "type",
                 options = availableTypes.map { type ->
-                    val label = formatAddonTypeLabel(type)
+                    val label = localizedTypeLabel(type)
                     DiscoverOption(label, type)
                 },
                 onExpandedChange = { shouldExpand ->
@@ -164,7 +172,7 @@ internal fun DiscoverSection(
             val metadataSegments = buildList {
                 add(catalog.addonName)
                 if (uiState.catalogTypeSuffixEnabled) {
-                    formatAddonTypeLabel(catalog.type)
+                    localizedTypeLabel(catalog.type)
                         .takeIf { it.isNotEmpty() }
                         ?.let(::add)
                 }

@@ -61,6 +61,23 @@ class SkipIntroRepository @Inject constructor(
         return emptyList()
     }
 
+    suspend fun getSkipIntervalsForMal(malId: String, episode: Int): List<SkipInterval> {
+        val cacheKey = "mal:$malId:$episode"
+        cache[cacheKey]?.let { return it }
+        val result = fetchFromAniSkip(malId, episode)
+        cache[cacheKey] = result
+        return result
+    }
+
+    suspend fun getSkipIntervalsForKitsu(kitsuId: String, episode: Int): List<SkipInterval> {
+        val cacheKey = "kitsu:$kitsuId:$episode"
+        cache[cacheKey]?.let { return it }
+        val malId = resolveKitsuId(kitsuId)
+        val result = if (malId != null) fetchFromAniSkip(malId, episode) else emptyList()
+        cache[cacheKey] = result
+        return result
+    }
+
     private suspend fun fetchFromIntroDb(imdbId: String, season: Int, episode: Int): List<SkipInterval> {
         return try {
             val response = introDbApi.getSegments(imdbId, season, episode)
@@ -114,7 +131,6 @@ class SkipIntroRepository @Inject constructor(
     }
 
     private suspend fun resolveMalId(imdbId: String): String? {
-        // Use a sentinel value for "not found" since ConcurrentHashMap doesn't allow null values
         val cached = malIdCache[imdbId]
         if (cached != null) return cached.takeIf { it != NO_MAL_ID }
 
@@ -128,6 +144,24 @@ class SkipIntroRepository @Inject constructor(
         }
 
         malIdCache[imdbId] = malId ?: NO_MAL_ID
+        return malId
+    }
+
+    private suspend fun resolveKitsuId(kitsuId: String): String? {
+        val cacheKey = "kitsu:$kitsuId"
+        val cached = malIdCache[cacheKey]
+        if (cached != null) return cached.takeIf { it != NO_MAL_ID }
+
+        val malId = try {
+            val response = armApi.resolveByKitsu(kitsuId)
+            if (response.isSuccessful) {
+                response.body()?.firstOrNull()?.myanimelist?.toString()
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+
+        malIdCache[cacheKey] = malId ?: NO_MAL_ID
         return malId
     }
 

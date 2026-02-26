@@ -207,7 +207,7 @@ internal fun PlayerRuntimeController.emitPauseScrobbleStop(progressPercent: Floa
     if (!hasSentScrobbleStartForCurrentItem) return
 
     scope.launch {
-        traktScrobbleService.scrobblePause(
+        traktScrobbleService.scrobbleStop(
             item = item,
             progressPercent = progressPercent
         )
@@ -711,7 +711,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         PlayerEvent.OnToggleAspectRatio -> {
             val currentMode = _uiState.value.resizeMode
             val newMode = PlayerDisplayModeUtils.nextResizeMode(currentMode)
-            val modeText = PlayerDisplayModeUtils.resizeModeLabel(newMode)
+            val modeText = PlayerDisplayModeUtils.resizeModeLabel(newMode, context)
             Log.d("PlayerViewModel", "Aspect ratio toggled: $currentMode -> $newMode")
             _uiState.update { 
                 it.copy(

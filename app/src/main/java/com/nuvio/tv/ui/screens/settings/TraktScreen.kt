@@ -34,7 +34,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
@@ -56,6 +55,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.repository.TraktProgressService
+import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
 import java.util.concurrent.TimeUnit
@@ -318,26 +318,14 @@ fun TraktScreen(
     }
 
     if (showDaysCapDialog) {
-        Dialog(onDismissRequest = { showDaysCapDialog = false }) {
-            Column(
-                modifier = Modifier
-                    .width(620.dp)
-                    .background(NuvioColors.BackgroundElevated, RoundedCornerShape(16.dp))
-                    .border(1.dp, NuvioColors.Border, RoundedCornerShape(16.dp))
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.trakt_cw_window_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = NuvioColors.TextPrimary
-                )
-                Text(
-                    text = stringResource(R.string.trakt_cw_window_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary
-                )
-
+        NuvioDialog(
+            onDismiss = { showDaysCapDialog = false },
+            title = stringResource(R.string.trakt_cw_window_title),
+            subtitle = stringResource(R.string.trakt_cw_window_subtitle),
+            width = 620.dp,
+            suppressFirstKeyUp = false
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 continueWatchingDayOptions.chunked(2).forEach { rowOptions ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -384,25 +372,14 @@ fun TraktScreen(
     }
 
     if (showUnairedNextUpDialog) {
-        Dialog(onDismissRequest = { showUnairedNextUpDialog = false }) {
-            Column(
-                modifier = Modifier
-                    .width(620.dp)
-                    .background(NuvioColors.BackgroundElevated, RoundedCornerShape(16.dp))
-                    .border(1.dp, NuvioColors.Border, RoundedCornerShape(16.dp))
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.trakt_unaired_dialog_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = NuvioColors.TextPrimary
-                )
-                Text(
-                    text = stringResource(R.string.trakt_unaired_dialog_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary
-                )
+        NuvioDialog(
+            onDismiss = { showUnairedNextUpDialog = false },
+            title = stringResource(R.string.trakt_unaired_dialog_title),
+            subtitle = stringResource(R.string.trakt_unaired_dialog_subtitle),
+            width = 620.dp,
+            suppressFirstKeyUp = false
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(
                     onClick = {
                         viewModel.onShowUnairedNextUpChanged(true)
@@ -448,49 +425,36 @@ fun TraktScreen(
     }
 
     if (showDisconnectConfirm) {
-        Dialog(onDismissRequest = { showDisconnectConfirm = false }) {
-            Column(
-                modifier = Modifier
-                    .width(520.dp)
-                    .background(NuvioColors.BackgroundElevated, RoundedCornerShape(16.dp))
-                    .border(1.dp, NuvioColors.Border, RoundedCornerShape(16.dp))
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        NuvioDialog(
+            onDismiss = { showDisconnectConfirm = false },
+            title = stringResource(R.string.trakt_disconnect_title),
+            subtitle = stringResource(R.string.trakt_disconnect_subtitle),
+            width = 520.dp,
+            suppressFirstKeyUp = false
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.trakt_disconnect_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = NuvioColors.TextPrimary
-                )
-                Text(
-                    text = stringResource(R.string.trakt_disconnect_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                Button(
+                    onClick = {
+                        showDisconnectConfirm = false
+                        viewModel.onDisconnectClick()
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = NuvioColors.BackgroundCard,
+                        contentColor = NuvioColors.TextPrimary
+                    )
                 ) {
-                    Button(
-                        onClick = {
-                            showDisconnectConfirm = false
-                            viewModel.onDisconnectClick()
-                        },
-                        colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
-                            contentColor = NuvioColors.TextPrimary
-                        )
-                    ) {
-                        Text(stringResource(R.string.trakt_disconnect))
-                    }
-                    Button(
-                        onClick = { showDisconnectConfirm = false },
-                        colors = ButtonDefaults.colors(
-                            containerColor = NuvioColors.BackgroundCard,
-                            contentColor = NuvioColors.TextPrimary
-                        )
-                    ) {
-                        Text(stringResource(R.string.action_cancel))
-                    }
+                    Text(stringResource(R.string.trakt_disconnect))
+                }
+                Button(
+                    onClick = { showDisconnectConfirm = false },
+                    colors = ButtonDefaults.colors(
+                        containerColor = NuvioColors.BackgroundCard,
+                        contentColor = NuvioColors.TextPrimary
+                    )
+                ) {
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         }

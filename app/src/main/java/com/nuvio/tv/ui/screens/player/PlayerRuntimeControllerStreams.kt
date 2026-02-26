@@ -7,6 +7,8 @@ import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Video
+import com.nuvio.tv.ui.components.SourceChipItem
+import com.nuvio.tv.ui.components.SourceChipStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -87,6 +89,7 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
 
     val targetChanged = requestKey != sourceStreamsCacheRequestKey
     sourceStreamsJob?.cancel()
+    sourceChipErrorDismissJob?.cancel()
     sourceStreamsJob = scope.launch {
         sourceStreamsCacheRequestKey = requestKey
         _uiState.update {
@@ -96,9 +99,14 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
                 sourceAllStreams = if (forceRefresh || targetChanged) emptyList() else it.sourceAllStreams,
                 sourceSelectedAddonFilter = if (forceRefresh || targetChanged) null else it.sourceSelectedAddonFilter,
                 sourceFilteredStreams = if (forceRefresh || targetChanged) emptyList() else it.sourceFilteredStreams,
-                sourceAvailableAddons = if (forceRefresh || targetChanged) emptyList() else it.sourceAvailableAddons
+                sourceAvailableAddons = if (forceRefresh || targetChanged) emptyList() else it.sourceAvailableAddons,
+                sourceChips = if (forceRefresh || targetChanged) emptyList() else it.sourceChips
             )
         }
+
+        val installedAddons = addonRepository.getInstalledAddons().first()
+        val installedAddonOrder = installedAddons.map { it.displayName }
+        updateSourceChipsForFetchStart(type, installedAddons)
 
         streamRepository.getStreamsFromAllAddons(
             type = type,
@@ -108,7 +116,7 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {
-                    val addonStreams = result.data
+                    val addonStreams = StreamAutoPlaySelector.orderAddonStreams(result.data, installedAddonOrder)
                     val allStreams = addonStreams.flatMap { it.streams }
                     val availableAddons = addonStreams.map { it.addonName }
                     _uiState.update {
@@ -118,6 +126,10 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
                             sourceSelectedAddonFilter = null,
                             sourceFilteredStreams = allStreams,
                             sourceAvailableAddons = availableAddons,
+                            sourceChips = mergeSourceChipStatuses(
+                                existing = it.sourceChips,
+                                succeededNames = addonStreams.map { group -> group.addonName }
+                            ),
                             sourceStreamsError = null
                         )
                     }
@@ -137,6 +149,7 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
                 }
             }
         }
+        markRemainingSourceChipsAsError()
     }
 }
 
@@ -144,9 +157,11 @@ internal fun PlayerRuntimeController.dismissSourcesPanel() {
     _uiState.update {
         it.copy(
             showSourcesPanel = false,
-            isLoadingSourceStreams = false
+            isLoadingSourceStreams = false,
+            sourceChips = emptyList()
         )
     }
+    sourceChipErrorDismissJob?.cancel()
     scheduleHideControls()
 }
 
@@ -162,6 +177,91 @@ internal fun PlayerRuntimeController.filterSourceStreamsByAddon(addonName: Strin
             sourceSelectedAddonFilter = addonName,
             sourceFilteredStreams = filteredStreams
         )
+    }
+}
+
+private suspend fun PlayerRuntimeController.updateSourceChipsForFetchStart(
+    type: String,
+    installedAddons: List<com.nuvio.tv.domain.model.Addon>
+) {
+    val addonNames = installedAddons
+        .filter { it.supportsStreamResourceForChip(type) }
+        .map { it.displayName }
+
+    val pluginNames = try {
+        if (pluginManager.pluginsEnabled.first()) {
+            pluginManager.enabledScrapers.first()
+                .filter { it.supportsType(type) }
+                .map { it.name }
+                .distinct()
+        } else {
+            emptyList()
+        }
+    } catch (_: Exception) {
+        emptyList()
+    }
+
+    val ordered = (addonNames + pluginNames).distinct()
+    _uiState.update {
+        it.copy(
+            sourceChips = ordered.map { name -> SourceChipItem(name, SourceChipStatus.LOADING) }
+        )
+    }
+}
+
+private fun PlayerRuntimeController.mergeSourceChipStatuses(
+    existing: List<SourceChipItem>,
+    succeededNames: List<String>
+): List<SourceChipItem> {
+    if (succeededNames.isEmpty()) return existing
+    if (existing.isEmpty()) {
+        return succeededNames.distinct().map { SourceChipItem(it, SourceChipStatus.SUCCESS) }
+    }
+
+    val successSet = succeededNames.toSet()
+    val updated = existing.map { chip ->
+        if (chip.name in successSet) chip.copy(status = SourceChipStatus.SUCCESS) else chip
+    }.toMutableList()
+
+    val known = updated.map { it.name }.toSet()
+    succeededNames.forEach { name ->
+        if (name !in known) updated += SourceChipItem(name, SourceChipStatus.SUCCESS)
+    }
+    return updated
+}
+
+private fun PlayerRuntimeController.markRemainingSourceChipsAsError() {
+    var markedAnyError = false
+    _uiState.update { state ->
+        if (!state.sourceChips.any { it.status == SourceChipStatus.LOADING }) return@update state
+        markedAnyError = true
+        state.copy(
+            sourceChips = state.sourceChips.map { chip ->
+                if (chip.status == SourceChipStatus.LOADING) {
+                    chip.copy(status = SourceChipStatus.ERROR)
+                } else {
+                    chip
+                }
+            }
+        )
+    }
+    if (!markedAnyError) return
+
+    sourceChipErrorDismissJob?.cancel()
+    sourceChipErrorDismissJob = scope.launch {
+        delay(1600L)
+        _uiState.update { state ->
+            state.copy(
+                sourceChips = state.sourceChips.filterNot { it.status == SourceChipStatus.ERROR }
+            )
+        }
+    }
+}
+
+private fun com.nuvio.tv.domain.model.Addon.supportsStreamResourceForChip(type: String): Boolean {
+    return resources.any { resource ->
+        resource.name == "stream" &&
+            (resource.types.isEmpty() || resource.types.any { it.equals(type, ignoreCase = true) })
     }
 }
 
@@ -182,6 +282,11 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
     currentStreamUrl = url
     currentHeaders = newHeaders
     currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
+    currentVideoHash = stream.behaviorHints?.videoHash
+    currentVideoSize = stream.behaviorHints?.videoSize
+    currentFilename = stream.behaviorHints?.filename
+        ?: url.substringBefore('?').substringAfterLast('/', "")
+            .takeIf { it.isNotBlank() && it.contains('.') }
     pendingAddonSubtitleLanguage = null
     pendingAddonSubtitleTrackId = null
     pendingAudioSelectionAfterSubtitleRefresh = null
@@ -194,6 +299,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
             isBuffering = true,
             error = null,
             currentStreamName = stream.name ?: stream.addonName,
+            currentStreamUrl = url,
             audioTracks = emptyList(),
             subtitleTracks = emptyList(),
             selectedAudioTrackIndex = -1,
@@ -373,6 +479,9 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(video: Video, forceRe
             )
         }
 
+        val installedAddons = addonRepository.getInstalledAddons().first()
+        val installedAddonOrder = installedAddons.map { it.displayName }
+
         streamRepository.getStreamsFromAllAddons(
             type = type,
             videoId = video.id,
@@ -381,7 +490,7 @@ internal fun PlayerRuntimeController.loadStreamsForEpisode(video: Video, forceRe
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {
-                    val addonStreams = result.data
+                    val addonStreams = StreamAutoPlaySelector.orderAddonStreams(result.data, installedAddonOrder)
                     val allStreams = addonStreams.flatMap { it.streams }
                     val availableAddons = addonStreams.map { it.addonName }
                     val selectedAddon = previousAddonFilter?.takeIf { it in availableAddons }
@@ -457,6 +566,11 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
     currentStreamUrl = url
     currentHeaders = newHeaders
     currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
+    currentVideoHash = stream.behaviorHints?.videoHash
+    currentVideoSize = stream.behaviorHints?.videoSize
+    currentFilename = stream.behaviorHints?.filename
+        ?: url.substringBefore('?').substringAfterLast('/', "")
+            .takeIf { it.isNotBlank() && it.contains('.') }
     pendingAddonSubtitleLanguage = null
     pendingAddonSubtitleTrackId = null
     pendingAudioSelectionAfterSubtitleRefresh = null
@@ -478,6 +592,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
             currentEpisode = currentEpisode,
             currentEpisodeTitle = currentEpisodeTitle,
             currentStreamName = stream.name ?: stream.addonName, 
+            currentStreamUrl = url,
             audioTracks = emptyList(),
             subtitleTracks = emptyList(),
             selectedAudioTrackIndex = -1,

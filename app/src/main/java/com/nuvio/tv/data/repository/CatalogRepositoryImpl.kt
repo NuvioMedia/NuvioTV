@@ -37,6 +37,7 @@ class CatalogRepositoryImpl @Inject constructor(
         supportsSkip: Boolean
     ): Flow<NetworkResult<CatalogRow>> = flow {
         val cacheKey = buildCacheKey(
+            addonBaseUrl = addonBaseUrl,
             addonId = addonId,
             type = type,
             catalogId = catalogId,
@@ -137,6 +138,7 @@ class CatalogRepositoryImpl @Inject constructor(
     }
 
     private fun buildCacheKey(
+        addonBaseUrl: String,
         addonId: String,
         type: String,
         catalogId: String,
@@ -146,6 +148,7 @@ class CatalogRepositoryImpl @Inject constructor(
         val normalizedArgs = extraArgs.entries
             .sortedBy { it.key }
             .joinToString("&") { "${it.key}=${it.value}" }
-        return "${addonId}_${type}_${catalogId}_${skip}_${normalizedArgs}"
+        val normalizedBaseUrl = addonBaseUrl.trim().trimEnd('/').lowercase()
+        return "${normalizedBaseUrl}_${addonId}_${type}_${catalogId}_${skip}_${normalizedArgs}"
     }
 }

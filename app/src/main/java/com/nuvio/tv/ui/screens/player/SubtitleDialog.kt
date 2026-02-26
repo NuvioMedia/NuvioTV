@@ -103,12 +103,19 @@ internal fun SubtitleSelectionDialog(
             .distinct()
             .size
     }
+    val strAddons = stringResource(R.string.subtitle_tab_addons)
+    val strLanguages = stringResource(R.string.subtitle_tab_languages)
     val addonsTabTitle = when (subtitleOrganizationMode) {
-        SubtitleOrganizationMode.BY_LANGUAGE -> "Languages"
+        SubtitleOrganizationMode.BY_LANGUAGE -> strLanguages
         SubtitleOrganizationMode.NONE,
-        SubtitleOrganizationMode.BY_ADDON -> "Addons"
+        SubtitleOrganizationMode.BY_ADDON -> strAddons
     }
-    val tabs = listOf("Built-in", addonsTabTitle, "Style", "Delay")
+    val tabs = listOf(
+        stringResource(R.string.subtitle_tab_builtin),
+        addonsTabTitle,
+        stringResource(R.string.subtitle_tab_style),
+        stringResource(R.string.subtitle_tab_delay)
+    )
     val tabFocusRequesters = remember { tabs.map { FocusRequester() } }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -268,7 +275,7 @@ private fun InternalSubtitlesContent(
     ) {
         item {
             TrackItem(
-                track = TrackInfo(index = -1, name = "None", language = null),
+                track = TrackInfo(index = -1, name = stringResource(R.string.subtitle_none), language = null),
                 isSelected = selectedIndex == -1 && selectedAddonSubtitle == null,
                 onClick = onDisableSubtitles
             )
@@ -310,11 +317,17 @@ private fun AddonSubtitlesContent(
     isLoading: Boolean,
     onSubtitleSelected: (Subtitle) -> Unit
 ) {
-    val viewData = remember(subtitles, preferredLanguage, subtitleOrganizationMode) {
+    val strAll = stringResource(R.string.subtitle_all)
+    val strLanguages = stringResource(R.string.subtitle_tab_languages)
+    val strAddons = stringResource(R.string.subtitle_tab_addons)
+    val viewData = remember(subtitles, preferredLanguage, subtitleOrganizationMode, strAll, strLanguages, strAddons) {
         buildAddonSubtitleViewData(
             subtitles = subtitles,
             preferredLanguage = preferredLanguage,
-            mode = subtitleOrganizationMode
+            mode = subtitleOrganizationMode,
+            strAll = strAll,
+            strLanguages = strLanguages,
+            strAddons = strAddons
         )
     }
 
@@ -478,7 +491,10 @@ private data class AddonSubtitleViewData(
 private fun buildAddonSubtitleViewData(
     subtitles: List<Subtitle>,
     preferredLanguage: String,
-    mode: SubtitleOrganizationMode
+    mode: SubtitleOrganizationMode,
+    strAll: String,
+    strLanguages: String,
+    strAddons: String
 ): AddonSubtitleViewData {
     val preferredFirst = sortByPreferredLanguage(subtitles, preferredLanguage) { it.lang }
 
@@ -489,7 +505,7 @@ private fun buildAddonSubtitleViewData(
                 filters = listOf(
                     SubtitleFilter(
                         key = "all",
-                        label = "All",
+                        label = strAll,
                         items = preferredFirst
                     )
                 )
@@ -498,7 +514,7 @@ private fun buildAddonSubtitleViewData(
 
         SubtitleOrganizationMode.BY_LANGUAGE -> {
             AddonSubtitleViewData(
-                filterTitle = "Languages",
+                filterTitle = strLanguages,
                 filters = preferredFirst
                     .groupBy { subtitleLanguageGroupKey(it.lang) }
                     .map { (languageKey, items) ->
@@ -514,7 +530,7 @@ private fun buildAddonSubtitleViewData(
 
         SubtitleOrganizationMode.BY_ADDON -> {
             AddonSubtitleViewData(
-                filterTitle = "Addons",
+                filterTitle = strAddons,
                 filters = preferredFirst
                     .groupBy { it.addonName }
                     .map { (addon, items) ->
@@ -679,11 +695,11 @@ private fun SubtitleStyleContent(
         // Core section
         item {
             StyleSection(
-                title = "Core",
+                title = stringResource(R.string.subtitle_section_core),
                 icon = Icons.Default.FormatSize
             ) {
                 // Font Size
-                StyleSettingRow(label = "Font Size") {
+                StyleSettingRow(label = stringResource(R.string.subtitle_font_size)) {
                     StyleStepperButton(
                         icon = Icons.Default.Remove,
                         onClick = { onEvent(PlayerEvent.OnSetSubtitleSize(subtitleStyle.size - 10)) }
@@ -698,7 +714,7 @@ private fun SubtitleStyleContent(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Bold
-                StyleSettingRow(label = "Bold") {
+                StyleSettingRow(label = stringResource(R.string.subtitle_bold)) {
                     StyleToggleButton(
                         isEnabled = subtitleStyle.bold,
                         onClick = { onEvent(PlayerEvent.OnSetSubtitleBold(!subtitleStyle.bold)) }
@@ -710,7 +726,7 @@ private fun SubtitleStyleContent(
         // Advanced section
         item {
             StyleSection(
-                title = "Advanced",
+                title = stringResource(R.string.subtitle_section_advanced),
                 icon = Icons.Default.Tune
             ) {
                 // Text Color
@@ -735,7 +751,7 @@ private fun SubtitleStyleContent(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Outline
-                StyleSettingRow(label = "Outline") {
+                StyleSettingRow(label = stringResource(R.string.subtitle_outline)) {
                     StyleToggleButton(
                         isEnabled = subtitleStyle.outlineEnabled,
                         onClick = { onEvent(PlayerEvent.OnSetSubtitleOutlineEnabled(!subtitleStyle.outlineEnabled)) }
@@ -768,7 +784,7 @@ private fun SubtitleStyleContent(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Bottom Offset
-                StyleSettingRow(label = "Bottom Offset") {
+                StyleSettingRow(label = stringResource(R.string.subtitle_bottom_offset)) {
                     StyleStepperButton(
                         icon = Icons.Default.Remove,
                         onClick = { onEvent(PlayerEvent.OnSetSubtitleVerticalOffset(subtitleStyle.verticalOffset - 5)) }
@@ -952,7 +968,7 @@ private fun StyleToggleButton(
         shape = CardDefaults.shape(RoundedCornerShape(10.dp))
     ) {
         Text(
-            text = if (isEnabled) "On" else "Off",
+            text = if (isEnabled) stringResource(R.string.subtitle_on) else stringResource(R.string.subtitle_off),
             style = MaterialTheme.typography.bodyMedium,
             color = if (isEnabled) Color.White else Color.White.copy(alpha = 0.5f),
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)

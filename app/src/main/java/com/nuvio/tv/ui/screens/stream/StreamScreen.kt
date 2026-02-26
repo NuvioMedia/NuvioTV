@@ -70,6 +70,9 @@ import coil.compose.AsyncImage
 import com.nuvio.tv.core.player.ExternalPlayerLauncher
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.domain.model.Stream
+import com.nuvio.tv.ui.components.SourceChipItem
+import com.nuvio.tv.ui.components.SourceChipStatus
+import com.nuvio.tv.ui.components.SourceStatusFilterChip
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.components.StreamsSkeletonList
 import com.nuvio.tv.ui.screens.player.LoadingOverlay
@@ -216,6 +219,7 @@ fun StreamScreen(
                     error = uiState.error,
                     streams = uiState.filteredStreams,
                     availableAddons = uiState.availableAddons,
+                    sourceChips = uiState.sourceChips,
                     selectedAddonFilter = uiState.selectedAddonFilter,
                     onAddonFilterSelected = { viewModel.onEvent(StreamScreenEvent.OnAddonFilterSelected(it)) },
                     onStreamSelected = { stream ->
@@ -462,6 +466,7 @@ private fun RightStreamSection(
     error: String?,
     streams: List<Stream>,
     availableAddons: List<String>,
+    sourceChips: List<SourceChipItem>,
     selectedAddonFilter: String?,
     onAddonFilterSelected: (String?) -> Unit,
     onStreamSelected: (Stream) -> Unit,
@@ -494,12 +499,13 @@ private fun RightStreamSection(
         // Addon filter chips
         Box(modifier = Modifier.height(chipRowHeight)) {
             androidx.compose.animation.AnimatedVisibility(
-                visible = !isLoading && availableAddons.isNotEmpty(),
+                visible = sourceChips.isNotEmpty() || (!isLoading && availableAddons.isNotEmpty()),
                 enter = fadeIn(animationSpec = tween(300)),
                 exit = fadeOut(animationSpec = tween(300))
             ) {
                 AddonFilterChips(
                     addons = availableAddons,
+                    sourceChips = sourceChips,
                     selectedAddon = selectedAddonFilter,
                     onAddonSelected = onAddonFilterSelected
                 )
@@ -559,85 +565,45 @@ private fun RightStreamSection(
 @Composable
 private fun AddonFilterChips(
     addons: List<String>,
+    sourceChips: List<SourceChipItem>,
     selectedAddon: String?,
     onAddonSelected: (String?) -> Unit
 ) {
+    val chipMap = sourceChips.associateBy { it.name }
+    val orderedNames = buildList {
+        addAll(addons)
+        sourceChips.forEach { chip ->
+            if (chip.name !in this) add(chip.name)
+        }
+    }
+
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
     ) {
         // "All" chip
         item {
-            AddonChip(
+            SourceStatusFilterChip(
                 name = "All",
                 isSelected = selectedAddon == null,
+                status = SourceChipStatus.SUCCESS,
+                isSelectable = true,
                 onClick = { onAddonSelected(null) }
             )
         }
 
-        items(addons) { addon ->
-            AddonChip(
+        items(orderedNames) { addon ->
+            val chipStatus = chipMap[addon]?.status ?: SourceChipStatus.SUCCESS
+            val isSelectable = addon in addons && chipStatus == SourceChipStatus.SUCCESS
+            SourceStatusFilterChip(
                 name = addon,
                 isSelected = selectedAddon == addon,
-                onClick = { onAddonSelected(addon) }
+                status = chipStatus,
+                isSelectable = isSelectable,
+                onClick = { if (isSelectable) onAddonSelected(addon) },
+                onFocusSelect = { if (isSelectable) onAddonSelected(addon) }
             )
         }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun AddonChip(
-    name: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    var isFocused by remember { mutableStateOf(false) }
-
-    FilterChip(
-        selected = isSelected,
-        onClick = onClick,
-        modifier = Modifier.onFocusChanged {
-            val nowFocused = it.isFocused
-            isFocused = nowFocused
-            if (nowFocused && !isSelected) {
-                onClick()
-            }
-        },
-        colors = FilterChipDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.Secondary,
-            selectedContainerColor = NuvioColors.Secondary,
-            focusedSelectedContainerColor = NuvioColors.Secondary,
-            contentColor = NuvioColors.TextSecondary,
-            focusedContentColor = NuvioColors.OnSecondary,
-            selectedContentColor = NuvioColors.OnSecondary,
-            focusedSelectedContentColor = NuvioColors.OnSecondary
-        ),
-        border = FilterChipDefaults.border(
-            border = Border(
-                border = BorderStroke(1.dp, NuvioColors.Border),
-                shape = RoundedCornerShape(20.dp)
-            ),
-            focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(20.dp)
-            ),
-            selectedBorder = Border(
-                border = BorderStroke(1.dp, NuvioColors.Primary),
-                shape = RoundedCornerShape(20.dp)
-            ),
-            focusedSelectedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(20.dp)
-            )
-        ),
-        shape = FilterChipDefaults.shape(shape = RoundedCornerShape(20.dp))
-    ) {
-        Text(
-            text = name,
-            style = MaterialTheme.typography.labelLarge
-        )
     }
 }
 

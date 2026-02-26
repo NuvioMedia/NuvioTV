@@ -5,8 +5,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +32,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -89,50 +94,39 @@ internal fun ModernSidebarBlurPanel(
     } else {
         Modifier
     }
+    val bgElevated = NuvioColors.BackgroundElevated
+    val bgCard = NuvioColors.BackgroundCard
+    val borderBase = NuvioColors.Border
+    val panelBackgroundBrush = remember(blurEnabled, bgElevated, bgCard) {
+        if (blurEnabled) {
+            Brush.verticalGradient(listOf(Color(0xD64A4F59), Color(0xCC3F454F), Color(0xC640474F)))
+        } else {
+            Brush.verticalGradient(listOf(bgElevated, bgCard))
+        }
+    }
+    val panelBorderColor = remember(blurEnabled, borderBase) {
+        if (blurEnabled) Color.White.copy(alpha = 0.14f) else borderBase.copy(alpha = 0.9f)
+    }
 
     Column(
         modifier = Modifier
             .fillMaxHeight()
-            .graphicsLayer(
-                alpha = sidebarExpandProgress,
-                scaleX = 0.97f + (0.03f * sidebarExpandProgress),
-                scaleY = 0.97f + (0.03f * sidebarExpandProgress),
+            .graphicsLayer {
+                val p = sidebarExpandProgress
+                alpha = p
+                val s = 0.97f + (0.03f * p)
+                scaleX = s
+                scaleY = s
                 transformOrigin = TransformOrigin(0f, 0f)
-            )
+            }
             .then(expandedPanelBlurModifier)
             .graphicsLayer {
                 shape = panelShape
                 clip = true
             }
             .clip(panelShape)
-            .background(
-                brush = if (blurEnabled) {
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xD64A4F59),
-                            Color(0xCC3F454F),
-                            Color(0xC640474F)
-                        )
-                    )
-                } else {
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            NuvioColors.BackgroundElevated,
-                            NuvioColors.BackgroundCard
-                        )
-                    )
-                },
-                shape = panelShape
-            )
-            .border(
-                width = 1.dp,
-                color = if (blurEnabled) {
-                    Color.White.copy(alpha = 0.14f)
-                } else {
-                    NuvioColors.Border.copy(alpha = 0.9f)
-                },
-                shape = panelShape
-            )
+            .background(brush = panelBackgroundBrush, shape = panelShape)
+            .border(width = 1.dp, color = panelBorderColor, shape = panelShape)
             .padding(horizontal = 12.dp, vertical = 14.dp)
     ) {
         val headerLogoRes = if (isSidebarExpanded) R.drawable.app_logo_wordmark else R.drawable.app_logo_mark
@@ -252,7 +246,14 @@ private fun SidebarNavigationItem(
                 onFocusChanged(it.isFocused)
             }
             .focusable(enabled = focusEnabled)
-            .clickable(onClick = onClick)
+            .onPreviewKeyEvent { event ->
+                if (focusEnabled && event.type == KeyEventType.KeyUp &&
+                    (event.key == Key.Enter || event.key == Key.DirectionCenter || event.key == Key.NumPadEnter)
+                ) {
+                    onClick()
+                    true
+                } else false
+            }
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -262,10 +263,10 @@ private fun SidebarNavigationItem(
                 .clip(CircleShape)
                 .background(iconCircleColor)
                 .padding(6.dp)
-                .graphicsLayer(
-                    scaleX = iconScale,
+                .graphicsLayer {
+                    scaleX = iconScale
                     scaleY = iconScale
-                ),
+                },
             contentAlignment = Alignment.Center
         ) {
             when {
@@ -291,7 +292,7 @@ private fun SidebarNavigationItem(
             color = contentColor,
             modifier = Modifier
                 .weight(1f)
-                .graphicsLayer(alpha = labelAlpha),
+                .graphicsLayer { alpha = labelAlpha },
             style = androidx.tv.material3.MaterialTheme.typography.titleLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -335,7 +336,14 @@ private fun SidebarProfileItem(
                 onFocusChanged(it.isFocused)
             }
             .focusable(enabled = focusEnabled)
-            .clickable(onClick = onClick)
+            .onPreviewKeyEvent { event ->
+                if (focusEnabled && event.type == KeyEventType.KeyUp &&
+                    (event.key == Key.Enter || event.key == Key.DirectionCenter || event.key == Key.NumPadEnter)
+                ) {
+                    onClick()
+                    true
+                } else false
+            }
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -349,7 +357,7 @@ private fun SidebarProfileItem(
             text = profileName,
             color = Color.White,
             modifier = Modifier
-                .graphicsLayer(alpha = labelAlpha),
+                .graphicsLayer { alpha = labelAlpha },
             style = androidx.tv.material3.MaterialTheme.typography.titleLarge,
             maxLines = 1
         )

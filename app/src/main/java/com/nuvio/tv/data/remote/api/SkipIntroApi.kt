@@ -78,6 +78,12 @@ interface ArmApi {
         @Query("id") imdbId: String,
         @Query("include") include: String = "myanimelist"
     ): Response<List<ArmEntry>>
+
+    @GET("kitsu")
+    suspend fun resolveByKitsu(
+        @Query("id") kitsuId: String,
+        @Query("include") include: String = "myanimelist"
+    ): Response<List<ArmEntry>>
 }
 
 @JsonClass(generateAdapter = true)

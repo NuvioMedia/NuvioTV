@@ -1,9 +1,11 @@
 package com.nuvio.tv.ui.screens.account
 
+import android.content.Context
 import android.os.Build
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.R
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.plugin.PluginManager
@@ -59,7 +61,8 @@ class AccountViewModel @Inject constructor(
     private val watchedItemsPreferences: WatchedItemsPreferences,
     private val traktAuthDataStore: TraktAuthDataStore,
     private val postgrest: Postgrest,
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AccountUiState())
@@ -540,9 +543,9 @@ class AccountViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         qrLoginStatus = when (normalizedStatus) {
-                            "approved" -> "Login approved. Finishing sign in..."
-                            "pending" -> "Waiting for approval on your phone..."
-                            "expired" -> "QR login expired. Generate a new code."
+                            "approved" -> context.getString(R.string.qr_login_approved)
+                            "pending" -> context.getString(R.string.qr_login_pending)
+                            "expired" -> context.getString(R.string.qr_login_expired)
                             else -> "Status: ${result.status}"
                         },
                         qrLoginExpiresAtMillis = expiresAtMillis ?: it.qrLoginExpiresAtMillis,

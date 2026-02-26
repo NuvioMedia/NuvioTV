@@ -342,7 +342,10 @@ fun NuvioNavHost(
                                 rememberedAudioLanguage = playbackInfo.rememberedAudioLanguage,
                                 rememberedAudioName = playbackInfo.rememberedAudioName,
                                 autoPlayNav = false,
-                                returnToDetailOnBack = returnToDetailOnBack
+                                returnToDetailOnBack = returnToDetailOnBack,
+                                filename = playbackInfo.filename,
+                                videoHash = playbackInfo.videoHash,
+                                videoSize = playbackInfo.videoSize
                             )
                         )
                     }
@@ -370,7 +373,10 @@ fun NuvioNavHost(
                                 rememberedAudioLanguage = playbackInfo.rememberedAudioLanguage,
                                 rememberedAudioName = playbackInfo.rememberedAudioName,
                                 autoPlayNav = true,
-                                returnToDetailOnBack = returnToDetailOnBack
+                                returnToDetailOnBack = returnToDetailOnBack,
+                                filename = playbackInfo.filename,
+                                videoHash = playbackInfo.videoHash,
+                                videoSize = playbackInfo.videoSize
                             )
                         ) {
                             popUpTo(Screen.Stream.route) { inclusive = true }
@@ -474,6 +480,21 @@ fun NuvioNavHost(
                     type = NavType.StringType
                     nullable = true
                     defaultValue = "false"
+                },
+                navArgument("filename") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("videoHash") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("videoSize") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
                 }
             )
         ) { backStackEntry ->

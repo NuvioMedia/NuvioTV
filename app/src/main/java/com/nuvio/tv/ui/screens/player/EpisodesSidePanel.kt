@@ -126,7 +126,7 @@ internal fun EpisodesSidePanel(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (uiState.showEpisodeStreams) "Streams" else "Episodes",
+                        text = if (uiState.showEpisodeStreams) stringResource(R.string.episodes_panel_streams_title) else stringResource(R.string.episodes_panel_title),
                         style = MaterialTheme.typography.headlineSmall,
                         color = NuvioColors.TextPrimary
                     )

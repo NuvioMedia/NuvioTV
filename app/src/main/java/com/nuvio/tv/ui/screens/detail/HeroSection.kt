@@ -93,6 +93,7 @@ fun HeroContentSection(
     isTrailerPlaying: Boolean = false,
     playButtonFocusRequester: FocusRequester? = null,
     restorePlayFocusToken: Int = 0,
+    onHeroActionFocused: () -> Unit = {},
     onPlayFocusRestored: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -103,7 +104,7 @@ fun HeroContentSection(
         meta.logo?.let { logo ->
             ImageRequest.Builder(context)
                 .data(logo)
-                .crossfade(false)
+                .crossfade(true)
                 .build()
         }
     }
@@ -221,7 +222,10 @@ fun HeroContentSection(
                             onClick = onPlayClick,
                             focusRequester = playButtonFocusRequester,
                             restoreFocusToken = restorePlayFocusToken,
-                            onFocusRestored = onPlayFocusRestored
+                            onFocusRestored = {
+                                onHeroActionFocused()
+                                onPlayFocusRestored()
+                            }
                         )
 
                         ActionIconButton(
@@ -233,7 +237,8 @@ fun HeroContentSection(
                             },
                             contentDescription = if (isInLibrary) stringResource(R.string.hero_remove_from_library) else stringResource(R.string.hero_add_to_library),
                             onClick = onToggleLibrary,
-                            onLongPress = onLibraryLongPress
+                            onLongPress = onLibraryLongPress,
+                            onFocused = onHeroActionFocused
                         )
 
                         if (meta.apiType == "movie") {
@@ -252,7 +257,8 @@ fun HeroContentSection(
                                 enabled = !isMovieWatchedPending,
                                 selected = isMovieWatched,
                                 selectedContainerColor = Color.White,
-                                selectedContentColor = Color.Black
+                                selectedContentColor = Color.Black,
+                                onFocused = onHeroActionFocused
                             )
                         }
 
@@ -260,7 +266,8 @@ fun HeroContentSection(
                             ActionIconButtonPainter(
                                 painter = trailerPainter,
                                 contentDescription = stringResource(R.string.hero_play_trailer),
-                                onClick = onTrailerClick
+                                onClick = onTrailerClick,
+                                onFocused = onHeroActionFocused
                             )
                         }
                     }
@@ -375,6 +382,7 @@ private fun ActionIconButtonPainter(
     painter: Painter,
     contentDescription: String,
     onClick: () -> Unit,
+    onFocused: () -> Unit = {},
     enabled: Boolean = true
 ) {
     IconButton(
@@ -382,6 +390,9 @@ private fun ActionIconButtonPainter(
         enabled = enabled,
         modifier = Modifier
             .size(48.dp)
+            .onFocusChanged { state ->
+                if (state.isFocused) onFocused()
+            }
             .focusProperties { up = FocusRequester.Cancel },
         colors = IconButtonDefaults.colors(
             containerColor = NuvioColors.BackgroundCard,
@@ -418,7 +429,8 @@ private fun ActionIconButton(
     enabled: Boolean = true,
     selected: Boolean = false,
     selectedContainerColor: Color = Color(0xFF7CFF9B),
-    selectedContentColor: Color = Color.Black
+    selectedContentColor: Color = Color.Black,
+    onFocused: () -> Unit = {}
 ) {
     var longPressTriggered by remember { mutableStateOf(false) }
 
@@ -433,6 +445,9 @@ private fun ActionIconButton(
         enabled = enabled,
         modifier = Modifier
             .size(48.dp)
+            .onFocusChanged { state ->
+                if (state.isFocused) onFocused()
+            }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
                 if (onLongPress != null && native.action == AndroidKeyEvent.ACTION_DOWN) {

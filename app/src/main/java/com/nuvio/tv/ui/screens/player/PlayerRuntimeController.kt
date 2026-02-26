@@ -5,6 +5,7 @@ import android.media.audiofx.LoudnessEnhancer
 import androidx.lifecycle.SavedStateHandle
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
@@ -34,6 +35,7 @@ class PlayerRuntimeController(
     internal val metaRepository: MetaRepository,
     internal val streamRepository: StreamRepository,
     internal val addonRepository: AddonRepository,
+    internal val pluginManager: PluginManager,
     internal val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     internal val parentalGuideRepository: ParentalGuideRepository,
     internal val traktScrobbleService: TraktScrobbleService,
@@ -84,6 +86,11 @@ class PlayerRuntimeController(
     internal val rememberedAudioName: String? = navigationArgs.rememberedAudioName
     internal val mediaSourceFactory = PlayerMediaSourceFactory()
 
+    internal var currentVideoHash: String? = navigationArgs.videoHash
+    internal var currentVideoSize: Long? = navigationArgs.videoSize
+    internal var currentFilename: String? = navigationArgs.filename
+        ?: initialStreamUrl.substringBefore('?').substringAfterLast('/', "")
+            .takeIf { it.isNotBlank() && it.contains('.') }
     internal var currentStreamUrl: String = initialStreamUrl
     internal var currentHeaders: Map<String, String> = PlayerMediaSourceFactory.parseHeaders(headersJson)
 
@@ -104,6 +111,7 @@ class PlayerRuntimeController(
             title = title,
             contentName = contentName,
             currentStreamName = streamName,
+            currentStreamUrl = currentStreamUrl,
             releaseYear = year,
             contentType = contentType,
             backdrop = backdrop,
@@ -132,6 +140,7 @@ class PlayerRuntimeController(
     internal var hideSubtitleDelayOverlayJob: Job? = null
     internal var nextEpisodeAutoPlayJob: Job? = null
     internal var sourceStreamsJob: Job? = null
+    internal var sourceChipErrorDismissJob: Job? = null
     internal var sourceStreamsCacheRequestKey: String? = null
     
     
@@ -208,5 +217,6 @@ class PlayerRuntimeController(
     fun onCleared() {
         releasePlayer()
         mediaSourceFactory.shutdown()
+        sourceChipErrorDismissJob?.cancel()
     }
 }

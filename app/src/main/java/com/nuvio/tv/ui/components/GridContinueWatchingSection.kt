@@ -43,19 +43,18 @@ fun GridContinueWatchingSection(
 ) {
     if (items.isEmpty()) return
     var optionsItem by remember { mutableStateOf<ContinueWatchingItem?>(null) }
-    val itemFocusRequester = remember { FocusRequester() }
     val focusRequesters = remember(items.size) { List(items.size) { FocusRequester() } }
     var lastFocusedIndex by remember { mutableIntStateOf(-1) }
     var lastRequestedFocusIndex by remember { mutableIntStateOf(-1) }
     var pendingFocusIndex by remember { mutableStateOf<Int?>(null) }
 
-    LaunchedEffect(focusedItemIndex, items) {
+    LaunchedEffect(focusedItemIndex) {
         if (focusedItemIndex >= 0 && focusedItemIndex < items.size) {
             if (lastRequestedFocusIndex == focusedItemIndex) return@LaunchedEffect
             var focused = false
             for (attempt in 0 until 3) {
                 withFrameNanos { }
-                focused = runCatching { itemFocusRequester.requestFocus() }.isSuccess
+                focused = runCatching { focusRequesters[focusedItemIndex].requestFocus() }.isSuccess
                 if (focused) break
             }
             if (focused) {
@@ -84,7 +83,11 @@ fun GridContinueWatchingSection(
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .focusRestorer(),
+                .focusRestorer {
+                    val idx = if (lastFocusedIndex >= 0 && lastFocusedIndex < focusRequesters.size)
+                        lastFocusedIndex else 0
+                    focusRequesters.getOrNull(idx) ?: FocusRequester.Default
+                },
             contentPadding = PaddingValues(horizontal = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -99,10 +102,8 @@ fun GridContinueWatchingSection(
                     }
                 }
             ) { index, progress ->
-                val focusModifier = if (pendingFocusIndex == index && index < focusRequesters.size) {
+                val focusModifier = if (index < focusRequesters.size) {
                     Modifier.focusRequester(focusRequesters[index])
-                } else if (index == focusedItemIndex) {
-                    Modifier.focusRequester(itemFocusRequester)
                 } else {
                     Modifier
                 }
