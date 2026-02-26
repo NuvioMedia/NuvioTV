@@ -33,6 +33,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -76,7 +78,7 @@ fun ContentCard(
     focusedPosterBackdropTrailerMuted: Boolean = true,
     trailerPreviewUrl: String? = null,
     onRequestTrailerPreview: (MetaPreview) -> Unit = {},
-    isWatched: Boolean = false,
+    isWatched: Boolean = item.isWatched,
     onFocus: (MetaPreview) -> Unit = {},
     onLongPress: (() -> Unit)? = null,
     onClick: () -> Unit = {}
@@ -302,7 +304,8 @@ fun ContentCard(
                         model = imageModel,
                         contentDescription = item.name,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        colorFilter = if (isWatched) ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) else null
                     )
                 } else {
                     MonochromePosterPlaceholder()
@@ -356,7 +359,8 @@ fun ContentCard(
                         modifier = Modifier
                             .fillMaxSize()
                             .graphicsLayer { alpha = trailerCoverAlpha },
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        colorFilter = if (isWatched) ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) else null
                     )
                 }
 
@@ -417,13 +421,13 @@ fun ContentCard(
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = Color.Black,
+                            tint = NuvioColors.Secondary,
                             modifier = Modifier.size(24.dp)
                         )
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = stringResource(R.string.episodes_cd_watched),
-                            tint = Color.White,
+                            tint = NuvioColors.OnSecondary,
                             modifier = Modifier.size(21.dp)
                         )
                     }

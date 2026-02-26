@@ -80,6 +80,7 @@ fun MoreLikeThisSection(
                     posterCardStyle = landscapeStyle,
                     showLabel = true,
                     imageCrossfade = true,
+                    isWatched = false,
                     focusRequester = focusRequester,
                     upFocusRequester = upFocusRequester,
                     onFocused = {

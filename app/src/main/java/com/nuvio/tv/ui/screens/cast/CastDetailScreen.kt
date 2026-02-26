@@ -410,6 +410,7 @@ private fun FilmographyRow(
             GridContentCard(
                 item = item,
                 onClick = { onItemClick(item) },
+                isWatched = false,
                 modifier = if (index == 0) {
                     Modifier.onGloballyPositioned {
                         if (!hasRequestedInitialFocus.value) {

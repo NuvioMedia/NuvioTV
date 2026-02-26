@@ -26,6 +26,8 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -56,7 +58,7 @@ fun GridContentCard(
     posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
     showLabel: Boolean = true,
     imageCrossfade: Boolean = false,
-    isWatched: Boolean = false,
+    isWatched: Boolean = item.isWatched,
     focusRequester: FocusRequester? = null,
     upFocusRequester: FocusRequester? = null,
     onLongPress: (() -> Unit)? = null,
@@ -160,7 +162,8 @@ fun GridContentCard(
                         model = imageModel,
                         contentDescription = item.name,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        colorFilter = if (isWatched) ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) else null
                     )
                 }
 
@@ -175,13 +178,13 @@ fun GridContentCard(
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = Color.Black,
+                            tint = NuvioColors.Secondary,
                             modifier = Modifier.size(24.dp)
                         )
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = stringResource(R.string.episodes_cd_watched),
-                            tint = Color.White,
+                            tint = NuvioColors.OnSecondary,
                             modifier = Modifier.size(21.dp)
                         )
                     }

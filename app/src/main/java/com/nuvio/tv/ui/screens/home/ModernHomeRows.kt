@@ -38,6 +38,8 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
@@ -634,7 +636,8 @@ private fun ModernCarouselCard(
                             model = imageModel,
                             contentDescription = item.title,
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Crop,
+                            colorFilter = if (isWatched) ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) else null
                         )
                     } else {
                         MonochromePosterPlaceholder()
@@ -678,13 +681,13 @@ private fun ModernCarouselCard(
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = Color.Black,
+                            tint = NuvioColors.Secondary,
                             modifier = Modifier.size(24.dp)
                         )
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = stringResource(R.string.episodes_cd_watched),
-                            tint = Color.White,
+                            tint = NuvioColors.OnSecondary,
                             modifier = Modifier.size(21.dp)
                         )
                     }
