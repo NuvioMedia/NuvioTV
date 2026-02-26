@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -495,36 +494,6 @@ private fun FrameRateMatchingModeOptions(
         )
     }
 }
-
-@Composable
-private fun OsdClockFormatOptions(
-    selectedFormat: OsdClockFormat,
-    onSelect: (OsdClockFormat) -> Unit,
-    onFocused: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        RenderTypeSettingsItem(
-            title = stringResource(R.string.playback_osd_clock_format_12),
-            subtitle = stringResource(R.string.playback_osd_clock_format_12_sub),
-            isSelected = selectedFormat == OsdClockFormat.HOUR_12,
-            onClick = { onSelect(OsdClockFormat.HOUR_12) },
-            onFocused = onFocused,
-            enabled = true
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        RenderTypeSettingsItem(
-            title = stringResource(R.string.playback_osd_clock_format_24),
-            subtitle = stringResource(R.string.playback_osd_clock_format_24_sub),
-            isSelected = selectedFormat == OsdClockFormat.HOUR_24,
-            onClick = { onSelect(OsdClockFormat.HOUR_24) },
-            onFocused = onFocused,
-            enabled = true
-        )
-    }
-}
-
 @Composable
 private fun OsdClockFormatOptionsWithOff(
     osdClockEnabled: Boolean,
