@@ -56,9 +56,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -594,7 +598,7 @@ fun ModernHomeContent(
         val heroTrailerAlpha = heroTransitionProgress
         val catalogBottomPadding = 0.dp
         val heroToCatalogGap = 16.dp
-        val rowTitleBottom = 14.dp
+        val rowTitleBottom = 20.dp
         val rowsViewportHeightFraction = if (useLandscapePosters) 0.50f else 0.54f
         val rowsViewportHeight = maxHeight * rowsViewportHeightFraction
         val localDensity = LocalDensity.current
@@ -661,6 +665,21 @@ fun ModernHomeContent(
                     .fillMaxWidth()
                     .height(rowsViewportHeight)
                     .padding(bottom = catalogBottomPadding)
+                    .graphicsLayer {
+                        compositingStrategy = CompositingStrategy.Offscreen
+                    }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                0.0f to Color.Transparent,
+                                0.15f to Color.Black,
+                                0.85f to Color.Black,
+                                1.0f to Color.Transparent
+                            ),
+                            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn
+                        )
+                    }
                     .onPreviewKeyEvent { event ->
                         val native = event.nativeKeyEvent
                         if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {
