@@ -116,12 +116,14 @@ import com.nuvio.tv.ui.screens.account.AuthQrSignInScreen
 import com.nuvio.tv.ui.screens.profile.ProfileSelectionScreen
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.updater.UpdateUiState
 import com.nuvio.tv.updater.UpdateViewModel
 import com.nuvio.tv.updater.ui.UpdatePromptDialog
 import dagger.hilt.android.AndroidEntryPoint
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -175,6 +177,8 @@ class MainActivity : ComponentActivity() {
     lateinit var appOnboardingDataStore: AppOnboardingDataStore
 
     private lateinit var jankStats: JankStats
+    private var startupSyncJob: Job? = null
+    private var hasDispatchedStartupSync: Boolean = false
 
     @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
     override fun attachBaseContext(newBase: Context) {
@@ -330,8 +334,17 @@ class MainActivity : ComponentActivity() {
                         mainUiPrefs.modernSidebarBlurPref && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
                     val hideBuiltInHeadersForFloatingPill = modernSidebarEnabled && !sidebarCollapsed
 
-                    val updateViewModel: UpdateViewModel = hiltViewModel(this@MainActivity)
-                    val updateState by updateViewModel.uiState.collectAsState()
+                    var shouldInitUpdateViewModel by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) {
+                        delay(1500)
+                        shouldInitUpdateViewModel = true
+                    }
+                    val updateViewModel: UpdateViewModel? = if (shouldInitUpdateViewModel) {
+                        hiltViewModel(this@MainActivity)
+                    } else {
+                        null
+                    }
+                    val updateState = updateViewModel?.uiState?.collectAsState()?.value ?: UpdateUiState()
 
                     val startDestination = if (layoutChosen) Screen.Home.route else Screen.LayoutSelection.route
                     val navController = rememberNavController()
@@ -443,11 +456,11 @@ class MainActivity : ComponentActivity() {
 
                     UpdatePromptDialog(
                         state = updateState,
-                        onDismiss = { updateViewModel.dismissDialog() },
-                        onDownload = { updateViewModel.downloadUpdate() },
-                        onInstall = { updateViewModel.installUpdateOrRequestPermission() },
-                        onIgnore = { updateViewModel.ignoreThisVersion() },
-                        onOpenUnknownSources = { updateViewModel.openUnknownSourcesSettings() }
+                        onDismiss = { updateViewModel?.dismissDialog() },
+                        onDownload = { updateViewModel?.downloadUpdate() },
+                        onInstall = { updateViewModel?.installUpdateOrRequestPermission() },
+                        onIgnore = { updateViewModel?.ignoreThisVersion() },
+                        onOpenUnknownSources = { updateViewModel?.openUnknownSourcesSettings() }
                     )
                 }
             }
@@ -476,9 +489,21 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        startupSyncService.requestSyncNow()
-        lifecycleScope.launch {
+        if (hasDispatchedStartupSync || startupSyncJob?.isActive == true) {
+            return
+        }
+        startupSyncJob = lifecycleScope.launch {
+            delay(1500)
+            startupSyncService.requestSyncNow()
             traktProgressService.refreshNow()
+            hasDispatchedStartupSync = true
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (!hasDispatchedStartupSync && startupSyncJob?.isActive == true) {
+            startupSyncJob?.cancel()
         }
     }
 }

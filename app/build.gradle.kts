@@ -63,7 +63,7 @@ android {
     buildTypes {
         debug {
             signingConfig = signingConfigs.getByName("release")
-            isDebuggable = false
+            isDebuggable = true
             isMinifyEnabled = false
 
             resValue("string", "app_name", "Nuvio Debug")

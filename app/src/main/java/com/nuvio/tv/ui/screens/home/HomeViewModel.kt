@@ -107,10 +107,12 @@ class HomeViewModel @Inject constructor(
 
     private val catalogsMap = linkedMapOf<String, CatalogRow>()
     private val catalogOrder = mutableListOf<String>()
+    private val activeCatalogLoadJobs = mutableMapOf<String, Job>()
     private var addonsCache: List<Addon> = emptyList()
     private var homeCatalogOrderKeys: List<String> = emptyList()
     private var disabledHomeCatalogKeys: Set<String> = emptySet()
     private var currentHeroCatalogKeys: List<String> = emptyList()
+    private var activeCatalogLoadSessionId: Long = 0L
     private var catalogUpdateJob: Job? = null
     private var hasRenderedFirstCatalog = false
     private val catalogLoadSemaphore = Semaphore(
@@ -579,36 +581,39 @@ class HomeViewModel @Inject constructor(
                     showUnairedNextUp = showUnairedNextUp
                 )
             }.collectLatest { snapshot ->
-                val items = snapshot.items
-                val daysCap = snapshot.daysCap
+                val preparedState = withContext(Dispatchers.Default) {
+                    val items = snapshot.items
+                    val daysCap = snapshot.daysCap
+                    val cutoffMs = if (daysCap == TraktSettingsDataStore.CONTINUE_WATCHING_DAYS_CAP_ALL) {
+                        null
+                    } else {
+                        val windowMs = daysCap.toLong() * 24L * 60L * 60L * 1000L
+                        System.currentTimeMillis() - windowMs
+                    }
+                    val recentItems = items
+                        .asSequence()
+                        .filter { progress -> cutoffMs == null || progress.lastWatched >= cutoffMs }
+                        .sortedByDescending { it.lastWatched }
+                        .take(MAX_RECENT_PROGRESS_ITEMS)
+                        .toList()
+
+                    val inProgressOnly = deduplicateInProgress(
+                        recentItems.filter { shouldTreatAsInProgressForContinueWatching(it) }
+                    ).map { progress ->
+                        ContinueWatchingItem.InProgress(progress = progress)
+                    }
+
+                    ContinueWatchingPreparedState(
+                        allProgressCount = items.size,
+                        recentItems = recentItems,
+                        inProgressOnly = inProgressOnly
+                    )
+                }
+                val recentItems = preparedState.recentItems
+                val inProgressOnly = preparedState.inProgressOnly
                 val dismissedNextUp = snapshot.dismissedNextUp
                 val showUnairedNextUp = snapshot.showUnairedNextUp
-                val cutoffMs = if (daysCap == TraktSettingsDataStore.CONTINUE_WATCHING_DAYS_CAP_ALL) {
-                    null
-                } else {
-                    val windowMs = daysCap.toLong() * 24L * 60L * 60L * 1000L
-                    System.currentTimeMillis() - windowMs
-                }
-                val recentItems = items
-                    .asSequence()
-                    .filter { progress -> cutoffMs == null || progress.lastWatched >= cutoffMs }
-                    .sortedByDescending { it.lastWatched }
-                    .take(MAX_RECENT_PROGRESS_ITEMS)
-                    .toList()
-
-                Log.d("HomeViewModel", "allProgress emitted=${items.size} recentWindow=${recentItems.size}")
-
-                val inProgressOnly = buildList {
-                    deduplicateInProgress(
-                        recentItems.filter { shouldTreatAsInProgressForContinueWatching(it) }
-                    ).forEach { progress ->
-                        add(
-                            ContinueWatchingItem.InProgress(
-                                progress = progress
-                            )
-                        )
-                    }
-                }
+                Log.d("HomeViewModel", "allProgress emitted=${preparedState.allProgressCount} recentWindow=${recentItems.size}")
 
                 Log.d("HomeViewModel", "inProgressOnly: ${inProgressOnly.size} items after filter+dedup")
 
@@ -646,6 +651,12 @@ class HomeViewModel @Inject constructor(
         val daysCap: Int,
         val dismissedNextUp: Set<String>,
         val showUnairedNextUp: Boolean
+    )
+
+    private data class ContinueWatchingPreparedState(
+        val allProgressCount: Int,
+        val recentItems: List<WatchProgress>,
+        val inProgressOnly: List<ContinueWatchingItem.InProgress>
     )
 
     private data class NextUpArtworkFallback(
@@ -719,34 +730,35 @@ class HomeViewModel @Inject constructor(
         dismissedNextUp: Set<String>,
         showUnairedNextUp: Boolean
     ) = coroutineScope {
-        val inProgressIds = inProgressItems
-            .map { it.progress.contentId }
-            .filter { it.isNotBlank() }
-            .toSet()
-
-        val latestCompletedBySeries = allProgress
-            .filter { progress ->
-                isSeriesType(progress.contentType) &&
-                    progress.season != null &&
-                    progress.episode != null &&
-                    progress.season != 0 &&
-                    progress.isCompleted() &&
-                    progress.source != WatchProgress.SOURCE_TRAKT_PLAYBACK
-            }
-            .groupBy { it.contentId }
-            .mapNotNull { (_, items) ->
-                items.maxWithOrNull(
-                    compareBy<WatchProgress>(
-                        { it.lastWatched },
-                        { it.season ?: -1 },
-                        { it.episode ?: -1 }
+        val latestCompletedBySeries = withContext(Dispatchers.Default) {
+            val inProgressIds = inProgressItems
+                .map { it.progress.contentId }
+                .filter { it.isNotBlank() }
+                .toSet()
+            allProgress
+                .filter { progress ->
+                    isSeriesType(progress.contentType) &&
+                        progress.season != null &&
+                        progress.episode != null &&
+                        progress.season != 0 &&
+                        progress.isCompleted() &&
+                        progress.source != WatchProgress.SOURCE_TRAKT_PLAYBACK
+                }
+                .groupBy { it.contentId }
+                .mapNotNull { (_, items) ->
+                    items.maxWithOrNull(
+                        compareBy<WatchProgress>(
+                            { it.lastWatched },
+                            { it.season ?: -1 },
+                            { it.episode ?: -1 }
+                        )
                     )
-                )
-            }
-            .filter { it.contentId !in inProgressIds }
-            .filter { progress -> nextUpDismissKey(progress.contentId) !in dismissedNextUp }
-            .sortedByDescending { it.lastWatched }
-            .take(MAX_NEXT_UP_LOOKUPS)
+                }
+                .filter { it.contentId !in inProgressIds }
+                .filter { progress -> nextUpDismissKey(progress.contentId) !in dismissedNextUp }
+                .sortedByDescending { it.lastWatched }
+                .take(MAX_NEXT_UP_LOOKUPS)
+        }
 
         if (latestCompletedBySeries.isEmpty()) {
             return@coroutineScope
@@ -1212,6 +1224,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun loadAllCatalogs(addons: List<Addon>) {
+        val catalogLoadSessionId = startCatalogLoadSession()
         _uiState.update { it.copy(isLoading = true, error = null, installedAddonsCount = addons.size) }
         catalogOrder.clear()
         catalogsMap.clear()
@@ -1235,6 +1248,7 @@ class HomeViewModel @Inject constructor(
 
         try {
             if (addons.isEmpty()) {
+                if (catalogLoadSessionId != activeCatalogLoadSessionId) return
                 _uiState.update { it.copy(isLoading = false, error = "No addons installed") }
                 return
             }
@@ -1242,6 +1256,7 @@ class HomeViewModel @Inject constructor(
             rebuildCatalogOrder(addons)
 
             if (catalogOrder.isEmpty()) {
+                if (catalogLoadSessionId != activeCatalogLoadSessionId) return
                 _uiState.update { it.copy(isLoading = false, error = "No catalog addons installed") }
                 return
             }
@@ -1270,7 +1285,7 @@ class HomeViewModel @Inject constructor(
             val firstWave = catalogsToLoad.take(firstWaveSize)
             val remaining = catalogsToLoad.drop(firstWaveSize)
 
-            firstWave.forEach { (addon, catalog) -> loadCatalog(addon, catalog) }
+            firstWave.forEach { (addon, catalog) -> loadCatalog(addon, catalog, catalogLoadSessionId) }
 
             val waveDelayMs = if (deviceCapabilities.tier == DeviceTier.LOW) {
                 CATALOG_WAVE_DELAY_MS * 2  // Extra breathing room on constrained devices
@@ -1279,16 +1294,34 @@ class HomeViewModel @Inject constructor(
             }
             remaining.chunked(subsequentWaveSize).forEach { wave ->
                 delay(waveDelayMs)
-                wave.forEach { (addon, catalog) -> loadCatalog(addon, catalog) }
+                if (catalogLoadSessionId != activeCatalogLoadSessionId) return
+                wave.forEach { (addon, catalog) -> loadCatalog(addon, catalog, catalogLoadSessionId) }
             }
         } catch (e: Exception) {
+            if (catalogLoadSessionId != activeCatalogLoadSessionId) return
             _uiState.update { it.copy(isLoading = false, error = e.message) }
         }
     }
 
-    private fun loadCatalog(addon: Addon, catalog: CatalogDescriptor) {
-        viewModelScope.launch {
+    private fun startCatalogLoadSession(): Long {
+        activeCatalogLoadSessionId += 1
+        activeCatalogLoadJobs.values.forEach { it.cancel() }
+        activeCatalogLoadJobs.clear()
+        _loadingCatalogs.value = emptySet()
+        pendingCatalogLoads = 0
+        return activeCatalogLoadSessionId
+    }
+
+    private fun loadCatalog(addon: Addon, catalog: CatalogDescriptor, sessionId: Long) {
+        val key = catalogKey(
+            addonId = addon.id,
+            type = catalog.apiType,
+            catalogId = catalog.id
+        )
+        activeCatalogLoadJobs.remove(key)?.cancel()
+        val job = viewModelScope.launch {
             catalogLoadSemaphore.withPermit {
+                if (sessionId != activeCatalogLoadSessionId) return@withPermit
                 val supportsSkip = catalog.extra.any { it.name == "skip" }
                 Log.d(
                     TAG,
@@ -1304,13 +1337,9 @@ class HomeViewModel @Inject constructor(
                     skip = 0,
                     supportsSkip = supportsSkip
                 ).collect { result ->
+                    if (sessionId != activeCatalogLoadSessionId) return@collect
                     when (result) {
                         is NetworkResult.Success -> {
-                            val key = catalogKey(
-                                addonId = addon.id,
-                                type = catalog.apiType,
-                                catalogId = catalog.id
-                            )
                             catalogsMap[key] = result.data
                             catalogVersion++
                             pendingCatalogLoads = (pendingCatalogLoads - 1).coerceAtLeast(0)
@@ -1331,6 +1360,12 @@ class HomeViewModel @Inject constructor(
                         NetworkResult.Loading -> { /* Handled by individual row */ }
                     }
                 }
+            }
+        }
+        activeCatalogLoadJobs[key] = job
+        job.invokeOnCompletion {
+            if (activeCatalogLoadJobs[key] == job) {
+                activeCatalogLoadJobs.remove(key)
             }
         }
     }
@@ -2010,6 +2045,8 @@ class HomeViewModel @Inject constructor(
 
     override fun onCleared() {
         posterStatusFlushJob?.cancel()
+        activeCatalogLoadJobs.values.forEach { it.cancel() }
+        activeCatalogLoadJobs.clear()
         posterLibraryObserverJobs.values.forEach { it.cancel() }
         movieWatchedObserverJobs.values.forEach { it.cancel() }
         posterLibraryObserverJobs.clear()
