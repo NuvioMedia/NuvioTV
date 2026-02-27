@@ -61,7 +61,7 @@ internal fun AudioSelectionDialog(
     onDismiss: () -> Unit
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Audio", "Volume")
+    val tabs = listOf("Audio", "Mix")
     val tabFocusRequesters = remember { tabs.map { FocusRequester() } }
 
     Dialog(onDismissRequest = onDismiss) {
