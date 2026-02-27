@@ -279,15 +279,14 @@ internal fun HeroTitleBlock(
             }
         }
 
-        preview.description?.takeIf { it.isNotBlank() }?.let { description ->
-            Text(
-                text = description,
-                style = scaledDescriptionStyle,
-                color = NuvioColors.TextPrimary,
-                maxLines = descriptionMaxLines,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        Text(
+            text = preview.description?.takeIf { it.isNotBlank() }.orEmpty(),
+            style = scaledDescriptionStyle,
+            color = NuvioColors.TextPrimary,
+            minLines = descriptionMaxLines,
+            maxLines = descriptionMaxLines,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
