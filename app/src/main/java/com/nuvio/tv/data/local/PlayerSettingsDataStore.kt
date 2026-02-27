@@ -124,6 +124,8 @@ data class PlayerSettings(
     val decoderPriority: Int = 1, // EXTENSION_RENDERER_MODE_ON (0=off, 1=on, 2=prefer)
     val tunnelingEnabled: Boolean = false,
     val skipSilence: Boolean = false,
+    val audioAmplificationDb: Int = 0,
+    val persistAudioAmplification: Boolean = false,
     val preferredAudioLanguage: String = AudioLanguageOption.DEVICE,
     val loadingOverlayEnabled: Boolean = true,
     val pauseOverlayEnabled: Boolean = true,
@@ -202,6 +204,8 @@ class PlayerSettingsDataStore @Inject constructor(
 ) {
     companion object {
         private const val FEATURE = "player_settings"
+        private const val AUDIO_AMPLIFICATION_DB_MIN = 0
+        private const val AUDIO_AMPLIFICATION_DB_MAX = 10
     }
 
     private fun store(profileId: Int = profileManager.activeProfileId.value) =
@@ -220,6 +224,8 @@ class PlayerSettingsDataStore @Inject constructor(
     private val decoderPriorityKey = intPreferencesKey("decoder_priority")
     private val tunnelingEnabledKey = booleanPreferencesKey("tunneling_enabled")
     private val skipSilenceKey = booleanPreferencesKey("skip_silence")
+    private val audioAmplificationDbKey = intPreferencesKey("audio_amplification_db")
+    private val persistAudioAmplificationKey = booleanPreferencesKey("persist_audio_amplification")
     private val preferredAudioLanguageKey = stringPreferencesKey("preferred_audio_language")
     private val loadingOverlayEnabledKey = booleanPreferencesKey("loading_overlay_enabled")
     private val pauseOverlayEnabledKey = booleanPreferencesKey("pause_overlay_enabled")
@@ -337,6 +343,9 @@ class PlayerSettingsDataStore @Inject constructor(
                 decoderPriority = prefs[decoderPriorityKey] ?: 1,
                 tunnelingEnabled = prefs[tunnelingEnabledKey] ?: false,
                 skipSilence = prefs[skipSilenceKey] ?: false,
+                audioAmplificationDb = (prefs[audioAmplificationDbKey] ?: AUDIO_AMPLIFICATION_DB_MIN)
+                    .coerceIn(AUDIO_AMPLIFICATION_DB_MIN, AUDIO_AMPLIFICATION_DB_MAX),
+                persistAudioAmplification = prefs[persistAudioAmplificationKey] ?: false,
                 preferredAudioLanguage = normalizeSelectableLanguageCode(
                     prefs[preferredAudioLanguageKey] ?: AudioLanguageOption.DEVICE
                 ),
@@ -455,6 +464,27 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setSkipSilence(enabled: Boolean) {
         store().edit { prefs ->
             prefs[skipSilenceKey] = enabled
+        }
+    }
+
+    suspend fun setAudioAmplificationDb(db: Int) {
+        store().edit { prefs ->
+            prefs[audioAmplificationDbKey] = db.coerceIn(
+                AUDIO_AMPLIFICATION_DB_MIN,
+                AUDIO_AMPLIFICATION_DB_MAX
+            )
+        }
+    }
+
+    suspend fun setPersistAudioAmplification(enabled: Boolean, dbToPersist: Int? = null) {
+        store().edit { prefs ->
+            prefs[persistAudioAmplificationKey] = enabled
+            if (enabled && dbToPersist != null) {
+                prefs[audioAmplificationDbKey] = dbToPersist.coerceIn(
+                    AUDIO_AMPLIFICATION_DB_MIN,
+                    AUDIO_AMPLIFICATION_DB_MAX
+                )
+            }
         }
     }
 

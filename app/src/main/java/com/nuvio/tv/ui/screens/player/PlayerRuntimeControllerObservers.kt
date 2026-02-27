@@ -93,8 +93,21 @@ internal fun PlayerRuntimeController.observeEpisodeWatchProgress() {
 internal fun PlayerRuntimeController.observeSubtitleSettings() {
     scope.launch {
         playerSettingsDataStore.playerSettings.collect { settings ->
+            val currentState = _uiState.value
             val wasFrameRateMatchingEnabled =
-                _uiState.value.frameRateMatchingMode != FrameRateMatchingMode.OFF
+                currentState.frameRateMatchingMode != FrameRateMatchingMode.OFF
+            val resolvedAudioAmplificationDb = when {
+                !hasInitializedAudioAmplificationForSession -> {
+                    hasInitializedAudioAmplificationForSession = true
+                    if (settings.persistAudioAmplification) {
+                        settings.audioAmplificationDb
+                    } else {
+                        AUDIO_AMPLIFICATION_MIN_DB
+                    }
+                }
+                settings.persistAudioAmplification -> settings.audioAmplificationDb
+                else -> currentState.audioAmplificationDb
+            }
             _uiState.update { state ->
                 val shouldShowOverlay = if (settings.loadingOverlayEnabled && !hasRenderedFirstFrame) {
                     true
@@ -111,8 +124,13 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                     showLoadingOverlay = shouldShowOverlay,
                     pauseOverlayEnabled = settings.pauseOverlayEnabled,
                     osdClockEnabled = settings.osdClockEnabled,
-                    frameRateMatchingMode = settings.frameRateMatchingMode
+                    frameRateMatchingMode = settings.frameRateMatchingMode,
+                    persistAudioAmplification = settings.persistAudioAmplification,
+                    audioAmplificationDb = resolvedAudioAmplificationDb
                 )
+            }
+            if (resolvedAudioAmplificationDb != currentState.audioAmplificationDb) {
+                applyAudioAmplification(resolvedAudioAmplificationDb)
             }
             if (!wasFrameRateMatchingEnabled &&
                 settings.frameRateMatchingMode != FrameRateMatchingMode.OFF &&
