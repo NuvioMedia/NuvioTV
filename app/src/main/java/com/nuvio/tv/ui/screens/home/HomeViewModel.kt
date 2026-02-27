@@ -114,7 +114,11 @@ class HomeViewModel @Inject constructor(
     private var currentHeroCatalogKeys: List<String> = emptyList()
     private var activeCatalogLoadSessionId: Long = 0L
     private var catalogUpdateJob: Job? = null
-    private var hasRenderedFirstCatalog = false
+    private var hasDispatchedFirstCatalogBatch = false
+    @Volatile
+    private var hasCatalogContentDrawn = false
+    private var reconcilePosterObserversJob: Job? = null
+    private var hasBootstrappedPosterObservers = false
     private val catalogLoadSemaphore = Semaphore(
         when (deviceCapabilities.tier) {
             DeviceTier.LOW -> 2
@@ -473,7 +477,9 @@ class HomeViewModel @Inject constructor(
 
     private fun loadHomeCatalogOrderPreference() {
         viewModelScope.launch {
-            layoutPreferenceDataStore.homeCatalogOrderKeys.collectLatest { keys ->
+            layoutPreferenceDataStore.homeCatalogOrderKeys
+                .distinctUntilChanged()
+                .collectLatest { keys ->
                 homeCatalogOrderKeys = keys
                 rebuildCatalogOrder(addonsCache)
                 scheduleUpdateCatalogRows()
@@ -483,7 +489,9 @@ class HomeViewModel @Inject constructor(
 
     private fun loadDisabledHomeCatalogPreference() {
         viewModelScope.launch {
-            layoutPreferenceDataStore.disabledHomeCatalogKeys.collectLatest { keys ->
+            layoutPreferenceDataStore.disabledHomeCatalogKeys
+                .distinctUntilChanged()
+                .collectLatest { keys ->
                 disabledHomeCatalogKeys = keys.toSet()
                 rebuildCatalogOrder(addonsCache)
                 if (addonsCache.isNotEmpty()) {
@@ -628,9 +636,9 @@ class HomeViewModel @Inject constructor(
 
                 // Wait for first catalog to render before enriching, so enrichment
                 // state updates don't compete with the initial catalog paint.
-                if (!hasRenderedFirstCatalog) {
+                if (!hasCatalogContentDrawn) {
                     withTimeoutOrNull(5000L) {
-                        while (!hasRenderedFirstCatalog) { delay(100) }
+                        while (!hasCatalogContentDrawn) { delay(100) }
                     }
                 }
 
@@ -1216,6 +1224,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             addonRepository.getInstalledAddons()
                 .distinctUntilChanged()
+                .debounce(200)
                 .collectLatest { addons ->
                     addonsCache = addons
                     loadAllCatalogs(addons)
@@ -1230,10 +1239,13 @@ class HomeViewModel @Inject constructor(
         catalogsMap.clear()
         catalogVersion++
         lastProcessedCatalogVersion = -1L
+        reconcilePosterObserversJob?.cancel()
+        hasBootstrappedPosterObservers = false
+        hasDispatchedFirstCatalogBatch = false
+        hasCatalogContentDrawn = false
         reconcilePosterStatusObservers(emptyList())
         _fullCatalogRows.value = emptyList()
         truncatedRowCache.clear()
-        hasRenderedFirstCatalog = false
         trailerPreviewLoadingIds.clear()
         trailerPreviewNegativeCache.clear()
         trailerPreviewUrlsState.clear()
@@ -1423,8 +1435,8 @@ class HomeViewModel @Inject constructor(
             val debounceMs = when {
                 // First render: use minimal debounce to show content ASAP while still
                 // batching near-simultaneous arrivals.
-                !hasRenderedFirstCatalog && catalogsMap.isNotEmpty() -> {
-                    hasRenderedFirstCatalog = true
+                !hasDispatchedFirstCatalogBatch && catalogsMap.isNotEmpty() -> {
+                    hasDispatchedFirstCatalogBatch = true
                     50L
                 }
                 pendingCatalogLoads > 8 -> 350L
@@ -1627,11 +1639,29 @@ class HomeViewModel @Inject constructor(
         // Defer poster-status observers during the initial bulk load to avoid
         // launching hundreds of coroutines that compete with catalog loading + rendering.
         if (pendingCatalogLoads <= 0) {
-            viewModelScope.launch {
-                delay(50)
-                reconcilePosterStatusObservers(displayRows)
-            }
+            scheduleReconcilePosterStatusObservers(displayRows)
         }
+    }
+
+    private fun scheduleReconcilePosterStatusObservers(rows: List<CatalogRow>) {
+        reconcilePosterObserversJob?.cancel()
+        val rowsSnapshot = rows.toList()
+        reconcilePosterObserversJob = viewModelScope.launch {
+            if (!hasBootstrappedPosterObservers) {
+                withTimeoutOrNull(4000L) {
+                    while (!hasCatalogContentDrawn) {
+                        delay(50)
+                    }
+                }
+            }
+            delay(if (hasBootstrappedPosterObservers) 120L else 450L)
+            reconcilePosterStatusObservers(rowsSnapshot)
+            hasBootstrappedPosterObservers = true
+        }
+    }
+
+    fun onCatalogContentRendered() {
+        hasCatalogContentDrawn = true
     }
 
     private fun schedulePosterStatusFlush() {
@@ -2045,6 +2075,7 @@ class HomeViewModel @Inject constructor(
 
     override fun onCleared() {
         posterStatusFlushJob?.cancel()
+        reconcilePosterObserversJob?.cancel()
         activeCatalogLoadJobs.values.forEach { it.cancel() }
         activeCatalogLoadJobs.clear()
         posterLibraryObserverJobs.values.forEach { it.cancel() }

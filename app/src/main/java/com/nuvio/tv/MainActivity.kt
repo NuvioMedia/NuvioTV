@@ -336,7 +336,7 @@ class MainActivity : ComponentActivity() {
 
                     var shouldInitUpdateViewModel by remember { mutableStateOf(false) }
                     LaunchedEffect(Unit) {
-                        delay(1500)
+                        delay(4000)
                         shouldInitUpdateViewModel = true
                     }
                     val updateViewModel: UpdateViewModel? = if (shouldInitUpdateViewModel) {
@@ -493,8 +493,9 @@ class MainActivity : ComponentActivity() {
             return
         }
         startupSyncJob = lifecycleScope.launch {
-            delay(1500)
+            delay(3200)
             startupSyncService.requestSyncNow()
+            delay(1200)
             traktProgressService.refreshNow()
             hasDispatchedStartupSync = true
         }

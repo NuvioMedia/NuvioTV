@@ -73,6 +73,7 @@ fun HomeScreen(
     LaunchedEffect(hasCatalogContent) {
         if (hasCatalogContent) {
             hasEnteredCatalogContent = true
+            viewModel.onCatalogContentRendered()
         }
     }
 
