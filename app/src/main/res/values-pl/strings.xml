@@ -55,6 +55,21 @@
     <string name="episodes_play">Odtwórz</string>
     <string name="episodes_season_actions">Akcje sezonu</string>
 
+    <!-- MetaDetailsViewModel -->
+    <string name="detail_added_to_library">Dodano do biblioteki</string>
+    <string name="detail_removed_from_library">Usunięto z biblioteki</string>
+    <string name="detail_episode_marked_watched">Odcinek oznaczony jako obejrzany</string>
+    <string name="detail_episode_marked_unwatched">Odcinek oznaczony jako nieobejrzany</string>
+    <string name="detail_lists_updated">Listy zaktualizowane</string>
+    <string name="detail_movie_marked_watched">Oznaczono jako obejrzane</string>
+    <string name="detail_movie_marked_unwatched">Oznaczono jako nieobejrzane</string>
+    <string name="detail_all_episodes_watched">Wszystkie odcinki już obejrzane</string>
+    <string name="detail_no_watched_episodes">Brak obejrzanych odcinków w tym sezonie</string>
+    <string name="detail_all_previous_watched">Wszystkie poprzednie odcinki już obejrzane</string>
+    <string name="detail_marked_episodes_watched">Odcinki oznaczone jako obejrzane: %1$d</string>
+    <string name="detail_marked_episodes_unwatched">Odcinki oznaczone jako nieobejrzane: %1$d</string>
+    <string name="detail_marked_previous_watched">Poprzednie odcinki oznaczone jako obejrzane: %1$d</string>
+
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Odtwórz</string>
     <string name="detail_btn_resume">Wznów</string>
@@ -591,6 +606,16 @@
     <string name="subtitle_style_title">Styl napisów</string>
     <string name="subtitle_style_color">Kolor</string>
     <string name="subtitle_style_reset">Resetuj</string>
+    <string name="subtitle_style_font_size">Rozmiar czcionki</string>
+    <string name="subtitle_style_bold">Pogrubienie</string>
+    <string name="subtitle_style_text_color">Kolor tekstu</string>
+    <string name="subtitle_style_outline">Obramowanie</string>
+    <string name="subtitle_style_bottom_offset">Przesunięcie od dołu</string>
+    <string name="subtitle_style_defaults">Domyślne</string>
+    <string name="subtitle_style_on">Wł.</string>
+    <string name="subtitle_style_off">Wył.</string>
+    <string name="panel_failed_load_streams">Nie udało się załadować strumieni</string>
+    <string name="panel_failed_load_episodes">Nie udało się załadować odcinków</string>
 
     <!-- PauseOverlay -->
     <string name="pause_you_are_watching">Oglądasz</string>
@@ -600,6 +625,16 @@
 
     <!-- NextEpisodeCardOverlay -->
     <string name="next_episode_label">Następny odcinek</string>
+    <string name="next_episode_finding_source">Szukanie źródła…</string>
+    <string name="next_episode_playing_via">Odtwarzanie przez %1$s za %2$ds</string>
+    <string name="next_episode_play">Odtwórz</string>
+    <string name="next_episode_unaired">Niewyemitowany</string>
+    <string name="skip_intro">Pomiń czołówkę</string>
+    <string name="skip_ending">Pomiń zakończenie</string>
+    <string name="skip_recap">Pomiń podsumowanie</string>
+    <string name="skip_generic">Pomiń</string>
+    <string name="display_mode_refresh">Odświeżanie</string>
+    <string name="display_mode_resolution">Rozdzielczość</string>
 
 
     <!-- SearchScreen -->
@@ -659,6 +694,18 @@
     <string name="auth_qr_finishing">Kończenie logowania\u2026</string>
     <string name="auth_qr_code_label">Kod: %1$s</string>
     <string name="auth_qr_expires">Wygasa za %1$s</string>
+    <string name="auth_qr_phone_hint">Użyj telefonu, aby zalogować się e-mailem i hasłem. TV obsługuje tylko QR dla szybszego logowania.</string>
+    <string name="auth_qr_scan_instruction">Zeskanuj QR, zatwierdź w przeglądarce, a następnie wróć tutaj.</string>
+    <string name="auth_qr_code_display">Kod: %1$s</string>
+    <string name="auth_qr_refresh">Odśwież QR</string>
+    <string name="auth_qr_continue_without_account">Kontynuuj bez konta</string>
+    <string name="auth_qr_connected">Twoje konto jest połączone z tym TV.</string>
+    <string name="auth_qr_synced_data">Zsynchronizowane dane</string>
+    <string name="auth_qr_generating">Generowanie QR\u2026</string>
+    <string name="auth_qr_unavailable">QR niedostępny. Odśwież, aby spróbować ponownie.</string>
+    <string name="auth_qr_please_wait">Proszę czekać\u2026</string>
+    <string name="auth_qr_continue">Kontynuuj</string>
+    <string name="auth_qr_back">Wstecz</string>
 
     <!-- SyncCodeGenerateScreen -->
     <string name="sync_generate_title">Generuj kod synchronizacji</string>
@@ -783,6 +830,7 @@
     <string name="nav_library">Biblioteka</string>
     <string name="nav_addons">Dodatki</string>
     <string name="nav_settings">Ustawienia</string>
+    <string name="settings_rounded_ui">Zaokrąglony interfejs</string>
     <string name="cd_expand_sidebar">Rozwiń pasek boczny</string>
 
     <string name="update_close">Zamknij</string>

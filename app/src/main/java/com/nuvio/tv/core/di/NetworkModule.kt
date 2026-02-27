@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.di
 
 import android.content.Context
+import android.util.Log
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.data.remote.api.AniSkipApi
@@ -28,8 +29,14 @@ import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.io.File
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Named
 import javax.inject.Singleton
+
+private object TraktHttpTrace {
+    private val requestCounter = AtomicLong(0L)
+    fun nextRequestId(): Long = requestCounter.incrementAndGet()
+}
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -64,11 +71,53 @@ object NetworkModule {
             val version = BuildConfig.VERSION_NAME.ifBlank { "dev" }
             val newRequest = request.newBuilder()
                 .header("Content-Type", "application/json")
-                .header("User-Agent", "NuvioTV/$version")
+                .header("User-Agent", "Nuvio/$version")
                 .header("trakt-api-key", BuildConfig.TRAKT_CLIENT_ID)
                 .header("trakt-api-version", "2")
                 .build()
-            chain.proceed(newRequest)
+
+            if (!BuildConfig.DEBUG) {
+                return@addInterceptor chain.proceed(newRequest)
+            }
+
+            val requestId = TraktHttpTrace.nextRequestId()
+            val target = buildString {
+                append(newRequest.url.encodedPath)
+                newRequest.url.encodedQuery?.let { query ->
+                    append('?')
+                    append(query)
+                }
+            }
+            val startNs = System.nanoTime()
+            Log.d("TraktHttp", "REQ #$requestId ${newRequest.method} $target")
+
+            try {
+                val response = chain.proceed(newRequest)
+                val durationMs = (System.nanoTime() - startNs) / 1_000_000L
+                val retryAfter = response.header("Retry-After")
+                val rateLimit = response.header("X-Ratelimit")
+                val page = response.header("X-Pagination-Page")
+                val pageCount = response.header("X-Pagination-Page-Count")
+                val pageInfo = if (page != null || pageCount != null) {
+                    " page=${page ?: "-"} pageCount=${pageCount ?: "-"}"
+                } else {
+                    ""
+                }
+                val retryInfo = retryAfter?.let { " retryAfter=${it}s" } ?: ""
+                val rateInfo = rateLimit?.let { " rate=$it" } ?: ""
+                Log.d(
+                    "TraktHttp",
+                    "RES #$requestId ${response.code} ${newRequest.method} $target ${durationMs}ms$retryInfo$pageInfo$rateInfo"
+                )
+                response
+            } catch (error: Exception) {
+                val durationMs = (System.nanoTime() - startNs) / 1_000_000L
+                Log.w(
+                    "TraktHttp",
+                    "ERR #$requestId ${newRequest.method} $target ${durationMs}ms ${error.javaClass.simpleName}: ${error.message}"
+                )
+                throw error
+            }
         }
         .build()
 

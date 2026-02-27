@@ -139,6 +139,7 @@ fun SeasonTabs(
                             longPressTriggered &&
                             isSelectKey(native.keyCode)
                         ) {
+                            longPressTriggered = false
                             return@onPreviewKeyEvent true
                         }
                         false
@@ -414,6 +415,7 @@ private fun EpisodeCard(
                     longPressTriggered &&
                     isSelectKey(native.keyCode)
                 ) {
+                    longPressTriggered = false
                     return@onPreviewKeyEvent true
                 }
                 false

@@ -47,7 +47,7 @@ class SkipIntroRepository @Inject constructor(
         }
 
         // 2. Try AniSkip (anime) - resolve MAL ID from IMDB via ARM
-        val malId = resolveMalId(imdbId)
+        val malId = resolveMalId(imdbId, season)
         if (malId != null) {
             val aniSkipResult = fetchFromAniSkip(malId, episode)
             if (aniSkipResult.isNotEmpty()) {
@@ -130,20 +130,20 @@ class SkipIntroRepository @Inject constructor(
         }
     }
 
-    private suspend fun resolveMalId(imdbId: String): String? {
-        val cached = malIdCache[imdbId]
+    private suspend fun resolveMalId(imdbId: String, season: Int): String? {
+        val cacheKey = "$imdbId:$season"
+        val cached = malIdCache[cacheKey]
         if (cached != null) return cached.takeIf { it != NO_MAL_ID }
 
         val malId = try {
-            val response = armApi.resolve(imdbId)
+            val response = armApi.resolveByImdb(imdbId)
             if (response.isSuccessful) {
-                response.body()?.firstOrNull()?.myanimelist?.toString()
+                val entries = response.body() ?: emptyList()
+                (entries.getOrNull(season - 1) ?: entries.firstOrNull())?.myanimelist?.toString()
             } else null
-        } catch (e: Exception) {
-            null
-        }
+        } catch (e: Exception) { null }
 
-        malIdCache[imdbId] = malId ?: NO_MAL_ID
+        malIdCache[cacheKey] = malId ?: NO_MAL_ID
         return malId
     }
 
@@ -153,13 +153,11 @@ class SkipIntroRepository @Inject constructor(
         if (cached != null) return cached.takeIf { it != NO_MAL_ID }
 
         val malId = try {
-            val response = armApi.resolveByKitsu(kitsuId)
+            val response = armApi.resolveByKitsu(kitsuId = kitsuId)
             if (response.isSuccessful) {
-                response.body()?.firstOrNull()?.myanimelist?.toString()
+                response.body()?.myanimelist?.toString()
             } else null
-        } catch (e: Exception) {
-            null
-        }
+        } catch (e: Exception) { null }
 
         malIdCache[cacheKey] = malId ?: NO_MAL_ID
         return malId

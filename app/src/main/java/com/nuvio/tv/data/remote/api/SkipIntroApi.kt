@@ -74,16 +74,17 @@ data class AniSkipInterval(
 
 interface ArmApi {
     @GET("imdb")
-    suspend fun resolve(
+    suspend fun resolveByImdb(
         @Query("id") imdbId: String,
         @Query("include") include: String = "myanimelist"
     ): Response<List<ArmEntry>>
 
-    @GET("kitsu")
+    @GET("ids")
     suspend fun resolveByKitsu(
+        @Query("source") source: String = "kitsu",
         @Query("id") kitsuId: String,
         @Query("include") include: String = "myanimelist"
-    ): Response<List<ArmEntry>>
+    ): Response<ArmEntry>
 }
 
 @JsonClass(generateAdapter = true)

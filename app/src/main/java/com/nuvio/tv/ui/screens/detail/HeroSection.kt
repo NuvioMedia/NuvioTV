@@ -472,7 +472,10 @@ private fun ActionIconButton(
                         native.keyCode == AndroidKeyEvent.KEYCODE_ENTER ||
                         native.keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER ||
                         native.keyCode == AndroidKeyEvent.KEYCODE_MENU
-                    if (isSelectKey) return@onPreviewKeyEvent true
+                    if (isSelectKey) {
+                        longPressTriggered = false
+                        return@onPreviewKeyEvent true
+                    }
                 }
                 false
             }

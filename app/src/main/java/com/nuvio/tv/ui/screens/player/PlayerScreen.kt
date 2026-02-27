@@ -104,7 +104,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.core.player.ExternalPlayerLauncher
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
-import java.text.SimpleDateFormat
+import android.text.format.DateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -764,7 +764,7 @@ fun PlayerScreen(
                         headers = headers
                     )
                 },
-                onResetHideTimer = { viewModel.scheduleHideControls() },
+                onResetHideTimer = { viewModel.scheduleHideControls(); viewModel.onUserInteraction() },
                 onBack = onBackPress
             )
         }
@@ -1376,7 +1376,8 @@ private fun PlayerClockOverlay(
     duration: Long
 ) {
     var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
-    val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val context = LocalContext.current
+    val timeFormatter = remember(context) { DateFormat.getTimeFormat(context) }
 
     LaunchedEffect(Unit) {
         while (true) {

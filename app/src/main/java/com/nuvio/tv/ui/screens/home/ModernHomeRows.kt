@@ -600,6 +600,7 @@ private fun ModernCarouselCard(
                         longPressTriggered &&
                         isSelectKey(native.keyCode)
                     ) {
+                        longPressTriggered = false
                         return@onPreviewKeyEvent true
                     }
                     false

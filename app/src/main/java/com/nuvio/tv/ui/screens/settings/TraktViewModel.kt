@@ -319,6 +319,17 @@ class TraktViewModel @Inject constructor(
                         }
                     }
 
+                    TraktTokenPollResult.AlreadyUsed -> {
+                        _uiState.update {
+                            it.copy(
+                                isPolling = false,
+                                errorMessage = "Device code already used. Start again.",
+                                statusMessage = null
+                            )
+                        }
+                        break
+                    }
+
                     TraktTokenPollResult.Expired -> {
                         _uiState.update {
                             it.copy(

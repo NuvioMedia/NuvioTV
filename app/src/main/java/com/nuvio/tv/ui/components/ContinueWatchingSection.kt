@@ -329,6 +329,7 @@ fun ContinueWatchingCard(
                     }
                 }
                 if (native.action == AndroidKeyEvent.ACTION_UP && longPressTriggered && isSelectKey(native.keyCode)) {
+                    longPressTriggered = false
                     return@onPreviewKeyEvent true
                 }
                 false

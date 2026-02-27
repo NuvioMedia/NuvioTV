@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -254,9 +253,7 @@ class SearchViewModel @Inject constructor(
                         type = catalog.apiType,
                         catalogId = catalog.id
                     )
-                    catalogsMap[key] = result.data.copy(
-                        catalogName = searchCatalogLabel(catalog.apiType)
-                    )
+                    catalogsMap[key] = result.data
                     pendingCatalogResponses = (pendingCatalogResponses - 1).coerceAtLeast(0)
                     scheduleCatalogRowsUpdate()
                 }
@@ -613,14 +610,6 @@ class SearchViewModel @Inject constructor(
         }
 
         return allSearchTargets
-    }
-
-    private fun searchCatalogLabel(apiType: String): String {
-        return when (apiType.lowercase(Locale.ROOT)) {
-            "movie" -> "Search Movies"
-            "series" -> "Search Series"
-            else -> "Search ${apiType.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }}"
-        }
     }
 
     private fun catalogKey(addonId: String, type: String, catalogId: String): String {
