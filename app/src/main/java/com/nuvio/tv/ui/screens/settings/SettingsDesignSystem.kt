@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -130,7 +131,7 @@ internal fun SettingsBrandPanel(
             }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = "Settings",
+                text = stringResource(R.string.nav_settings),
                 style = MaterialTheme.typography.titleLarge,
                 color = titleColor
             )
@@ -170,7 +171,7 @@ internal fun SettingsBrandPanel(
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            text = "Rounded UI",
+            text = stringResource(R.string.settings_rounded_ui),
             style = MaterialTheme.typography.labelMedium,
             letterSpacing = 1.2.sp,
             color = subtitleColor
@@ -377,6 +378,7 @@ internal fun SettingsToggleRow(
     enabled: Boolean = true
 ) {
     val contentAlpha = if (enabled) 1f else 0.4f
+    var isFocused by remember { mutableStateOf(false) }
 
     Card(
         onClick = {
@@ -385,8 +387,12 @@ internal fun SettingsToggleRow(
         modifier = modifier
             .fillMaxWidth()
             .height(62.dp)
-            .onFocusChanged {
-                if (it.isFocused) onFocused()
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                    if (nowFocused) onFocused()
+                }
             },
         colors = CardDefaults.colors(
             containerColor = NuvioColors.Background,
@@ -448,14 +454,19 @@ internal fun SettingsActionRow(
     trailingIcon: ImageVector = Icons.Default.ChevronRight
 ) {
     val contentAlpha = if (enabled) 1f else 0.4f
+    var isFocused by remember { mutableStateOf(false) }
 
     Card(
         onClick = { if (enabled) onClick() },
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 62.dp)
-            .onFocusChanged {
-                if (it.isFocused) onFocused()
+            .onFocusChanged { state ->
+                val nowFocused = state.isFocused
+                if (isFocused != nowFocused) {
+                    isFocused = nowFocused
+                    if (nowFocused) onFocused()
+                }
             },
         colors = CardDefaults.colors(
             containerColor = NuvioColors.Background,
@@ -574,7 +585,13 @@ private fun SettingsTogglePill(
             .width(46.dp)
             .height(24.dp)
             .clip(RoundedCornerShape(SettingsPillRadius))
-            .background(if (checked) NuvioColors.FocusRing.copy(alpha = alpha) else NuvioColors.Border.copy(alpha = alpha))
+            .background(
+                if (checked) {
+                    NuvioColors.Secondary.copy(alpha = 0.35f * alpha)
+                } else {
+                    NuvioColors.Border.copy(alpha = alpha)
+                }
+            )
             .padding(2.dp),
         contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart
     ) {

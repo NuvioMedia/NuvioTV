@@ -25,6 +25,15 @@ class PluginSyncService @Inject constructor(
     private val pluginDataStore: PluginDataStore,
     private val profileManager: ProfileManager
 ) {
+    private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
+        return try {
+            block()
+        } catch (e: Exception) {
+            if (!authManager.refreshSessionIfJwtExpired(e)) throw e
+            block()
+        }
+    }
+
     /**
      * Push local plugin repository URLs to Supabase via RPC.
      * Uses a SECURITY DEFINER function to handle RLS for linked devices.
@@ -57,7 +66,9 @@ class PluginSyncService @Inject constructor(
                 put("p_profile_id", profileId)
             }
             Log.d(TAG, "pushToRemote: calling RPC sync_push_plugins with profile_id=$profileId")
-            postgrest.rpc("sync_push_plugins", params)
+            withJwtRefreshRetry {
+                postgrest.rpc("sync_push_plugins", params)
+            }
 
             Log.d(TAG, "Pushed ${localRepos.size} plugin repos to remote for profile $profileId")
             Result.success(Unit)
@@ -69,19 +80,23 @@ class PluginSyncService @Inject constructor(
 
     suspend fun getRemoteRepoUrls(): Result<List<String>> = withContext(Dispatchers.IO) {
         try {
-            val effectiveUserId = authManager.getEffectiveUserId()
-                ?: return@withContext Result.success(emptyList())
+            val effectiveUserId = authManager.getEffectiveUserId(fallbackToOwnIdOnFailure = false)
+                ?: return@withContext Result.failure(
+                    IllegalStateException("Unable to resolve sync owner for plugin sync")
+                )
 
             val activeProfile = profileManager.activeProfile
             val profileId = if (activeProfile != null && !activeProfile.isPrimary && activeProfile.usesPrimaryPlugins) 1
                             else profileManager.activeProfileId.value
 
-            val remotePlugins = postgrest.from("plugins")
-                .select { filter {
-                    eq("user_id", effectiveUserId)
-                    eq("profile_id", profileId)
-                } }
-                .decodeList<SupabasePlugin>()
+            val remotePlugins = withJwtRefreshRetry {
+                postgrest.from("plugins")
+                    .select { filter {
+                        eq("user_id", effectiveUserId)
+                        eq("profile_id", profileId)
+                    } }
+                    .decodeList<SupabasePlugin>()
+            }
 
             Result.success(
                 remotePlugins

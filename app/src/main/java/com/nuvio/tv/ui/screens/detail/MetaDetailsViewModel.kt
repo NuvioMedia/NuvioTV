@@ -27,6 +27,8 @@ import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.data.local.TrailerSettingsDataStore
 import com.nuvio.tv.data.trailer.TrailerService
+import com.nuvio.tv.core.util.isUnreleased
+import java.time.LocalDate
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -39,12 +41,16 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import android.content.Context
+import com.nuvio.tv.R
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
 private const val TAG = "MetaDetailsViewModel"
 
 @HiltViewModel
 class MetaDetailsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val metaRepository: MetaRepository,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
     private val tmdbService: TmdbService,
@@ -76,6 +82,7 @@ class MetaDetailsViewModel @Inject constructor(
     private var trailerAutoplayEnabled = false
 
     private var isPlayButtonFocused = false
+    private var hideUnreleasedContent = false
 
     init {
         observeMetaViewSettings()
@@ -85,7 +92,18 @@ class MetaDetailsViewModel @Inject constructor(
         observeWatchedEpisodes()
         observeMovieWatched()
         observeBlurUnwatchedEpisodes()
+        observeHideUnreleasedContent()
         loadMeta()
+    }
+
+    private fun observeHideUnreleasedContent() {
+        viewModelScope.launch {
+            layoutPreferenceDataStore.hideUnreleasedContent
+                .distinctUntilChanged()
+                .collectLatest { enabled ->
+                    hideUnreleasedContent = enabled
+                }
+        }
     }
 
     private fun observeMetaViewSettings() {
@@ -440,7 +458,7 @@ class MetaDetailsViewModel @Inject constructor(
                 return@launch
             }
 
-            val recommendations = runCatching {
+            val rawRecommendations = runCatching {
                 tmdbMetadataService.fetchMoreLikeThis(
                     tmdbId = tmdbId,
                     contentType = tmdbContentType,
@@ -449,6 +467,13 @@ class MetaDetailsViewModel @Inject constructor(
             }.getOrElse {
                 Log.w(TAG, "Failed to load More like this for ${meta.id}: ${it.message}")
                 emptyList()
+            }
+
+            val recommendations = if (hideUnreleasedContent) {
+                val today = LocalDate.now()
+                rawRecommendations.filterNot { it.isUnreleased(today) }
+            } else {
+                rawRecommendations
             }
 
             _uiState.update { state ->
@@ -743,7 +768,7 @@ class MetaDetailsViewModel @Inject constructor(
                         nextVideoId = meta.id,
                         nextSeason = null,
                         nextEpisode = null,
-                        displayText = "Resume"
+                        displayText = context.getString(R.string.detail_btn_resume)
                     )
                 } else {
                     NextToWatch(
@@ -752,7 +777,7 @@ class MetaDetailsViewModel @Inject constructor(
                         nextVideoId = meta.id,
                         nextSeason = null,
                         nextEpisode = null,
-                        displayText = "Play"
+                        displayText = context.getString(R.string.detail_btn_play)
                     )
                 }
                 updateNextToWatch(nextToWatch)
@@ -771,7 +796,7 @@ class MetaDetailsViewModel @Inject constructor(
                         nextVideoId = meta.id,
                         nextSeason = null,
                         nextEpisode = null,
-                        displayText = "Play"
+                        displayText = context.getString(R.string.detail_btn_play)
                     )
                 )
                 return@launch
@@ -805,7 +830,7 @@ class MetaDetailsViewModel @Inject constructor(
                 nextVideoId = metaId,
                 nextSeason = null,
                 nextEpisode = null,
-                displayText = "Play"
+                displayText = context.getString(R.string.detail_btn_play)
             )
         }
 
@@ -822,7 +847,7 @@ class MetaDetailsViewModel @Inject constructor(
                     nextVideoId = matchedEpisode?.id ?: latestProgress.videoId,
                     nextSeason = season,
                     nextEpisode = episode,
-                    displayText = "Resume S${season}E${episode}"
+                    displayText = context.getString(R.string.detail_btn_resume_episode, season, episode)
                 )
             }
 
@@ -835,7 +860,7 @@ class MetaDetailsViewModel @Inject constructor(
                         nextVideoId = next.id,
                         nextSeason = next.season,
                         nextEpisode = next.episode,
-                        displayText = "Next S${next.season}E${next.episode}"
+                        displayText = context.getString(R.string.detail_btn_next_episode, next.season, next.episode)
                     )
                 }
             }
@@ -876,19 +901,24 @@ class MetaDetailsViewModel @Inject constructor(
                     nextVideoId = resumeEpisode.id,
                     nextSeason = resumeEpisode.season,
                     nextEpisode = resumeEpisode.episode,
-                    displayText = "Resume S${resumeEpisode.season}E${resumeEpisode.episode}"
+                    displayText = context.getString(R.string.detail_btn_resume_episode, resumeEpisode.season, resumeEpisode.episode)
                 )
             }
             nextUnwatchedEpisode != null -> {
                 val hasWatchedSomething = fallbackProgressMap.isNotEmpty()
-                val displayPrefix = if (hasWatchedSomething) "Next" else "Play"
+                val s = nextUnwatchedEpisode.season
+                val e = nextUnwatchedEpisode.episode
                 NextToWatch(
                     watchProgress = null,
                     isResume = false,
                     nextVideoId = nextUnwatchedEpisode.id,
-                    nextSeason = nextUnwatchedEpisode.season,
-                    nextEpisode = nextUnwatchedEpisode.episode,
-                    displayText = "$displayPrefix S${nextUnwatchedEpisode.season}E${nextUnwatchedEpisode.episode}"
+                    nextSeason = s,
+                    nextEpisode = e,
+                    displayText = if (hasWatchedSomething) {
+                        context.getString(R.string.detail_btn_next_episode, s, e)
+                    } else {
+                        context.getString(R.string.detail_btn_play_episode, s, e)
+                    }
                 )
             }
             else -> {
@@ -900,9 +930,9 @@ class MetaDetailsViewModel @Inject constructor(
                     nextSeason = firstEpisode?.season,
                     nextEpisode = firstEpisode?.episode,
                     displayText = if (firstEpisode != null) {
-                        "Play S${firstEpisode.season}E${firstEpisode.episode}"
+                        context.getString(R.string.detail_btn_play_episode, firstEpisode.season, firstEpisode.episode)
                     } else {
-                        "Play"
+                        context.getString(R.string.detail_btn_play)
                     }
                 )
             }
@@ -924,7 +954,7 @@ class MetaDetailsViewModel @Inject constructor(
                 val message = if (_uiState.value.librarySourceMode == LibrarySourceMode.TRAKT) {
                     if (wasInWatchlist) "Removed from watchlist" else "Added to watchlist"
                 } else {
-                    if (wasInLibrary) "Removed from library" else "Added to library"
+                    if (wasInLibrary) context.getString(R.string.detail_removed_from_library) else context.getString(R.string.detail_added_to_library)
                 }
                 showMessage(message)
             }.onFailure { error ->
@@ -998,7 +1028,7 @@ class MetaDetailsViewModel @Inject constructor(
                         pickerError = null
                     )
                 }
-                showMessage("Lists updated")
+                showMessage(context.getString(R.string.detail_lists_updated))
             }.onFailure { error ->
                 _uiState.update {
                     it.copy(
@@ -1031,10 +1061,10 @@ class MetaDetailsViewModel @Inject constructor(
             runCatching {
                 if (_uiState.value.isMovieWatched) {
                     watchProgressRepository.removeFromHistory(itemId)
-                    showMessage("Marked as unwatched")
+                    showMessage(context.getString(R.string.detail_movie_marked_unwatched))
                 } else {
                     watchProgressRepository.markAsCompleted(buildCompletedMovieProgress(meta))
-                    showMessage("Marked as watched")
+                    showMessage(context.getString(R.string.detail_movie_marked_watched))
                 }
             }.onFailure { error ->
                 showMessage(
@@ -1063,10 +1093,10 @@ class MetaDetailsViewModel @Inject constructor(
             runCatching {
                 if (isWatched) {
                     watchProgressRepository.removeFromHistory(itemId, season, episode)
-                    showMessage("Episode marked as unwatched")
+                    showMessage(context.getString(R.string.detail_episode_marked_unwatched))
                 } else {
                     watchProgressRepository.markAsCompleted(buildCompletedEpisodeProgress(meta, video))
-                    showMessage("Episode marked as watched")
+                    showMessage(context.getString(R.string.detail_episode_marked_watched))
                 }
             }.onFailure { error ->
                 showMessage(
@@ -1106,7 +1136,7 @@ class MetaDetailsViewModel @Inject constructor(
                 !isWatched
             }
             if (unwatched.isEmpty()) {
-                showMessage("All episodes already watched")
+                showMessage(context.getString(R.string.detail_all_episodes_watched))
                 return@launch
             }
 
@@ -1129,7 +1159,7 @@ class MetaDetailsViewModel @Inject constructor(
                 }
             }
 
-            showMessage("Marked $marked episode${if (marked != 1) "s" else ""} as watched")
+            showMessage(context.getString(R.string.detail_marked_episodes_watched, marked))
         }
     }
 
@@ -1144,7 +1174,7 @@ class MetaDetailsViewModel @Inject constructor(
                     || _uiState.value.watchedEpisodes.contains(s to e)
             }
             if (watched.isEmpty()) {
-                showMessage("No watched episodes in this season")
+                showMessage(context.getString(R.string.detail_no_watched_episodes))
                 return@launch
             }
 
@@ -1167,7 +1197,7 @@ class MetaDetailsViewModel @Inject constructor(
                 }
             }
 
-            showMessage("Marked $unmarked episode${if (unmarked != 1) "s" else ""} as unwatched")
+            showMessage(context.getString(R.string.detail_marked_episodes_unwatched, unmarked))
         }
     }
 
@@ -1188,7 +1218,7 @@ class MetaDetailsViewModel @Inject constructor(
                 !isWatched
             }
             if (unwatched.isEmpty()) {
-                showMessage("All previous episodes already watched")
+                showMessage(context.getString(R.string.detail_all_previous_watched))
                 return@launch
             }
 
@@ -1211,7 +1241,7 @@ class MetaDetailsViewModel @Inject constructor(
                 }
             }
 
-            showMessage("Marked $marked previous episode${if (marked != 1) "s" else ""} as watched")
+            showMessage(context.getString(R.string.detail_marked_previous_watched, marked))
         }
     }
 

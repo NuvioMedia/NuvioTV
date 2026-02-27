@@ -55,6 +55,8 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MDBListRatings
 import com.nuvio.tv.domain.model.Video
@@ -91,6 +93,7 @@ fun HeroContentSection(
     isTrailerPlaying: Boolean = false,
     playButtonFocusRequester: FocusRequester? = null,
     restorePlayFocusToken: Int = 0,
+    onHeroActionFocused: () -> Unit = {},
     onPlayFocusRestored: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -101,7 +104,7 @@ fun HeroContentSection(
         meta.logo?.let { logo ->
             ImageRequest.Builder(context)
                 .data(logo)
-                .crossfade(false)
+                .crossfade(true)
                 .build()
         }
     }
@@ -113,14 +116,17 @@ fun HeroContentSection(
         context = context,
         rawRes = com.nuvio.tv.R.raw.trailer_play_button
     )
+    val strCreator = stringResource(R.string.hero_creator)
+    val strDirector = stringResource(R.string.hero_director)
+    val strWriter = stringResource(R.string.hero_writer)
     val creditLine = remember(meta.director, meta.writer, isSeriesApi) {
         val directorLine = meta.director.takeIf { it.isNotEmpty() }?.joinToString(", ")
         val writerLine = meta.writer.takeIf { it.isNotEmpty() }?.joinToString(", ")
         when {
             !directorLine.isNullOrBlank() -> {
-                if (isSeriesApi) "Creator: $directorLine" else "Director: $directorLine"
+                if (isSeriesApi) strCreator.format(directorLine) else strDirector.format(directorLine)
             }
-            !writerLine.isNullOrBlank() -> "Writer: $writerLine"
+            !writerLine.isNullOrBlank() -> strWriter.format(writerLine)
             else -> null
         }
     }
@@ -190,7 +196,7 @@ fun HeroContentSection(
                 exit = fadeOut(tween(300))
             ) {
                 Text(
-                    text = "Press back to exit trailer",
+                    text = stringResource(R.string.hero_press_back_trailer),
                     style = MaterialTheme.typography.labelMedium,
                     color = NuvioColors.TextTertiary,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -210,13 +216,16 @@ fun HeroContentSection(
                     ) {
                         PlayButton(
                             text = nextToWatch?.displayText ?: when {
-                                nextEpisode != null -> "Play S${nextEpisode.season}, E${nextEpisode.episode}"
-                                else -> "Play"
+                                nextEpisode != null -> stringResource(R.string.hero_play_episode, nextEpisode.season ?: 0, nextEpisode.episode ?: 0)
+                                else -> stringResource(R.string.hero_play)
                             },
                             onClick = onPlayClick,
                             focusRequester = playButtonFocusRequester,
                             restoreFocusToken = restorePlayFocusToken,
-                            onFocusRestored = onPlayFocusRestored
+                            onFocusRestored = {
+                                onHeroActionFocused()
+                                onPlayFocusRestored()
+                            }
                         )
 
                         ActionIconButton(
@@ -226,9 +235,10 @@ fun HeroContentSection(
                             } else {
                                 null
                             },
-                            contentDescription = if (isInLibrary) "Remove from library" else "Add to library",
+                            contentDescription = if (isInLibrary) stringResource(R.string.hero_remove_from_library) else stringResource(R.string.hero_add_to_library),
                             onClick = onToggleLibrary,
-                            onLongPress = onLibraryLongPress
+                            onLongPress = onLibraryLongPress,
+                            onFocused = onHeroActionFocused
                         )
 
                         if (meta.apiType == "movie") {
@@ -239,23 +249,25 @@ fun HeroContentSection(
                                     Icons.Default.VisibilityOff
                                 },
                                 contentDescription = if (isMovieWatched) {
-                                    "Mark as unwatched"
+                                    stringResource(R.string.hero_mark_unwatched)
                                 } else {
-                                    "Mark as watched"
+                                    stringResource(R.string.hero_mark_watched)
                                 },
                                 onClick = onToggleMovieWatched,
                                 enabled = !isMovieWatchedPending,
                                 selected = isMovieWatched,
                                 selectedContainerColor = Color.White,
-                                selectedContentColor = Color.Black
+                                selectedContentColor = Color.Black,
+                                onFocused = onHeroActionFocused
                             )
                         }
 
                         if (trailerAvailable) {
                             ActionIconButtonPainter(
                                 painter = trailerPainter,
-                                contentDescription = "Play trailer",
-                                onClick = onTrailerClick
+                                contentDescription = stringResource(R.string.hero_play_trailer),
+                                onClick = onTrailerClick,
+                                onFocused = onHeroActionFocused
                             )
                         }
                     }
@@ -370,6 +382,7 @@ private fun ActionIconButtonPainter(
     painter: Painter,
     contentDescription: String,
     onClick: () -> Unit,
+    onFocused: () -> Unit = {},
     enabled: Boolean = true
 ) {
     IconButton(
@@ -377,12 +390,15 @@ private fun ActionIconButtonPainter(
         enabled = enabled,
         modifier = Modifier
             .size(48.dp)
+            .onFocusChanged { state ->
+                if (state.isFocused) onFocused()
+            }
             .focusProperties { up = FocusRequester.Cancel },
         colors = IconButtonDefaults.colors(
             containerColor = NuvioColors.BackgroundCard,
             focusedContainerColor = NuvioColors.Secondary,
             contentColor = NuvioColors.TextPrimary,
-            focusedContentColor = NuvioColors.OnPrimary
+            focusedContentColor = NuvioColors.OnSecondary
         ),
         border = IconButtonDefaults.border(
             focusedBorder = Border(
@@ -413,7 +429,8 @@ private fun ActionIconButton(
     enabled: Boolean = true,
     selected: Boolean = false,
     selectedContainerColor: Color = Color(0xFF7CFF9B),
-    selectedContentColor: Color = Color.Black
+    selectedContentColor: Color = Color.Black,
+    onFocused: () -> Unit = {}
 ) {
     var longPressTriggered by remember { mutableStateOf(false) }
 
@@ -428,6 +445,9 @@ private fun ActionIconButton(
         enabled = enabled,
         modifier = Modifier
             .size(48.dp)
+            .onFocusChanged { state ->
+                if (state.isFocused) onFocused()
+            }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
                 if (onLongPress != null && native.action == AndroidKeyEvent.ACTION_DOWN) {
@@ -452,7 +472,10 @@ private fun ActionIconButton(
                         native.keyCode == AndroidKeyEvent.KEYCODE_ENTER ||
                         native.keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER ||
                         native.keyCode == AndroidKeyEvent.KEYCODE_MENU
-                    if (isSelectKey) return@onPreviewKeyEvent true
+                    if (isSelectKey) {
+                        longPressTriggered = false
+                        return@onPreviewKeyEvent true
+                    }
                 }
                 false
             }
@@ -461,7 +484,7 @@ private fun ActionIconButton(
             containerColor = if (selected) selectedContainerColor else NuvioColors.BackgroundCard,
             focusedContainerColor = NuvioColors.Secondary,
             contentColor = if (selected) selectedContentColor else NuvioColors.TextPrimary,
-            focusedContentColor = NuvioColors.OnPrimary
+            focusedContentColor = NuvioColors.OnSecondary
         ),
         border = IconButtonDefaults.border(
             focusedBorder = Border(
@@ -560,7 +583,7 @@ private fun MetaInfoRow(
                 ) {
                     AsyncImage(
                         model = imdbModel,
-                        contentDescription = "Rating",
+                        contentDescription = stringResource(R.string.cd_rating),
                         modifier = Modifier.size(30.dp),
                         contentScale = ContentScale.Fit
                     )

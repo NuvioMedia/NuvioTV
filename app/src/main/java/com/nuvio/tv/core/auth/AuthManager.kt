@@ -60,18 +60,31 @@ class AuthManager @Inject constructor(
                                 cachedEffectiveUserId = null
                                 cachedEffectiveUserSourceUserId = null
                             }
-                            val isAnonymous = user.email.isNullOrBlank()
-                            _authState.value = if (isAnonymous) {
-                                AuthState.Anonymous(userId = user.id)
+                            if (user.email.isNullOrBlank()) {
+                                _authState.value = AuthState.SignedOut
                             } else {
-                                AuthState.FullAccount(userId = user.id, email = user.email!!)
+                                _authState.value = AuthState.FullAccount(userId = user.id, email = user.email!!)
                             }
                         }
                     }
                     is SessionStatus.NotAuthenticated -> {
-                        cachedEffectiveUserId = null
-                        cachedEffectiveUserSourceUserId = null
-                        _authState.value = AuthState.SignedOut
+                        val session = auth.currentSessionOrNull()
+                        val hasRefreshToken = session?.refreshToken?.isNotBlank() == true
+                        if (hasRefreshToken) {
+                            scope.launch {
+                                try {
+                                    auth.refreshCurrentSession()
+                                } catch (e: Exception) {
+                                    cachedEffectiveUserId = null
+                                    cachedEffectiveUserSourceUserId = null
+                                    _authState.value = AuthState.SignedOut
+                                }
+                            }
+                        } else {
+                            cachedEffectiveUserId = null
+                            cachedEffectiveUserSourceUserId = null
+                            _authState.value = AuthState.SignedOut
+                        }
                     }
                     is SessionStatus.Initializing -> {
                         _authState.value = AuthState.Loading
@@ -83,11 +96,10 @@ class AuthManager @Inject constructor(
     }
 
     val isAuthenticated: Boolean
-        get() = _authState.value is AuthState.Anonymous || _authState.value is AuthState.FullAccount
+        get() = _authState.value is AuthState.FullAccount
 
     val currentUserId: String?
         get() = when (val state = _authState.value) {
-            is AuthState.Anonymous -> state.userId
             is AuthState.FullAccount -> state.userId
             else -> null
         }
@@ -97,22 +109,46 @@ class AuthManager @Inject constructor(
      * For sync-linked devices, this returns the sync owner's user ID.
      * For direct users, returns their own user ID.
      */
-    suspend fun getEffectiveUserId(): String? {
+    suspend fun getEffectiveUserId(fallbackToOwnIdOnFailure: Boolean = true): String? {
         val userId = currentUserId ?: return null
         if (cachedEffectiveUserSourceUserId != userId) {
             cachedEffectiveUserId = null
             cachedEffectiveUserSourceUserId = null
         }
         cachedEffectiveUserId?.let { return it }
-        return try {
+
+        suspend fun resolveAndCache(): String {
             val result = postgrest.rpc("get_sync_owner")
             val effectiveId = result.decodeAs<String>()
             cachedEffectiveUserId = effectiveId
             cachedEffectiveUserSourceUserId = userId
-            effectiveId
+            return effectiveId
+        }
+
+        return try {
+            resolveAndCache()
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to get effective user ID, falling back to own ID", e)
-            userId
+            if (refreshSessionIfJwtExpired(e)) {
+                return try {
+                    resolveAndCache()
+                } catch (retryError: Exception) {
+                    if (fallbackToOwnIdOnFailure) {
+                        Log.e(TAG, "Failed to get effective user ID after refresh; falling back to own ID", retryError)
+                        userId
+                    } else {
+                        Log.e(TAG, "Failed to get effective user ID after refresh", retryError)
+                        null
+                    }
+                }
+            }
+
+            if (fallbackToOwnIdOnFailure) {
+                Log.e(TAG, "Failed to get effective user ID, falling back to own ID", e)
+                userId
+            } else {
+                Log.e(TAG, "Failed to get effective user ID", e)
+                null
+            }
         }
     }
 
@@ -142,12 +178,24 @@ class AuthManager @Inject constructor(
         }
     }
 
-    suspend fun signInAnonymously(): Result<Unit> {
+    /**
+     * QR login RPCs currently require an authenticated Supabase session.
+     * This creates/reuses an anonymous session only for the QR flow while
+     * keeping app-level auth state exposed as SignedOut until a full account exists.
+     */
+    suspend fun ensureQrSessionAuthenticated(): Result<Unit> {
+        val user = auth.currentUserOrNull()
+        val hasToken = auth.currentAccessTokenOrNull() != null
+
+        if (user != null && hasToken) {
+            return Result.success(Unit)
+        }
+
         return try {
             auth.signInAnonymously()
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Anonymous sign in failed", e)
+            Log.e(TAG, "QR anonymous sign in failed", e)
             Result.failure(e)
         }
     }
@@ -165,6 +213,23 @@ class AuthManager @Inject constructor(
     fun clearEffectiveUserIdCache() {
         cachedEffectiveUserId = null
         cachedEffectiveUserSourceUserId = null
+    }
+
+    suspend fun refreshSessionIfJwtExpired(error: Throwable): Boolean {
+        if (!error.isJwtExpiredError()) return false
+        val hasRefreshToken = auth.currentSessionOrNull()?.refreshToken?.isNotBlank() == true
+        if (!hasRefreshToken) {
+            Log.w(TAG, "JWT expired but no refresh token available; cannot refresh session")
+            return false
+        }
+        return try {
+            Log.w(TAG, "JWT expired; refreshing Supabase session and retrying request")
+            auth.refreshCurrentSession()
+            true
+        } catch (refreshError: Exception) {
+            Log.e(TAG, "Failed to refresh Supabase session after JWT expiry", refreshError)
+            false
+        }
     }
 
     suspend fun startTvLoginSession(deviceNonce: String, deviceName: String?, redirectBaseUrl: String): Result<TvLoginStartResult> {
@@ -266,4 +331,13 @@ class AuthManager @Inject constructor(
             Result.failure(e)
         }
     }
+}
+
+private fun Throwable.isJwtExpiredError(): Boolean {
+    var current: Throwable? = this
+    while (current != null) {
+        if (current.message?.contains("jwt expired", ignoreCase = true) == true) return true
+        current = current.cause
+    }
+    return false
 }

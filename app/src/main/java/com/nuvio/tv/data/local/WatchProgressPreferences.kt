@@ -207,11 +207,19 @@ class WatchProgressPreferences @Inject constructor(
      */
     suspend fun mergeRemoteEntries(remoteEntries: Map<String, WatchProgress>) {
         Log.d("WatchProgressPrefs", "mergeRemoteEntries: ${remoteEntries.size} remote entries")
-        if (remoteEntries.isEmpty()) return
         store().edit { preferences ->
             val json = preferences[watchProgressKey] ?: "{}"
             val local = parseProgressMap(json).toMutableMap()
             Log.d("WatchProgressPrefs", "mergeRemoteEntries: ${local.size} existing local entries")
+
+            // Remove local entries that no longer exist on remote
+            if (remoteEntries.isNotEmpty()) {
+                val removedKeys = local.keys - remoteEntries.keys
+                removedKeys.forEach { key ->
+                    local.remove(key)
+                    Log.d("WatchProgressPrefs", "  removed key=$key (not in remote)")
+                }
+            }
 
             for ((key, remote) in remoteEntries) {
                 val existing = local[key]
@@ -232,6 +240,12 @@ class WatchProgressPreferences @Inject constructor(
     suspend fun replaceWithRemoteEntries(remoteEntries: Map<String, WatchProgress>) {
         Log.d("WatchProgressPrefs", "replaceWithRemoteEntries: ${remoteEntries.size} remote entries")
         store().edit { preferences ->
+            val currentJson = preferences[watchProgressKey] ?: "{}"
+            val current = parseProgressMap(currentJson)
+            if (remoteEntries.isEmpty() && current.isNotEmpty()) {
+                Log.w(TAG, "replaceWithRemoteEntries: remote empty while local has ${current.size} entries; preserving local watch progress")
+                return@edit
+            }
             val pruned = pruneOldItems(remoteEntries.toMutableMap())
             Log.d("WatchProgressPrefs", "replaceWithRemoteEntries: ${pruned.size} entries after prune, writing to DataStore")
             preferences[watchProgressKey] = gson.toJson(pruned)

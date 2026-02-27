@@ -30,6 +30,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -48,8 +50,8 @@ fun DisplayModeOverlay(
     if (info == null) return
 
     val items = listOf(
-        "Refresh" to formatHz(info.refreshRate),
-        "Resolution" to "${info.width}x${info.height}"
+        stringResource(R.string.display_mode_refresh) to formatHz(info.refreshRate),
+        stringResource(R.string.display_mode_resolution) to "${info.width}x${info.height}"
     )
     val count = items.size
     val totalLineHeight = (ROW_HEIGHT.value * count) + (ROW_GAP.value * (count - 1))

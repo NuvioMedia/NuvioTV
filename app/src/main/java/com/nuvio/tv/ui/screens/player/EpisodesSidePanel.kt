@@ -67,6 +67,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -124,13 +126,13 @@ internal fun EpisodesSidePanel(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (uiState.showEpisodeStreams) "Streams" else "Episodes",
+                        text = if (uiState.showEpisodeStreams) stringResource(R.string.episodes_panel_streams_title) else stringResource(R.string.episodes_panel_title),
                         style = MaterialTheme.typography.headlineSmall,
                         color = NuvioColors.TextPrimary
                     )
 
                     DialogButton(
-                        text = "Close",
+                        text = stringResource(R.string.episodes_panel_close),
                         onClick = onClose,
                         isPrimary = false
                     )
@@ -175,12 +177,12 @@ private fun EpisodeStreamsView(
         verticalAlignment = Alignment.CenterVertically
     ) {
         DialogButton(
-            text = "Back",
+            text = stringResource(R.string.episodes_panel_back),
             onClick = onBackToEpisodes,
             isPrimary = false
         )
         DialogButton(
-            text = "Reload",
+            text = stringResource(R.string.episodes_panel_reload),
             onClick = onReload,
             isPrimary = false
         )
@@ -233,7 +235,7 @@ private fun EpisodeStreamsView(
 
         uiState.episodeStreamsError != null -> {
             Text(
-                text = uiState.episodeStreamsError ?: "Failed to load streams",
+                text = uiState.episodeStreamsError ?: stringResource(R.string.panel_failed_load_streams),
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.85f)
             )
@@ -241,7 +243,7 @@ private fun EpisodeStreamsView(
 
         uiState.episodeFilteredStreams.isEmpty() -> {
             Text(
-                text = "No streams found",
+                text = stringResource(R.string.episodes_panel_no_streams),
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.7f)
             )
@@ -318,7 +320,7 @@ private fun EpisodesListView(
 
         uiState.episodesError != null -> {
             Text(
-                text = uiState.episodesError ?: "Failed to load episodes",
+                text = uiState.episodesError ?: stringResource(R.string.panel_failed_load_episodes),
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.85f)
             )
@@ -326,7 +328,7 @@ private fun EpisodesListView(
 
         uiState.episodes.isEmpty() -> {
             Text(
-                text = "No episodes available",
+                text = stringResource(R.string.episodes_panel_no_episodes),
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.7f)
             )
@@ -432,11 +434,11 @@ private fun EpisodesSeasonTabs(
                 scale = CardDefaults.scale(focusedScale = 1.0f)
             ) {
                 Text(
-                    text = if (season == 0) "Specials" else "Season $season",
+                    text = if (season == 0) stringResource(R.string.episodes_specials) else stringResource(R.string.episodes_season, season),
                     style = MaterialTheme.typography.labelLarge,
                     color = when {
                         isSelected -> Color.Black
-                        isFocused -> NuvioColors.OnPrimary
+                        isFocused -> NuvioColors.OnSecondary
                         else -> NuvioTheme.extendedColors.textSecondary
                     },
                     modifier = Modifier.padding(vertical = 10.dp, horizontal = 20.dp)
@@ -561,7 +563,7 @@ private fun EpisodeItem(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = episode.title.ifBlank { "Episode" },
+                    text = episode.title.ifBlank { stringResource(R.string.episodes_episode) },
                     style = MaterialTheme.typography.titleMedium,
                     color = NuvioColors.TextPrimary,
                     maxLines = 1,

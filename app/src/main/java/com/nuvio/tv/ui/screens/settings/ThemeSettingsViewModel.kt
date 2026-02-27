@@ -15,8 +15,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ThemeSettingsUiState(
-    val selectedTheme: AppTheme = AppTheme.CRIMSON,
-    val availableThemes: List<AppTheme> = AppTheme.entries
+    val selectedTheme: AppTheme = AppTheme.WHITE,
+    val availableThemes: List<AppTheme> = listOf(AppTheme.WHITE) + AppTheme.entries.filterNot { it == AppTheme.WHITE }
 )
 
 sealed class ThemeSettingsEvent {

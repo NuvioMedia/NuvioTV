@@ -3,11 +3,14 @@ package com.nuvio.tv.ui.screens.library
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.repository.TraktLibraryService
+import com.nuvio.tv.data.repository.parseContentIds
 import com.nuvio.tv.domain.model.LibraryEntry
 import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.TraktListPrivacy
+import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.repository.LibraryRepository
+import com.nuvio.tv.domain.repository.WatchProgressRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -16,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -28,6 +32,19 @@ data class LibraryTypeTab(
     companion object {
         const val ALL_KEY = "__all__"
         val All = LibraryTypeTab(key = ALL_KEY, label = "All")
+    }
+}
+
+enum class LibrarySortOption(
+    val key: String,
+    val label: String
+) {
+    DEFAULT("default", "Trakt Order"),
+    TITLE_ASC("title_asc", "Title A-Z"),
+    RECENTLY_WATCHED("recently_watched", "Recently Watched");
+
+    companion object {
+        val TraktOptions = entries
     }
 }
 
@@ -50,8 +67,11 @@ data class LibraryUiState(
     val visibleItems: List<LibraryEntry> = emptyList(),
     val listTabs: List<LibraryListTab> = emptyList(),
     val availableTypeTabs: List<LibraryTypeTab> = emptyList(),
+    val availableSortOptions: List<LibrarySortOption> = emptyList(),
     val selectedListKey: String? = null,
     val selectedTypeTab: LibraryTypeTab? = null,
+    val selectedSortOption: LibrarySortOption = LibrarySortOption.DEFAULT,
+    val lastWatchedByContent: Map<String, Long> = emptyMap(),
     val isLoading: Boolean = true,
     val isSyncing: Boolean = false,
     val errorMessage: String? = null,
@@ -64,7 +84,8 @@ data class LibraryUiState(
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
-    private val libraryRepository: LibraryRepository
+    private val libraryRepository: LibraryRepository,
+    private val watchProgressRepository: WatchProgressRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -86,6 +107,13 @@ class LibraryViewModel @Inject constructor(
     fun onSelectListTab(listKey: String) {
         _uiState.update { current ->
             val updated = current.copy(selectedListKey = listKey)
+            updated.withVisibleItems()
+        }
+    }
+
+    fun onSelectSortOption(option: LibrarySortOption) {
+        _uiState.update { current ->
+            val updated = current.copy(selectedSortOption = option)
             updated.withVisibleItems()
         }
     }
@@ -259,10 +287,17 @@ class LibraryViewModel @Inject constructor(
                 libraryRepository.sourceMode,
                 libraryRepository.isSyncing,
                 libraryRepository.libraryItems,
-                libraryRepository.listTabs
-            ) { sourceMode, isSyncing, items, listTabs ->
-                DataBundle(sourceMode, isSyncing, items, listTabs)
-            }.collectLatest { (sourceMode, isSyncing, items, listTabs) ->
+                libraryRepository.listTabs,
+                watchProgressRepository.allProgress.onStart { emit(emptyList()) }
+            ) { sourceMode, isSyncing, items, listTabs, allProgress ->
+                DataBundle(
+                    sourceMode = sourceMode,
+                    isSyncing = isSyncing,
+                    items = items,
+                    listTabs = listTabs,
+                    lastWatchedByContent = buildLastWatchedIndex(allProgress)
+                )
+            }.collectLatest { (sourceMode, isSyncing, items, listTabs, lastWatchedByContent) ->
                 _uiState.update { current ->
                     val nextSelectedList = when {
                         sourceMode == LibrarySourceMode.TRAKT -> {
@@ -291,14 +326,25 @@ class LibraryViewModel @Inject constructor(
                     val nextSelectedType = current.selectedTypeTab
                         ?.takeIf { selected -> typeTabs.any { it.key == selected.key } }
                         ?: LibraryTypeTab.All
+                    val sortOptions = if (sourceMode == LibrarySourceMode.TRAKT) {
+                        LibrarySortOption.TraktOptions
+                    } else {
+                        emptyList()
+                    }
+                    val nextSelectedSort = current.selectedSortOption
+                        .takeIf { it in sortOptions }
+                        ?: LibrarySortOption.DEFAULT
 
                     val updated = current.copy(
                         sourceMode = sourceMode,
                         allItems = items,
                         listTabs = listTabs,
                         availableTypeTabs = typeTabs,
+                        availableSortOptions = sortOptions,
                         selectedTypeTab = nextSelectedType,
                         selectedListKey = nextSelectedList,
+                        selectedSortOption = nextSelectedSort,
+                        lastWatchedByContent = lastWatchedByContent,
                         manageSelectedListKey = nextManageSelected,
                         isSyncing = sourceMode == LibrarySourceMode.TRAKT && isSyncing,
                         isLoading = sourceMode == LibrarySourceMode.TRAKT &&
@@ -316,7 +362,8 @@ class LibraryViewModel @Inject constructor(
         val sourceMode: LibrarySourceMode,
         val isSyncing: Boolean,
         val items: List<LibraryEntry>,
-        val listTabs: List<LibraryListTab>
+        val listTabs: List<LibraryListTab>,
+        val lastWatchedByContent: Map<String, Long>
     )
 
     private fun reorderSelectedList(moveUp: Boolean) {
@@ -418,6 +465,65 @@ class LibraryViewModel @Inject constructor(
             typeFiltered
         }
 
-        return copy(visibleItems = listFiltered)
+        val sorted = when (selectedSortOption) {
+            LibrarySortOption.DEFAULT -> listFiltered
+            LibrarySortOption.TITLE_ASC -> listFiltered.sortedWith(
+                compareBy<LibraryEntry> { it.name.ifBlank { it.id }.lowercase(Locale.ROOT) }
+                    .thenBy { it.id }
+            )
+            LibrarySortOption.RECENTLY_WATCHED -> listFiltered.sortedWith(
+                compareByDescending<LibraryEntry> { entry -> resolveLastWatched(entry) }
+                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
+                    .thenBy { it.id }
+            )
+        }
+
+        return copy(visibleItems = sorted)
+    }
+
+    private fun buildLastWatchedIndex(progressItems: List<WatchProgress>): Map<String, Long> {
+        val byKey = mutableMapOf<String, Long>()
+        progressItems.forEach { progress ->
+            val normalizedType = normalizeContentType(progress.contentType)
+            contentIdCandidates(progress.contentId).forEach { idKey ->
+                val composite = "$normalizedType:$idKey"
+                val current = byKey[composite] ?: 0L
+                if (progress.lastWatched > current) {
+                    byKey[composite] = progress.lastWatched
+                }
+            }
+        }
+        return byKey
+    }
+
+    private fun LibraryUiState.resolveLastWatched(entry: LibraryEntry): Long {
+        val normalizedType = normalizeContentType(entry.type)
+        return contentIdCandidates(entry.id)
+            .map { idKey -> "$normalizedType:$idKey" }
+            .mapNotNull { key -> lastWatchedByContent[key] }
+            .maxOrNull() ?: 0L
+    }
+
+    private fun normalizeContentType(type: String): String {
+        return when (type.trim().lowercase(Locale.ROOT)) {
+            "series", "show", "tv" -> "series"
+            "movie" -> "movie"
+            else -> type.trim().lowercase(Locale.ROOT)
+        }
+    }
+
+    private fun contentIdCandidates(contentId: String): Set<String> {
+        val raw = contentId.trim()
+        if (raw.isBlank()) return emptySet()
+
+        val parsed = parseContentIds(raw)
+        return buildSet {
+            add(raw.lowercase(Locale.ROOT))
+            parsed.imdb
+                ?.takeIf { it.isNotBlank() }
+                ?.let { add(it.lowercase(Locale.ROOT)) }
+            parsed.tmdb?.let { add("tmdb:$it") }
+            parsed.trakt?.let { add("trakt:$it") }
+        }
     }
 }

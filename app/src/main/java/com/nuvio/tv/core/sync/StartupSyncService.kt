@@ -55,11 +55,6 @@ class StartupSyncService @Inject constructor(
         scope.launch {
             authManager.authState.collect { state ->
                 when (state) {
-                    is AuthState.Anonymous -> {
-                        val force = forceSyncRequested
-                        val started = scheduleStartupPull(state.userId, force = force)
-                        if (force && started) forceSyncRequested = false
-                    }
                     is AuthState.FullAccount -> {
                         val force = forceSyncRequested
                         val started = scheduleStartupPull(state.userId, force = force)
@@ -81,10 +76,6 @@ class StartupSyncService @Inject constructor(
     fun requestSyncNow() {
         forceSyncRequested = true
         when (val state = authManager.authState.value) {
-            is AuthState.Anonymous -> {
-                val started = scheduleStartupPull(state.userId, force = true)
-                if (started) forceSyncRequested = false
-            }
             is AuthState.FullAccount -> {
                 val started = scheduleStartupPull(state.userId, force = true)
                 if (started) forceSyncRequested = false
@@ -127,13 +118,11 @@ class StartupSyncService @Inject constructor(
                     delay(3000)
                 }
             }
-            if (syncCompleted) return@launch
-
-            // After completing, check if a re-sync was requested while we were running
+            
             val resyncKey = pendingResyncKey
             if (resyncKey != null) {
                 pendingResyncKey = null
-                if (resyncKey != lastPulledKey) {
+                if (!syncCompleted || resyncKey != lastPulledKey) {
                     Log.d(TAG, "Running pending re-sync for key=$resyncKey")
                     scheduleStartupPull(userId, force = true)
                 }

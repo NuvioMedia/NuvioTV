@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +47,7 @@ import com.nuvio.tv.domain.model.UserProfile
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
 import com.nuvio.tv.ui.screens.account.InputField
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.R
 
 private enum class ProfileSettingsMode {
     List,
@@ -67,8 +69,8 @@ internal fun ProfileSettingsContent(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SettingsDetailHeader(
-            title = "Profiles",
-            subtitle = "Manage user profiles for this account."
+            title = stringResource(R.string.profile_title),
+            subtitle = stringResource(R.string.profile_subtitle)
         )
 
         SettingsGroupCard(modifier = Modifier.fillMaxSize()) {
@@ -129,7 +131,7 @@ internal fun ProfileSettingsContent(
                         }
 
                         if (viewModel.canAddProfile) {
-                            item {
+                            item(key = "add_profile") {
                                 AddProfileButton(
                                     onClick = { mode = ProfileSettingsMode.Create }
                                 )
@@ -188,18 +190,18 @@ private fun ProfileListItem(
                 )
                 if (profile.isPrimary) {
                     Text(
-                        text = "Primary",
+                        text = stringResource(R.string.profile_primary_label),
                         color = NuvioColors.TextSecondary,
                         fontSize = 12.sp
                     )
                 } else {
                     val sharing = buildList {
-                        if (profile.usesPrimaryAddons) add("addons")
-                        if (profile.usesPrimaryPlugins) add("plugins")
+                        if (profile.usesPrimaryAddons) add(stringResource(R.string.profile_addons))
+                        if (profile.usesPrimaryPlugins) add(stringResource(R.string.profile_plugins))
                     }
                     if (sharing.isNotEmpty()) {
                         Text(
-                            text = "Shares primary's ${sharing.joinToString(" & ")}",
+                            text = stringResource(R.string.profile_shares_primary, sharing.joinToString(" & ")),
                             color = NuvioColors.TextSecondary,
                             fontSize = 12.sp
                         )
@@ -208,7 +210,7 @@ private fun ProfileListItem(
             }
 
             Text(
-                text = "Edit",
+                text = stringResource(R.string.profile_edit_label),
                 color = NuvioColors.TextSecondary,
                 fontSize = 14.sp
             )
@@ -260,7 +262,7 @@ private fun AddProfileButton(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Add Profile",
+                    text = stringResource(R.string.profile_add),
                     color = NuvioColors.TextSecondary,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium
@@ -293,7 +295,7 @@ private fun ProfileCreateForm(
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text(
-            text = "Create Profile",
+            text = stringResource(R.string.profile_create_title),
             color = NuvioColors.TextPrimary,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold
@@ -302,11 +304,11 @@ private fun ProfileCreateForm(
         InputField(
             value = name,
             onValueChange = { if (it.length <= 20) name = it },
-            placeholder = "Profile name"
+            placeholder = stringResource(R.string.profile_name_placeholder)
         )
 
         Text(
-            text = "Avatar Color",
+            text = stringResource(R.string.profile_avatar_color),
             color = NuvioColors.TextSecondary,
             fontSize = 14.sp
         )
@@ -321,13 +323,13 @@ private fun ProfileCreateForm(
         }
 
         SettingsToggleRow(
-            title = "Use primary profile's addons",
+            title = stringResource(R.string.profile_use_primary_addons),
             subtitle = null,
             checked = usesPrimaryAddons,
             onToggle = { usesPrimaryAddons = !usesPrimaryAddons }
         )
         SettingsToggleRow(
-            title = "Use primary profile's plugins",
+            title = stringResource(R.string.profile_use_primary_plugins),
             subtitle = null,
             checked = usesPrimaryPlugins,
             onToggle = { usesPrimaryPlugins = !usesPrimaryPlugins }
@@ -337,9 +339,9 @@ private fun ProfileCreateForm(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            ProfileFormButton(text = "Cancel", onClick = onCancel, modifier = Modifier.weight(1f))
+            ProfileFormButton(text = stringResource(R.string.action_cancel), onClick = onCancel, modifier = Modifier.weight(1f))
             ProfileFormButton(
-                text = if (isCreating) "Creating..." else "Create",
+                text = if (isCreating) stringResource(R.string.profile_creating) else stringResource(R.string.profile_create_btn),
                 enabled = name.isNotBlank() && !isCreating,
                 onClick = { onCreate(name.trim(), selectedColor, usesPrimaryAddons, usesPrimaryPlugins) },
                 modifier = Modifier.weight(1f)
@@ -367,7 +369,7 @@ private fun ProfileEditForm(
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text(
-            text = "Edit Profile ${profile.id}",
+            text = stringResource(R.string.profile_edit_title_id, profile.id),
             color = NuvioColors.TextPrimary,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold
@@ -376,11 +378,11 @@ private fun ProfileEditForm(
         InputField(
             value = name,
             onValueChange = { if (it.length <= 20) name = it },
-            placeholder = "Profile name"
+            placeholder = stringResource(R.string.profile_name_placeholder)
         )
 
         Text(
-            text = "Avatar Color",
+            text = stringResource(R.string.profile_avatar_color),
             color = NuvioColors.TextSecondary,
             fontSize = 14.sp
         )
@@ -396,13 +398,13 @@ private fun ProfileEditForm(
 
         if (!profile.isPrimary) {
             SettingsToggleRow(
-                title = "Use primary profile's addons",
+                title = stringResource(R.string.profile_use_primary_addons),
                 subtitle = null,
                 checked = usesPrimaryAddons,
                 onToggle = { usesPrimaryAddons = !usesPrimaryAddons }
             )
             SettingsToggleRow(
-                title = "Use primary profile's plugins",
+                title = stringResource(R.string.profile_use_primary_plugins),
                 subtitle = null,
                 checked = usesPrimaryPlugins,
                 onToggle = { usesPrimaryPlugins = !usesPrimaryPlugins }
@@ -413,9 +415,9 @@ private fun ProfileEditForm(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            ProfileFormButton(text = "Cancel", onClick = onCancel, modifier = Modifier.weight(1f))
+            ProfileFormButton(text = stringResource(R.string.action_cancel), onClick = onCancel, modifier = Modifier.weight(1f))
             ProfileFormButton(
-                text = "Save",
+                text = stringResource(R.string.action_save),
                 onClick = {
                     onSave(
                         profile.copy(
@@ -431,7 +433,7 @@ private fun ProfileEditForm(
             if (onDelete != null) {
                 var confirmDelete by remember { mutableStateOf(false) }
                 ProfileFormButton(
-                    text = if (confirmDelete) "Confirm" else "Delete",
+                    text = if (confirmDelete) stringResource(R.string.profile_confirm) else stringResource(R.string.profile_delete),
                     onClick = {
                         if (confirmDelete) onDelete() else confirmDelete = true
                     },

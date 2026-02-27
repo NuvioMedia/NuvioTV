@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.local
 
+import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
@@ -19,6 +20,7 @@ class WatchedItemsPreferences @Inject constructor(
 ) {
     companion object {
         private const val FEATURE = "watched_items_preferences"
+        private const val TAG = "WatchedItemsPrefs"
     }
 
     private fun store(profileId: Int = profileManager.activeProfileId.value) =
@@ -110,6 +112,11 @@ class WatchedItemsPreferences @Inject constructor(
 
     suspend fun replaceWithRemoteItems(remoteItems: List<WatchedItem>) {
         store().edit { preferences ->
+            val current = preferences[watchedItemsKey] ?: emptySet()
+            if (remoteItems.isEmpty() && current.isNotEmpty()) {
+                Log.w(TAG, "replaceWithRemoteItems: remote list empty while local has ${current.size} entries; preserving local watched items")
+                return@edit
+            }
             val deduped = linkedMapOf<Triple<String, Int?, Int?>, WatchedItem>()
             remoteItems.forEach { item ->
                 deduped[Triple(item.contentId, item.season, item.episode)] = item

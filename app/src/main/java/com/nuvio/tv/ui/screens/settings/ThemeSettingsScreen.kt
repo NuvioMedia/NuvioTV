@@ -2,6 +2,9 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -17,11 +20,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,19 +39,27 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
+import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.AppTheme
+import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.ThemeColors
+import kotlinx.coroutines.delay
 
 @Composable
 fun ThemeSettingsScreen(
@@ -56,8 +69,8 @@ fun ThemeSettingsScreen(
     BackHandler { onBackPress() }
 
     SettingsStandaloneScaffold(
-        title = "Appearance",
-        subtitle = "Choose your color theme"
+        title = stringResource(R.string.appearance_title),
+        subtitle = stringResource(R.string.appearance_subtitle)
     ) {
         ThemeSettingsContent(viewModel = viewModel)
     }
@@ -69,14 +82,55 @@ fun ThemeSettingsContent(
     initialFocusRequester: FocusRequester? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    var pendingLanguageRestart by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    val strLanguageSystem = stringResource(R.string.appearance_language_system)
+    val supportedLocales = remember(strLanguageSystem) {
+        listOf(
+            null to strLanguageSystem,
+            "en" to "English",
+            "es" to "Español",
+            "hu" to "Magyar",
+            "fr" to "Français",
+            "it" to "Italiano",
+            "pl" to "Polski",
+            "pt-PT" to "Português (Portugal)",
+            "pt-BR" to "Português (Brasil)",
+            "tr" to "Türkçe",
+            "se" to "Svenska",
+            "sk" to "Slovensky",
+            "sl" to "Slovenščina",
+            "ro" to "Română"
+        )
+    }
+    var selectedTag by remember {
+        mutableStateOf(
+            context.getSharedPreferences("app_locale", android.content.Context.MODE_PRIVATE)
+                .getString("locale_tag", null)?.takeIf { it.isNotEmpty() }
+        )
+    }
+    val currentLocaleName = supportedLocales.firstOrNull { it.first == selectedTag }?.second ?: stringResource(R.string.appearance_language_system)
+    val strRestartHint = stringResource(R.string.appearance_language_restart_hint)
+
+    LaunchedEffect(pendingLanguageRestart, showLanguageDialog) {
+        if (pendingLanguageRestart && !showLanguageDialog) {
+            // Let the dialog window detach before recreating the Activity to avoid focus/window ANRs.
+            delay(150)
+            context.findActivity()?.recreate()
+                ?: Toast.makeText(context, strRestartHint, Toast.LENGTH_LONG).show()
+            pendingLanguageRestart = false
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         SettingsDetailHeader(
-            title = "Appearance",
-            subtitle = "Choose your color theme"
+            title = stringResource(R.string.appearance_title),
+            subtitle = stringResource(R.string.appearance_subtitle)
         )
 
         SettingsGroupCard(
@@ -91,7 +145,10 @@ fun ThemeSettingsContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                itemsIndexed(uiState.availableThemes) { index, theme ->
+                itemsIndexed(
+                    items = uiState.availableThemes,
+                    key = { _, theme -> theme.name }
+                ) { index, theme ->
                     ThemeCard(
                         theme = theme,
                         isSelected = theme == uiState.selectedTheme,
@@ -105,7 +162,75 @@ fun ThemeSettingsContent(
                 }
             }
         }
+
+        SettingsGroupCard(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            SettingsActionRow(
+                title = stringResource(R.string.appearance_language),
+                subtitle = stringResource(R.string.appearance_language_subtitle),
+                value = currentLocaleName,
+                onClick = { showLanguageDialog = true }
+            )
+        }
     }
+
+    if (showLanguageDialog) {
+        val firstFocusRequester = remember { FocusRequester() }
+        LaunchedEffect(Unit) { firstFocusRequester.requestFocus() }
+        NuvioDialog(
+            onDismiss = { showLanguageDialog = false },
+            title = stringResource(R.string.appearance_language_dialog_title),
+            width = 400.dp,
+            suppressFirstKeyUp = false
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(280.dp)
+            ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 2.dp)
+                ) {
+                    for (index in supportedLocales.indices) {
+                        val (tag, name) = supportedLocales[index]
+                        item {
+                            val isSelected = tag == selectedTag
+                            Button(
+                                onClick = {
+                                    val previousTag = selectedTag
+                                    context.getSharedPreferences("app_locale", android.content.Context.MODE_PRIVATE)
+                                        .edit().putString("locale_tag", tag ?: "").apply()
+                                    selectedTag = tag
+                                    showLanguageDialog = false
+                                    if (previousTag != tag) {
+                                        pendingLanguageRestart = true
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .then(if (index == 0) Modifier.focusRequester(firstFocusRequester) else Modifier),
+                                colors = ButtonDefaults.colors(
+                                    containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
+                                    contentColor = NuvioColors.TextPrimary
+                                )
+                            ) {
+                                Text(name)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 @Composable
@@ -148,12 +273,12 @@ private fun ThemeCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
+                .padding(17.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(55.dp)
                     .clip(CircleShape)
                     .background(palette.secondary),
                 contentAlignment = Alignment.Center
@@ -161,14 +286,14 @@ private fun ThemeCard(
                 if (isSelected) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "Selected",
-                        tint = Color.White,
+                        contentDescription = stringResource(R.string.cd_selected),
+                        tint = palette.onSecondary,
                         modifier = Modifier.size(28.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(11.dp))
 
             Text(
                 text = theme.displayName,
@@ -176,7 +301,7 @@ private fun ThemeCard(
                 color = if (isFocused || isSelected) NuvioColors.TextPrimary else NuvioColors.TextSecondary
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(7.dp))
 
             Box(
                 modifier = Modifier

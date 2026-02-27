@@ -48,6 +48,8 @@ import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @Composable
 fun NextEpisodeCardOverlay(
@@ -136,7 +138,7 @@ fun NextEpisodeCardOverlay(
 
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                     Text(
-                        text = "Next Episode",
+                        text = stringResource(R.string.next_episode_label),
                         color = Color.White.copy(alpha = 0.8f),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium
@@ -152,9 +154,9 @@ fun NextEpisodeCardOverlay(
                     )
                     val autoPlayStatus = when {
                         !isPlayable && !unairedMessage.isNullOrBlank() -> unairedMessage
-                        isAutoPlaySearching -> "Finding source..."
+                        isAutoPlaySearching -> stringResource(R.string.next_episode_finding_source)
                         !autoPlaySourceName.isNullOrBlank() && autoPlayCountdownSec != null ->
-                            "Playing via $autoPlaySourceName in ${autoPlayCountdownSec}s"
+                            stringResource(R.string.next_episode_playing_via, autoPlaySourceName, autoPlayCountdownSec)
                         else -> null
                     }
                     if (autoPlayStatus != null) {
@@ -187,7 +189,7 @@ fun NextEpisodeCardOverlay(
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        text = if (isPlayable) "Play" else "Unaired",
+                        text = if (isPlayable) stringResource(R.string.next_episode_play) else stringResource(R.string.next_episode_unaired),
                         color = if (isPlayable) Color.White else Color.White.copy(alpha = 0.72f),
                         fontSize = 12.sp,
                         modifier = Modifier.padding(start = 3.dp)

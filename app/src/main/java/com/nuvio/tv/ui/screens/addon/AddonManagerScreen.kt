@@ -87,6 +87,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -163,7 +165,7 @@ fun AddonManagerScreen(
         ) {
             item {
                 Text(
-                    text = "Addons",
+                    text = stringResource(R.string.addon_title),
                     style = MaterialTheme.typography.headlineMedium,
                     color = if (showBuiltInHeader) NuvioColors.TextPrimary else Color.Transparent
                 )
@@ -177,7 +179,7 @@ fun AddonManagerScreen(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "Using primary profile's addons and can't be changed",
+                            text = stringResource(R.string.addon_readonly_notice),
                             style = MaterialTheme.typography.bodyMedium,
                             color = NuvioColors.TextSecondary,
                             modifier = androidx.compose.ui.Modifier.padding(16.dp)
@@ -197,7 +199,7 @@ fun AddonManagerScreen(
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
-                                text = "Install addon",
+                                text = stringResource(R.string.addon_install_title),
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = NuvioColors.TextPrimary
                             )
@@ -263,7 +265,7 @@ fun AddonManagerScreen(
                                             decorationBox = { innerTextField ->
                                                 if (uiState.installUrl.isEmpty()) {
                                                     Text(
-                                                        text = "https://example.com",
+                                                        text = stringResource(R.string.addon_install_placeholder),
                                                         style = MaterialTheme.typography.bodyMedium,
                                                         color = NuvioColors.TextTertiary
                                                     )
@@ -291,7 +293,7 @@ fun AddonManagerScreen(
                                     ),
                                     shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                                 ) {
-                                    Text(text = if (uiState.isInstalling) "Installing" else "Install")
+                                    Text(text = if (uiState.isInstalling) stringResource(R.string.addon_installing) else stringResource(R.string.addon_install_btn))
                                 }
                             }
 
@@ -325,7 +327,7 @@ fun AddonManagerScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Installed",
+                        text = stringResource(R.string.addon_installed_section),
                         style = MaterialTheme.typography.titleLarge,
                         color = NuvioColors.TextPrimary
                     )
@@ -339,7 +341,7 @@ fun AddonManagerScreen(
             if (uiState.installedAddons.isEmpty() && !uiState.isLoading) {
                 item {
                     Text(
-                        text = "No addons installed. Add one to get started.",
+                        text = stringResource(R.string.addon_empty),
                         style = MaterialTheme.typography.bodyLarge,
                         color = NuvioColors.TextSecondary
                     )
@@ -429,12 +431,12 @@ private fun ManageFromPhoneCard(onClick: () -> Unit) {
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "Manage from phone",
+                        text = stringResource(R.string.addon_manage_from_phone_title),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = NuvioColors.TextPrimary
                     )
                     Text(
-                        text = "Scan a QR code to manage addons and Home catalogs from your phone",
+                        text = stringResource(R.string.addon_manage_from_phone_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )
@@ -490,12 +492,12 @@ private fun CatalogOrderEntryCard(onClick: () -> Unit) {
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "Reorder home catalogs",
+                        text = stringResource(R.string.addon_reorder_title),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = NuvioColors.TextPrimary
                     )
                     Text(
-                        text = "Controls catalog row order on Home (Classic + Modern + Grid)",
+                        text = stringResource(R.string.addon_reorder_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )
@@ -539,7 +541,7 @@ private fun QrCodeOverlay(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Scan with your phone to manage addons and catalogs",
+                text = stringResource(R.string.addon_qr_scan_instruction),
                 style = MaterialTheme.typography.bodyMedium,
                 color = NuvioColors.TextSecondary,
                 textAlign = TextAlign.Center
@@ -597,7 +599,7 @@ private fun QrCodeOverlay(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Close",
+                        text = stringResource(R.string.addon_qr_close),
                         color = NuvioColors.TextPrimary
                     )
                 }
@@ -643,7 +645,7 @@ private fun ConfirmAddonChangesDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Confirm addon & catalog changes",
+                    text = stringResource(R.string.addon_confirm_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary
                 )
@@ -651,7 +653,7 @@ private fun ConfirmAddonChangesDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "The following changes were made from your phone:",
+                    text = stringResource(R.string.addon_confirm_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
@@ -675,7 +677,7 @@ private fun ConfirmAddonChangesDialog(
                     ) {
                         if (pendingChange.addedUrls.isNotEmpty()) {
                             Text(
-                                text = "Added:",
+                                text = stringResource(R.string.addon_confirm_added),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = NuvioColors.Success,
                                 modifier = Modifier
@@ -698,7 +700,7 @@ private fun ConfirmAddonChangesDialog(
 
                         if (pendingChange.removedUrls.isNotEmpty()) {
                             Text(
-                                text = "Removed:",
+                                text = stringResource(R.string.addon_confirm_removed),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = NuvioColors.Error,
                                 modifier = Modifier
@@ -721,7 +723,7 @@ private fun ConfirmAddonChangesDialog(
 
                         if (pendingChange.catalogsReordered) {
                             Text(
-                                text = "Catalog order was changed",
+                                text = stringResource(R.string.addon_confirm_catalog_reordered),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = NuvioColors.TextSecondary,
                                 modifier = Modifier
@@ -732,7 +734,7 @@ private fun ConfirmAddonChangesDialog(
 
                         if (pendingChange.disabledCatalogNames.isNotEmpty()) {
                             Text(
-                                text = "Catalogs disabled on Home:",
+                                text = stringResource(R.string.addon_confirm_catalogs_disabled),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = NuvioColors.Error,
                                 modifier = Modifier
@@ -754,7 +756,7 @@ private fun ConfirmAddonChangesDialog(
 
                         if (pendingChange.enabledCatalogNames.isNotEmpty()) {
                             Text(
-                                text = "Catalogs enabled on Home:",
+                                text = stringResource(R.string.addon_confirm_catalogs_enabled),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = NuvioColors.Success,
                                 modifier = Modifier
@@ -782,7 +784,7 @@ private fun ConfirmAddonChangesDialog(
                             pendingChange.enabledCatalogNames.isEmpty()
                         ) {
                             Text(
-                                text = "No visible changes detected",
+                                text = stringResource(R.string.addon_confirm_no_changes),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = NuvioColors.TextSecondary
                             )
@@ -791,13 +793,13 @@ private fun ConfirmAddonChangesDialog(
                 }
 
                 Text(
-                    text = "Total addons: ${pendingChange.proposedUrls.size}",
+                    text = stringResource(R.string.addon_confirm_total_addons, pendingChange.proposedUrls.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextTertiary,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    text = "Total catalogs: ${pendingChange.proposedCatalogOrderKeys.size}",
+                    text = stringResource(R.string.addon_confirm_total_catalogs, pendingChange.proposedCatalogOrderKeys.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextTertiary,
                     modifier = Modifier.fillMaxWidth()
@@ -837,7 +839,7 @@ private fun ConfirmAddonChangesDialog(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Reject",
+                                    text = stringResource(R.string.addon_confirm_reject),
                                     color = NuvioColors.TextPrimary
                                 )
                             }
@@ -859,9 +861,9 @@ private fun ConfirmAddonChangesDialog(
                             shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50))
                         ) {
                             Text(
-                                text = "Confirm",
+                                text = stringResource(R.string.addon_confirm_confirm),
                                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-                                color = Color.White
+                                color = NuvioColors.OnSecondary
                             )
                         }
                     }
@@ -994,7 +996,7 @@ private fun AddonCardContent(
                         ),
                         shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                     ) {
-                        Text(text = "Remove")
+                        Text(text = stringResource(R.string.addon_remove))
                     }
                 }
             }
@@ -1018,7 +1020,7 @@ private fun AddonCardContent(
 
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Catalogs: ${addon.catalogs.size} • Types: ${addon.rawTypes.joinToString()}",
+            text = stringResource(R.string.addon_catalogs_types, addon.catalogs.size, addon.rawTypes.joinToString()),
             style = MaterialTheme.typography.bodySmall,
             color = NuvioColors.TextTertiary
         )

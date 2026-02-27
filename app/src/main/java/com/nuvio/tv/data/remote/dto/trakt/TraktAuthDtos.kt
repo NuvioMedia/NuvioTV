@@ -29,6 +29,7 @@ data class TraktRefreshTokenRequestDto(
     @Json(name = "refresh_token") val refreshToken: String,
     @Json(name = "client_id") val clientId: String,
     @Json(name = "client_secret") val clientSecret: String,
+    @Json(name = "redirect_uri") val redirectUri: String,
     @Json(name = "grant_type") val grantType: String = "refresh_token"
 )
 

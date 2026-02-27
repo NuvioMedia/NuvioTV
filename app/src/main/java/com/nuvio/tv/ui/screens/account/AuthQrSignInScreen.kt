@@ -44,6 +44,7 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.ui.theme.NuvioColors
@@ -75,8 +76,13 @@ fun AuthQrSignInScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        if (!isSignedIn && uiState.qrLoginCode.isNullOrBlank() && !uiState.isLoading) {
+    LaunchedEffect(uiState.authState, isSignedIn, uiState.qrLoginCode, uiState.isLoading) {
+        if (
+            uiState.authState !is AuthState.Loading &&
+            !isSignedIn &&
+            uiState.qrLoginCode.isNullOrBlank() &&
+            !uiState.isLoading
+        ) {
             viewModel.startQrLogin()
         }
     }
@@ -138,7 +144,7 @@ fun AuthQrSignInScreen(
                 )
                 Spacer(modifier = Modifier.height(22.dp))
                 Text(
-                    text = "Sign In With QR",
+                    text = stringResource(R.string.auth_qr_title),
                     style = MaterialTheme.typography.headlineLarge,
                     color = NuvioColors.TextPrimary,
                     textAlign = TextAlign.Center
@@ -146,9 +152,9 @@ fun AuthQrSignInScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = if (isSignedIn) {
-                        "Your account is connected on this TV."
+                        stringResource(R.string.auth_qr_connected)
                     } else {
-                        "Use your phone to sign in with email/password. TV stays QR-only for faster login."
+                        stringResource(R.string.auth_qr_phone_hint)
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     color = NuvioColors.TextSecondary,
@@ -186,15 +192,15 @@ fun AuthQrSignInScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Account Login",
+                    text = stringResource(R.string.auth_qr_account_login),
                     style = MaterialTheme.typography.titleLarge,
                     color = NuvioColors.TextPrimary
                 )
                 Text(
                     text = if (isSignedIn) {
-                        "Your synced data"
+                        stringResource(R.string.auth_qr_synced_data)
                     } else {
-                        "Scan QR, approve in browser, then return here."
+                        stringResource(R.string.auth_qr_scan_instruction)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextSecondary,
@@ -208,7 +214,7 @@ fun AuthQrSignInScreen(
                     )
                 } else if (isSignedIn && isOnboardingMode) {
                     StatusPill(
-                        text = "Finishing sign in...",
+                        text = stringResource(R.string.auth_qr_finishing),
                         containerColor = NuvioColors.BackgroundCard,
                         contentColor = NuvioColors.TextSecondary
                     )
@@ -231,7 +237,7 @@ fun AuthQrSignInScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = if (uiState.isLoading) "Generating QR..." else "QR unavailable. Refresh to retry.",
+                                text = if (uiState.isLoading) stringResource(R.string.auth_qr_generating) else stringResource(R.string.auth_qr_unavailable),
                                 color = NuvioColors.TextSecondary,
                                 textAlign = TextAlign.Center
                             )
@@ -240,7 +246,7 @@ fun AuthQrSignInScreen(
 
                     if (!uiState.qrLoginCode.isNullOrBlank()) {
                         Text(
-                            text = "Code: ${uiState.qrLoginCode}",
+                            text = stringResource(R.string.auth_qr_code_display, uiState.qrLoginCode!!),
                             style = MaterialTheme.typography.bodyMedium,
                             color = NuvioColors.TextPrimary,
                             fontWeight = FontWeight.Medium
@@ -248,7 +254,7 @@ fun AuthQrSignInScreen(
                     }
                     if (uiState.qrLoginExpiresAtMillis != null) {
                         Text(
-                            text = "Expires in ${formatDuration(remainingMillis)}",
+                            text = stringResource(R.string.auth_qr_expires, formatDuration(remainingMillis)),
                             style = MaterialTheme.typography.bodySmall,
                             color = NuvioColors.TextSecondary
                         )
@@ -285,14 +291,17 @@ fun AuthQrSignInScreen(
                     ) {
                         Text(
                             when {
-                                isSignedIn -> "Sign Out"
-                                uiState.isLoading -> "Please wait..."
-                                else -> "Refresh QR"
+                                isSignedIn -> stringResource(R.string.account_sign_out)
+                                uiState.isLoading -> stringResource(R.string.auth_qr_please_wait)
+                                else -> stringResource(R.string.auth_qr_refresh)
                             }
                         )
                     }
                     Button(
                         onClick = {
+                            if (onContinue != null && !isSignedIn) {
+                                viewModel.signOut()
+                            }
                             viewModel.clearQrLoginSession()
                             if (onContinue != null) {
                                 onContinue()
@@ -309,9 +318,9 @@ fun AuthQrSignInScreen(
                     ) {
                         Text(
                             if (onContinue != null) {
-                                if (isSignedIn) "Continue" else "Continue without account"
+                                if (isSignedIn) stringResource(R.string.auth_qr_continue) else stringResource(R.string.auth_qr_continue_without_account)
                             } else {
-                                "Back"
+                                stringResource(R.string.auth_qr_back)
                             }
                         )
                     }
@@ -360,7 +369,12 @@ private fun AccountConnectedStatsStrip(
             (stats?.watchProgress ?: 0).toString()
         )
     }
-    val labels = listOf("Addons", "Plugins", "Library", "Watch Progress")
+    val labels = listOf(
+        stringResource(R.string.account_stat_addons),
+        stringResource(R.string.account_stat_plugins),
+        stringResource(R.string.account_stat_library),
+        stringResource(R.string.account_stat_progress)
+    )
 
     Column(
         modifier = Modifier.fillMaxWidth(),

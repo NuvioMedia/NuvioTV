@@ -1,7 +1,9 @@
 package com.nuvio.tv.ui.screens.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.R
 import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.TraktAuthState
 import com.nuvio.tv.data.local.TraktSettingsDataStore
@@ -11,6 +13,7 @@ import com.nuvio.tv.data.repository.TraktTokenPollResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +41,7 @@ data class TraktUiState(
     val pollIntervalSeconds: Int = 5,
     val deviceCodeExpiresAtMillis: Long? = null,
     val continueWatchingDaysCap: Int = TraktSettingsDataStore.DEFAULT_CONTINUE_WATCHING_DAYS_CAP,
+    val showUnairedNextUp: Boolean = TraktSettingsDataStore.DEFAULT_SHOW_UNAIRED_NEXT_UP,
     val connectedStats: TraktProgressService.TraktCachedStats? = null,
     val statusMessage: String? = null,
     val errorMessage: String? = null
@@ -48,7 +52,8 @@ class TraktViewModel @Inject constructor(
     private val traktAuthService: TraktAuthService,
     private val traktAuthDataStore: TraktAuthDataStore,
     private val traktProgressService: TraktProgressService,
-    private val traktSettingsDataStore: TraktSettingsDataStore
+    private val traktSettingsDataStore: TraktSettingsDataStore,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TraktUiState())
     val uiState: StateFlow<TraktUiState> = _uiState.asStateFlow()
@@ -73,6 +78,22 @@ class TraktViewModel @Inject constructor(
                 it.copy(
                     continueWatchingDaysCap = days,
                     statusMessage = "Continue watching window updated"
+                )
+            }
+        }
+    }
+
+    fun onShowUnairedNextUpChanged(enabled: Boolean) {
+        viewModelScope.launch {
+            traktSettingsDataStore.setShowUnairedNextUp(enabled)
+            _uiState.update {
+                it.copy(
+                    showUnairedNextUp = enabled,
+                    statusMessage = if (enabled) {
+                        "Unaired Next Up episodes are now shown"
+                    } else {
+                        "Unaired Next Up episodes are now hidden"
+                    }
                 )
             }
         }
@@ -172,8 +193,18 @@ class TraktViewModel @Inject constructor(
 
     private fun observeSettings() {
         viewModelScope.launch {
-            traktSettingsDataStore.continueWatchingDaysCap.collectLatest { daysCap ->
-                _uiState.update { it.copy(continueWatchingDaysCap = daysCap) }
+            combine(
+                traktSettingsDataStore.continueWatchingDaysCap,
+                traktSettingsDataStore.showUnairedNextUp
+            ) { daysCap, showUnairedNextUp ->
+                daysCap to showUnairedNextUp
+            }.collectLatest { (daysCap, showUnairedNextUp) ->
+                _uiState.update {
+                    it.copy(
+                        continueWatchingDaysCap = daysCap,
+                        showUnairedNextUp = showUnairedNextUp
+                    )
+                }
             }
         }
     }
@@ -283,9 +314,20 @@ class TraktViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isPolling = true,
-                                statusMessage = "Waiting for approval..."
+                                statusMessage = context.getString(R.string.trakt_waiting_approval)
                             )
                         }
+                    }
+
+                    TraktTokenPollResult.AlreadyUsed -> {
+                        _uiState.update {
+                            it.copy(
+                                isPolling = false,
+                                errorMessage = "Device code already used. Start again.",
+                                statusMessage = null
+                            )
+                        }
+                        break
                     }
 
                     TraktTokenPollResult.Expired -> {

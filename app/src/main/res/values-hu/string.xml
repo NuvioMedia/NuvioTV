@@ -1,0 +1,797 @@
+<resources>
+    <string name="type_movie">Film</string>
+    <string name="type_series">Sorozat</string>
+    <string name="type_unknown">Ismeretlen</string>
+
+    <!-- HomeScreen -->
+    <string name="home_no_addons">Nincsenek telepített bővítmények. A kezdéshez adj hozzá egyet.</string>
+    <string name="home_no_catalog_addons">Nincsenek katalógus bővítmények. Telepíts egyet a tartalom megtekintéséhez.</string>
+    <string name="error_generic">Hiba történt</string>
+
+    <!-- ErrorState -->
+    <string name="action_retry">Próbáld újra</string>
+
+    <!-- ContinueWatchingSection -->
+    <string name="continue_watching">Nézés folytatása</string>
+    <string name="cw_upcoming">Közelgő</string>
+    <string name="cw_next_up">Következő epizód</string>
+    <string name="cw_resume">Folytatás</string>
+    <string name="cw_hours_min_left">%1$d ó %2$d p van hátra</string>
+    <string name="cw_min_left">%1$d p van hátra</string>
+    <string name="cw_almost_done">Mindjárt kész</string>
+    <string name="cw_airs_date">Adásban: %1$s</string>
+    <string name="cw_action_go_to_details">Részletek</string>
+    <string name="cw_action_remove">Eltávolítás</string>
+    <string name="cw_dialog_subtitle">Válaszd ki a műveletet.</string>
+    <string name="home_poster_dialog_subtitle">Műveletek</string>
+	
+
+    <!-- CatalogRowSection -->
+    <string name="catalog_from_addon">forrás: %1$s</string>
+    <string name="action_see_all">Összes megtekintése</string>
+
+    <!-- HeroSection -->
+    <string name="hero_creator">Alkotó: %1$s</string>
+    <string name="hero_director">Rendező: %1$s</string>
+    <string name="hero_writer">Író: %1$s</string>
+    <string name="hero_play">Lejátszás</string>
+    <string name="hero_play_episode">Lejátszás: S%1$d, E%2$d</string>
+    <string name="hero_add_to_library">Hozzáadás a könyvtárhoz</string>
+    <string name="hero_remove_from_library">Eltávolítás a könyvtárból</string>
+    <string name="hero_mark_watched">Megjelölés megnézettként</string>
+    <string name="hero_mark_unwatched">Megjelölés nem látottként</string>
+    <string name="hero_play_trailer">Előzetes lejátszása</string>
+    <string name="hero_press_back_trailer">Nyomd meg a vissza gombot az előzetes bezárásához</string>
+    <string name="cd_rating">Értékelés</string>
+
+    <!-- EpisodesSection -->
+    <string name="episodes_season">%1$d. évad</string>
+    <string name="episodes_specials">Különkiadások</string>
+    <string name="episodes_episode">Epizód</string>
+    <string name="episodes_cd_watched">Megnézve</string>
+    <string name="episodes_dialog_subtitle">Epizód műveletek</string>
+    <string name="episodes_mark_watched">Megjelölés megnézettként</string>
+    <string name="episodes_mark_unwatched">Megjelölés nem látottként</string>
+    <string name="episodes_mark_season_watched">Évad megjelölése megnézettként</string>
+    <string name="episodes_mark_season_unwatched">Évad megjelölése nem látottként</string>
+    <string name="episodes_mark_previous_watched">Korábbiak megjelölése megnézettként ebben az évadban</string>
+    <string name="episodes_play">Lejátszás</string>
+    <string name="episodes_season_actions">Évad műveletek</string>
+
+    <!-- MetaDetailsScreen -->
+    <string name="detail_btn_play">Lejátszás</string>
+    <string name="detail_btn_resume">Folytatás</string>
+    <string name="detail_btn_play_episode">%1$d. évad %2$d. rész lejátszása</string>
+    <string name="detail_btn_resume_episode">%1$d. évad %2$d. rész folytatása</string>
+    <string name="detail_btn_next_episode">Következő: %1$d. évad %2$d. rész</string>
+    <string name="detail_tab_cast">Alkotók és stáblista</string>
+    <string name="cast_role_creator">Alkotó</string>
+    <string name="cast_role_director">Rendező</string>
+    <string name="cast_role_writer">Író</string>
+    <string name="detail_tab_ratings">Értékelések</string>
+    <string name="detail_tab_more_like_this">Hasonló tartalmak</string>
+    <string name="detail_section_network">Csatorna</string>
+    <string name="detail_section_production">Gyártó</string>
+    <string name="detail_lists_fallback">Listák</string>
+    <string name="detail_lists_subtitle">Válaszd ki, melyik listákba kerüljön be ez a tartalom.</string>
+    <string name="action_save">Mentés</string>
+    <string name="action_saving">Mentés…</string>
+	
+
+    <!-- AppLanguage -->
+    <string name="appearance_language">Alkalmazás nyelve</string>
+    <string name="appearance_language_subtitle">Rendszernyelv felülbírálása</string>
+    <string name="appearance_language_system">Rendszer alapértelmezett</string>
+    <string name="appearance_language_dialog_title">Nyelv kiválasztása</string>
+    <string name="appearance_language_restart_hint">Indítsd újra az alkalmazást a nyelvi beállítások érvényesítéséhez.</string>
+
+    <!-- ThemeSettingsScreen -->
+    <string name="appearance_title">Megjelenés</string>
+    <string name="appearance_subtitle">Válaszd ki a színtémát és a nyelvet</string>
+    <string name="cd_selected">Kiválasztva</string>
+
+    <!-- AboutScreen -->
+    <string name="about_title">Névjegy</string>
+    <string name="about_subtitle">Információk, frissítések és jogi nyilatkozatok</string>
+    <string name="about_made_with_love">Készítette ❤️-tel a Tapframe és barátai</string>
+    <string name="about_version">Verzió: %1$s</string>
+    <string name="about_check_updates">Frissítések keresése</string>
+    <string name="about_check_updates_subtitle">A legújabb verzió letöltése</string>
+    <string name="about_privacy_policy">Adatvédelmi irányelvek</string>
+    <string name="about_privacy_policy_subtitle">Adatvédelmi irányelvek megtekintése</string>
+
+    <!-- SettingsScreen categories -->
+    <string name="settings_account">Fiók</string>
+    <string name="settings_account_subtitle">Fiókadatok és szinkronizálási állapot.</string>
+    <string name="settings_profiles">Profilok</string>
+    <string name="settings_profiles_subtitle">Felhasználói profilok kezelése.</string>
+    <string name="settings_layout">Megjelenés</string>
+    <string name="settings_layout_subtitle">Kezdőlap szerkezete és poszter stílusok.</string>
+    <string name="settings_plugins">Bővítmények</string>
+    <string name="settings_plugins_subtitle">Tárhelyek és szolgáltatók.</string>
+    <string name="settings_integration">Integráció</string>
+    <string name="settings_playback">Lejátszás</string>
+    <string name="settings_playback_subtitle">Lejátszó, feliratok és automatikus lejátszás.</string>
+    <string name="settings_trakt_subtitle">Trakt kapcsolat beállítása.</string>
+    <string name="settings_about_subtitle">Verzióinformációk és irányelvek.</string>
+    <string name="settings_debug">Hibakeresés</string>
+    <string name="settings_debug_subtitle">Fejlesztői eszközök és tesztfunkciók.</string>
+    <string name="settings_plugins_section_subtitle">Tárhelyek, szolgáltatók és bővítmények kezelése.</string>
+    <string name="settings_account_section_subtitle">Fiók és szinkronizálási állapot.</string>
+    <string name="account_stat_addons">kiegészítő</string>
+    <string name="account_stat_plugins">bővítmény</string>
+    <string name="account_stat_library">könyvtár</string>
+    <string name="account_stat_progress">folyamatban</string>
+    <string name="account_stat_watched">megnézve</string>
+    <string name="settings_integrations_section">Integrációk</string>
+    <string name="settings_integrations_section_subtitle">TMDB vagy MDBList beállítások</string>
+    <string name="settings_tmdb_subtitle">Metaadat-bővítési beállítások</string>
+    <string name="settings_mdblist_subtitle">Külső értékelési szolgáltatók</string>
+
+
+    <!-- PlaybackSettingsScreen -->
+    <string name="playback_title">Lejátszási beállítások</string>
+    <string name="playback_subtitle">Videólejátszás és feliratok konfigurálása</string>
+    <string name="cd_decrease">Csökkentés</string>
+    <string name="cd_increase">Növelés</string>
+    <string name="action_cancel">Mégse</string>
+    <string name="action_none">Nincs</string>
+
+    <!-- PlaybackSettingsSections -->
+    <string name="playback_section_general">Általános</string>
+    <string name="playback_section_general_desc">Alapvető lejátszási beállítások.</string>
+    <string name="playback_loading_overlay">Betöltési réteg</string>
+    <string name="playback_loading_overlay_sub">Betöltőképernyő megjelenítése az első képkocka megjelenéséig.</string>
+    <string name="playback_pause_overlay">Szüneteltetési réteg</string>
+    <string name="playback_pause_overlay_sub">Részletek megjelenítése 5 másodperc szüneteltetés után.</string>
+    <string name="playback_show_clock_sub">Aktuális idő és befejezési idő megjelenítése a vezérlőkkel együtt.</string>
+    <string name="playback_osd_clock">OSD óra</string>
+    <string name="playback_skip_intro">Intro átugrása</string>
+    <string name="playback_skip_intro_sub">Az introdb.app használata az intrók és összefoglalók felismeréséhez.</string>
+    <string name="playback_auto_frame_rate">Automatikus képfrissítés (AFR)</string>
+    <string name="playback_section_player">Lejátszó és forrásválasztás</string>
+    <string name="playback_section_player_desc">Lejátszó, automatikus indítás és forrásszűrés.</string>
+    <string name="playback_player">Lejátszó</string>
+    <string name="playback_player_internal">Belső</string>
+    <string name="playback_player_external">Külső</string>
+    <string name="playback_player_ask">Kérdezzen rá minden alkalommal</string>
+    <string name="playback_section_audio">Hang és előzetes</string>
+    <string name="playback_section_audio_desc">Előzetesek és hangvezérlés beállításai.</string>
+    <string name="playback_section_subtitles">Feliratok</string>
+    <string name="playback_section_subtitles_desc">Nyelv, stílus és megjelenítési mód.</string>
+    <string name="playback_afr_open">Nyitott</string>
+    <string name="playback_afr_closed">Zárt</string>
+    <string name="playback_afr_off">Kikapcsolva</string>
+    <string name="playback_afr_off_sub">Ne változtassa meg a kijelző képfrissítési gyakoriságát.</string>
+    <string name="playback_afr_on_start">Indításkor</string>
+    <string name="playback_afr_on_start_sub">Váltás a lejátszás megkezdésekor.</string>
+    <string name="playback_afr_on_start_stop">Indításkor/leállításkor</string>
+    <string name="playback_afr_on_start_stop_sub">Váltás indításkor, visszaállítás leállításkor.</string>
+    <string name="playback_player_external_desc">Streamek megnyitása mindig külső alkalmazásban.</string>
+    <string name="playback_player_ask_desc">Lejátszó kiválasztása minden alkalommal.</string>
+	
+
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_trailer_section">Előzetes</string>
+    <string name="audio_autoplay_trailers">Előzetesek automatikus lejátszása</string>
+    <string name="audio_autoplay_trailers_sub">Előzetesek automatikus indítása a részletek képernyőn inaktivitás esetén</string>
+    <string name="audio_trailer_delay">Előzetes késleltetése</string>
+    <string name="audio_section">Hang</string>
+    <string name="audio_lang_default">Alapértelmezett (médiafájl szerint)</string>
+    <string name="audio_lang_device">Eszköz nyelve</string>
+    <string name="audio_preferred_lang">Preferált hangnyelv</string>
+    <string name="audio_skip_silence">Csend átugrása</string>
+    <string name="audio_skip_silence_sub">Néma szakaszok átugrása lejátszás közben</string>
+    <string name="audio_advanced_section">Speciális hangbeállítások</string>
+    <string name="audio_advanced_warning">Ezek a beállítások problémákat okozhatnak bizonyos eszközökön. Csak akkor módosítsd, ha tudod, mit csinálsz.</string>
+    <string name="audio_decoder_device_only">Csak az eszköz dekóderei</string>
+    <string name="audio_decoder_prefer_device">Eszköz dekódereinek előnyben részesítése</string>
+    <string name="audio_decoder_prefer_app">Alkalmazás dekódereinek előnyben részesítése (FFmpeg)</string>
+    <string name="audio_decoder_priority">Dekóder prioritása</string>
+    <string name="audio_tunneled">Alagutazott (tunneled) lejátszás</string>
+    <string name="audio_tunneled_sub">Hang/videó szinkronizálása hardveres szinten. Javíthatja a lejátszást egyes Android TV eszközökön.</string>
+    <string name="audio_dv_sub">Dolby Vision Profile 7 leképzése szabványos HEVC-re a DV-t nem támogató eszközökön</string>
+    <string name="audio_decoder_device_only_desc">Csak a beépített hardveres dekóderek használata. A leginkább kompatibilis, de nem biztos, hogy minden formátumot támogat.</string>
+    <string name="audio_decoder_prefer_device_desc">Hardveres dekóderek használata, ha elérhetőek, egyébként FFmpeg. A legtöbb eszközhöz ez ajánlott.</string>
+    <string name="audio_decoder_prefer_app_desc">FFmpeg dekóderek használata, ha elérhetőek. Jobb formátumtámogatás, de magasabb CPU-használat.</string>
+    <string name="audio_decoder_controls">Meghatározza, hogy hardveres vagy szoftveres (FFmpeg) dekódereket használjon-e a rendszer a hanghoz és videóhoz</string>
+
+    <!-- PlaybackSubtitleSettings -->
+    <string name="sub_section">Feliratok</string>
+    <string name="sub_not_set">Nincs beállítva</string>
+    <string name="sub_forced_lang">Kényszerített feliratok</string>
+    <string name="sub_preferred_lang">Elsődleges nyelv</string>
+    <string name="sub_secondary_lang">Másodlagos nyelv</string>
+    <string name="sub_organization">Feliratok rendezése</string>
+    <string name="sub_size">Méret</string>
+    <string name="sub_vertical_offset">Függőleges eltolás</string>
+    <string name="sub_bold">Félkövér</string>
+    <string name="sub_bold_sub">Félkövér betűtípus használata a feliratokhoz</string>
+    <string name="sub_text_color">Szövegszín</string>
+    <string name="sub_bg_color">Háttérszín</string>
+    <string name="sub_outline">Körvonal</string>
+    <string name="sub_outline_sub">Körvonal megjelenítése a jobb olvashatóság érdekében</string>
+    <string name="sub_outline_color">Körvonal színe</string>
+    <string name="sub_advanced_section">Speciális felirat-megjelenítés</string>
+    <string name="sub_libass">Libass használata ASS/SSA feliratokhoz</string>
+    <string name="sub_libass_sub">Karbantartás miatt ideiglenesen letiltva</string>
+    <string name="sub_libass_mode">Libass megjelenítési mód</string>
+    <string name="sub_mode_overlay_gl">OpenGL réteg (Ajánlott)</string>
+    <string name="sub_mode_overlay_gl_sub">A legjobb minőség HDR támogatással. Külön szálon futó megjelenítés.</string>
+    <string name="sub_mode_overlay_canvas">Canvas réteg</string>
+    <string name="sub_mode_effects_gl">OpenGL effektek</string>
+    <string name="sub_mode_effects_gl_sub">Media3 effektekkel támogatott animáció. Gyorsabb, mint a Canvas.</string>
+    <string name="sub_mode_effects_canvas">Canvas effektek</string>
+    <string name="sub_mode_effects_canvas_sub">Media3 effektek animáció-támogatással, Canvas megjelenítéssel.</string>
+    <string name="sub_mode_standard">Standard megjelenítés</string>
+    <string name="sub_mode_standard_sub">Alapszintű megjelenítés animációk nélkül. Legjobb kompatibilitás.</string>
+    <string name="sub_org_none">Nincs (alapértelmezett sorrend)</string>
+    <string name="sub_org_by_lang">Nyelv szerint</string>
+    <string name="sub_org_by_addon">Kiegészítő szerint</string>
+    <string name="sub_org_none_desc">A kiegészítők által küldött eredeti sorrend használata.</string>
+    <string name="sub_org_by_lang_desc">Feliratok csoportosítása nyelv szerint.</string>
+    <string name="sub_org_by_addon_desc">Feliratok csoportosítása forrás (kiegészítő) szerint.</string>
+
+
+    <!-- PlaybackAutoPlaySettings -->
+    <string name="autoplay_reuse_last_link">Utolsó link újrafelhasználása</string>
+    <string name="autoplay_reuse_last_link_sub">Az utolsó működő stream automatikus újrajátszása ugyanahhoz a filmhez/epizódhoz, amíg a gyorsítótár friss</string>
+    <string name="autoplay_last_link_cache">Link gyorsítótár érvényessége</string>
+    <string name="autoplay_mode_manual">Kézi (stream választása)</string>
+    <string name="autoplay_mode_first">Első forrás automatikus lejátszása</string>
+    <string name="autoplay_mode_regex">Regex találat automatikus lejátszása</string>
+    <string name="autoplay_stream_selection">Automatikus stream választás</string>
+    <string name="autoplay_next_episode">Következő epizód automatikus lejátszása</string>
+    <string name="autoplay_next_episode_sub">Következő epizód automatikus indítása, amikor megjelenik a felhívás.</string>
+    <string name="autoplay_threshold_pct">Százalék</string>
+    <string name="autoplay_threshold_min">Perc a vége előtt</string>
+    <string name="autoplay_threshold_mode">Következő epizód küszöbérték módja</string>
+    <string name="autoplay_threshold_pct_title">Százalékos küszöb</string>
+    <string name="autoplay_threshold_pct_sub">Tartalék megoldás, ha nincs outro jelző.</string>
+    <string name="autoplay_threshold_min_title">Időalapú küszöb (perc)</string>
+    <string name="autoplay_threshold_min_sub">Tartalék megoldás, ha nincs outro jelző.</string>
+    <string name="autoplay_scope_all">Összes forrás</string>
+    <string name="autoplay_scope_addons">Csak a telepített bővítmények</string>
+    <string name="autoplay_scope_plugins">Csak az engedélyezett pluginek</string>
+    <string name="autoplay_scope">Auto-play források köre</string>
+    <string name="autoplay_allowed_addons">Engedélyezett bővítmények</string>
+    <string name="autoplay_all_addons">Minden telepített bővítmény</string>
+    <string name="autoplay_allowed_plugins">Engedélyezett pluginek</string>
+    <string name="autoplay_all_plugins">Minden engedélyezett plugin</string>
+    <string name="autoplay_regex_placeholder">Nincs minta. Példa: 4K|2160p|Remux</string>
+    <string name="autoplay_regex_title">Regex minta</string>
+    <string name="autoplay_no_items">Nincsenek elérhető elemek</string>
+    <string name="autoplay_mode_manual_desc">Mindig jelenítse meg a források listáját a választáshoz.</string>
+    <string name="autoplay_mode_first_desc">Az első elérhető forrás automatikus lejátszása.</string>
+    <string name="autoplay_mode_regex_desc">Az első olyan forrás lejátszása, amelynek szövege illeszkedik a regex mintára.</string>
+    <string name="autoplay_scope_all_desc">Az automatikus lejátszás telepített bővítményeket és plugineket is használhat.</string>
+    <string name="autoplay_scope_addons_desc">Csak a telepített bővítményekből származó streameket veszi figyelembe.</string>
+    <string name="autoplay_scope_plugins_desc">Csak az engedélyezett pluginekből származó streameket veszi figyelembe.</string>
+    <string name="autoplay_threshold_pct_desc">Megjelenítés a lejátszási százalék alapján, ha nincs outro jelző.</string>
+    <string name="autoplay_threshold_min_desc">Megjelenítés ennyi perccel az epizód vége előtt, ha nincs outro jelző.</string>
+    <string name="autoplay_regex_matches">Illeszkedik a stream nevére/címére/leírására/bővítményére/URL-jére. Példa: 4K|2160p|Remux</string>
+    <string name="autoplay_regex_presets">Előbeállítások</string>
+    <string name="autoplay_invalid_regex">Érvénytelen regex minta</string>
+
+    <!-- LayoutSettingsScreen -->
+    <string name="layout_title">Megjelenés beállításai</string>
+    <string name="layout_subtitle">Kezdőlap elrendezése, tartalom láthatósága és a poszterek viselkedése</string>
+    <string name="layout_classic">Klasszikus nézet</string>
+    <string name="layout_grid">Rácsnézet</string>
+    <string name="layout_modern">Modern nézet</string>
+    <string name="layout_classic_desc">Kategóriák böngészése vízszintes görgetéssel</string>
+    <string name="layout_grid_desc">Minden tartalom függőleges rácsban, kiemelt (hero) szekcióval</string>
+    <string name="layout_modern_desc">Rögzített kiemelt rész egyetlen aktív sorral a gyorsabb böngészésért</string>
+    <string name="layout_section_home">Kezdőlap elrendezése</string>
+    <string name="layout_section_home_desc">Válaszd ki a felépítést és a kiemelt tartalom forrását.</string>
+    <string name="layout_landscape_posters">Fekvő poszterek</string>
+    <string name="layout_landscape_posters_sub">Váltás az álló és fekvő kártyák között Modern nézetben.</string>
+    <string name="layout_preview_row">Előnézeti sor megjelenítése</string>
+    <string name="layout_preview_row_sub">A következő sor részleges előnézete Modern elrendezésben.</string>
+    <string name="layout_hero_catalogs">Kiemelt katalógusok</string>
+    <string name="layout_hero_catalogs_sub">Válassz egy vagy több katalógust a kiemelt tartalomhoz.</string>
+    <string name="layout_section_content">Kezdőlap tartalma</string>
+    <string name="layout_section_content_desc">A kezdőlapon és a keresőben megjelenő tartalmak vezérlése.</string>
+    <string name="layout_collapse_sidebar">Oldalsáv összecsukása</string>
+    <string name="layout_collapse_sidebar_sub">Oldalsáv elrejtése alapértelmezés szerint; fókusz esetén jelenik meg.</string>
+    <string name="layout_modern_sidebar">Modern oldalsáv</string>
+    <string name="layout_modern_sidebar_sub">Lebegő oldalsó navigáció engedélyezése.</string>
+    <string name="layout_modern_sidebar_blur">Modern oldalsáv elmosása</string>
+    <string name="layout_modern_sidebar_blur_sub">Elmosási effektus (blur) az oldalsáv felületein.</string>
+    <string name="layout_show_hero">Kiemelt (hero) szekció megjelenítése</string>
+    <string name="layout_show_hero_sub">Kiemelt karusszel megjelenítése a kezdőlap tetején.</string>
+    <string name="layout_show_discover">„Felfedezés” a keresőben</string>
+    <string name="layout_show_discover_sub">Böngészési szekció megjelenítése, ha a kereső üres.</string>
+    <string name="layout_poster_labels">Poszter feliratok megjelenítése</string>
+    <string name="layout_poster_labels_sub">Címek megjelenítése a poszterek alatt a sorokban, rácsban és az összes nézetben.</string>
+    <string name="layout_addon_name">Bővítmény nevének megjelenítése</string>
+    <string name="layout_addon_name_sub">Forrás nevének megjelenítése a katalóguscímek alatt.</string>
+    <string name="layout_catalog_type">Katalógus típusának megjelenítése</string>
+    <string name="layout_catalog_type_sub">Típus utótag megjelenítése a katalógus neve mellett (Film/Sorozat).</string>
+    <string name="layout_section_detail">Részletek oldal</string>
+    <string name="layout_section_detail_desc">Beállítások a részletek és epizódok képernyőhöz.</string>
+    <string name="layout_blur_unwatched">Nem látott epizódok elmosása</string>
+    <string name="layout_blur_unwatched_sub">Epizód előnézeti képek elmosása megtekintésig a spoilerek elkerülése végett.</string>
+    <string name="layout_trailer_button">Előzetes gomb megjelenítése</string>
+    <string name="layout_trailer_button_sub">Előzetes gomb a részletek oldalon (csak ha van elérhető előzetes).</string>
+    <string name="layout_prefer_external_meta">Külső bővítmény metaadatainak előnyben részesítése</string>
+    <string name="layout_prefer_external_meta_sub">Külső bővítmény metaadatainak használata a katalógus-bővítményé helyett.</string>
+    <string name="layout_section_focused">Fókuszált poszter</string>
+    <string name="layout_section_focused_desc">A kijelölt poszterkártyák speciális viselkedése.</string>
+    <string name="layout_expand_poster">Fókuszált poszter kiterjesztése háttérré</string>
+    <string name="layout_expand_poster_sub">A kijelölt poszter kiterjesztése várakozás után.</string>
+    <string name="layout_expand_delay">Háttérkiterjesztés késleltetése</string>
+    <string name="layout_expand_delay_sub">Várakozási idő a kijelölt kártyák kiterjesztése előtt.</string>
+    <string name="layout_autoplay_trailer">Előzetes automatikus lejátszása</string>
+    <string name="layout_autoplay_trailer_expanded">Előzetes automatikus lejátszása kiterjesztett kártyán</string>
+    <string name="layout_autoplay_trailer_sub">Előnézeti videó lejátszása a kijelölt tartalomhoz, ha elérhető.</string>
+    <string name="layout_autoplay_trailer_expanded_sub">Előzetes lejátszása a kiterjesztett háttérben, ha elérhető.</string>
+    <string name="layout_trailer_muted">Előzetes lejátszása némítva</string>
+    <string name="layout_trailer_muted_sub_preview">Előzetes hangjának némítása automatikus lejátszáskor.</string>
+    <string name="layout_trailer_muted_sub_expanded">Előzetes hangjának némítása a kiterjesztett kártyákon.</string>
+    <string name="layout_section_card_style">Poszterkártya stílusa</string>
+    <string name="layout_section_card_style_desc">Kártyaszélesség és sarokkerekítés finomhangolása.</string>
+    <string name="layout_open">Nyitott</string>
+    <string name="layout_closed">Zárt</string>
+    <string name="layout_trailer_location">Modern előzetes lejátszási helye</string>
+    <string name="layout_trailer_location_sub">Válaszd ki, hol induljon az előzetes Modern nézetben.</string>
+    <string name="layout_trailer_expanded_card">Kiterjesztett kártya</string>
+    <string name="layout_trailer_hero_media">Kiemelt média</string>
+    <string name="layout_preset_compact">Kompakt</string>
+    <string name="layout_preset_dense">Sűrű</string>
+    <string name="layout_preset_standard">Standard</string>
+    <string name="layout_preset_balanced">Kiegyensúlyozott</string>
+    <string name="layout_preset_comfort">Kényelmes</string>
+    <string name="layout_preset_large">Nagy</string>
+    <string name="layout_preset_sharp">Éles</string>
+    <string name="layout_preset_subtle">Finom</string>
+    <string name="layout_preset_classic">Klasszikus</string>
+    <string name="layout_preset_rounded">Lekerekített</string>
+    <string name="layout_preset_pill">Kapszula</string>
+    <string name="layout_card_width">Szélesség</string>
+    <string name="layout_card_radius">Sarokkerekítés</string>
+    <string name="layout_reset_default">Alapértelmezés visszaállítása</string>
+    <string name="layout_custom">Egyéni</string>
+
+    <!-- MDBListSettingsScreen -->
+    <string name="mdblist_title">MDBList értékelések</string>
+    <string name="mdblist_subtitle">Külső értékelések beállítása a részletek oldalon</string>
+    <string name="mdblist_enable_title">MDBList értékelések engedélyezése</string>
+    <string name="mdblist_enable_subtitle">Értékelések lekérése külső szolgáltatóktól a részletek képernyőn</string>
+    <string name="mdblist_api_key_title">API-kulcs</string>
+    <string name="mdblist_api_key_subtitle">Szükséges az értékelések lekéréséhez az MDBList-ről</string>
+    <string name="mdblist_trakt_title">Trakt</string>
+    <string name="mdblist_trakt_subtitle">Trakt értékelés megjelenítése</string>
+    <string name="mdblist_imdb_title">IMDb</string>
+    <string name="mdblist_imdb_subtitle">IMDb értékelés megjelenítése (és az alapértelmezett IMDb sor elrejtése, ha elérhető)</string>
+    <string name="mdblist_tmdb_title">TMDB</string>
+    <string name="mdblist_tmdb_subtitle">TMDB értékelés megjelenítése</string>
+    <string name="mdblist_letterboxd_title">Letterboxd</string>
+    <string name="mdblist_letterboxd_subtitle">Letterboxd értékelés megjelenítése</string>
+    <string name="mdblist_tomatoes_title">Rotten Tomatoes</string>
+    <string name="mdblist_tomatoes_subtitle">Kritikusi pontszám megjelenítése</string>
+    <string name="mdblist_audience_title">Közönségértékelés</string>
+    <string name="mdblist_audience_subtitle">Nézői pontszám megjelenítése</string>
+    <string name="mdblist_metacritic_title">Metacritic</string>
+    <string name="mdblist_metacritic_subtitle">Metacritic értékelés megjelenítése</string>
+    <string name="mdblist_dialog_title">MDBList API-kulcs</string>
+    <string name="mdblist_dialog_subtitle">Add meg az API-kulcsot a külső értékelések lekéréséhez</string>
+    <string name="mdblist_dialog_placeholder">MDBList API-kulcs megadása</string>
+    <string name="mdblist_not_set">Nincs beállítva</string>
+    <string name="action_clear">Törlés</string>
+
+    <!-- TmdbSettingsScreen -->
+    <string name="tmdb_title">TMDB adatbővítés</string>
+    <string name="tmdb_subtitle">Válaszd ki, mely metaadat-mezők származzanak a TMDB-ről</string>
+    <string name="tmdb_enable_title">TMDB adatbővítés engedélyezése</string>
+    <string name="tmdb_enable_subtitle">A TMDB használata metaadat-forrásként a bővítmények adatainak kiegészítéséhez</string>
+    <string name="tmdb_language_title">Nyelv</string>
+    <string name="tmdb_language_subtitle">TMDB metaadatok nyelve a címekhez, logókhoz és az engedélyezett mezőkhöz</string>
+    <string name="tmdb_artwork_title">Grafikák</string>
+    <string name="tmdb_artwork_subtitle">Logók és háttérképek a TMDB-ről</string>
+    <string name="tmdb_basic_info_title">Alapvető információk</string>
+    <string name="tmdb_basic_info_subtitle">Leírás, műfajok és értékelés a TMDB-ről</string>
+    <string name="tmdb_details_title">Részletek</string>
+    <string name="tmdb_details_subtitle">Hossz, premier dátuma, ország és nyelv a TMDB-ről</string>
+    <string name="tmdb_credits_title">Stáb</string>
+    <string name="tmdb_credits_subtitle">Szereplők (fotókkal), rendező és író a TMDB-ről</string>
+    <string name="tmdb_productions_title">Gyártók</string>
+    <string name="tmdb_productions_subtitle">Gyártó cégek a TMDB-ről</string>
+    <string name="tmdb_networks_title">Hálózatok</string>
+    <string name="tmdb_networks_subtitle">Csatornák és logóik a TMDB-ről</string>
+    <string name="tmdb_episodes_title">Epizódok</string>
+    <string name="tmdb_episodes_subtitle">Epizódcímek, leírások, miniatűrök és hosszak a TMDB-ről</string>
+    <string name="tmdb_more_like_this_title">Hasonlóak</string>
+    <string name="tmdb_more_like_this_subtitle">TMDB ajánlások a részletek oldalon</string>
+    <string name="tmdb_language_dialog_title">TMDB nyelv</string>
+
+    <!-- TraktScreen -->
+    <string name="trakt_description">Szinkronizáld a megnézendőket, a nézési folyamatot, a lejátszás folytatását és a saját listáidat a Trakt-tal.</string>
+    <string name="trakt_connected_as">Bejelentkezve mint: %1$s</string>
+    <string name="trakt_account_login">Fiók bejelentkezés</string>
+    <string name="trakt_awaiting_instruction">Látogass el a trakt.tv/activate oldalra, és írd be ezt a kódot:</string>
+    <string name="trakt_waiting_approval">Várakozás jóváhagyásra…</string>
+    <string name="qr_login_approved">Sikeres jóváhagyás. Bejelentkezés befejezése…</string>
+    <string name="qr_login_pending">Várakozás a telefonos jóváhagyásra…</string>
+    <string name="qr_login_expired">A QR-kód lejárt. Kérj új kódot.</string>
+    <string name="trakt_code_expires">A kód lejár: %1$s múlva</string>
+    <string name="trakt_token_refreshes">Trakt token frissítése: %1$s múlva</string>
+    <string name="trakt_login_instruction">Nyomd meg a Bejelentkezés gombot a Trakt hitelesítéshez. Egy QR-kód fog megjelenni.</string>
+    <string name="trakt_missing_credentials">Hiányzó TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET a local.properties fájlban.</string>
+    <string name="trakt_continue_watching_window">Folytatási időablak</string>
+    <string name="trakt_continue_watching_subtitle">A Trakt előzmények figyelembe vétele a folytatáshoz</string>
+    <string name="trakt_unaired_next_up">Még nem vetített epizódok</string>
+    <string name="trakt_unaired_next_up_subtitle">Közelgő epizódok megjelenítése a premier előtt</string>
+    <string name="trakt_unaired_shown">Látható</string>
+    <string name="trakt_unaired_hidden">Rejtett</string>
+    <string name="trakt_cached_label">Gyorsítótárazva</string>
+    <string name="trakt_stat_movies">Film</string>
+    <string name="trakt_stat_shows">Sorozat</string>
+    <string name="trakt_stat_episodes">Epizód</string>
+    <string name="trakt_stat_watched_hours">Nézett órák</string>
+    <string name="trakt_disconnect">Leválasztás</string>
+    <string name="trakt_disconnect_title">Lecsatlakozol a Trakt-ról?</string>
+    <string name="trakt_disconnect_subtitle">Ez megszünteti a kapcsolatot a Trakt fiókod és a Nuvio között.</string>
+    <string name="trakt_login">Bejelentkezés</string>
+    <string name="trakt_retry">Újra</string>
+    <string name="trakt_back">Vissza</string>
+    <string name="trakt_cw_window_title">Folytatási időablak</string>
+    <string name="trakt_cw_window_subtitle">Válaszd ki, mennyi Trakt aktivitás jelenjen meg a folytatási listában.</string>
+    <string name="trakt_unaired_dialog_title">Még nem vetített epizódok</string>
+    <string name="trakt_unaired_dialog_subtitle">Döntsd el, hogy a Folytatás tartalmazza-e a premier előtti epizódokat.</string>
+    <string name="trakt_show_unaired">Megjelenítés</string>
+    <string name="trakt_hide_unaired">Elrejtés</string>
+    <string name="trakt_all_history">Teljes előzmény</string>
+    <string name="trakt_days_format">%1$d nap</string>
+
+    <!-- DebugSettingsScreen -->
+    <string name="debug_title">Hibakeresés</string>
+    <string name="debug_subtitle">Fejlesztői eszközök és funkciókapcsolók (csak debug build esetén)</string>
+    <string name="debug_section_popup">Ablakok / dialógusok tesztelése</string>
+    <string name="debug_playback_error_title">Lejátszási hiba képernyő</string>
+    <string name="debug_playback_error_subtitle">Szimulált lejátszási hiba felugró ablak megjelenítése</string>
+    <string name="debug_section_features">Funkciókapcsolók</string>
+    <string name="debug_account_tab_title">Fiók fül</string>
+    <string name="debug_account_tab_subtitle">Fiók fül megjelenítése a navigációs beállításoknál</string>
+    <string name="debug_sync_code_title">Szinkronizációs kód funkciók</string>
+    <string name="debug_sync_code_subtitle">Szinkronizációs kód generálása/megadása gombok a fiókbeállításoknál</string>
+    <string name="debug_section_account">Fiók</string>
+    <string name="debug_manual_signin_title">Kézi bejelentkezés</string>
+    <string name="debug_manual_signin_subtitle">Bejelentkezés e-maillel és jelszóval (Supabase hitelesítés)</string>
+    <string name="debug_email_placeholder">E-mail</string>
+    <string name="debug_password_placeholder">Jelszó</string>
+    <string name="debug_signing_in">Bejelentkezés\u2026</string>
+    <string name="debug_sign_in">Bejelentkezés</string>
+    <string name="debug_error_dialog_title">Lejátszási hiba</string>
+    <string name="debug_error_dialog_subtitle">Hiba történt a lejátszás során.\n\nHiba: Szimulált teszthiba – ez nem valódi összeomlás. A forrás HTTP 503 (Service Unavailable) kódot küldött.</string>
+    <string name="debug_dismiss">Bezárás</string>
+    <!-- ProfileSettingsContent -->
+    <string name="profile_title">Profilok</string>
+    <string name="profile_subtitle">A fiókhoz tartozó felhasználói profilok kezelése.</string>
+    <string name="profile_primary_label">Elsődleges</string>
+    <string name="profile_shares_primary">Megosztva az elsődleges profil %1$s-ával</string>
+    <string name="profile_edit_label">Szerkesztés</string>
+    <string name="profile_add">Profil hozzáadása</string>
+    <string name="profile_create_title">Profil létrehozása</string>
+    <string name="profile_edit_title">%1$s profil szerkesztése</string>
+    <string name="profile_name_placeholder">Profil neve</string>
+    <string name="profile_avatar_color">Avatar színe</string>
+    <string name="profile_use_primary_addons">Elsődleges profil bővítményeinek használata</string>
+    <string name="profile_use_primary_plugins">Elsődleges profil pluginjeinek használata</string>
+    <string name="profile_creating">Létrehozás\u2026</string>
+    <string name="profile_create_btn">Létrehozás</string>
+    <string name="profile_confirm">Megerősítés</string>
+    <string name="profile_delete">Törlés</string>
+    <string name="profile_addons">bővítmények</string>
+    <string name="profile_plugins">pluginek</string>
+
+
+    <!-- AddonManagerScreen -->
+    <string name="addon_title">Bővítmények</string>
+    <string name="addon_readonly_notice">Az elsődleges profil bővítményeit használod, ezek nem módosíthatók</string>
+    <string name="addon_install_title">Bővítmény telepítése</string>
+    <string name="addon_install_placeholder">https://pelda.hu</string>
+    <string name="addon_installing">Telepítés</string>
+    <string name="addon_install_btn">Telepítés</string>
+    <string name="addon_installed_section">Telepítve</string>
+    <string name="addon_empty">Nincsenek telepített bővítmények. A kezdéshez adj hozzá egyet.</string>
+    <string name="addon_remove">Eltávolítás</string>
+    <string name="addon_manage_from_phone_title">Kezelés telefonról</string>
+    <string name="addon_manage_from_phone_subtitle">Olvasd be a QR-kódot a bővítmények és a kezdőlap katalógusainak telefonos kezeléséhez</string>
+    <string name="addon_reorder_title">Kezdőlap katalógusok sorrendje</string>
+    <string name="addon_reorder_subtitle">A katalógussorok sorrendjének módosítása a kezdőlapon (Klasszikus + Modern + Rács)</string>
+    <string name="addon_qr_scan_instruction">Olvasd be a telefonoddal a bővítmények és katalógusok kezeléséhez</string>
+    <string name="addon_qr_close">Bezárás</string>
+    <string name="addon_confirm_title">Bővítmény- és katalógusmódosítások megerősítése</string>
+    <string name="addon_confirm_subtitle">A következő módosítások történtek a telefonról:</string>
+    <string name="addon_confirm_added">Hozzáadva:</string>
+    <string name="addon_confirm_removed">Eltávolítva:</string>
+    <string name="addon_confirm_catalog_reordered">A katalógusok sorrendje megváltozott</string>
+    <string name="addon_confirm_catalogs_disabled">A kezdőlapon letiltott katalógusok:</string>
+    <string name="addon_confirm_catalogs_enabled">A kezdőlapon engedélyezett katalógusok:</string>
+    <string name="addon_confirm_no_changes">Nem történt látható változás</string>
+    <string name="addon_confirm_reject">Elvetés</string>
+    <string name="addon_confirm_confirm">Megerősítés</string>
+
+    <!-- CatalogOrderScreen -->
+    <string name="catalog_order_title">Kezdőlap katalógusok sorrendje</string>
+    <string name="catalog_order_subtitle">Itt állítható be a katalógussorok sorrendje a kezdőlapon (Klasszikus + Modern + Rács).</string>
+    <string name="catalog_order_empty">Még nincsenek elérhető katalógusok.</string>
+    <string name="catalog_order_disabled_on_home">Letiltva a kezdőlapon</string>
+    <string name="catalog_order_enable">Engedélyezés</string>
+    <string name="catalog_order_disable">Letiltás</string>
+
+
+    <!-- StreamScreen -->
+    <string name="stream_retry">Újra</string>
+    <string name="stream_no_streams">Nem található forrás</string>
+    <string name="stream_no_streams_hint">További forrásokhoz próbálj meg több bővítményt telepíteni</string>
+    <string name="stream_finding_source">Stream forrás keresése</string>
+    <string name="stream_type_torrent">Torrent</string>
+    <string name="stream_type_youtube">YouTube</string>
+    <string name="stream_type_external">Külső</string>
+    <string name="stream_player_picker_title">Melyik lejátszót használod?</string>
+    <string name="stream_player_internal">Beépített</string>
+    <string name="stream_player_external">Külső</string>
+
+    <!-- PlayerScreen -->
+    <string name="player_ends_at">Várható befejezés: %1$s</string>
+    <string name="player_via">forrás: %1$s</string>
+    <string name="player_subtitle_delay">Felirat késleltetése</string>
+    <string name="player_error_title">Lejátszási hiba</string>
+    <string name="player_go_back">Vissza</string>
+    <string name="player_speed_title">Lejátszási sebesség</string>
+    <string name="player_more_actions_title">További műveletek</string>
+    <string name="player_more_speed">Lejátszási sebesség</string>
+    <string name="player_more_aspect_ratio">Képarány</string>
+    <string name="player_more_open_external">Megnyitás külső lejátszóban</string>
+
+    <!-- StreamSourcesSidePanel -->
+    <string name="sources_title">Források</string>
+    <string name="sources_reload">Frissítés</string>
+    <string name="sources_close">Bezárás</string>
+    <string name="sources_playing">Lejátszás alatt</string>
+    <string name="sources_no_streams">Nem található forrás</string>
+
+    <!-- EpisodesSidePanel -->
+    <string name="episodes_panel_close">Bezárás</string>
+    <string name="episodes_panel_back">Vissza</string>
+    <string name="episodes_panel_reload">Frissítés</string>
+    <string name="episodes_panel_no_streams">Nem található forrás</string>
+    <string name="episodes_panel_no_episodes">Nincsenek elérhető részek</string>
+    <string name="episodes_panel_title">Epizódok</string>
+    <string name="episodes_panel_streams_title">Források</string>
+    <string name="player_speed_normal">Normál</string>
+    <string name="player_aspect_fit">Illesztés (Eredeti)</string>
+    <string name="player_aspect_stretch">Nyújtás</string>
+    <string name="player_aspect_fit_width">Szélességhez igazítás</string>
+    <string name="player_aspect_fit_height">Magassághoz igazítás</string>
+    <string name="player_aspect_crop">Vágás</string>
+
+    <!-- AudioDialog -->
+    <string name="audio_dialog_title">Hang</string>
+
+    <!-- SubtitleDialog / SubtitleStyleSidePanel -->
+    <string name="subtitle_dialog_title">Feliratok</string>
+    <string name="subtitle_no_builtin">Nincs elérhető beépített felirat</string>
+    <string name="subtitle_loading_addon">Külső feliratok betöltése a kiegészítőkből\u2026</string>
+    <string name="subtitle_no_addon">Nincs elérhető felirat a kiegészítőkből</string>
+    <string name="subtitle_text_color">Szövegszín</string>
+    <string name="subtitle_outline_color">Körvonal színe</string>
+    <string name="subtitle_reset_defaults">Alaphelyzet</string>
+    <string name="subtitle_tab_builtin">Beépített</string>
+    <string name="subtitle_tab_addons">Kiegészítők</string>
+    <string name="subtitle_tab_languages">Nyelvek</string>
+    <string name="subtitle_tab_style">Stílus</string>
+    <string name="subtitle_tab_delay">Késleltetés</string>
+    <string name="subtitle_none">Nincs</string>
+    <string name="subtitle_all">Mind</string>
+    <string name="subtitle_section_core">Alap</string>
+    <string name="subtitle_section_advanced">Speciális</string>
+    <string name="subtitle_font_size">Betűméret</string>
+    <string name="subtitle_bold">Félkövér</string>
+    <string name="subtitle_outline">Körvonal</string>
+    <string name="subtitle_bottom_offset">Alsó eltolás</string>
+    <string name="subtitle_on">Be</string>
+    <string name="subtitle_off">Ki</string>
+    <string name="subtitle_style_title">Felirat stílusa</string>
+    <string name="subtitle_style_color">Szín</string>
+    <string name="subtitle_style_reset">Visszaállítás</string>
+
+    <!-- PauseOverlay -->
+    <string name="pause_you_are_watching">Most nézed</string>
+    <string name="pause_cast_label">Stáb</string>
+    <string name="pause_back_to_details">Vissza a részletekhez</string>
+    <string name="pause_as_character">mint %1$s</string>
+
+    <!-- NextEpisodeCardOverlay -->
+    <string name="next_episode_label">Következő epizód</string>
+
+    <!-- SearchScreen -->
+    <string name="search_keyboard_hint">A kereséshez nyomd meg a Kész gombot a billentyűzeten</string>
+    <string name="search_placeholder">Filmek és sorozatok keresése</string>
+    <string name="search_start_title">Kezdj el keresni</string>
+    <string name="search_start_subtitle">Adj meg legalább 2 karaktert</string>
+    <string name="search_start_subtitle_no_discover">A felfedezés ki van kapcsolva. Adj meg legalább 2 karaktert</string>
+
+    <!-- LibraryScreen -->
+    <string name="library_syncing">Trakt könyvtár szinkronizálása\u2026</string>
+    <string name="library_title">Könyvtár</string>
+    <string name="library_filter_list">Lista</string>
+    <string name="library_filter_type">Típus</string>
+    <string name="library_filter_sort">Rendezés</string>
+    <string name="library_manage_lists">Listák kezelése</string>
+    <string name="library_manage_trakt_lists">Trakt listák kezelése</string>
+    <string name="library_no_lists">Még nincsenek saját listák.</string>
+    <string name="library_list_create">Létrehozás</string>
+    <string name="library_list_edit">Szerkesztés</string>
+    <string name="library_list_move_up">Mozgatás felfelé</string>
+    <string name="library_list_move_down">Mozgatás lefelé</string>
+    <string name="library_list_delete">Törlés</string>
+    <string name="library_list_close">Bezárás</string>
+    <string name="library_list_name_label">Név</string>
+    <string name="library_list_description_label">Leírás</string>
+    <string name="library_list_privacy">Adatvédelem</string>
+    <string name="library_delete_title">Törlöd ezt a listát?</string>
+    <string name="library_delete_subtitle">Ez törli a listát és annak minden elemét a Trakt-ról.</string>
+    <string name="library_delete_confirm">Törlés</string>
+    <string name="library_source_local">HELYI</string>
+    <string name="library_type_all">Mind</string>
+    <string name="library_type_items">elem</string>
+    <string name="library_empty_local_title">Nincs még %1$s</string>
+    <string name="library_empty_trakt_title">Ezen a listán nincs %1$s</string>
+    <string name="library_empty_local_subtitle">Mentsd el a kedvenceidet, hogy itt láthasd őket</string>
+    <string name="library_empty_trakt_subtitle">A részletek oldalon a + gombbal adhatsz elemeket a várólistádhoz vagy más listákhoz</string>
+
+    <!-- AccountSettingsContent -->
+    <string name="account_loading">Betöltés\u2026</string>
+    <string name="account_sync_description">Könyvtár, megtekintési előzmények, bővítmények és pluginek szinkronizálása az eszközök között.</string>
+    <string name="account_signin_qr_title">Bejelentkezés QR-kóddal</string>
+    <string name="account_signin_qr_subtitle">Olvasd be a QR-kódot, és fejezd be a bejelentkezést e-mailben a telefonodon</string>
+    <string name="account_signed_in_label">Bejelentkezve</string>
+    <string name="account_total_label">Összesen</string>
+    <string name="account_loading_sync">Szinkronizálási adatok betöltése\u2026</string>
+    <string name="account_sign_out">Kijelentkezés</string>
+
+    <!-- AuthSignInScreen -->
+    <string name="auth_signin_title">Bejelentkezés</string>
+    <string name="auth_signin_tv_disabled">Az e-mail és jelszó megadása TV-n le van tiltva. Folytasd a bejelentkezést QR-kóddal.</string>
+    <string name="auth_signin_qr_btn">Folytatás QR-kóddal</string>
+
+    <!-- AuthQrSignInScreen -->
+    <string name="auth_qr_title">Bejelentkezés QR-kóddal</string>
+    <string name="auth_qr_account_login">Fiók bejelentkezés</string>
+    <string name="auth_qr_finishing">Bejelentkezés befejezése\u2026</string>
+    <string name="auth_qr_code_label">Kód: %1$s</string>
+    <string name="auth_qr_expires">Lejár: %1$s múlva</string>
+
+    <!-- SyncCodeGenerateScreen -->
+    <string name="sync_generate_title">Szinkronizációs kód generálása</string>
+    <string name="sync_generate_subtitle">Hozz létre egy PIN-kódot a szinkronizációs kód védelméhez. Oszd meg a kódot más eszközökkel.</string>
+    <string name="sync_generate_code_label">A te szinkronizációs kódod</string>
+    <string name="sync_generate_instruction">Add meg ezt a kódot és a PIN-t a másik eszközön az összekapcsoláshoz.</string>
+    <string name="sync_generate_done">Kész</string>
+    <string name="sync_generate_pin_label">Válassz PIN-kódot (4-8 karakter)</string>
+    <string name="sync_generate_pin_placeholder">PIN megadása</string>
+
+    <!-- SyncCodeClaimScreen -->
+    <string name="sync_claim_title">Eszköz összekapcsolása</string>
+    <string name="sync_claim_subtitle">Add meg a másik eszközről származó szinkronizációs kódot és PIN-t az összekapcsoláshoz.</string>
+    <string name="sync_claim_success">Eszköz összekapcsolva! A bővítmények és pluginek mostantól szinkronizálva lesznek.</string>
+    <string name="sync_claim_done">Kész</string>
+    <string name="sync_claim_code_label">Szinkronizációs kód</string>
+    <string name="sync_claim_code_placeholder">XXXX-XXXX-XXXX-XXXX-XXXX</string>
+    <string name="sync_claim_pin_label">PIN</string>
+    <string name="sync_claim_pin_placeholder">PIN megadása</string>
+
+    <!-- PluginScreen -->
+    <string name="plugin_readonly_notice">Az elsődleges profil pluginjeit használod – ezek nem módosíthatók</string>
+    <string name="plugin_repositories_section">Adattárak (%1$d)</string>
+    <string name="plugin_providers_section">Szolgáltatók (%1$d)</string>
+    <string name="plugin_title">Pluginek</string>
+    <string name="plugin_subtitle">Helyi adatgyűjtők (scrapers) és szolgáltatók kezelése</string>
+    <string name="plugin_add_repository">Adattár hozzáadása</string>
+    <string name="plugin_add_btn">Hozzáadás</string>
+    <string name="plugin_manage_from_phone_title">Kezelés telefonról</string>
+    <string name="plugin_manage_from_phone_subtitle">Olvasd be a QR-kódot adattárak hozzáadásához vagy törléséhez a telefonodról</string>
+    <string name="plugin_qr_instruction">Olvasd be a telefonoddal az adattárak kezeléséhez</string>
+    <string name="plugin_qr_close">Bezárás</string>
+    <string name="plugin_confirm_title">Adattár-módosítások megerősítése</string>
+    <string name="plugin_confirm_subtitle">A következő módosítások történtek a telefonról:</string>
+    <string name="plugin_confirm_added">Hozzáadva:</string>
+    <string name="plugin_confirm_removed">Eltávolítva:</string>
+    <string name="plugin_confirm_no_changes">Nem történt változás</string>
+    <string name="plugin_confirm_total">Összes adattár: %1$d</string>
+    <string name="plugin_confirm_reject">Elvetés</string>
+    <string name="plugin_confirm_confirm">Megerősítés</string>
+    <string name="plugin_updated_format">Frissítve: %1$s</string>
+    <string name="plugin_test_btn">Tesztelés</string>
+    <string name="plugin_test_results">Teszteredmények (%1$d forrás)</string>
+    <!-- ProfileSelectionScreen -->
+    <string name="profile_selection_title">Ki nézi?</string>
+    <string name="profile_selection_subtitle">Válassz egy profilt a folytatáshoz</string>
+    <string name="profile_selection_hint">Használd az irányválasztót (D-pad) a profil kiválasztásához</string>
+    <string name="profile_selection_empty">Nem találhatók profilok</string>
+    <string name="profile_selection_primary_badge">ELSŐDLEGES</string>
+
+    <!-- CastDetailScreen -->
+    <string name="cast_detail_error">Valami hiba történt</string>
+    <string name="cast_detail_retry">Újra</string>
+    <string name="cast_detail_filmography">Filmográfia</string>
+
+    <!-- CatalogSeeAllScreen -->
+    <string name="catalog_see_all_from">innen: %1$s</string>
+    <string name="catalog_see_all_empty_title">Nincsenek elérhető tételek</string>
+    <string name="catalog_see_all_empty_subtitle">Próbálkozz másik katalógussal, vagy térj vissza később</string>
+
+    <!-- LayoutSelectionScreen -->
+    <string name="layout_selection_welcome">Üdvözöl a Nuvio</string>
+    <string name="layout_selection_subtitle">Válaszd ki a kezdőképernyő elrendezését</string>
+    <string name="layout_selection_continue">Folytatás</string>
+
+    <!-- UpdatePromptDialog -->
+    <string name="update_title">Alkalmazásfrissítés</string>
+    <string name="update_downloading">Frissítés letöltése</string>
+    <string name="update_unknown_sources">A folytatáshoz engedélyezd a telepítést ismeretlen forrásokból.</string>
+
+    <!-- AccountScreen -->
+    <string name="account_title">Fiók</string>
+    <string name="account_sign_in_description">Jelentkezz be a könyvtár, a megtekintési előzmények és a bővítmények eszközök közötti szinkronizálásához. A könyvtár és az előzmények szinkronizálása csak akkor működik, ha a Trakt nincs csatlakoztatva.</string>
+    <string name="account_sync_code_title">Szinkronizációs kód</string>
+    <string name="account_sync_code_description">Szinkronizálás az eszközök között fiók létrehozása nélkül.</string>
+    <string name="account_linked_devices">Összekapcsolt eszközök (%1$d)</string>
+    <string name="account_no_linked_devices">Nincsenek összekapcsolt eszközök</string>
+    <string name="account_unlink">Leválasztás</string>
+
+    <!-- EpisodeRatingsSection -->
+    <string name="ratings_loading">Epizódértékelések betöltése…</string>
+    <string name="ratings_unavailable">Az epizódértékelések nem érhetők el.</string>
+    <string name="ratings_season_summary">%1$d. évad – %2$d epizód</string>
+
+    <!-- SearchDiscoverSection -->
+    <string name="discover_title">Felfedezés</string>
+    <string name="discover_load_more">Továbbiak betöltése</string>
+    <string name="discover_loading">Betöltés…</string>
+    <string name="discover_filter_type">Típus</string>
+    <string name="discover_filter_catalog">Katalógus</string>
+    <string name="discover_filter_genre">Műfaj</string>
+    <string name="discover_select_catalog">Választás</string>
+    <string name="discover_genre_default">Alapértelmezett</string>
+    <string name="discover_empty_no_catalog_title">Válassz katalógust</string>
+    <string name="discover_empty_no_catalog_subtitle">Válassz egy katalógust a böngészéshez</string>
+    <string name="discover_empty_no_content_title">Nincs tartalom</string>
+    <string name="discover_empty_no_content_subtitle">Próbálkozz másik műfajjal vagy katalógussal</string>
+
+    <!-- AddonManagerScreen -->
+    <string name="addon_confirm_total_addons">Összes bővítmény: %1$d</string>
+    <string name="addon_confirm_total_catalogs">Összes katalógus: %1$d</string>
+    <string name="addon_catalogs_types">Katalógusok: %1$d – Típusok: %2$s</string>
+
+    <!-- PluginScreen -->
+    <string name="plugin_and_more">… és még %1$d</string>
+    <string name="plugin_providers_count">%1$d szolgáltató</string>
+    <string name="plugin_enabled">Engedélyezve</string>
+    <string name="plugin_disabled">Letiltva</string>
+    <string name="plugin_no_repos">Nincsenek hozzáadott adattárak.\nAdj hozzá egyet a kezdéshez.</string>
+
+    <!-- ProfileSettingsContent -->
+    <string name="profile_edit_title_id">%1$d. profil szerkesztése</string>
+
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_passthrough_info">A hangátvitel (passthrough – TrueHD, DTS, AC-3 stb.) automatikus. Kompatibilis erősítőhöz vagy soundbarhoz HDMI-n csatlakozva a veszteségmentes hang dekódolás nélkül továbbítódik.</string>
+    <string name="audio_dv_title">DV7 – HEVC tartalék (Fallback)</string>
+
+    <!-- SidebarNavigation / MainActivity -->
+    <string name="nav_home">Kezdőlap</string>
+    <string name="nav_discover">Felfedezés</string>
+    <string name="nav_search">Keresés</string>
+    <string name="nav_library">Könyvtár</string>
+    <string name="nav_addons">Bővítmények</string>
+    <string name="nav_settings">Beállítások</string>
+    <string name="cd_expand_sidebar">Oldalsáv kibontása</string>
+
+    <string name="update_close">Bezárás</string>
+    <string name="update_open_settings">Beállítások megnyitása</string>
+    <string name="update_install">Telepítés</string>
+    <string name="update_ignore">Mellőzés</string>
+</resources>

@@ -12,8 +12,12 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,17 +27,21 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import com.nuvio.tv.ui.components.LoadingIndicator
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
 
 @Composable
 fun LoadingOverlay(
     visible: Boolean,
     backdropUrl: String?,
     logoUrl: String?,
+    message: String? = null,
     modifier: Modifier = Modifier
 ) {
     val logoAlpha by animateFloatAsState(
@@ -95,25 +103,45 @@ fun LoadingOverlay(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                if (!logoUrl.isNullOrBlank()) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(logoUrl)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Loading logo",
-                        modifier = Modifier
-                            .width(320.dp)
-                            .height(180.dp)
-                            .graphicsLayer {
-                                alpha = logoAlpha
-                                scaleX = logoScale
-                                scaleY = logoScale
-                            },
-                        contentScale = ContentScale.Fit
-                    )
-                } else {
-                    LoadingIndicator()
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (!logoUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(logoUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Loading logo",
+                            modifier = Modifier
+                                .width(320.dp)
+                                .height(180.dp)
+                                .graphicsLayer {
+                                    alpha = logoAlpha
+                                    scaleX = logoScale
+                                    scaleY = logoScale
+                                },
+                            contentScale = ContentScale.Fit
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier.size(180.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LoadingIndicator()
+                        }
+                    }
+
+                    if (!message.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            text = message,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.72f),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 24.dp)
+                        )
+                    }
                 }
             }
         }

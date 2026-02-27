@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,11 +35,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import android.view.KeyEvent
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @Composable
 internal fun StreamSourcesSidePanel(
@@ -61,6 +68,16 @@ internal fun StreamSourcesSidePanel(
         }
     }
 
+    val orderedAddonNames = remember(uiState.sourceAvailableAddons, uiState.sourceChips) {
+        buildList {
+            addAll(uiState.sourceAvailableAddons)
+            uiState.sourceChips.forEach { if (it.name !in this) add(it.name) }
+        }
+    }
+    val chipFocusRequesters = remember(orderedAddonNames.size) {
+        List(orderedAddonNames.size + 1) { FocusRequester() }
+    }
+
     Box(
         modifier = modifier
             .fillMaxHeight()
@@ -75,19 +92,19 @@ internal fun StreamSourcesSidePanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Sources",
+                    text = stringResource(R.string.sources_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = NuvioColors.TextPrimary
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     DialogButton(
-                        text = "Reload",
+                        text = stringResource(R.string.sources_reload),
                         onClick = onReload,
                         isPrimary = false
                     )
                     DialogButton(
-                        text = "Close",
+                        text = stringResource(R.string.sources_close),
                         onClick = onClose,
                         isPrimary = false
                     )
@@ -117,14 +134,18 @@ internal fun StreamSourcesSidePanel(
             Spacer(modifier = Modifier.height(16.dp))
 
             AnimatedVisibility(
-                visible = !uiState.isLoadingSourceStreams && uiState.sourceAvailableAddons.isNotEmpty(),
+                visible = uiState.sourceChips.isNotEmpty() ||
+                    (!uiState.isLoadingSourceStreams && uiState.sourceAvailableAddons.isNotEmpty()),
                 enter = fadeIn(animationSpec = tween(200)),
                 exit = fadeOut(animationSpec = tween(120))
             ) {
                 AddonFilterChips(
                     addons = uiState.sourceAvailableAddons,
+                    sourceChips = uiState.sourceChips,
                     selectedAddon = uiState.sourceSelectedAddonFilter,
-                    onAddonSelected = onAddonFilterSelected
+                    onAddonSelected = onAddonFilterSelected,
+                    externalFocusRequesters = chipFocusRequesters,
+                    externalOrderedNames = orderedAddonNames
                 )
             }
 
@@ -144,7 +165,7 @@ internal fun StreamSourcesSidePanel(
 
                 uiState.sourceStreamsError != null -> {
                     Text(
-                        text = uiState.sourceStreamsError ?: "Failed to load streams",
+                        text = uiState.sourceStreamsError ?: stringResource(R.string.panel_failed_load_streams),
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White.copy(alpha = 0.85f)
                     )
@@ -152,24 +173,64 @@ internal fun StreamSourcesSidePanel(
 
                 uiState.sourceFilteredStreams.isEmpty() -> {
                     Text(
-                        text = "No streams found",
+                        text = stringResource(R.string.sources_no_streams),
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White.copy(alpha = 0.7f)
                     )
                 }
 
                 else -> {
+                    val currentStreamUrl = uiState.currentStreamUrl
+                    val currentStreamName = uiState.currentStreamName
+                    val currentStreamIndex = findCurrentStreamIndex(
+                        streams = uiState.sourceFilteredStreams,
+                        currentStreamUrl = currentStreamUrl,
+                        currentStreamName = currentStreamName
+                    )
+                    val initialFocusStream = uiState.sourceFilteredStreams.getOrNull(currentStreamIndex)
+                        ?: uiState.sourceFilteredStreams.firstOrNull()
+
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                        modifier = Modifier.fillMaxHeight()
+                        contentPadding = PaddingValues(
+                            start = 8.dp,
+                            top = 14.dp,
+                            end = 8.dp,
+                            bottom = 8.dp
+                        ),
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .onKeyEvent { event ->
+                                if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
+                                val addons = uiState.sourceAvailableAddons
+                                if (addons.isEmpty()) return@onKeyEvent false
+                                val allOptions = listOf<String?>(null) + addons
+                                val currentIdx = allOptions.indexOf(uiState.sourceSelectedAddonFilter)
+                                when (event.key) {
+                                    Key.DirectionLeft -> {
+                                        if (currentIdx > 0) { onAddonFilterSelected(allOptions[currentIdx - 1]); true } else false
+                                    }
+                                    Key.DirectionRight -> {
+                                        if (currentIdx < allOptions.lastIndex) { onAddonFilterSelected(allOptions[currentIdx + 1]); true } else false
+                                    }
+                                    else -> false
+                                }
+                            }
                     ) {
-                        items(uiState.sourceFilteredStreams) { stream ->
+                        itemsIndexed(uiState.sourceFilteredStreams) { index, stream ->
                             StreamItem(
                                 stream = stream,
                                 focusRequester = streamsFocusRequester,
-                                requestInitialFocus = stream == uiState.sourceFilteredStreams.firstOrNull(),
-                                onClick = { onStreamSelected(stream) }
+                                requestInitialFocus = stream == initialFocusStream,
+                                isCurrentStream = index == currentStreamIndex,
+                                onClick = { onStreamSelected(stream) },
+                                onUpKey = if (index == 0 && chipFocusRequesters.isNotEmpty()) {{
+                                    val selected = uiState.sourceSelectedAddonFilter
+                                    val idx = if (selected == null) 0 else orderedAddonNames.indexOf(selected) + 1
+                                    if (idx >= 0 && idx < chipFocusRequesters.size) {
+                                        try { chipFocusRequesters[idx].requestFocus() } catch (_: Exception) {}
+                                    }
+                                }} else null
                             )
                         }
                     }
@@ -177,4 +238,39 @@ internal fun StreamSourcesSidePanel(
             }
         }
     }
+}
+
+private fun findCurrentStreamIndex(
+    streams: List<Stream>,
+    currentStreamUrl: String?,
+    currentStreamName: String?
+): Int {
+    if (streams.isEmpty()) return -1
+
+    val hasUrl = !currentStreamUrl.isNullOrBlank()
+    val hasName = !currentStreamName.isNullOrBlank()
+
+    if (hasUrl && hasName) {
+        val bothMatch = streams.indexOfFirst { stream ->
+            stream.getStreamUrl() == currentStreamUrl &&
+                stream.getDisplayName().equals(currentStreamName, ignoreCase = true)
+        }
+        if (bothMatch >= 0) return bothMatch
+    }
+
+    if (hasUrl) {
+        val urlMatch = streams.indexOfFirst { stream ->
+            stream.getStreamUrl() == currentStreamUrl
+        }
+        if (urlMatch >= 0) return urlMatch
+    }
+
+    if (hasName) {
+        val nameMatch = streams.indexOfFirst { stream ->
+            stream.getDisplayName().equals(currentStreamName, ignoreCase = true)
+        }
+        if (nameMatch >= 0) return nameMatch
+    }
+
+    return -1
 }

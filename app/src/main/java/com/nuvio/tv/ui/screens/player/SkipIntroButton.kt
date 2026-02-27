@@ -36,6 +36,8 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
@@ -117,12 +119,12 @@ fun SkipIntroButton(
                 Icon(
                     imageVector = Icons.Default.SkipNext,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = if (isFocused) NuvioColors.OnSecondary else Color.White,
                     modifier = Modifier.size(20.dp)
                 )
                 Text(
                     text = getSkipLabel(interval?.type),
-                    color = Color.White,
+                    color = if (isFocused) NuvioColors.OnSecondary else Color.White,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(start = 8.dp)
                 )
@@ -132,16 +134,17 @@ fun SkipIntroButton(
                 modifier = Modifier
                     .height(2.dp)
                     .clip(RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
-                    .background(if (isFocused) Color.White else NuvioColors.Secondary)
+                    .background(if (isFocused) NuvioColors.OnSecondary else NuvioColors.Secondary)
                     .align(Alignment.CenterHorizontally)
             )
         }
     }
 }
 
+@Composable
 private fun getSkipLabel(type: String?): String = when (type) {
-    "op", "mixed-op", "intro" -> "Skip Intro"
-    "ed", "mixed-ed", "outro" -> "Skip Ending"
-    "recap" -> "Skip Recap"
-    else -> "Skip"
+    "op", "mixed-op", "intro" -> stringResource(R.string.skip_intro)
+    "ed", "mixed-ed", "outro" -> stringResource(R.string.skip_ending)
+    "recap" -> stringResource(R.string.skip_recap)
+    else -> stringResource(R.string.skip_generic)
 }

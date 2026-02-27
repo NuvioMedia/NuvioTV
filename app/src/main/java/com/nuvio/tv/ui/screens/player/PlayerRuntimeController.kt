@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
@@ -33,6 +34,7 @@ class PlayerRuntimeController(
     internal val metaRepository: MetaRepository,
     internal val streamRepository: StreamRepository,
     internal val addonRepository: AddonRepository,
+    internal val pluginManager: PluginManager,
     internal val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     internal val parentalGuideRepository: ParentalGuideRepository,
     internal val traktScrobbleService: TraktScrobbleService,
@@ -83,6 +85,11 @@ class PlayerRuntimeController(
     internal val rememberedAudioName: String? = navigationArgs.rememberedAudioName
     internal val mediaSourceFactory = PlayerMediaSourceFactory()
 
+    internal var currentVideoHash: String? = navigationArgs.videoHash
+    internal var currentVideoSize: Long? = navigationArgs.videoSize
+    internal var currentFilename: String? = navigationArgs.filename
+        ?: initialStreamUrl.substringBefore('?').substringAfterLast('/', "")
+            .takeIf { it.isNotBlank() && it.contains('.') }
     internal var currentStreamUrl: String = initialStreamUrl
     internal var currentHeaders: Map<String, String> = PlayerMediaSourceFactory.parseHeaders(headersJson)
 
@@ -103,6 +110,7 @@ class PlayerRuntimeController(
             title = title,
             contentName = contentName,
             currentStreamName = streamName,
+            currentStreamUrl = currentStreamUrl,
             releaseYear = year,
             contentType = contentType,
             backdrop = backdrop,
@@ -131,6 +139,7 @@ class PlayerRuntimeController(
     internal var hideSubtitleDelayOverlayJob: Job? = null
     internal var nextEpisodeAutoPlayJob: Job? = null
     internal var sourceStreamsJob: Job? = null
+    internal var sourceChipErrorDismissJob: Job? = null
     internal var sourceStreamsCacheRequestKey: String? = null
     
     
@@ -161,9 +170,11 @@ class PlayerRuntimeController(
     internal var streamReuseLastLinkEnabled: Boolean = false
     internal var streamAutoPlayModeSetting: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL
     internal var streamAutoPlayNextEpisodeEnabledSetting: Boolean = false
+    internal var streamAutoPlayPreferBingeGroupForNextEpisodeSetting: Boolean = false
     internal var nextEpisodeThresholdModeSetting: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE
     internal var nextEpisodeThresholdPercentSetting: Float = 98f
     internal var nextEpisodeThresholdMinutesBeforeEndSetting: Float = 2f
+    internal var currentStreamBingeGroup: String? = navigationArgs.bingeGroup
     internal var hasAppliedRememberedAudioSelection: Boolean = false
     internal var hasInitializedAudioAmplificationForSession: Boolean = false
 
@@ -193,7 +204,9 @@ class PlayerRuntimeController(
     init {
         refreshScrobbleItem()
         initializePlayer(currentStreamUrl, currentHeaders)
-        loadSavedProgressFor(currentSeason, currentEpisode)
+        if (!navigationArgs.startFromBeginning) {
+            loadSavedProgressFor(currentSeason, currentEpisode)
+        }
         fetchParentalGuide(contentId, contentType, currentSeason, currentEpisode)
         observeSubtitleSettings()
         fetchAddonSubtitles()
@@ -206,5 +219,6 @@ class PlayerRuntimeController(
     fun onCleared() {
         releasePlayer()
         mediaSourceFactory.shutdown()
+        sourceChipErrorDismissJob?.cancel()
     }
 }

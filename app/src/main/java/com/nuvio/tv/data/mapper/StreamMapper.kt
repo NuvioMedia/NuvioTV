@@ -25,7 +25,10 @@ fun BehaviorHintsDto.toDomain(): StreamBehaviorHints = StreamBehaviorHints(
     notWebReady = notWebReady,
     bingeGroup = bingeGroup,
     countryWhitelist = countryWhitelist,
-    proxyHeaders = proxyHeaders?.toDomain()
+    proxyHeaders = proxyHeaders?.toDomain(),
+    videoHash = videoHash,
+    videoSize = videoSize,
+    filename = filename
 )
 
 fun ProxyHeadersDto.toDomain(): ProxyHeaders = ProxyHeaders(

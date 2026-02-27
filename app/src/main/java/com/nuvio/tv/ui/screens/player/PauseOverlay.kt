@@ -48,10 +48,12 @@ import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import com.nuvio.tv.domain.model.MetaCastMember
 import com.nuvio.tv.ui.theme.NuvioColors
-import java.text.SimpleDateFormat
+import android.text.format.DateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.delay
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 
 @Composable
 fun PauseOverlay(
@@ -148,7 +150,8 @@ fun PauseOverlay(
 @Composable
 private fun PauseOverlayClock(modifier: Modifier = Modifier) {
     var nowMillis by remember { mutableStateOf(System.currentTimeMillis()) }
-    val formatter = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+    val context = LocalContext.current
+    val formatter = remember(context) { DateFormat.getTimeFormat(context) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -186,7 +189,7 @@ private fun PauseMetadataView(
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = "You're watching",
+                text = stringResource(R.string.pause_you_are_watching),
                 style = MaterialTheme.typography.bodyLarge,
                 color = NuvioColors.TextTertiary
             )
@@ -242,7 +245,7 @@ private fun PauseMetadataView(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
-                    text = "Cast",
+                    text = stringResource(R.string.pause_cast_label),
                     style = MaterialTheme.typography.titleSmall,
                     color = NuvioColors.TextTertiary
                 )
@@ -309,7 +312,7 @@ private fun CastDetailView(
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = "Back to details",
+                text = stringResource(R.string.pause_back_to_details),
                 style = MaterialTheme.typography.bodyMedium,
                 color = NuvioColors.TextSecondary,
                 modifier = Modifier.clickable(onClick = onBack)
@@ -347,7 +350,7 @@ private fun CastDetailView(
 
                 if (!member.character.isNullOrBlank()) {
                     Text(
-                        text = "as ${member.character}",
+                        text = stringResource(R.string.pause_as_character, member.character ?: ""),
                         style = MaterialTheme.typography.bodyLarge,
                         color = NuvioColors.TextSecondary,
                         modifier = Modifier.padding(top = 8.dp),

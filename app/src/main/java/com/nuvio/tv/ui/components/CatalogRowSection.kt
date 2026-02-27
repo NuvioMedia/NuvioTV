@@ -36,8 +36,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import com.nuvio.tv.R
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
@@ -49,6 +50,7 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.util.formatAddonTypeLabel
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -67,6 +69,8 @@ fun CatalogRowSection(
     trailerPreviewUrls: Map<String, String> = emptyMap(),
     onRequestTrailerPreview: (MetaPreview) -> Unit = {},
     onItemFocus: (MetaPreview) -> Unit = {},
+    isItemWatched: (MetaPreview) -> Boolean = { false },
+    onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     enableRowFocusRestorer: Boolean = true,
     initialScrollIndex: Int = 0,
@@ -76,34 +80,42 @@ fun CatalogRowSection(
     upFocusRequester: FocusRequester? = null,
     listState: LazyListState = rememberLazyListState(initialFirstVisibleItemIndex = initialScrollIndex)
 ) {
+    fun rowItemFocusKey(index: Int, item: MetaPreview): String {
+        return "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}_${item.id}_$index"
+    }
+
     val seeAllCardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
     val currentOnItemFocused by rememberUpdatedState(onItemFocused)
+    val currentOnItemFocus by rememberUpdatedState(onItemFocus)
 
     val internalRowFocusRequester = remember { FocusRequester() }
     val resolvedRowFocusRequester = rowFocusRequester ?: internalRowFocusRequester
-    val itemFocusRequestersById = remember { mutableMapOf<String, FocusRequester>() }
-    var lastRequestedFocusItemId by remember { mutableStateOf<String?>(null) }
+    val itemFocusRequestersByKey = remember { mutableMapOf<String, FocusRequester>() }
+    var lastRequestedFocusItemKey by remember { mutableStateOf<String?>(null) }
     var lastFocusedItemIndex by remember { mutableIntStateOf(-1) }
     LaunchedEffect(catalogRow.items) {
-        val validIds = catalogRow.items.mapTo(mutableSetOf()) { it.id }
-        itemFocusRequestersById.keys.retainAll(validIds)
-        if (lastRequestedFocusItemId !in validIds) {
-            lastRequestedFocusItemId = null
+        val validKeys = catalogRow.items.mapIndexedTo(mutableSetOf()) { index, item ->
+            rowItemFocusKey(index, item)
+        }
+        itemFocusRequestersByKey.keys.retainAll(validKeys)
+        if (lastRequestedFocusItemKey !in validKeys) {
+            lastRequestedFocusItemKey = null
         }
     }
 
     LaunchedEffect(focusedItemIndex, catalogRow.items) {
         if (focusedItemIndex >= 0 && focusedItemIndex < catalogRow.items.size) {
-            val targetItemId = catalogRow.items[focusedItemIndex].id
-            if (lastRequestedFocusItemId == targetItemId) return@LaunchedEffect
-            val requester = itemFocusRequestersById.getOrPut(targetItemId) { FocusRequester() }
+            val targetItem = catalogRow.items[focusedItemIndex]
+            val targetItemKey = rowItemFocusKey(focusedItemIndex, targetItem)
+            if (lastRequestedFocusItemKey == targetItemKey) return@LaunchedEffect
+            val requester = itemFocusRequestersByKey.getOrPut(targetItemKey) { FocusRequester() }
             repeat(2) { withFrameNanos { } }
             val focused = runCatching { requester.requestFocus() }.isSuccess
             if (focused) {
-                lastRequestedFocusItemId = targetItemId
+                lastRequestedFocusItemKey = targetItemKey
             }
         } else {
-            lastRequestedFocusItemId = null
+            lastRequestedFocusItemKey = null
         }
     }
 
@@ -113,13 +125,19 @@ fun CatalogRowSection(
         Modifier
     }
 
-    val catalogTitle = remember(catalogRow.catalogName, catalogRow.apiType, showCatalogTypeSuffix) {
-        val formattedName = catalogRow.catalogName.replaceFirstChar { it.uppercase() }
-        if (showCatalogTypeSuffix) {
-            "$formattedName - ${catalogRow.apiType.replaceFirstChar { it.uppercase() }}"
-        } else {
-            formattedName
+    val strTypeMovie = stringResource(R.string.type_movie)
+    val strTypeSeries = stringResource(R.string.type_series)
+    val typeLabel = remember(catalogRow.rawType, catalogRow.apiType, strTypeMovie, strTypeSeries) {
+        val raw = catalogRow.rawType.takeIf { it.isNotBlank() } ?: catalogRow.apiType
+        when (raw.lowercase()) {
+            "movie" -> strTypeMovie
+            "series" -> strTypeSeries
+            else -> formatAddonTypeLabel(raw)
         }
+    }
+    val catalogTitle = remember(catalogRow.catalogName, typeLabel, showCatalogTypeSuffix) {
+        val formattedName = catalogRow.catalogName.replaceFirstChar { it.uppercase() }
+        if (showCatalogTypeSuffix && typeLabel.isNotEmpty()) "$formattedName - $typeLabel" else formattedName
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -140,7 +158,7 @@ fun CatalogRowSection(
                 )
                 if (showAddonName) {
                     Text(
-                        text = "from ${catalogRow.addonName}",
+                        text = stringResource(R.string.catalog_from_addon, catalogRow.addonName),
                         style = MaterialTheme.typography.labelMedium,
                         color = NuvioColors.TextTertiary
                     )
@@ -158,9 +176,10 @@ fun CatalogRowSection(
                         Modifier.focusRestorer {
                             val fallbackIndex = listState.firstVisibleItemIndex
                                 .coerceIn(0, (catalogRow.items.size - 1).coerceAtLeast(0))
-                            val fallbackItemId = catalogRow.items.getOrNull(fallbackIndex)?.id
-                            if (fallbackItemId != null) {
-                                itemFocusRequestersById.getOrPut(fallbackItemId) { FocusRequester() }
+                            val fallbackItem = catalogRow.items.getOrNull(fallbackIndex)
+                            if (fallbackItem != null) {
+                                val fallbackItemKey = rowItemFocusKey(fallbackIndex, fallbackItem)
+                                itemFocusRequestersByKey.getOrPut(fallbackItemKey) { FocusRequester() }
                             } else {
                                 resolvedRowFocusRequester
                             }
@@ -169,13 +188,13 @@ fun CatalogRowSection(
                         Modifier
                     }
                 ),
-            contentPadding = PaddingValues(horizontal = 48.dp),
+            contentPadding = PaddingValues(start = 48.dp, end = 200.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             itemsIndexed(
                 items = catalogRow.items,
-                key = { _, item ->
-                    "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}_${item.id}"
+                key = { index, item ->
+                    rowItemFocusKey(index, item)
                 },
                 contentType = { _, _ -> "content_card" }
             ) { index, item ->
@@ -189,19 +208,20 @@ fun CatalogRowSection(
                     focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
                     trailerPreviewUrl = trailerPreviewUrls[item.id],
                     onRequestTrailerPreview = onRequestTrailerPreview,
-                    onFocus = onItemFocus,
-                    onClick = { onItemClick(item.id, item.apiType, catalogRow.addonBaseUrl) },
-                    modifier = Modifier
-                        .onFocusChanged { focusState ->
-                            if (focusState.isFocused) {
-                                if (lastFocusedItemIndex != index) {
-                                    lastFocusedItemIndex = index
-                                    currentOnItemFocused(index)
-                                }
-                            }
+                    isWatched = isItemWatched(item),
+                    onFocus = { focusedItem ->
+                        currentOnItemFocus(focusedItem)
+                        if (lastFocusedItemIndex != index) {
+                            lastFocusedItemIndex = index
+                            currentOnItemFocused(index)
                         }
-                        .then(directionalFocusModifier),
-                    focusRequester = itemFocusRequestersById.getOrPut(item.id) { FocusRequester() }
+                    },
+                    onClick = { onItemClick(item.id, item.apiType, catalogRow.addonBaseUrl) },
+                    onLongPress = { onItemLongPress(item, catalogRow.addonBaseUrl) },
+                    modifier = Modifier.then(directionalFocusModifier),
+                    focusRequester = itemFocusRequestersByKey.getOrPut(
+                        rowItemFocusKey(index, item)
+                    ) { FocusRequester() }
                 )
             }
 
@@ -236,13 +256,13 @@ fun CatalogRowSection(
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = "See All",
+                                    contentDescription = stringResource(R.string.action_see_all),
                                     modifier = Modifier.size(32.dp),
                                     tint = NuvioColors.TextSecondary
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "See All",
+                                    text = stringResource(R.string.action_see_all),
                                     style = MaterialTheme.typography.titleSmall,
                                     color = NuvioColors.TextSecondary
                                 )

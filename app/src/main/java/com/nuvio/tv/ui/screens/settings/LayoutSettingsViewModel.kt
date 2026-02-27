@@ -24,8 +24,7 @@ data class LayoutSettingsUiState(
     val sidebarCollapsedByDefault: Boolean = false,
     val modernSidebarEnabled: Boolean = false,
     val modernSidebarBlurEnabled: Boolean = false,
-    val modernLandscapePostersEnabled: Boolean = true,
-    val modernNextRowPreviewEnabled: Boolean = false,
+    val modernLandscapePostersEnabled: Boolean = false,
     val heroSectionEnabled: Boolean = true,
     val searchDiscoverEnabled: Boolean = true,
     val posterLabelsEnabled: Boolean = true,
@@ -42,7 +41,8 @@ data class LayoutSettingsUiState(
     val posterCardCornerRadiusDp: Int = 12,
     val blurUnwatchedEpisodes: Boolean = false,
     val detailPageTrailerButtonEnabled: Boolean = false,
-    val preferExternalMetaAddonDetail: Boolean = false
+    val preferExternalMetaAddonDetail: Boolean = false,
+    val hideUnreleasedContent: Boolean = false
 )
 
 data class CatalogInfo(
@@ -58,7 +58,6 @@ sealed class LayoutSettingsEvent {
     data class SetModernSidebarEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetModernSidebarBlurEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetModernLandscapePostersEnabled(val enabled: Boolean) : LayoutSettingsEvent()
-    data class SetModernNextRowPreviewEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetHeroSectionEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetSearchDiscoverEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetPosterLabelsEnabled(val enabled: Boolean) : LayoutSettingsEvent()
@@ -76,6 +75,7 @@ sealed class LayoutSettingsEvent {
     data class SetBlurUnwatchedEpisodes(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetDetailPageTrailerButtonEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetPreferExternalMetaAddonDetail(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetHideUnreleasedContent(val enabled: Boolean) : LayoutSettingsEvent()
     data object ResetPosterCardStyle : LayoutSettingsEvent()
 }
 
@@ -132,11 +132,6 @@ class LayoutSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             layoutPreferenceDataStore.modernLandscapePostersEnabled.distinctUntilChanged().collectLatest { enabled ->
                 updateUiStateIfChanged { it.copy(modernLandscapePostersEnabled = enabled) }
-            }
-        }
-        viewModelScope.launch {
-            layoutPreferenceDataStore.modernNextRowPreviewEnabled.distinctUntilChanged().collectLatest { enabled ->
-                updateUiStateIfChanged { it.copy(modernNextRowPreviewEnabled = enabled) }
             }
         }
         viewModelScope.launch {
@@ -219,6 +214,11 @@ class LayoutSettingsViewModel @Inject constructor(
                 updateUiStateIfChanged { it.copy(preferExternalMetaAddonDetail = enabled) }
             }
         }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.hideUnreleasedContent.distinctUntilChanged().collectLatest { enabled ->
+                updateUiStateIfChanged { it.copy(hideUnreleasedContent = enabled) }
+            }
+        }
         loadAvailableCatalogs()
     }
 
@@ -230,7 +230,6 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetModernSidebarEnabled -> setModernSidebarEnabled(event.enabled)
             is LayoutSettingsEvent.SetModernSidebarBlurEnabled -> setModernSidebarBlurEnabled(event.enabled)
             is LayoutSettingsEvent.SetModernLandscapePostersEnabled -> setModernLandscapePostersEnabled(event.enabled)
-            is LayoutSettingsEvent.SetModernNextRowPreviewEnabled -> setModernNextRowPreviewEnabled(event.enabled)
             is LayoutSettingsEvent.SetHeroSectionEnabled -> setHeroSectionEnabled(event.enabled)
             is LayoutSettingsEvent.SetSearchDiscoverEnabled -> setSearchDiscoverEnabled(event.enabled)
             is LayoutSettingsEvent.SetPosterLabelsEnabled -> setPosterLabelsEnabled(event.enabled)
@@ -247,12 +246,13 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SetBlurUnwatchedEpisodes -> setBlurUnwatchedEpisodes(event.enabled)
             is LayoutSettingsEvent.SetDetailPageTrailerButtonEnabled -> setDetailPageTrailerButtonEnabled(event.enabled)
             is LayoutSettingsEvent.SetPreferExternalMetaAddonDetail -> setPreferExternalMetaAddonDetail(event.enabled)
+            is LayoutSettingsEvent.SetHideUnreleasedContent -> setHideUnreleasedContent(event.enabled)
             LayoutSettingsEvent.ResetPosterCardStyle -> resetPosterCardStyle()
         }
     }
 
     private fun selectLayout(layout: HomeLayout) {
-        if (_uiState.value.selectedLayout == layout) return
+        if (_uiState.value.selectedLayout == layout && _uiState.value.hasChosen) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setLayout(layout)
         }
@@ -295,13 +295,6 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.modernLandscapePostersEnabled == enabled) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setModernLandscapePostersEnabled(enabled)
-        }
-    }
-
-    private fun setModernNextRowPreviewEnabled(enabled: Boolean) {
-        if (_uiState.value.modernNextRowPreviewEnabled == enabled) return
-        viewModelScope.launch {
-            layoutPreferenceDataStore.setModernNextRowPreviewEnabled(enabled)
         }
     }
 
@@ -409,6 +402,13 @@ class LayoutSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             layoutPreferenceDataStore.setPreferExternalMetaAddonDetail(enabled)
             metaRepository.clearCache()
+        }
+    }
+
+    private fun setHideUnreleasedContent(enabled: Boolean) {
+        if (_uiState.value.hideUnreleasedContent == enabled) return
+        viewModelScope.launch {
+            layoutPreferenceDataStore.setHideUnreleasedContent(enabled)
         }
     }
 

@@ -4,6 +4,8 @@ import androidx.compose.runtime.Immutable
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeLayout
+import com.nuvio.tv.domain.model.LibraryListTab
+import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.WatchProgress
 
@@ -16,8 +18,7 @@ data class HomeUiState(
     val selectedItemId: String? = null,
     val installedAddonsCount: Int = 0,
     val homeLayout: HomeLayout = HomeLayout.MODERN,
-    val modernLandscapePostersEnabled: Boolean = true,
-    val modernNextRowPreviewEnabled: Boolean = false,
+    val modernLandscapePostersEnabled: Boolean = false,
     val heroItems: List<MetaPreview> = emptyList(),
     val heroCatalogKeys: List<String> = emptyList(),
     val heroSectionEnabled: Boolean = true,
@@ -33,7 +34,19 @@ data class HomeUiState(
     val posterCardWidthDp: Int = 126,
     val posterCardHeightDp: Int = 189,
     val posterCardCornerRadiusDp: Int = 12,
-    val gridItems: List<GridItem> = emptyList()
+    val librarySourceMode: LibrarySourceMode = LibrarySourceMode.LOCAL,
+    val libraryListTabs: List<LibraryListTab> = emptyList(),
+    val posterLibraryMembership: Map<String, Boolean> = emptyMap(),
+    val movieWatchedStatus: Map<String, Boolean> = emptyMap(),
+    val posterLibraryPending: Set<String> = emptySet(),
+    val movieWatchedPending: Set<String> = emptySet(),
+    val showPosterListPicker: Boolean = false,
+    val posterListPickerTitle: String? = null,
+    val posterListPickerMembership: Map<String, Boolean> = emptyMap(),
+    val posterListPickerPending: Boolean = false,
+    val posterListPickerError: String? = null,
+    val gridItems: List<GridItem> = emptyList(),
+    val hideUnreleasedContent: Boolean = false
 )
 
 @Immutable
@@ -63,6 +76,9 @@ data class NextUpInfo(
     val episodeTitle: String?,
     val episodeDescription: String? = null,
     val thumbnail: String?,
+    val released: String? = null,
+    val hasAired: Boolean = true,
+    val airDateLabel: String? = null,
     val lastWatched: Long
 )
 
@@ -103,4 +119,8 @@ sealed class HomeEvent {
         val isNextUp: Boolean = false
     ) : HomeEvent()
     data object OnRetry : HomeEvent()
+}
+
+fun homeItemStatusKey(itemId: String, itemType: String): String {
+    return "${itemType.lowercase()}|$itemId"
 }

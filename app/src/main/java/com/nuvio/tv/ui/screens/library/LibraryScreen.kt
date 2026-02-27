@@ -70,7 +70,18 @@ import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
+import com.nuvio.tv.ui.util.formatAddonTypeLabel
 import kotlinx.coroutines.delay
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
+
+@Composable
+private fun localizedTypeLabel(key: String): String = when (key.lowercase()) {
+    LibraryTypeTab.ALL_KEY -> stringResource(R.string.library_type_all)
+    "movie" -> stringResource(R.string.type_movie)
+    "series" -> stringResource(R.string.type_series)
+    else -> formatAddonTypeLabel(key)
+}
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -126,7 +137,7 @@ fun LibraryScreen(
             ) {
                 LoadingIndicator()
                 Text(
-                    text = "Syncing Trakt library...",
+                    text = stringResource(R.string.library_syncing),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
@@ -151,14 +162,14 @@ fun LibraryScreen(
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Library",
+                    text = stringResource(R.string.library_title),
                     style = MaterialTheme.typography.headlineMedium,
                     color = if (showBuiltInHeader) NuvioColors.TextPrimary else Color.Transparent,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 0.5.sp
                 )
                 Text(
-                    text = if (uiState.sourceMode == LibrarySourceMode.TRAKT) "TRAKT" else "LOCAL",
+                    text = if (uiState.sourceMode == LibrarySourceMode.TRAKT) "TRAKT" else stringResource(R.string.library_source_local),
                     style = MaterialTheme.typography.labelLarge,
                     color = if (showBuiltInHeader) NuvioColors.TextTertiary else Color.Transparent,
                     fontWeight = FontWeight.Medium,
@@ -172,8 +183,10 @@ fun LibraryScreen(
                 sourceMode = uiState.sourceMode,
                 listTabs = uiState.listTabs,
                 typeTabs = uiState.availableTypeTabs,
+                sortOptions = uiState.availableSortOptions,
                 selectedListKey = uiState.selectedListKey,
                 selectedTypeTab = uiState.selectedTypeTab,
+                selectedSortOption = uiState.selectedSortOption,
                 primaryFocusRequester = primaryFocusRequester,
                 expandedPicker = expandedPicker,
                 onExpandedChange = { picker, shouldExpand ->
@@ -185,6 +198,10 @@ fun LibraryScreen(
                 },
                 onSelectType = { type ->
                     viewModel.onSelectTypeTab(type)
+                    expandedPicker = null
+                },
+                onSelectSort = { sort ->
+                    viewModel.onSelectSortOption(sort)
                     expandedPicker = null
                 }
             )
@@ -203,14 +220,14 @@ fun LibraryScreen(
 
         item {
             if (uiState.visibleItems.isEmpty()) {
-                val selectedTypeLabel = uiState.selectedTypeTab?.label?.lowercase() ?: "items"
+                val selectedTypeLabel = uiState.selectedTypeTab?.let { localizedTypeLabel(it.key) }?.lowercase() ?: stringResource(R.string.library_type_items)
                 val title = when (uiState.sourceMode) {
-                    LibrarySourceMode.LOCAL -> "No $selectedTypeLabel yet"
-                    LibrarySourceMode.TRAKT -> "No $selectedTypeLabel in this list"
+                    LibrarySourceMode.LOCAL -> stringResource(R.string.library_empty_local_title, selectedTypeLabel)
+                    LibrarySourceMode.TRAKT -> stringResource(R.string.library_empty_trakt_title, selectedTypeLabel)
                 }
                 val subtitle = when (uiState.sourceMode) {
-                    LibrarySourceMode.LOCAL -> "Start saving your favorites to see them here"
-                    LibrarySourceMode.TRAKT -> "Use + in details to add items to watchlist or lists"
+                    LibrarySourceMode.LOCAL -> stringResource(R.string.library_empty_local_subtitle)
+                    LibrarySourceMode.TRAKT -> stringResource(R.string.library_empty_trakt_subtitle)
                 }
                 EmptyScreenState(
                     title = title,
@@ -308,16 +325,20 @@ private fun LibrarySelectorsRow(
     sourceMode: LibrarySourceMode,
     listTabs: List<LibraryListTab>,
     typeTabs: List<LibraryTypeTab>,
+    sortOptions: List<LibrarySortOption>,
     selectedListKey: String?,
     selectedTypeTab: LibraryTypeTab?,
+    selectedSortOption: LibrarySortOption,
     primaryFocusRequester: FocusRequester,
     expandedPicker: String?,
     onExpandedChange: (String, Boolean) -> Unit,
     onSelectList: (String) -> Unit,
-    onSelectType: (LibraryTypeTab) -> Unit
+    onSelectType: (LibraryTypeTab) -> Unit,
+    onSelectSort: (LibrarySortOption) -> Unit
 ) {
     val selectedListLabel = listTabs.firstOrNull { it.key == selectedListKey }?.title ?: "Select"
-    val selectedTypeLabel = selectedTypeTab?.label ?: "All"
+    val selectedTypeLabel = selectedTypeTab?.let { localizedTypeLabel(it.key) } ?: stringResource(R.string.library_type_all)
+    val selectedSortLabel = selectedSortOption.label
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -329,7 +350,7 @@ private fun LibrarySelectorsRow(
                     .weight(1f)
                     .padding(start = 48.dp)
                     .focusRequester(primaryFocusRequester),
-                title = "List",
+                title = stringResource(R.string.library_filter_list),
                 value = selectedListLabel,
                 expanded = expandedPicker == "list",
                 options = listTabs.map { LibraryOption(it.title, it.key) },
@@ -340,24 +361,38 @@ private fun LibrarySelectorsRow(
 
         LibraryDropdownPicker(
             modifier = if (sourceMode == LibrarySourceMode.TRAKT) {
-                Modifier
-                    .weight(1f)
-                    .padding(end = 48.dp)
+                Modifier.weight(1f)
             } else {
                 Modifier
                     .width(420.dp)
                     .padding(start = 48.dp, end = 48.dp)
                     .focusRequester(primaryFocusRequester)
             },
-            title = "Type",
+            title = stringResource(R.string.library_filter_type),
             value = selectedTypeLabel,
             expanded = expandedPicker == "type",
-            options = typeTabs.map { LibraryOption(it.label, it.key) },
+            options = typeTabs.map { LibraryOption(localizedTypeLabel(it.key), it.key) },
             onExpandedChange = { onExpandedChange("type", it) },
             onSelect = { option ->
                 typeTabs.firstOrNull { it.key == option.value }?.let(onSelectType)
             }
         )
+
+        if (sourceMode == LibrarySourceMode.TRAKT) {
+            LibraryDropdownPicker(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 48.dp),
+                title = stringResource(R.string.library_filter_sort),
+                value = selectedSortLabel,
+                expanded = expandedPicker == "sort",
+                options = sortOptions.map { LibraryOption(it.label, it.key) },
+                onExpandedChange = { onExpandedChange("sort", it) },
+                onSelect = { option ->
+                    sortOptions.firstOrNull { it.key == option.value }?.let(onSelectSort)
+                }
+            )
+        }
     }
 }
 
@@ -494,7 +529,7 @@ private fun LibraryActionsRow(
                 contentColor = NuvioColors.TextPrimary
             )
         ) {
-            Text("Manage Lists")
+            Text(stringResource(R.string.library_manage_lists))
         }
         Button(
             onClick = onRefresh,
@@ -546,7 +581,7 @@ private fun ManageListsDialog(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(
-                    text = "Manage Trakt Lists",
+                    text = stringResource(R.string.library_manage_trakt_lists),
                     style = MaterialTheme.typography.titleLarge,
                     color = NuvioColors.TextPrimary
                 )
@@ -561,7 +596,7 @@ private fun ManageListsDialog(
 
                 if (personalTabs.isEmpty()) {
                     Text(
-                        text = "No personal lists yet.",
+                        text = stringResource(R.string.library_no_lists),
                         style = MaterialTheme.typography.bodyMedium,
                         color = NuvioTheme.extendedColors.textSecondary
                     )
@@ -607,7 +642,7 @@ private fun ManageListsDialog(
                             containerColor = NuvioColors.BackgroundCard,
                             contentColor = NuvioColors.TextPrimary
                         )
-                    ) { Text("Create") }
+                    ) { Text(stringResource(R.string.library_list_create)) }
                     Button(
                         onClick = onEdit,
                         enabled = !pending && selectedKey != null,
@@ -615,7 +650,7 @@ private fun ManageListsDialog(
                             containerColor = NuvioColors.BackgroundCard,
                             contentColor = NuvioColors.TextPrimary
                         )
-                    ) { Text("Edit") }
+                    ) { Text(stringResource(R.string.library_list_edit)) }
                     Button(
                         onClick = onMoveUp,
                         enabled = !pending && selectedKey != null,
@@ -623,7 +658,7 @@ private fun ManageListsDialog(
                             containerColor = NuvioColors.BackgroundCard,
                             contentColor = NuvioColors.TextPrimary
                         )
-                    ) { Text("Move Up") }
+                    ) { Text(stringResource(R.string.library_list_move_up)) }
                     Button(
                         onClick = onMoveDown,
                         enabled = !pending && selectedKey != null,
@@ -631,7 +666,7 @@ private fun ManageListsDialog(
                             containerColor = NuvioColors.BackgroundCard,
                             contentColor = NuvioColors.TextPrimary
                         )
-                    ) { Text("Move Down") }
+                    ) { Text(stringResource(R.string.library_list_move_down)) }
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -642,7 +677,7 @@ private fun ManageListsDialog(
                             containerColor = Color(0xFF4A2323),
                             contentColor = NuvioColors.TextPrimary
                         )
-                    ) { Text("Delete") }
+                    ) { Text(stringResource(R.string.library_list_delete)) }
                     Button(
                         onClick = onDismiss,
                         enabled = !pending,
@@ -651,7 +686,7 @@ private fun ManageListsDialog(
                             containerColor = NuvioColors.BackgroundCard,
                             contentColor = NuvioColors.TextPrimary
                         )
-                    ) { Text("Close") }
+                    ) { Text(stringResource(R.string.library_list_close)) }
                 }
             }
         }
@@ -721,7 +756,7 @@ private fun ListEditorDialog(
                     keyboardController?.hide()
                 }
             ),
-            label = { androidx.compose.material3.Text("Name") },
+            label = { androidx.compose.material3.Text(stringResource(R.string.library_list_name_label)) },
             colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                 focusedTextColor = NuvioColors.TextPrimary,
                 unfocusedTextColor = NuvioColors.TextPrimary,
@@ -759,7 +794,7 @@ private fun ListEditorDialog(
             readOnly = !descriptionEditing,
             minLines = 3,
             maxLines = 5,
-            label = { androidx.compose.material3.Text("Description") },
+            label = { androidx.compose.material3.Text(stringResource(R.string.library_list_description_label)) },
             colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                 focusedTextColor = NuvioColors.TextPrimary,
                 unfocusedTextColor = NuvioColors.TextPrimary,
@@ -774,7 +809,7 @@ private fun ListEditorDialog(
         )
 
         Text(
-            text = "Privacy",
+            text = stringResource(R.string.library_list_privacy),
             style = MaterialTheme.typography.bodyMedium,
             color = NuvioTheme.extendedColors.textSecondary
         )
@@ -818,8 +853,8 @@ private fun ConfirmDeleteDialog(
 ) {
     NuvioDialog(
         onDismiss = onCancel,
-        title = "Delete this list?",
-        subtitle = "This removes the list and all list items from Trakt.",
+        title = stringResource(R.string.library_delete_title),
+        subtitle = stringResource(R.string.library_delete_subtitle),
         width = 420.dp
     ) {
         Button(
@@ -831,7 +866,7 @@ private fun ConfirmDeleteDialog(
                 contentColor = NuvioColors.TextPrimary
             )
         ) {
-            Text("Delete")
+            Text(stringResource(R.string.library_list_delete))
         }
     }
 }

@@ -45,7 +45,6 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val legacyModernSidebarEnabledKey = booleanPreferencesKey("glass_sidepanel_enabled")
     private val modernSidebarBlurEnabledKey = booleanPreferencesKey("modern_sidebar_blur_enabled")
     private val modernLandscapePostersEnabledKey = booleanPreferencesKey("modern_landscape_posters_enabled")
-    private val modernNextRowPreviewEnabledKey = booleanPreferencesKey("modern_next_row_preview_enabled")
     private val heroSectionEnabledKey = booleanPreferencesKey("hero_section_enabled")
     private val searchDiscoverEnabledKey = booleanPreferencesKey("search_discover_enabled")
     private val posterLabelsEnabledKey = booleanPreferencesKey("poster_labels_enabled")
@@ -63,6 +62,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val blurUnwatchedEpisodesKey = booleanPreferencesKey("blur_unwatched_episodes")
     private val detailPageTrailerButtonEnabledKey = booleanPreferencesKey("detail_page_trailer_button_enabled")
     private val preferExternalMetaAddonDetailKey = booleanPreferencesKey("prefer_external_meta_addon_detail")
+    private val hideUnreleasedContentKey = booleanPreferencesKey("hide_unreleased_content")
 
     private fun <T> profileFlow(extract: (prefs: androidx.datastore.preferences.core.Preferences) -> T): Flow<T> =
         profileManager.activeProfileId.flatMapLatest { pid ->
@@ -126,11 +126,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     val modernLandscapePostersEnabled: Flow<Boolean> = profileFlow { prefs ->
-        prefs[modernLandscapePostersEnabledKey] ?: true
-    }
-
-    val modernNextRowPreviewEnabled: Flow<Boolean> = profileFlow { prefs ->
-        prefs[modernNextRowPreviewEnabledKey] ?: false
+        prefs[modernLandscapePostersEnabledKey] ?: false
     }
 
     val heroSectionEnabled: Flow<Boolean> = profileFlow { prefs ->
@@ -201,6 +197,10 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     val preferExternalMetaAddonDetail: Flow<Boolean> = profileFlow { prefs ->
         prefs[preferExternalMetaAddonDetailKey] ?: false
+    }
+
+    val hideUnreleasedContent: Flow<Boolean> = profileFlow { prefs ->
+        prefs[hideUnreleasedContentKey] ?: false
     }
 
     suspend fun setLayout(layout: HomeLayout) {
@@ -285,12 +285,6 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setModernLandscapePostersEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[modernLandscapePostersEnabledKey] = enabled
-        }
-    }
-
-    suspend fun setModernNextRowPreviewEnabled(enabled: Boolean) {
-        store().edit { prefs ->
-            prefs[modernNextRowPreviewEnabledKey] = enabled
         }
     }
 
@@ -397,6 +391,12 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setPreferExternalMetaAddonDetail(enabled: Boolean) {
         store().edit { prefs ->
             prefs[preferExternalMetaAddonDetailKey] = enabled
+        }
+    }
+
+    suspend fun setHideUnreleasedContent(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[hideUnreleasedContentKey] = enabled
         }
     }
 

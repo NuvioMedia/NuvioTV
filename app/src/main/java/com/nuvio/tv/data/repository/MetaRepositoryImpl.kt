@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.repository
 
+import android.content.Context
 import android.util.Log
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.network.safeApiCall
@@ -10,6 +11,8 @@ import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.AddonResource
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.MetaRepository
+import com.nuvio.tv.R
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -20,6 +23,7 @@ import javax.inject.Singleton
 
 @Singleton
 class MetaRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val api: AddonApi,
     private val addonRepository: AddonRepository
 ) : MetaRepository {
@@ -51,7 +55,8 @@ class MetaRepositoryImpl @Inject constructor(
             is NetworkResult.Success -> {
                 val metaDto = result.data.meta
                 if (metaDto != null) {
-                    val meta = metaDto.toDomain()
+                    val episodeLabel = context.getString(R.string.episodes_episode)
+                    val meta = metaDto.toDomain(episodeLabel)
                     metaCache[cacheKey] = meta
                     emit(NetworkResult.Success(meta))
                 } else {
@@ -121,7 +126,8 @@ class MetaRepositoryImpl @Inject constructor(
                     is NetworkResult.Success -> {
                         val metaDto = result.data.meta
                         if (metaDto != null) {
-                            val meta = metaDto.toDomain()
+                            val episodeLabel = context.getString(R.string.episodes_episode)
+                    val meta = metaDto.toDomain(episodeLabel)
                             addonMetaCache[cacheKey] = meta
                             metaCache[cacheKey] = meta
                             emit(NetworkResult.Success(meta))
@@ -147,7 +153,8 @@ class MetaRepositoryImpl @Inject constructor(
                 is NetworkResult.Success -> {
                     val metaDto = result.data.meta
                     if (metaDto != null) {
-                        val meta = metaDto.toDomain()
+                        val episodeLabel = context.getString(R.string.episodes_episode)
+                    val meta = metaDto.toDomain(episodeLabel)
                         addonMetaCache[cacheKey] = meta
                         metaCache[cacheKey] = meta
                         Log.d(
