@@ -951,7 +951,14 @@ fun PlayerScreen(
             AudioSelectionDialog(
                 tracks = uiState.audioTracks,
                 selectedIndex = uiState.selectedAudioTrackIndex,
+                audioAmplificationDb = uiState.audioAmplificationDb,
+                isAmplificationAvailable = uiState.isAudioAmplificationAvailable,
+                persistAmplification = uiState.persistAudioAmplification,
                 onTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectAudioTrack(it)) },
+                onAmplificationChange = { viewModel.onEvent(PlayerEvent.OnSetAudioAmplificationDb(it)) },
+                onPersistAmplificationChange = {
+                    viewModel.onEvent(PlayerEvent.OnSetPersistAudioAmplification(it))
+                },
                 onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissDialog) }
             )
         }

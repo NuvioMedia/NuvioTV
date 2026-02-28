@@ -1,7 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
 import android.content.Context
-import android.media.audiofx.LoudnessEnhancer
 import androidx.lifecycle.SavedStateHandle
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
@@ -177,10 +176,11 @@ class PlayerRuntimeController(
     internal var nextEpisodeThresholdMinutesBeforeEndSetting: Float = 2f
     internal var currentStreamBingeGroup: String? = navigationArgs.bingeGroup
     internal var hasAppliedRememberedAudioSelection: Boolean = false
+    internal var hasInitializedAudioAmplificationForSession: Boolean = false
 
     internal var lastBufferLogTimeMs: Long = 0L
     
-    internal var loudnessEnhancer: LoudnessEnhancer? = null
+    internal val gainAudioProcessor = GainAudioProcessor()
     internal var trackSelector: DefaultTrackSelector? = null
     internal var currentMediaSession: MediaSession? = null
     internal var pauseOverlayJob: Job? = null

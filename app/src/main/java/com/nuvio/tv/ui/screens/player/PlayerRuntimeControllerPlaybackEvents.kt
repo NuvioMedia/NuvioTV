@@ -13,6 +13,20 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+internal const val AUDIO_AMPLIFICATION_MIN_DB = 0
+internal const val AUDIO_AMPLIFICATION_MAX_DB = 10
+
+internal fun PlayerRuntimeController.applyAudioAmplification(db: Int) {
+    val clampedDb = db.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
+    gainAudioProcessor.setGainDb(clampedDb)
+    _uiState.update {
+        it.copy(
+            audioAmplificationDb = clampedDb,
+            isAudioAmplificationAvailable = true
+        )
+    }
+}
+
 internal fun PlayerRuntimeController.startProgressUpdates() {
     progressJob?.cancel()
     progressJob = scope.launch {
@@ -433,6 +447,25 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         is PlayerEvent.OnSelectAudioTrack -> {
             selectAudioTrack(event.index)
             _uiState.update { it.copy(showAudioDialog = false, showSubtitleDelayOverlay = false) }
+        }
+        is PlayerEvent.OnSetAudioAmplificationDb -> {
+            val clampedDb = event.db.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
+            applyAudioAmplification(clampedDb)
+            if (_uiState.value.persistAudioAmplification) {
+                scope.launch {
+                    playerSettingsDataStore.setAudioAmplificationDb(clampedDb)
+                }
+            }
+        }
+        is PlayerEvent.OnSetPersistAudioAmplification -> {
+            val currentDb = _uiState.value.audioAmplificationDb
+            _uiState.update { it.copy(persistAudioAmplification = event.enabled) }
+            scope.launch {
+                playerSettingsDataStore.setPersistAudioAmplification(
+                    enabled = event.enabled,
+                    dbToPersist = if (event.enabled) currentDb else null
+                )
+            }
         }
         is PlayerEvent.OnSelectSubtitleTrack -> {
             autoSubtitleSelected = true
