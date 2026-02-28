@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -206,6 +207,7 @@ internal fun HeroTitleBlock(
         }
 
         Row(
+            modifier = Modifier.defaultMinSize(minHeight = 30.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(metaSpacing)
         ) {
@@ -222,6 +224,19 @@ internal fun HeroTitleBlock(
                 hasLeadingMeta = true
             }
 
+            preview.episodeText?.takeIf { it.isNotBlank() }?.let { episode ->
+                if (hasLeadingMeta) {
+                    HeroMetaDivider(metaScale)
+                }
+                Text(
+                    text = episode,
+                    style = labelMedium,
+                    color = NuvioColors.TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                hasLeadingMeta = true
+            }
             preview.genres.firstOrNull()?.takeIf { it.isNotBlank() }?.let { genre ->
                 if (hasLeadingMeta) {
                     HeroMetaDivider(metaScale)

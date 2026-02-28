@@ -255,6 +255,7 @@ fun ContinueWatchingCard(
         remainingText ?: nextUpBadgeText ?: strNextUp
     }
     val progressFraction = progress?.progressPercentage ?: 0f
+    val episodeThumbnail = (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail
     val imageModel = when {
         nextUp != null && !nextUp.hasAired -> firstNonBlank(
             nextUp.backdrop,
@@ -264,6 +265,7 @@ fun ContinueWatchingCard(
             progress?.poster
         )
         else -> firstNonBlank(
+            episodeThumbnail,
             nextUp?.thumbnail,
             progress?.backdrop,
             progress?.poster,
