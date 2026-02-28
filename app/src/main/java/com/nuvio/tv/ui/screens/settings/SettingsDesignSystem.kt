@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -130,7 +131,7 @@ internal fun SettingsBrandPanel(
             }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = "Settings",
+                text = stringResource(R.string.nav_settings),
                 style = MaterialTheme.typography.titleLarge,
                 color = titleColor
             )
@@ -170,7 +171,7 @@ internal fun SettingsBrandPanel(
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            text = "Rounded UI",
+            text = stringResource(R.string.settings_rounded_ui),
             style = MaterialTheme.typography.labelMedium,
             letterSpacing = 1.2.sp,
             color = subtitleColor

@@ -37,14 +37,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -237,7 +235,7 @@ private fun EpisodeStreamsView(
 
         uiState.episodeStreamsError != null -> {
             Text(
-                text = uiState.episodeStreamsError ?: "Failed to load streams",
+                text = uiState.episodeStreamsError ?: stringResource(R.string.panel_failed_load_streams),
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.85f)
             )
@@ -322,7 +320,7 @@ private fun EpisodesListView(
 
         uiState.episodesError != null -> {
             Text(
-                text = uiState.episodesError ?: "Failed to load episodes",
+                text = uiState.episodesError ?: stringResource(R.string.panel_failed_load_episodes),
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.85f)
             )
@@ -436,7 +434,7 @@ private fun EpisodesSeasonTabs(
                 scale = CardDefaults.scale(focusedScale = 1.0f)
             ) {
                 Text(
-                    text = if (season == 0) "Specials" else "Season $season",
+                    text = if (season == 0) stringResource(R.string.episodes_specials) else stringResource(R.string.episodes_season, season),
                     style = MaterialTheme.typography.labelLarge,
                     color = when {
                         isSelected -> Color.Black
@@ -527,16 +525,8 @@ private fun EpisodeItem(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(8.dp)
-                            .drawWithCache {
-                                val radius = 6.dp.toPx()
-                                val bgColor = Color.Black.copy(alpha = 0.75f)
-                                onDrawBehind {
-                                    drawRoundRect(
-                                        color = bgColor,
-                                        cornerRadius = CornerRadius(radius, radius)
-                                    )
-                                }
-                            }
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color.Black.copy(alpha = 0.75f))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
@@ -553,16 +543,8 @@ private fun EpisodeItem(
                             .align(Alignment.TopEnd)
                             .padding(6.dp)
                             .size(22.dp)
-                            .drawWithCache {
-                                val radius = size.minDimension / 2f
-                                val bgColor = NuvioColors.Primary
-                                onDrawBehind {
-                                    drawRoundRect(
-                                        color = bgColor,
-                                        cornerRadius = CornerRadius(radius, radius)
-                                    )
-                                }
-                            },
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(NuvioColors.Primary),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -581,7 +563,7 @@ private fun EpisodeItem(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = episode.title.ifBlank { "Episode" },
+                    text = episode.title.ifBlank { stringResource(R.string.episodes_episode) },
                     style = MaterialTheme.typography.titleMedium,
                     color = NuvioColors.TextPrimary,
                     maxLines = 1,

@@ -33,7 +33,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -96,20 +95,22 @@ fun ProfileSelectionScreen(
     val gradientMid = lerp(NuvioColors.Background, animatedAvatarColor, 0.14f)
     val halfFadeStrong = animatedAvatarColor.copy(alpha = 0.26f)
     val halfFadeSoft = animatedAvatarColor.copy(alpha = 0.08f)
-    val backgroundColor = NuvioColors.Background
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .drawWithCache {
-                val verticalGradient = Brush.verticalGradient(
+            .background(NuvioColors.Background)
+            .background(
+                brush = Brush.verticalGradient(
                     colorStops = arrayOf(
                         0f to gradientTop,
                         0.42f to gradientMid,
-                        1f to backgroundColor
+                        1f to NuvioColors.Background
                     )
                 )
-                val horizontalGradient = Brush.horizontalGradient(
+            )
+            .background(
+                brush = Brush.horizontalGradient(
                     colorStops = arrayOf(
                         0f to halfFadeStrong,
                         0.45f to halfFadeSoft,
@@ -117,12 +118,7 @@ fun ProfileSelectionScreen(
                         1f to Color.Transparent
                     )
                 )
-                onDrawBehind {
-                    drawRect(color = backgroundColor, size = size)
-                    drawRect(brush = verticalGradient, size = size)
-                    drawRect(brush = horizontalGradient, size = size)
-                }
-            }
+            )
     ) {
         Column(
             modifier = Modifier

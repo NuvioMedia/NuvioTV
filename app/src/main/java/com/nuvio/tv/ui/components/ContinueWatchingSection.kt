@@ -74,13 +74,13 @@ fun ContinueWatchingSection(
     onItemClick: (ContinueWatchingItem) -> Unit,
     onDetailsClick: (ContinueWatchingItem) -> Unit = onItemClick,
     onRemoveItem: (ContinueWatchingItem) -> Unit,
+    onStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
     modifier: Modifier = Modifier,
     focusedItemIndex: Int = -1,
     onItemFocused: (itemIndex: Int) -> Unit = {}
 ) {
     if (items.isEmpty()) return
 
-    val itemFocusRequester = remember { FocusRequester() }
     val focusRequesters = remember(items.size) { List(items.size) { FocusRequester() } }
     var lastFocusedIndex by remember { mutableIntStateOf(-1) }
     var lastRequestedFocusIndex by remember { mutableIntStateOf(-1) }
@@ -90,13 +90,13 @@ fun ContinueWatchingSection(
     val listState = rememberLazyListState()
 
     // Restore focus to specific item if requested
-    LaunchedEffect(focusedItemIndex, items) {
+    LaunchedEffect(focusedItemIndex) {
         if (focusedItemIndex >= 0 && focusedItemIndex < items.size) {
             if (lastRequestedFocusIndex == focusedItemIndex) return@LaunchedEffect
             var focused = false
             for (attempt in 0 until 3) {
                 withFrameNanos { }
-                focused = runCatching { itemFocusRequester.requestFocus() }.isSuccess
+                focused = runCatching { focusRequesters[focusedItemIndex].requestFocus() }.isSuccess
                 if (focused) break
             }
             if (focused) {
@@ -125,7 +125,11 @@ fun ContinueWatchingSection(
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .focusRestorer(),
+                .focusRestorer {
+                        val idx = if (lastFocusedIndex >= 0 && lastFocusedIndex < focusRequesters.size)
+                            lastFocusedIndex else 0
+                        focusRequesters.getOrNull(idx) ?: FocusRequester.Default
+                    },
             contentPadding = PaddingValues(horizontal = 48.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             state = listState
@@ -142,8 +146,7 @@ fun ContinueWatchingSection(
                 }
             ) { index, progress ->
                 val focusModifier = when {
-                    pendingFocusIndex == index && index < focusRequesters.size -> Modifier.focusRequester(focusRequesters[index])
-                    index == focusedItemIndex -> Modifier.focusRequester(itemFocusRequester)
+                    index < focusRequesters.size -> Modifier.focusRequester(focusRequesters[index])
                     else -> Modifier
                 }
 
@@ -177,6 +180,10 @@ fun ContinueWatchingSection(
             },
             onDetails = {
                 onDetailsClick(menuItem)
+                optionsItem = null
+            },
+            onStartFromBeginning = {
+                onStartFromBeginning(menuItem)
                 optionsItem = null
             }
         )
@@ -327,6 +334,7 @@ fun ContinueWatchingCard(
                     }
                 }
                 if (native.action == AndroidKeyEvent.ACTION_UP && longPressTriggered && isSelectKey(native.keyCode)) {
+                    longPressTriggered = false
                     return@onPreviewKeyEvent true
                 }
                 false
@@ -448,7 +456,8 @@ fun ContinueWatchingOptionsDialog(
     item: ContinueWatchingItem,
     onDismiss: () -> Unit,
     onRemove: () -> Unit,
-    onDetails: () -> Unit
+    onDetails: () -> Unit,
+    onStartFromBeginning: () -> Unit = {}
 ) {
     val title = when (item) {
         is ContinueWatchingItem.InProgress -> item.progress.name
@@ -477,6 +486,19 @@ fun ContinueWatchingOptionsDialog(
             )
         ) {
             Text(stringResource(R.string.cw_action_go_to_details))
+        }
+
+        if (item is ContinueWatchingItem.InProgress) {
+            Button(
+                onClick = onStartFromBeginning,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioColors.BackgroundCard,
+                    contentColor = NuvioColors.TextPrimary
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.cw_action_start_from_beginning))
+            }
         }
 
         Button(

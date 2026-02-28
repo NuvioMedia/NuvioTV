@@ -1,0 +1,746 @@
+  <resources>
+    <string name="type_movie">Filme</string>
+    <string name="type_series">Série</string>
+    <string name="type_unknown">Desconhecido</string>
+
+    <!-- HomeScreen -->
+    <string name="home_no_addons">Nenhum addon instalado. Adicione um para começar.</string>
+    <string name="home_no_catalog_addons">Nenhum addon de catálogo instalado. Instale um addon de catálogo para ver conteúdo.</string>
+    <string name="error_generic">Ocorreu um erro</string>
+
+    <!-- ErrorState -->
+    <string name="action_retry">Tentar novamente</string>
+
+    <!-- ContinueWatchingSection -->
+    <string name="continue_watching">Continuar assistindo</string>
+    <string name="cw_upcoming">Em breve</string>
+    <string name="cw_next_up">Próximo</string>
+    <string name="cw_resume">Retomar</string>
+    <string name="cw_airs_date">Vai ao ar %1$s</string>
+    <string name="cw_action_go_to_details">Ir para detalhes</string>
+    <string name="cw_action_remove">Remover</string>
+    <string name="cw_dialog_subtitle">Escolha o que deseja fazer com este item.</string>
+
+    <!-- CatalogRowSection -->
+    <string name="catalog_from_addon">de %1$s</string>
+    <string name="action_see_all">Ver tudo</string>
+
+    <!-- HeroSection -->
+    <string name="hero_creator">Criador: %1$s</string>
+    <string name="hero_director">Diretor: %1$s</string>
+    <string name="hero_writer">Roteirista: %1$s</string>
+    <string name="hero_play">Reproduzir</string>
+    <string name="hero_play_episode">Reproduzir T%1$d, E%2$d</string>
+    <string name="hero_add_to_library">Adicionar à biblioteca</string>
+    <string name="hero_remove_from_library">Remover da biblioteca</string>
+    <string name="hero_mark_watched">Marcar como assistido</string>
+    <string name="hero_mark_unwatched">Marcar como não assistido</string>
+    <string name="hero_play_trailer">Reproduzir trailer</string>
+    <string name="hero_press_back_trailer">Pressione voltar para sair do trailer</string>
+    <string name="cd_rating">Avaliação</string>
+
+    <!-- EpisodesSection -->
+    <string name="episodes_season">Temporada %1$d</string>
+    <string name="episodes_specials">Especiais</string>
+    <string name="episodes_episode">Episódio</string>
+    <string name="episodes_cd_watched">Assistido</string>
+    <string name="episodes_dialog_subtitle">Ações do episódio</string>
+    <string name="episodes_mark_watched">Marcar como assistido</string>
+    <string name="episodes_mark_unwatched">Marcar como não assistido</string>
+    <string name="episodes_mark_season_watched">Marcar temporada como assistida</string>
+    <string name="episodes_mark_season_unwatched">Marcar temporada como não assistida</string>
+    <string name="episodes_mark_previous_watched">Marcar anteriores desta temporada como assistidos</string>
+    <string name="episodes_play">Reproduzir</string>
+    <string name="episodes_season_actions">Ações da temporada</string>
+
+    <!-- MetaDetailsScreen -->
+    <string name="detail_tab_cast">Criador e elenco</string>
+    <string name="detail_tab_ratings">Avaliações</string>
+    <string name="detail_tab_more_like_this">Mais como este</string>
+    <string name="detail_section_network">Rede</string>
+    <string name="detail_section_production">Produção</string>
+    <string name="detail_lists_fallback">Listas</string>
+    <string name="detail_lists_subtitle">Selecione em quais listas este título deve aparecer.</string>
+    <string name="action_save">Salvar</string>
+    <string name="action_saving">Salvando…</string>
+
+    <!-- AppLanguage -->
+    <string name="appearance_language">Idioma do aplicativo</string>
+    <string name="appearance_language_subtitle">Substituir idioma do sistema</string>
+    <string name="appearance_language_system">Padrão do sistema</string>
+    <string name="appearance_language_dialog_title">Escolher idioma</string>
+    <string name="appearance_language_restart_hint">Reinicie o aplicativo para aplicar a mudança de idioma.</string>
+
+    <!-- ThemeSettingsScreen -->
+    <string name="appearance_title">Aparência</string>
+    <string name="appearance_subtitle">Escolha seu tema de cores e idioma</string>
+    <string name="cd_selected">Selecionado</string>
+
+    <!-- AboutScreen -->
+    <string name="about_title">Sobre</string>
+    <string name="about_subtitle">Informações do app, atualizações e links legais</string>
+    <string name="about_made_with_love">Feito com ❤️ pela Tapframe e amigos</string>
+    <string name="about_version">Versão %1$s</string>
+    <string name="about_check_updates">Verificar atualizações</string>
+    <string name="about_check_updates_subtitle">Baixar última versão</string>
+    <string name="about_privacy_policy">Política de Privacidade</string>
+    <string name="about_privacy_policy_subtitle">Veja nossa política de privacidade</string>
+
+    <!-- SettingsScreen categories -->
+    <string name="settings_account">Conta</string>
+    <string name="settings_account_subtitle">Status da conta e sincronização.</string>
+    <string name="settings_profiles">Perfis</string>
+    <string name="settings_profiles_subtitle">Gerenciar perfis de usuário.</string>
+    <string name="settings_layout">Layout</string>
+    <string name="settings_layout_subtitle">Estrutura da tela inicial e estilos de pôster.</string>
+    <string name="settings_plugins">Plugins</string>
+    <string name="settings_plugins_subtitle">Repositórios e provedores.</string>
+    <string name="settings_integration">Integração</string>
+    <string name="settings_playback">Reprodução</string>
+    <string name="settings_playback_subtitle">Player, legendas e reprodução automática.</string>
+    <string name="settings_trakt_subtitle">Abrir tela de conexão com Trakt.</string>
+    <string name="settings_about_subtitle">Versão e políticas.</string>
+    <string name="settings_debug">Depuração</string>
+    <string name="settings_debug_subtitle">Ferramentas de desenvolvedor e recursos experimentais.</string>
+    <string name="settings_plugins_section_subtitle">Gerenciar repositórios, provedores e estados de plugins.</string>
+    <string name="settings_account_section_subtitle">Status da conta e sincronização.</string>
+    <string name="settings_integrations_section">Integrações</string>
+    <string name="settings_integrations_section_subtitle">Escolher configurações TMDB ou MDBList</string>
+    <string name="settings_tmdb_subtitle">Controles de enriquecimento de metadados</string>
+    <string name="settings_mdblist_subtitle">Provedores de avaliações externas</string>
+
+    <!-- PlaybackSettingsScreen -->
+    <string name="playback_title">Configurações de Reprodução</string>
+    <string name="playback_subtitle">Configurar opções de reprodução de vídeo e legendas</string>
+    <string name="cd_decrease">Diminuir</string>
+    <string name="cd_increase">Aumentar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_none">Nenhum</string>
+
+    <!-- PlaybackSettingsSections -->
+    <string name="playback_section_general">Geral</string>
+    <string name="playback_section_general_desc">Comportamento principal da reprodução.</string>
+    <string name="playback_loading_overlay">Tela de Carregamento</string>
+    <string name="playback_loading_overlay_sub">Mostrar tela de carregamento até o primeiro quadro do vídeo aparecer.</string>
+    <string name="playback_pause_overlay">Tela de Pausa</string>
+    <string name="playback_pause_overlay_sub">Mostrar detalhes após 5 segundos em pausa.</string>
+    <string name="playback_show_clock_sub">Mostrar hora atual e hora de término no pause.</string>
+    <string name="playback_skip_intro">Pular Introdução</string>
+    <string name="playback_skip_intro_sub">Usar introdb.app para detectar introduções e recaps.</string>
+    <string name="playback_auto_frame_rate">Taxa de Quadros Automática</string>
+    <string name="playback_section_player">Player e Seleção de Stream</string>
+    <string name="playback_section_player_desc">Preferência de player, reprodução automática e filtragem de fontes.</string>
+    <string name="playback_player">Player</string>
+    <string name="playback_player_internal">Interno</string>
+    <string name="playback_player_external">Externo</string>
+    <string name="playback_player_ask">Perguntar sempre</string>
+    <string name="playback_section_audio">Áudio e Trailer</string>
+    <string name="playback_section_audio_desc">Comportamento de trailer e controles de áudio.</string>
+    <string name="playback_section_subtitles">Legendas</string>
+    <string name="playback_section_subtitles_desc">Idioma, estilo e modo de renderização.</string>
+    <string name="playback_afr_open">Aberto</string>
+    <string name="playback_afr_closed">Fechado</string>
+    <string name="playback_afr_off">Desativado</string>
+    <string name="playback_afr_off_sub">Não alterar taxa de atualização da tela.</string>
+    <string name="playback_afr_on_start">No início</string>
+    <string name="playback_afr_on_start_sub">Alterar quando a reprodução começar.</string>
+    <string name="playback_afr_on_start_stop">No início/parar</string>
+    <string name="playback_afr_on_start_stop_sub">Alterar no início e restaurar ao parar.</string>
+    <string name="playback_player_external_desc">Sempre abrir streams em um app externo</string>
+    <string name="playback_player_ask_desc">Escolher o player a cada vez</string>
+
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_trailer_section">Trailer</string>
+    <string name="audio_autoplay_trailers">Reprodução Automática de Trailers</string>
+    <string name="audio_autoplay_trailers_sub">Reproduzir trailers automaticamente em detalhes após inatividade.</string>
+    <string name="audio_trailer_delay">Atraso do Trailer</string>
+    <string name="audio_section">Áudio</string>
+    <string name="audio_lang_default">Padrão (arquivo de mídia)</string>
+    <string name="audio_lang_device">Idioma do dispositivo</string>
+    <string name="audio_preferred_lang">Idioma de Áudio Preferido</string>
+    <string name="audio_skip_silence">Pular Silêncio</string>
+    <string name="audio_skip_silence_sub">Pular trechos silenciosos do áudio durante a reprodução</string>
+    <string name="audio_advanced_section">Áudio Avançado</string>
+    <string name="audio_advanced_warning">Essas configurações podem causar problemas em alguns dispositivos. Altere apenas se souber o que está fazendo.</string>
+    <string name="audio_decoder_device_only">Somente decodificadores do dispositivo</string>
+    <string name="audio_decoder_prefer_device">Preferir decodificadores do dispositivo</string>
+    <string name="audio_decoder_prefer_app">Preferir decodificadores do app (FFmpeg)</string>
+    <string name="audio_decoder_priority">Prioridade de Decodificador</string>
+    <string name="audio_tunneled">Reprodução "Tunneled"</string>
+    <string name="audio_tunneled_sub">Sincroniza de áudio/vídeo diretamente no hardware. Pode melhorar a fluidez em alguns dispositivos.</string>
+    <string name="audio_dv_sub">Mapear Dolby Vision Profile 7 para HEVC padrão em dispositivos sem suporte DV</string>
+    <string name="audio_decoder_device_only_desc">Usar apenas decodificadores de hardware integrados. Mais compatível, mas pode não suportar todos os formatos.</string>
+    <string name="audio_decoder_prefer_device_desc">Usar decodificadores de hardware quando disponíveis, com fallback para FFmpeg. Recomendado para a maioria dos dispositivos.</string>
+    <string name="audio_decoder_prefer_app_desc">Usar decodificadores FFmpeg quando disponíveis. Melhor suporte de formatos, mas maior uso de CPU.</string>
+    <string name="audio_decoder_controls">Controla se decodificadores de hardware ou software (FFmpeg) são usados para áudio e vídeo</string>
+
+    <!-- PlaybackSubtitleSettings -->
+    <string name="sub_section">Legendas</string>
+    <string name="sub_not_set">Não definido</string>
+    <string name="sub_preferred_lang">Idioma Preferido</string>
+    <string name="sub_secondary_lang">Idioma Preferido Secundário</string>
+    <string name="sub_organization">Organização das Legendas</string>
+    <string name="sub_size">Tamanho</string>
+    <string name="sub_vertical_offset">Deslocamento Vertical</string>
+    <string name="sub_bold">Negrito</string>
+    <string name="sub_bold_sub">Usar fonte em negrito para legendas</string>
+    <string name="sub_text_color">Cor do Texto</string>
+    <string name="sub_bg_color">Cor de Fundo</string>
+    <string name="sub_outline">Contorno</string>
+    <string name="sub_outline_sub">Adicionar contorno ao texto da legenda para melhor visibilidade</string>
+    <string name="sub_outline_color">Cor do Contorno</string>
+    <string name="sub_advanced_section">Renderização Avançada de Legendas</string>
+    <string name="sub_libass">Usar libass para legendas ASS/SSA</string>
+    <string name="sub_libass_sub">Temporariamente desativado para manutenção</string>
+    <string name="sub_libass_mode">Modo de Renderização Libass</string>
+    <string name="sub_mode_overlay_gl">Overlay OpenGL (Recomendado)</string>
+    <string name="sub_mode_overlay_gl_sub">Melhor qualidade com suporte HDR. Renderiza legendas em uma thread separada.</string>
+    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
+    <string name="sub_mode_effects_gl">Efeitos OpenGL</string>
+    <string name="sub_mode_effects_gl_sub">Suporte a animações usando efeitos Media3. Mais rápido que Canvas.</string>
+    <string name="sub_mode_effects_canvas">Efeitos Canvas</string>
+    <string name="sub_mode_effects_canvas_sub">Suporte a animações usando efeitos Media3 com renderização Canvas.</string>
+    <string name="sub_mode_standard">Cues Padrão</string>
+    <string name="sub_mode_standard_sub">Renderização básica de legendas sem suporte a animações. Mais compatível.</string>
+    <string name="sub_org_none">Nenhum (ordem padrão)</string>
+    <string name="sub_org_by_lang">Por idioma</string>
+    <string name="sub_org_by_addon">Por addon</string>
+    <string name="sub_org_none_desc">Mostrar legendas na ordem padrão dos resultados do addon.</string>
+    <string name="sub_org_by_lang_desc">Agrupar legendas por idioma.</string>
+    <string name="sub_org_by_addon_desc">Agrupar legendas pela fonte do addon.</string>
+
+
+    <!-- PlaybackAutoPlaySettings -->
+    <string name="autoplay_reuse_last_link">Reutilizar Último Link</string>
+    <string name="autoplay_reuse_last_link_sub">Reproduzir automaticamente seu último stream enquanto em cache.</string>
+    <string name="autoplay_last_link_cache">Duração do Cache do Último Link</string>
+    <string name="autoplay_mode_manual">Manual (escolher stream)</string>
+    <string name="autoplay_mode_first">Reprodução automática da primeira fonte</string>
+    <string name="autoplay_mode_regex">Reprodução automática por regex</string>
+    <string name="autoplay_stream_selection">Seleção Automática de Stream</string>
+    <string name="autoplay_next_episode">Reprodução Automática do Próximo Episódio</string>
+    <string name="autoplay_next_episode_sub">Iniciar próximo episódio automaticamente quando o aviso aparecer.</string>
+    <string name="autoplay_threshold_pct">Porcentagem</string>
+    <string name="autoplay_threshold_min">Minutos antes do fim</string>
+    <string name="autoplay_threshold_mode">Modo de Limite do Próximo Episódio</string>
+    <string name="autoplay_threshold_pct_title">Limite em Porcentagem</string>
+    <string name="autoplay_threshold_pct_sub">Usado quando não existe timestamp de encerramento.</string>
+    <string name="autoplay_threshold_min_title">Limite em Minutos</string>
+    <string name="autoplay_threshold_min_sub">Usado quando não existe timestamp de encerramento.</string>
+    <string name="autoplay_scope_all">Todas as fontes</string>
+    <string name="autoplay_scope_addons">Somente addons instalados</string>
+    <string name="autoplay_scope_plugins">Somente plugins habilitados</string>
+    <string name="autoplay_scope">Escopo da Reprodução Automática</string>
+    <string name="autoplay_allowed_addons">Addons Permitidos</string>
+    <string name="autoplay_all_addons">Todos os addons instalados</string>
+    <string name="autoplay_allowed_plugins">Plugins Permitidos</string>
+    <string name="autoplay_all_plugins">Todos os plugins habilitados</string>
+    <string name="autoplay_regex_placeholder">Nenhum padrão definido. Exemplo: 4K|2160p|Remux</string>
+    <string name="autoplay_regex_title">Padrão Regex</string>
+    <string name="autoplay_no_items">Nenhum item disponível</string>
+    <string name="autoplay_mode_manual_desc">Sempre mostrar lista de fontes e deixar eu escolher.</string>
+    <string name="autoplay_mode_first_desc">Reproduzir automaticamente a primeira fonte disponível.</string>
+    <string name="autoplay_mode_regex_desc">Reproduzir a primeira fonte cujo texto corresponda ao padrão regex.</string>
+    <string name="autoplay_scope_all_desc">A reprodução automática pode usar tanto addons instalados quanto plugins habilitados.</string>
+    <string name="autoplay_scope_addons_desc">A reprodução automática considera apenas streams vindos dos addons instalados.</string>
+    <string name="autoplay_scope_plugins_desc">A reprodução automática considera apenas streams vindos de plugins habilitados.</string>
+    <string name="autoplay_threshold_pct_desc">Mostrar por porcentagem de reprodução quando não houver timestamp de encerramento.</string>
+    <string name="autoplay_threshold_min_desc">Mostrar este número de minutos antes do fim do episódio quando não houver timestamp de encerramento.</string>
+    <string name="autoplay_regex_matches">Corresponde ao nome/título/descrição/addon/url do stream. Exemplo: 4K|2160p|Remux</string>
+    <string name="autoplay_regex_presets">Predefinições</string>
+    <string name="autoplay_invalid_regex">Padrão regex inválido</string>
+
+    <!-- LayoutSettingsScreen -->
+    <string name="layout_title">Configurações de Layout</string>
+    <string name="layout_subtitle">Ajustar layout da tela inicial, visibilidade de conteúdo e comportamento dos pôsteres</string>
+    <string name="layout_classic">Visual Clássico</string>
+    <string name="layout_grid">Visual em Grade</string>
+    <string name="layout_modern">Visual Moderno</string>
+    <string name="layout_classic_desc">Percorrer categorias horizontalmente</string>
+    <string name="layout_grid_desc">Navegar em tudo em uma grade vertical com seção de destaque</string>
+    <string name="layout_modern_desc">Destaque fixo com uma única linha ativa para navegação mais rápida</string>
+    <string name="layout_section_home">Layout da Tela Inicial</string>
+    <string name="layout_section_home_desc">Escolher estrutura e fonte de destaque.</string>
+    <string name="layout_landscape_posters">Pôsteres em Paisagem</string>
+    <string name="layout_landscape_posters_sub">Alternar entre cartões em retrato e paisagem para o visual moderno.</string>
+    <string name="layout_preview_row">Mostrar Linha de Prévia</string>
+    <string name="layout_preview_row_sub">Mostrar prévia da linha abaixo no layout moderno da tela inicial.</string>
+    <string name="layout_hero_catalogs">Catálogos de Destaque</string>
+    <string name="layout_hero_catalogs_sub">Selecionar um ou mais catálogos para conteúdo de destaque.</string>
+    <string name="layout_section_content">Conteúdo da Tela Inicial</string>
+    <string name="layout_section_content_desc">Controlar o que aparece na tela inicial e na busca.</string>
+    <string name="layout_collapse_sidebar">Ocultar Barra Lateral</string>
+    <string name="layout_collapse_sidebar_sub">Ocultar barra lateral por padrão; mostrar quando focada.</string>
+    <string name="layout_modern_sidebar">Barra Lateral Moderna</string>
+    <string name="layout_modern_sidebar_sub">Ativar navegação flutuante na barra lateral.</string>
+    <string name="layout_modern_sidebar_blur">Desfoque da Barra Lateral Moderna</string>
+    <string name="layout_modern_sidebar_blur_sub">Alternar efeito de desfoque para superfícies da barra lateral moderna.</string>
+    <string name="layout_show_hero">Mostrar Seção de Destaque</string>
+    <string name="layout_show_hero_sub">Exibir carrossel de destaque no topo da tela inicial.</string>
+    <string name="layout_show_discover">Mostrar Descobrir na Busca</string>
+    <string name="layout_show_discover_sub">Mostrar seção de navegação quando a busca estiver vazia.</string>
+    <string name="layout_poster_labels">Mostrar Rótulos nos Pôsteres</string>
+    <string name="layout_poster_labels_sub">Mostrar títulos abaixo dos pôsteres em linhas, grade e ver tudo.</string>
+    <string name="layout_addon_name">Mostrar Nome do Addon</string>
+    <string name="layout_addon_name_sub">Mostrar nome da fonte abaixo dos títulos de catálogo.</string>
+    <string name="layout_catalog_type">Mostrar Tipo de Catálogo</string>
+    <string name="layout_catalog_type_sub">Mostrar sufixo de tipo ao lado do nome do catálogo (Filme/Série).</string>
+    <string name="layout_section_detail">Página de Detalhes</string>
+    <string name="layout_section_detail_desc">Configurações para telas de detalhes e episódios.</string>
+    <string name="layout_blur_unwatched">Desfoque em Episódios Não Assistidos</string>
+    <string name="layout_blur_unwatched_sub">Desfocar episódios até serem assistidos para evitar spoilers.</string>
+    <string name="layout_trailer_button">Mostrar Botão de Trailer</string>
+    <string name="layout_trailer_button_sub">Mostrar botão de trailer na página de detalhes (Quando disponível).</string>
+    <string name="layout_prefer_external_meta">Preferir metadados de addon externo</string>
+    <string name="layout_prefer_external_meta_sub">Usar metadados de addon externo em vez de addon de catálogo.</string>
+    <string name="layout_section_focused">Pôster Selecionados</string>
+    <string name="layout_section_focused_desc">Comportamento avançado para pôsteres selecionados.</string>
+    <string name="layout_expand_poster">Expandir pôster selecionado para fundo</string>
+    <string name="layout_expand_poster_sub">Expandir o pôster transformando em imagem de fundo (backdrop)</string>
+    <string name="layout_expand_delay">Atraso para Expandir Fundo</string>
+    <string name="layout_expand_delay_sub">Tempo de espera antes de expandir pôsteres em foco.</string>
+    <string name="layout_autoplay_trailer">Reprodução Automática de Trailer</string>
+    <string name="layout_autoplay_trailer_expanded">Reprodução Automática de Trailer em Cartão Expandido</string>
+    <string name="layout_autoplay_trailer_sub">Reproduzir prévia de trailer para conteúdo em foco quando disponível.</string>
+    <string name="layout_autoplay_trailer_expanded_sub">Reproduzir trailer dentro do fundo expandido quando disponível.</string>
+    <string name="layout_trailer_muted">Reproduzir Trailer Silenciado</string>
+    <string name="layout_trailer_muted_sub_preview">Silenciar áudio do trailer durante a prévia automática.</string>
+    <string name="layout_trailer_muted_sub_expanded">Silenciar áudio do trailer em cartões expandidos.</string>
+    <string name="layout_section_card_style">Estilo dos Cartões de Pôster</string>
+    <string name="layout_section_card_style_desc">Ajustar largura e raio dos cantos dos cartões.</string>
+    <string name="layout_open">Aberto</string>
+    <string name="layout_closed">Fechado</string>
+    <string name="layout_trailer_location">Local de Reprodução de Trailer Moderno</string>
+    <string name="layout_trailer_location_sub">Escolher onde a prévia do trailer será exibida na Tela Inicial Moderna.</string>
+    <string name="layout_trailer_expanded_card">Cartão Expandido</string>
+    <string name="layout_trailer_hero_media">Mídia de Destaque</string>
+    <string name="layout_preset_compact">Compacto</string>
+    <string name="layout_preset_dense">Denso</string>
+    <string name="layout_preset_standard">Padrão</string>
+    <string name="layout_preset_balanced">Balanceado</string>
+    <string name="layout_preset_comfort">Conforto</string>
+    <string name="layout_preset_large">Grande</string>
+    <string name="layout_preset_sharp">Marcante</string>
+    <string name="layout_preset_subtle">Sutil</string>
+    <string name="layout_preset_classic">Clássico</string>
+    <string name="layout_preset_rounded">Arredondado</string>
+    <string name="layout_preset_pill">Pílula</string>
+    <string name="layout_card_width">Largura</string>
+    <string name="layout_card_radius">Raio dos Cantos</string>
+    <string name="layout_reset_default">Redefinir para Padrão</string>
+    <string name="layout_custom">Personalizado</string>
+
+
+    <!-- MDBListSettingsScreen -->
+    <string name="mdblist_title">Avaliações MDBList</string>
+    <string name="mdblist_subtitle">Configurar avaliações externas exibidas no destaque de detalhes</string>
+    <string name="mdblist_enable_title">Ativar Avaliações MDBList</string>
+    <string name="mdblist_enable_subtitle">Buscar avaliações de provedores externos na tela de detalhes de metadados</string>
+    <string name="mdblist_api_key_title">Chave API</string>
+    <string name="mdblist_api_key_subtitle">Necessária para buscar avaliações do MDBList</string>
+    <string name="mdblist_trakt_title">Trakt</string>
+    <string name="mdblist_trakt_subtitle">Mostrar pontuação do Trakt</string>
+    <string name="mdblist_imdb_title">IMDb</string>
+    <string name="mdblist_imdb_subtitle">Mostrar pontuação do IMDb (e ocultar linha padrão do IMDb quando disponível)</string>
+    <string name="mdblist_tmdb_title">TMDB</string>
+    <string name="mdblist_tmdb_subtitle">Mostrar pontuação do TMDB</string>
+    <string name="mdblist_letterboxd_title">Letterboxd</string>
+    <string name="mdblist_letterboxd_subtitle">Mostrar pontuação do Letterboxd</string>
+    <string name="mdblist_tomatoes_title">Rotten Tomatoes</string>
+    <string name="mdblist_tomatoes_subtitle">Mostrar pontuação dos críticos</string>
+    <string name="mdblist_audience_title">Pontuação do Público</string>
+    <string name="mdblist_audience_subtitle">Mostrar pontuação do público</string>
+    <string name="mdblist_metacritic_title">Metacritic</string>
+    <string name="mdblist_metacritic_subtitle">Mostrar pontuação do Metacritic</string>
+    <string name="mdblist_dialog_title">Chave API MDBList</string>
+    <string name="mdblist_dialog_subtitle">Digite sua chave API para buscar avaliações externas</string>
+    <string name="mdblist_dialog_placeholder">Digite a chave API do MDBList</string>
+    <string name="mdblist_not_set">Não definido</string>
+    <string name="action_clear">Limpar</string>
+
+    <!-- TmdbSettingsScreen -->
+    <string name="tmdb_title">Enriquecimento TMDB</string>
+    <string name="tmdb_subtitle">Escolha quais campos de metadados devem vir do TMDB</string>
+    <string name="tmdb_enable_title">Ativar Enriquecimento TMDB</string>
+    <string name="tmdb_enable_subtitle">Usar TMDB como fonte de metadados para aprimorar dados de addons</string>
+    <string name="tmdb_language_title">Idioma</string>
+    <string name="tmdb_language_subtitle">Idioma dos metadados do TMDB para título, logo e campos habilitados</string>
+    <string name="tmdb_artwork_title">Arte</string>
+    <string name="tmdb_artwork_subtitle">Logos e imagens de fundo do TMDB</string>
+    <string name="tmdb_basic_info_title">Informações Básicas</string>
+    <string name="tmdb_basic_info_subtitle">Descrição, gêneros e avaliação do TMDB</string>
+    <string name="tmdb_details_title">Detalhes</string>
+    <string name="tmdb_details_subtitle">Duração, data de lançamento, país e idioma do TMDB</string>
+    <string name="tmdb_credits_title">Créditos</string>
+    <string name="tmdb_credits_subtitle">Elenco com fotos, diretor e roteirista do TMDB</string>
+    <string name="tmdb_productions_title">Produtoras</string>
+    <string name="tmdb_productions_subtitle">Produtoras do TMDB</string>
+    <string name="tmdb_networks_title">Streamings</string>
+    <string name="tmdb_networks_subtitle">logos dos Streamings do TMDB</string>
+    <string name="tmdb_episodes_title">Episódios</string>
+    <string name="tmdb_episodes_subtitle">Títulos, resumos, miniaturas e duração dos episódios do TMDB</string>
+    <string name="tmdb_more_like_this_title">Mais Como Este</string>
+    <string name="tmdb_more_like_this_subtitle">Recomendações do TMDB na página de detalhes</string>
+    <string name="tmdb_language_dialog_title">Idioma do TMDB</string>
+
+   <!-- TraktScreen -->
+    <string name="trakt_description">Sincronize sua lista de desejos, progresso de reprodução, continuar assistindo, scrobbles e listas pessoais com o Trakt.</string>
+    <string name="trakt_connected_as">Conectado como %1$s</string>
+    <string name="trakt_account_login">Login da Conta</string>
+    <string name="trakt_awaiting_instruction">Acesse trakt.tv/activate e insira este código:</string>
+    <string name="trakt_code_expires">O código expira em %1$s</string>
+    <string name="trakt_token_refreshes">O token de acesso do Trakt será atualizado em %1$s</string>
+    <string name="trakt_login_instruction">Pressione Login para iniciar a autenticação do dispositivo Trakt. Um QR code aparecerá aqui.</string>
+    <string name="trakt_missing_credentials">Faltando TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET em local.properties.</string>
+    <string name="trakt_continue_watching_window">Janela de Continuar Assistindo</string>
+    <string name="trakt_continue_watching_subtitle">Histórico do Trakt considerado para continuar assistindo</string>
+    <string name="trakt_unaired_next_up">Próximos Episódios Não Exibidos</string>
+    <string name="trakt_unaired_next_up_subtitle">Mostrar episódios futuros antes de irem ao ar</string>
+    <string name="trakt_unaired_shown">Exibidos</string>
+    <string name="trakt_unaired_hidden">Ocultos</string>
+    <string name="trakt_cached_label">Em cache</string>
+    <string name="trakt_stat_movies">Filmes</string>
+    <string name="trakt_stat_shows">Séries</string>
+    <string name="trakt_stat_episodes">Episódios</string>
+    <string name="trakt_stat_watched_hours">Horas Assistidas</string>
+    <string name="trakt_disconnect">Desconectar</string>
+    <string name="trakt_disconnect_title">Desconectar Trakt?</string>
+    <string name="trakt_disconnect_subtitle">Isso desconectará sua conta Trakt do Nuvio.</string>
+    <string name="trakt_login">Login</string>
+    <string name="trakt_retry">Tentar novamente</string>
+    <string name="trakt_back">Voltar</string>
+    <string name="trakt_cw_window_title">Janela de Continuar Assistindo</string>
+    <string name="trakt_cw_window_subtitle">Escolha quanto da atividade do Trakt deve aparecer em continuar assistindo.</string>
+    <string name="trakt_unaired_dialog_title">Próximos Episódios Não Exibidos</string>
+    <string name="trakt_unaired_dialog_subtitle">Escolha se Continuar Assistindo deve incluir episódios futuros antes do lançamento.</string>
+    <string name="trakt_show_unaired">Mostrar episódios não exibidos</string>
+    <string name="trakt_hide_unaired">Ocultar episódios não exibidos</string>
+    <string name="trakt_all_history">Todo o histórico</string>
+    <string name="trakt_days_format">%1$d dias</string>
+
+    <!-- DebugSettingsScreen -->
+    <string name="debug_title">Depuração</string>
+    <string name="debug_subtitle">Ferramentas de desenvolvedor e recursos experimentais (somente builds de depuração)</string>
+    <string name="debug_section_popup">Teste de Popup / Diálogo</string>
+    <string name="debug_playback_error_title">Tela de Erro de Reprodução</string>
+    <string name="debug_playback_error_subtitle">Mostrar um popup de erro de reprodução simulado</string>
+    <string name="debug_section_features">Alternância de Recursos</string>
+    <string name="debug_account_tab_title">Aba de Conta</string>
+    <string name="debug_account_tab_subtitle">Mostrar a aba Conta na navegação de Configurações</string>
+    <string name="debug_sync_code_title">Recursos de Código de Sincronização</string>
+    <string name="debug_sync_code_subtitle">Mostrar botões Gerar/Inserir Código de Sincronização nas configurações da Conta</string>
+    <string name="debug_section_account">Conta</string>
+    <string name="debug_manual_signin_title">Login Manual</string>
+    <string name="debug_manual_signin_subtitle">Entrar com e-mail e senha (autenticação Supabase)</string>
+    <string name="debug_email_placeholder">E-mail</string>
+    <string name="debug_password_placeholder">Senha</string>
+    <string name="debug_signing_in">Entrando\u2026</string>
+    <string name="debug_sign_in">Entrar</string>
+    <string name="debug_error_dialog_title">Erro de Reprodução</string>
+    <string name="debug_error_dialog_subtitle">Ocorreu um erro durante a reprodução.\n\nErro: Erro simulado de teste - isto não é uma falha real. A fonte retornou HTTP 503 (Serviço Indisponível).</string>
+    <string name="debug_dismiss">Fechar</string>
+
+    <!-- ProfileSettingsContent -->
+    <string name="profile_title">Perfis</string>
+    <string name="profile_subtitle">Gerenciar perfis de usuário para esta conta.</string>
+    <string name="profile_primary_label">Primário</string>
+    <string name="profile_shares_primary">Compartilha %1$s do primário</string>
+    <string name="profile_edit_label">Editar</string>
+    <string name="profile_add">Adicionar Perfil</string>
+    <string name="profile_create_title">Criar Perfil</string>
+    <string name="profile_edit_title">Editar Perfil %1$s</string>
+    <string name="profile_name_placeholder">Nome do perfil</string>
+    <string name="profile_avatar_color">Cor do Avatar</string>
+    <string name="profile_use_primary_addons">Usar addons do perfil primário</string>
+    <string name="profile_use_primary_plugins">Usar plugins do perfil primário</string>
+    <string name="profile_creating">Criando\u2026</string>
+    <string name="profile_create_btn">Criar</string>
+    <string name="profile_confirm">Confirmar</string>
+    <string name="profile_delete">Excluir</string>
+    <string name="profile_addons">addons</string>
+    <string name="profile_plugins">plugins</string>
+
+
+    <!-- AddonManagerScreen -->
+    <string name="addon_title">Addons</string>
+    <string name="addon_readonly_notice">Usando addons do perfil primário e não pode ser alterado</string>
+    <string name="addon_install_title">Instalar addon</string>
+    <string name="addon_install_placeholder">https://example.com</string>
+    <string name="addon_installing">Instalando</string>
+    <string name="addon_install_btn">Instalar</string>
+    <string name="addon_installed_section">Instalados</string>
+    <string name="addon_empty">Nenhum addon instalado. Adicione um para começar.</string>
+    <string name="addon_remove">Remover</string>
+    <string name="addon_manage_from_phone_title">Gerenciar pelo celular</string>
+    <string name="addon_manage_from_phone_subtitle">Escaneie um QR code para gerenciar addons e catálogos da Tela Inicial pelo celular</string>
+    <string name="addon_reorder_title">Reordenar catálogos da Tela Inicial</string>
+    <string name="addon_reorder_subtitle">Controla a ordem das linhas de catálogo na Tela Inicial (Clássico + Moderno + Grade)</string>
+    <string name="addon_qr_scan_instruction">Escaneie com seu celular para gerenciar addons e catálogos</string>
+    <string name="addon_qr_close">Fechar</string>
+    <string name="addon_confirm_title">Confirmar alterações de addons e catálogos</string>
+    <string name="addon_confirm_subtitle">As seguintes alterações foram feitas pelo seu celular:</string>
+    <string name="addon_confirm_added">Adicionado:</string>
+    <string name="addon_confirm_removed">Removido:</string>
+    <string name="addon_confirm_catalog_reordered">A ordem dos catálogos foi alterada</string>
+    <string name="addon_confirm_catalogs_disabled">Catálogos desativados na Tela Inicial:</string>
+    <string name="addon_confirm_catalogs_enabled">Catálogos ativados na Tela Inicial:</string>
+    <string name="addon_confirm_no_changes">Nenhuma alteração visível detectada</string>
+    <string name="addon_confirm_reject">Rejeitar</string>
+    <string name="addon_confirm_confirm">Confirmar</string>
+
+    <!-- CatalogOrderScreen -->
+    <string name="catalog_order_title">Reordenar Catálogos da Tela Inicial</string>
+    <string name="catalog_order_subtitle">Controla a ordem das linhas de catálogo na Tela Inicial (Clássico + Moderno + Grade).</string>
+    <string name="catalog_order_empty">Nenhum catálogo da Tela Inicial disponível ainda.</string>
+    <string name="catalog_order_disabled_on_home">Desativado na Tela Inicial</string>
+    <string name="catalog_order_enable">Ativar</string>
+    <string name="catalog_order_disable">Desativar</string>
+
+
+    <!-- StreamScreen -->
+    <string name="stream_retry">Tentar novamente</string>
+    <string name="stream_no_streams">Nenhum stream encontrado</string>
+    <string name="stream_no_streams_hint">Tente instalar mais addons para encontrar streams</string>
+    <string name="stream_finding_source">Encontrando fonte do stream</string>
+    <string name="stream_type_torrent">Torrent</string>
+    <string name="stream_type_youtube">YouTube</string>
+    <string name="stream_type_external">Externo</string>
+    <string name="stream_player_picker_title">Qual player deve ser usado?</string>
+    <string name="stream_player_internal">Interno</string>
+    <string name="stream_player_external">Externo</string>
+
+    <!-- PlayerScreen -->
+    <string name="player_ends_at">Termina às: %1$s</string>
+    <string name="player_via">via %1$s</string>
+    <string name="player_subtitle_delay">Atraso das Legendas</string>
+    <string name="player_error_title">Erro de Reprodução</string>
+    <string name="player_go_back">Voltar</string>
+    <string name="player_speed_title">Velocidade de Reprodução</string>
+    <string name="player_more_actions_title">Mais Ações</string>
+    <string name="player_more_speed">Velocidade de Reprodução</string>
+    <string name="player_more_aspect_ratio">Proporção da Tela</string>
+    <string name="player_more_open_external">Abrir em Player Externo</string>
+
+    <!-- StreamSourcesSidePanel -->
+    <string name="sources_title">Fontes</string>
+    <string name="sources_reload">Recarregar</string>
+    <string name="sources_close">Fechar</string>
+    <string name="sources_no_streams">Nenhum stream encontrado</string>
+
+    <!-- EpisodesSidePanel -->
+    <string name="episodes_panel_close">Fechar</string>
+    <string name="episodes_panel_back">Voltar</string>
+    <string name="episodes_panel_reload">Recarregar</string>
+    <string name="episodes_panel_no_streams">Nenhum stream encontrado</string>
+    <string name="episodes_panel_no_episodes">Nenhum episódio disponível</string>
+
+    <!-- AudioDialog -->
+    <string name="audio_dialog_title">Áudio</string>
+
+    <!-- SubtitleDialog / SubtitleStyleSidePanel -->
+    <string name="subtitle_dialog_title">Legendas</string>
+    <string name="subtitle_no_builtin">Nenhuma legenda embutida disponível</string>
+    <string name="subtitle_loading_addon">Carregando legendas dos addons\u2026</string>
+    <string name="subtitle_no_addon">Nenhuma legenda de addon disponível</string>
+    <string name="subtitle_text_color">Cor do Texto</string>
+    <string name="subtitle_outline_color">Cor do Contorno</string>
+    <string name="subtitle_reset_defaults">Redefinir Padrões</string>
+    <string name="subtitle_style_title">Estilo da Legenda</string>
+    <string name="subtitle_style_color">Cor</string>
+    <string name="subtitle_style_reset">Redefinir</string>
+
+    <!-- PauseOverlay -->
+    <string name="pause_you_are_watching">Você está assistindo</string>
+    <string name="pause_cast_label">Elenco</string>
+    <string name="pause_back_to_details">Voltar para detalhes</string>
+    <string name="pause_as_character">como %1$s</string>
+
+    <!-- NextEpisodeCardOverlay -->
+    <string name="next_episode_label">Próximo Episódio</string>
+
+
+    <!-- SearchScreen -->
+    <string name="search_keyboard_hint">Pressione Concluir no teclado para pesquisar</string>
+    <string name="search_placeholder">Pesquisar filmes &amp; séries</string>
+
+    <!-- LibraryScreen -->
+    <string name="library_syncing">Sincronizando biblioteca Trakt\u2026</string>
+    <string name="library_title">Biblioteca</string>
+    <string name="library_filter_list">Lista</string>
+    <string name="library_filter_type">Tipo</string>
+    <string name="library_filter_sort">Ordenar</string>
+    <string name="library_manage_lists">Gerenciar Listas</string>
+    <string name="library_manage_trakt_lists">Gerenciar Listas do Trakt</string>
+    <string name="library_no_lists">Nenhuma lista pessoal ainda.</string>
+    <string name="library_list_create">Criar</string>
+    <string name="library_list_edit">Editar</string>
+    <string name="library_list_move_up">Mover para cima</string>
+    <string name="library_list_move_down">Mover para baixo</string>
+    <string name="library_list_delete">Excluir</string>
+    <string name="library_list_close">Fechar</string>
+    <string name="library_list_name_label">Nome</string>
+    <string name="library_list_description_label">Descrição</string>
+    <string name="library_list_privacy">Privacidade</string>
+    <string name="library_delete_title">Excluir esta lista?</string>
+    <string name="library_delete_subtitle">Isso remove a lista e todos os itens da lista do Trakt.</string>
+    <string name="library_delete_confirm">Excluir</string>
+    <string name="library_source_local">LOCAL</string>
+    <string name="library_type_all">Todos</string>
+    <string name="library_type_items">itens</string>
+    <string name="library_empty_local_title">Nenhum %1$s ainda</string>
+    <string name="library_empty_trakt_title">Nenhum %1$s nesta lista</string>
+    <string name="library_empty_local_subtitle">Comece a salvar seus favoritos para vê-los aqui</string>
+    <string name="library_empty_trakt_subtitle">Use + nos detalhes para adicionar itens à lista de desejos ou listas</string>
+
+    <!-- AccountSettingsContent -->
+    <string name="account_loading">Carregando\u2026</string>
+    <string name="account_sync_description">Sincronize sua biblioteca, progresso de reprodução, addons e plugins entre dispositivos.</string>
+    <string name="account_signin_qr_title">Entrar com QR</string>
+    <string name="account_signin_qr_subtitle">Escaneie um QR code e complete o login por e-mail no seu celular</string>
+    <string name="account_signed_in_label">Conectado</string>
+    <string name="account_total_label">Total</string>
+    <string name="account_loading_sync">Carregando dados de sincronização\u2026</string>
+    <string name="account_sign_out">Sair</string>
+
+    <!-- AuthSignInScreen -->
+    <string name="auth_signin_title">Entrar</string>
+    <string name="auth_signin_tv_disabled">Entrada de e-mail/senha na TV está desativada. Continue com login via QR.</string>
+    <string name="auth_signin_qr_btn">Continuar com QR</string>
+
+    <!-- AuthQrSignInScreen -->
+    <string name="auth_qr_title">Entrar com QR</string>
+    <string name="auth_qr_account_login">Login da Conta</string>
+    <string name="auth_qr_finishing">Finalizando login\u2026</string>
+    <string name="auth_qr_code_label">Código: %1$s</string>
+    <string name="auth_qr_expires">Expira em %1$s</string>
+
+    <!-- SyncCodeGenerateScreen -->
+    <string name="sync_generate_title">Gerar Código de Sincronização</string>
+    <string name="sync_generate_subtitle">Crie um PIN para proteger seu código de sincronização. Compartilhe o código com seus outros dispositivos.</string>
+    <string name="sync_generate_code_label">Seu Código de Sincronização</string>
+    <string name="sync_generate_instruction">Digite este código e seu PIN em outro dispositivo para vinculá-los.</string>
+    <string name="sync_generate_done">Concluído</string>
+    <string name="sync_generate_pin_label">Escolha um PIN (4-8 caracteres)</string>
+    <string name="sync_generate_pin_placeholder">Digite o PIN</string>
+
+    <!-- SyncCodeClaimScreen -->
+    <string name="sync_claim_title">Vincular Dispositivo</string>
+    <string name="sync_claim_subtitle">Digite o código de sincronização e PIN do outro dispositivo para vincular este dispositivo.</string>
+    <string name="sync_claim_success">Dispositivo vinculado com sucesso! Seus addons e plugins agora serão sincronizados.</string>
+    <string name="sync_claim_done">Concluído</string>
+    <string name="sync_claim_code_label">Código de Sincronização</string>
+    <string name="sync_claim_code_placeholder">XXXX-XXXX-XXXX-XXXX-XXXX</string>
+    <string name="sync_claim_pin_label">PIN</string>
+    <string name="sync_claim_pin_placeholder">Digite o PIN</string>
+
+    <!-- PluginScreen -->
+    <string name="plugin_readonly_notice">Usando plugins do perfil primário e não pode ser alterado</string>
+    <string name="plugin_repositories_section">Repositórios (%1$d)</string>
+    <string name="plugin_providers_section">Provedores (%1$d)</string>
+    <string name="plugin_title">Plugins</string>
+    <string name="plugin_subtitle">Gerenciar scrapers e provedores locais</string>
+    <string name="plugin_add_repository">Adicionar repositório</string>
+    <string name="plugin_add_btn">Adicionar</string>
+    <string name="plugin_manage_from_phone_title">Gerenciar pelo celular</string>
+    <string name="plugin_manage_from_phone_subtitle">Escaneie um QR code para adicionar ou remover repositórios pelo celular</string>
+    <string name="plugin_qr_instruction">Escaneie com seu celular para gerenciar repositórios</string>
+    <string name="plugin_qr_close">Fechar</string>
+    <string name="plugin_confirm_title">Confirmar alterações de repositório</string>
+    <string name="plugin_confirm_subtitle">As seguintes alterações foram feitas pelo seu celular:</string>
+    <string name="plugin_confirm_added">Adicionado:</string>
+    <string name="plugin_confirm_removed">Removido:</string>
+    <string name="plugin_confirm_no_changes">Nenhuma alteração detectada</string>
+    <string name="plugin_confirm_total">Total de repositórios: %1$d</string>
+    <string name="plugin_confirm_reject">Rejeitar</string>
+    <string name="plugin_confirm_confirm">Confirmar</string>
+    <string name="plugin_updated_format">Atualizado: %1$s</string>
+    <string name="plugin_test_btn">Testar</string>
+    <string name="plugin_test_results">Resultados do Teste (%1$d streams)</string>
+
+    <!-- ProfileSelectionScreen -->
+    <string name="profile_selection_title">Quem está assistindo?</string>
+    <string name="profile_selection_subtitle">Selecione um perfil para continuar</string>
+    <string name="profile_selection_hint">Use o D-pad para escolher um perfil</string>
+    <string name="profile_selection_empty">Nenhum perfil encontrado</string>
+    <string name="profile_selection_primary_badge">PRIMÁRIO</string>
+
+    <!-- CastDetailScreen -->
+    <string name="cast_detail_error">Algo deu errado</string>
+    <string name="cast_detail_retry">Tentar novamente</string>
+    <string name="cast_detail_filmography">Filmografia</string>
+
+<!-- CatalogSeeAllScreen -->
+    <string name="catalog_see_all_from">de %1$s</string>
+    <string name="catalog_see_all_empty_title">Nenhum item disponível</string>
+    <string name="catalog_see_all_empty_subtitle">Tente um catálogo diferente ou volte mais tarde</string>
+
+    <!-- LayoutSelectionScreen -->
+    <string name="layout_selection_welcome">Bem-vindo ao Nuvio</string>
+    <string name="layout_selection_subtitle">Escolha o layout da sua tela inicial</string>
+    <string name="layout_selection_continue">Continuar</string>
+
+    <!-- UpdatePromptDialog -->
+    <string name="update_title">Atualização do App</string>
+    <string name="update_downloading">Baixando atualização</string>
+    <string name="update_unknown_sources">Permita instalações de fontes desconhecidas para continuar.</string>
+    <!-- AccountScreen -->
+    <string name="account_title">Conta</string>
+    <string name="account_sign_in_description">Entre para sincronizar sua biblioteca, progresso de reprodução, addons e plugins entre dispositivos. Biblioteca e progresso de reprodução só sincronizam quando o Trakt não está conectado.</string>
+    <string name="account_sync_code_title">Código de Sincronização</string>
+    <string name="account_sync_code_description">Sincronize entre dispositivos sem criar uma conta.</string>
+    <string name="account_linked_devices">Dispositivos vinculados (%1$d)</string>
+    <string name="account_no_linked_devices">Nenhum dispositivo vinculado</string>
+    <string name="account_unlink">Desvincular</string>
+
+    <!-- EpisodeRatingsSection -->
+    <string name="ratings_loading">Carregando avaliações de episódios...</string>
+    <string name="ratings_unavailable">Avaliações de episódios indisponíveis.</string>
+    <string name="ratings_season_summary">Temporada %1$d - %2$d episódios</string>
+
+    <!-- SearchDiscoverSection -->
+    <string name="discover_title">Descobrir</string>
+    <string name="discover_load_more">Carregar mais</string>
+    <string name="discover_loading">Carregando...</string>
+    <string name="discover_filter_type">Tipo</string>
+    <string name="discover_filter_catalog">Catálogo</string>
+    <string name="discover_filter_genre">Gênero</string>
+    <string name="discover_select_catalog">Selecionar</string>
+    <string name="discover_genre_default">Padrão</string>
+    <string name="discover_empty_no_catalog_title">Selecione um catálogo</string>
+    <string name="discover_empty_no_catalog_subtitle">Escolha um catálogo de descoberta para navegar</string>
+    <string name="discover_empty_no_content_title">Nenhum conteúdo encontrado</string>
+    <string name="discover_empty_no_content_subtitle">Tente um gênero ou catálogo diferente</string>
+
+    <!-- AddonManagerScreen -->
+    <string name="addon_confirm_total_addons">Total de addons: %1$d</string>
+    <string name="addon_confirm_total_catalogs">Total de catálogos: %1$d</string>
+    <string name="addon_catalogs_types">Catálogos: %1$d - Tipos: %2$s</string>
+
+    <!-- PluginScreen -->
+    <string name="plugin_and_more">... e mais %1$d</string>
+    <string name="plugin_providers_count">%1$d provedores</string>
+    <string name="plugin_enabled">Ativado</string>
+    <string name="plugin_disabled">Desativado</string>
+    <string name="plugin_no_repos">Nenhum repositório adicionado ainda.\nAdicione um repositório para começar.</string>
+
+    <!-- ProfileSettingsContent -->
+    <string name="profile_edit_title_id">Editar Perfil %1$d</string>
+
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_passthrough_info">Passagem direta de áudio (TrueHD, DTS, AC-3, etc.) é automática. Quando conectado a um receiver AV ou soundbar compatível via HDMI, o áudio sem perdas é enviado como está, sem decodificação.</string>
+    <string name="audio_dv_title">DV7 - HEVC Alternativo</string>
+
+    <!-- SidebarNavigation / MainActivity -->
+    <string name="nav_home">Início</string>
+    <string name="nav_discover">Descobrir</string>
+    <string name="nav_search">Buscar</string>
+    <string name="nav_library">Biblioteca</string>
+    <string name="nav_addons">Addons</string>
+    <string name="nav_settings">Configurações</string>
+    <string name="cd_expand_sidebar">Expandir barra lateral</string>
+
+    <string name="update_close">Fechar</string>
+    <string name="update_open_settings">Abrir Configurações</string>
+    <string name="update_install">Instalar</string>
+    <string name="update_ignore">Ignorar</string>
+</resources>

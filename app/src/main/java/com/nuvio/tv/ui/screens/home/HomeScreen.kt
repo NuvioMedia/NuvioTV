@@ -5,9 +5,14 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Divider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -19,6 +24,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -28,6 +35,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.HomeLayout
+import com.nuvio.tv.domain.model.LibraryListTab
+import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.ErrorState
 import com.nuvio.tv.ui.components.LoadingIndicator
@@ -62,6 +71,7 @@ fun HomeScreen(
             ""
         )
     },
+    onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = onContinueWatchingClick,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit = { _, _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -176,6 +186,7 @@ fun HomeScreen(
                                 posterCardStyle = posterCardStyle,
                                 onNavigateToDetail = onNavigateToDetail,
                                 onContinueWatchingClick = onContinueWatchingClick,
+                                onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
                                 onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
                                 isCatalogItemWatched = { item ->
                                     uiState.movieWatchedStatus[homeItemStatusKey(item.id, item.apiType)] == true
@@ -191,6 +202,7 @@ fun HomeScreen(
                                 posterCardStyle = posterCardStyle,
                                 onNavigateToDetail = onNavigateToDetail,
                                 onContinueWatchingClick = onContinueWatchingClick,
+                                onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
                                 onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
                                 isCatalogItemWatched = { item ->
                                     uiState.movieWatchedStatus[homeItemStatusKey(item.id, item.apiType)] == true
@@ -205,6 +217,7 @@ fun HomeScreen(
                                 uiState = uiState,
                                 onNavigateToDetail = onNavigateToDetail,
                                 onContinueWatchingClick = onContinueWatchingClick,
+                                onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
                                 isCatalogItemWatched = { item ->
                                     uiState.movieWatchedStatus[homeItemStatusKey(item.id, item.apiType)] == true
                                 },
@@ -228,6 +241,7 @@ fun HomeScreen(
             title = item.name,
             isInLibrary = uiState.posterLibraryMembership[statusKey] == true,
             isLibraryPending = statusKey in uiState.posterLibraryPending,
+            showManageLists = uiState.librarySourceMode == LibrarySourceMode.TRAKT,
             isMovie = isMovie,
             isWatched = uiState.movieWatchedStatus[statusKey] == true,
             isWatchedPending = statusKey in uiState.movieWatchedPending,
@@ -237,13 +251,30 @@ fun HomeScreen(
                 posterOptionsTarget = null
             },
             onToggleLibrary = {
-                viewModel.togglePosterLibrary(item, selectedPoster.addonBaseUrl)
+                if (uiState.librarySourceMode == LibrarySourceMode.TRAKT) {
+                    viewModel.openPosterListPicker(item, selectedPoster.addonBaseUrl)
+                } else {
+                    viewModel.togglePosterLibrary(item, selectedPoster.addonBaseUrl)
+                }
                 posterOptionsTarget = null
             },
             onToggleWatched = {
                 viewModel.togglePosterMovieWatched(item)
                 posterOptionsTarget = null
             }
+        )
+    }
+
+    if (uiState.showPosterListPicker) {
+        HomeLibraryListPickerDialog(
+            title = uiState.posterListPickerTitle ?: stringResource(R.string.detail_lists_fallback),
+            tabs = uiState.libraryListTabs,
+            membership = uiState.posterListPickerMembership,
+            isPending = uiState.posterListPickerPending,
+            error = uiState.posterListPickerError,
+            onToggle = { key -> viewModel.togglePosterListPickerMembership(key) },
+            onSave = { viewModel.savePosterListPickerMembership() },
+            onDismiss = { viewModel.dismissPosterListPicker() }
         )
     }
 }
@@ -255,6 +286,7 @@ private fun ClassicHomeRoute(
     posterCardStyle: PosterCardStyle,
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
+    onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean,
     onCatalogItemLongPress: (MetaPreview, String) -> Unit
@@ -267,6 +299,7 @@ private fun ClassicHomeRoute(
         trailerPreviewUrls = viewModel.trailerPreviewUrls,
         onNavigateToDetail = onNavigateToDetail,
         onContinueWatchingClick = onContinueWatchingClick,
+        onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
         onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
         onRemoveContinueWatching = { contentId, season, episode, isNextUp ->
             viewModel.onEvent(HomeEvent.OnRemoveContinueWatching(contentId, season, episode, isNextUp))
@@ -292,6 +325,7 @@ private fun GridHomeRoute(
     posterCardStyle: PosterCardStyle,
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
+    onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean,
     onCatalogItemLongPress: (MetaPreview, String) -> Unit
@@ -303,6 +337,7 @@ private fun GridHomeRoute(
         gridFocusState = gridFocusState,
         onNavigateToDetail = onNavigateToDetail,
         onContinueWatchingClick = onContinueWatchingClick,
+        onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
         onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
         onRemoveContinueWatching = { contentId, season, episode, isNextUp ->
             viewModel.onEvent(HomeEvent.OnRemoveContinueWatching(contentId, season, episode, isNextUp))
@@ -324,6 +359,7 @@ private fun ModernHomeRoute(
     uiState: HomeUiState,
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
+    onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean,
     onCatalogItemLongPress: (MetaPreview, String) -> Unit
 ) {
@@ -354,6 +390,7 @@ private fun ModernHomeRoute(
         trailerPreviewUrls = viewModel.trailerPreviewUrls,
         onNavigateToDetail = onNavigateToDetail,
         onContinueWatchingClick = onContinueWatchingClick,
+        onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
         onRequestTrailerPreview = requestTrailerPreview,
         onLoadMoreCatalog = loadMoreCatalog,
         onRemoveContinueWatching = removeContinueWatching,
@@ -372,6 +409,7 @@ private fun HomePosterOptionsDialog(
     title: String,
     isInLibrary: Boolean,
     isLibraryPending: Boolean,
+    showManageLists: Boolean,
     isMovie: Boolean,
     isWatched: Boolean,
     isWatchedPending: Boolean,
@@ -414,10 +452,14 @@ private fun HomePosterOptionsDialog(
             )
         ) {
             Text(
-                if (isInLibrary) {
-                    stringResource(R.string.hero_remove_from_library)
+                if (showManageLists) {
+                    stringResource(R.string.library_manage_lists)
                 } else {
-                    stringResource(R.string.hero_add_to_library)
+                    if (isInLibrary) {
+                        stringResource(R.string.hero_remove_from_library)
+                    } else {
+                        stringResource(R.string.hero_add_to_library)
+                    }
                 }
             )
         }
@@ -439,6 +481,88 @@ private fun HomePosterOptionsDialog(
                         stringResource(R.string.hero_mark_watched)
                     }
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun HomeLibraryListPickerDialog(
+    title: String,
+    tabs: List<LibraryListTab>,
+    membership: Map<String, Boolean>,
+    isPending: Boolean,
+    error: String?,
+    onToggle: (String) -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val primaryFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        primaryFocusRequester.requestFocus()
+    }
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = title,
+        subtitle = stringResource(R.string.detail_lists_subtitle),
+        width = 500.dp
+    ) {
+        if (!error.isNullOrBlank()) {
+            Text(
+                text = error,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFFFFB6B6)
+            )
+        }
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 300.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            items(tabs, key = { it.key }) { tab ->
+                val selected = membership[tab.key] == true
+                val titleText = if (selected) "\u2713 ${tab.title}" else tab.title
+                Button(
+                    onClick = { onToggle(tab.key) },
+                    enabled = !isPending,
+                    modifier = if (tab.key == tabs.firstOrNull()?.key) {
+                        Modifier
+                            .fillMaxWidth()
+                            .focusRequester(primaryFocusRequester)
+                    } else {
+                        Modifier.fillMaxWidth()
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = if (selected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
+                        contentColor = NuvioColors.TextPrimary
+                    )
+                ) {
+                    Text(
+                        text = titleText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+
+        Divider(color = NuvioColors.Border, thickness = 1.dp)
+
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+            Button(
+                onClick = onSave,
+                enabled = !isPending,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioColors.BackgroundCard,
+                    contentColor = NuvioColors.TextPrimary
+                )
+            ) {
+                Text(if (isPending) stringResource(R.string.action_saving) else stringResource(R.string.action_save))
             }
         }
     }

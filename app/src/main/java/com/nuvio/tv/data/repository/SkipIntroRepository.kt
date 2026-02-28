@@ -47,7 +47,7 @@ class SkipIntroRepository @Inject constructor(
         }
 
         // 2. Try AniSkip (anime) - resolve MAL ID from IMDB via ARM
-        val malId = resolveMalId(imdbId)
+        val malId = resolveMalId(imdbId, season)
         if (malId != null) {
             val aniSkipResult = fetchFromAniSkip(malId, episode)
             if (aniSkipResult.isNotEmpty()) {
@@ -59,6 +59,23 @@ class SkipIntroRepository @Inject constructor(
         // Cache empty result to avoid repeated lookups
         cache[cacheKey] = emptyList()
         return emptyList()
+    }
+
+    suspend fun getSkipIntervalsForMal(malId: String, episode: Int): List<SkipInterval> {
+        val cacheKey = "mal:$malId:$episode"
+        cache[cacheKey]?.let { return it }
+        val result = fetchFromAniSkip(malId, episode)
+        cache[cacheKey] = result
+        return result
+    }
+
+    suspend fun getSkipIntervalsForKitsu(kitsuId: String, episode: Int): List<SkipInterval> {
+        val cacheKey = "kitsu:$kitsuId:$episode"
+        cache[cacheKey]?.let { return it }
+        val malId = resolveKitsuId(kitsuId)
+        val result = if (malId != null) fetchFromAniSkip(malId, episode) else emptyList()
+        cache[cacheKey] = result
+        return result
     }
 
     private suspend fun fetchFromIntroDb(imdbId: String, season: Int, episode: Int): List<SkipInterval> {
@@ -113,21 +130,36 @@ class SkipIntroRepository @Inject constructor(
         }
     }
 
-    private suspend fun resolveMalId(imdbId: String): String? {
-        // Use a sentinel value for "not found" since ConcurrentHashMap doesn't allow null values
-        val cached = malIdCache[imdbId]
+    private suspend fun resolveMalId(imdbId: String, season: Int): String? {
+        val cacheKey = "$imdbId:$season"
+        val cached = malIdCache[cacheKey]
         if (cached != null) return cached.takeIf { it != NO_MAL_ID }
 
         val malId = try {
-            val response = armApi.resolve(imdbId)
+            val response = armApi.resolveByImdb(imdbId)
             if (response.isSuccessful) {
-                response.body()?.firstOrNull()?.myanimelist?.toString()
+                val entries = response.body() ?: emptyList()
+                (entries.getOrNull(season - 1) ?: entries.firstOrNull())?.myanimelist?.toString()
             } else null
-        } catch (e: Exception) {
-            null
-        }
+        } catch (e: Exception) { null }
 
-        malIdCache[imdbId] = malId ?: NO_MAL_ID
+        malIdCache[cacheKey] = malId ?: NO_MAL_ID
+        return malId
+    }
+
+    private suspend fun resolveKitsuId(kitsuId: String): String? {
+        val cacheKey = "kitsu:$kitsuId"
+        val cached = malIdCache[cacheKey]
+        if (cached != null) return cached.takeIf { it != NO_MAL_ID }
+
+        val malId = try {
+            val response = armApi.resolveByKitsu(kitsuId = kitsuId)
+            if (response.isSuccessful) {
+                response.body()?.myanimelist?.toString()
+            } else null
+        } catch (e: Exception) { null }
+
+        malIdCache[cacheKey] = malId ?: NO_MAL_ID
         return malId
     }
 

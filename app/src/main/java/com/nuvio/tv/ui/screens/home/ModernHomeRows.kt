@@ -333,7 +333,7 @@ internal fun ModernRowSection(
         val density = LocalDensity.current
         val rowStartPadding = 52.dp
         val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec) {
-            val parentStartOffsetPx = with(density) { 28.dp.roundToPx() }
+            val parentStartOffsetPx = with(density) { rowStartPadding.roundToPx() }
             object : BringIntoViewSpec {
                 @Suppress("DEPRECATION")
                 override val scrollAnimationSpec: AnimationSpec<Float> =
@@ -364,7 +364,8 @@ internal fun ModernRowSection(
         CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalBringIntoViewSpec) {
             LazyRow(
                 state = rowListState,
-                modifier = Modifier.focusRestorer {
+                modifier = Modifier
+                    .focusRestorer {
                     val rememberedIndex = (focusedItemByRow[row.key] ?: 0)
                         .coerceIn(0, (row.items.size - 1).coerceAtLeast(0))
                     val fallbackIndex = rowListState.firstVisibleItemIndex
@@ -374,7 +375,10 @@ internal fun ModernRowSection(
                     } else {
                         fallbackIndex
                     }
-                    val itemKey = row.items.getOrNull(restoreIndex)?.key ?: row.items.first().key
+                    val visibleIndices = rowListState.layoutInfo.visibleItemsInfo.map { it.index }.toSet()
+                    val safeIndex = if (restoreIndex in visibleIndices) restoreIndex else
+                        visibleIndices.minByOrNull { kotlin.math.abs(it - restoreIndex) } ?: fallbackIndex
+                    val itemKey = row.items.getOrNull(safeIndex)?.key ?: row.items.first().key
                     itemFocusRequesters[row.key]?.get(itemKey) ?: FocusRequester.Default
                 },
                 contentPadding = PaddingValues(horizontal = rowStartPadding),
@@ -596,6 +600,7 @@ private fun ModernCarouselCard(
                         longPressTriggered &&
                         isSelectKey(native.keyCode)
                     ) {
+                        longPressTriggered = false
                         return@onPreviewKeyEvent true
                     }
                     false

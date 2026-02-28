@@ -54,7 +54,8 @@ class LibraryPreferences @Inject constructor(
                     saved.id == item.id && saved.type.equals(item.type, ignoreCase = true)
                 } ?: false
             }
-            preferences[libraryItemsKey] = filtered.toSet() + gson.toJson(item)
+            val itemWithTimestamp = if (item.addedAt == 0L) item.copy(addedAt = System.currentTimeMillis()) else item
+            preferences[libraryItemsKey] = filtered.toSet() + gson.toJson(itemWithTimestamp)
         }
     }
 

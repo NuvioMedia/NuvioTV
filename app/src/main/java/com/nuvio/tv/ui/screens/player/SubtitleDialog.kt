@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,13 +34,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.onKeyEvent
@@ -832,16 +830,8 @@ private fun StyleSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .drawWithCache {
-                val radius = 16.dp.toPx()
-                val bgColor = Color.White.copy(alpha = 0.05f)
-                onDrawBehind {
-                    drawRoundRect(
-                        color = bgColor,
-                        cornerRadius = CornerRadius(radius, radius)
-                    )
-                }
-            }
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White.copy(alpha = 0.05f))
             .padding(16.dp)
     ) {
         // Section header
@@ -914,16 +904,8 @@ private fun StyleStepperButton(
 private fun StyleValueDisplay(text: String) {
     Box(
         modifier = Modifier
-            .drawWithCache {
-                val radius = 10.dp.toPx()
-                val bgColor = Color.White.copy(alpha = 0.12f)
-                onDrawBehind {
-                    drawRoundRect(
-                        color = bgColor,
-                        cornerRadius = CornerRadius(radius, radius)
-                    )
-                }
-            }
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color.White.copy(alpha = 0.12f))
             .padding(horizontal = 14.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -943,29 +925,18 @@ private fun StyleColorChip(
 ) {
     val isLight = (color.red + color.green + color.blue) / 3f > 0.5f
     var isFocused by remember { mutableStateOf(false) }
-    val ringColor = when {
-        isFocused -> NuvioColors.FocusRing
-        isSelected -> Color.White
-        else -> Color.Transparent
+
+    val borderModifier = when {
+        isFocused -> Modifier.border(2.dp, NuvioColors.FocusRing, CircleShape)
+        isSelected -> Modifier.border(2.dp, Color.White, CircleShape)
+        else -> Modifier
     }
 
     IconButton(
         onClick = onClick,
         modifier = Modifier
             .size(36.dp)
-            .drawWithCache {
-                val strokeWidth = 2.dp.toPx()
-                onDrawWithContent {
-                    drawContent()
-                    if (ringColor.alpha > 0f) {
-                        drawCircle(
-                            color = ringColor,
-                            radius = (size.minDimension / 2f) - (strokeWidth / 2f),
-                            style = Stroke(width = strokeWidth)
-                        )
-                    }
-                }
-            }
+            .then(borderModifier)
             .onFocusChanged { isFocused = it.isFocused },
         colors = IconButtonDefaults.colors(
             containerColor = color,

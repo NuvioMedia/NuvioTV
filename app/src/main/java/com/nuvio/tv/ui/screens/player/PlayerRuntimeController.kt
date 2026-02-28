@@ -204,7 +204,9 @@ class PlayerRuntimeController(
     init {
         refreshScrobbleItem()
         initializePlayer(currentStreamUrl, currentHeaders)
-        loadSavedProgressFor(currentSeason, currentEpisode)
+        if (!navigationArgs.startFromBeginning) {
+            loadSavedProgressFor(currentSeason, currentEpisode)
+        }
         fetchParentalGuide(contentId, contentType, currentSeason, currentEpisode)
         observeSubtitleSettings()
         fetchAddonSubtitles()

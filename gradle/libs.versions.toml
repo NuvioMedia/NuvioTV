@@ -6,7 +6,7 @@ coreKtx = "1.15.0"
 appcompat = "1.6.1"
 composeBom = "2026.01.01"
 tvFoundation = "1.0.0-alpha11"
-tvMaterial = "1.0.0"
+tvMaterial = "1.0.1"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.11.0"
 

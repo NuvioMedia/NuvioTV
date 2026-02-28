@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -95,6 +96,7 @@ import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.data.local.TrailerSettings
+import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.PlayCircle
@@ -906,80 +908,72 @@ internal fun LanguageSelectionDialog(
     onDismiss: () -> Unit
 ) {
     val focusRequester = remember { FocusRequester() }
-    
+
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }
 
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = title,
+        width = 400.dp,
+        suppressFirstKeyUp = false
+    ) {
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
-                .background(NuvioColors.BackgroundCard)
+                .fillMaxWidth()
+                .height(320.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .width(400.dp)
-                    .padding(24.dp)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = NuvioColors.TextPrimary
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                LazyColumn(
-                    modifier = Modifier.height(400.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (showNoneOption) {
-                        item(key = "language_none_option") {
-                            LanguageOptionItem(
-                                name = stringResource(R.string.action_none),
-                                code = null,
-                                isSelected = selectedLanguage == null,
-                                onClick = { onLanguageSelected(null) },
-                                modifier = Modifier.focusRequester(focusRequester)
-                            )
-                        }
+                if (showNoneOption) {
+                    item(key = "language_none_option") {
+                        LanguageOptionItem(
+                            name = stringResource(R.string.action_none),
+                            code = null,
+                            isSelected = selectedLanguage == null,
+                            onClick = { onLanguageSelected(null) },
+                            modifier = Modifier.focusRequester(focusRequester)
+                        )
                     }
+                }
 
-                    items(
-                        items = extraOptions,
-                        key = { (code, _) -> "language_extra_$code" }
-                    ) { (code, name) ->
-                        LanguageOptionItem(
-                            name = name,
-                            code = code,
-                            isSelected = selectedLanguage == code,
-                            onClick = { onLanguageSelected(code) },
-                            modifier = if (!showNoneOption && extraOptions.firstOrNull()?.first == code) {
-                                Modifier.focusRequester(focusRequester)
-                            } else {
-                                Modifier
-                            }
-                        )
-                    }
-                    
-                    items(
-                        count = AVAILABLE_SUBTITLE_LANGUAGES.size,
-                        key = { index -> AVAILABLE_SUBTITLE_LANGUAGES[index].code }
-                    ) { index ->
-                        val language = AVAILABLE_SUBTITLE_LANGUAGES[index]
-                        LanguageOptionItem(
-                            name = language.name,
-                            code = language.code,
-                            isSelected = selectedLanguage == language.code,
-                            onClick = { onLanguageSelected(language.code) },
-                            modifier = if (!showNoneOption && index == 0) {
-                                Modifier.focusRequester(focusRequester)
-                            } else {
-                                Modifier
-                            }
-                        )
-                    }
+                items(
+                    items = extraOptions,
+                    key = { (code, _) -> "language_extra_$code" }
+                ) { (code, name) ->
+                    LanguageOptionItem(
+                        name = name,
+                        code = code,
+                        isSelected = selectedLanguage == code,
+                        onClick = { onLanguageSelected(code) },
+                        modifier = if (!showNoneOption && extraOptions.firstOrNull()?.first == code) {
+                            Modifier.focusRequester(focusRequester)
+                        } else {
+                            Modifier
+                        }
+                    )
+                }
+
+                items(
+                    count = AVAILABLE_SUBTITLE_LANGUAGES.size,
+                    key = { index -> AVAILABLE_SUBTITLE_LANGUAGES[index].code }
+                ) { index ->
+                    val language = AVAILABLE_SUBTITLE_LANGUAGES[index]
+                    LanguageOptionItem(
+                        name = language.name,
+                        code = language.code,
+                        isSelected = selectedLanguage == language.code,
+                        onClick = { onLanguageSelected(language.code) },
+                        modifier = if (!showNoneOption && index == 0) {
+                            Modifier.focusRequester(focusRequester)
+                        } else {
+                            Modifier
+                        }
+                    )
                 }
             }
         }
@@ -1003,17 +997,11 @@ private fun LanguageOptionItem(
             .then(modifier)
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
-            containerColor = if (isSelected) NuvioColors.Primary.copy(alpha = 0.2f) else NuvioColors.BackgroundElevated,
+            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
             focusedContainerColor = NuvioColors.FocusBackground
         ),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(8.dp)
-            )
-        ),
-        shape = CardDefaults.shape(shape = RoundedCornerShape(8.dp)),
-        scale = CardDefaults.scale(focusedScale = 1.02f)
+        shape = CardDefaults.shape(shape = RoundedCornerShape(10.dp)),
+        scale = CardDefaults.scale(focusedScale = 1f)
     ) {
         Row(
             modifier = Modifier
@@ -1059,21 +1047,17 @@ internal fun ColorSelectionDialog(
     onDismiss: () -> Unit
 ) {
     val focusRequester = remember { FocusRequester() }
-    
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = title,
+        suppressFirstKeyUp = false
+    ) {
         Column(
             modifier = Modifier
-                .background(NuvioColors.BackgroundCard, RoundedCornerShape(16.dp))
-                .padding(24.dp)
+                .fillMaxWidth()
+                .heightIn(max = 240.dp)
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = NuvioColors.TextPrimary
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
             // Color grid using LazyRow for proper TV focus
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -1092,9 +1076,9 @@ internal fun ColorSelectionDialog(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // Cancel button
             Card(
                 onClick = onDismiss,
@@ -1123,7 +1107,7 @@ internal fun ColorSelectionDialog(
             }
         }
     }
-    
+
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }

@@ -271,6 +271,7 @@ fun ContentCard(
                         longPressTriggered &&
                         isSelectKey(native.keyCode)
                     ) {
+                        longPressTriggered = false
                         return@onPreviewKeyEvent true
                     }
                     false

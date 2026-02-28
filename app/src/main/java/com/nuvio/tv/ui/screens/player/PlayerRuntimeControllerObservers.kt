@@ -215,6 +215,35 @@ internal fun PlayerRuntimeController.loadSavedProgressFor(season: Int?, episode:
 internal fun PlayerRuntimeController.fetchSkipIntervals(id: String?, season: Int?, episode: Int?) {
     if (!skipIntroEnabled) return
     if (id.isNullOrBlank()) return
+
+    // MAL ID format: "mal:57658:1" (malId:episode)
+    if (id.startsWith("mal:")) {
+        val parts = id.split(":")
+        val malId = parts.getOrNull(1) ?: return
+        val malEpisode = parts.getOrNull(2)?.toIntOrNull() ?: episode ?: return
+        val key = "mal:$malId:$malEpisode"
+        if (skipIntroFetchedKey == key) return
+        skipIntroFetchedKey = key
+        scope.launch {
+            skipIntervals = skipIntroRepository.getSkipIntervalsForMal(malId, malEpisode)
+        }
+        return
+    }
+
+    // Kitsu ID format: "kitsu:12345:1" (kitsuId:episode)
+    if (id.startsWith("kitsu:")) {
+        val parts = id.split(":")
+        val kitsuId = parts.getOrNull(1) ?: return
+        val kitsuEpisode = parts.getOrNull(2)?.toIntOrNull() ?: episode ?: return
+        val key = "kitsu:$kitsuId:$kitsuEpisode"
+        if (skipIntroFetchedKey == key) return
+        skipIntroFetchedKey = key
+        scope.launch {
+            skipIntervals = skipIntroRepository.getSkipIntervalsForKitsu(kitsuId, kitsuEpisode)
+        }
+        return
+    }
+
     val imdbId = id.split(":").firstOrNull()?.takeIf { it.startsWith("tt") } ?: return
     if (season == null || episode == null) return
 

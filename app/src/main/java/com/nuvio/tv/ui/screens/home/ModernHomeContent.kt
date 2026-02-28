@@ -94,7 +94,10 @@ import com.nuvio.tv.ui.components.MonochromePosterPlaceholder
 import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
+import android.view.KeyEvent as AndroidKeyEvent
 import kotlinx.coroutines.flow.distinctUntilChanged
+
+private const val KEY_REPEAT_THROTTLE_MS = 80L
 
 @Composable
 fun ModernHomeContent(
@@ -103,6 +106,7 @@ fun ModernHomeContent(
     trailerPreviewUrls: Map<String, String>,
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
+    onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
     onRequestTrailerPreview: (String, String, String?, String) -> Unit,
     onLoadMoreCatalog: (String, String, String) -> Unit,
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
@@ -137,12 +141,16 @@ fun ModernHomeContent(
     val strContinueWatching = stringResource(R.string.continue_watching)
     val strAirsDate = stringResource(R.string.cw_airs_date)
     val strUpcoming = stringResource(R.string.cw_upcoming)
+    val strTypeMovie = stringResource(R.string.type_movie)
+    val strTypeSeries = stringResource(R.string.type_series)
     val rowBuildCache = remember { ModernCarouselRowBuildCache() }
     val carouselRows = remember(
         uiState.continueWatchingItems,
         visibleCatalogRows,
         useLandscapePosters,
-        showCatalogTypeSuffixInModern
+        showCatalogTypeSuffixInModern,
+        strTypeMovie,
+        strTypeSeries
     ) {
         buildList {
             val activeCatalogKeys = LinkedHashSet<String>(visibleCatalogRows.size)
@@ -206,7 +214,9 @@ fun ModernHomeContent(
                         key = rowKey,
                         title = catalogRowTitle(
                             row = row,
-                            showCatalogTypeSuffix = showCatalogTypeSuffixInModern
+                            showCatalogTypeSuffix = showCatalogTypeSuffixInModern,
+                            strTypeMovie = strTypeMovie,
+                            strTypeSeries = strTypeSeries
                         ),
                         globalRowIndex = index,
                         catalogId = row.catalogId,
@@ -299,6 +309,7 @@ fun ModernHomeContent(
     var restoredFromSavedState by remember { mutableStateOf(false) }
     var optionsItem by remember { mutableStateOf<ContinueWatchingItem?>(null) }
     var lastFocusedContinueWatchingIndex by remember { mutableStateOf(-1) }
+    var lastKeyRepeatTime by remember { mutableStateOf(0L) }
     var focusedCatalogSelection by remember { mutableStateOf<FocusedCatalogSelection?>(null) }
     var lastRequestedTrailerFocusKey by remember { mutableStateOf<String?>(null) }
     var expandedCatalogFocusKey by remember { mutableStateOf<String?>(null) }
@@ -649,7 +660,18 @@ fun ModernHomeContent(
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
                     .height(rowsViewportHeight)
-                    .padding(bottom = catalogBottomPadding),
+                    .padding(bottom = catalogBottomPadding)
+                    .onPreviewKeyEvent { event ->
+                        val native = event.nativeKeyEvent
+                        if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {
+                            val now = System.currentTimeMillis()
+                            if (now - lastKeyRepeatTime < KEY_REPEAT_THROTTLE_MS) {
+                                return@onPreviewKeyEvent true
+                            }
+                            lastKeyRepeatTime = now
+                        }
+                        false
+                    },
                 contentPadding = PaddingValues(bottom = 0.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
@@ -755,6 +777,10 @@ fun ModernHomeContent(
                     selectedOptionsItem.contentType(),
                     ""
                 )
+                optionsItem = null
+            },
+            onStartFromBeginning = {
+                onContinueWatchingStartFromBeginning(selectedOptionsItem)
                 optionsItem = null
             }
         )

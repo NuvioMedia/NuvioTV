@@ -1,4 +1,5 @@
 <resources>
+    <string name="app_name">Nuvio</string>
     <string name="type_movie">Movie</string>
     <string name="type_series">Series</string>
     <string name="type_unknown">Unknown</string>
@@ -21,6 +22,7 @@
     <string name="cw_almost_done">Almost done</string>
     <string name="cw_airs_date">Airs %1$s</string>
     <string name="cw_action_go_to_details">Go to details</string>
+    <string name="cw_action_start_from_beginning">Start from beginning</string>
     <string name="cw_action_remove">Remove</string>
     <string name="cw_dialog_subtitle">Choose what you want to do with this item.</string>
     <string name="home_poster_dialog_subtitle">Title actions</string>
@@ -56,6 +58,21 @@
     <string name="episodes_mark_previous_watched">Mark previous in this season as watched</string>
     <string name="episodes_play">Play</string>
     <string name="episodes_season_actions">Season actions</string>
+
+    <!-- MetaDetailsViewModel -->
+    <string name="detail_added_to_library">Added to library</string>
+    <string name="detail_removed_from_library">Removed from library</string>
+    <string name="detail_episode_marked_watched">Episode marked as watched</string>
+    <string name="detail_episode_marked_unwatched">Episode marked as unwatched</string>
+    <string name="detail_lists_updated">Lists updated</string>
+    <string name="detail_movie_marked_watched">Marked as watched</string>
+    <string name="detail_movie_marked_unwatched">Marked as unwatched</string>
+    <string name="detail_all_episodes_watched">All episodes already watched</string>
+    <string name="detail_no_watched_episodes">No watched episodes in this season</string>
+    <string name="detail_all_previous_watched">All previous episodes already watched</string>
+    <string name="detail_marked_episodes_watched">Episodes marked as watched: %1$d</string>
+    <string name="detail_marked_episodes_unwatched">Episodes marked as unwatched: %1$d</string>
+    <string name="detail_marked_previous_watched">Previous episodes marked as watched: %1$d</string>
 
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Play</string>
@@ -303,6 +320,8 @@
     <string name="layout_addon_name_sub">Show source name under catalog titles.</string>
     <string name="layout_catalog_type">Show Catalog Type</string>
     <string name="layout_catalog_type_sub">Show type suffix next to catalog name (Movie/Series).</string>
+    <string name="layout_hide_unreleased">Hide Unreleased Content</string>
+    <string name="layout_hide_unreleased_sub">Hide movies and shows that haven\'t been released yet.</string>
     <string name="layout_section_detail">Detail Page</string>
     <string name="layout_section_detail_desc">Settings for the detail and episode screens.</string>
     <string name="layout_blur_unwatched">Blur Unwatched Episodes</string>
@@ -594,6 +613,16 @@
     <string name="subtitle_style_title">Subtitle Style</string>
     <string name="subtitle_style_color">Color</string>
     <string name="subtitle_style_reset">Reset</string>
+    <string name="subtitle_style_font_size">Font Size</string>
+    <string name="subtitle_style_bold">Bold</string>
+    <string name="subtitle_style_text_color">Text Color</string>
+    <string name="subtitle_style_outline">Outline</string>
+    <string name="subtitle_style_bottom_offset">Bottom Offset</string>
+    <string name="subtitle_style_defaults">Defaults</string>
+    <string name="subtitle_style_on">On</string>
+    <string name="subtitle_style_off">Off</string>
+    <string name="panel_failed_load_streams">Failed to load streams</string>
+    <string name="panel_failed_load_episodes">Failed to load episodes</string>
 
     <!-- PauseOverlay -->
     <string name="pause_you_are_watching">You\'re watching</string>
@@ -603,6 +632,16 @@
 
     <!-- NextEpisodeCardOverlay -->
     <string name="next_episode_label">Next Episode</string>
+    <string name="next_episode_finding_source">Finding source…</string>
+    <string name="next_episode_playing_via">Playing via %1$s in %2$ds</string>
+    <string name="next_episode_play">Play</string>
+    <string name="next_episode_unaired">Unaired</string>
+    <string name="skip_intro">Skip Intro</string>
+    <string name="skip_ending">Skip Ending</string>
+    <string name="skip_recap">Skip Recap</string>
+    <string name="skip_generic">Skip</string>
+    <string name="display_mode_refresh">Refresh</string>
+    <string name="display_mode_resolution">Resolution</string>
 
 
     <!-- SearchScreen -->
@@ -662,6 +701,18 @@
     <string name="auth_qr_finishing">Finishing sign in\u2026</string>
     <string name="auth_qr_code_label">Code: %1$s</string>
     <string name="auth_qr_expires">Expires in %1$s</string>
+    <string name="auth_qr_phone_hint">Use your phone to sign in with email/password. TV stays QR-only for faster login.</string>
+    <string name="auth_qr_scan_instruction">Scan QR, approve in browser, then return here.</string>
+    <string name="auth_qr_code_display">Code: %1$s</string>
+    <string name="auth_qr_refresh">Refresh QR</string>
+    <string name="auth_qr_continue_without_account">Continue without account</string>
+    <string name="auth_qr_connected">Your account is connected on this TV.</string>
+    <string name="auth_qr_synced_data">Your synced data</string>
+    <string name="auth_qr_generating">Generating QR\u2026</string>
+    <string name="auth_qr_unavailable">QR unavailable. Refresh to retry.</string>
+    <string name="auth_qr_please_wait">Please wait\u2026</string>
+    <string name="auth_qr_continue">Continue</string>
+    <string name="auth_qr_back">Back</string>
 
     <!-- SyncCodeGenerateScreen -->
     <string name="sync_generate_title">Generate Sync Code</string>
@@ -786,6 +837,7 @@
     <string name="nav_library">Library</string>
     <string name="nav_addons">Addons</string>
     <string name="nav_settings">Settings</string>
+    <string name="settings_rounded_ui">Rounded UI</string>
     <string name="cd_expand_sidebar">Expand sidebar</string>
 
     <string name="update_close">Close</string>

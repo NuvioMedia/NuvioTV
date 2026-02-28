@@ -10,8 +10,8 @@ object NuvioScrollDefaults {
     val smoothScrollSpec = object : BringIntoViewSpec {
         @Suppress("DEPRECATION")
         override val scrollAnimationSpec: AnimationSpec<Float> = spring(
-            dampingRatio = 0.83f,
-            stiffness = 150f
+            dampingRatio = 0.95f,
+            stiffness = 180f
         )
 
         override fun calculateScrollDistance(

@@ -3,6 +3,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,13 +29,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -122,7 +120,7 @@ internal fun SubtitleStyleSidePanel(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SubtitleStyleSection(
-                    title = "Font Size",
+                    title = stringResource(R.string.subtitle_style_font_size),
                     modifier = Modifier
                         .width(StyleCardWidth)
                         .height(StyleCardHeight)
@@ -141,7 +139,7 @@ internal fun SubtitleStyleSidePanel(
                     }
                 }
                 SubtitleStyleSection(
-                    title = "Bold",
+                    title = stringResource(R.string.subtitle_style_bold),
                     modifier = Modifier
                         .width(StyleCardWidth)
                         .height(StyleCardHeight)
@@ -157,7 +155,7 @@ internal fun SubtitleStyleSidePanel(
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SubtitleStyleSection(
-                    title = "Text Color",
+                    title = stringResource(R.string.subtitle_style_text_color),
                     modifier = Modifier
                         .width(StyleCardWidth)
                         .height(StyleCardHeight)
@@ -173,7 +171,7 @@ internal fun SubtitleStyleSidePanel(
                     }
                 }
                 SubtitleStyleSection(
-                    title = "Outline",
+                    title = stringResource(R.string.subtitle_style_outline),
                     centerContent = false,
                     modifier = Modifier
                         .width(StyleCardWidth)
@@ -214,7 +212,7 @@ internal fun SubtitleStyleSidePanel(
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SubtitleStyleSection(
-                    title = "Bottom Offset",
+                    title = stringResource(R.string.subtitle_style_bottom_offset),
                     modifier = Modifier
                         .width(StyleCardWidth)
                         .height(StyleCardHeight)
@@ -232,7 +230,7 @@ internal fun SubtitleStyleSidePanel(
                     }
                 }
                 SubtitleStyleSection(
-                    title = "Defaults",
+                    title = stringResource(R.string.subtitle_style_defaults),
                     modifier = Modifier
                         .width(StyleCardWidth)
                         .height(StyleCardHeight)
@@ -267,16 +265,8 @@ private fun SubtitleStyleSection(
 ) {
     Box(
         modifier = modifier
-            .drawWithCache {
-                val radius = 14.dp.toPx()
-                val bgColor = Color.White.copy(alpha = 0.06f)
-                onDrawBehind {
-                    drawRoundRect(
-                        color = bgColor,
-                        cornerRadius = CornerRadius(radius, radius)
-                    )
-                }
-            }
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White.copy(alpha = 0.06f))
             .padding(12.dp)
     ) {
         Column(
@@ -354,16 +344,8 @@ private fun SubtitleStyleStepperButton(
 private fun SubtitleStyleValueDisplay(text: String) {
     Box(
         modifier = Modifier
-            .drawWithCache {
-                val radius = 10.dp.toPx()
-                val bgColor = Color.White.copy(alpha = 0.12f)
-                onDrawBehind {
-                    drawRoundRect(
-                        color = bgColor,
-                        cornerRadius = CornerRadius(radius, radius)
-                    )
-                }
-            }
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color.White.copy(alpha = 0.12f))
             .padding(horizontal = 10.dp, vertical = 5.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -383,29 +365,18 @@ private fun SubtitleStyleColorChip(
 ) {
     val isLight = (color.red + color.green + color.blue) / 3f > 0.5f
     var isFocused by remember { mutableStateOf(false) }
-    val ringColor = when {
-        isFocused -> NuvioColors.FocusRing
-        isSelected -> Color.White
-        else -> Color.Transparent
+
+    val borderModifier = when {
+        isFocused -> Modifier.border(2.dp, NuvioColors.FocusRing, CircleShape)
+        isSelected -> Modifier.border(2.dp, Color.White, CircleShape)
+        else -> Modifier
     }
 
     IconButton(
         onClick = onClick,
         modifier = Modifier
             .size(30.dp)
-            .drawWithCache {
-                val strokeWidth = 2.dp.toPx()
-                onDrawWithContent {
-                    drawContent()
-                    if (ringColor.alpha > 0f) {
-                        drawCircle(
-                            color = ringColor,
-                            radius = (size.minDimension / 2f) - (strokeWidth / 2f),
-                            style = Stroke(width = strokeWidth)
-                        )
-                    }
-                }
-            }
+            .then(borderModifier)
             .onFocusChanged { isFocused = it.isFocused },
         colors = IconButtonDefaults.colors(
             containerColor = color,
@@ -435,7 +406,7 @@ private fun SubtitleStyleToggleButton(
         shape = CardDefaults.shape(RoundedCornerShape(10.dp))
     ) {
         Text(
-            text = if (isEnabled) "On" else "Off",
+            text = if (isEnabled) stringResource(R.string.subtitle_style_on) else stringResource(R.string.subtitle_style_off),
             style = MaterialTheme.typography.bodySmall,
             color = if (isEnabled) Color.White else Color.White.copy(alpha = 0.55f),
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)

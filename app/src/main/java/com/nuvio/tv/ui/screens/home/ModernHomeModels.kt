@@ -274,14 +274,18 @@ internal fun catalogRowKey(row: CatalogRow): String {
 
 internal fun catalogRowTitle(
     row: CatalogRow,
-    showCatalogTypeSuffix: Boolean
+    showCatalogTypeSuffix: Boolean,
+    strTypeMovie: String = "",
+    strTypeSeries: String = ""
 ): String {
     val catalogName = row.catalogName.replaceFirstChar { it.uppercase() }
-    return if (showCatalogTypeSuffix) {
-        "$catalogName - ${row.apiType.replaceFirstChar { it.uppercase() }}"
-    } else {
-        catalogName
+    if (!showCatalogTypeSuffix) return catalogName
+    val typeLabel = when (row.apiType.lowercase()) {
+        "movie" -> strTypeMovie.ifBlank { row.apiType.replaceFirstChar { it.uppercase() } }
+        "series" -> strTypeSeries.ifBlank { row.apiType.replaceFirstChar { it.uppercase() } }
+        else -> row.apiType.replaceFirstChar { it.uppercase() }
     }
+    return "$catalogName - $typeLabel"
 }
 
 internal fun CatalogRow.key(): String {

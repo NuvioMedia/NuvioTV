@@ -67,6 +67,7 @@ fun GridHomeContent(
     gridFocusState: HomeScreenFocusState,
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
+    onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean = { false },
@@ -224,6 +225,7 @@ fun GridHomeContent(
                                     onItemClick = { item ->
                                         onContinueWatchingClick(item)
                                     },
+                                    onStartFromBeginning = onContinueWatchingStartFromBeginning,
                                     onDetailsClick = { item ->
                                         onNavigateToDetail(
                                             when (item) {
@@ -262,8 +264,20 @@ fun GridHomeContent(
                             span = { GridItemSpan(maxLineSpan) },
                             contentType = "divider"
                         ) {
+                            val strTypeMovie = stringResource(R.string.type_movie)
+                            val strTypeSeries = stringResource(R.string.type_series)
+                            val typeLabel = when (gridItem.type.lowercase()) {
+                                "movie" -> strTypeMovie
+                                "series" -> strTypeSeries
+                                else -> gridItem.type.replaceFirstChar { it.uppercase() }
+                            }
+                            val displayName = if (uiState.catalogTypeSuffixEnabled && typeLabel.isNotBlank()) {
+                                "${gridItem.catalogName.replaceFirstChar { it.uppercase() }} - $typeLabel"
+                            } else {
+                                gridItem.catalogName.replaceFirstChar { it.uppercase() }
+                            }
                             SectionDivider(
-                                catalogName = gridItem.catalogName
+                                catalogName = displayName
                             )
                         }
                     }
@@ -354,6 +368,7 @@ fun GridHomeContent(
                         onItemClick = { item ->
                             onContinueWatchingClick(item)
                         },
+                        onStartFromBeginning = onContinueWatchingStartFromBeginning,
                         onDetailsClick = { item ->
                             onNavigateToDetail(
                                 when (item) {

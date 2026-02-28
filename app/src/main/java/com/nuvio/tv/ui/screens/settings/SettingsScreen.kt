@@ -334,12 +334,15 @@ fun SettingsScreen(
                         .fillMaxHeight()
                         .onKeyEvent { event ->
                             if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft) {
-                                allowDetailAutofocus = false
-                                val requested = railFocusRequesters[selectedCategory]?.let { requester ->
-                                    runCatching { requester.requestFocus() }.isSuccess
-                                } ?: false
-                                if (!requested) {
-                                    runCatching { railContainerFocusRequester.requestFocus() }
+                                val movedLeft = focusManager.moveFocus(FocusDirection.Left)
+                                if (!movedLeft) {
+                                    allowDetailAutofocus = false
+                                    val requested = railFocusRequesters[selectedCategory]?.let { requester ->
+                                        runCatching { requester.requestFocus() }.isSuccess
+                                    } ?: false
+                                    if (!requested) {
+                                        runCatching { railContainerFocusRequester.requestFocus() }
+                                    }
                                 }
                                 true
                             } else {

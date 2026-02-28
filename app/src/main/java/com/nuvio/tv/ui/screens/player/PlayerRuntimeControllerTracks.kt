@@ -98,13 +98,20 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                     val isSelected = trackGroup.isTrackSelected(i)
                     if (isSelected) selectedSubtitleIndex = subtitleTracks.size
                     
+                    val hasForcedFlag = (format.selectionFlags and C.SELECTION_FLAG_FORCED) != 0
+                    val trackTexts = listOfNotNull(format.label, format.language, format.id)
+                    val nameHintForced = trackTexts.any { it.contains("forced", ignoreCase = true) }
+                    val isSongsAndSigns = trackTexts.any {
+                        it.contains("songs", ignoreCase = true) && it.contains("sign", ignoreCase = true)
+                    }
+
                     subtitleTracks.add(
                         TrackInfo(
                             index = subtitleTracks.size,
                             name = format.label ?: format.language ?: "Subtitle ${subtitleTracks.size + 1}",
                             language = format.language,
                             trackId = format.id,
-                            isForced = (format.selectionFlags and C.SELECTION_FLAG_FORCED) != 0,
+                            isForced = hasForcedFlag || nameHintForced || isSongsAndSigns,
                             isSelected = isSelected
                         )
                     )
@@ -328,16 +335,8 @@ internal fun PlayerRuntimeController.findBestInternalSubtitleTrackIndex(
 }
 
 private fun findBestForcedSubtitleTrackIndex(subtitleTracks: List<TrackInfo>): Int {
-    val forcedByFlag = subtitleTracks.indexOfFirst { it.isForced }
-    if (forcedByFlag >= 0) return forcedByFlag
-
-    // Some providers don't propagate selection flags, so use conservative name hints as fallback.
-    return subtitleTracks.indexOfFirst { track ->
-        val text = listOfNotNull(track.name, track.language, track.trackId)
-            .joinToString(" ")
-            .lowercase(Locale.ROOT)
-        "forced" in text
-    }
+    // isForced is set from both the ExoPlayer SELECTION_FLAG_FORCED and name/label/id containing "forced"
+    return subtitleTracks.indexOfFirst { it.isForced }
 }
 
 internal fun PlayerRuntimeController.findBrazilianPortugueseInGenericPtTracks(
@@ -425,8 +424,12 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
     }
 
     if (targets.contains(SUBTITLE_LANGUAGE_FORCED)) {
-        autoSubtitleSelected = true
-        Log.d(PlayerRuntimeController.TAG, "AUTO_SUB stop: forced subtitles requested but no forced internal track found")
+        if (hasScannedTextTracksOnce) {
+            autoSubtitleSelected = true
+            Log.d(PlayerRuntimeController.TAG, "AUTO_SUB stop: forced subtitles requested but no forced internal track found")
+            return
+        }
+        Log.d(PlayerRuntimeController.TAG, "AUTO_SUB defer forced: text tracks not scanned yet")
         return
     }
 

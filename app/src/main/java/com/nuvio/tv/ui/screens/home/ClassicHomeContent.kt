@@ -46,6 +46,7 @@ fun ClassicHomeContent(
     trailerPreviewUrls: Map<String, String>,
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
+    onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean = { false },
@@ -180,6 +181,7 @@ fun ClassicHomeContent(
                     onItemClick = { item ->
                         onContinueWatchingClick(item)
                     },
+                    onStartFromBeginning = onContinueWatchingStartFromBeginning,
                     onDetailsClick = { item ->
                         onNavigateToDetail(
                             when (item) {
@@ -274,7 +276,8 @@ fun ClassicHomeContent(
                 },
                 rowFocusRequester = rowFocusRequester,
                 listState = listState,
-                // We don't need initialScrollIndex anymore as listState handles it
+                enableRowFocusRestorer = true,
+                
                 focusedItemIndex = focusedItemIndex,
                 onItemFocused = { itemIndex ->
                     if (restoringFocus) restoringFocus = false
