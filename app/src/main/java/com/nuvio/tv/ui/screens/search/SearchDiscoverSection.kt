@@ -27,7 +27,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +63,9 @@ import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
+import kotlinx.coroutines.flow.distinctUntilChanged
+
+private const val DISCOVER_AUTO_LOAD_THRESHOLD_ROWS = 3
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -376,6 +381,7 @@ internal fun DiscoverGrid(
     var pendingFocusOnNewItemIndex by remember { mutableStateOf<Int?>(null) }
     var localRestoreFocusedItemIndex by remember { mutableStateOf(-1) }
     var localShouldRestoreFocusedItem by remember { mutableStateOf(false) }
+    var lastAutoLoadTriggerItemCount by remember { mutableStateOf(-1) }
     val effectiveFocusedItemIndex = if (localShouldRestoreFocusedItem) {
         localRestoreFocusedItemIndex
     } else {
@@ -398,6 +404,11 @@ internal fun DiscoverGrid(
             height = cardWidth * 1.5f
         )
     }
+    val currentPendingCount = rememberUpdatedState(pendingCount)
+    val currentCanLoadMore = rememberUpdatedState(canLoadMore)
+    val currentIsLoadingMore = rememberUpdatedState(isLoadingMore)
+    val currentItems = rememberUpdatedState(items)
+    val currentOnLoadMore = rememberUpdatedState(onLoadMore)
 
     LaunchedEffect(effectiveShouldRestoreFocusedItem, effectiveFocusedItemIndex, totalCells) {
         if (!effectiveShouldRestoreFocusedItem) return@LaunchedEffect
@@ -427,12 +438,62 @@ internal fun DiscoverGrid(
         }
     }
 
-    LaunchedEffect(items.size, pendingFocusOnNewItemIndex) {
+    LaunchedEffect(items.size, pendingFocusOnNewItemIndex, actionType) {
         val targetIndex = pendingFocusOnNewItemIndex ?: return@LaunchedEffect
-        if (items.size <= targetIndex) return@LaunchedEffect
-        pendingFocusOnNewItemIndex = null
-        localRestoreFocusedItemIndex = targetIndex
-        localShouldRestoreFocusedItem = true
+        when {
+            items.size > targetIndex -> {
+                pendingFocusOnNewItemIndex = null
+                localRestoreFocusedItemIndex = targetIndex
+                localShouldRestoreFocusedItem = true
+            }
+            actionType != DiscoverGridAction.Loading -> {
+                pendingFocusOnNewItemIndex = null
+            }
+        }
+    }
+
+    LaunchedEffect(items.size) {
+        if (items.isEmpty()) {
+            lastAutoLoadTriggerItemCount = -1
+        } else if (effectiveFocusedItemIndex !in 0 until totalCells) {
+            lastAutoLoadTriggerItemCount = -1
+        }
+    }
+
+    LaunchedEffect(gridState) {
+        snapshotFlow {
+            val contentItems = currentItems.value
+            val visibleContentItems = gridState.layoutInfo.visibleItemsInfo
+                .filter { it.index in contentItems.indices }
+            val visibleRows = visibleContentItems
+                .map { it.offset.y }
+                .distinct()
+                .size
+                .coerceAtLeast(1)
+            val visibleItemsPerRow = ((visibleContentItems.size + visibleRows - 1) / visibleRows)
+                .coerceAtLeast(1)
+            val nearEndThreshold = (visibleItemsPerRow * DISCOVER_AUTO_LOAD_THRESHOLD_ROWS)
+                .coerceAtLeast(1)
+            val total = contentItems.size
+            val lastVisible = visibleContentItems.lastOrNull()?.index ?: -1
+            Triple(lastVisible, total, nearEndThreshold)
+        }
+            .distinctUntilChanged()
+            .collect { (lastVisible, total, nearEndThreshold) ->
+                if (total <= 0 || lastVisible < 0) return@collect
+                val isNearEnd = lastVisible >= (total - nearEndThreshold).coerceAtLeast(0)
+                if (!isNearEnd) {
+                    lastAutoLoadTriggerItemCount = -1
+                    return@collect
+                }
+                if ((currentPendingCount.value > 0 || currentCanLoadMore.value) &&
+                    !currentIsLoadingMore.value &&
+                    lastAutoLoadTriggerItemCount != total
+                ) {
+                    lastAutoLoadTriggerItemCount = total
+                    currentOnLoadMore.value()
+                }
+            }
     }
 
     LazyVerticalGrid(
@@ -479,7 +540,14 @@ internal fun DiscoverGrid(
                     posterCardStyle = adaptiveStyle,
                     modifier = Modifier.width(adaptiveStyle.width),
                     focusRequester = focusReq,
-                    onFocused = { onItemFocused(actionIndex) },
+                    onFocusChanged = { isFocused ->
+                        if (isFocused && actionType == DiscoverGridAction.Loading) {
+                            pendingFocusOnNewItemIndex = items.size
+                        }
+                    },
+                    onFocused = {
+                        onItemFocused(actionIndex)
+                    },
                     onClick = {
                         when (actionType) {
                             DiscoverGridAction.ShowMore -> {
@@ -515,6 +583,7 @@ private fun DiscoverActionCard(
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
     onFocused: () -> Unit = {},
+    onFocusChanged: (Boolean) -> Unit = {},
     onClick: () -> Unit
 ) {
     val cardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
@@ -534,7 +603,10 @@ private fun DiscoverActionCard(
                     event.nativeKeyEvent.action == AndroidKeyEvent.ACTION_DOWN &&
                     event.nativeKeyEvent.keyCode == AndroidKeyEvent.KEYCODE_DPAD_RIGHT
             }
-            .onFocusChanged { state -> if (state.isFocused) onFocused() }
+            .onFocusChanged { state ->
+                onFocusChanged(state.isFocused)
+                if (state.isFocused) onFocused()
+            }
             .then(
                 if (focusRequester != null) Modifier.focusRequester(focusRequester)
                 else Modifier
