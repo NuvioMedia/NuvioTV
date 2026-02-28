@@ -133,6 +133,10 @@ fun GridContentCard(
                 focusedContainerColor = NuvioColors.BackgroundCard
             ),
             border = CardDefaults.border(
+                border = Border(
+                    border = BorderStroke(1.dp, NuvioColors.Border),
+                    shape = cardShape
+                ),
                 focusedBorder = Border(
                     border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioColors.FocusRing),
                     shape = cardShape
@@ -176,13 +180,13 @@ fun GridContentCard(
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = Color.Black,
+                            tint = NuvioColors.Background,
                             modifier = Modifier.size(24.dp)
                         )
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = stringResource(R.string.episodes_cd_watched),
-                            tint = Color.White,
+                            tint = NuvioColors.TextPrimary,
                             modifier = Modifier.size(21.dp)
                         )
                     }

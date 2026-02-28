@@ -44,7 +44,7 @@ fun NuvioDialog(
             modifier = Modifier
                 .width(width)
                 .clip(RoundedCornerShape(16.dp))
-                .background(NuvioColors.BackgroundElevated, RoundedCornerShape(16.dp))
+                .background(NuvioColors.Background, RoundedCornerShape(16.dp))
                 .border(1.dp, NuvioColors.Border, RoundedCornerShape(16.dp))
                 .padding(24.dp)
                 .onPreviewKeyEvent { event ->

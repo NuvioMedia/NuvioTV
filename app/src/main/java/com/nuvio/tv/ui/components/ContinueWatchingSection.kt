@@ -345,6 +345,10 @@ fun ContinueWatchingCard(
             focusedContainerColor = NuvioColors.FocusBackground
         ),
         border = CardDefaults.border(
+            border = Border(
+                border = BorderStroke(1.dp, NuvioColors.Border),
+                shape = CwCardShape
+            ),
             focusedBorder = Border(
                 border = BorderStroke(2.dp, NuvioColors.FocusRing),
                 shape = CwCardShape

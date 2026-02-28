@@ -133,7 +133,8 @@ fun HeroCarousel(
         // Indicator dots — pre-compute colors + shape to avoid reallocation per dot
         val focusRing = NuvioColors.FocusRing
         val dotColorFocusedInactive = remember(focusRing) { focusRing.copy(alpha = 0.4f) }
-        val dotColorUnfocusedInactive = remember { Color.White.copy(alpha = 0.3f) }
+        val textTertiary = NuvioColors.TextTertiary
+        val dotColorUnfocusedInactive = remember(textTertiary) { textTertiary.copy(alpha = 0.5f) }
         val dotShape = remember { RoundedCornerShape(3.dp) }
         Row(
             modifier = Modifier
@@ -271,7 +272,7 @@ private fun HeroCarouselSlide(
                 Text(
                     text = item.name,
                     style = MaterialTheme.typography.headlineLarge,
-                    color = Color.White,
+                    color = NuvioColors.TextPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -305,7 +306,7 @@ private fun HeroCarouselSlide(
                         Text(
                             text = ratingText,
                             style = MaterialTheme.typography.labelLarge,
-                            color = Color.White.copy(alpha = 0.8f)
+                            color = NuvioColors.TextSecondary
                         )
                     }
                 }
@@ -319,7 +320,7 @@ private fun HeroCarouselSlide(
                     Text(
                         text = year,
                         style = MaterialTheme.typography.labelLarge,
-                        color = Color.White.copy(alpha = 0.8f)
+                        color = NuvioColors.TextSecondary
                     )
                 }
             }
@@ -333,10 +334,10 @@ private fun HeroCarouselSlide(
                         Text(
                             text = genre,
                             style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.7f),
+                            color = NuvioColors.TextSecondary,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(Color.White.copy(alpha = 0.1f))
+                                .background(NuvioColors.TextPrimary.copy(alpha = 0.1f))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
@@ -348,7 +349,7 @@ private fun HeroCarouselSlide(
                 Text(
                     text = desc,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = NuvioColors.TextSecondary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )

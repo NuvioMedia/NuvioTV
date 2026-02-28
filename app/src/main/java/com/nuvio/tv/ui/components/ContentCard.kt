@@ -285,6 +285,10 @@ fun ContentCard(
                 focusedContainerColor = NuvioColors.BackgroundCard
             ),
             border = CardDefaults.border(
+                border = Border(
+                    border = BorderStroke(1.dp, NuvioColors.Border),
+                    shape = cardShape
+                ),
                 focusedBorder = Border(
                     border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioColors.FocusRing),
                     shape = cardShape
@@ -362,11 +366,12 @@ fun ContentCard(
                 }
 
                 if (isBackdropExpanded) {
-                    val logoAreaGradient = remember {
+                    val gradientColor = NuvioColors.Background.copy(alpha = 0.86f)
+                    val logoAreaGradient = remember(gradientColor) {
                         Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                Color.Black.copy(alpha = 0.76f)
+                                gradientColor
                             )
                         )
                     }
@@ -399,7 +404,7 @@ fun ContentCard(
                             Text(
                                 text = item.name,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Color.White,
+                                color = NuvioColors.TextPrimary,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -418,13 +423,13 @@ fun ContentCard(
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = Color.Black,
+                            tint = NuvioColors.Background,
                             modifier = Modifier.size(24.dp)
                         )
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = stringResource(R.string.episodes_cd_watched),
-                            tint = Color.White,
+                            tint = NuvioColors.TextPrimary,
                             modifier = Modifier.size(21.dp)
                         )
                     }
@@ -442,7 +447,7 @@ fun ContentCard(
                     Text(
                         text = metaTokens.joinToString("  •  "),
                         style = MaterialTheme.typography.labelMedium,
-                        color = NuvioTheme.extendedColors.textSecondary,
+                        color = NuvioColors.TextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
