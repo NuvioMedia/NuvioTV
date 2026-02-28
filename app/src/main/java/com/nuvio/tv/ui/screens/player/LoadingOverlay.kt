@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.nuvio.tv.ui.components.LoadingIndicator
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.nuvio.tv.ui.theme.NuvioColors
 
 @Composable
 fun LoadingOverlay(
@@ -70,7 +71,7 @@ fun LoadingOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                .background(NuvioColors.Background)
         ) {
             if (!backdropUrl.isNullOrBlank()) {
                 AsyncImage(
@@ -90,10 +91,10 @@ fun LoadingOverlay(
                     .background(
                         Brush.verticalGradient(
                             colorStops = arrayOf(
-                                0f to Color(0x4D000000),
-                                0.35f to Color(0x99000000),
-                                0.7f to Color(0xCC000000),
-                                1f to Color(0xE6000000)
+                                0f to NuvioColors.Background.copy(alpha = 0.3f),
+                                0.35f to NuvioColors.Background.copy(alpha = 0.6f),
+                                0.7f to NuvioColors.Background.copy(alpha = 0.8f),
+                                1f to NuvioColors.Background.copy(alpha = 0.9f)
                             )
                         )
                     )
@@ -137,7 +138,7 @@ fun LoadingOverlay(
                         Text(
                             text = message,
                             style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.72f),
+                            color = NuvioColors.TextPrimary.copy(alpha = 0.72f),
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(horizontal = 24.dp)
                         )

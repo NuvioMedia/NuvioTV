@@ -91,7 +91,7 @@ internal fun SubtitleStyleSidePanel(
             .width(760.dp)
             .height(292.dp)
             .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-            .background(Color(0xFF101010))
+            .background(NuvioColors.BackgroundElevated)
             .padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 10.dp)
     ) {
         Box(
@@ -106,7 +106,7 @@ internal fun SubtitleStyleSidePanel(
                 Text(
                     text = stringResource(R.string.subtitle_style_title),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.White
+                    color = NuvioColors.TextPrimary
                 )
             }
         }
@@ -189,7 +189,7 @@ internal fun SubtitleStyleSidePanel(
                             Text(
                                 text = stringResource(R.string.subtitle_style_color),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.7f)
+                                color = NuvioColors.TextPrimary.copy(alpha = 0.7f)
                             )
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -238,15 +238,15 @@ internal fun SubtitleStyleSidePanel(
                     Card(
                         onClick = { onEvent(PlayerEvent.OnResetSubtitleDefaults) },
                         colors = CardDefaults.colors(
-                            containerColor = Color.White.copy(alpha = 0.1f),
-                            focusedContainerColor = Color.White.copy(alpha = 0.2f)
+                            containerColor = NuvioColors.TextPrimary.copy(alpha = 0.1f),
+                            focusedContainerColor = NuvioColors.TextPrimary.copy(alpha = 0.2f)
                         ),
                         shape = CardDefaults.shape(RoundedCornerShape(12.dp))
                     ) {
                         Text(
                             text = stringResource(R.string.subtitle_style_reset),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.8f),
+                            color = NuvioColors.TextPrimary.copy(alpha = 0.8f),
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                         )
                     }
@@ -266,7 +266,7 @@ private fun SubtitleStyleSection(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
-            .background(Color.White.copy(alpha = 0.06f))
+            .background(NuvioColors.TextPrimary.copy(alpha = 0.06f))
             .padding(12.dp)
     ) {
         Column(
@@ -279,7 +279,7 @@ private fun SubtitleStyleSection(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.8f)
+                    color = NuvioColors.TextPrimary.copy(alpha = 0.8f)
                 )
             }
         }
@@ -306,7 +306,7 @@ private fun SubtitleStyleSettingRow(
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White,
+                color = NuvioColors.TextPrimary,
                 modifier = Modifier.padding(bottom = 6.dp)
             )
         }
@@ -329,10 +329,10 @@ private fun SubtitleStyleStepperButton(
         onClick = onClick,
         modifier = modifier.size(32.dp),
         colors = IconButtonDefaults.colors(
-            containerColor = Color.White.copy(alpha = 0.16f),
-            focusedContainerColor = Color.White.copy(alpha = 0.28f),
-            contentColor = Color.White,
-            focusedContentColor = Color.White
+            containerColor = NuvioColors.TextPrimary.copy(alpha = 0.16f),
+            focusedContainerColor = NuvioColors.TextPrimary.copy(alpha = 0.28f),
+            contentColor = NuvioColors.TextPrimary,
+            focusedContentColor = NuvioColors.TextPrimary
         ),
         shape = IconButtonDefaults.shape(shape = RoundedCornerShape(10.dp))
     ) {
@@ -345,14 +345,14 @@ private fun SubtitleStyleValueDisplay(text: String) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(Color.White.copy(alpha = 0.12f))
+            .background(NuvioColors.TextPrimary.copy(alpha = 0.12f))
             .padding(horizontal = 10.dp, vertical = 5.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White
+            color = NuvioColors.TextPrimary
         )
     }
 }
@@ -368,7 +368,7 @@ private fun SubtitleStyleColorChip(
 
     val borderModifier = when {
         isFocused -> Modifier.border(2.dp, NuvioColors.FocusRing, CircleShape)
-        isSelected -> Modifier.border(2.dp, Color.White, CircleShape)
+        isSelected -> Modifier.border(2.dp, NuvioColors.TextPrimary, CircleShape)
         else -> Modifier
     }
 
@@ -381,8 +381,8 @@ private fun SubtitleStyleColorChip(
         colors = IconButtonDefaults.colors(
             containerColor = color,
             focusedContainerColor = color,
-            contentColor = if (isLight) Color.Black else Color.White,
-            focusedContentColor = if (isLight) Color.Black else Color.White
+            contentColor = if (isLight) Color.Black else NuvioColors.TextPrimary,
+            focusedContentColor = if (isLight) Color.Black else NuvioColors.TextPrimary
         ),
         shape = IconButtonDefaults.shape(shape = CircleShape)
     ) {
@@ -400,15 +400,15 @@ private fun SubtitleStyleToggleButton(
     Card(
         onClick = onClick,
         colors = CardDefaults.colors(
-            containerColor = if (isEnabled) Color.White.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.08f),
-            focusedContainerColor = Color.White.copy(alpha = 0.28f)
+            containerColor = if (isEnabled) NuvioColors.TextPrimary.copy(alpha = 0.18f) else NuvioColors.TextPrimary.copy(alpha = 0.08f),
+            focusedContainerColor = NuvioColors.TextPrimary.copy(alpha = 0.28f)
         ),
         shape = CardDefaults.shape(RoundedCornerShape(10.dp))
     ) {
         Text(
             text = if (isEnabled) stringResource(R.string.subtitle_style_on) else stringResource(R.string.subtitle_style_off),
             style = MaterialTheme.typography.bodySmall,
-            color = if (isEnabled) Color.White else Color.White.copy(alpha = 0.55f),
+            color = if (isEnabled) NuvioColors.TextPrimary else NuvioColors.TextPrimary.copy(alpha = 0.55f),
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
         )
     }

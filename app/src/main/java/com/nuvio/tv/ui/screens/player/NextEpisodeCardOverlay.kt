@@ -90,12 +90,12 @@ fun NextEpisodeCardOverlay(
             onClick = onCardClick,
             shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
             colors = CardDefaults.colors(
-                containerColor = Color(0xE3191919),
-                focusedContainerColor = Color(0xE3191919)
+                containerColor = NuvioColors.BackgroundElevated.copy(alpha = 0.89f),
+                focusedContainerColor = NuvioColors.BackgroundElevated.copy(alpha = 0.89f)
             ),
             border = CardDefaults.border(
                 border = Border(
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
+                    border = BorderStroke(1.dp, NuvioColors.TextPrimary.copy(alpha = 0.16f)),
                     shape = RoundedCornerShape(14.dp)
                 ),
                 focusedBorder = Border(
@@ -128,7 +128,7 @@ fun NextEpisodeCardOverlay(
                             .fillMaxSize()
                             .background(
                                 Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.32f))
+                                    colors = listOf(Color.Transparent, NuvioColors.Background.copy(alpha = 0.32f))
                                 )
                             )
                     )
@@ -139,14 +139,14 @@ fun NextEpisodeCardOverlay(
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                     Text(
                         text = stringResource(R.string.next_episode_label),
-                        color = Color.White.copy(alpha = 0.8f),
+                        color = NuvioColors.TextPrimary.copy(alpha = 0.8f),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "S${nextEpisode.season}E${nextEpisode.episode} • ${nextEpisode.title}",
-                        color = Color.White,
+                        color = NuvioColors.TextPrimary,
                         fontSize = 14.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -163,7 +163,7 @@ fun NextEpisodeCardOverlay(
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = autoPlayStatus,
-                            color = Color.White.copy(alpha = 0.78f),
+                            color = NuvioColors.TextPrimary.copy(alpha = 0.78f),
                             fontSize = 11.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -176,7 +176,7 @@ fun NextEpisodeCardOverlay(
                         .padding(start = 8.dp)
                         .clip(CircleShape)
                         .border(
-                            BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+                            BorderStroke(1.dp, NuvioColors.TextPrimary.copy(alpha = 0.2f)),
                             CircleShape
                         )
                         .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -185,12 +185,12 @@ fun NextEpisodeCardOverlay(
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = null,
-                        tint = if (isPlayable) Color.White else Color.White.copy(alpha = 0.65f),
+                        tint = if (isPlayable) NuvioColors.TextPrimary else NuvioColors.TextPrimary.copy(alpha = 0.65f),
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
                         text = if (isPlayable) stringResource(R.string.next_episode_play) else stringResource(R.string.next_episode_unaired),
-                        color = if (isPlayable) Color.White else Color.White.copy(alpha = 0.72f),
+                        color = if (isPlayable) NuvioColors.TextPrimary else NuvioColors.TextPrimary.copy(alpha = 0.72f),
                         fontSize = 12.sp,
                         modifier = Modifier.padding(start = 3.dp)
                     )

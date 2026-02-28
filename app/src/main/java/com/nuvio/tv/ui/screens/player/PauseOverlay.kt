@@ -88,7 +88,7 @@ fun PauseOverlay(
                     .background(
                         Brush.horizontalGradient(
                             colors = listOf(
-                                Color.Black.copy(alpha = 0.88f),
+                                NuvioColors.Background.copy(alpha = 0.88f),
                                 Color.Transparent
                             )
                         )
@@ -101,9 +101,9 @@ fun PauseOverlay(
                     .background(
                         Brush.verticalGradient(
                             colorStops = arrayOf(
-                                0f to Color.Black.copy(alpha = 0.6f),
-                                0.3f to Color.Black.copy(alpha = 0.4f),
-                                0.6f to Color.Black.copy(alpha = 0.2f),
+                                0f to NuvioColors.Background.copy(alpha = 0.6f),
+                                0.3f to NuvioColors.Background.copy(alpha = 0.4f),
+                                0.6f to NuvioColors.Background.copy(alpha = 0.2f),
                                 1f to Color.Transparent
                             )
                         )
@@ -166,7 +166,7 @@ private fun PauseOverlayClock(modifier: Modifier = Modifier) {
             fontWeight = FontWeight.Normal,
             fontSize = 34.sp
         ),
-        color = Color.White.copy(alpha = 0.95f),
+        color = NuvioColors.TextPrimary.copy(alpha = 0.95f),
         modifier = modifier
     )
 }
@@ -199,7 +199,7 @@ private fun PauseMetadataView(
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineLarge,
-                color = Color.White,
+                color = NuvioColors.TextPrimary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -223,7 +223,7 @@ private fun PauseMetadataView(
                 Text(
                     text = episodeTitle,
                     style = MaterialTheme.typography.titleLarge,
-                    color = Color.White,
+                    color = NuvioColors.TextPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 12.dp)
@@ -273,15 +273,15 @@ private fun CastChip(
     Card(
         onClick = onClick,
         colors = CardDefaults.colors(
-            containerColor = Color.White.copy(alpha = 0.1f),
-            focusedContainerColor = Color.White.copy(alpha = 0.18f)
+            containerColor = NuvioColors.TextPrimary.copy(alpha = 0.1f),
+            focusedContainerColor = NuvioColors.TextPrimary.copy(alpha = 0.18f)
         ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp))
     ) {
         Text(
             text = member.name,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White,
+            color = NuvioColors.TextPrimary,
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -342,7 +342,7 @@ private fun CastDetailView(
                 Text(
                     text = member.name,
                     style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
+                    color = NuvioColors.TextPrimary,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis

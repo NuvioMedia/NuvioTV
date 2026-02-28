@@ -329,7 +329,7 @@ fun PlayerScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(NuvioColors.Background)
             .focusRequester(containerFocusRequester)
             .focusable()
             .onPreviewKeyEvent { keyEvent ->
@@ -838,7 +838,7 @@ fun PlayerScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.45f))
+                    .background(NuvioColors.Background.copy(alpha = 0.45f))
             )
         }
 
@@ -880,7 +880,7 @@ fun PlayerScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.45f))
+                    .background(NuvioColors.Background.copy(alpha = 0.45f))
             )
         }
 
@@ -918,7 +918,7 @@ fun PlayerScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.35f))
+                    .background(NuvioColors.Background.copy(alpha = 0.35f))
             )
         }
 
@@ -1024,7 +1024,7 @@ private fun PlayerControlsOverlay(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color.Black.copy(alpha = 0.7f),
+                            NuvioColors.Background.copy(alpha = 0.7f),
                             Color.Transparent
                         )
                     )
@@ -1041,7 +1041,7 @@ private fun PlayerControlsOverlay(
                     Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color.Black.copy(alpha = 0.8f)
+                            NuvioColors.Background.copy(alpha = 0.8f)
                         )
                     )
                 )
@@ -1070,7 +1070,7 @@ private fun PlayerControlsOverlay(
                     Text(
                         text = displayName,
                         style = MaterialTheme.typography.headlineMedium,
-                        color = Color.White,
+                        color = NuvioColors.TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1085,7 +1085,7 @@ private fun PlayerControlsOverlay(
                         Text(
                             text = episodeInfo,
                             style = MaterialTheme.typography.titleMedium,
-                            color = Color.White.copy(alpha = 0.9f),
+                            color = NuvioColors.TextPrimary.copy(alpha = 0.9f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1101,7 +1101,7 @@ private fun PlayerControlsOverlay(
                                 Text(
                                     text = yearText,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.68f)
+                                    color = NuvioColors.TextPrimary.copy(alpha = 0.68f)
                                 )
                             }
 
@@ -1113,7 +1113,7 @@ private fun PlayerControlsOverlay(
                                 Text(
                                     text = stringResource(R.string.player_via, uiState.currentStreamName ?: ""),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.68f),
+                                    color = NuvioColors.TextPrimary.copy(alpha = 0.68f),
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -1254,7 +1254,7 @@ private fun PlayerControlsOverlay(
                 Text(
                     text = "${formatTime(uiState.currentPosition)} / ${formatTime(uiState.duration)}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.9f)
+                    color = NuvioColors.TextPrimary.copy(alpha = 0.9f)
                 )
             }
         }
@@ -1286,9 +1286,9 @@ private fun ControlButton(
             },
         colors = IconButtonDefaults.colors(
             containerColor = Color.Transparent,
-            focusedContainerColor = Color.White,
-            contentColor = Color.White,
-            focusedContentColor = Color.Black
+            focusedContainerColor = NuvioColors.TextPrimary,
+            contentColor = NuvioColors.TextPrimary,
+            focusedContentColor = NuvioColors.Background
         ),
         shape = IconButtonDefaults.shape(shape = CircleShape)
     ) {
@@ -1329,7 +1329,7 @@ private fun ProgressBar(
             .fillMaxWidth()
             .height(6.dp)
             .clip(RoundedCornerShape(3.dp))
-            .background(Color.White.copy(alpha = 0.3f))
+            .background(NuvioColors.TextPrimary.copy(alpha = 0.3f))
     ) {
         Box(
             modifier = Modifier
@@ -1364,7 +1364,7 @@ private fun SeekOverlay(uiState: PlayerUiState) {
             Text(
                 text = "${formatTime(uiState.currentPosition)} / ${formatTime(uiState.duration)}",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.9f)
+                color = NuvioColors.TextPrimary.copy(alpha = 0.9f)
             )
         }
     }
@@ -1406,12 +1406,12 @@ private fun PlayerClockOverlay(
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold
             ),
-            color = Color.White.copy(alpha = 0.96f)
+            color = NuvioColors.TextPrimary.copy(alpha = 0.96f)
         )
         Text(
             text = stringResource(R.string.player_ends_at, endTimeText),
             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 10.sp),
-            color = Color.White.copy(alpha = 0.78f)
+            color = NuvioColors.TextPrimary.copy(alpha = 0.78f)
         )
     }
 }
@@ -1424,7 +1424,7 @@ private fun AspectRatioIndicator(text: String) {
     Row(
         modifier = Modifier
             .background(
-                color = Color.Black.copy(alpha = 0.85f),
+                color = NuvioColors.Background.copy(alpha = 0.85f),
                 shape = RoundedCornerShape(24.dp)
             )
             .padding(horizontal = 20.dp, vertical = 12.dp),
@@ -1436,7 +1436,7 @@ private fun AspectRatioIndicator(text: String) {
             modifier = Modifier
                 .size(36.dp)
                 .background(
-                    color = Color(0xFF3B3B3B),
+                    color = NuvioColors.BackgroundElevated,
                     shape = CircleShape
                 ),
             contentAlignment = Alignment.Center
@@ -1444,7 +1444,7 @@ private fun AspectRatioIndicator(text: String) {
             Icon(
                 painter = customAspectPainter,
                 contentDescription = null,
-                tint = Color.White,
+                tint = NuvioColors.TextPrimary,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -1458,7 +1458,7 @@ private fun AspectRatioIndicator(text: String) {
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold
             ),
-            color = Color.White
+            color = NuvioColors.TextPrimary
         )
     }
 }
@@ -1468,7 +1468,7 @@ private fun StreamSourceIndicator(text: String) {
     Row(
         modifier = Modifier
             .background(
-                color = Color.Black.copy(alpha = 0.82f),
+                color = NuvioColors.Background.copy(alpha = 0.82f),
                 shape = RoundedCornerShape(20.dp)
             )
             .padding(horizontal = 14.dp, vertical = 8.dp),
@@ -1477,7 +1477,7 @@ private fun StreamSourceIndicator(text: String) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-            color = Color.White,
+            color = NuvioColors.TextPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -1496,9 +1496,8 @@ private fun SubtitleDelayOverlay(subtitleDelayMs: Int) {
             .background(
                 Brush.linearGradient(
                     colors = listOf(
-                        Color(0xCC1F3246),
-                        Color(0xCC283655),
-                        Color(0xCC2F2B55)
+                        NuvioColors.BackgroundElevated.copy(alpha = 0.95f),
+                        NuvioColors.BackgroundElevated.copy(alpha = 0.95f)
                     )
                 )
             )

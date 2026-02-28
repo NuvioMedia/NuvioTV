@@ -237,7 +237,7 @@ private fun EpisodeStreamsView(
             Text(
                 text = uiState.episodeStreamsError ?: stringResource(R.string.panel_failed_load_streams),
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.85f)
+                color = NuvioColors.TextPrimary.copy(alpha = 0.85f)
             )
         }
 
@@ -245,7 +245,7 @@ private fun EpisodeStreamsView(
             Text(
                 text = stringResource(R.string.episodes_panel_no_streams),
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.7f)
+                color = NuvioColors.TextPrimary.copy(alpha = 0.7f)
             )
         }
 
@@ -322,7 +322,7 @@ private fun EpisodesListView(
             Text(
                 text = uiState.episodesError ?: stringResource(R.string.panel_failed_load_episodes),
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.85f)
+                color = NuvioColors.TextPrimary.copy(alpha = 0.85f)
             )
         }
 
@@ -330,7 +330,7 @@ private fun EpisodesListView(
             Text(
                 text = stringResource(R.string.episodes_panel_no_episodes),
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.7f)
+                color = NuvioColors.TextPrimary.copy(alpha = 0.7f)
             )
         }
 
@@ -418,8 +418,8 @@ private fun EpisodesSeasonTabs(
                     .onFocusChanged { isFocused = it.isFocused },
                 shape = CardDefaults.shape(shape = RoundedCornerShape(24.dp)),
                 colors = CardDefaults.colors(
-                    containerColor = if (isSelected) Color(0xFFF5F5F5) else NuvioColors.BackgroundCard,
-                    focusedContainerColor = if (isSelected) Color.White else NuvioColors.Secondary
+                    containerColor = if (isSelected) NuvioColors.TextPrimary else NuvioColors.BackgroundCard,
+                    focusedContainerColor = if (isSelected) NuvioColors.TextPrimary else NuvioColors.Secondary
                 ),
                 border = CardDefaults.border(
                     border = Border(
@@ -437,7 +437,7 @@ private fun EpisodesSeasonTabs(
                     text = if (season == 0) stringResource(R.string.episodes_specials) else stringResource(R.string.episodes_season, season),
                     style = MaterialTheme.typography.labelLarge,
                     color = when {
-                        isSelected -> Color.Black
+                        isSelected -> NuvioColors.Background
                         isFocused -> NuvioColors.OnSecondary
                         else -> NuvioTheme.extendedColors.textSecondary
                     },
@@ -526,13 +526,13 @@ private fun EpisodeItem(
                             .align(Alignment.BottomStart)
                             .padding(8.dp)
                             .clip(RoundedCornerShape(6.dp))
-                            .background(Color.Black.copy(alpha = 0.75f))
+                            .background(NuvioColors.Background.copy(alpha = 0.75f))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = episodeCode,
                             style = MaterialTheme.typography.labelMedium,
-                            color = Color.White
+                            color = NuvioColors.TextPrimary
                         )
                     }
                 }
@@ -550,7 +550,7 @@ private fun EpisodeItem(
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Current",
-                            tint = Color.White,
+                            tint = NuvioColors.TextPrimary,
                             modifier = Modifier.size(14.dp)
                         )
                     }

@@ -118,7 +118,7 @@ fun DisplayModeOverlay(
                 textAlign = TextAlign.End,
                 modifier = Modifier
                     .clip(RoundedCornerShape(6.dp))
-                    .background(Color.Black.copy(alpha = 0.45f))
+                    .background(NuvioColors.Background.copy(alpha = 0.45f))
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             )
         }
@@ -139,19 +139,19 @@ fun DisplayModeOverlay(
                         Text(
                             text = item.first,
                             fontSize = 11.sp,
-                            color = Color.White.copy(alpha = 0.85f),
+                            color = NuvioColors.TextPrimary.copy(alpha = 0.85f),
                             fontWeight = FontWeight.SemiBold,
                             textAlign = TextAlign.End
                         )
                         Text(
                             text = " - ",
                             fontSize = 11.sp,
-                            color = Color.White.copy(alpha = 0.4f),
+                            color = NuvioColors.TextPrimary.copy(alpha = 0.4f),
                         )
                         Text(
                             text = item.second,
                             fontSize = 11.sp,
-                            color = Color.White.copy(alpha = 0.6f),
+                            color = NuvioColors.TextPrimary.copy(alpha = 0.6f),
                             textAlign = TextAlign.End
                         )
                     }

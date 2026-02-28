@@ -167,7 +167,7 @@ internal fun StreamSourcesSidePanel(
                     Text(
                         text = uiState.sourceStreamsError ?: stringResource(R.string.panel_failed_load_streams),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.85f)
+                        color = NuvioColors.TextPrimary.copy(alpha = 0.85f)
                     )
                 }
 
@@ -175,7 +175,7 @@ internal fun StreamSourcesSidePanel(
                     Text(
                         text = stringResource(R.string.sources_no_streams),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.7f)
+                        color = NuvioColors.TextPrimary.copy(alpha = 0.7f)
                     )
                 }
 

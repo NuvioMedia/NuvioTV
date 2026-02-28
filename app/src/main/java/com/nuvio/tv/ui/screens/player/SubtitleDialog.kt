@@ -123,7 +123,7 @@ internal fun SubtitleSelectionDialog(
             modifier = Modifier
                 .width(450.dp)
                 .clip(RoundedCornerShape(24.dp))
-                .background(Color(0xFF0F0F0F))
+                .background(NuvioColors.BackgroundElevated)
         ) {
             Column(
                 modifier = Modifier.padding(24.dp)
@@ -131,7 +131,7 @@ internal fun SubtitleSelectionDialog(
                 Text(
                     text = stringResource(R.string.subtitle_dialog_title),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White,
+                    color = NuvioColors.TextPrimary,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
@@ -218,11 +218,11 @@ private fun SubtitleTab(
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
             containerColor = when {
-                isSelected -> Color.White.copy(alpha = 0.18f)
-                isFocused -> Color.White.copy(alpha = 0.12f)
-                else -> Color.White.copy(alpha = 0.06f)
+                isSelected -> NuvioColors.TextPrimary.copy(alpha = 0.18f)
+                isFocused -> NuvioColors.TextPrimary.copy(alpha = 0.12f)
+                else -> NuvioColors.TextPrimary.copy(alpha = 0.06f)
             },
-            focusedContainerColor = if (isSelected) Color.White.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.12f)
+            focusedContainerColor = if (isSelected) NuvioColors.TextPrimary.copy(alpha = 0.22f) else NuvioColors.TextPrimary.copy(alpha = 0.12f)
         ),
         shape = CardDefaults.shape(RoundedCornerShape(12.dp))
     ) {
@@ -234,20 +234,20 @@ private fun SubtitleTab(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f)
+                color = if (isSelected) NuvioColors.TextPrimary else NuvioColors.TextPrimary.copy(alpha = 0.7f)
             )
 
             if (badgeCount != null && badgeCount > 0) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (isSelected) Color.White.copy(alpha = 0.2f) else NuvioColors.Secondary)
+                        .background(if (isSelected) NuvioColors.TextPrimary.copy(alpha = 0.2f) else NuvioColors.Secondary)
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = badgeCount.toString(),
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (isSelected) Color.White else NuvioColors.OnSecondary
+                        color = if (isSelected) NuvioColors.TextPrimary else NuvioColors.OnSecondary
                     )
                 }
             }
@@ -292,7 +292,7 @@ private fun InternalSubtitlesContent(
                     Text(
                         text = stringResource(R.string.subtitle_no_builtin),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = NuvioColors.TextPrimary.copy(alpha = 0.5f)
                     )
                 }
             }
@@ -360,7 +360,7 @@ private fun AddonSubtitlesContent(
                         Text(
                             text = stringResource(R.string.subtitle_loading_addon),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.5f)
+                            color = NuvioColors.TextPrimary.copy(alpha = 0.5f)
                         )
                     }
                 }
@@ -376,7 +376,7 @@ private fun AddonSubtitlesContent(
                     Text(
                         text = stringResource(R.string.subtitle_no_addon),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = NuvioColors.TextPrimary.copy(alpha = 0.5f)
                     )
                 }
             }
@@ -420,7 +420,7 @@ private fun FilterSelector(
         Text(
             text = title,
             style = MaterialTheme.typography.labelMedium,
-            color = Color.White.copy(alpha = 0.65f)
+            color = NuvioColors.TextPrimary.copy(alpha = 0.65f)
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(filters, key = { it.key }) { filter ->
@@ -460,18 +460,18 @@ private fun FilterChip(
             },
         colors = CardDefaults.colors(
             containerColor = when {
-                isSelected -> Color.White.copy(alpha = 0.2f)
-                isFocused -> Color.White.copy(alpha = 0.12f)
-                else -> Color.White.copy(alpha = 0.06f)
+                isSelected -> NuvioColors.TextPrimary.copy(alpha = 0.2f)
+                isFocused -> NuvioColors.TextPrimary.copy(alpha = 0.12f)
+                else -> NuvioColors.TextPrimary.copy(alpha = 0.06f)
             },
-            focusedContainerColor = if (isSelected) Color.White.copy(alpha = 0.24f) else Color.White.copy(alpha = 0.12f)
+            focusedContainerColor = if (isSelected) NuvioColors.TextPrimary.copy(alpha = 0.24f) else NuvioColors.TextPrimary.copy(alpha = 0.12f)
         ),
         shape = CardDefaults.shape(RoundedCornerShape(10.dp))
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White,
+            color = NuvioColors.TextPrimary,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
         )
     }
@@ -641,10 +641,10 @@ private fun AddonSubtitleItem(
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
             containerColor = when {
-                isSelected -> Color.White.copy(alpha = 0.12f)
-                else -> Color.White.copy(alpha = 0.05f)
+                isSelected -> NuvioColors.TextPrimary.copy(alpha = 0.12f)
+                else -> NuvioColors.TextPrimary.copy(alpha = 0.05f)
             },
-            focusedContainerColor = Color.White.copy(alpha = 0.15f)
+            focusedContainerColor = NuvioColors.TextPrimary.copy(alpha = 0.15f)
         ),
         shape = CardDefaults.shape(RoundedCornerShape(12.dp))
     ) {
@@ -659,12 +659,12 @@ private fun AddonSubtitleItem(
                 Text(
                     text = Subtitle.languageCodeToName(normalizeSubtitleLanguageCode(subtitle.lang)),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White
+                    color = NuvioColors.TextPrimary
                 )
                 Text(
                     text = subtitle.addonName,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.5f)
+                    color = NuvioColors.TextPrimary.copy(alpha = 0.5f)
                 )
             }
 
@@ -805,15 +805,15 @@ private fun SubtitleStyleContent(
                 onClick = { onEvent(PlayerEvent.OnResetSubtitleDefaults) },
                 modifier = Modifier.onFocusChanged { isFocused = it.isFocused },
                 colors = CardDefaults.colors(
-                    containerColor = Color.White.copy(alpha = 0.1f),
-                    focusedContainerColor = Color.White.copy(alpha = 0.18f)
+                    containerColor = NuvioColors.TextPrimary.copy(alpha = 0.1f),
+                    focusedContainerColor = NuvioColors.TextPrimary.copy(alpha = 0.18f)
                 ),
                 shape = CardDefaults.shape(RoundedCornerShape(12.dp))
             ) {
                 Text(
                     text = stringResource(R.string.subtitle_reset_defaults),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f),
+                    color = NuvioColors.TextPrimary.copy(alpha = 0.7f),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                 )
             }
@@ -831,7 +831,7 @@ private fun StyleSection(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.05f))
+            .background(NuvioColors.TextPrimary.copy(alpha = 0.05f))
             .padding(16.dp)
     ) {
         // Section header
@@ -843,13 +843,13 @@ private fun StyleSection(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.7f),
+                tint = NuvioColors.TextPrimary.copy(alpha = 0.7f),
                 modifier = Modifier.size(18.dp)
             )
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
-                color = Color.White.copy(alpha = 0.7f)
+                color = NuvioColors.TextPrimary.copy(alpha = 0.7f)
             )
         }
 
@@ -868,7 +868,7 @@ private fun StyleSettingRow(
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White,
+            color = NuvioColors.TextPrimary,
             modifier = Modifier.padding(bottom = 8.dp)
         )
         Row(
@@ -889,10 +889,10 @@ private fun StyleStepperButton(
         onClick = onClick,
         modifier = Modifier.size(36.dp),
         colors = IconButtonDefaults.colors(
-            containerColor = Color.White.copy(alpha = 0.18f),
-            focusedContainerColor = Color.White.copy(alpha = 0.3f),
-            contentColor = Color.White,
-            focusedContentColor = Color.White
+            containerColor = NuvioColors.TextPrimary.copy(alpha = 0.18f),
+            focusedContainerColor = NuvioColors.TextPrimary.copy(alpha = 0.3f),
+            contentColor = NuvioColors.TextPrimary,
+            focusedContentColor = NuvioColors.TextPrimary
         ),
         shape = IconButtonDefaults.shape(shape = RoundedCornerShape(12.dp))
     ) {
@@ -905,14 +905,14 @@ private fun StyleValueDisplay(text: String) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(Color.White.copy(alpha = 0.12f))
+            .background(NuvioColors.TextPrimary.copy(alpha = 0.12f))
             .padding(horizontal = 14.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.White
+            color = NuvioColors.TextPrimary
         )
     }
 }
@@ -928,7 +928,7 @@ private fun StyleColorChip(
 
     val borderModifier = when {
         isFocused -> Modifier.border(2.dp, NuvioColors.FocusRing, CircleShape)
-        isSelected -> Modifier.border(2.dp, Color.White, CircleShape)
+        isSelected -> Modifier.border(2.dp, NuvioColors.TextPrimary, CircleShape)
         else -> Modifier
     }
 
@@ -941,8 +941,8 @@ private fun StyleColorChip(
         colors = IconButtonDefaults.colors(
             containerColor = color,
             focusedContainerColor = color,
-            contentColor = if (isLight) Color.Black else Color.White,
-            focusedContentColor = if (isLight) Color.Black else Color.White
+            contentColor = if (isLight) Color.Black else NuvioColors.TextPrimary,
+            focusedContentColor = if (isLight) Color.Black else NuvioColors.TextPrimary
         ),
         shape = IconButtonDefaults.shape(shape = CircleShape)
     ) {
@@ -962,15 +962,15 @@ private fun StyleToggleButton(
         onClick = onClick,
         modifier = Modifier.onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
-            containerColor = if (isEnabled) Color.White.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.08f),
-            focusedContainerColor = Color.White.copy(alpha = 0.25f)
+            containerColor = if (isEnabled) NuvioColors.TextPrimary.copy(alpha = 0.18f) else NuvioColors.TextPrimary.copy(alpha = 0.08f),
+            focusedContainerColor = NuvioColors.TextPrimary.copy(alpha = 0.25f)
         ),
         shape = CardDefaults.shape(RoundedCornerShape(10.dp))
     ) {
         Text(
             text = if (isEnabled) stringResource(R.string.subtitle_on) else stringResource(R.string.subtitle_off),
             style = MaterialTheme.typography.bodyMedium,
-            color = if (isEnabled) Color.White else Color.White.copy(alpha = 0.5f),
+            color = if (isEnabled) NuvioColors.TextPrimary else NuvioColors.TextPrimary.copy(alpha = 0.5f),
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
     }
@@ -991,8 +991,8 @@ internal fun TrackItem(
             .fillMaxWidth()
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
-            containerColor = if (isSelected) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.05f),
-            focusedContainerColor = Color.White.copy(alpha = 0.15f)
+            containerColor = if (isSelected) NuvioColors.TextPrimary.copy(alpha = 0.12f) else NuvioColors.TextPrimary.copy(alpha = 0.05f),
+            focusedContainerColor = NuvioColors.TextPrimary.copy(alpha = 0.15f)
         ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp))
     ) {
@@ -1007,13 +1007,13 @@ internal fun TrackItem(
                 Text(
                     text = track.name,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = if (isSelected) Color.White else Color.White.copy(alpha = 0.9f)
+                    color = if (isSelected) NuvioColors.TextPrimary else NuvioColors.TextPrimary.copy(alpha = 0.9f)
                 )
                 if (track.language != null) {
                     Text(
                         text = track.language.uppercase(),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = NuvioColors.TextPrimary.copy(alpha = 0.5f)
                     )
                 }
             }

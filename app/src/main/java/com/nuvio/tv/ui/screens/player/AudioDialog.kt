@@ -57,7 +57,7 @@ internal fun AudioSelectionDialog(
             modifier = Modifier
                 .width(420.dp)
                 .clip(RoundedCornerShape(24.dp))
-                .background(Color(0xFF0F0F0F))
+                .background(NuvioColors.BackgroundElevated)
         ) {
             Column(
                 modifier = Modifier.padding(24.dp)
@@ -65,7 +65,7 @@ internal fun AudioSelectionDialog(
                 Text(
                     text = stringResource(R.string.audio_dialog_title),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White,
+                    color = NuvioColors.TextPrimary,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
@@ -112,10 +112,10 @@ private fun AudioTrackItem(
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
             containerColor = when {
-                isSelected -> Color.White.copy(alpha = 0.12f)
-                else -> Color.White.copy(alpha = 0.05f)
+                isSelected -> NuvioColors.TextPrimary.copy(alpha = 0.12f)
+                else -> NuvioColors.TextPrimary.copy(alpha = 0.05f)
             },
-            focusedContainerColor = Color.White.copy(alpha = 0.15f)
+            focusedContainerColor = NuvioColors.TextPrimary.copy(alpha = 0.15f)
         ),
         shape = CardDefaults.shape(RoundedCornerShape(12.dp))
     ) {
@@ -130,13 +130,13 @@ private fun AudioTrackItem(
                 Text(
                     text = track.name,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = if (isSelected) Color.White else Color.White.copy(alpha = 0.9f)
+                    color = if (isSelected) NuvioColors.TextPrimary else NuvioColors.TextPrimary.copy(alpha = 0.9f)
                 )
                 if (track.language != null) {
                     Text(
                         text = track.language.uppercase(),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.5f)
+                        color = NuvioColors.TextPrimary.copy(alpha = 0.5f)
                     )
                 }
             }
