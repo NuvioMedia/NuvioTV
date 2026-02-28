@@ -234,7 +234,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
                     }
                 } else {
                     combine(
-                        watchProgressPreferences.allProgress,
+                        watchProgressPreferences.allRawProgress,
                         metadataState
                     ) { items, metadataMap ->
                         hydrateMetadata(items)
