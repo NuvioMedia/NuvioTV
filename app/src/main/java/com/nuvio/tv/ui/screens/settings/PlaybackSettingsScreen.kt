@@ -358,7 +358,7 @@ internal fun ToggleSettingsItem(
             },
         colors = CardDefaults.colors(
             containerColor = NuvioColors.Background,
-            focusedContainerColor = NuvioColors.Background
+            focusedContainerColor = NuvioColors.FocusBackground
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
@@ -445,12 +445,12 @@ internal fun RenderTypeSettingsItem(
             containerColor = if (isSelected) {
                 NuvioColors.Primary.copy(alpha = 0.15f * contentAlpha)
             } else {
-                NuvioColors.BackgroundCard
+                NuvioColors.Background
             },
             focusedContainerColor = if (isSelected) {
                 NuvioColors.Primary.copy(alpha = 0.15f * contentAlpha)
             } else {
-                NuvioColors.BackgroundCard
+                NuvioColors.Background
             }
         ),
         border = CardDefaults.border(
@@ -528,7 +528,7 @@ internal fun NavigationSettingsItem(
             },
         colors = CardDefaults.colors(
             containerColor = NuvioColors.Background,
-            focusedContainerColor = NuvioColors.Background
+            focusedContainerColor = NuvioColors.FocusBackground
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
@@ -629,7 +629,7 @@ internal fun SliderSettingsItem(
             },
         colors = CardDefaults.colors(
             containerColor = NuvioColors.Background,
-            focusedContainerColor = NuvioColors.Background
+            focusedContainerColor = NuvioColors.FocusBackground
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
@@ -714,7 +714,7 @@ internal fun SliderSettingsItem(
                         },
                     colors = CardDefaults.colors(
                         containerColor = NuvioColors.Background,
-                        focusedContainerColor = NuvioColors.Background
+                        focusedContainerColor = NuvioColors.FocusBackground
                     ),
                     border = CardDefaults.border(
                         focusedBorder = Border(
@@ -775,7 +775,7 @@ internal fun SliderSettingsItem(
                         },
                     colors = CardDefaults.colors(
                         containerColor = NuvioColors.Background,
-                        focusedContainerColor = NuvioColors.Background
+                        focusedContainerColor = NuvioColors.FocusBackground
                     ),
                     border = CardDefaults.border(
                         focusedBorder = Border(
@@ -829,7 +829,7 @@ internal fun ColorSettingsItem(
             },
         colors = CardDefaults.colors(
             containerColor = NuvioColors.Background,
-            focusedContainerColor = NuvioColors.Background
+            focusedContainerColor = NuvioColors.FocusBackground
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
@@ -997,8 +997,14 @@ private fun LanguageOptionItem(
             .then(modifier)
             .onFocusChanged { isFocused = it.isFocused },
         colors = CardDefaults.colors(
-            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
+            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.Background,
             focusedContainerColor = NuvioColors.FocusBackground
+        ),
+        border = CardDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                shape = RoundedCornerShape(10.dp)
+            )
         ),
         shape = CardDefaults.shape(shape = RoundedCornerShape(10.dp)),
         scale = CardDefaults.scale(focusedScale = 1f)

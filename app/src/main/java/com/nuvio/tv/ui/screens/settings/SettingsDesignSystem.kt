@@ -230,7 +230,7 @@ internal fun SettingsRailButton(
             },
         colors = CardDefaults.colors(
             containerColor = if (isSelected) NuvioColors.BackgroundCard else NuvioColors.Background,
-            focusedContainerColor = NuvioColors.BackgroundCard
+            focusedContainerColor = NuvioColors.FocusBackground
         ),
         border = CardDefaults.border(
             border = if (isSelected) Border(
@@ -396,7 +396,7 @@ internal fun SettingsToggleRow(
             },
         colors = CardDefaults.colors(
             containerColor = NuvioColors.Background,
-            focusedContainerColor = NuvioColors.Background
+            focusedContainerColor = NuvioColors.FocusBackground
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
@@ -470,7 +470,7 @@ internal fun SettingsActionRow(
             },
         colors = CardDefaults.colors(
             containerColor = NuvioColors.Background,
-            focusedContainerColor = NuvioColors.Background
+            focusedContainerColor = NuvioColors.FocusBackground
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
@@ -549,16 +549,19 @@ internal fun SettingsChoiceChip(
             }
         },
         colors = CardDefaults.colors(
-            containerColor = if (selected) NuvioColors.FocusRing.copy(alpha = 0.2f) else NuvioColors.Background,
-            focusedContainerColor = if (selected) NuvioColors.FocusRing.copy(alpha = 0.2f) else NuvioColors.Background
+            containerColor = if (selected) NuvioColors.Primary.copy(alpha = 0.15f) else NuvioColors.Background,
+            focusedContainerColor = if (selected) NuvioColors.Primary.copy(alpha = 0.3f) else NuvioColors.FocusBackground
         ),
         border = CardDefaults.border(
             border = if (selected) Border(
-                border = BorderStroke(1.dp, NuvioColors.FocusRing),
+                border = BorderStroke(1.dp, NuvioColors.Primary),
                 shape = RoundedCornerShape(SettingsPillRadius)
-            ) else Border.None,
+            ) else Border(
+                border = BorderStroke(1.dp, NuvioColors.Border),
+                shape = RoundedCornerShape(SettingsPillRadius)
+            ),
             focusedBorder = Border(
-                border = BorderStroke(1.dp, NuvioColors.FocusRing),
+                border = BorderStroke(2.dp, NuvioColors.FocusRing),
                 shape = RoundedCornerShape(SettingsPillRadius)
             )
         ),
@@ -599,7 +602,7 @@ private fun SettingsTogglePill(
             modifier = Modifier
                 .size(20.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = alpha))
+                .background(NuvioColors.TextPrimary.copy(alpha = alpha))
         )
     }
 }

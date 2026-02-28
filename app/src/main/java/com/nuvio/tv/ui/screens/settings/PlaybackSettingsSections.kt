@@ -205,75 +205,63 @@ internal fun PlaybackSettingsSections(
             focusRequester = generalHeaderFocus,
             onHeaderFocused = { focusedSection = PlaybackSection.GENERAL }
         ) {
-            item(key = "general_loading_overlay") {
-                ToggleSettingsItem(
-                    icon = Icons.Default.Image,
-                    title = stringResource(R.string.playback_loading_overlay),
-                    subtitle = stringResource(R.string.playback_loading_overlay_sub),
-                    isChecked = playerSettings.loadingOverlayEnabled,
-                    onCheckedChange = onSetLoadingOverlayEnabled,
-                    onFocused = { focusedSection = PlaybackSection.GENERAL },
-                    enabled = !generalUi.isExternalPlayer
-                )
-            }
+            ToggleSettingsItem(
+                icon = Icons.Default.Image,
+                title = stringResource(R.string.playback_loading_overlay),
+                subtitle = stringResource(R.string.playback_loading_overlay_sub),
+                isChecked = playerSettings.loadingOverlayEnabled,
+                onCheckedChange = onSetLoadingOverlayEnabled,
+                onFocused = { focusedSection = PlaybackSection.GENERAL },
+                enabled = !generalUi.isExternalPlayer
+            )
 
-            item(key = "general_pause_overlay") {
-                ToggleSettingsItem(
-                    icon = Icons.Default.PauseCircle,
-                    title = stringResource(R.string.playback_pause_overlay),
-                    subtitle = stringResource(R.string.playback_pause_overlay_sub),
-                    isChecked = playerSettings.pauseOverlayEnabled,
-                    onCheckedChange = onSetPauseOverlayEnabled,
-                    onFocused = { focusedSection = PlaybackSection.GENERAL },
-                    enabled = !generalUi.isExternalPlayer
-                )
-            }
+            ToggleSettingsItem(
+                icon = Icons.Default.PauseCircle,
+                title = stringResource(R.string.playback_pause_overlay),
+                subtitle = stringResource(R.string.playback_pause_overlay_sub),
+                isChecked = playerSettings.pauseOverlayEnabled,
+                onCheckedChange = onSetPauseOverlayEnabled,
+                onFocused = { focusedSection = PlaybackSection.GENERAL },
+                enabled = !generalUi.isExternalPlayer
+            )
 
-            item(key = "general_osd_clock") {
-                ToggleSettingsItem(
-                    icon = Icons.Default.Timer,
-                    title = stringResource(R.string.playback_osd_clock),
-                    subtitle = stringResource(R.string.playback_show_clock_sub),
-                    isChecked = playerSettings.osdClockEnabled,
-                    onCheckedChange = onSetOsdClockEnabled,
-                    onFocused = { focusedSection = PlaybackSection.GENERAL },
-                    enabled = !generalUi.isExternalPlayer
-                )
-            }
+            ToggleSettingsItem(
+                icon = Icons.Default.Timer,
+                title = stringResource(R.string.playback_osd_clock),
+                subtitle = stringResource(R.string.playback_show_clock_sub),
+                isChecked = playerSettings.osdClockEnabled,
+                onCheckedChange = onSetOsdClockEnabled,
+                onFocused = { focusedSection = PlaybackSection.GENERAL },
+                enabled = !generalUi.isExternalPlayer
+            )
 
-            item(key = "general_skip_intro") {
-                ToggleSettingsItem(
-                    icon = Icons.Default.History,
-                    title = stringResource(R.string.playback_skip_intro),
-                    subtitle = stringResource(R.string.playback_skip_intro_sub),
-                    isChecked = playerSettings.skipIntroEnabled,
-                    onCheckedChange = onSetSkipIntroEnabled,
-                    onFocused = { focusedSection = PlaybackSection.GENERAL },
-                    enabled = !generalUi.isExternalPlayer
-                )
-            }
+            ToggleSettingsItem(
+                icon = Icons.Default.History,
+                title = stringResource(R.string.playback_skip_intro),
+                subtitle = stringResource(R.string.playback_skip_intro_sub),
+                isChecked = playerSettings.skipIntroEnabled,
+                onCheckedChange = onSetSkipIntroEnabled,
+                onFocused = { focusedSection = PlaybackSection.GENERAL },
+                enabled = !generalUi.isExternalPlayer
+            )
 
-            item(key = "general_afr_header") {
-                PlaybackSectionHeader(
-                    title = stringResource(R.string.playback_auto_frame_rate),
-                    description = generalUi.frameRateMatchingLabel,
-                    expanded = afrExpanded,
-                    onToggle = { afrExpanded = !afrExpanded },
-                    focusRequester = afrHeaderFocus,
-                    onFocused = { focusedSection = PlaybackSection.GENERAL },
-                    enabled = !generalUi.isExternalPlayer
-                )
-            }
+            PlaybackSectionHeader(
+                title = stringResource(R.string.playback_auto_frame_rate),
+                description = generalUi.frameRateMatchingLabel,
+                expanded = afrExpanded,
+                onToggle = { afrExpanded = !afrExpanded },
+                focusRequester = afrHeaderFocus,
+                onFocused = { focusedSection = PlaybackSection.GENERAL },
+                enabled = !generalUi.isExternalPlayer
+            )
 
             if (afrExpanded) {
-                item(key = "general_afr_options") {
-                    FrameRateMatchingModeOptions(
-                        selectedMode = playerSettings.frameRateMatchingMode,
-                        onSelect = onSetFrameRateMatchingMode,
-                        onFocused = { focusedSection = PlaybackSection.GENERAL },
-                        enabled = !generalUi.isExternalPlayer
-                    )
-                }
+                FrameRateMatchingModeOptions(
+                    selectedMode = playerSettings.frameRateMatchingMode,
+                    onSelect = onSetFrameRateMatchingMode,
+                    onFocused = { focusedSection = PlaybackSection.GENERAL },
+                    enabled = !generalUi.isExternalPlayer
+                )
             }
         }
 
@@ -376,29 +364,27 @@ private fun LazyListScope.playbackCollapsibleSection(
     onToggle: () -> Unit,
     focusRequester: FocusRequester,
     onHeaderFocused: () -> Unit,
-    content: LazyListScope.() -> Unit
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
 ) {
-    item(key = "${keyPrefix}_header") {
-        PlaybackSectionHeader(
-            title = title,
-            description = description,
-            expanded = expanded,
-            onToggle = onToggle,
-            focusRequester = focusRequester,
-            onFocused = onHeaderFocused
-        )
-    }
-
-    if (expanded) {
-        content()
-        item(key = "${keyPrefix}_end_divider") {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp)
-                    .height(1.dp)
-                    .background(NuvioColors.Border)
+    item(key = "${keyPrefix}_section") {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            PlaybackSectionHeader(
+                title = title,
+                description = description,
+                expanded = expanded,
+                onToggle = onToggle,
+                focusRequester = focusRequester,
+                onFocused = onHeaderFocused
             )
+
+            if (expanded) {
+                SettingsGroupCard {
+                    content()
+                }
+            }
         }
     }
 }
@@ -640,7 +626,7 @@ private fun PlayerPreferenceDialog(
                             .fillMaxWidth()
                             .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
                         colors = CardDefaults.colors(
-                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
+                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.Background,
                             focusedContainerColor = NuvioColors.FocusBackground
                         ),
                         shape = CardDefaults.shape(shape = RoundedCornerShape(10.dp)),

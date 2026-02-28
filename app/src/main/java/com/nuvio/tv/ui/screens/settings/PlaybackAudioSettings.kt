@@ -54,9 +54,11 @@ import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.ui.components.NuvioDialog
+import androidx.compose.foundation.BorderStroke
 import com.nuvio.tv.ui.theme.NuvioColors
 
-internal fun LazyListScope.trailerAndAudioSettingsItems(
+@androidx.compose.runtime.Composable
+internal fun androidx.compose.foundation.layout.ColumnScope.trailerAndAudioSettingsItems(
     playerSettings: PlayerSettings,
     trailerSettings: TrailerSettings,
     onShowAudioLanguageDialog: () -> Unit,
@@ -69,154 +71,130 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onItemFocused: () -> Unit = {},
     enabled: Boolean = true
 ) {
-    item(key = "audio_trailer_section_header") {
-        Text(
-            text = stringResource(R.string.audio_trailer_section),
-            style = MaterialTheme.typography.titleMedium,
-            color = NuvioColors.TextSecondary,
-            modifier = Modifier.padding(vertical = 8.dp)
-        )
-    }
+    Text(
+        text = stringResource(R.string.audio_trailer_section),
+        style = MaterialTheme.typography.titleMedium,
+        color = NuvioColors.TextSecondary,
+        modifier = Modifier.padding(vertical = 8.dp)
+    )
 
-    item(key = "audio_trailer_enabled") {
-        ToggleSettingsItem(
-            icon = Icons.Default.PlayCircle,
-            title = stringResource(R.string.audio_autoplay_trailers),
-            subtitle = stringResource(R.string.audio_autoplay_trailers_sub),
-            isChecked = trailerSettings.enabled,
-            onCheckedChange = onSetTrailerEnabled,
-            onFocused = onItemFocused,
-            enabled = enabled
-        )
-    }
+    ToggleSettingsItem(
+        icon = Icons.Default.PlayCircle,
+        title = stringResource(R.string.audio_autoplay_trailers),
+        subtitle = stringResource(R.string.audio_autoplay_trailers_sub),
+        isChecked = trailerSettings.enabled,
+        onCheckedChange = onSetTrailerEnabled,
+        onFocused = onItemFocused,
+        enabled = enabled
+    )
 
     if (trailerSettings.enabled) {
-        item(key = "audio_trailer_delay") {
-            SliderSettingsItem(
-                icon = Icons.Default.Timer,
-                title = stringResource(R.string.audio_trailer_delay),
-                value = trailerSettings.delaySeconds,
-                valueText = "${trailerSettings.delaySeconds}s",
-                minValue = 3,
-                maxValue = 15,
-                step = 1,
-                onValueChange = onSetTrailerDelaySeconds,
-                onFocused = onItemFocused,
-                enabled = enabled
-            )
-        }
-    }
-
-    item(key = "audio_header") {
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.audio_section),
-            style = MaterialTheme.typography.titleMedium,
-            color = NuvioColors.TextSecondary,
-            modifier = Modifier.padding(vertical = 8.dp)
-        )
-    }
-
-    item(key = "audio_passthrough_info") {
-        Text(
-            text = stringResource(R.string.audio_passthrough_info),
-            style = MaterialTheme.typography.bodySmall,
-            color = NuvioColors.TextSecondary,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-    }
-
-    item(key = "audio_preferred_language") {
-        val audioLangName = when (playerSettings.preferredAudioLanguage) {
-            AudioLanguageOption.DEFAULT -> stringResource(R.string.audio_lang_default)
-            AudioLanguageOption.DEVICE -> stringResource(R.string.audio_lang_device)
-            else -> AVAILABLE_SUBTITLE_LANGUAGES.find {
-                it.code == playerSettings.preferredAudioLanguage
-            }?.name ?: playerSettings.preferredAudioLanguage
-        }
-
-        NavigationSettingsItem(
-            icon = Icons.Default.Language,
-            title = stringResource(R.string.audio_preferred_lang),
-            subtitle = audioLangName,
-            onClick = onShowAudioLanguageDialog,
+        SliderSettingsItem(
+            icon = Icons.Default.Timer,
+            title = stringResource(R.string.audio_trailer_delay),
+            value = trailerSettings.delaySeconds,
+            valueText = "${trailerSettings.delaySeconds}s",
+            minValue = 3,
+            maxValue = 15,
+            step = 1,
+            onValueChange = onSetTrailerDelaySeconds,
             onFocused = onItemFocused,
             enabled = enabled
         )
     }
 
-    item(key = "audio_skip_silence") {
-        ToggleSettingsItem(
-            icon = Icons.Default.Speed,
-            title = stringResource(R.string.audio_skip_silence),
-            subtitle = stringResource(R.string.audio_skip_silence_sub),
-            isChecked = playerSettings.skipSilence,
-            onCheckedChange = onSetSkipSilence,
-            onFocused = onItemFocused,
-            enabled = enabled
-        )
+    Spacer(modifier = Modifier.height(16.dp))
+    Text(
+        text = stringResource(R.string.audio_section),
+        style = MaterialTheme.typography.titleMedium,
+        color = NuvioColors.TextSecondary,
+        modifier = Modifier.padding(vertical = 8.dp)
+    )
+
+    Text(
+        text = stringResource(R.string.audio_passthrough_info),
+        style = MaterialTheme.typography.bodySmall,
+        color = NuvioColors.TextSecondary,
+        modifier = Modifier.padding(bottom = 8.dp)
+    )
+
+    val audioLangName = when (playerSettings.preferredAudioLanguage) {
+        AudioLanguageOption.DEFAULT -> stringResource(R.string.audio_lang_default)
+        AudioLanguageOption.DEVICE -> stringResource(R.string.audio_lang_device)
+        else -> AVAILABLE_SUBTITLE_LANGUAGES.find {
+            it.code == playerSettings.preferredAudioLanguage
+        }?.name ?: playerSettings.preferredAudioLanguage
     }
 
-    item(key = "audio_advanced_header") {
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.audio_advanced_section),
-            style = MaterialTheme.typography.titleMedium,
-            color = NuvioColors.TextSecondary,
-            modifier = Modifier.padding(vertical = 8.dp)
-        )
+    NavigationSettingsItem(
+        icon = Icons.Default.Language,
+        title = stringResource(R.string.audio_preferred_lang),
+        subtitle = audioLangName,
+        onClick = onShowAudioLanguageDialog,
+        onFocused = onItemFocused,
+        enabled = enabled
+    )
+
+    ToggleSettingsItem(
+        icon = Icons.Default.Speed,
+        title = stringResource(R.string.audio_skip_silence),
+        subtitle = stringResource(R.string.audio_skip_silence_sub),
+        isChecked = playerSettings.skipSilence,
+        onCheckedChange = onSetSkipSilence,
+        onFocused = onItemFocused,
+        enabled = enabled
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+    Text(
+        text = stringResource(R.string.audio_advanced_section),
+        style = MaterialTheme.typography.titleMedium,
+        color = NuvioColors.TextSecondary,
+        modifier = Modifier.padding(vertical = 8.dp)
+    )
+
+    Text(
+        text = stringResource(R.string.audio_advanced_warning),
+        style = MaterialTheme.typography.bodySmall,
+        color = Color(0xFFFF9800),
+        modifier = Modifier.padding(bottom = 8.dp)
+    )
+
+    val decoderName = when (playerSettings.decoderPriority) {
+        0 -> stringResource(R.string.audio_decoder_device_only)
+        1 -> stringResource(R.string.audio_decoder_prefer_device)
+        2 -> stringResource(R.string.audio_decoder_prefer_app)
+        else -> stringResource(R.string.audio_decoder_prefer_device)
     }
 
-    item(key = "audio_advanced_warning") {
-        Text(
-            text = stringResource(R.string.audio_advanced_warning),
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFFFF9800),
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-    }
+    NavigationSettingsItem(
+        icon = Icons.Default.Tune,
+        title = stringResource(R.string.audio_decoder_priority),
+        subtitle = decoderName,
+        onClick = onShowDecoderPriorityDialog,
+        onFocused = onItemFocused,
+        enabled = enabled
+    )
 
-    item(key = "audio_decoder_priority") {
-        val decoderName = when (playerSettings.decoderPriority) {
-            0 -> stringResource(R.string.audio_decoder_device_only)
-            1 -> stringResource(R.string.audio_decoder_prefer_device)
-            2 -> stringResource(R.string.audio_decoder_prefer_app)
-            else -> stringResource(R.string.audio_decoder_prefer_device)
-        }
+    ToggleSettingsItem(
+        icon = Icons.Default.VolumeUp,
+        title = stringResource(R.string.audio_tunneled),
+        subtitle = stringResource(R.string.audio_tunneled_sub),
+        isChecked = playerSettings.tunnelingEnabled,
+        onCheckedChange = onSetTunnelingEnabled,
+        onFocused = onItemFocused,
+        enabled = enabled
+    )
 
-        NavigationSettingsItem(
-            icon = Icons.Default.Tune,
-            title = stringResource(R.string.audio_decoder_priority),
-            subtitle = decoderName,
-            onClick = onShowDecoderPriorityDialog,
-            onFocused = onItemFocused,
-            enabled = enabled
-        )
-    }
-
-    item(key = "audio_tunneled_playback") {
-        ToggleSettingsItem(
-            icon = Icons.Default.VolumeUp,
-            title = stringResource(R.string.audio_tunneled),
-            subtitle = stringResource(R.string.audio_tunneled_sub),
-            isChecked = playerSettings.tunnelingEnabled,
-            onCheckedChange = onSetTunnelingEnabled,
-            onFocused = onItemFocused,
-            enabled = enabled
-        )
-    }
-
-    item(key = "audio_dv7_hevc_fallback") {
-        ToggleSettingsItem(
-            icon = Icons.Default.Tune,
-            title = stringResource(R.string.audio_dv_title),
-            subtitle = stringResource(R.string.audio_dv_sub),
-            isChecked = playerSettings.mapDV7ToHevc,
-            onCheckedChange = onSetMapDV7ToHevc,
-            onFocused = onItemFocused,
-            enabled = enabled
-        )
-    }
+    ToggleSettingsItem(
+        icon = Icons.Default.Tune,
+        title = stringResource(R.string.audio_dv_title),
+        subtitle = stringResource(R.string.audio_dv_sub),
+        isChecked = playerSettings.mapDV7ToHevc,
+        onCheckedChange = onSetMapDV7ToHevc,
+        onFocused = onItemFocused,
+        enabled = enabled
+    )
 }
 
 @Composable
@@ -301,8 +279,14 @@ private fun AudioLanguageSelectionDialog(
                             .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier)
                             .onFocusChanged { isFocused = it.isFocused },
                         colors = CardDefaults.colors(
-                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
+                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.Background,
                             focusedContainerColor = NuvioColors.FocusBackground
+                        ),
+                        border = CardDefaults.border(
+                            focusedBorder = Border(
+                                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                shape = RoundedCornerShape(10.dp)
+                            )
                         ),
                         shape = CardDefaults.shape(shape = RoundedCornerShape(10.dp)),
                         scale = CardDefaults.scale(focusedScale = 1f)
@@ -382,8 +366,14 @@ private fun DecoderPriorityDialog(
                             .fillMaxWidth()
                             .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
                         colors = CardDefaults.colors(
-                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
+                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.Background,
                             focusedContainerColor = NuvioColors.FocusBackground
+                        ),
+                        border = CardDefaults.border(
+                            focusedBorder = Border(
+                                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                shape = RoundedCornerShape(10.dp)
+                            )
                         ),
                         shape = CardDefaults.shape(shape = RoundedCornerShape(10.dp)),
                         scale = CardDefaults.scale(focusedScale = 1f)
