@@ -269,14 +269,25 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
     val currentGridItems = _uiState.value.gridItems
     val heroSectionEnabled = _uiState.value.heroSectionEnabled
     val hideUnreleased = _uiState.value.hideUnreleasedContent
+    val hiddenKeys = _uiState.value.hiddenItemKeys
 
     val (displayRows, baseHeroItems, baseGridItems) = withContext(Dispatchers.Default) {
         val rawRows = orderedKeys.mapNotNull { key -> catalogSnapshot[key] }
-        val orderedRows = if (hideUnreleased) {
+        val releasedRows = if (hideUnreleased) {
             val today = LocalDate.now()
             rawRows.map { it.filterReleasedItems(today) }
         } else {
             rawRows
+        }
+        val orderedRows = if (hiddenKeys.isNotEmpty()) {
+            releasedRows.map { row ->
+                val filtered = row.items.filter { item ->
+                    com.nuvio.tv.data.local.HiddenItemsPreferences.hiddenKey(item.id, item.apiType) !in hiddenKeys
+                }
+                if (filtered.size == row.items.size) row else row.copy(items = filtered)
+            }
+        } else {
+            releasedRows
         }
         val selectedHeroCatalogSet = heroCatalogKeys.toSet()
         val selectedHeroRows = if (selectedHeroCatalogSet.isNotEmpty()) {

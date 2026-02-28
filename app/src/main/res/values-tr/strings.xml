@@ -41,6 +41,7 @@
     <string name="hero_remove_from_library">Kütüphaneden kaldır</string>
     <string name="hero_mark_watched">İzlendi olarak işaretle</string>
     <string name="hero_mark_unwatched">İzlenmedi olarak işaretle</string>
+    <string name="home_poster_hide">Gizle</string>
     <string name="hero_play_trailer">Fragmanı izle</string>
     <string name="hero_press_back_trailer">Fragmandan çıkmak için geri tuşuna basın</string>
     <string name="cd_rating">Değerlendirme</string>
@@ -679,6 +680,13 @@
     <string name="library_empty_trakt_title">Bu listede içerik görünmüyor</string>
     <string name="library_empty_local_subtitle">İçerik eklemek için içerik detaylarındaki + tuşunu kullanın</string>
     <string name="library_empty_trakt_subtitle">İçerikleri izleme listenize eklemek için içerik detaylarındaki + tuşunu kullanın</string>
+    <string name="library_hidden_title">Gizlenen (%1$d)</string>
+    <string name="library_hidden_show_all">Tümünü Göster</string>
+    <string name="library_hidden_empty_title">Gizlenen içerik yok</string>
+    <string name="library_hidden_empty_subtitle">Gizlediğiniz içerikler burada görünecek</string>
+    <string name="library_item_unhidden">İçerik gizlemeden çıkarıldı</string>
+    <string name="library_unhide">Gizlemeyi Kaldır</string>
+    <string name="library_list_library">Kütüphane</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Yükleniyor\u2026</string>
