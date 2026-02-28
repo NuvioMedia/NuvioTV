@@ -55,7 +55,11 @@ sealed class ContinueWatchingItem {
     data class InProgress(
         val progress: WatchProgress,
         val episodeDescription: String? = null,
-        val episodeThumbnail: String? = null
+        val episodeThumbnail: String? = null,
+        val genres: List<String> = emptyList(),
+        val releaseInfo: String? = null,
+        val imdbRating: Float? = null,
+        val contentDescription: String? = null
     ) : ContinueWatchingItem()
 
     @Immutable
@@ -79,7 +83,11 @@ data class NextUpInfo(
     val released: String? = null,
     val hasAired: Boolean = true,
     val airDateLabel: String? = null,
-    val lastWatched: Long
+    val lastWatched: Long,
+    val genres: List<String> = emptyList(),
+    val contentReleaseInfo: String? = null,
+    val imdbRating: Float? = null,
+    val contentDescription: String? = null
 )
 
 @Immutable

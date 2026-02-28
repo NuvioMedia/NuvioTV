@@ -30,6 +30,7 @@ internal data class HeroPreview(
     val logo: String?,
     val description: String?,
     val contentTypeText: String?,
+    val episodeText: String?,
     val yearText: String?,
     val imdbText: String?,
     val genres: List<String>,
@@ -132,13 +133,14 @@ internal fun buildContinueWatchingItem(
         is ContinueWatchingItem.InProgress -> HeroPreview(
             title = item.progress.name,
             logo = item.progress.logo,
-            description = item.episodeDescription ?: item.progress.episodeTitle,
+            description = item.episodeDescription ?: item.progress.episodeTitle ?: item.contentDescription,
             contentTypeText = item.progress.contentType.replaceFirstChar { ch -> ch.uppercase() },
-            yearText = null,
-            imdbText = null,
-            genres = emptyList(),
+            episodeText = item.progress.episodeDisplayString,
+            yearText = extractYear(item.releaseInfo),
+            imdbText = item.imdbRating?.let { String.format("%.1f", it) },
+            genres = item.genres.take(3),
             poster = item.progress.poster,
-            backdrop = item.progress.backdrop,
+            backdrop = firstNonBlank(item.episodeThumbnail, item.progress.backdrop),
             imageUrl = if (useLandscapePosters) {
                 item.progress.backdrop ?: item.progress.poster
             } else {
@@ -150,11 +152,13 @@ internal fun buildContinueWatchingItem(
             logo = item.info.logo,
             description = item.info.episodeDescription
                 ?: item.info.episodeTitle
+                ?: item.info.contentDescription
                 ?: item.info.airDateLabel?.let { airsDateTemplate.format(it) },
             contentTypeText = item.info.contentType.replaceFirstChar { ch -> ch.uppercase() },
-            yearText = null,
-            imdbText = null,
-            genres = emptyList(),
+            episodeText = "S${item.info.season}E${item.info.episode}",
+            yearText = extractYear(item.info.contentReleaseInfo),
+            imdbText = item.info.imdbRating?.let { String.format("%.1f", it) },
+            genres = item.info.genres.take(3),
             poster = item.info.poster,
             backdrop = item.info.backdrop,
             imageUrl = if (useLandscapePosters) {
@@ -168,13 +172,13 @@ internal fun buildContinueWatchingItem(
     val imageUrl = when (item) {
         is ContinueWatchingItem.InProgress -> if (useLandscapePosters) {
             if (isSeriesType(item.progress.contentType)) {
-                firstNonBlank(item.episodeThumbnail, item.progress.poster, item.progress.backdrop)
+                firstNonBlank(item.episodeThumbnail, item.progress.backdrop, item.progress.poster)
             } else {
                 firstNonBlank(item.progress.backdrop, item.progress.poster)
             }
         } else {
             if (isSeriesType(item.progress.contentType)) {
-                firstNonBlank(heroPreview.poster, item.progress.poster, item.progress.backdrop)
+                firstNonBlank(item.episodeThumbnail, item.progress.poster, item.progress.backdrop)
             } else {
                 firstNonBlank(item.progress.poster, item.progress.backdrop)
             }
@@ -224,6 +228,7 @@ internal fun buildCatalogItem(
         logo = item.logo,
         description = item.description,
         contentTypeText = item.apiType.replaceFirstChar { ch -> ch.uppercase() },
+        episodeText = null,
         yearText = extractYear(item.releaseInfo),
         imdbText = item.imdbRating?.let { String.format("%.1f", it) },
         genres = item.genres.take(3),
