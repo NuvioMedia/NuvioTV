@@ -672,14 +672,15 @@ fun ModernHomeContent(
                         drawContent()
                         drawRect(
                             brush = Brush.verticalGradient(
-                                0.0f  to Color.Transparent,
-                                0.04f to Color.Black.copy(alpha = 0.20f),
-                                0.08f to Color.Black.copy(alpha = 0.60f),
-                                0.13f to Color.Black,
-                                0.78f to Color.Black,
-                                0.87f to Color.Black.copy(alpha = 0.60f),
-                                0.93f to Color.Black.copy(alpha = 0.20f),
-                                1.0f  to Color.Transparent
+                                0.0f   to Color.Transparent,
+                                0.02f  to Color.Black.copy(alpha = 0.12f),
+                                0.04f  to Color.Black.copy(alpha = 0.35f),
+                                0.07f  to Color.Black.copy(alpha = 0.65f),
+                                0.11f  to Color.Black,
+                                0.80f  to Color.Black,
+                                0.88f  to Color.Black.copy(alpha = 0.55f),
+                                0.94f  to Color.Black.copy(alpha = 0.15f),
+                                1.0f   to Color.Transparent
                             ),
                             blendMode = androidx.compose.ui.graphics.BlendMode.DstIn
                         )

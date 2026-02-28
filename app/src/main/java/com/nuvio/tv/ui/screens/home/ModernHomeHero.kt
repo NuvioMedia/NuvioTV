@@ -116,10 +116,10 @@ internal fun ModernHeroMediaLayer(
                         radius = size.height * 1.05f
                     )
                     val verticalGradient = Brush.verticalGradient(
-                        0.60f to Color.Transparent,
-                        0.72f to bgColor.copy(alpha = 0.65f),
-                        0.80f to bgColor.copy(alpha = 0.94f),
-                        0.86f to bgColor
+                        0.52f to Color.Transparent,
+                        0.64f to bgColor.copy(alpha = 0.55f),
+                        0.74f to bgColor.copy(alpha = 0.88f),
+                        0.82f to bgColor
                     )
                     onDrawBehind {
                         drawRect(brush = horizontalGradient, size = size)
