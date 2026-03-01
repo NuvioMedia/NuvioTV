@@ -18,7 +18,10 @@ data class LibraryEntry(
     val addonBaseUrl: String?,
     val listKeys: Set<String> = emptySet(),
     val listedAt: Long = 0L,
-    val traktRank: Int? = null
+    val traktRank: Int? = null,
+    val imdbId: String? = null,
+    val tmdbId: Int? = null,
+    val traktId: Int? = null
 ) {
     fun toMetaPreview(): MetaPreview {
         return MetaPreview(

@@ -165,7 +165,7 @@ class TraktProgressService @Inject constructor(
     private val episodeProgressFetchThrottleMs = 15_000L
     private val optimisticTtlMs = 3 * 60_000L
     private val maxRecentEpisodeHistoryEntries = 300
-    private val metadataHydrationLimit = 250
+    private val metadataHydrationLimit = 110
     private val metadataFetchSemaphore = Semaphore(5)
     private val fastSyncThrottleMs = 3_000L
     private val manualRefreshSignalThrottleMs = 2_000L
