@@ -1028,33 +1028,14 @@ private fun PlayerControlsOverlay(
                     }
 
                     val hasYear = !uiState.releaseYear.isNullOrBlank()
-                    val showVia = !uiState.isPlaying && !uiState.currentStreamName.isNullOrBlank()
                     val yearText = uiState.releaseYear.orEmpty()
 
-                    if (hasYear || showVia) {
-                        Column {
-                            if (hasYear) {
-                                Text(
-                                    text = yearText,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.68f)
-                                )
-                            }
-
-                            AnimatedVisibility(
-                                visible = showVia,
-                                enter = fadeIn(animationSpec = tween(durationMillis = 220)),
-                                exit = fadeOut(animationSpec = tween(durationMillis = 180))
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.player_via, uiState.currentStreamName ?: ""),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.68f),
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
+                    if (hasYear) {
+                        Text(
+                            text = yearText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.68f)
+                        )
                     }
 
                     // Quality info badges
