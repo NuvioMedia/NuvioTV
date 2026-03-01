@@ -347,12 +347,14 @@ private class SubtitleOffsetRenderersFactory(
 }
 
 private class SubtitleOffsetRenderer(
-    renderer: Renderer,
+    private val baseRenderer: Renderer,
     private val subtitleDelayUsProvider: () -> Long
-) : ForwardingRenderer(renderer) {
+) : ForwardingRenderer(baseRenderer) {
 
     override fun render(positionUs: Long, elapsedRealtimeUs: Long) {
-        val adjustedPositionUs = (positionUs - subtitleDelayUsProvider()).coerceAtLeast(0L)
+        val offset = subtitleDelayUsProvider()
+        val adjustedPositionUs = (positionUs - offset).coerceAtLeast(0L)
+        
         super.render(adjustedPositionUs, elapsedRealtimeUs)
     }
 }
