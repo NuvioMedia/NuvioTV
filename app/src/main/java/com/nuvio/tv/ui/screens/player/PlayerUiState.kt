@@ -121,7 +121,14 @@ data class PlayerUiState(
     // Aspect ratio / resize mode
     val resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
     val showAspectRatioIndicator: Boolean = false,
-    val aspectRatioIndicatorText: String = ""
+    val aspectRatioIndicatorText: String = "",
+    // Video & audio quality info badges
+    val videoResolutionWidth: Int = 0,
+    val videoResolutionHeight: Int = 0,
+    val videoCodecName: String? = null,
+    val videoHdrType: String? = null,  // "HDR10", "HDR10+", "HLG", "Dolby Vision", null for SDR
+    val audioCodecName: String? = null,
+    val audioChannelLayout: String? = null  // "Stereo", "5.1", "7.1", etc.
 )
 
 data class TrackInfo(

@@ -1056,6 +1056,62 @@ private fun PlayerControlsOverlay(
                             }
                         }
                     }
+
+                    // Quality info badges
+                    val resolutionLabel = resolveResolutionLabel(uiState.videoResolutionHeight, uiState.videoResolutionWidth)
+                    val hasAnyBadge = resolutionLabel != null || uiState.videoHdrType != null ||
+                        uiState.videoCodecName != null || uiState.audioCodecName != null
+
+                    if (hasAnyBadge) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Resolution badge (4K, 1080p, etc.)
+                            if (resolutionLabel != null) {
+                                QualityBadge(
+                                    text = resolutionLabel,
+                                    backgroundColor = Color.White.copy(alpha = 0.15f),
+                                    textColor = Color.White.copy(alpha = 0.9f)
+                                )
+                            }
+
+                            // HDR / Dolby Vision badge
+                            if (uiState.videoHdrType != null) {
+                                QualityBadge(
+                                    text = uiState.videoHdrType,
+                                    backgroundColor = Color(0xCCB8860B), // Dark goldenrod
+                                    textColor = Color.White
+                                )
+                            }
+
+                            // Video codec badge
+                            if (uiState.videoCodecName != null) {
+                                QualityBadge(
+                                    text = uiState.videoCodecName,
+                                    backgroundColor = Color.White.copy(alpha = 0.15f),
+                                    textColor = Color.White.copy(alpha = 0.9f)
+                                )
+                            }
+
+                            // Audio codec + channel layout
+                            val audioText = buildString {
+                                if (uiState.audioCodecName != null) append(uiState.audioCodecName)
+                                if (uiState.audioChannelLayout != null) {
+                                    if (isNotEmpty()) append(" ")
+                                    append(uiState.audioChannelLayout)
+                                }
+                            }
+                            if (audioText.isNotBlank()) {
+                                QualityBadge(
+                                    text = audioText,
+                                    backgroundColor = Color.White.copy(alpha = 0.15f),
+                                    textColor = Color.White.copy(alpha = 0.9f)
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1748,6 +1804,45 @@ internal fun DialogButton(
             color = if (isPrimary) NuvioColors.OnSecondary else NuvioColors.TextPrimary,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
         )
+    }
+}
+
+@Composable
+private fun QualityBadge(
+    text: String,
+    backgroundColor: Color,
+    textColor: Color
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall.copy(
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp
+        ),
+        color = textColor,
+        modifier = Modifier
+            .background(
+                color = backgroundColor,
+                shape = RoundedCornerShape(4.dp)
+            )
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+    )
+}
+
+private fun resolveResolutionLabel(height: Int, width: Int): String? {
+    if (height <= 0 && width <= 0) return null
+    // Check the larger dimension for resolution classification
+    val maxDim = maxOf(height, width)
+    val minDim = minOf(height, width)
+    return when {
+        minDim >= 2160 || maxDim >= 3840 -> "4K"
+        minDim >= 1440 || maxDim >= 2560 -> "2K"
+        minDim >= 1080 || maxDim >= 1920 -> "1080p"
+        minDim >= 720 || maxDim >= 1280 -> "720p"
+        minDim >= 480 || maxDim >= 854 -> "480p"
+        minDim >= 360 || maxDim >= 640 -> "360p"
+        else -> "${height}p"
     }
 }
 

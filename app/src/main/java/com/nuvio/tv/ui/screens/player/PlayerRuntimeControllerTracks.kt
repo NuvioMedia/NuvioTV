@@ -21,6 +21,12 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
     val subtitleTracks = mutableListOf<TrackInfo>()
     var selectedAudioIndex = -1
     var selectedSubtitleIndex = -1
+    var videoWidth = 0
+    var videoHeight = 0
+    var videoCodec: String? = null
+    var hdrType: String? = null
+    var selectedAudioCodec: String? = null
+    var selectedAudioChannelLayout: String? = null
 
     tracks.groups.forEachIndexed { groupIndex, trackGroup ->
         val trackType = trackGroup.type
@@ -31,6 +37,38 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                 for (i in 0 until trackGroup.length) {
                     if (trackGroup.isTrackSelected(i)) {
                         val format = trackGroup.getTrackFormat(i)
+
+                        // Extract video resolution
+                        val vWidth = format.width.takeIf { it > 0 } ?: 0
+                        val vHeight = format.height.takeIf { it > 0 } ?: 0
+                        if (vWidth > 0 && vHeight > 0) {
+                            videoWidth = vWidth
+                            videoHeight = vHeight
+                        }
+
+                        // Extract video codec
+                        videoCodec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType)
+                            ?: CustomDefaultTrackNameProvider.formatNameFromMime(format.codecs)
+
+                        // Detect HDR type from colorInfo
+                        val colorInfo = format.colorInfo
+                        if (colorInfo != null) {
+                            val colorTransfer = colorInfo.colorTransfer
+                            val isDolbyVision = format.sampleMimeType == "video/dolby-vision"
+                                || format.codecs?.startsWith("dvh") == true
+                                || format.codecs?.startsWith("dvhe") == true
+
+                            hdrType = when {
+                                isDolbyVision -> "Dolby Vision"
+                                colorTransfer == C.COLOR_TRANSFER_ST2084 -> {
+                                    // HDR10 or HDR10+ (both use PQ/ST2084 transfer)
+                                    if (format.codecs?.contains("hev1.2.4") == true) "HDR10+" else "HDR10"
+                                }
+                                colorTransfer == C.COLOR_TRANSFER_HLG -> "HLG"
+                                else -> null
+                            }
+                        }
+
                         if (format.frameRate > 0f) {
                             val raw = format.frameRate
                             val snapped = FrameRateUtils.snapToStandardRate(raw)
@@ -54,7 +92,12 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                 for (i in 0 until trackGroup.length) {
                     val format = trackGroup.getTrackFormat(i)
                     val isSelected = trackGroup.isTrackSelected(i)
-                    if (isSelected) selectedAudioIndex = audioTracks.size
+                    if (isSelected) {
+                        selectedAudioIndex = audioTracks.size
+                        // Capture selected audio codec and channel info for badge display
+                        selectedAudioCodec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType)
+                        selectedAudioChannelLayout = CustomDefaultTrackNameProvider.getChannelLayoutName(format.channelCount)
+                    }
 
                     
                     val codecName = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType)
@@ -157,7 +200,13 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
             audioTracks = audioTracks,
             subtitleTracks = subtitleTracks,
             selectedAudioTrackIndex = selectedAudioIndex,
-            selectedSubtitleTrackIndex = selectedSubtitleIndex
+            selectedSubtitleTrackIndex = selectedSubtitleIndex,
+            videoResolutionWidth = videoWidth,
+            videoResolutionHeight = videoHeight,
+            videoCodecName = videoCodec,
+            videoHdrType = hdrType,
+            audioCodecName = selectedAudioCodec,
+            audioChannelLayout = selectedAudioChannelLayout
         )
     }
     tryAutoSelectPreferredSubtitleFromAvailableTracks()
