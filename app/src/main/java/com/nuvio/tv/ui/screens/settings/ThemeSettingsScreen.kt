@@ -99,9 +99,11 @@ fun ThemeSettingsContent(
             "pt-PT" to "Português (Portugal)",
             "pt-BR" to "Português (Brasil)",
             "tr" to "Türkçe",
+            "se" to "Svenska",
             "sk" to "Slovensky",
             "sl" to "Slovenščina",
-            "ro" to "Română"
+            "ro" to "Română",
+            "ja" to "日本語"
         )
     }
     var selectedTag by remember {

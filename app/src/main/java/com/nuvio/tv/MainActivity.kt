@@ -415,6 +415,7 @@ class MainActivity : ComponentActivity() {
                             hideBuiltInHeaders = hideBuiltInHeadersForFloatingPill,
                             activeProfileName = activeProfile?.name ?: "",
                             activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
+                            showProfileSelector = profiles.size > 1,
                             onSwitchProfile = { hasSelectedProfileThisSession = false },
                             onExitApp = {
                                 finishAffinity()
@@ -433,6 +434,7 @@ class MainActivity : ComponentActivity() {
                             hideBuiltInHeaders = false,
                             activeProfileName = activeProfile?.name ?: "",
                             activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
+                            showProfileSelector = profiles.size > 1,
                             onSwitchProfile = { hasSelectedProfileThisSession = false },
                             onExitApp = {
                                 finishAffinity()
@@ -496,6 +498,7 @@ private fun LegacySidebarScaffold(
     hideBuiltInHeaders: Boolean,
     activeProfileName: String,
     activeProfileColorHex: String,
+    showProfileSelector: Boolean,
     onSwitchProfile: () -> Unit,
     onExitApp: () -> Unit
 ) {
@@ -619,7 +622,7 @@ private fun LegacySidebarScaffold(
 
                     Spacer(modifier = Modifier.weight(1f))
 
-                    if (isExpanded && activeProfileName.isNotEmpty()) {
+                    if (isExpanded && showProfileSelector && activeProfileName.isNotEmpty()) {
                         var isProfileFocused by remember { mutableStateOf(false) }
                         val profileItemShape = RoundedCornerShape(32.dp)
                         val profileBgColor by animateColorAsState(
@@ -779,6 +782,7 @@ private fun ModernSidebarScaffold(
     hideBuiltInHeaders: Boolean,
     activeProfileName: String,
     activeProfileColorHex: String,
+    showProfileSelector: Boolean,
     onSwitchProfile: () -> Unit,
     onExitApp: () -> Unit
 ) {
@@ -1105,6 +1109,7 @@ private fun ModernSidebarScaffold(
                         },
                         activeProfileName = activeProfileName,
                         activeProfileColorHex = activeProfileColorHex,
+                        showProfileSelector = showProfileSelector,
                         onSwitchProfile = onSwitchProfile
                     )
                 }

@@ -1,4 +1,5 @@
 <resources>
+    <string name="app_name">Nuvio</string>
     <string name="type_movie">Movie</string>
     <string name="type_series">Series</string>
     <string name="type_unknown">Unknown</string>
@@ -21,6 +22,7 @@
     <string name="cw_almost_done">Almost done</string>
     <string name="cw_airs_date">Airs %1$s</string>
     <string name="cw_action_go_to_details">Go to details</string>
+    <string name="cw_action_start_from_beginning">Start from beginning</string>
     <string name="cw_action_remove">Remove</string>
     <string name="cw_dialog_subtitle">Choose what you want to do with this item.</string>
     <string name="home_poster_dialog_subtitle">Title actions</string>
@@ -137,7 +139,7 @@
     <string name="account_stat_progress">progress</string>
     <string name="account_stat_watched">watched</string>
     <string name="settings_integrations_section">Integrations</string>
-    <string name="settings_integrations_section_subtitle">Choose TMDB or MDBList settings</string>
+    <string name="settings_integrations_section_subtitle">Choose TMDB or MDBList</string>
     <string name="settings_tmdb_subtitle">Metadata enrichment controls</string>
     <string name="settings_mdblist_subtitle">External ratings providers</string>
 
@@ -318,6 +320,8 @@
     <string name="layout_addon_name_sub">Show source name under catalog titles.</string>
     <string name="layout_catalog_type">Show Catalog Type</string>
     <string name="layout_catalog_type_sub">Show type suffix next to catalog name (Movie/Series).</string>
+    <string name="layout_hide_unreleased">Hide Unreleased Content</string>
+    <string name="layout_hide_unreleased_sub">Hide movies and shows that haven\'t been released yet.</string>
     <string name="layout_section_detail">Detail Page</string>
     <string name="layout_section_detail_desc">Settings for the detail and episode screens.</string>
     <string name="layout_blur_unwatched">Blur Unwatched Episodes</string>

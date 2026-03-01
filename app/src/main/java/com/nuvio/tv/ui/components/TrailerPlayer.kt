@@ -26,7 +26,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.MergingMediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import java.util.concurrent.atomic.AtomicBoolean
@@ -36,6 +39,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun TrailerPlayer(
     trailerUrl: String?,
+    trailerAudioUrl: String? = null,
     isPlaying: Boolean,
     onEnded: () -> Unit,
     onFirstFrameRendered: () -> Unit = {},
@@ -54,6 +58,7 @@ fun TrailerPlayer(
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentIsPlaying by rememberUpdatedState(isPlaying)
     val currentTrailerUrl by rememberUpdatedState(trailerUrl)
+    val currentTrailerAudioUrl by rememberUpdatedState(trailerAudioUrl)
     val currentOnEnded by rememberUpdatedState(onEnded)
     val currentOnFirstFrameRendered by rememberUpdatedState(onFirstFrameRendered)
     val currentOnProgressChanged by rememberUpdatedState(onProgressChanged)
@@ -66,7 +71,7 @@ fun TrailerPlayer(
         label = "trailerFirstFrameAlpha"
     )
 
-    val trailerPlayer = remember(trailerUrl) {
+    val trailerPlayer = remember(trailerUrl, trailerAudioUrl) {
         if (trailerUrl != null) {
             ExoPlayer.Builder(context)
                 .build()
@@ -85,12 +90,19 @@ fun TrailerPlayer(
     }
     val releaseCalled = remember(trailerPlayer) { AtomicBoolean(false) }
 
-    LaunchedEffect(isPlaying, trailerUrl, muted) {
+    LaunchedEffect(isPlaying, trailerUrl, trailerAudioUrl, muted) {
         val player = trailerPlayer ?: return@LaunchedEffect
         player.volume = if (muted) 0f else 1f
         if (isPlaying && trailerUrl != null) {
             hasRenderedFirstFrame = false
-            player.setMediaItem(MediaItem.fromUri(trailerUrl))
+            if (!trailerAudioUrl.isNullOrBlank()) {
+                val mediaSourceFactory = ProgressiveMediaSource.Factory(DefaultDataSource.Factory(context))
+                val videoSource = mediaSourceFactory.createMediaSource(MediaItem.fromUri(trailerUrl))
+                val audioSource = mediaSourceFactory.createMediaSource(MediaItem.fromUri(trailerAudioUrl))
+                player.setMediaSource(MergingMediaSource(videoSource, audioSource))
+            } else {
+                player.setMediaItem(MediaItem.fromUri(trailerUrl))
+            }
             player.prepare()
             player.playWhenReady = true
         } else {
@@ -148,7 +160,14 @@ fun TrailerPlayer(
                 Lifecycle.Event.ON_RESUME -> {
                     if (currentIsPlaying && !currentTrailerUrl.isNullOrBlank()) {
                         if (player.currentMediaItem == null) {
-                            player.setMediaItem(MediaItem.fromUri(currentTrailerUrl!!))
+                            if (!currentTrailerAudioUrl.isNullOrBlank()) {
+                                val mediaSourceFactory = ProgressiveMediaSource.Factory(DefaultDataSource.Factory(context))
+                                val videoSource = mediaSourceFactory.createMediaSource(MediaItem.fromUri(currentTrailerUrl!!))
+                                val audioSource = mediaSourceFactory.createMediaSource(MediaItem.fromUri(currentTrailerAudioUrl!!))
+                                player.setMediaSource(MergingMediaSource(videoSource, audioSource))
+                            } else {
+                                player.setMediaItem(MediaItem.fromUri(currentTrailerUrl!!))
+                            }
                             player.prepare()
                         }
                         player.playWhenReady = true

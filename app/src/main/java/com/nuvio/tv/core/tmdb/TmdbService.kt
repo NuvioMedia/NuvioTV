@@ -212,4 +212,6 @@ class TmdbService @Inject constructor(
         imdbToTmdbCache[imdbId] = tmdbId
         tmdbToImdbCache[tmdbId] = imdbId
     }
+
+    fun apiKey(): String = TMDB_API_KEY
 }

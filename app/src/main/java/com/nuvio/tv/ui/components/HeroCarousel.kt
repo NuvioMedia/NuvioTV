@@ -197,6 +197,8 @@ private fun HeroCarouselSlide(
                 .build()
         }
     }
+    var logoLoadFailed by remember(item.logo) { mutableStateOf(false) }
+    val showLogo = !item.logo.isNullOrBlank() && !logoLoadFailed
 
     val bgColor = NuvioColors.Background
     val bottomGradient = remember(bgColor) {
@@ -257,10 +259,11 @@ private fun HeroCarouselSlide(
                 .fillMaxWidth(0.5f)
         ) {
             // Title logo or text title
-            if (!item.logo.isNullOrBlank()) {
+            if (showLogo) {
                 AsyncImage(
                     model = logoModel,
                     contentDescription = item.name,
+                    onError = { logoLoadFailed = true },
                     modifier = Modifier
                         .height(80.dp)
                         .fillMaxWidth(),

@@ -45,7 +45,8 @@ data class HomeUiState(
     val posterListPickerMembership: Map<String, Boolean> = emptyMap(),
     val posterListPickerPending: Boolean = false,
     val posterListPickerError: String? = null,
-    val gridItems: List<GridItem> = emptyList()
+    val gridItems: List<GridItem> = emptyList(),
+    val hideUnreleasedContent: Boolean = false
 )
 
 @Immutable

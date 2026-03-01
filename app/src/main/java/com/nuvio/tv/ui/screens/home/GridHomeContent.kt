@@ -67,6 +67,7 @@ fun GridHomeContent(
     gridFocusState: HomeScreenFocusState,
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
+    onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean = { false },
@@ -224,6 +225,7 @@ fun GridHomeContent(
                                     onItemClick = { item ->
                                         onContinueWatchingClick(item)
                                     },
+                                    onStartFromBeginning = onContinueWatchingStartFromBeginning,
                                     onDetailsClick = { item ->
                                         onNavigateToDetail(
                                             when (item) {
@@ -366,6 +368,7 @@ fun GridHomeContent(
                         onItemClick = { item ->
                             onContinueWatchingClick(item)
                         },
+                        onStartFromBeginning = onContinueWatchingStartFromBeginning,
                         onDetailsClick = { item ->
                             onNavigateToDetail(
                                 when (item) {

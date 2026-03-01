@@ -71,6 +71,7 @@ fun HomeScreen(
             ""
         )
     },
+    onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = onContinueWatchingClick,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit = { _, _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -185,6 +186,7 @@ fun HomeScreen(
                                 posterCardStyle = posterCardStyle,
                                 onNavigateToDetail = onNavigateToDetail,
                                 onContinueWatchingClick = onContinueWatchingClick,
+                                onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
                                 onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
                                 isCatalogItemWatched = { item ->
                                     uiState.movieWatchedStatus[homeItemStatusKey(item.id, item.apiType)] == true
@@ -200,6 +202,7 @@ fun HomeScreen(
                                 posterCardStyle = posterCardStyle,
                                 onNavigateToDetail = onNavigateToDetail,
                                 onContinueWatchingClick = onContinueWatchingClick,
+                                onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
                                 onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
                                 isCatalogItemWatched = { item ->
                                     uiState.movieWatchedStatus[homeItemStatusKey(item.id, item.apiType)] == true
@@ -214,6 +217,7 @@ fun HomeScreen(
                                 uiState = uiState,
                                 onNavigateToDetail = onNavigateToDetail,
                                 onContinueWatchingClick = onContinueWatchingClick,
+                                onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
                                 isCatalogItemWatched = { item ->
                                     uiState.movieWatchedStatus[homeItemStatusKey(item.id, item.apiType)] == true
                                 },
@@ -282,6 +286,7 @@ private fun ClassicHomeRoute(
     posterCardStyle: PosterCardStyle,
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
+    onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean,
     onCatalogItemLongPress: (MetaPreview, String) -> Unit
@@ -292,8 +297,10 @@ private fun ClassicHomeRoute(
         posterCardStyle = posterCardStyle,
         focusState = focusState,
         trailerPreviewUrls = viewModel.trailerPreviewUrls,
+        trailerPreviewAudioUrls = viewModel.trailerPreviewAudioUrls,
         onNavigateToDetail = onNavigateToDetail,
         onContinueWatchingClick = onContinueWatchingClick,
+        onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
         onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
         onRemoveContinueWatching = { contentId, season, episode, isNextUp ->
             viewModel.onEvent(HomeEvent.OnRemoveContinueWatching(contentId, season, episode, isNextUp))
@@ -319,6 +326,7 @@ private fun GridHomeRoute(
     posterCardStyle: PosterCardStyle,
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
+    onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean,
     onCatalogItemLongPress: (MetaPreview, String) -> Unit
@@ -330,6 +338,7 @@ private fun GridHomeRoute(
         gridFocusState = gridFocusState,
         onNavigateToDetail = onNavigateToDetail,
         onContinueWatchingClick = onContinueWatchingClick,
+        onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
         onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
         onRemoveContinueWatching = { contentId, season, episode, isNextUp ->
             viewModel.onEvent(HomeEvent.OnRemoveContinueWatching(contentId, season, episode, isNextUp))
@@ -351,6 +360,7 @@ private fun ModernHomeRoute(
     uiState: HomeUiState,
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
+    onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean,
     onCatalogItemLongPress: (MetaPreview, String) -> Unit
 ) {
@@ -379,8 +389,10 @@ private fun ModernHomeRoute(
         uiState = uiState,
         focusState = focusState,
         trailerPreviewUrls = viewModel.trailerPreviewUrls,
+        trailerPreviewAudioUrls = viewModel.trailerPreviewAudioUrls,
         onNavigateToDetail = onNavigateToDetail,
         onContinueWatchingClick = onContinueWatchingClick,
+        onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
         onRequestTrailerPreview = requestTrailerPreview,
         onLoadMoreCatalog = loadMoreCatalog,
         onRemoveContinueWatching = removeContinueWatching,

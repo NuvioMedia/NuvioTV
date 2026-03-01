@@ -28,6 +28,20 @@ interface TmdbApi {
         @Query("api_key") apiKey: String
     ): Response<TmdbExternalIdsResponse>
 
+    @GET("movie/{movie_id}/videos")
+    suspend fun getMovieVideos(
+        @Path("movie_id") movieId: Int,
+        @Query("api_key") apiKey: String,
+        @Query("language") language: String = "en-US"
+    ): Response<TmdbVideosResponse>
+
+    @GET("tv/{tv_id}/videos")
+    suspend fun getTvVideos(
+        @Path("tv_id") tvId: Int,
+        @Query("api_key") apiKey: String,
+        @Query("language") language: String = "en-US"
+    ): Response<TmdbVideosResponse>
+
     @GET("movie/{movie_id}")
     suspend fun getMovieDetails(
         @Path("movie_id") movieId: Int,
@@ -142,6 +156,26 @@ data class TmdbExternalIdsResponse(
     @Json(name = "id") val id: Int,
     @Json(name = "imdb_id") val imdbId: String? = null,
     @Json(name = "tvdb_id") val tvdbId: Int? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbVideosResponse(
+    @Json(name = "id") val id: Int,
+    @Json(name = "results") val results: List<TmdbVideoResult> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbVideoResult(
+    @Json(name = "iso_639_1") val iso6391: String? = null,
+    @Json(name = "iso_3166_1") val iso31661: String? = null,
+    @Json(name = "name") val name: String? = null,
+    @Json(name = "key") val key: String? = null,
+    @Json(name = "site") val site: String? = null,
+    @Json(name = "size") val size: Int? = null,
+    @Json(name = "type") val type: String? = null,
+    @Json(name = "official") val official: Boolean? = null,
+    @Json(name = "published_at") val publishedAt: String? = null,
+    @Json(name = "id") val id: String? = null
 )
 
 @JsonClass(generateAdapter = true)

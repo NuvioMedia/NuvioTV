@@ -193,6 +193,7 @@ fun StreamScreen(
                 visible = true,
                 backdropUrl = uiState.backdrop ?: uiState.poster,
                 logoUrl = uiState.logo,
+                title = uiState.title,
                 message = if (uiState.directAutoPlayMessage != null) {
                     stringResource(R.string.stream_finding_source)
                 } else {
@@ -380,6 +381,7 @@ private fun LeftContentSection(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    var logoLoadFailed by remember(logo) { mutableStateOf(false) }
     val logoModel = remember(context, logo) {
         logo?.let { image ->
             ImageRequest.Builder(context)
@@ -400,10 +402,11 @@ private fun LeftContentSection(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth(0.8f)
         ) {
-            if (logoModel != null) {
+            if (logoModel != null && !logoLoadFailed) {
                 AsyncImage(
                     model = logoModel,
                     contentDescription = title,
+                    onError = { logoLoadFailed = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(120.dp),

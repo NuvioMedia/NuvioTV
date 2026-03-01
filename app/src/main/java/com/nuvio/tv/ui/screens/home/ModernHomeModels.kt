@@ -15,7 +15,7 @@ internal const val MODERN_HERO_TEXT_WIDTH_FRACTION = 0.42f
 internal const val MODERN_HERO_BACKDROP_HEIGHT_FRACTION = 0.62f
 internal const val MODERN_TRAILER_OVERSCAN_ZOOM = 1.35f
 internal const val MODERN_HERO_FOCUS_DEBOUNCE_MS = 90L
-internal val MODERN_ROW_HEADER_FOCUS_INSET = 56.dp
+internal val MODERN_ROW_HEADER_FOCUS_INSET = 40.dp
 internal val MODERN_LANDSCAPE_LOGO_GRADIENT = Brush.verticalGradient(
     colorStops = arrayOf(
         0.0f to Color.Transparent,

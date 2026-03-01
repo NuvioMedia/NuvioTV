@@ -361,6 +361,17 @@ fun LayoutSettingsContent(
                         },
                         onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                     )
+                    CompactToggleRow(
+                        title = stringResource(R.string.layout_hide_unreleased),
+                        subtitle = stringResource(R.string.layout_hide_unreleased_sub),
+                        checked = uiState.hideUnreleasedContent,
+                        onToggle = {
+                            viewModel.onEvent(
+                                LayoutSettingsEvent.SetHideUnreleasedContent(!uiState.hideUnreleasedContent)
+                            )
+                        },
+                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                    )
                 }
             }
 

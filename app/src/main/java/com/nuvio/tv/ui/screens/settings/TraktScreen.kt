@@ -155,8 +155,8 @@ fun TraktScreen(
                 .fillMaxHeight()
                 .border(1.dp, NuvioColors.Border.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
                 .background(NuvioColors.BackgroundElevated.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
-                .padding(26.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             val expiresAt = uiState.deviceCodeExpiresAtMillis
             val remaining = expiresAt?.let { (it - nowMillis).coerceAtLeast(0L) } ?: 0L
@@ -193,15 +193,15 @@ fun TraktScreen(
                 Text(
                     text = userCode ?: "-",
                     color = NuvioColors.Primary,
-                    fontSize = 46.sp,
+                    fontSize = 38.sp,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 6.sp
+                    letterSpacing = 4.sp
                 )
                 if (qrBitmap != null) {
                     Image(
                         bitmap = qrBitmap.asImageBitmap(),
                         contentDescription = "Trakt activation QR",
-                        modifier = Modifier.size(220.dp),
+                        modifier = Modifier.size(180.dp),
                         contentScale = ContentScale.Fit
                     )
                 }
@@ -228,7 +228,7 @@ fun TraktScreen(
                 ) {
                     Text(stringResource(R.string.trakt_disconnect))
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 TraktConnectedStatsStrip(
                     stats = uiState.connectedStats,
                     isLoading = uiState.isStatsLoading

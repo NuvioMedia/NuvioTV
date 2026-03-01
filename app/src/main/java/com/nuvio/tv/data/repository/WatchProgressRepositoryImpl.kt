@@ -73,7 +73,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
     private val metadataState = MutableStateFlow<Map<String, ContentMetadata>>(emptyMap())
     private val metadataMutex = Mutex()
     private val inFlightMetadataKeys = mutableSetOf<String>()
-    private val metadataHydrationLimit = 30
+    private val metadataHydrationLimit = 250
 
     private fun triggerRemoteSync() {
         if (isSyncingFromRemote) return

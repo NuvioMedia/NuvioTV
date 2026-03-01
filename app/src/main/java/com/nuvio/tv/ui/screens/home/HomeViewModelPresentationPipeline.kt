@@ -28,7 +28,8 @@ private data class CoreLayoutPrefs(
     val heroSectionEnabled: Boolean,
     val posterLabelsEnabled: Boolean,
     val catalogAddonNameEnabled: Boolean,
-    val catalogTypeSuffixEnabled: Boolean
+    val catalogTypeSuffixEnabled: Boolean,
+    val hideUnreleasedContent: Boolean
 )
 
 private data class FocusedBackdropPrefs(
@@ -46,6 +47,7 @@ private data class LayoutUiPrefs(
     val posterLabelsEnabled: Boolean,
     val catalogAddonNameEnabled: Boolean,
     val catalogTypeSuffixEnabled: Boolean,
+    val hideUnreleasedContent: Boolean,
     val modernLandscapePostersEnabled: Boolean,
     val focusedBackdropExpandEnabled: Boolean,
     val focusedBackdropExpandDelaySeconds: Int,
@@ -73,12 +75,17 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
                 heroSectionEnabled = heroSectionEnabled,
                 posterLabelsEnabled = posterLabelsEnabled,
                 catalogAddonNameEnabled = catalogAddonNameEnabled,
-                catalogTypeSuffixEnabled = true
+                catalogTypeSuffixEnabled = true,
+                hideUnreleasedContent = false
             )
         },
-        layoutPreferenceDataStore.catalogTypeSuffixEnabled
-    ) { corePrefs, catalogTypeSuffixEnabled ->
-        corePrefs.copy(catalogTypeSuffixEnabled = catalogTypeSuffixEnabled)
+        layoutPreferenceDataStore.catalogTypeSuffixEnabled,
+        layoutPreferenceDataStore.hideUnreleasedContent
+    ) { corePrefs, catalogTypeSuffixEnabled, hideUnreleasedContent ->
+        corePrefs.copy(
+            catalogTypeSuffixEnabled = catalogTypeSuffixEnabled,
+            hideUnreleasedContent = hideUnreleasedContent
+        )
     }
 
     val focusedBackdropPrefsFlow = combine(
@@ -113,6 +120,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
             posterLabelsEnabled = corePrefs.posterLabelsEnabled,
             catalogAddonNameEnabled = corePrefs.catalogAddonNameEnabled,
             catalogTypeSuffixEnabled = corePrefs.catalogTypeSuffixEnabled,
+            hideUnreleasedContent = corePrefs.hideUnreleasedContent,
             modernLandscapePostersEnabled = false,
             focusedBackdropExpandEnabled = focusedBackdropPrefs.expandEnabled,
             focusedBackdropExpandDelaySeconds = focusedBackdropPrefs.expandDelaySeconds,
@@ -146,7 +154,8 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
                 val shouldRefreshCatalogPresentation =
                     currentHeroCatalogKeys != prefs.heroCatalogKeys ||
                         previousState.heroSectionEnabled != prefs.heroSectionEnabled ||
-                        previousState.homeLayout != prefs.layout
+                        previousState.homeLayout != prefs.layout ||
+                        previousState.hideUnreleasedContent != prefs.hideUnreleasedContent
                 currentHeroCatalogKeys = prefs.heroCatalogKeys
                 _uiState.update {
                     it.copy(
@@ -156,6 +165,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
                         posterLabelsEnabled = effectivePosterLabelsEnabled,
                         catalogAddonNameEnabled = prefs.catalogAddonNameEnabled,
                         catalogTypeSuffixEnabled = prefs.catalogTypeSuffixEnabled,
+                        hideUnreleasedContent = prefs.hideUnreleasedContent,
                         modernLandscapePostersEnabled = prefs.modernLandscapePostersEnabled,
                         focusedPosterBackdropExpandEnabled = prefs.focusedBackdropExpandEnabled,
                         focusedPosterBackdropExpandDelaySeconds = prefs.focusedBackdropExpandDelaySeconds,
@@ -217,10 +227,16 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
     val requestVersion = trailerPreviewRequestVersion
 
     viewModelScope.launch {
-        val trailerUrl = trailerService.getTrailerUrl(
+        val tmdbId = try {
+            tmdbService.ensureTmdbId(itemId, apiType)
+        } catch (_: Exception) {
+            null
+        }
+
+        val trailerSource = trailerService.getTrailerPlaybackSource(
             title = title,
             year = extractYear(releaseInfo),
-            tmdbId = null,
+            tmdbId = tmdbId,
             type = apiType
         )
 
@@ -231,11 +247,20 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
             return@launch
         }
 
-        if (trailerUrl.isNullOrBlank()) {
+        if (trailerSource?.videoUrl.isNullOrBlank()) {
             trailerPreviewNegativeCache.add(itemId)
+            trailerPreviewUrlsState.remove(itemId)
+            trailerPreviewAudioUrlsState.remove(itemId)
         } else {
-            if (trailerPreviewUrlsState[itemId] != trailerUrl) {
-                trailerPreviewUrlsState[itemId] = trailerUrl
+            val videoUrl = trailerSource.videoUrl
+            if (trailerPreviewUrlsState[itemId] != videoUrl) {
+                trailerPreviewUrlsState[itemId] = videoUrl
+            }
+            val audioUrl = trailerSource.audioUrl
+            if (audioUrl.isNullOrBlank()) {
+                trailerPreviewAudioUrlsState.remove(itemId)
+            } else if (trailerPreviewAudioUrlsState[itemId] != audioUrl) {
+                trailerPreviewAudioUrlsState[itemId] = audioUrl
             }
         }
 

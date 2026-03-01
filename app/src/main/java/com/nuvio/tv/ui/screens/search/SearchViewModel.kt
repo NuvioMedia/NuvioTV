@@ -7,7 +7,10 @@ import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.core.util.filterReleasedItems
+import com.nuvio.tv.core.util.isUnreleased
 import com.nuvio.tv.domain.repository.AddonRepository
+import java.time.LocalDate
 import com.nuvio.tv.domain.repository.CatalogRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -41,6 +44,7 @@ class SearchViewModel @Inject constructor(
     private var hasRenderedFirstCatalog = false
     private var pendingCatalogResponses = 0
     private var revealBatchAfterNextDiscoverFetch = false
+    private var hideUnreleasedContent = false
 
     private companion object {
         const val DISCOVER_INITIAL_LIMIT = 100
@@ -91,6 +95,12 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             layoutPreferenceDataStore.catalogTypeSuffixEnabled.collectLatest { enabled ->
                 _uiState.update { it.copy(catalogTypeSuffixEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.hideUnreleasedContent.collectLatest { enabled ->
+                hideUnreleasedContent = enabled
+                scheduleCatalogRowsUpdate()
             }
         }
     }
@@ -307,8 +317,15 @@ class SearchViewModel @Inject constructor(
             ).collect { result ->
                 when (result) {
                     is NetworkResult.Success -> {
-                        val mergedItems = currentRow.items + result.data.items
-                        catalogsMap[key] = result.data.copy(items = mergedItems)
+                        val existingIds = currentRow.items.asSequence()
+                            .map { "${it.apiType}:${it.id}" }
+                            .toHashSet()
+                        val newUniqueItems = result.data.items.filter { item ->
+                            "${item.apiType}:${item.id}" !in existingIds
+                        }
+                        val mergedItems = currentRow.items + newUniqueItems
+                        val hasMore = if (newUniqueItems.isEmpty()) false else result.data.hasMore
+                        catalogsMap[key] = result.data.copy(items = mergedItems, hasMore = hasMore)
                         scheduleCatalogRowsUpdate()
                     }
                     is NetworkResult.Error -> {
@@ -342,8 +359,14 @@ class SearchViewModel @Inject constructor(
     private fun updateCatalogRowsNow() {
         _uiState.update { state ->
             val orderedRows = catalogOrder.mapNotNull { key -> catalogsMap[key] }
+            val filteredRows = if (hideUnreleasedContent) {
+                val today = LocalDate.now()
+                orderedRows.map { it.filterReleasedItems(today) }
+            } else {
+                orderedRows
+            }
             state.copy(
-                catalogRows = orderedRows
+                catalogRows = filteredRows
             )
         }
     }
@@ -546,7 +569,13 @@ class SearchViewModel @Inject constructor(
                             "${item.apiType}:${item.id}" !in existingKeys
                         }
                         val merged = if (reset) incoming else (existing + incoming)
-                        val deduped = merged.distinctBy { "${it.apiType}:${it.id}" }
+                        val rawDeduped = merged.distinctBy { "${it.apiType}:${it.id}" }
+                        val deduped = if (hideUnreleasedContent) {
+                            val today = LocalDate.now()
+                            rawDeduped.filterNot { it.isUnreleased(today) }
+                        } else {
+                            rawDeduped
+                        }
                         val shouldRevealBatch = !reset && revealBatchAfterNextDiscoverFetch
                         val visibleLimit = if (reset) {
                             DISCOVER_INITIAL_LIMIT

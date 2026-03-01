@@ -99,8 +99,6 @@ internal fun PlayerRuntimeController.observeEpisodeWatchProgress() {
 internal fun PlayerRuntimeController.observeSubtitleSettings() {
     scope.launch {
         playerSettingsDataStore.playerSettings.collect { settings ->
-            val wasFrameRateMatchingEnabled =
-                _uiState.value.frameRateMatchingMode != FrameRateMatchingMode.OFF
             _uiState.update { state ->
                 val shouldShowOverlay = if (settings.loadingOverlayEnabled && !hasRenderedFirstFrame) {
                     true
@@ -120,20 +118,14 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                     frameRateMatchingMode = settings.frameRateMatchingMode
                 )
             }
-            if (!wasFrameRateMatchingEnabled &&
-                settings.frameRateMatchingMode != FrameRateMatchingMode.OFF &&
-                _uiState.value.detectedFrameRate <= 0f &&
-                currentStreamUrl.isNotBlank()
-            ) {
-                startFrameRateProbe(currentStreamUrl, currentHeaders, true)
-            }
             if (settings.frameRateMatchingMode == FrameRateMatchingMode.OFF) {
                 frameRateProbeJob?.cancel()
                 _uiState.update {
                     it.copy(
                         detectedFrameRateRaw = 0f,
                         detectedFrameRate = 0f,
-                        detectedFrameRateSource = null
+                        detectedFrameRateSource = null,
+                        afrProbeRunning = false
                     )
                 }
             }
@@ -297,8 +289,8 @@ internal fun PlayerRuntimeController.retryCurrentStreamFromStartAfter416() {
             player.clearMediaItems()
             player.setMediaSource(mediaSourceFactory.createMediaSource(currentStreamUrl, currentHeaders))
             player.seekTo(0L)
-            player.prepare()
             player.playWhenReady = true
+            player.prepare()
         }.onFailure { e ->
             _uiState.update {
                 it.copy(

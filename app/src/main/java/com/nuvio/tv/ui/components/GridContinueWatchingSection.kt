@@ -38,6 +38,7 @@ fun GridContinueWatchingSection(
     onItemClick: (ContinueWatchingItem) -> Unit,
     onDetailsClick: (ContinueWatchingItem) -> Unit = onItemClick,
     onRemoveItem: (ContinueWatchingItem) -> Unit,
+    onStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
     modifier: Modifier = Modifier,
     focusedItemIndex: Int = -1
 ) {
@@ -138,6 +139,10 @@ fun GridContinueWatchingSection(
             },
             onDetails = {
                 onDetailsClick(menuItem)
+                optionsItem = null
+            },
+            onStartFromBeginning = {
+                onStartFromBeginning(menuItem)
                 optionsItem = null
             }
         )

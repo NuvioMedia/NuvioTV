@@ -59,7 +59,7 @@ class TraktViewModel @Inject constructor(
     val uiState: StateFlow<TraktUiState> = _uiState.asStateFlow()
 
     private var pollJob: Job? = null
-    private var lastMode: TraktConnectionMode = TraktConnectionMode.DISCONNECTED
+    private var lastMode: TraktConnectionMode? = null
     private var lastAutoSyncAtMs: Long = 0L
 
     init {
@@ -235,7 +235,9 @@ class TraktViewModel @Inject constructor(
             )
         }
 
-        if (mode == TraktConnectionMode.CONNECTED &&
+        if (mode == TraktConnectionMode.CONNECTED && lastMode == null) {
+            loadConnectedStats(forceRefresh = false)
+        } else if (mode == TraktConnectionMode.CONNECTED &&
             (lastMode != TraktConnectionMode.CONNECTED || shouldAutoSyncNow())
         ) {
             autoSyncAfterConnected()

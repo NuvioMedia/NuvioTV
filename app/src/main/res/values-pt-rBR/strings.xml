@@ -26,8 +26,8 @@
     <string name="action_see_all">Ver tudo</string>
 
     <!-- HeroSection -->
-    <string name="hero_creator">Criador: %1$s</string>
-    <string name="hero_director">Diretor: %1$s</string>
+    <string name="hero_creator">Criador(a): %1$s</string>
+    <string name="hero_director">Diretor(a): %1$s</string>
     <string name="hero_writer">Roteirista: %1$s</string>
     <string name="hero_play">Reproduzir</string>
     <string name="hero_play_episode">Reproduzir T%1$d, E%2$d</string>
@@ -54,10 +54,10 @@
     <string name="episodes_season_actions">Ações da temporada</string>
 
     <!-- MetaDetailsScreen -->
-    <string name="detail_tab_cast">Criador e elenco</string>
+    <string name="detail_tab_cast">Criador(a) e elenco</string>
     <string name="detail_tab_ratings">Avaliações</string>
     <string name="detail_tab_more_like_this">Mais como este</string>
-    <string name="detail_section_network">Rede</string>
+    <string name="detail_section_network">Emissora</string>
     <string name="detail_section_production">Produção</string>
     <string name="detail_lists_fallback">Listas</string>
     <string name="detail_lists_subtitle">Selecione em quais listas este título deve aparecer.</string>
@@ -121,7 +121,7 @@
     <string name="playback_section_general">Geral</string>
     <string name="playback_section_general_desc">Comportamento principal da reprodução.</string>
     <string name="playback_loading_overlay">Tela de Carregamento</string>
-    <string name="playback_loading_overlay_sub">Mostrar tela de carregamento até o primeiro quadro do vídeo aparecer.</string>
+    <string name="playback_loading_overlay_sub">Mostrar carregamento até o vídeo aparecer.</string>
     <string name="playback_pause_overlay">Tela de Pausa</string>
     <string name="playback_pause_overlay_sub">Mostrar detalhes após 5 segundos em pausa.</string>
     <string name="playback_show_clock_sub">Mostrar hora atual e hora de término no pause.</string>
@@ -152,7 +152,7 @@
     <!-- PlaybackAudioSettings -->
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Reprodução Automática de Trailers</string>
-    <string name="audio_autoplay_trailers_sub">Reproduzir trailers automaticamente em detalhes após inatividade.</string>
+    <string name="audio_autoplay_trailers_sub">Reproduzir trailers auto em detalhes após inatividade.</string>
     <string name="audio_trailer_delay">Atraso do Trailer</string>
     <string name="audio_section">Áudio</string>
     <string name="audio_lang_default">Padrão (arquivo de mídia)</string>
@@ -167,8 +167,8 @@
     <string name="audio_decoder_prefer_app">Preferir decodificadores do app (FFmpeg)</string>
     <string name="audio_decoder_priority">Prioridade de Decodificador</string>
     <string name="audio_tunneled">Reprodução "Tunneled"</string>
-    <string name="audio_tunneled_sub">Sincroniza de áudio/vídeo diretamente no hardware. Pode melhorar a fluidez em alguns dispositivos.</string>
-    <string name="audio_dv_sub">Mapear Dolby Vision Profile 7 para HEVC padrão em dispositivos sem suporte DV</string>
+    <string name="audio_tunneled_sub">Sincroniza áudio/vídeo pelo hardware. Pode melhorar a fluidez.</string>
+    <string name="audio_dv_sub">Mapear DV7 para HEVC em dispositivos sem DV</string>
     <string name="audio_decoder_device_only_desc">Usar apenas decodificadores de hardware integrados. Mais compatível, mas pode não suportar todos os formatos.</string>
     <string name="audio_decoder_prefer_device_desc">Usar decodificadores de hardware quando disponíveis, com fallback para FFmpeg. Recomendado para a maioria dos dispositivos.</string>
     <string name="audio_decoder_prefer_app_desc">Usar decodificadores FFmpeg quando disponíveis. Melhor suporte de formatos, mas maior uso de CPU.</string>
@@ -187,7 +187,7 @@
     <string name="sub_text_color">Cor do Texto</string>
     <string name="sub_bg_color">Cor de Fundo</string>
     <string name="sub_outline">Contorno</string>
-    <string name="sub_outline_sub">Adicionar contorno ao texto da legenda para melhor visibilidade</string>
+    <string name="sub_outline_sub">Adicionar contorno ao texto da legenda</string>
     <string name="sub_outline_color">Cor do Contorno</string>
     <string name="sub_advanced_section">Renderização Avançada de Legendas</string>
     <string name="sub_libass">Usar libass para legendas ASS/SSA</string>
@@ -212,7 +212,7 @@
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Reutilizar Último Link</string>
-    <string name="autoplay_reuse_last_link_sub">Reproduzir automaticamente seu último stream enquanto em cache.</string>
+    <string name="autoplay_reuse_last_link_sub">Reproduzir auto o último stream em cache.</string>
     <string name="autoplay_last_link_cache">Duração do Cache do Último Link</string>
     <string name="autoplay_mode_manual">Manual (escolher stream)</string>
     <string name="autoplay_mode_first">Reprodução automática da primeira fonte</string>
@@ -260,9 +260,9 @@
     <string name="layout_grid_desc">Navegar em tudo em uma grade vertical com seção de destaque</string>
     <string name="layout_modern_desc">Destaque fixo com uma única linha ativa para navegação mais rápida</string>
     <string name="layout_section_home">Layout da Tela Inicial</string>
-    <string name="layout_section_home_desc">Escolher estrutura e fonte de destaque.</string>
+    <string name="layout_section_home_desc">Escolher visual e fonte do destaque.</string>
     <string name="layout_landscape_posters">Pôsteres em Paisagem</string>
-    <string name="layout_landscape_posters_sub">Alternar entre cartões em retrato e paisagem para o visual moderno.</string>
+    <string name="layout_landscape_posters_sub">Alternar entre retrato e paisagem para o visual moderno.</string>
     <string name="layout_preview_row">Mostrar Linha de Prévia</string>
     <string name="layout_preview_row_sub">Mostrar prévia da linha abaixo no layout moderno da tela inicial.</string>
     <string name="layout_hero_catalogs">Catálogos de Destaque</string>
@@ -278,30 +278,30 @@
     <string name="layout_show_hero">Mostrar Seção de Destaque</string>
     <string name="layout_show_hero_sub">Exibir carrossel de destaque no topo da tela inicial.</string>
     <string name="layout_show_discover">Mostrar Descobrir na Busca</string>
-    <string name="layout_show_discover_sub">Mostrar seção de navegação quando a busca estiver vazia.</string>
+    <string name="layout_show_discover_sub">Mostrar seção descobrir quando a busca estiver vazia.</string>
     <string name="layout_poster_labels">Mostrar Rótulos nos Pôsteres</string>
     <string name="layout_poster_labels_sub">Mostrar títulos abaixo dos pôsteres em linhas, grade e ver tudo.</string>
     <string name="layout_addon_name">Mostrar Nome do Addon</string>
     <string name="layout_addon_name_sub">Mostrar nome da fonte abaixo dos títulos de catálogo.</string>
     <string name="layout_catalog_type">Mostrar Tipo de Catálogo</string>
-    <string name="layout_catalog_type_sub">Mostrar sufixo de tipo ao lado do nome do catálogo (Filme/Série).</string>
+    <string name="layout_catalog_type_sub">Mostrar tipo de catálogo ao lado do nome. (Filme/Série).</string>
     <string name="layout_section_detail">Página de Detalhes</string>
     <string name="layout_section_detail_desc">Configurações para telas de detalhes e episódios.</string>
     <string name="layout_blur_unwatched">Desfoque em Episódios Não Assistidos</string>
-    <string name="layout_blur_unwatched_sub">Desfocar episódios até serem assistidos para evitar spoilers.</string>
+    <string name="layout_blur_unwatched_sub">Desfocar episódios evitar spoilers.</string>
     <string name="layout_trailer_button">Mostrar Botão de Trailer</string>
-    <string name="layout_trailer_button_sub">Mostrar botão de trailer na página de detalhes (Quando disponível).</string>
-    <string name="layout_prefer_external_meta">Preferir metadados de addon externo</string>
-    <string name="layout_prefer_external_meta_sub">Usar metadados de addon externo em vez de addon de catálogo.</string>
+    <string name="layout_trailer_button_sub">Mostrar botão de trailer na página de detalhes (se existir).</string>
+    <string name="layout_prefer_external_meta">Preferir Metadados do Addon Externo</string>
+    <string name="layout_prefer_external_meta_sub">Usar metadados do addon externo ao de catálogo.</string>
     <string name="layout_section_focused">Pôster Selecionados</string>
     <string name="layout_section_focused_desc">Comportamento avançado para pôsteres selecionados.</string>
     <string name="layout_expand_poster">Expandir pôster selecionado para fundo</string>
-    <string name="layout_expand_poster_sub">Expandir o pôster transformando em imagem de fundo (backdrop)</string>
+    <string name="layout_expand_poster_sub">Expandir o pôster transformando em imagem de fundo.</string>
     <string name="layout_expand_delay">Atraso para Expandir Fundo</string>
     <string name="layout_expand_delay_sub">Tempo de espera antes de expandir pôsteres em foco.</string>
     <string name="layout_autoplay_trailer">Reprodução Automática de Trailer</string>
     <string name="layout_autoplay_trailer_expanded">Reprodução Automática de Trailer em Cartão Expandido</string>
-    <string name="layout_autoplay_trailer_sub">Reproduzir prévia de trailer para conteúdo em foco quando disponível.</string>
+    <string name="layout_autoplay_trailer_sub">Reproduzir trailer em foco quando disponível.</string>
     <string name="layout_autoplay_trailer_expanded_sub">Reproduzir trailer dentro do fundo expandido quando disponível.</string>
     <string name="layout_trailer_muted">Reproduzir Trailer Silenciado</string>
     <string name="layout_trailer_muted_sub_preview">Silenciar áudio do trailer durante a prévia automática.</string>
@@ -362,9 +362,9 @@
     <string name="tmdb_title">Enriquecimento TMDB</string>
     <string name="tmdb_subtitle">Escolha quais campos de metadados devem vir do TMDB</string>
     <string name="tmdb_enable_title">Ativar Enriquecimento TMDB</string>
-    <string name="tmdb_enable_subtitle">Usar TMDB como fonte de metadados para aprimorar dados de addons</string>
+    <string name="tmdb_enable_subtitle">Usar TMDB como fonte de metadados para aprimorar.</string>
     <string name="tmdb_language_title">Idioma</string>
-    <string name="tmdb_language_subtitle">Idioma dos metadados do TMDB para título, logo e campos habilitados</string>
+    <string name="tmdb_language_subtitle">Idioma dos metadados do TMDB.</string>
     <string name="tmdb_artwork_title">Arte</string>
     <string name="tmdb_artwork_subtitle">Logos e imagens de fundo do TMDB</string>
     <string name="tmdb_basic_info_title">Informações Básicas</string>
@@ -375,8 +375,8 @@
     <string name="tmdb_credits_subtitle">Elenco com fotos, diretor e roteirista do TMDB</string>
     <string name="tmdb_productions_title">Produtoras</string>
     <string name="tmdb_productions_subtitle">Produtoras do TMDB</string>
-    <string name="tmdb_networks_title">Streamings</string>
-    <string name="tmdb_networks_subtitle">logos dos Streamings do TMDB</string>
+    <string name="tmdb_networks_title">Emissoras</string>
+    <string name="tmdb_networks_subtitle">logos das Emissora do TMDB</string>
     <string name="tmdb_episodes_title">Episódios</string>
     <string name="tmdb_episodes_subtitle">Títulos, resumos, miniaturas e duração dos episódios do TMDB</string>
     <string name="tmdb_more_like_this_title">Mais Como Este</string>
@@ -444,7 +444,7 @@
     <string name="profile_title">Perfis</string>
     <string name="profile_subtitle">Gerenciar perfis de usuário para esta conta.</string>
     <string name="profile_primary_label">Primário</string>
-    <string name="profile_shares_primary">Compartilha %1$s do primário</string>
+    <string name="profile_shares_primary">Compartilhar %1$s do primário</string>
     <string name="profile_edit_label">Editar</string>
     <string name="profile_add">Adicionar Perfil</string>
     <string name="profile_create_title">Criar Perfil</string>
@@ -733,10 +733,10 @@
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Início</string>
     <string name="nav_discover">Descobrir</string>
-    <string name="nav_search">Buscar</string>
+    <string name="nav_search">Procurar</string>
     <string name="nav_library">Biblioteca</string>
     <string name="nav_addons">Addons</string>
-    <string name="nav_settings">Configurações</string>
+    <string name="nav_settings">Configurar</string>
     <string name="cd_expand_sidebar">Expandir barra lateral</string>
 
     <string name="update_close">Fechar</string>

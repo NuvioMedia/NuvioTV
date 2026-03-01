@@ -3,7 +3,6 @@ package com.nuvio.tv.ui.screens.player
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
-import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Video
@@ -313,18 +312,20 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
     resetNextEpisodeCardState(clearEpisode = false)
 
     _exoPlayer?.let { player ->
-        try {
-            player.setMediaSource(mediaSourceFactory.createMediaSource(url, newHeaders))
-            player.prepare()
-            player.playWhenReady = true
-            startFrameRateProbe(
-                url,
-                newHeaders,
-                _uiState.value.frameRateMatchingMode != FrameRateMatchingMode.OFF
-            )
-        } catch (e: Exception) {
-            _uiState.update { it.copy(error = e.message ?: "Failed to play selected stream") }
-            return
+        scope.launch {
+            try {
+                val playerSettings = playerSettingsDataStore.playerSettings.first()
+                runAfrPreflightIfEnabled(
+                    url = url,
+                    headers = newHeaders,
+                    frameRateMatchingMode = playerSettings.frameRateMatchingMode
+                )
+                player.setMediaSource(mediaSourceFactory.createMediaSource(url, newHeaders))
+                player.playWhenReady = true
+                player.prepare()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message ?: "Failed to play selected stream") }
+            }
         }
     } ?: run {
         initializePlayer(url, newHeaders)
@@ -631,18 +632,20 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
     fetchSkipIntervals(contentId, currentSeason, currentEpisode)
 
     _exoPlayer?.let { player ->
-        try {
-            player.setMediaSource(mediaSourceFactory.createMediaSource(url, newHeaders))
-            player.prepare()
-            player.playWhenReady = true
-            startFrameRateProbe(
-                url,
-                newHeaders,
-                _uiState.value.frameRateMatchingMode != FrameRateMatchingMode.OFF
-            )
-        } catch (e: Exception) {
-            _uiState.update { it.copy(error = e.message ?: "Failed to play selected stream") }
-            return
+        scope.launch {
+            try {
+                val playerSettings = playerSettingsDataStore.playerSettings.first()
+                runAfrPreflightIfEnabled(
+                    url = url,
+                    headers = newHeaders,
+                    frameRateMatchingMode = playerSettings.frameRateMatchingMode
+                )
+                player.setMediaSource(mediaSourceFactory.createMediaSource(url, newHeaders))
+                player.playWhenReady = true
+                player.prepare()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message ?: "Failed to play selected stream") }
+            }
         }
     } ?: run {
         initializePlayer(url, newHeaders)

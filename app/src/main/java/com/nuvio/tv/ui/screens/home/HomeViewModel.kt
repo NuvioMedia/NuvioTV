@@ -94,6 +94,7 @@ class HomeViewModel @Inject constructor(
     internal val trailerPreviewLoadingIds = mutableSetOf<String>()
     internal val trailerPreviewNegativeCache = mutableSetOf<String>()
     internal val trailerPreviewUrlsState = mutableStateMapOf<String, String>()
+    internal val trailerPreviewAudioUrlsState = mutableStateMapOf<String, String>()
     internal var activeTrailerPreviewItemId: String? = null
     internal var trailerPreviewRequestVersion: Long = 0L
     internal var currentTmdbSettings: TmdbSettings = TmdbSettings()
@@ -113,6 +114,8 @@ class HomeViewModel @Inject constructor(
     internal var startupGracePeriodActive: Boolean = true
     val trailerPreviewUrls: Map<String, String>
         get() = trailerPreviewUrlsState
+    val trailerPreviewAudioUrls: Map<String, String>
+        get() = trailerPreviewAudioUrlsState
 
     init {
         observeLayoutPreferences()
