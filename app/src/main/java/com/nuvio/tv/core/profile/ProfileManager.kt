@@ -63,6 +63,7 @@ class ProfileManager @Inject constructor(
             usesPrimaryAddons = usesPrimaryAddons,
             usesPrimaryPlugins = usesPrimaryPlugins
         )
+        factory.markProfileCreated(nextId)
         profileDataStore.upsertProfile(profile)
         return true
     }
@@ -70,7 +71,7 @@ class ProfileManager @Inject constructor(
     suspend fun deleteProfile(id: Int): Boolean {
         if (id == 1) return false
         if (profiles.value.none { it.id == id }) return false
-        deleteProfileData(id)
+        deleteProfileDataAsync(id)
         profileDataStore.deleteProfile(id)
         return true
     }
@@ -81,7 +82,7 @@ class ProfileManager @Inject constructor(
         return true
     }
 
-    private fun deleteProfileData(profileId: Int) {
+    private suspend fun deleteProfileDataAsync(profileId: Int) {
         if (profileId == 1) return
 
         factory.clearProfile(profileId)

@@ -1,4 +1,7 @@
-@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@file:OptIn(
+    androidx.compose.foundation.ExperimentalFoundationApi::class,
+    androidx.compose.ui.ExperimentalComposeUiApi::class
+)
 
 package com.nuvio.tv.ui.screens.home
 
@@ -56,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
@@ -104,6 +108,7 @@ fun ModernHomeContent(
     uiState: HomeUiState,
     focusState: HomeScreenFocusState,
     trailerPreviewUrls: Map<String, String>,
+    trailerPreviewAudioUrls: Map<String, String>,
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
@@ -565,7 +570,13 @@ fun ModernHomeContent(
                 expandedFocusedSelection?.payload?.itemId?.let { trailerPreviewUrls[it] }
             }
         }
+        val heroTrailerAudioUrl by remember(expandedFocusedSelection, trailerPreviewAudioUrls) {
+            derivedStateOf {
+                expandedFocusedSelection?.payload?.itemId?.let { trailerPreviewAudioUrls[it] }
+            }
+        }
         val expandedCatalogTrailerUrl = heroTrailerUrl
+        val expandedCatalogTrailerAudioUrl = heroTrailerAudioUrl
         val shouldPlayHeroTrailer by remember(
             effectiveAutoplayEnabled,
             trailerPlaybackTarget,
@@ -631,6 +642,7 @@ fun ModernHomeContent(
             heroBackdropAlpha = heroBackdropAlpha,
             shouldPlayHeroTrailer = shouldPlayHeroTrailer,
             heroTrailerUrl = heroTrailerUrl,
+            heroTrailerAudioUrl = heroTrailerAudioUrl,
             heroTrailerAlpha = heroTrailerAlpha,
             muted = uiState.focusedPosterBackdropTrailerMuted,
             bgColor = bgColor,
@@ -661,6 +673,18 @@ fun ModernHomeContent(
                     .fillMaxWidth()
                     .height(rowsViewportHeight)
                     .padding(bottom = catalogBottomPadding)
+                    .focusRestorer {
+                        val rowKey = activeRowKey
+                        val itemIndex = activeItemIndex
+                        if (rowKey != null) {
+                            val row = carouselRows.firstOrNull { it.key == rowKey }
+                            val safeIndex = itemIndex.coerceIn(0, ((row?.items?.size ?: 1) - 1).coerceAtLeast(0))
+                            val itemKey = row?.items?.getOrNull(safeIndex)?.key
+                            if (itemKey != null) {
+                                uiCaches.itemFocusRequesters[rowKey]?.get(itemKey) ?: FocusRequester.Default
+                            } else FocusRequester.Default
+                        } else FocusRequester.Default
+                    }
                     .onPreviewKeyEvent { event ->
                         val native = event.nativeKeyEvent
                         if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {
@@ -722,6 +746,7 @@ fun ModernHomeContent(
                         trailerPlaybackTarget = trailerPlaybackTarget,
                         expandedCatalogFocusKey = expandedCatalogFocusKey,
                         expandedTrailerPreviewUrl = expandedCatalogTrailerUrl,
+                        expandedTrailerPreviewAudioUrl = expandedCatalogTrailerAudioUrl,
                         modernCatalogCardWidth = modernCatalogCardWidth,
                         modernCatalogCardHeight = modernCatalogCardHeight,
                         continueWatchingCardWidth = continueWatchingCardWidth,

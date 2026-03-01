@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
@@ -39,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -67,9 +69,10 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
+import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.model.TraktListPrivacy
-import com.nuvio.tv.ui.components.ContentCard
 import com.nuvio.tv.ui.components.EmptyScreenState
+import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.NuvioDialog
@@ -101,7 +104,20 @@ fun LibraryScreen(
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var expandedPicker by remember { mutableStateOf<String?>(null) }
     val primaryFocusRequester = remember { FocusRequester() }
+    val gridState = rememberLazyGridState()
     var pendingPrimaryFocus by remember { mutableStateOf(true) }
+    var lastFocusedPosterKey by rememberSaveable { mutableStateOf<String?>(null) }
+    val visibleItemKeys = remember(uiState.visibleItems) {
+        uiState.visibleItems.map { "${it.type}:${it.id}" }
+    }
+    val visibleItemIndexByKey = remember(visibleItemKeys) {
+        visibleItemKeys.withIndex().associate { (index, key) -> key to index }
+    }
+    val posterFocusRequesters = remember(visibleItemKeys) {
+        visibleItemKeys.associateWith { FocusRequester() }
+    }
+    val firstVisiblePosterKey = visibleItemKeys.firstOrNull()
+    val posterCardStyle = PosterCardDefaults.Style
 
     LaunchedEffect(uiState.isLoading) {
         if (uiState.isLoading) {
@@ -111,12 +127,42 @@ fun LibraryScreen(
 
     LaunchedEffect(uiState.isLoading, uiState.sourceMode, uiState.listTabs.size) {
         if (!uiState.isLoading && pendingPrimaryFocus) {
-            val focused = runCatching { primaryFocusRequester.requestFocus() }.isSuccess
+            val restoreKey = lastFocusedPosterKey
+            val restoreIndex = restoreKey?.let { visibleItemIndexByKey[it] }
+            val restoreRequester = restoreKey?.let { posterFocusRequesters[it] }
+
+            var focused = false
+            if (restoreIndex != null && restoreRequester != null) {
+                runCatching { gridState.scrollToItem(restoreIndex) }
+                focused = runCatching { restoreRequester.requestFocus() }.isSuccess
+                if (!focused) {
+                    delay(16)
+                    focused = runCatching { restoreRequester.requestFocus() }.isSuccess
+                }
+            }
+
+            if (!focused) {
+                focused = runCatching { primaryFocusRequester.requestFocus() }.isSuccess
+            }
             if (!focused) {
                 delay(16)
                 runCatching { primaryFocusRequester.requestFocus() }
             }
             pendingPrimaryFocus = false
+        }
+    }
+
+    LaunchedEffect(uiState.sortSelectionVersion, firstVisiblePosterKey) {
+        if (uiState.sortSelectionVersion <= 0L) return@LaunchedEffect
+        val targetKey = firstVisiblePosterKey ?: return@LaunchedEffect
+        runCatching { gridState.scrollToItem(0) }
+        var focused = false
+        repeat(6) {
+            focused = posterFocusRequesters[targetKey]
+                ?.let { requester -> runCatching { requester.requestFocus() }.isSuccess }
+                ?: false
+            if (focused) return@LaunchedEffect
+            delay(24)
         }
     }
 
@@ -156,7 +202,8 @@ fun LibraryScreen(
     val lastKeyRepeatTime = remember { longArrayOf(0L) }
 
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = PosterCardDefaults.Style.width),
+        columns = GridCells.Adaptive(minSize = posterCardStyle.width),
+        state = gridState,
         modifier = Modifier
             .fillMaxSize()
             .background(NuvioColors.Background)
@@ -258,9 +305,17 @@ fun LibraryScreen(
         }
 
         items(uiState.visibleItems, key = { "${it.type}:${it.id}" }) { item ->
-            ContentCard(
-                item = item.toMetaPreview(),
+            val focusKey = "${item.type}:${item.id}"
+            GridContentCard(
+                item = item.toMetaPreview().copy(posterShape = PosterShape.POSTER),
+                posterCardStyle = posterCardStyle,
+                focusRequester = posterFocusRequesters[focusKey],
+                showLabel = true,
+                onFocused = {
+                    lastFocusedPosterKey = focusKey
+                },
                 onClick = {
+                    lastFocusedPosterKey = focusKey
                     onNavigateToDetail(item.id, item.type, item.addonBaseUrl)
                 }
             )

@@ -1363,7 +1363,10 @@ class MetaDetailsViewModel @Inject constructor(
                 if (state.isTrailerLoading) state else state.copy(isTrailerLoading = true)
             }
 
-            val year = meta.releaseInfo?.split("-")?.firstOrNull()
+            val year = meta.releaseInfo?.let { info ->
+                if (info.isBlank()) null
+                else Regex("""\b(19|20)\d{2}\b""").find(info)?.value
+            }
 
             val tmdbId = try {
                 tmdbService.ensureTmdbId(meta.id, meta.apiType)
@@ -1371,25 +1374,27 @@ class MetaDetailsViewModel @Inject constructor(
                 null
             }
 
-            val type = when (meta.type) {
-                com.nuvio.tv.domain.model.ContentType.MOVIE -> "movie"
-                com.nuvio.tv.domain.model.ContentType.SERIES,
-                com.nuvio.tv.domain.model.ContentType.TV -> "tv"
-                else -> null
-            }
-
-            val url = trailerService.getTrailerUrl(
+            val source = trailerService.getTrailerPlaybackSource(
                 title = meta.name,
                 year = year,
                 tmdbId = tmdbId,
-                type = type
+                type = meta.apiType
             )
+            val url = source?.videoUrl
+            val audioUrl = source?.audioUrl
 
             _uiState.update { state ->
-                if (state.trailerUrl == url && !state.isTrailerLoading) {
+                if (state.trailerUrl == url &&
+                    state.trailerAudioUrl == audioUrl &&
+                    !state.isTrailerLoading
+                ) {
                     state
                 } else {
-                    state.copy(trailerUrl = url, isTrailerLoading = false)
+                    state.copy(
+                        trailerUrl = url,
+                        trailerAudioUrl = audioUrl,
+                        isTrailerLoading = false
+                    )
                 }
             }
 

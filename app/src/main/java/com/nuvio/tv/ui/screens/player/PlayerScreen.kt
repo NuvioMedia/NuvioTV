@@ -58,7 +58,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -109,7 +108,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @Composable
 fun PlayerScreen(
@@ -146,6 +144,10 @@ fun PlayerScreen(
             } else {
                 viewModel.onEvent(PlayerEvent.OnDismissEpisodesPanel)
             }
+        } else if (uiState.activeSkipInterval != null && !uiState.skipIntervalDismissed) {
+            viewModel.onEvent(PlayerEvent.OnDismissSkipIntro)
+        } else if (uiState.showNextEpisodeCard && uiState.nextEpisode != null) {
+            viewModel.onEvent(PlayerEvent.OnDismissNextEpisodeCard)
         } else if (uiState.showControls) {
             // If controls are visible, hide them instead of going back
             viewModel.hideControls()
@@ -184,82 +186,15 @@ fun PlayerScreen(
         }
     }
 
-    // Frame rate matching: switch display refresh rate to match video frame rate.
-    // Track gets priority; probe is fallback.
-    // Allow one correction if source/decision changes after first switch.
+    // Frame rate matching lifecycle.
     val activity = LocalContext.current as? android.app.Activity
-    val coroutineScope = rememberCoroutineScope()
-    var afrAppliedSource by remember { mutableStateOf<FrameRateSource?>(null) }
-    var afrAppliedRate by remember { mutableStateOf(0f) }
-    var afrCorrectionUsed by remember { mutableStateOf(false) }
-    LaunchedEffect(
-        uiState.detectedFrameRate,
-        uiState.detectedFrameRateRaw,
-        uiState.detectedFrameRateSource,
-        uiState.frameRateMatchingMode
-    ) {
-        if (uiState.frameRateMatchingMode == com.nuvio.tv.data.local.FrameRateMatchingMode.OFF) {
-            afrAppliedSource = null
-            afrAppliedRate = 0f
-            afrCorrectionUsed = false
-            return@LaunchedEffect
-        }
-        if (uiState.detectedFrameRate <= 0f) {
-            afrAppliedSource = null
-            afrAppliedRate = 0f
-            afrCorrectionUsed = false
-            return@LaunchedEffect
-        }
-        val source = uiState.detectedFrameRateSource ?: return@LaunchedEffect
-        val allowFirstDecision = afrAppliedSource == null
-        val allowSourceCorrection = afrAppliedSource != null &&
-            !afrCorrectionUsed &&
-            source != afrAppliedSource &&
-            kotlin.math.abs(uiState.detectedFrameRate - afrAppliedRate) > 0.015f
-        if (!allowFirstDecision && !allowSourceCorrection) return@LaunchedEffect
-
-        if (activity != null) {
-            val probeRaw = if (uiState.detectedFrameRateRaw > 0f) {
-                uiState.detectedFrameRateRaw
-            } else {
-                uiState.detectedFrameRate
-            }
-            val prefer23976ProbeBias = source == FrameRateSource.PROBE &&
-                probeRaw in 23.95f..24.12f
-            val targetFrameRate = com.nuvio.tv.core.player.FrameRateUtils.refineFrameRateForDisplay(
-                activity = activity,
-                detectedFps = uiState.detectedFrameRate,
-                prefer23976Near24 = prefer23976ProbeBias
-            )
-            val wasPlaying = uiState.isPlaying
-            com.nuvio.tv.core.player.FrameRateUtils.matchFrameRate(
-                activity,
-                targetFrameRate,
-                onBeforeSwitch = { if (wasPlaying) viewModel.exoPlayer?.pause() },
-                onAfterSwitch = { result ->
-                    if (wasPlaying) {
-                        coroutineScope.launch {
-                            kotlinx.coroutines.delay(2000)
-                            viewModel.exoPlayer?.play()
-                        }
-                    }
-                    viewModel.onEvent(
-                        PlayerEvent.OnShowDisplayModeInfo(
-                            DisplayModeInfo(
-                                width = result.appliedMode.physicalWidth,
-                                height = result.appliedMode.physicalHeight,
-                                refreshRate = result.appliedMode.refreshRate,
-                                statusMessage = if (result.isFallback) "Fallback applied" else null
-                            )
-                        )
-                    )
-                }
-            )
-            if (allowSourceCorrection) {
-                afrCorrectionUsed = true
-            }
-            afrAppliedSource = source
-            afrAppliedRate = targetFrameRate
+    LaunchedEffect(activity) {
+        viewModel.attachHostActivity(activity)
+        viewModel.startInitialPlaybackIfNeeded()
+    }
+    DisposableEffect(activity) {
+        onDispose {
+            viewModel.attachHostActivity(null)
         }
     }
     LaunchedEffect(uiState.frameRateMatchingMode) {
@@ -583,6 +518,7 @@ fun PlayerScreen(
             visible = uiState.showLoadingOverlay && uiState.error == null,
             backdropUrl = uiState.backdrop,
             logoUrl = uiState.logo,
+            title = uiState.title,
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(2f)

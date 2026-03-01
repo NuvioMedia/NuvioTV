@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
@@ -123,6 +123,26 @@ android {
         compose = true
         buildConfig = true
     }
+
+    sourceSets {
+        getByName("main") {
+            // Keep local jniLibs disabled; use dependency-provided native libs only.
+            jniLibs.srcDirs("src/main/_jni_disabled")
+        }
+    }
+
+    packaging {
+        jniLibs {
+            // Keep one consistent native set across dependencies.
+            pickFirsts += listOf(
+                "lib/*/libc++_shared.so",
+                "lib/*/libavcodec.so",
+                "lib/*/libavutil.so",
+                "lib/*/libswscale.so",
+                "lib/*/libswresample.so"
+            )
+        }
+    }
 }
 
 androidComponents {
@@ -221,6 +241,8 @@ dependencies {
 
     // libass-android for ASS/SSA subtitle support (from Maven Central)
     implementation("io.github.peerless2012:ass-media:0.4.0-beta01")
+    implementation("io.github.anilbeesetti:nextlib-mediainfo:1.9.1-0.11.0")
+    implementation("io.github.anilbeesetti:nextlib-media3ext:1.9.1-0.11.0")
     implementation("dev.chrisbanes.haze:haze-android:0.7.3") {
         exclude(group = "org.jetbrains.compose.ui")
         exclude(group = "org.jetbrains.compose.foundation")

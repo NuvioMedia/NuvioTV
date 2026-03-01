@@ -8,14 +8,6 @@ import retrofit2.http.Query
 
 interface TrailerApi {
 
-    @GET("search-trailer")
-    suspend fun searchTrailer(
-        @Query("title") title: String,
-        @Query("year") year: String? = null,
-        @Query("tmdbId") tmdbId: String? = null,
-        @Query("type") type: String? = null
-    ): Response<TrailerResponse>
-
     @GET("trailer")
     suspend fun getTrailer(
         @Query("youtube_url") youtubeUrl: String,

@@ -20,6 +20,7 @@ data class MetaDetailsUiState(
     val nextToWatch: NextToWatch? = null,
     val episodeProgressMap: Map<Pair<Int, Int>, WatchProgress> = emptyMap(),
     val trailerUrl: String? = null,
+    val trailerAudioUrl: String? = null,
     val isTrailerPlaying: Boolean = false,
     val isTrailerLoading: Boolean = false,
     val showTrailerControls: Boolean = false,

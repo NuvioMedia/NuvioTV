@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.repository.TraktLibraryService
 import com.nuvio.tv.domain.model.LibraryEntry
 import com.nuvio.tv.domain.model.LibraryListTab
@@ -70,6 +71,9 @@ data class LibraryUiState(
     val selectedListKey: String? = null,
     val selectedTypeTab: LibraryTypeTab? = null,
     val selectedSortOption: LibrarySortOption = LibrarySortOption.DEFAULT,
+    val sortSelectionVersion: Long = 0L,
+    val posterCardWidthDp: Int = 126,
+    val posterCardCornerRadiusDp: Int = 12,
     val isLoading: Boolean = true,
     val isSyncing: Boolean = false,
     val errorMessage: String? = null,
@@ -82,7 +86,8 @@ data class LibraryUiState(
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
-    private val libraryRepository: LibraryRepository
+    private val libraryRepository: LibraryRepository,
+    private val layoutPreferenceDataStore: LayoutPreferenceDataStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -91,6 +96,7 @@ class LibraryViewModel @Inject constructor(
     private var messageClearJob: Job? = null
 
     init {
+        observeLayoutPreferences()
         observeLibraryData()
     }
 
@@ -110,7 +116,15 @@ class LibraryViewModel @Inject constructor(
 
     fun onSelectSortOption(option: LibrarySortOption) {
         _uiState.update { current ->
-            val updated = current.copy(selectedSortOption = option)
+            val nextVersion = if (current.selectedSortOption != option) {
+                current.sortSelectionVersion + 1L
+            } else {
+                current.sortSelectionVersion
+            }
+            val updated = current.copy(
+                selectedSortOption = option,
+                sortSelectionVersion = nextVersion
+            )
             updated.withVisibleItems()
         }
     }
@@ -352,6 +366,30 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    private fun observeLayoutPreferences() {
+        viewModelScope.launch {
+            combine(
+                layoutPreferenceDataStore.posterCardWidthDp,
+                layoutPreferenceDataStore.posterCardCornerRadiusDp
+            ) { widthDp, cornerRadiusDp ->
+                widthDp to cornerRadiusDp
+            }.collectLatest { (widthDp, cornerRadiusDp) ->
+                _uiState.update { current ->
+                    if (current.posterCardWidthDp == widthDp &&
+                        current.posterCardCornerRadiusDp == cornerRadiusDp
+                    ) {
+                        current
+                    } else {
+                        current.copy(
+                            posterCardWidthDp = widthDp,
+                            posterCardCornerRadiusDp = cornerRadiusDp
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     private data class DataBundle(
         val sourceMode: LibrarySourceMode,
         val isSyncing: Boolean,
@@ -459,7 +497,16 @@ class LibraryViewModel @Inject constructor(
         }
 
         val sorted = when (selectedSortOption) {
-            LibrarySortOption.DEFAULT -> listFiltered
+            LibrarySortOption.DEFAULT -> if (sourceMode == LibrarySourceMode.TRAKT) {
+                listFiltered.sortedWith(
+                    compareBy<LibraryEntry> { it.traktRank ?: Int.MAX_VALUE }
+                        .thenByDescending { it.listedAt }
+                        .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
+                        .thenBy { it.id }
+                )
+            } else {
+                listFiltered
+            }
             LibrarySortOption.ADDED_DESC -> listFiltered.sortedWith(
                 compareByDescending<LibraryEntry> { it.listedAt }
                     .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }

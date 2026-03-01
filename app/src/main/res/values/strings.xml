@@ -139,7 +139,7 @@
     <string name="account_stat_progress">progress</string>
     <string name="account_stat_watched">watched</string>
     <string name="settings_integrations_section">Integrations</string>
-    <string name="settings_integrations_section_subtitle">Choose TMDB or MDBList settings</string>
+    <string name="settings_integrations_section_subtitle">Choose TMDB or MDBList</string>
     <string name="settings_tmdb_subtitle">Metadata enrichment controls</string>
     <string name="settings_mdblist_subtitle">External ratings providers</string>
 

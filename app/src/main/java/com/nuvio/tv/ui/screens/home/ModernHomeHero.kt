@@ -15,7 +15,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +48,7 @@ internal fun ModernHeroMediaLayer(
     heroBackdropAlpha: Float,
     shouldPlayHeroTrailer: Boolean,
     heroTrailerUrl: String?,
+    heroTrailerAudioUrl: String?,
     heroTrailerAlpha: Float,
     muted: Boolean,
     bgColor: Color,
@@ -83,6 +87,7 @@ internal fun ModernHeroMediaLayer(
         if (shouldPlayHeroTrailer) {
             TrailerPlayer(
                 trailerUrl = heroTrailerUrl,
+                trailerAudioUrl = heroTrailerAudioUrl,
                 isPlaying = true,
                 onEnded = onTrailerEnded,
                 onFirstFrameRendered = onFirstFrameRendered,
@@ -203,10 +208,13 @@ internal fun HeroTitleBlock(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(titleSpacing)
     ) {
-        if (!preview.logo.isNullOrBlank()) {
+        var logoLoadFailed by remember(preview.logo) { mutableStateOf(false) }
+        val showLogo = !preview.logo.isNullOrBlank() && !logoLoadFailed
+        if (showLogo) {
             AsyncImage(
                 model = logoModel,
                 contentDescription = preview.title,
+                onError = { logoLoadFailed = true },
                 modifier = Modifier
                     .height(100.dp)
                     .widthIn(min = 100.dp, max = 220.dp)

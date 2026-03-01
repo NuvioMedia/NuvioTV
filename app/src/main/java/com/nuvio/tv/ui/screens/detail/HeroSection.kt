@@ -108,6 +108,11 @@ fun HeroContentSection(
                 .build()
         }
     }
+    var logoLoadFailed by remember(meta.logo) { mutableStateOf(false) }
+    val shouldShowLogo =
+        !meta.logo.isNullOrBlank() &&
+            !logoLoadFailed &&
+            !(isTrailerPlaying && hideLogoDuringTrailer)
     val libraryAddPainter = rememberRawSvgPainter(
         context = context,
         rawRes = com.nuvio.tv.R.raw.library_add_plus
@@ -162,10 +167,11 @@ fun HeroContentSection(
             verticalArrangement = Arrangement.Bottom
         ) {
             // Logo/Title — always visible during trailer, animates size
-            if (!meta.logo.isNullOrBlank() && !(isTrailerPlaying && hideLogoDuringTrailer)) {
+            if (shouldShowLogo) {
                 AsyncImage(
                     model = logoModel,
                     contentDescription = meta.name,
+                    onError = { logoLoadFailed = true },
                     modifier = Modifier
                         .height(logoHeight)
                         .fillMaxWidth(logoMaxWidth)

@@ -75,7 +75,7 @@ class TraktLibraryService @Inject constructor(
     private var lastRefreshMs: Long = 0L
 
     private val cacheTtlMs = 60_000L
-    private val metadataHydrationLimit = 30
+    private val metadataHydrationLimit = 250
     private val listFetchConcurrency = 3
     private val metadataFetchSemaphore = Semaphore(5)
 
@@ -523,6 +523,10 @@ class TraktLibraryService @Inject constructor(
 
         return (moviesResponse.body().orEmpty() + showsResponse.body().orEmpty())
             .mapNotNull { mapListItem(listKey = WATCHLIST_KEY, item = it) }
+            .sortedWith(
+                compareBy<LibraryEntry> { it.traktRank ?: Int.MAX_VALUE }
+                    .thenByDescending { it.listedAt }
+            )
     }
 
     private data class PersonalListFetchResult(
@@ -557,7 +561,10 @@ class TraktLibraryService @Inject constructor(
                         } else {
                             val movies = fetchPersonalListItems(listIdPath, "movie", tab.key)
                             val shows = fetchPersonalListItems(listIdPath, "show", tab.key)
-                            tab.key to (movies + shows)
+                            tab.key to (movies + shows).sortedWith(
+                                compareBy<LibraryEntry> { it.traktRank ?: Int.MAX_VALUE }
+                                    .thenByDescending { it.listedAt }
+                            )
                         }
                     }
                 }
@@ -654,7 +661,8 @@ class TraktLibraryService @Inject constructor(
             genres = emptyList(),
             addonBaseUrl = null,
             listKeys = setOf(listKey),
-            listedAt = parseIsoToMillis(item.listedAt)
+            listedAt = parseIsoToMillis(item.listedAt),
+            traktRank = item.rank
         )
     }
 

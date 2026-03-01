@@ -84,7 +84,8 @@ fun SeasonTabs(
     selectedSeason: Int,
     onSeasonSelected: (Int) -> Unit,
     onSeasonLongPress: (Int) -> Unit = {},
-    selectedTabFocusRequester: FocusRequester
+    selectedTabFocusRequester: FocusRequester,
+    downFocusRequester: FocusRequester? = null
 ) {
     // Move season 0 (specials) to the end
     val sortedSeasons = remember(seasons) {
@@ -113,6 +114,11 @@ fun SeasonTabs(
                 },
                 modifier = Modifier
                     .then(if (isSelected) Modifier.focusRequester(selectedTabFocusRequester) else Modifier)
+                    .focusProperties {
+                        if (isSelected && downFocusRequester != null) {
+                            down = downFocusRequester
+                        }
+                    }
                     .onFocusChanged {
                     val nowFocused = it.isFocused
                     isFocused = nowFocused
@@ -192,18 +198,20 @@ fun EpisodesRow(
     onMarkPreviousEpisodesWatched: (Video) -> Unit = {},
     upFocusRequester: FocusRequester,
     downFocusRequester: FocusRequester? = null,
+    episodeFocusRequesters: MutableMap<String, FocusRequester> = mutableMapOf(),
     restoreEpisodeId: String? = null,
     restoreFocusToken: Int = 0,
-    onRestoreFocusHandled: () -> Unit = {}
+    onRestoreFocusHandled: () -> Unit = {},
+    onEpisodeFocused: (episodeId: String) -> Unit = {}
 ) {
-    val restoreFocusRequester = remember { FocusRequester() }
+    val restoreTargetRequester = restoreEpisodeId?.let { episodeFocusRequesters[it] }
     var optionsEpisode by remember { mutableStateOf<Video?>(null) }
     val cardMetrics = rememberEpisodeCardMetrics()
 
-    LaunchedEffect(restoreFocusToken, restoreEpisodeId, episodes) {
+    LaunchedEffect(restoreFocusToken, restoreEpisodeId, restoreTargetRequester, episodes) {
         if (restoreFocusToken <= 0 || restoreEpisodeId.isNullOrBlank()) return@LaunchedEffect
         if (episodes.none { it.id == restoreEpisodeId }) return@LaunchedEffect
-        restoreFocusRequester.requestFocusAfterFrames()
+        restoreTargetRequester?.requestFocusAfterFrames()
     }
 
     LazyRow(
@@ -235,6 +243,7 @@ fun EpisodesRow(
                     watchedEpisodes.contains(s to e)
                 }
             } ?: false
+            val episodeFocusRequester = episodeFocusRequesters.getOrPut(episode.id) { FocusRequester() }
             EpisodeCard(
                 episode = episode,
                 watchProgress = progress,
@@ -246,7 +255,10 @@ fun EpisodesRow(
                 onLongPress = { optionsEpisode = episode },
                 upFocusRequester = upFocusRequester,
                 downFocusRequester = downFocusRequester,
-                focusRequester = if (episode.id == restoreEpisodeId) restoreFocusRequester else null,
+                focusRequester = episodeFocusRequester,
+                onFocused = {
+                    onEpisodeFocused(episode.id)
+                },
                 onFocusRestored = if (episode.id == restoreEpisodeId) onRestoreFocusHandled else null
             )
         }
@@ -309,7 +321,8 @@ private fun EpisodeCard(
     onLongPress: () -> Unit,
     upFocusRequester: FocusRequester,
     downFocusRequester: FocusRequester? = null,
-    focusRequester: FocusRequester? = null,
+    focusRequester: FocusRequester,
+    onFocused: (() -> Unit)? = null,
     onFocusRestored: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -389,10 +402,11 @@ private fun EpisodeCard(
         },
         modifier = Modifier
             .width(cardMetrics.cardWidth)
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .focusRequester(focusRequester)
             .onFocusChanged {
                 isFocused = it.isFocused
                 if (it.isFocused) {
+                    onFocused?.invoke()
                     onFocusRestored?.invoke()
                 }
             }
@@ -800,7 +814,7 @@ private fun rememberEpisodeCardMetrics(): EpisodeCardMetrics {
                 rowVerticalPadding = 18.dp,
                 itemSpacing = 20.dp,
                 cardWidth = 400.dp,
-                cardHeight = 280.dp,
+                cardHeight = 263.dp,
                 cornerRadius = 20.dp,
                 contentPadding = 20.dp,
                 contentBottomPadding = 24.dp,
@@ -825,7 +839,7 @@ private fun rememberEpisodeCardMetrics(): EpisodeCardMetrics {
                 rowVerticalPadding = 18.dp,
                 itemSpacing = 18.dp,
                 cardWidth = 360.dp,
-                cardHeight = 250.dp,
+                cardHeight = 235.dp,
                 cornerRadius = 18.dp,
                 contentPadding = 18.dp,
                 contentBottomPadding = 22.dp,
@@ -850,7 +864,7 @@ private fun rememberEpisodeCardMetrics(): EpisodeCardMetrics {
                 rowVerticalPadding = 16.dp,
                 itemSpacing = 16.dp,
                 cardWidth = 320.dp,
-                cardHeight = 220.dp,
+                cardHeight = 207.dp,
                 cornerRadius = 16.dp,
                 contentPadding = 16.dp,
                 contentBottomPadding = 20.dp,
@@ -875,7 +889,7 @@ private fun rememberEpisodeCardMetrics(): EpisodeCardMetrics {
                 rowVerticalPadding = 14.dp,
                 itemSpacing = 14.dp,
                 cardWidth = 280.dp,
-                cardHeight = 190.dp,
+                cardHeight = 179.dp,
                 cornerRadius = 16.dp,
                 contentPadding = 14.dp,
                 contentBottomPadding = 16.dp,
