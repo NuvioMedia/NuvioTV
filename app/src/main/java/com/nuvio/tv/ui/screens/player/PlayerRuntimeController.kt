@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.app.Activity
 import android.content.Context
 import android.media.audiofx.LoudnessEnhancer
 import androidx.lifecycle.SavedStateHandle
@@ -27,6 +28,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicLong
 
 class PlayerRuntimeController(
@@ -142,6 +144,8 @@ class PlayerRuntimeController(
     internal var sourceStreamsJob: Job? = null
     internal var sourceChipErrorDismissJob: Job? = null
     internal var sourceStreamsCacheRequestKey: String? = null
+    internal var hostActivityRef: WeakReference<Activity>? = null
+    internal var initialPlaybackStarted: Boolean = false
     
     
     internal var lastSavedPosition: Long = 0L
@@ -203,7 +207,6 @@ class PlayerRuntimeController(
 
     init {
         refreshScrobbleItem()
-        initializePlayer(currentStreamUrl, currentHeaders)
         if (!navigationArgs.startFromBeginning) {
             loadSavedProgressFor(currentSeason, currentEpisode)
         }

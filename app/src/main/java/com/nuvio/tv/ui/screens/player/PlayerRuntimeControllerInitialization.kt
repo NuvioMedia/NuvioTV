@@ -24,7 +24,6 @@ import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.session.MediaSession
 import com.nuvio.tv.data.local.AudioLanguageOption
-import com.nuvio.tv.data.local.FrameRateMatchingMode
 import io.github.peerless2012.ass.media.kt.buildWithAssSupport
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -44,6 +43,16 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
             hasScannedTextTracksOnce = false
             resetLoadingOverlayForNewStream()
             val playerSettings = playerSettingsDataStore.playerSettings.first()
+            _uiState.update {
+                it.copy(
+                    frameRateMatchingMode = playerSettings.frameRateMatchingMode
+                )
+            }
+            runAfrPreflightIfEnabled(
+                url = url,
+                headers = headers,
+                frameRateMatchingMode = playerSettings.frameRateMatchingMode
+            )
             val useLibass = false // Temporarily disabled for maintenance
             val libassRenderType = playerSettings.libassRenderType.toAssRenderType()
             val loadControl = DefaultLoadControl.Builder().build()
@@ -161,10 +170,6 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                     e.printStackTrace()
                 }
 
-                
-                _uiState.update { it.copy(frameRateMatchingMode = playerSettings.frameRateMatchingMode) }
-
-                
                 try {
                     loudnessEnhancer?.release()
                     loudnessEnhancer = LoudnessEnhancer(audioSessionId)
@@ -179,14 +184,8 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                 val secondary = playerSettings.subtitleStyle.secondaryPreferredLanguage
                 applySubtitlePreferences(preferred, secondary)
                 setMediaSource(mediaSourceFactory.createMediaSource(url, headers))
-
                 playWhenReady = true
                 prepare()
-                startFrameRateProbe(
-                    url,
-                    headers,
-                    playerSettings.frameRateMatchingMode != FrameRateMatchingMode.OFF
-                )
 
                 addListener(object : Player.Listener {
                     override fun onPlaybackStateChanged(playbackState: Int) {

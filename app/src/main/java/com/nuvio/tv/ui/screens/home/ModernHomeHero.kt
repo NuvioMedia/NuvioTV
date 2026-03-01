@@ -48,6 +48,7 @@ internal fun ModernHeroMediaLayer(
     heroBackdropAlpha: Float,
     shouldPlayHeroTrailer: Boolean,
     heroTrailerUrl: String?,
+    heroTrailerAudioUrl: String?,
     heroTrailerAlpha: Float,
     muted: Boolean,
     bgColor: Color,
@@ -86,6 +87,7 @@ internal fun ModernHeroMediaLayer(
         if (shouldPlayHeroTrailer) {
             TrailerPlayer(
                 trailerUrl = heroTrailerUrl,
+                trailerAudioUrl = heroTrailerAudioUrl,
                 isPlaying = true,
                 onEnded = onTrailerEnded,
                 onFirstFrameRendered = onFirstFrameRendered,

@@ -227,10 +227,16 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
     val requestVersion = trailerPreviewRequestVersion
 
     viewModelScope.launch {
-        val trailerUrl = trailerService.getTrailerUrl(
+        val tmdbId = try {
+            tmdbService.ensureTmdbId(itemId, apiType)
+        } catch (_: Exception) {
+            null
+        }
+
+        val trailerSource = trailerService.getTrailerPlaybackSource(
             title = title,
             year = extractYear(releaseInfo),
-            tmdbId = null,
+            tmdbId = tmdbId,
             type = apiType
         )
 
@@ -241,11 +247,20 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
             return@launch
         }
 
-        if (trailerUrl.isNullOrBlank()) {
+        if (trailerSource?.videoUrl.isNullOrBlank()) {
             trailerPreviewNegativeCache.add(itemId)
+            trailerPreviewUrlsState.remove(itemId)
+            trailerPreviewAudioUrlsState.remove(itemId)
         } else {
-            if (trailerPreviewUrlsState[itemId] != trailerUrl) {
-                trailerPreviewUrlsState[itemId] = trailerUrl
+            val videoUrl = trailerSource.videoUrl
+            if (trailerPreviewUrlsState[itemId] != videoUrl) {
+                trailerPreviewUrlsState[itemId] = videoUrl
+            }
+            val audioUrl = trailerSource.audioUrl
+            if (audioUrl.isNullOrBlank()) {
+                trailerPreviewAudioUrlsState.remove(itemId)
+            } else if (trailerPreviewAudioUrlsState[itemId] != audioUrl) {
+                trailerPreviewAudioUrlsState[itemId] = audioUrl
             }
         }
 

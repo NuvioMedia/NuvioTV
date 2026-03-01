@@ -390,6 +390,7 @@ fun MetaDetailsScreen(
                         viewModel.isSeasonFullyWatched(season)
                     },
                     trailerUrl = uiState.trailerUrl,
+                    trailerAudioUrl = uiState.trailerAudioUrl,
                     isTrailerPlaying = uiState.isTrailerPlaying,
                     showTrailerControls = uiState.showTrailerControls,
                     hideLogoDuringTrailer = uiState.hideLogoDuringTrailer,
@@ -543,6 +544,7 @@ private fun MetaDetailsContent(
     onMarkPreviousEpisodesWatched: (Video) -> Unit,
     isSeasonFullyWatched: (Int) -> Boolean,
     trailerUrl: String?,
+    trailerAudioUrl: String?,
     isTrailerPlaying: Boolean,
     showTrailerControls: Boolean,
     hideLogoDuringTrailer: Boolean,
@@ -972,6 +974,7 @@ private fun MetaDetailsContent(
             // Trailer video (fades in when trailer plays)
             TrailerPlayer(
                 trailerUrl = trailerUrl,
+                trailerAudioUrl = trailerAudioUrl,
                 isPlaying = isTrailerPlaying,
                 seekRequestToken = if (showTrailerControls) trailerSeekToken else 0,
                 seekDeltaMs = if (showTrailerControls) trailerSeekDeltaMs else 0L,

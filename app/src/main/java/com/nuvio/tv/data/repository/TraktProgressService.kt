@@ -360,8 +360,12 @@ class TraktProgressService @Inject constructor(
             traktApi.addHistory(authHeader, body)
         } ?: throw IllegalStateException("Trakt request failed")
 
-        if (!response.isSuccessful || !hasSuccessfulHistoryAdd(response.body())) {
+        val responseBody = response.body()
+        if (!response.isSuccessful || hasHistoryAddNotFound(responseBody)) {
             throw IllegalStateException("Failed to mark watched on Trakt (${response.code()})")
+        }
+        if (!hasSuccessfulHistoryAdd(responseBody)) {
+            trace("markAsWatched: Trakt accepted request with no new history rows (code=${response.code()})")
         }
 
         if (progress.contentType.equals("movie", ignoreCase = true)) {
@@ -1080,6 +1084,14 @@ class TraktProgressService @Inject constructor(
             (added.shows ?: 0) +
             (added.seasons ?: 0)
         return addedCount > 0
+    }
+
+    private fun hasHistoryAddNotFound(body: TraktHistoryAddResponseDto?): Boolean {
+        val notFound = body?.notFound ?: return false
+        return !notFound.movies.isNullOrEmpty() ||
+            !notFound.shows.isNullOrEmpty() ||
+            !notFound.seasons.isNullOrEmpty() ||
+            !notFound.episodes.isNullOrEmpty()
     }
 
     private fun buildHistoryAddRequest(

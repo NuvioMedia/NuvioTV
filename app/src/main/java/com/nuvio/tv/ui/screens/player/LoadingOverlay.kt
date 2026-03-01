@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -15,9 +16,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -153,15 +154,24 @@ fun LoadingOverlay(
                             LoadingIndicator()
                         }
                     }
+                }
 
-                    if (!message.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(20.dp))
+                val messageOffset = if (showLogo || !title.isNullOrBlank()) 94.dp else 86.dp
+                Crossfade(
+                    targetState = message.orEmpty(),
+                    animationSpec = tween(durationMillis = 220),
+                    label = "loadingMessageCrossfade"
+                ) { targetMessage ->
+                    if (targetMessage.isNotBlank()) {
                         Text(
-                            text = message,
+                            text = targetMessage,
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White.copy(alpha = 0.72f),
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 24.dp)
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .offset(y = messageOffset)
+                                .padding(horizontal = 24.dp)
                         )
                     }
                 }

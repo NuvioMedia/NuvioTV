@@ -95,6 +95,7 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
     trailerPreviewLoadingIds.clear()
     trailerPreviewNegativeCache.clear()
     trailerPreviewUrlsState.clear()
+    trailerPreviewAudioUrlsState.clear()
     activeTrailerPreviewItemId = null
     trailerPreviewRequestVersion = 0L
     prefetchedExternalMetaIds.clear()

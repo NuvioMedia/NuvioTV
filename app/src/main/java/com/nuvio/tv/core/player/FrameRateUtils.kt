@@ -2,18 +2,23 @@ package com.nuvio.tv.core.player
 
 import android.app.Activity
 import android.content.Context
-import android.hardware.display.DisplayManager
 import android.media.MediaExtractor
 import android.net.Uri
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.view.Display
+import io.github.anilbeesetti.nextlib.mediainfo.MediaInfo
+import io.github.anilbeesetti.nextlib.mediainfo.MediaInfoBuilder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
+import java.util.Locale
 
 /**
  * Auto frame rate matching utility.
@@ -22,23 +27,20 @@ import kotlin.math.roundToInt
 object FrameRateUtils {
 
     private const val TAG = "FrameRateUtils"
-    private const val SWITCH_TIMEOUT_MS = 5000L
+    private const val SWITCH_TIMEOUT_MS = 4000L
     private const val REFRESH_MATCH_MIN_TOLERANCE_HZ = 0.08f
     private const val NTSC_FILM_FPS = 24000f / 1001f
     private const val CINEMA_24_FPS = 24f
+    private val NEXTLIB_HTTP_SCHEMES = setOf("http", "https")
+    private val LIVE_STREAM_EXTENSIONS = listOf(".m3u8", ".mpd", ".ism/manifest")
+    private const val MKV_EXTENSION = ".mkv"
+    private const val SWITCH_POLL_INTERVAL_MS = 60L
+    private const val SWITCH_REQUIRED_STABLE_POLLS = 2
 
-    private var displayManager: DisplayManager? = null
-    private var displayListener: DisplayManager.DisplayListener? = null
-    private var timeoutHandler: Handler? = null
-    private var timeoutRunnable: Runnable? = null
     data class DisplayModeSwitchResult(
-        val appliedMode: Display.Mode,
-        val isFallback: Boolean
+        val appliedMode: Display.Mode
     )
 
-    private var pendingAfterSwitch: ((DisplayModeSwitchResult) -> Unit)? = null
-    private var pendingDisplayId: Int? = null
-    private var pendingMode: Display.Mode? = null
     private var originalModeId: Int? = null
 
     data class FrameRateDetection(
@@ -70,35 +72,6 @@ object FrameRateUtils {
             weight += rounded / 10000f
         }
         return weight
-    }
-
-    private fun completeSwitch(reason: String) {
-        Log.d(TAG, "Display mode switch completed ($reason)")
-        val callback = pendingAfterSwitch
-        val requestedMode = pendingMode
-        val realMode = runCatching {
-            val displayId = pendingDisplayId
-            if (displayId != null) {
-                displayManager?.getDisplay(displayId)?.mode
-            } else {
-                null
-            }
-        }.getOrNull()
-        val appliedMode = realMode ?: requestedMode
-        val isFallback = requestedMode != null && realMode != null && realMode.modeId != requestedMode.modeId
-        cleanupDisplayListener()
-        if (callback != null && appliedMode != null) {
-            callback(DisplayModeSwitchResult(appliedMode = appliedMode, isFallback = isFallback))
-        }
-    }
-
-    private fun scheduleSwitchTimeout() {
-        timeoutHandler = Handler(Looper.getMainLooper())
-        timeoutRunnable = Runnable {
-            Log.w(TAG, "Display mode switch timeout after ${SWITCH_TIMEOUT_MS}ms")
-            completeSwitch("timeout")
-        }
-        timeoutHandler?.postDelayed(timeoutRunnable!!, SWITCH_TIMEOUT_MS)
     }
 
     private fun recordOriginalMode(display: Display) {
@@ -151,109 +124,109 @@ object FrameRateUtils {
         }
     }
 
-    fun matchFrameRate(
-        activity: Activity,
-        frameRate: Float,
-        onBeforeSwitch: (() -> Unit)? = null,
-        onAfterSwitch: ((DisplayModeSwitchResult) -> Unit)? = null
-    ): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return false
-        if (frameRate <= 0f) return false
+    private fun chooseBestModeForFrameRate(
+        activeMode: Display.Mode,
+        modes: List<Display.Mode>,
+        frameRate: Float
+    ): Display.Mode {
+        val modeExact = pickBestForTarget(modes, frameRate)
+        val modeDouble = pickBestForTarget(modes, frameRate * 2f)
+        val modePulldown = pickBestForTarget(modes, frameRate * 2.5f)
+        val modeFallback = modes.minByOrNull { refreshWeight(it.refreshRate, frameRate) }
+        return modeExact ?: modeDouble ?: modePulldown ?: modeFallback ?: activeMode
+    }
 
-        return try {
-            val window = activity.window ?: return false
-            val display = window.decorView.display ?: return false
-            val supportedModes = display.supportedModes
+    suspend fun matchFrameRateAndWait(
+        activity: Activity,
+        frameRate: Float
+    ): DisplayModeSwitchResult? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return null
+        if (frameRate <= 0f) return null
+
+        val switchPlan = withContext(Dispatchers.Main) {
+            val window = activity.window ?: return@withContext null
+            val display = window.decorView.display ?: return@withContext null
             val activeMode = display.mode
 
-            if (supportedModes.size <= 1) return false
-
-            val sameSizeModes = supportedModes.filter {
+            val sameSizeModes = display.supportedModes.filter {
                 it.physicalWidth == activeMode.physicalWidth &&
                     it.physicalHeight == activeMode.physicalHeight
             }
-            if (sameSizeModes.size <= 1) return false
-
-            // Kodi-like priority without user whitelist:
-            // exact -> 2x -> 3:2 pulldown -> weighted fallback.
-            val modeExact = pickBestForTarget(sameSizeModes, frameRate)
-            val modeDouble = pickBestForTarget(sameSizeModes, frameRate * 2f)
-            val modePulldown = pickBestForTarget(sameSizeModes, frameRate * 2.5f)
-            val modeFallback = sameSizeModes.minByOrNull { refreshWeight(it.refreshRate, frameRate) }
-
-            val modeBest = modeExact ?: modeDouble ?: modePulldown ?: modeFallback ?: activeMode
-            val switchNeeded = modeBest.modeId != activeMode.modeId
-
-            if (switchNeeded) {
-                Log.d(
-                    TAG,
-                    "Switching display mode: ${activeMode.refreshRate}Hz -> ${modeBest.refreshRate}Hz " +
-                        "(video ${frameRate}fps)"
+            if (sameSizeModes.size <= 1) {
+                return@withContext Pair<Display.Mode?, DisplayModeSwitchResult?>(
+                    null,
+                    DisplayModeSwitchResult(activeMode)
                 )
+            }
 
-                cleanupDisplayListener()
-                recordOriginalMode(display)
+            val modeBest = chooseBestModeForFrameRate(
+                activeMode = activeMode,
+                modes = sameSizeModes,
+                frameRate = frameRate
+            )
+            recordOriginalMode(display)
+            if (modeBest.modeId == activeMode.modeId) {
+                Log.d(TAG, "Display already at optimal rate ${activeMode.refreshRate}Hz for ${frameRate}fps")
+                return@withContext Pair<Display.Mode?, DisplayModeSwitchResult?>(
+                    null,
+                    DisplayModeSwitchResult(activeMode)
+                )
+            }
 
-                var completeImmediately = false
-                if (onAfterSwitch != null) {
-                    pendingAfterSwitch = onAfterSwitch
-                    pendingMode = modeBest
-                    pendingDisplayId = display.displayId
-                    displayManager = activity.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
-                    displayListener = object : DisplayManager.DisplayListener {
-                        override fun onDisplayAdded(displayId: Int) = Unit
-                        override fun onDisplayRemoved(displayId: Int) = Unit
-                        override fun onDisplayChanged(displayId: Int) {
-                            if (displayId != pendingDisplayId) return
-                            completeSwitch("displayChanged")
-                        }
-                    }
-                    if (displayManager != null) {
-                        displayManager?.registerDisplayListener(
-                            displayListener,
-                            Handler(Looper.getMainLooper())
-                        )
-                        scheduleSwitchTimeout()
-                    } else {
-                        completeImmediately = true
-                    }
-                }
+            Log.d(
+                TAG,
+                "Switching display mode: ${activeMode.refreshRate}Hz -> ${modeBest.refreshRate}Hz " +
+                    "(video ${frameRate}fps)"
+            )
 
-                onBeforeSwitch?.invoke()
+            val layoutParams = window.attributes
+            layoutParams.preferredDisplayModeId = modeBest.modeId
+            window.attributes = layoutParams
+            Pair(modeBest, null)
+        } ?: return null
 
-                val layoutParams = window.attributes
-                layoutParams.preferredDisplayModeId = modeBest.modeId
-                window.attributes = layoutParams
+        val immediateResult = switchPlan.second
+        if (immediateResult != null) return immediateResult
 
-                if (completeImmediately) {
-                    completeSwitch("noDisplayManager")
+        val expectedMode = switchPlan.first ?: return null
+        var stablePolls = 0
+        var lastMode: Display.Mode? = null
+        val start = System.currentTimeMillis()
+
+        while (System.currentTimeMillis() - start < SWITCH_TIMEOUT_MS) {
+            val mode = withContext(Dispatchers.Main) {
+                activity.window?.decorView?.display?.mode
+            } ?: break
+
+            lastMode = mode
+            val modeStable =
+                mode.modeId == expectedMode.modeId ||
+                    matchesTargetRefresh(mode.refreshRate, expectedMode.refreshRate)
+            if (modeStable) {
+                stablePolls += 1
+                if (stablePolls >= SWITCH_REQUIRED_STABLE_POLLS) {
+                    Log.d(
+                        TAG,
+                        "Display mode switch stabilized at ${mode.refreshRate}Hz (modeId=${mode.modeId})"
+                    )
+                    return DisplayModeSwitchResult(mode)
                 }
             } else {
-                Log.d(TAG, "Display already at optimal rate ${activeMode.refreshRate}Hz for ${frameRate}fps")
+                stablePolls = 0
             }
-
-            switchNeeded
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to match frame rate", e)
-            if (pendingAfterSwitch != null) {
-                completeSwitch("error")
-            }
-            false
+            delay(SWITCH_POLL_INTERVAL_MS)
         }
+
+        val fallbackMode = lastMode ?: expectedMode
+        Log.w(
+            TAG,
+            "Display mode polling timed out after ${SWITCH_TIMEOUT_MS}ms, using ${fallbackMode.refreshRate}Hz"
+        )
+        return DisplayModeSwitchResult(fallbackMode)
     }
 
     fun cleanupDisplayListener() {
-        timeoutRunnable?.let { timeoutHandler?.removeCallbacks(it) }
-        timeoutRunnable = null
-        timeoutHandler = null
-
-        displayListener?.let { displayManager?.unregisterDisplayListener(it) }
-        displayListener = null
-        displayManager = null
-
-        pendingAfterSwitch = null
-        pendingDisplayId = null
-        pendingMode = null
+        // Kept for API compatibility with existing call sites.
     }
 
     fun clearOriginalDisplayMode() {
@@ -321,6 +294,68 @@ object FrameRateUtils {
         sourceUrl: String,
         headers: Map<String, String> = emptyMap()
     ): FrameRateDetection? {
+        detectFrameRateWithNextLib(context, sourceUrl, headers)?.let { return it }
+
+        if (isResolveProxyUrl(sourceUrl)) {
+            val embeddedResolveUrl = extractEmbeddedResolveUrl(sourceUrl)
+            if (!embeddedResolveUrl.isNullOrBlank()) {
+                detectFrameRateWithExtractor(context, embeddedResolveUrl, headers)?.let { return it }
+            }
+        }
+        return detectFrameRateWithExtractor(context, sourceUrl, headers)
+    }
+
+    private fun detectFrameRateWithNextLib(
+        context: Context,
+        sourceUrl: String,
+        headers: Map<String, String>
+    ): FrameRateDetection? {
+        if (!shouldUseNextLibProbe(sourceUrl, headers)) return null
+
+        val embeddedResolveUrl = extractEmbeddedResolveUrl(sourceUrl)
+        val shouldPreferEmbedded = isResolveProxyUrl(sourceUrl)
+        val candidates = buildList {
+            if (shouldPreferEmbedded && !embeddedResolveUrl.isNullOrBlank() && embeddedResolveUrl != sourceUrl) {
+                add(embeddedResolveUrl)
+                add(sourceUrl)
+                return@buildList
+            }
+
+            add(sourceUrl)
+            if (!embeddedResolveUrl.isNullOrBlank() && embeddedResolveUrl != sourceUrl) {
+                add(embeddedResolveUrl)
+            }
+        }
+
+        candidates.forEach { candidateUrl ->
+            var mediaInfo: MediaInfo? = null
+            try {
+                val uri = Uri.parse(candidateUrl)
+                val builder = MediaInfoBuilder().from(context = context, uri = uri)
+                mediaInfo = builder.build() ?: return@forEach
+
+                val video = mediaInfo.videoStream ?: return@forEach
+                val measured = video.frameRate.toFloat()
+                if (!measured.isFinite() || measured <= 0f) return@forEach
+
+                return FrameRateDetection(
+                    raw = measured,
+                    snapped = snapToStandardRate(measured)
+                )
+            } catch (e: Throwable) {
+                Log.w(TAG, "NextLib frame rate probe failed: ${e.message}")
+            } finally {
+                runCatching { mediaInfo?.release() }
+            }
+        }
+        return null
+    }
+
+    private fun detectFrameRateWithExtractor(
+        context: Context,
+        sourceUrl: String,
+        headers: Map<String, String>
+    ): FrameRateDetection? {
         val extractor = MediaExtractor()
         return try {
             val uri = Uri.parse(sourceUrl)
@@ -381,5 +416,49 @@ object FrameRateUtils {
             } catch (_: Exception) {
             }
         }
+    }
+
+    private fun shouldUseNextLibProbe(sourceUrl: String, headers: Map<String, String>): Boolean {
+        if (sourceUrl.isBlank()) return false
+        if (isLiveStreamUrl(sourceUrl)) return false
+        if (isMkvSource(sourceUrl)) return true
+
+        val scheme = Uri.parse(sourceUrl).scheme?.lowercase(Locale.ROOT)
+        return when (scheme) {
+            in NEXTLIB_HTTP_SCHEMES -> true
+            "file", "content" -> true
+            null -> true
+            else -> false
+        }
+    }
+
+    private fun isLiveStreamUrl(sourceUrl: String): Boolean {
+        val normalized = sourceUrl.substringBefore('?').lowercase(Locale.ROOT)
+        return LIVE_STREAM_EXTENSIONS.any { ext -> normalized.endsWith(ext) }
+    }
+
+    private fun isMkvSource(sourceUrl: String): Boolean {
+        val normalized = sourceUrl.substringBefore('?').lowercase(Locale.ROOT)
+        return normalized.endsWith(MKV_EXTENSION)
+    }
+
+    private fun isResolveProxyUrl(sourceUrl: String): Boolean {
+        val normalized = sourceUrl.substringBefore('?').lowercase(Locale.ROOT)
+        return "/resolve/" in normalized
+    }
+
+    private fun extractEmbeddedResolveUrl(sourceUrl: String): String? {
+        val marker = "/resolve/"
+        val markerIndex = sourceUrl.indexOf(marker, ignoreCase = true)
+        if (markerIndex < 0) return null
+
+        val afterResolve = sourceUrl.substring(markerIndex + marker.length)
+        val nestedEncoded = afterResolve.substringAfter('/', missingDelimiterValue = "")
+            .substringAfter('/', missingDelimiterValue = "")
+        if (nestedEncoded.isBlank()) return null
+
+        return runCatching {
+            URLDecoder.decode(nestedEncoded, StandardCharsets.UTF_8.name())
+        }.getOrNull()
     }
 }

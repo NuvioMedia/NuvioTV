@@ -75,6 +75,7 @@ fun ContentCard(
     focusedPosterBackdropTrailerEnabled: Boolean = false,
     focusedPosterBackdropTrailerMuted: Boolean = true,
     trailerPreviewUrl: String? = null,
+    trailerPreviewAudioUrl: String? = null,
     onRequestTrailerPreview: (MetaPreview) -> Unit = {},
     isWatched: Boolean = false,
     onFocus: (MetaPreview) -> Unit = {},
@@ -339,6 +340,7 @@ fun ContentCard(
                 if (shouldPlayTrailerPreview) {
                     TrailerPlayer(
                         trailerUrl = trailerPreviewUrl,
+                        trailerAudioUrl = trailerPreviewAudioUrl,
                         isPlaying = true,
                         onEnded = {
                             trailerFirstFrameRendered = false

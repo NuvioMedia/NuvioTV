@@ -108,6 +108,7 @@ fun ModernHomeContent(
     uiState: HomeUiState,
     focusState: HomeScreenFocusState,
     trailerPreviewUrls: Map<String, String>,
+    trailerPreviewAudioUrls: Map<String, String>,
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
@@ -569,7 +570,13 @@ fun ModernHomeContent(
                 expandedFocusedSelection?.payload?.itemId?.let { trailerPreviewUrls[it] }
             }
         }
+        val heroTrailerAudioUrl by remember(expandedFocusedSelection, trailerPreviewAudioUrls) {
+            derivedStateOf {
+                expandedFocusedSelection?.payload?.itemId?.let { trailerPreviewAudioUrls[it] }
+            }
+        }
         val expandedCatalogTrailerUrl = heroTrailerUrl
+        val expandedCatalogTrailerAudioUrl = heroTrailerAudioUrl
         val shouldPlayHeroTrailer by remember(
             effectiveAutoplayEnabled,
             trailerPlaybackTarget,
@@ -635,6 +642,7 @@ fun ModernHomeContent(
             heroBackdropAlpha = heroBackdropAlpha,
             shouldPlayHeroTrailer = shouldPlayHeroTrailer,
             heroTrailerUrl = heroTrailerUrl,
+            heroTrailerAudioUrl = heroTrailerAudioUrl,
             heroTrailerAlpha = heroTrailerAlpha,
             muted = uiState.focusedPosterBackdropTrailerMuted,
             bgColor = bgColor,
@@ -738,6 +746,7 @@ fun ModernHomeContent(
                         trailerPlaybackTarget = trailerPlaybackTarget,
                         expandedCatalogFocusKey = expandedCatalogFocusKey,
                         expandedTrailerPreviewUrl = expandedCatalogTrailerUrl,
+                        expandedTrailerPreviewAudioUrl = expandedCatalogTrailerAudioUrl,
                         modernCatalogCardWidth = modernCatalogCardWidth,
                         modernCatalogCardHeight = modernCatalogCardHeight,
                         continueWatchingCardWidth = continueWatchingCardWidth,
