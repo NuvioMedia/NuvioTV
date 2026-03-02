@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
+import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
@@ -16,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
+@OptIn(UnstableApi::class)
 internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
     val audioTracks = mutableListOf<TrackInfo>()
     val subtitleTracks = mutableListOf<TrackInfo>()
@@ -281,6 +283,7 @@ private fun TrackInfo.isForcedSubtitle(): Boolean {
 
 internal fun PlayerRuntimeController.subtitleLanguageTargets(): List<String> {
     val preferred = _uiState.value.subtitleStyle.preferredLanguage.lowercase()
+    if (preferred == "none") return emptyList()
     val secondary = _uiState.value.subtitleStyle.secondaryPreferredLanguage?.lowercase()
 
     // This is the user's actual audio language preference (e.g., "en", "fr", "device", "default")
@@ -304,11 +307,9 @@ internal fun PlayerRuntimeController.subtitleLanguageTargets(): List<String> {
     }
 }
 
-
 internal fun PlayerRuntimeController.findBestInternalSubtitleTrackIndex(
     subtitleTracks: List<TrackInfo>,
     targets: List<String>
-
 ): Int {
 
     val preferred = _uiState.value.subtitleStyle.preferredLanguage.lowercase()
@@ -331,7 +332,6 @@ internal fun PlayerRuntimeController.findBestInternalSubtitleTrackIndex(
             return forcedIndex
 
         }
-
         val normalizedTarget = PlayerSubtitleUtils.normalizeLanguageCode(target)
         val candidateIndexes = subtitleTracks.indices.filter { index ->
             PlayerSubtitleUtils.matchesLanguageCode(subtitleTracks[index].language, target)
