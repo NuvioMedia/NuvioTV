@@ -49,6 +49,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.runtime.Composable
@@ -123,11 +124,20 @@ fun PlayerScreen(
     val streamsFocusRequester = remember { FocusRequester() }
     val sourceStreamsFocusRequester = remember { FocusRequester() }
     val skipIntroFocusRequester = remember { FocusRequester() }
+    var skipButtonActuallyVisible by remember { mutableStateOf(false) }
     val nextEpisodeFocusRequester = remember { FocusRequester() }
+    val exitPlayer: () -> Unit = {
+        viewModel.stopAndRelease()
+        onBackPress()
+    }
+    val exitPlayerFromError: () -> Unit = {
+        viewModel.stopAndRelease()
+        onPlaybackErrorBack()
+    }
 
     val handleBackPress = {
         if (uiState.error != null) {
-            onPlaybackErrorBack()
+            exitPlayerFromError()
         } else if (uiState.showPauseOverlay) {
             viewModel.onEvent(PlayerEvent.OnDismissPauseOverlay)
         } else if (uiState.showMoreDialog) {
@@ -144,7 +154,7 @@ fun PlayerScreen(
             } else {
                 viewModel.onEvent(PlayerEvent.OnDismissEpisodesPanel)
             }
-        } else if (uiState.activeSkipInterval != null && !uiState.skipIntervalDismissed) {
+        } else if (uiState.activeSkipInterval != null && !uiState.skipIntervalDismissed && !uiState.showControls) {
             viewModel.onEvent(PlayerEvent.OnDismissSkipIntro)
         } else if (uiState.showNextEpisodeCard && uiState.nextEpisode != null) {
             viewModel.onEvent(PlayerEvent.OnDismissNextEpisodeCard)
@@ -153,7 +163,7 @@ fun PlayerScreen(
             viewModel.hideControls()
         } else {
             // If controls are hidden, go back
-            onBackPress()
+            exitPlayer()
         }
     }
 
@@ -163,7 +173,7 @@ fun PlayerScreen(
 
     LaunchedEffect(uiState.playbackEnded, uiState.error) {
         if (uiState.playbackEnded && uiState.error == null) {
-            onBackPress()
+            exitPlayer()
         }
     }
 
@@ -402,7 +412,7 @@ fun PlayerScreen(
                             if (!uiState.showControls) {
                                 viewModel.onEvent(PlayerEvent.OnToggleControls)
                             } else {
-                                val skipVisible = uiState.activeSkipInterval != null && !uiState.skipIntervalDismissed
+                                val skipVisible = skipButtonActuallyVisible
                                 if (skipVisible) {
                                     try {
                                         skipIntroFocusRequester.requestFocus()
@@ -554,23 +564,25 @@ fun PlayerScreen(
         if (uiState.error != null) {
             ErrorOverlay(
                 message = uiState.error!!,
-                onBack = onPlaybackErrorBack
+                onBack = exitPlayerFromError
             )
         }
 
         // Skip Intro button (bottom-left, independent of controls)
         SkipIntroButton(
-            interval = uiState.activeSkipInterval,
+            interval = if (uiState.showPauseOverlay || uiState.showLoadingOverlay) null else uiState.activeSkipInterval,
             dismissed = uiState.skipIntervalDismissed,
             controlsVisible = uiState.showControls,
             onSkip = { viewModel.onEvent(PlayerEvent.OnSkipIntro) },
             onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissSkipIntro) },
+            onVisibilityChanged = { skipButtonActuallyVisible = it },
+            onFocused = { viewModel.scheduleHideControls() },
             focusRequester = skipIntroFocusRequester,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = 32.dp, bottom = if (uiState.showControls) 120.dp else 32.dp)
+                .padding(start = 32.dp, bottom = 120.dp)
+                
         )
-
         NextEpisodeCardOverlay(
             nextEpisode = uiState.nextEpisode,
             visible = uiState.showNextEpisodeCard &&
@@ -668,6 +680,7 @@ fun PlayerScreen(
                 uiState = uiState,
                 playPauseFocusRequester = playPauseFocusRequester,
                 onPlayPause = { viewModel.onEvent(PlayerEvent.OnPlayPause) },
+                onPlayNextEpisode = { viewModel.onEvent(PlayerEvent.OnPlayNextEpisode) },
                 onSeekForward = { viewModel.onEvent(PlayerEvent.OnSeekForward) },
                 onSeekBackward = { viewModel.onEvent(PlayerEvent.OnSeekBackward) },
                 onSeekTo = { viewModel.onEvent(PlayerEvent.OnSeekTo(it)) },
@@ -701,7 +714,8 @@ fun PlayerScreen(
                     )
                 },
                 onResetHideTimer = { viewModel.scheduleHideControls(); viewModel.onUserInteraction() },
-                onBack = onBackPress
+                onBack = onBackPress,
+                skipButtonVisible = skipButtonActuallyVisible
             )
         }
 
@@ -900,6 +914,7 @@ fun PlayerScreen(
                 addonSubtitles = uiState.addonSubtitles,
                 selectedAddonSubtitle = uiState.selectedAddonSubtitle,
                 preferredLanguage = uiState.subtitleStyle.preferredLanguage,
+                secondaryPreferredLanguage = uiState.subtitleStyle.secondaryPreferredLanguage,
                 subtitleOrganizationMode = uiState.subtitleOrganizationMode,
                 isLoadingAddons = uiState.isLoadingAddonSubtitles,
                 onInternalTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectSubtitleTrack(it)) },
@@ -928,6 +943,7 @@ private fun PlayerControlsOverlay(
     uiState: PlayerUiState,
     playPauseFocusRequester: FocusRequester,
     onPlayPause: () -> Unit,
+    onPlayNextEpisode: () -> Unit,
     onSeekForward: () -> Unit,
     onSeekBackward: () -> Unit,
     onSeekTo: (Long) -> Unit,
@@ -940,7 +956,8 @@ private fun PlayerControlsOverlay(
     onToggleMoreActions: () -> Unit,
     onOpenInExternalPlayer: () -> Unit,
     onResetHideTimer: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    skipButtonVisible: Boolean = false
 ) {
     val customPlayPainter = rememberRawSvgPainter(R.raw.ic_player_play)
     val customPausePainter = rememberRawSvgPainter(R.raw.ic_player_pause)
@@ -989,7 +1006,7 @@ private fun PlayerControlsOverlay(
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 32.dp, vertical = 24.dp)
         ) {
-            val skipIntroVisible = uiState.activeSkipInterval != null && !uiState.skipIntervalDismissed
+            val skipIntroVisible = uiState.activeSkipInterval != null
 
             AnimatedVisibility(
                 visible = !skipIntroVisible,
@@ -1083,6 +1100,9 @@ private fun PlayerControlsOverlay(
                     val hasEpisodeContext = uiState.currentSeason != null && uiState.currentEpisode != null
                     val hasSubtitleControl = uiState.subtitleTracks.isNotEmpty() || uiState.addonSubtitles.isNotEmpty()
                     val hasAudioControl = uiState.audioTracks.isNotEmpty()
+                    val showNextEpisodeButton = uiState.nextEpisode?.hasAired == true &&
+                        !uiState.nextEpisodeAutoPlaySearching &&
+                        uiState.nextEpisodeAutoPlayCountdownSec == null
 
                     ControlButton(
                         icon = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
@@ -1092,6 +1112,15 @@ private fun PlayerControlsOverlay(
                         focusRequester = playPauseFocusRequester,
                         onFocused = onResetHideTimer
                     )
+
+                    if (showNextEpisodeButton) {
+                        ControlButton(
+                            icon = Icons.Default.SkipNext,
+                            contentDescription = stringResource(R.string.next_episode_label),
+                            onClick = onPlayNextEpisode,
+                            onFocused = onResetHideTimer
+                        )
+                    }
 
                     if (hasSubtitleControl) {
                         ControlButton(

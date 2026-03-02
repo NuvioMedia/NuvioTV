@@ -142,6 +142,7 @@
     <string name="settings_integrations_section_subtitle">Choose TMDB or MDBList</string>
     <string name="settings_tmdb_subtitle">Metadata enrichment controls</string>
     <string name="settings_mdblist_subtitle">External ratings providers</string>
+    <string name="settings_animeskip_subtitle">Anime intro/outro skip timestamps</string>
 
     <!-- PlaybackSettingsScreen -->
     <string name="playback_title">Playback Settings</string>
@@ -246,6 +247,13 @@
     <string name="sub_org_none_desc">Show subtitles in default addon result order.</string>
     <string name="sub_org_by_lang_desc">Group subtitles by language.</string>
     <string name="sub_org_by_addon_desc">Group subtitles by addon source.</string>
+    <string name="sub_startup_mode_title">Addon Subtitle Loading</string>
+    <string name="sub_startup_mode_fast">Fast startup</string>
+    <string name="sub_startup_mode_preferred">Preferred languages</string>
+    <string name="sub_startup_mode_all">All addon subtitles</string>
+    <string name="sub_startup_mode_fast_desc">Start playback immediately. Selecting addon subtitles may reload the player once.</string>
+    <string name="sub_startup_mode_preferred_desc">Prefetch addon subtitles before playback and attach preferred/secondary language tracks.</string>
+    <string name="sub_startup_mode_all_desc">Prefetch and attach all addon subtitles before playback. Slowest startup.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Reuse Last Link</string>
@@ -395,6 +403,17 @@
     <string name="mdblist_dialog_subtitle">Enter your API key to fetch external ratings</string>
     <string name="mdblist_dialog_placeholder">Enter MDBList API key</string>
     <string name="mdblist_not_set">Not set</string>
+
+    <!-- Anime-Skip -->
+    <string name="animeskip_title">Anime Skip</string>
+    <string name="animeskip_subtitle">Configure your Anime Skip Client ID for anime intro/outro skipping</string>
+    <string name="animeskip_enable_title">Enable Anime Skip</string>
+    <string name="animeskip_enable_subtitle">Fetch skip timestamps from anime-skip.com</string>
+    <string name="animeskip_client_id_title">Client ID</string>
+    <string name="animeskip_client_id_subtitle">Required to fetch skip timestamps from anime-skip.com</string>
+    <string name="animeskip_dialog_title">Anime Skip Client ID</string>
+    <string name="animeskip_dialog_subtitle">Create your own Client ID at anime-skip.com/account/settings</string>
+    <string name="animeskip_dialog_placeholder">Enter Client ID</string>
     <string name="action_clear">Clear</string>
 
     <!-- TmdbSettingsScreen -->

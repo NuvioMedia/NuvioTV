@@ -60,6 +60,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     playerSettings: PlayerSettings,
     trailerSettings: TrailerSettings,
     onShowAudioLanguageDialog: () -> Unit,
+    onShowSecondaryAudioLanguageDialog: () -> Unit,
     onShowDecoderPriorityDialog: () -> Unit,
     onSetTrailerEnabled: (Boolean) -> Unit,
     onSetTrailerDelaySeconds: (Int) -> Unit,
@@ -145,6 +146,21 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
         )
     }
 
+    item(key = "audio_secondary_preferred_language") {
+        val secondaryAudioLangName = playerSettings.secondaryPreferredAudioLanguage?.let { code ->
+            AVAILABLE_SUBTITLE_LANGUAGES.find { it.code == code }?.name ?: code
+        } ?: stringResource(R.string.sub_not_set)
+
+        NavigationSettingsItem(
+            icon = Icons.Default.Language,
+            title = stringResource(R.string.sub_secondary_lang),
+            subtitle = secondaryAudioLangName,
+            onClick = onShowSecondaryAudioLanguageDialog,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
+    }
+
     item(key = "audio_skip_silence") {
         ToggleSettingsItem(
             icon = Icons.Default.Speed,
@@ -222,12 +238,16 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
 @Composable
 internal fun AudioSettingsDialogs(
     showAudioLanguageDialog: Boolean,
+    showSecondaryAudioLanguageDialog: Boolean,
     showDecoderPriorityDialog: Boolean,
     selectedLanguage: String,
+    selectedSecondaryLanguage: String?,
     selectedPriority: Int,
     onSetPreferredAudioLanguage: (String) -> Unit,
+    onSetSecondaryPreferredAudioLanguage: (String?) -> Unit,
     onSetDecoderPriority: (Int) -> Unit,
     onDismissAudioLanguageDialog: () -> Unit,
+    onDismissSecondaryAudioLanguageDialog: () -> Unit,
     onDismissDecoderPriorityDialog: () -> Unit
 ) {
     if (showAudioLanguageDialog) {
@@ -238,6 +258,19 @@ internal fun AudioSettingsDialogs(
                 onDismissAudioLanguageDialog()
             },
             onDismiss = onDismissAudioLanguageDialog
+        )
+    }
+
+    if (showSecondaryAudioLanguageDialog) {
+        LanguageSelectionDialog(
+            title = stringResource(R.string.sub_secondary_lang),
+            selectedLanguage = selectedSecondaryLanguage,
+            showNoneOption = true,
+            onLanguageSelected = {
+                onSetSecondaryPreferredAudioLanguage(it)
+                onDismissSecondaryAudioLanguageDialog()
+            },
+            onDismiss = onDismissSecondaryAudioLanguageDialog
         )
     }
 

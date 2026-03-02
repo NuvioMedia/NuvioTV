@@ -23,11 +23,24 @@ import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.session.MediaSession
+import com.nuvio.tv.data.local.AddonSubtitleStartupMode
 import com.nuvio.tv.data.local.AudioLanguageOption
+import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
+import com.nuvio.tv.data.local.FrameRateMatchingMode
+import com.nuvio.tv.domain.model.Subtitle
 import io.github.peerless2012.ass.media.kt.buildWithAssSupport
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+
+private const val STARTUP_SUBTITLE_PREFETCH_TIMEOUT_MS = 10_000L
+
+internal data class StartupSubtitlePreparation(
+    val fetchedSubtitles: List<Subtitle>,
+    val attachedSubtitles: List<Subtitle>,
+    val fetchCompleted: Boolean
+)
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(UnstableApi::class)
@@ -54,6 +67,11 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                 frameRateMatchingMode = playerSettings.frameRateMatchingMode,
                 resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
             )
+            val startupSubtitlePreparation = prepareStartupSubtitles(
+                mode = playerSettings.addonSubtitleStartupMode,
+                preferredLanguage = playerSettings.subtitleStyle.preferredLanguage,
+                secondaryLanguage = playerSettings.subtitleStyle.secondaryPreferredLanguage
+            )
             val useLibass = false // Temporarily disabled for maintenance
             val libassRenderType = playerSettings.libassRenderType.toAssRenderType()
             val loadControl = DefaultLoadControl.Builder().build()
@@ -69,28 +87,22 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                         buildUponParameters().setTunnelingEnabled(true)
                     )
                 }
-                
-                when (playerSettings.preferredAudioLanguage) {
-                    AudioLanguageOption.DEFAULT -> {   }
-                    AudioLanguageOption.DEVICE -> {
-                        
-                        val deviceLanguages = if (Build.VERSION.SDK_INT >= 24) {
-                            val localeList = Resources.getSystem().configuration.locales
-                            Array(localeList.size()) { localeList[it].isO3Language }
-                        } else {
-                            arrayOf(Resources.getSystem().configuration.locale.isO3Language)
-                        }
-                        setParameters(
-                            buildUponParameters().setPreferredAudioLanguages(*deviceLanguages)
-                        )
-                    }
-                    else -> {
-                        setParameters(
-                            buildUponParameters().setPreferredAudioLanguages(
-                                playerSettings.preferredAudioLanguage
-                            )
-                        )
-                    }
+
+                val deviceLanguages = if (Build.VERSION.SDK_INT >= 24) {
+                    val localeList = Resources.getSystem().configuration.locales
+                    List(localeList.size()) { localeList[it].isO3Language }
+                } else {
+                    listOf(Resources.getSystem().configuration.locale.isO3Language)
+                }
+                val preferredAudioLanguages = resolvePreferredAudioLanguages(
+                    preferredAudioLanguage = playerSettings.preferredAudioLanguage,
+                    secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
+                    deviceLanguages = deviceLanguages
+                )
+                if (preferredAudioLanguages.isNotEmpty()) {
+                    setParameters(
+                        buildUponParameters().setPreferredAudioLanguages(*preferredAudioLanguages.toTypedArray())
+                    )
                 }
 
                 
@@ -184,7 +196,20 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                 val preferred = playerSettings.subtitleStyle.preferredLanguage
                 val secondary = playerSettings.subtitleStyle.secondaryPreferredLanguage
                 applySubtitlePreferences(preferred, secondary)
-                setMediaSource(mediaSourceFactory.createMediaSource(url, headers))
+                attachedAddonSubtitleKeys = startupSubtitlePreparation.attachedSubtitles
+                    .distinctBy { addonSubtitleKey(it) }
+                    .map(::addonSubtitleKey)
+                    .toSet()
+                val startupSubtitleConfigurations = startupSubtitlePreparation.attachedSubtitles
+                    .distinctBy { "${it.id}|${it.url}" }
+                    .map { subtitle -> toSubtitleConfiguration(subtitle) }
+                setMediaSource(
+                    mediaSourceFactory.createMediaSource(
+                        url = url,
+                        headers = headers,
+                        subtitleConfigurations = startupSubtitleConfigurations
+                    )
+                )
                 playWhenReady = true
                 prepare()
 
@@ -303,6 +328,18 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                     }
                 })
             }
+            when {
+                startupSubtitlePreparation.fetchCompleted -> {
+                    _uiState.update {
+                        it.copy(
+                            addonSubtitles = startupSubtitlePreparation.fetchedSubtitles,
+                            isLoadingAddonSubtitles = false,
+                            addonSubtitlesError = null
+                        )
+                    }
+                }
+                else -> fetchAddonSubtitles()
+            }
         } catch (e: Exception) {
             _uiState.update {
                 it.copy(
@@ -312,6 +349,109 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
             }
         }
     }
+}
+
+internal fun resolvePreferredAudioLanguages(
+    preferredAudioLanguage: String,
+    secondaryPreferredAudioLanguage: String?,
+    deviceLanguages: List<String>
+): List<String> {
+    fun normalize(language: String?): String? {
+        val normalized = language
+            ?.trim()
+            ?.lowercase()
+            ?.takeIf { it.isNotBlank() }
+            ?: return null
+        return when (normalized) {
+            AudioLanguageOption.DEFAULT,
+            AudioLanguageOption.DEVICE,
+            SUBTITLE_LANGUAGE_FORCED -> null
+            else -> normalized
+        }
+    }
+
+    return when (preferredAudioLanguage.trim().lowercase()) {
+        AudioLanguageOption.DEFAULT -> listOfNotNull(
+            normalize(secondaryPreferredAudioLanguage)
+        ).distinct()
+        AudioLanguageOption.DEVICE -> (
+            deviceLanguages
+            .mapNotNull(::normalize)
+            + listOfNotNull(normalize(secondaryPreferredAudioLanguage))
+            ).distinct()
+        else -> listOfNotNull(
+            normalize(preferredAudioLanguage),
+            normalize(secondaryPreferredAudioLanguage)
+        ).distinct()
+    }
+}
+
+internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(
+    mode: AddonSubtitleStartupMode,
+    preferredLanguage: String,
+    secondaryLanguage: String?
+): StartupSubtitlePreparation {
+    if (mode == AddonSubtitleStartupMode.FAST_STARTUP) {
+        return StartupSubtitlePreparation(
+            fetchedSubtitles = emptyList(),
+            attachedSubtitles = emptyList(),
+            fetchCompleted = false
+        )
+    }
+
+    if (buildSubtitleFetchRequest() == null) {
+        return StartupSubtitlePreparation(
+            fetchedSubtitles = emptyList(),
+            attachedSubtitles = emptyList(),
+            fetchCompleted = false
+        )
+    }
+
+    val preferredTargets = when (PlayerSubtitleUtils.normalizeLanguageCode(preferredLanguage)) {
+        "none" -> listOfNotNull(
+            secondaryLanguage
+                ?.takeIf { it.isNotBlank() }
+        )
+        else -> listOfNotNull(
+            preferredLanguage,
+            secondaryLanguage?.takeIf { it.isNotBlank() }
+        )
+    }.map { PlayerSubtitleUtils.normalizeLanguageCode(it) }
+        .distinct()
+
+    if (mode == AddonSubtitleStartupMode.PREFERRED_ONLY && preferredTargets.isEmpty()) {
+        return StartupSubtitlePreparation(
+            fetchedSubtitles = emptyList(),
+            attachedSubtitles = emptyList(),
+            fetchCompleted = false
+        )
+    }
+
+    _uiState.update { it.copy(isLoadingAddonSubtitles = true, addonSubtitlesError = null) }
+
+    val fetchedSubtitles = withTimeoutOrNull(STARTUP_SUBTITLE_PREFETCH_TIMEOUT_MS) {
+        fetchAddonSubtitlesNow()
+    } ?: return StartupSubtitlePreparation(
+        fetchedSubtitles = emptyList(),
+        attachedSubtitles = emptyList(),
+        fetchCompleted = false
+    )
+
+    val attachedSubtitles = when (mode) {
+        AddonSubtitleStartupMode.ALL_SUBTITLES -> fetchedSubtitles
+        AddonSubtitleStartupMode.PREFERRED_ONLY -> fetchedSubtitles.filter { subtitle ->
+            preferredTargets.any { target ->
+                PlayerSubtitleUtils.matchesLanguageCode(subtitle.lang, target)
+            }
+        }
+        AddonSubtitleStartupMode.FAST_STARTUP -> emptyList()
+    }
+
+    return StartupSubtitlePreparation(
+        fetchedSubtitles = fetchedSubtitles,
+        attachedSubtitles = attachedSubtitles,
+        fetchCompleted = true
+    )
 }
 
 internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {

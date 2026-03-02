@@ -74,7 +74,8 @@ internal enum class SettingsCategory {
 private enum class IntegrationSettingsSection {
     Hub,
     Tmdb,
-    MdbList
+    MdbList,
+    AnimeSkip
 }
 
 internal enum class SettingsSectionDestination {
@@ -212,6 +213,7 @@ fun SettingsScreen(
     val integrationHubFocusRequester = remember { FocusRequester() }
     val integrationTmdbFocusRequester = remember { FocusRequester() }
     val integrationMdbListFocusRequester = remember { FocusRequester() }
+    val integrationAnimeSkipFocusRequester = remember { FocusRequester() }
     var integrationSection by remember { mutableStateOf(IntegrationSettingsSection.Hub) }
     var pendingContentFocusCategory by remember { mutableStateOf<SettingsCategory?>(null) }
     var pendingContentFocusRequestId by remember { mutableLongStateOf(0L) }
@@ -391,6 +393,7 @@ fun SettingsScreen(
                             hubFocusRequester = integrationHubFocusRequester,
                             tmdbFocusRequester = integrationTmdbFocusRequester,
                             mdbListFocusRequester = integrationMdbListFocusRequester,
+                            animeSkipFocusRequester = integrationAnimeSkipFocusRequester,
                             autoFocusEnabled = allowDetailAutofocus
                         )
                         SettingsCategory.ABOUT -> AboutSettingsContent(
@@ -476,6 +479,7 @@ private fun IntegrationSettingsContent(
     hubFocusRequester: FocusRequester,
     tmdbFocusRequester: FocusRequester,
     mdbListFocusRequester: FocusRequester,
+    animeSkipFocusRequester: FocusRequester,
     autoFocusEnabled: Boolean
 ) {
     BackHandler(enabled = selectedSection != IntegrationSettingsSection.Hub) {
@@ -489,6 +493,7 @@ private fun IntegrationSettingsContent(
             IntegrationSettingsSection.Hub -> hubEntryFocusRequester
             IntegrationSettingsSection.Tmdb -> tmdbFocusRequester
             IntegrationSettingsSection.MdbList -> mdbListFocusRequester
+            IntegrationSettingsSection.AnimeSkip -> animeSkipFocusRequester
         }
         runCatching { requester.requestFocus() }
     }
@@ -527,6 +532,13 @@ private fun IntegrationSettingsContent(
                                 onClick = { onSelectSection(IntegrationSettingsSection.MdbList) }
                             )
                         }
+                        item(key = "integration_hub_animeskip") {
+                            SettingsActionRow(
+                                title = "Anime-Skip",
+                                subtitle = stringResource(R.string.settings_animeskip_subtitle),
+                                onClick = { onSelectSection(IntegrationSettingsSection.AnimeSkip) }
+                            )
+                        }
                     }
                 }
             }
@@ -541,6 +553,12 @@ private fun IntegrationSettingsContent(
         IntegrationSettingsSection.MdbList -> {
             MDBListSettingsContent(
                 initialFocusRequester = mdbListFocusRequester
+            )
+        }
+
+        IntegrationSettingsSection.AnimeSkip -> {
+            AnimeSkipSettingsContent(
+                initialFocusRequester = animeSkipFocusRequester
             )
         }
     }

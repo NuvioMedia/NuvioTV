@@ -5,6 +5,7 @@ import android.util.Log
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.data.remote.api.AniSkipApi
+import com.nuvio.tv.data.remote.api.AnimeSkipApi
 import com.nuvio.tv.data.remote.api.ArmApi
 import com.nuvio.tv.data.remote.api.GitHubReleaseApi
 import com.nuvio.tv.data.remote.api.TraktApi
@@ -229,6 +230,21 @@ object NetworkModule {
     @Singleton
     fun provideArmApi(@Named("arm") retrofit: Retrofit): ArmApi =
         retrofit.create(ArmApi::class.java)
+
+    @Provides
+    @Singleton
+    @Named("animeSkipGql")
+    fun provideAnimeSkipGqlRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit =
+        Retrofit.Builder()
+            .baseUrl("https://api.anime-skip.com/")
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+
+    @Provides
+    @Singleton
+    fun provideAnimeSkipApi(@Named("animeSkipGql") retrofit: Retrofit): AnimeSkipApi =
+        retrofit.create(AnimeSkipApi::class.java)
 
     // --- GitHub Releases API (in-app updates) ---
 

@@ -1,7 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.core.network.NetworkResult
-import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Stream
 import kotlinx.coroutines.delay
@@ -167,6 +166,8 @@ internal fun PlayerRuntimeController.resetNextEpisodeCardState(clearEpisode: Boo
 }
 
 internal fun PlayerRuntimeController.evaluateNextEpisodeCardVisibility(positionMs: Long, durationMs: Long) {
+    if (!hasRenderedFirstFrame) return
+
     val state = _uiState.value
     if (state.nextEpisode == null || nextEpisodeVideo == null) {
         if (state.showNextEpisodeCard) {
@@ -190,8 +191,7 @@ internal fun PlayerRuntimeController.evaluateNextEpisodeCardVisibility(positionM
         _uiState.update { it.copy(showNextEpisodeCard = true) }
         if (
             state.nextEpisode.hasAired &&
-            streamAutoPlayNextEpisodeEnabledSetting &&
-            streamAutoPlayModeSetting != StreamAutoPlayMode.MANUAL
+            streamAutoPlayNextEpisodeEnabledSetting
         ) {
             playNextEpisode()
         }

@@ -28,7 +28,7 @@ class TrailerSettingsDataStore @Inject constructor(
     val settings: Flow<TrailerSettings> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             TrailerSettings(
-                enabled = prefs[enabledKey] ?: false,
+                enabled = prefs[enabledKey] ?: true,
                 delaySeconds = prefs[delaySecondsKey] ?: 7
             )
         }
@@ -44,6 +44,6 @@ class TrailerSettingsDataStore @Inject constructor(
 }
 
 data class TrailerSettings(
-    val enabled: Boolean = false,
+    val enabled: Boolean = true,
     val delaySeconds: Int = 7
 )

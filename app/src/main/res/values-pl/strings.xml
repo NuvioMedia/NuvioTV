@@ -389,6 +389,18 @@
     <string name="mdblist_not_set">Nie ustawiono</string>
     <string name="action_clear">Wyczyść</string>
 
+    <!-- Anime-Skip -->
+    <string name="animeskip_title">Anime Skip</string>
+    <string name="animeskip_subtitle">Skonfiguruj swój Client ID Anime Skip do pomijania czołówek i napisów końcowych anime</string>
+    <string name="animeskip_enable_title">Włącz Anime Skip</string>
+    <string name="animeskip_enable_subtitle">Pobieraj znaczniki czasu z anime-skip.com</string>
+    <string name="animeskip_client_id_title">Client ID</string>
+    <string name="animeskip_client_id_subtitle">Wymagany do pobierania znaczników czasu z anime-skip.com</string>
+    <string name="animeskip_dialog_title">Anime Skip Client ID</string>
+    <string name="animeskip_dialog_subtitle">Utwórz własny Client ID na anime-skip.com/account/settings</string>
+    <string name="animeskip_dialog_placeholder">Wprowadź Client ID</string>
+    <string name="settings_animeskip_subtitle">Znaczniki czasu czołówek i napisów końcowych anime</string>
+
     <!-- TmdbSettingsScreen -->
     <string name="tmdb_title">Wzbogacanie TMDB</string>
     <string name="tmdb_subtitle">Wybierz, które pola metadanych mają pochodzić z TMDB</string>

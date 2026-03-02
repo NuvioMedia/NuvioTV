@@ -145,8 +145,19 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun updateNextToWatch(nextToWatch: NextToWatch) {
         _uiState.update { state ->
-            if (state.nextToWatch == nextToWatch) {
-                state
+            if (state.nextToWatch == nextToWatch) return@update state
+            val nextSeason = nextToWatch.nextSeason
+            val meta = state.meta
+            val shouldSwitchSeason = nextSeason != null &&
+                nextSeason != state.selectedSeason &&
+                meta != null &&
+                state.seasons.contains(nextSeason)
+            if (shouldSwitchSeason && meta != null && nextSeason != null) {
+                state.copy(
+                    nextToWatch = nextToWatch,
+                    selectedSeason = nextSeason,
+                    episodesForSeason = getEpisodesForSeason(meta.videos, nextSeason)
+                )
             } else {
                 state.copy(nextToWatch = nextToWatch)
             }
@@ -940,7 +951,14 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     private fun shouldResumeProgress(progress: WatchProgress): Boolean {
-        return progress.progressPercentage >= 0.02f && !progress.isCompleted()
+        if (progress.isCompleted()) return false
+        if (progress.progressPercentage >= 0.02f) return true
+
+        val hasStartedPlayback = progress.position > 0L ||
+            progress.progressPercent?.let { it > 0f } == true
+        return hasStartedPlayback &&
+            progress.source != WatchProgress.SOURCE_TRAKT_HISTORY &&
+            progress.source != WatchProgress.SOURCE_TRAKT_SHOW_PROGRESS
     }
 
     private fun toggleLibrary() {
