@@ -150,7 +150,7 @@ data class PlayerSettings(
     val streamReuseLastLinkEnabled: Boolean = false,
     val streamReuseLastLinkCacheHours: Int = 24,
     val subtitleOrganizationMode: SubtitleOrganizationMode = SubtitleOrganizationMode.NONE,
-    val addonSubtitleStartupMode: AddonSubtitleStartupMode = AddonSubtitleStartupMode.FAST_STARTUP
+    val addonSubtitleStartupMode: AddonSubtitleStartupMode = AddonSubtitleStartupMode.ALL_SUBTITLES
 )
 
 enum class StreamAutoPlayMode {
@@ -656,10 +656,10 @@ class PlayerSettingsDataStore @Inject constructor(
 
     private fun parseAddonSubtitleStartupMode(value: String?): AddonSubtitleStartupMode {
         return when (value) {
-            null, "FAST_STARTUP" -> AddonSubtitleStartupMode.FAST_STARTUP
+            null, "ALL_SUBTITLES" -> AddonSubtitleStartupMode.ALL_SUBTITLES
             "PREFERRED_ONLY" -> AddonSubtitleStartupMode.PREFERRED_ONLY
-            "ALL_SUBTITLES" -> AddonSubtitleStartupMode.ALL_SUBTITLES
-            else -> AddonSubtitleStartupMode.FAST_STARTUP
+            "FAST_STARTUP" -> AddonSubtitleStartupMode.FAST_STARTUP
+            else -> AddonSubtitleStartupMode.ALL_SUBTITLES
         }
     }
 
