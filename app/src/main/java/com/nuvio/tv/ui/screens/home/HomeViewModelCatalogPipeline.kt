@@ -18,6 +18,13 @@ import com.nuvio.tv.core.util.filterReleasedItems
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
+private data class CatalogUpdateResult(
+    val displayRows: List<CatalogRow>,
+    val heroItems: List<com.nuvio.tv.domain.model.MetaPreview>,
+    val gridItems: List<GridItem>,
+    val fullRows: List<CatalogRow>
+)
+
 internal fun HomeViewModel.loadHomeCatalogOrderPreferencePipeline() {
     viewModelScope.launch {
         layoutPreferenceDataStore.homeCatalogOrderKeys.collectLatest { keys ->
@@ -271,7 +278,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
     val heroSectionEnabled = _uiState.value.heroSectionEnabled
     val hideUnreleased = _uiState.value.hideUnreleasedContent
 
-    val (displayRows, baseHeroItems, baseGridItems) = withContext(Dispatchers.Default) {
+    val (displayRows, baseHeroItems, baseGridItems, fullRowsFiltered) = withContext(Dispatchers.Default) {
         val rawRows = orderedKeys.mapNotNull { key -> catalogSnapshot[key] }
         val orderedRows = if (hideUnreleased) {
             val today = LocalDate.now()
@@ -378,18 +385,11 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             currentGridItems
         }
 
-        Triple(computedDisplayRows, computedHeroItems, computedGridItems)
+        CatalogUpdateResult(computedDisplayRows, computedHeroItems, computedGridItems, orderedRows)
     }
 
-    val rawFullRows = orderedKeys.mapNotNull { key -> catalogSnapshot[key] }
-    val fullRows = if (hideUnreleased) {
-        val today = LocalDate.now()
-        rawFullRows.map { it.filterReleasedItems(today) }
-    } else {
-        rawFullRows
-    }
     _fullCatalogRows.update { rows ->
-        if (rows == fullRows) rows else fullRows
+        if (rows == fullRowsFiltered) rows else fullRowsFiltered
     }
 
     val nextGridItems = if (currentLayout == HomeLayout.GRID) {

@@ -82,6 +82,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setPreferredAudioLanguage(language)
     }
 
+    suspend fun setSecondaryPreferredAudioLanguage(language: String?) {
+        playerSettingsDataStore.setSecondaryPreferredAudioLanguage(language)
+    }
+
     suspend fun setLoadingOverlayEnabled(enabled: Boolean) {
         playerSettingsDataStore.setLoadingOverlayEnabled(enabled)
     }

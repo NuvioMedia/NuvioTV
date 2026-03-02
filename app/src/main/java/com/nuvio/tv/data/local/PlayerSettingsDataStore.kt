@@ -127,6 +127,7 @@ data class PlayerSettings(
     val tunnelingEnabled: Boolean = false,
     val skipSilence: Boolean = false,
     val preferredAudioLanguage: String = AudioLanguageOption.DEVICE,
+    val secondaryPreferredAudioLanguage: String? = null,
     val loadingOverlayEnabled: Boolean = true,
     val pauseOverlayEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
@@ -224,6 +225,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val tunnelingEnabledKey = booleanPreferencesKey("tunneling_enabled")
     private val skipSilenceKey = booleanPreferencesKey("skip_silence")
     private val preferredAudioLanguageKey = stringPreferencesKey("preferred_audio_language")
+    private val secondaryPreferredAudioLanguageKey = stringPreferencesKey("secondary_preferred_audio_language")
     private val loadingOverlayEnabledKey = booleanPreferencesKey("loading_overlay_enabled")
     private val pauseOverlayEnabledKey = booleanPreferencesKey("pause_overlay_enabled")
     private val osdClockEnabledKey = booleanPreferencesKey("osd_clock_enabled")
@@ -304,6 +306,19 @@ class PlayerSettingsDataStore @Inject constructor(
                     }
                 }
 
+                val secondaryPreferredAudioLanguage = prefs[secondaryPreferredAudioLanguageKey]
+                if (secondaryPreferredAudioLanguage != null) {
+                    val normalizedSecondaryPreferredAudioLanguage =
+                        normalizeSecondaryAudioLanguageCode(secondaryPreferredAudioLanguage)
+                    if (normalizedSecondaryPreferredAudioLanguage != secondaryPreferredAudioLanguage) {
+                        if (normalizedSecondaryPreferredAudioLanguage != null) {
+                            prefs[secondaryPreferredAudioLanguageKey] = normalizedSecondaryPreferredAudioLanguage
+                        } else {
+                            prefs.remove(secondaryPreferredAudioLanguageKey)
+                        }
+                    }
+                }
+
                 val preferredSubtitleLanguage = prefs[subtitlePreferredLanguageKey]
                 if (preferredSubtitleLanguage != null) {
                     val normalizedPreferredSubtitleLanguage =
@@ -344,6 +359,8 @@ class PlayerSettingsDataStore @Inject constructor(
                 preferredAudioLanguage = normalizeSelectableLanguageCode(
                     prefs[preferredAudioLanguageKey] ?: AudioLanguageOption.DEVICE
                 ),
+                secondaryPreferredAudioLanguage = prefs[secondaryPreferredAudioLanguageKey]
+                    ?.let(::normalizeSecondaryAudioLanguageCode),
                 loadingOverlayEnabled = prefs[loadingOverlayEnabledKey] ?: true,
                 pauseOverlayEnabled = prefs[pauseOverlayEnabledKey] ?: true,
                 osdClockEnabled = prefs[osdClockEnabledKey] ?: true,
@@ -469,6 +486,19 @@ class PlayerSettingsDataStore @Inject constructor(
             prefs[preferredAudioLanguageKey] = normalizeSelectableLanguageCode(
                 language.ifBlank { AudioLanguageOption.DEVICE }
             )
+        }
+    }
+
+    suspend fun setSecondaryPreferredAudioLanguage(language: String?) {
+        store().edit { prefs ->
+            val normalizedLanguage = language
+                ?.takeIf { it.isNotBlank() }
+                ?.let(::normalizeSecondaryAudioLanguageCode)
+            if (normalizedLanguage != null) {
+                prefs[secondaryPreferredAudioLanguageKey] = normalizedLanguage
+            } else {
+                prefs.remove(secondaryPreferredAudioLanguageKey)
+            }
         }
     }
 
@@ -616,6 +646,16 @@ class PlayerSettingsDataStore @Inject constructor(
             "pt-pt", "pt_pt", "por" -> "pt"
             "forced", "force", "forc" -> SUBTITLE_LANGUAGE_FORCED
             else -> code
+        }
+    }
+
+    private fun normalizeSecondaryAudioLanguageCode(language: String): String? {
+        val normalized = normalizeSelectableLanguageCode(language)
+        return when (normalized) {
+            AudioLanguageOption.DEFAULT,
+            AudioLanguageOption.DEVICE,
+            SUBTITLE_LANGUAGE_FORCED -> null
+            else -> normalized
         }
     }
 

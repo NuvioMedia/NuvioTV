@@ -142,6 +142,7 @@ fun PlaybackSettingsContent(
     var showBackgroundColorDialog by remember { mutableStateOf(false) }
     var showOutlineColorDialog by remember { mutableStateOf(false) }
     var showAudioLanguageDialog by remember { mutableStateOf(false) }
+    var showSecondaryAudioLanguageDialog by remember { mutableStateOf(false) }
     var showDecoderPriorityDialog by remember { mutableStateOf(false) }
     var showStreamAutoPlayModeDialog by remember { mutableStateOf(false) }
     var showStreamAutoPlaySourceDialog by remember { mutableStateOf(false) }
@@ -160,6 +161,7 @@ fun PlaybackSettingsContent(
         showBackgroundColorDialog = false
         showOutlineColorDialog = false
         showAudioLanguageDialog = false
+        showSecondaryAudioLanguageDialog = false
         showDecoderPriorityDialog = false
         showStreamAutoPlayModeDialog = false
         showStreamAutoPlaySourceDialog = false
@@ -196,6 +198,7 @@ fun PlaybackSettingsContent(
                 trailerSettings = trailerSettings,
                 onShowPlayerPreferenceDialog = { openDialog { showPlayerPreferenceDialog = true } },
                 onShowAudioLanguageDialog = { openDialog { showAudioLanguageDialog = true } },
+                onShowSecondaryAudioLanguageDialog = { openDialog { showSecondaryAudioLanguageDialog = true } },
                 onShowDecoderPriorityDialog = { openDialog { showDecoderPriorityDialog = true } },
                 onShowLanguageDialog = { openDialog { showLanguageDialog = true } },
                 onShowSecondaryLanguageDialog = { openDialog { showSecondaryLanguageDialog = true } },
@@ -257,6 +260,7 @@ fun PlaybackSettingsContent(
         showBackgroundColorDialog = showBackgroundColorDialog,
         showOutlineColorDialog = showOutlineColorDialog,
         showAudioLanguageDialog = showAudioLanguageDialog,
+        showSecondaryAudioLanguageDialog = showSecondaryAudioLanguageDialog,
         showDecoderPriorityDialog = showDecoderPriorityDialog,
         showStreamAutoPlayModeDialog = showStreamAutoPlayModeDialog,
         showStreamAutoPlaySourceDialog = showStreamAutoPlaySourceDialog,
@@ -290,6 +294,9 @@ fun PlaybackSettingsContent(
         onSetPreferredAudioLanguage = { language ->
             coroutineScope.launch { viewModel.setPreferredAudioLanguage(language) }
         },
+        onSetSecondaryPreferredAudioLanguage = { language ->
+            coroutineScope.launch { viewModel.setSecondaryPreferredAudioLanguage(language) }
+        },
         onSetDecoderPriority = { priority ->
             coroutineScope.launch { viewModel.setDecoderPriority(priority) }
         },
@@ -321,6 +328,7 @@ fun PlaybackSettingsContent(
         onDismissBackgroundColorDialog = ::dismissAllDialogs,
         onDismissOutlineColorDialog = ::dismissAllDialogs,
         onDismissAudioLanguageDialog = ::dismissAllDialogs,
+        onDismissSecondaryAudioLanguageDialog = ::dismissAllDialogs,
         onDismissDecoderPriorityDialog = ::dismissAllDialogs,
         onDismissStreamAutoPlayModeDialog = ::dismissAllDialogs,
         onDismissStreamAutoPlaySourceDialog = ::dismissAllDialogs,

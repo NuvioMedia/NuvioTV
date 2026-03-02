@@ -24,6 +24,7 @@ import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.session.MediaSession
 import com.nuvio.tv.data.local.AudioLanguageOption
+import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
 import io.github.peerless2012.ass.media.kt.buildWithAssSupport
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -68,28 +69,22 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                         buildUponParameters().setTunnelingEnabled(true)
                     )
                 }
-                
-                when (playerSettings.preferredAudioLanguage) {
-                    AudioLanguageOption.DEFAULT -> {   }
-                    AudioLanguageOption.DEVICE -> {
-                        
-                        val deviceLanguages = if (Build.VERSION.SDK_INT >= 24) {
-                            val localeList = Resources.getSystem().configuration.locales
-                            Array(localeList.size()) { localeList[it].isO3Language }
-                        } else {
-                            arrayOf(Resources.getSystem().configuration.locale.isO3Language)
-                        }
-                        setParameters(
-                            buildUponParameters().setPreferredAudioLanguages(*deviceLanguages)
-                        )
-                    }
-                    else -> {
-                        setParameters(
-                            buildUponParameters().setPreferredAudioLanguages(
-                                playerSettings.preferredAudioLanguage
-                            )
-                        )
-                    }
+
+                val deviceLanguages = if (Build.VERSION.SDK_INT >= 24) {
+                    val localeList = Resources.getSystem().configuration.locales
+                    List(localeList.size()) { localeList[it].isO3Language }
+                } else {
+                    listOf(Resources.getSystem().configuration.locale.isO3Language)
+                }
+                val preferredAudioLanguages = resolvePreferredAudioLanguages(
+                    preferredAudioLanguage = playerSettings.preferredAudioLanguage,
+                    secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
+                    deviceLanguages = deviceLanguages
+                )
+                if (preferredAudioLanguages.isNotEmpty()) {
+                    setParameters(
+                        buildUponParameters().setPreferredAudioLanguages(*preferredAudioLanguages.toTypedArray())
+                    )
                 }
 
                 
@@ -310,6 +305,41 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                 )
             }
         }
+    }
+}
+
+internal fun resolvePreferredAudioLanguages(
+    preferredAudioLanguage: String,
+    secondaryPreferredAudioLanguage: String?,
+    deviceLanguages: List<String>
+): List<String> {
+    fun normalize(language: String?): String? {
+        val normalized = language
+            ?.trim()
+            ?.lowercase()
+            ?.takeIf { it.isNotBlank() }
+            ?: return null
+        return when (normalized) {
+            AudioLanguageOption.DEFAULT,
+            AudioLanguageOption.DEVICE,
+            SUBTITLE_LANGUAGE_FORCED -> null
+            else -> normalized
+        }
+    }
+
+    return when (preferredAudioLanguage.trim().lowercase()) {
+        AudioLanguageOption.DEFAULT -> listOfNotNull(
+            normalize(secondaryPreferredAudioLanguage)
+        ).distinct()
+        AudioLanguageOption.DEVICE -> (
+            deviceLanguages
+            .mapNotNull(::normalize)
+            + listOfNotNull(normalize(secondaryPreferredAudioLanguage))
+            ).distinct()
+        else -> listOfNotNull(
+            normalize(preferredAudioLanguage),
+            normalize(secondaryPreferredAudioLanguage)
+        ).distinct()
     }
 }
 

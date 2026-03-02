@@ -9,7 +9,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 
-private const val AFR_PREFLIGHT_PROBE_TIMEOUT_MS = 4000L
+private const val AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS = 60000L
+private const val AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS = 5500L
 
 internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
     url: String,
@@ -43,21 +44,40 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
         )
     }
 
+    val probeHeaders = headers.filterKeys { !it.equals("Range", ignoreCase = true) }
+
     try {
-        val detection = withTimeoutOrNull(AFR_PREFLIGHT_PROBE_TIMEOUT_MS) {
+        val nextLibDetection = withTimeoutOrNull(AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS) {
             withContext(Dispatchers.IO) {
-                FrameRateUtils.detectFrameRateFromSource(
+                FrameRateUtils.detectFrameRateFromNextLib(
                     context = context,
                     sourceUrl = url,
-                    headers = headers
+                    headers = probeHeaders
                 )
+            }
+        }
+        val detection = if (nextLibDetection != null) {
+            nextLibDetection
+        } else {
+            Log.w(
+                PlayerRuntimeController.TAG,
+                "AFR preflight NextLib probe failed/timed out after ${AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS}ms; trying extractor fallback"
+            )
+            withTimeoutOrNull(AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS) {
+                withContext(Dispatchers.IO) {
+                    FrameRateUtils.detectFrameRateFromExtractor(
+                        context = context,
+                        sourceUrl = url,
+                        headers = probeHeaders
+                    )
+                }
             }
         }
 
         if (detection == null) {
             Log.w(
                 PlayerRuntimeController.TAG,
-                "AFR preflight probe timed out/failed after ${AFR_PREFLIGHT_PROBE_TIMEOUT_MS}ms"
+                "AFR preflight probe timed out/failed (NextLib + extractor fallback)"
             )
             return
         }

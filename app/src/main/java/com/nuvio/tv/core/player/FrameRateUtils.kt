@@ -31,6 +31,8 @@ object FrameRateUtils {
     private const val REFRESH_MATCH_MIN_TOLERANCE_HZ = 0.08f
     private const val NTSC_FILM_FPS = 24000f / 1001f
     private const val CINEMA_24_FPS = 24f
+    private const val MIN_VALID_VIDEO_FPS = 10f
+    private const val MAX_VALID_VIDEO_FPS = 120f
     private val NEXTLIB_HTTP_SCHEMES = setOf("http", "https")
     private val LIVE_STREAM_EXTENSIONS = listOf(".m3u8", ".mpd", ".ism/manifest")
     private const val MKV_EXTENSION = ".mkv"
@@ -289,13 +291,32 @@ object FrameRateUtils {
         return snapToStandardRate(measuredFps)
     }
 
+    private fun isValidVideoFrameRate(frameRate: Float): Boolean {
+        return frameRate.isFinite() && frameRate in MIN_VALID_VIDEO_FPS..MAX_VALID_VIDEO_FPS
+    }
+
     fun detectFrameRateFromSource(
         context: Context,
         sourceUrl: String,
         headers: Map<String, String> = emptyMap()
     ): FrameRateDetection? {
-        detectFrameRateWithNextLib(context, sourceUrl, headers)?.let { return it }
+        detectFrameRateFromNextLib(context, sourceUrl, headers)?.let { return it }
+        return detectFrameRateFromExtractor(context, sourceUrl, headers)
+    }
 
+    fun detectFrameRateFromNextLib(
+        context: Context,
+        sourceUrl: String,
+        headers: Map<String, String> = emptyMap()
+    ): FrameRateDetection? {
+        return detectFrameRateWithNextLib(context, sourceUrl, headers)
+    }
+
+    fun detectFrameRateFromExtractor(
+        context: Context,
+        sourceUrl: String,
+        headers: Map<String, String> = emptyMap()
+    ): FrameRateDetection? {
         if (isResolveProxyUrl(sourceUrl)) {
             val embeddedResolveUrl = extractEmbeddedResolveUrl(sourceUrl)
             if (!embeddedResolveUrl.isNullOrBlank()) {
@@ -336,7 +357,7 @@ object FrameRateUtils {
 
                 val video = mediaInfo.videoStream ?: return@forEach
                 val measured = video.frameRate.toFloat()
-                if (!measured.isFinite() || measured <= 0f) return@forEach
+                if (!isValidVideoFrameRate(measured)) return@forEach
 
                 return FrameRateDetection(
                     raw = measured,
@@ -365,19 +386,32 @@ object FrameRateUtils {
             }
 
             var videoTrackIndex = -1
+            var videoFormat: android.media.MediaFormat? = null
             for (i in 0 until extractor.trackCount) {
                 val format = extractor.getTrackFormat(i)
                 val mime = format.getString(android.media.MediaFormat.KEY_MIME)
                 if (mime?.startsWith("video/") == true) {
                     videoTrackIndex = i
+                    videoFormat = format
                     break
                 }
             }
             if (videoTrackIndex < 0) return null
 
+            val declaredFrameRate = videoFormat
+                ?.takeIf { it.containsKey(android.media.MediaFormat.KEY_FRAME_RATE) }
+                ?.runCatching { getFloat(android.media.MediaFormat.KEY_FRAME_RATE) }
+                ?.getOrNull()
+            if (declaredFrameRate != null && isValidVideoFrameRate(declaredFrameRate)) {
+                return FrameRateDetection(
+                    raw = declaredFrameRate,
+                    snapped = snapToStandardRate(declaredFrameRate)
+                )
+            }
+
             extractor.selectTrack(videoTrackIndex)
             val timestamps = ArrayList<Long>(400)
-            val ignoreSamples = 30
+            val ignoreSamples = 3
             val targetSamples = 350 + ignoreSamples
 
             while (timestamps.size < targetSamples) {
@@ -395,13 +429,13 @@ object FrameRateUtils {
             }
 
             val sampleCount = (timestamps.size - ignoreSamples - 1).coerceAtLeast(1)
-            if (sampleCount < 90) return null
+            if (sampleCount < 30) return null
 
             val averageFrameDurationUs = totalFrameDurationUs.toFloat() / sampleCount.toFloat()
             if (averageFrameDurationUs <= 0f) return null
 
             val measured = 1_000_000f / averageFrameDurationUs
-            if (measured < 10f || measured > 120f) return null
+            if (!isValidVideoFrameRate(measured)) return null
 
             FrameRateDetection(
                 raw = measured,

@@ -276,8 +276,9 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
 
     flushPlaybackSnapshotForSwitchOrExit()
 
-    val newHeaders = stream.behaviorHints?.proxyHeaders?.request.orEmpty()
-        .filterKeys { !it.equals("Range", ignoreCase = true) }
+    val newHeaders = PlayerMediaSourceFactory.sanitizeHeaders(
+        stream.behaviorHints?.proxyHeaders?.request
+    )
     currentStreamUrl = url
     currentHeaders = newHeaders
     currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
@@ -559,8 +560,9 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
 
     flushPlaybackSnapshotForSwitchOrExit()
 
-    val newHeaders = stream.behaviorHints?.proxyHeaders?.request.orEmpty()
-        .filterKeys { !it.equals("Range", ignoreCase = true) }
+    val newHeaders = PlayerMediaSourceFactory.sanitizeHeaders(
+        stream.behaviorHints?.proxyHeaders?.request
+    )
     val targetVideo = forcedTargetVideo
         ?: _uiState.value.episodes.firstOrNull { it.id == _uiState.value.episodeStreamsForVideoId }
 

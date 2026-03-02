@@ -91,6 +91,7 @@ internal fun PlaybackSettingsSections(
     trailerSettings: TrailerSettings,
     onShowPlayerPreferenceDialog: () -> Unit,
     onShowAudioLanguageDialog: () -> Unit,
+    onShowSecondaryAudioLanguageDialog: () -> Unit,
     onShowDecoderPriorityDialog: () -> Unit,
     onShowLanguageDialog: () -> Unit,
     onShowSecondaryLanguageDialog: () -> Unit,
@@ -327,6 +328,7 @@ internal fun PlaybackSettingsSections(
                 playerSettings = playerSettings,
                 trailerSettings = trailerSettings,
                 onShowAudioLanguageDialog = onShowAudioLanguageDialog,
+                onShowSecondaryAudioLanguageDialog = onShowSecondaryAudioLanguageDialog,
                 onShowDecoderPriorityDialog = onShowDecoderPriorityDialog,
                 onSetTrailerEnabled = onSetTrailerEnabled,
                 onSetTrailerDelaySeconds = onSetTrailerDelaySeconds,
@@ -481,6 +483,7 @@ internal fun PlaybackSettingsDialogsHost(
     showBackgroundColorDialog: Boolean,
     showOutlineColorDialog: Boolean,
     showAudioLanguageDialog: Boolean,
+    showSecondaryAudioLanguageDialog: Boolean,
     showDecoderPriorityDialog: Boolean,
     showStreamAutoPlayModeDialog: Boolean,
     showStreamAutoPlaySourceDialog: Boolean,
@@ -498,6 +501,7 @@ internal fun PlaybackSettingsDialogsHost(
     onSetSubtitleBackgroundColor: (Color) -> Unit,
     onSetSubtitleOutlineColor: (Color) -> Unit,
     onSetPreferredAudioLanguage: (String) -> Unit,
+    onSetSecondaryPreferredAudioLanguage: (String?) -> Unit,
     onSetDecoderPriority: (Int) -> Unit,
     onSetStreamAutoPlayMode: (com.nuvio.tv.data.local.StreamAutoPlayMode) -> Unit,
     onSetStreamAutoPlaySource: (com.nuvio.tv.data.local.StreamAutoPlaySource) -> Unit,
@@ -513,6 +517,7 @@ internal fun PlaybackSettingsDialogsHost(
     onDismissBackgroundColorDialog: () -> Unit,
     onDismissOutlineColorDialog: () -> Unit,
     onDismissAudioLanguageDialog: () -> Unit,
+    onDismissSecondaryAudioLanguageDialog: () -> Unit,
     onDismissDecoderPriorityDialog: () -> Unit,
     onDismissStreamAutoPlayModeDialog: () -> Unit,
     onDismissStreamAutoPlaySourceDialog: () -> Unit,
@@ -557,12 +562,16 @@ internal fun PlaybackSettingsDialogsHost(
 
     AudioSettingsDialogs(
         showAudioLanguageDialog = showAudioLanguageDialog,
+        showSecondaryAudioLanguageDialog = showSecondaryAudioLanguageDialog,
         showDecoderPriorityDialog = showDecoderPriorityDialog,
         selectedLanguage = playerSettings.preferredAudioLanguage,
+        selectedSecondaryLanguage = playerSettings.secondaryPreferredAudioLanguage,
         selectedPriority = playerSettings.decoderPriority,
         onSetPreferredAudioLanguage = onSetPreferredAudioLanguage,
+        onSetSecondaryPreferredAudioLanguage = onSetSecondaryPreferredAudioLanguage,
         onSetDecoderPriority = onSetDecoderPriority,
         onDismissAudioLanguageDialog = onDismissAudioLanguageDialog,
+        onDismissSecondaryAudioLanguageDialog = onDismissSecondaryAudioLanguageDialog,
         onDismissDecoderPriorityDialog = onDismissDecoderPriorityDialog
     )
 

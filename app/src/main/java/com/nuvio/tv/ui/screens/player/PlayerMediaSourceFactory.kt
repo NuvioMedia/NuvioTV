@@ -20,7 +20,7 @@ internal class PlayerMediaSourceFactory {
         headers: Map<String, String>,
         subtitleConfigurations: List<MediaItem.SubtitleConfiguration> = emptyList()
     ): MediaSource {
-        val sanitizedHeaders = headers.filterKeys { !it.equals("Range", ignoreCase = true) }
+        val sanitizedHeaders = sanitizeHeaders(headers)
         val okHttpFactory = OkHttpDataSource.Factory(getOrCreateOkHttpClient()).apply {
             setDefaultRequestProperties(sanitizedHeaders)
             setUserAgent(
@@ -88,11 +88,26 @@ internal class PlayerMediaSourceFactory {
     }
 
     companion object {
+        fun sanitizeHeaders(headers: Map<String, String>?): Map<String, String> {
+            val raw: Map<*, *> = headers ?: return emptyMap()
+            if (raw.isEmpty()) return emptyMap()
+
+            val sanitized = LinkedHashMap<String, String>(raw.size)
+            raw.forEach { (rawKey, rawValue) ->
+                val key = (rawKey as? String)?.trim().orEmpty()
+                val value = (rawValue as? String)?.trim().orEmpty()
+                if (key.isEmpty() || value.isEmpty()) return@forEach
+                if (key.equals("Range", ignoreCase = true)) return@forEach
+                sanitized[key] = value
+            }
+            return sanitized
+        }
+
         fun parseHeaders(headers: String?): Map<String, String> {
             if (headers.isNullOrEmpty()) return emptyMap()
 
             return try {
-                headers.split("&").associate { pair ->
+                val parsed = headers.split("&").associate { pair ->
                     val parts = pair.split("=", limit = 2)
                     if (parts.size == 2) {
                         URLDecoder.decode(parts[0], "UTF-8") to URLDecoder.decode(parts[1], "UTF-8")
@@ -100,6 +115,7 @@ internal class PlayerMediaSourceFactory {
                         "" to ""
                     }
                 }.filterKeys { it.isNotEmpty() }
+                sanitizeHeaders(parsed)
             } catch (_: Exception) {
                 emptyMap()
             }

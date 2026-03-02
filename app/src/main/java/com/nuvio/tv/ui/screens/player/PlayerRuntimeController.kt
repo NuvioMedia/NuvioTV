@@ -94,7 +94,8 @@ class PlayerRuntimeController(
         ?: initialStreamUrl.substringBefore('?').substringAfterLast('/', "")
             .takeIf { it.isNotBlank() && it.contains('.') }
     internal var currentStreamUrl: String = initialStreamUrl
-    internal var currentHeaders: Map<String, String> = PlayerMediaSourceFactory.parseHeaders(headersJson)
+    internal var currentHeaders: Map<String, String> =
+        PlayerMediaSourceFactory.sanitizeHeaders(PlayerMediaSourceFactory.parseHeaders(headersJson))
 
     fun getCurrentStreamUrl(): String = currentStreamUrl
     fun getCurrentHeaders(): Map<String, String> = currentHeaders
