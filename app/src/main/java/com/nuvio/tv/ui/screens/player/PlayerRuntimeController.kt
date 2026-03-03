@@ -191,6 +191,11 @@ class PlayerRuntimeController(
     internal var lastBufferLogTimeMs: Long = 0L
     internal var lastVodTelemetryRefreshTimeMs: Long = 0L
     internal var cachedVodCacheLogState: String = "vod=warming"
+    internal var bufferLogsEnabled: Boolean = false
+    internal var lastProgressUiUpdateUptimeMs: Long = 0L
+    internal var lastSkipIntervalEvaluationUptimeMs: Long = 0L
+    internal var lastNextEpisodeEvaluationUptimeMs: Long = 0L
+    internal var bufferLogJob: Job? = null
     
     internal var loudnessEnhancer: LoudnessEnhancer? = null
     internal var trackSelector: DefaultTrackSelector? = null

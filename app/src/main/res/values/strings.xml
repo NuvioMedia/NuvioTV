@@ -499,6 +499,8 @@
     <string name="debug_account_tab_subtitle">Show the Account tab in Settings navigation</string>
     <string name="debug_sync_code_title">Sync Code Features</string>
     <string name="debug_sync_code_subtitle">Show Generate/Enter Sync Code buttons in Account settings</string>
+    <string name="debug_buffer_logs_title">Enable BUFFER Logs</string>
+    <string name="debug_buffer_logs_subtitle">Emit periodic player buffer diagnostics to logcat (disabled by default)</string>
     <string name="debug_section_account">Account</string>
     <string name="debug_manual_signin_title">Manual Sign In</string>
     <string name="debug_manual_signin_subtitle">Sign in with email and password (Supabase auth)</string>

@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.os.SystemClock
 import android.util.Log
 import androidx.media3.common.Player
 import com.nuvio.tv.core.player.DoviBridge
@@ -21,29 +22,45 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
     progressJob = scope.launch {
         while (isActive) {
             _exoPlayer?.let { player ->
+                val nowUptime = SystemClock.uptimeMillis()
                 val pos = player.currentPosition.coerceAtLeast(0L)
                 val playerDuration = player.duration
                 if (playerDuration > lastKnownDuration) {
                     lastKnownDuration = playerDuration
                 }
                 val displayPosition = pendingPreviewSeekPosition ?: pos
-                _uiState.update {
-                    it.copy(
-                        currentPosition = displayPosition,
-                        duration = playerDuration.coerceAtLeast(0L)
+                val controlsVisible = _uiState.value.showControls
+                val progressUpdateIntervalMs =
+                    if (controlsVisible || pendingPreviewSeekPosition != null) 500L else 1_000L
+                if (
+                    nowUptime - lastProgressUiUpdateUptimeMs >= progressUpdateIntervalMs ||
+                    _uiState.value.currentPosition != displayPosition ||
+                    _uiState.value.duration != playerDuration.coerceAtLeast(0L)
+                ) {
+                    lastProgressUiUpdateUptimeMs = nowUptime
+                    _uiState.update {
+                        it.copy(
+                            currentPosition = displayPosition,
+                            duration = playerDuration.coerceAtLeast(0L)
+                        )
+                    }
+                }
+                if (nowUptime - lastSkipIntervalEvaluationUptimeMs >= 1_000L) {
+                    lastSkipIntervalEvaluationUptimeMs = nowUptime
+                    updateActiveSkipInterval(pos)
+                }
+                if (nowUptime - lastNextEpisodeEvaluationUptimeMs >= 1_000L) {
+                    lastNextEpisodeEvaluationUptimeMs = nowUptime
+                    evaluateNextEpisodeCardVisibility(
+                        positionMs = pos,
+                        durationMs = playerDuration.coerceAtLeast(0L)
                     )
                 }
-                updateActiveSkipInterval(pos)
-                evaluateNextEpisodeCardVisibility(
-                    positionMs = pos,
-                    durationMs = playerDuration.coerceAtLeast(0L)
-                )
 
-                
-                if (player.isPlaying) {
+                if (player.isPlaying && bufferLogsEnabled) {
                     val now = System.currentTimeMillis()
                     maybeRefreshVodTelemetry(now)
-                    if (now - lastBufferLogTimeMs >= 30_000) {
+                    if (now - lastBufferLogTimeMs >= 30_000 && bufferLogJob?.isActive != true) {
                         lastBufferLogTimeMs = now
                         val bufAhead = (player.bufferedPosition - player.currentPosition) / 1000
                         val loading = player.isLoading
@@ -59,26 +76,30 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                             hasAttemptedDv7ToDv81ForCurrentPlayback ||
                                 conversionCalls > 0 ||
                                 signalingRewrites > 0
-                        val dv7doviState = buildString {
-                            append("dv7dovi=")
-                            append(if (isExperimentalDv7ToDv81ActiveForCurrentPlayback) "on" else "off")
-                            append(",attempted=")
-                            append(if (conversionAttempted) "yes" else "no")
-                            append(",signalRewrites=")
-                            append(signalingRewrites)
-                            append(",calls=")
-                            append(conversionCalls)
-                            append(",success=")
-                            append(conversionSuccess)
-                            append(",hook=")
-                            append(if (DoviBridge.isExtractorHookReadyInBuild) "ready" else "missing")
-                            append(",reason=")
-                            append(dv7ToDv81LastProbeReasonForCurrentPlayback ?: "n/a")
+                        val experimentalDvEnabled = isExperimentalDv7ToDv81ActiveForCurrentPlayback
+                        val dv7ProbeReason = dv7ToDv81LastProbeReasonForCurrentPlayback ?: "n/a"
+                        bufferLogJob = scope.launch(Dispatchers.Default) {
+                            val dv7doviState = buildString {
+                                append("dv7dovi=")
+                                append(if (experimentalDvEnabled) "on" else "off")
+                                append(",attempted=")
+                                append(if (conversionAttempted) "yes" else "no")
+                                append(",signalRewrites=")
+                                append(signalingRewrites)
+                                append(",calls=")
+                                append(conversionCalls)
+                                append(",success=")
+                                append(conversionSuccess)
+                                append(",hook=")
+                                append(if (DoviBridge.isExtractorHookReadyInBuild) "ready" else "missing")
+                                append(",reason=")
+                                append(dv7ProbeReason)
+                            }
+                            Log.d(
+                                PlayerRuntimeController.TAG,
+                                "BUFFER: ahead=${bufAhead}s, loading=$loading, heap=${usedMb}/${maxMb}MB, pos=${pos / 1000}s, $vodCache, $dv7doviState"
+                            )
                         }
-                        Log.d(
-                            PlayerRuntimeController.TAG,
-                            "BUFFER: ahead=${bufAhead}s, loading=$loading, heap=${usedMb}/${maxMb}MB, pos=${pos / 1000}s, $vodCache, $dv7doviState"
-                        )
                     }
                 }
             }
@@ -92,6 +113,8 @@ internal fun PlayerRuntimeController.stopProgressUpdates() {
     progressJob = null
     vodTelemetryJob?.cancel()
     vodTelemetryJob = null
+    bufferLogJob?.cancel()
+    bufferLogJob = null
 }
 
 internal fun PlayerRuntimeController.startWatchProgressSaving() {

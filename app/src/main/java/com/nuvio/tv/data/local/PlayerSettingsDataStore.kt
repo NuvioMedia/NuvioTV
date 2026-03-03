@@ -167,7 +167,8 @@ data class PlayerSettings(
     val useParallelConnections: Boolean = DEFAULT_USE_PARALLEL_CONNECTIONS,
     val parallelConnectionCount: Int = DEFAULT_PARALLEL_CONNECTION_COUNT,
     val parallelChunkSizeMb: Int = DEFAULT_PARALLEL_CHUNK_SIZE_MB,
-    val addonSubtitleStartupMode: AddonSubtitleStartupMode = AddonSubtitleStartupMode.ALL_SUBTITLES
+    val addonSubtitleStartupMode: AddonSubtitleStartupMode = AddonSubtitleStartupMode.ALL_SUBTITLES,
+    val enableBufferLogs: Boolean = false
 ) {
     companion object {
         const val DEFAULT_VOD_CACHE_SIZE_MB = 500
@@ -300,6 +301,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val parallelConnectionCountKey = intPreferencesKey("parallel_connection_count")
     private val parallelChunkSizeMbKey = intPreferencesKey("parallel_chunk_size_mb")
     private val addonSubtitleStartupModeKey = stringPreferencesKey("addon_subtitle_startup_mode")
+    private val enableBufferLogsKey = booleanPreferencesKey("enable_buffer_logs")
 
     // Subtitle style settings keys
     private val subtitlePreferredLanguageKey = stringPreferencesKey("subtitle_preferred_language")
@@ -494,6 +496,7 @@ class PlayerSettingsDataStore @Inject constructor(
                     PlayerSettings.MAX_PARALLEL_CHUNK_SIZE_MB
                 ),
                 addonSubtitleStartupMode = parseAddonSubtitleStartupMode(prefs[addonSubtitleStartupModeKey]),
+                enableBufferLogs = prefs[enableBufferLogsKey] ?: false,
                 subtitleStyle = SubtitleStyleSettings(
                     preferredLanguage = normalizeSelectableLanguageCode(
                         prefs[subtitlePreferredLanguageKey] ?: "en"
@@ -630,6 +633,12 @@ class PlayerSettingsDataStore @Inject constructor(
         setFrameRateMatchingMode(
             if (enabled) FrameRateMatchingMode.START_STOP else FrameRateMatchingMode.OFF
         )
+    }
+
+    suspend fun setEnableBufferLogs(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[enableBufferLogsKey] = enabled
+        }
     }
 
     suspend fun setStreamAutoPlayMode(mode: StreamAutoPlayMode) {
