@@ -464,39 +464,16 @@ class PlayerSettingsDataStore @Inject constructor(
                     outlineWidth = prefs[subtitleOutlineWidthKey] ?: 2
                 ),
                 bufferSettings = BufferSettings(
-                    minBufferMs = prefs[minBufferMsKey] ?: 50_000,
-                    maxBufferMs = prefs[maxBufferMsKey] ?: 50_000,
-                    bufferForPlaybackMs = prefs[bufferForPlaybackMsKey] ?: 2_500,
-                    bufferForPlaybackAfterRebufferMs = prefs[bufferForPlaybackAfterRebufferMsKey] ?: 5_000,
-                    targetBufferSizeMb = prefs[targetBufferSizeMbKey] ?: 0,
-                    backBufferDurationMs = prefs[backBufferDurationMsKey] ?: 0,
-                    retainBackBufferFromKeyframe = prefs[retainBackBufferFromKeyframeKey] ?: false
-                useParallelConnections = prefs[useParallelConnectionsKey] ?: PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS,
-            parallelConnectionCount = (prefs[parallelConnectionCountKey] ?: PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT),
-            parallelChunkSizeMb = (prefs[parallelChunkSizeMbKey] ?: PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB),
-            subtitleStyle = SubtitleStyleSettings(
-                preferredLanguage = normalizeSelectableLanguageCode(
-                    prefs[subtitlePreferredLanguageKey] ?: "en"
-                ),
-                secondaryPreferredLanguage = prefs[subtitleSecondaryLanguageKey]
-                    ?.let(::normalizeSelectableLanguageCode),
-                size = prefs[subtitleSizeKey] ?: 100,
-                verticalOffset = prefs[subtitleVerticalOffsetKey] ?: 5,
-                bold = prefs[subtitleBoldKey] ?: false,
-                textColor = prefs[subtitleTextColorKey] ?: Color.White.toArgb(),
-                backgroundColor = prefs[subtitleBackgroundColorKey] ?: Color.Transparent.toArgb(),
-                outlineEnabled = prefs[subtitleOutlineEnabledKey] ?: true,
-                outlineColor = prefs[subtitleOutlineColorKey] ?: Color.Black.toArgb(),
-                outlineWidth = prefs[subtitleOutlineWidthKey] ?: 2
-            ),
-            bufferSettings = BufferSettings(
-                minBufferMs = prefs[minBufferMsKey] ?: BufferSettings.DEFAULT_MIN_BUFFER_MS,
+                    minBufferMs = prefs[minBufferMsKey] ?: BufferSettings.DEFAULT_MIN_BUFFER_MS,
                     maxBufferMs = prefs[maxBufferMsKey] ?: BufferSettings.DEFAULT_MAX_BUFFER_MS,
                     bufferForPlaybackMs = prefs[bufferForPlaybackMsKey] ?: BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
                     bufferForPlaybackAfterRebufferMs = prefs[bufferForPlaybackAfterRebufferMsKey] ?: BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS,
-                targetBufferSizeMb = prefs[targetBufferSizeMbKey]?.coerceAtLeast(50) ?: BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB,
+                    targetBufferSizeMb = prefs[targetBufferSizeMbKey]?.coerceAtLeast(50) ?: BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB,
                     backBufferDurationMs = prefs[backBufferDurationMsKey] ?: BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS,
-                )
+                ),
+                useParallelConnections = prefs[useParallelConnectionsKey] ?: PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS,
+                parallelConnectionCount = (prefs[parallelConnectionCountKey] ?: PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT),
+                parallelChunkSizeMb = (prefs[parallelChunkSizeMbKey] ?: PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB)
             )
         }
     }
