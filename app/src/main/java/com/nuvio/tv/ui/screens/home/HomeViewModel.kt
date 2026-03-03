@@ -191,6 +191,8 @@ class HomeViewModel @Inject constructor(
     private suspend fun loadAllCatalogs(addons: List<Addon>, forceReload: Boolean = false) =
         loadAllCatalogsPipeline(addons, forceReload)
 
+    internal fun silentRefreshCatalogs() = silentRefreshAllCatalogsPipeline()
+
     private fun loadCatalog(addon: Addon, catalog: CatalogDescriptor, generation: Long) =
         loadCatalogPipeline(addon, catalog, generation)
 

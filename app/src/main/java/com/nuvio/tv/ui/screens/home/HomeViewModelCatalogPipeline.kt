@@ -150,6 +150,42 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
     }
 }
 
+internal fun HomeViewModel.silentRefreshAllCatalogsPipeline() {
+    val addons = addonsCache
+    if (addons.isEmpty()) return
+
+    Log.d(HomeViewModel.TAG, "Silently refreshing catalogs related to library/watchlist")
+    
+    val generation = catalogLoadGeneration
+    val catalogsToLoad = addons.flatMap { addon ->
+        addon.catalogs
+            .filterNot {
+                it.isSearchOnlyCatalog() || isCatalogDisabled(
+                    addonBaseUrl = addon.baseUrl,
+                    addonId = addon.id,
+                    type = it.apiType,
+                    catalogId = it.id,
+                    catalogName = it.name
+                )
+            }
+            .filter { catalog ->
+                addon.id.contains("trakt", ignoreCase = true) ||
+                catalog.id.contains("watchlist", ignoreCase = true) ||
+                catalog.name.contains("watchlist", ignoreCase = true) ||
+                catalog.id.contains("library", ignoreCase = true) ||
+                catalog.name.contains("library", ignoreCase = true)
+            }
+            .map { catalog -> addon to catalog }
+    }
+    
+    pendingCatalogLoads += catalogsToLoad.size
+    
+    catalogsToLoad.forEach { (addon, catalog) ->
+        catalogRepository.clearCacheForAddonAndCatalog(addon.id, catalog.apiType, catalog.id)
+        loadCatalogPipeline(addon, catalog, generation)
+    }
+}
+
 internal fun HomeViewModel.loadCatalogPipeline(
     addon: Addon,
     catalog: CatalogDescriptor,

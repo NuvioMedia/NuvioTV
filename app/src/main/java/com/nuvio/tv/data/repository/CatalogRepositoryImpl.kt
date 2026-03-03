@@ -25,6 +25,17 @@ class CatalogRepositoryImpl @Inject constructor(
 
     private val catalogCache = ConcurrentHashMap<String, CatalogRow>()
 
+    override fun clearCacheForAddonAndCatalog(addonId: String, type: String, catalogId: String) {
+        val iterator = catalogCache.entries.iterator()
+        while (iterator.hasNext()) {
+            val row = iterator.next().value
+            if (row.addonId == addonId && row.rawType == type && row.catalogId == catalogId) {
+                iterator.remove()
+            }
+        }
+        Log.d(TAG, "Catalog cache cleared for $addonId / $type / $catalogId")
+    }
+
     override fun getCatalog(
         addonBaseUrl: String,
         addonId: String,

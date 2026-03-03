@@ -64,6 +64,19 @@ internal fun HomeViewModel.observeLibraryState() {
                 }
             }
     }
+
+    viewModelScope.launch {
+        var previouxHash = 0
+        libraryRepository.libraryItems
+            .distinctUntilChanged()
+            .collectLatest { items ->
+                val currentHash = items.hashCode()
+                if (previouxHash != 0 && previouxHash != currentHash) {
+                    silentRefreshCatalogs()
+                }
+                previouxHash = currentHash
+            }
+    }
 }
 
 fun HomeViewModel.togglePosterLibrary(item: MetaPreview, addonBaseUrl: String?) {
