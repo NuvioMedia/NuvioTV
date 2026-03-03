@@ -6,7 +6,6 @@
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
-    id("io.sentry.android.gradle") version "6.0.0"
 }
 
 import java.util.Properties
@@ -33,8 +32,8 @@ android {
         applicationId = "com.nuvio.tv"
         minSdk = 26
         targetSdk = 36
-        versionCode = 25
-        versionName = "0.4.7-beta"
+        versionCode = 27
+        versionName = "0.4.9-beta"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")

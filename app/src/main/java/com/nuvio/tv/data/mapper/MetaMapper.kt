@@ -46,7 +46,8 @@ fun MetaDto.toDomain(episodeLabel: String = "Episode"): Meta {
         country = country,
         awards = awards,
         language = language,
-        links = links?.mapNotNull { it.toDomain() } ?: emptyList()
+        links = links?.mapNotNull { it.toDomain() } ?: emptyList(),
+        trailerYtIds = trailerStreams?.mapNotNull { it.ytId?.takeIf { id -> id.isNotBlank() } } ?: emptyList()
     )
 }
 

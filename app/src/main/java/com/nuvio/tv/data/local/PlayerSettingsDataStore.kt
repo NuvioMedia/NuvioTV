@@ -143,6 +143,7 @@ data class PlayerSettings(
     val tunnelingEnabled: Boolean = false,
     val skipSilence: Boolean = false,
     val preferredAudioLanguage: String = AudioLanguageOption.DEVICE,
+    val secondaryPreferredAudioLanguage: String? = null,
     val loadingOverlayEnabled: Boolean = true,
     val pauseOverlayEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
@@ -151,6 +152,7 @@ data class PlayerSettings(
     val mapDV7ToHevc: Boolean = false,
     // Display settings
     val frameRateMatchingMode: FrameRateMatchingMode = FrameRateMatchingMode.OFF,
+    val resolutionMatchingEnabled: Boolean = false,
     // Stream selection settings
     val streamAutoPlayMode: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL,
     val streamAutoPlaySource: StreamAutoPlaySource = StreamAutoPlaySource.ALL_SOURCES,
@@ -158,13 +160,14 @@ data class PlayerSettings(
     val streamAutoPlaySelectedPlugins: Set<String> = emptySet(),
     val streamAutoPlayRegex: String = "",
     val streamAutoPlayNextEpisodeEnabled: Boolean = false,
-    val streamAutoPlayPreferBingeGroupForNextEpisode: Boolean = false,
+    val streamAutoPlayPreferBingeGroupForNextEpisode: Boolean = true,
     val nextEpisodeThresholdMode: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE,
-    val nextEpisodeThresholdPercent: Float = 98f,
+    val nextEpisodeThresholdPercent: Float = 99f,
     val nextEpisodeThresholdMinutesBeforeEnd: Float = 2f,
     val streamReuseLastLinkEnabled: Boolean = false,
     val streamReuseLastLinkCacheHours: Int = 24,
     val subtitleOrganizationMode: SubtitleOrganizationMode = SubtitleOrganizationMode.NONE,
+    val addonSubtitleStartupMode: AddonSubtitleStartupMode = AddonSubtitleStartupMode.ALL_SUBTITLES,
     // Networking
     val useParallelConnections: Boolean = DEFAULT_USE_PARALLEL_CONNECTIONS,
     val parallelConnectionCount: Int = DEFAULT_PARALLEL_CONNECTION_COUNT,
@@ -204,6 +207,12 @@ enum class SubtitleOrganizationMode {
     NONE,
     BY_LANGUAGE,
     BY_ADDON
+}
+
+enum class AddonSubtitleStartupMode {
+    FAST_STARTUP,
+    PREFERRED_ONLY,
+    ALL_SUBTITLES
 }
 
 enum class PlayerPreference {
@@ -251,6 +260,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val tunnelingEnabledKey = booleanPreferencesKey("tunneling_enabled")
     private val skipSilenceKey = booleanPreferencesKey("skip_silence")
     private val preferredAudioLanguageKey = stringPreferencesKey("preferred_audio_language")
+    private val secondaryPreferredAudioLanguageKey = stringPreferencesKey("secondary_preferred_audio_language")
     private val loadingOverlayEnabledKey = booleanPreferencesKey("loading_overlay_enabled")
     private val pauseOverlayEnabledKey = booleanPreferencesKey("pause_overlay_enabled")
     private val osdClockEnabledKey = booleanPreferencesKey("osd_clock_enabled")
@@ -258,6 +268,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val mapDV7ToHevcKey = booleanPreferencesKey("map_dv7_to_hevc")
     private val frameRateMatchingKey = booleanPreferencesKey("frame_rate_matching")
     private val frameRateMatchingModeKey = stringPreferencesKey("frame_rate_matching_mode")
+    private val resolutionMatchingEnabledKey = booleanPreferencesKey("resolution_matching_enabled")
     private val streamAutoPlayModeKey = stringPreferencesKey("stream_auto_play_mode")
     private val streamAutoPlaySourceKey = stringPreferencesKey("stream_auto_play_source")
     private val streamAutoPlaySelectedAddonsKey = stringSetPreferencesKey("stream_auto_play_selected_addons")
@@ -273,6 +284,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val streamReuseLastLinkEnabledKey = booleanPreferencesKey("stream_reuse_last_link_enabled")
     private val streamReuseLastLinkCacheHoursKey = intPreferencesKey("stream_reuse_last_link_cache_hours")
     private val subtitleOrganizationModeKey = stringPreferencesKey("subtitle_organization_mode")
+    private val addonSubtitleStartupModeKey = stringPreferencesKey("addon_subtitle_startup_mode")
 
     // Networking keys
     private val useParallelConnectionsKey = booleanPreferencesKey("use_parallel_connections")
@@ -335,6 +347,19 @@ class PlayerSettingsDataStore @Inject constructor(
                     }
                 }
 
+                val secondaryPreferredAudioLanguage = prefs[secondaryPreferredAudioLanguageKey]
+                if (secondaryPreferredAudioLanguage != null) {
+                    val normalizedSecondaryPreferredAudioLanguage =
+                        normalizeSecondaryAudioLanguageCode(secondaryPreferredAudioLanguage)
+                    if (normalizedSecondaryPreferredAudioLanguage != secondaryPreferredAudioLanguage) {
+                        if (normalizedSecondaryPreferredAudioLanguage != null) {
+                            prefs[secondaryPreferredAudioLanguageKey] = normalizedSecondaryPreferredAudioLanguage
+                        } else {
+                            prefs.remove(secondaryPreferredAudioLanguageKey)
+                        }
+                    }
+                }
+
                 val preferredSubtitleLanguage = prefs[subtitlePreferredLanguageKey]
                 if (preferredSubtitleLanguage != null) {
                     val normalizedPreferredSubtitleLanguage =
@@ -375,6 +400,8 @@ class PlayerSettingsDataStore @Inject constructor(
                 preferredAudioLanguage = normalizeSelectableLanguageCode(
                     prefs[preferredAudioLanguageKey] ?: AudioLanguageOption.DEVICE
                 ),
+                secondaryPreferredAudioLanguage = prefs[secondaryPreferredAudioLanguageKey]
+                    ?.let(::normalizeSecondaryAudioLanguageCode),
                 loadingOverlayEnabled = prefs[loadingOverlayEnabledKey] ?: true,
                 pauseOverlayEnabled = prefs[pauseOverlayEnabledKey] ?: true,
                 osdClockEnabled = prefs[osdClockEnabledKey] ?: true,
@@ -387,6 +414,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 } else {
                     FrameRateMatchingMode.OFF
                 },
+                resolutionMatchingEnabled = prefs[resolutionMatchingEnabledKey] ?: false,
                 streamAutoPlayMode = prefs[streamAutoPlayModeKey]?.let {
                     runCatching { StreamAutoPlayMode.valueOf(it) }.getOrDefault(StreamAutoPlayMode.MANUAL)
                 } ?: StreamAutoPlayMode.MANUAL,
@@ -398,14 +426,14 @@ class PlayerSettingsDataStore @Inject constructor(
                 streamAutoPlayRegex = prefs[streamAutoPlayRegexKey] ?: "",
                 streamAutoPlayNextEpisodeEnabled = prefs[streamAutoPlayNextEpisodeEnabledKey] ?: false,
                 streamAutoPlayPreferBingeGroupForNextEpisode =
-                    prefs[streamAutoPlayPreferBingeGroupForNextEpisodeKey] ?: false,
+                    prefs[streamAutoPlayPreferBingeGroupForNextEpisodeKey] ?: true,
                 nextEpisodeThresholdMode = prefs[nextEpisodeThresholdModeKey]?.let {
                     runCatching { NextEpisodeThresholdMode.valueOf(it) }.getOrDefault(NextEpisodeThresholdMode.PERCENTAGE)
                 } ?: NextEpisodeThresholdMode.PERCENTAGE,
                 nextEpisodeThresholdPercent = normalizeHalfStep(
                     value = prefs[nextEpisodeThresholdPercentKey]
                         ?: prefs[nextEpisodeThresholdPercentLegacyKey]?.toFloat()
-                        ?: 98f,
+                        ?: 99f,
                     min = 97f,
                     max = 99.5f
                 ),
@@ -419,6 +447,30 @@ class PlayerSettingsDataStore @Inject constructor(
                 streamReuseLastLinkEnabled = prefs[streamReuseLastLinkEnabledKey] ?: false,
                 streamReuseLastLinkCacheHours = (prefs[streamReuseLastLinkCacheHoursKey] ?: 24).coerceIn(1, 168),
                 subtitleOrganizationMode = parseSubtitleOrganizationMode(prefs[subtitleOrganizationModeKey]),
+                addonSubtitleStartupMode = parseAddonSubtitleStartupMode(prefs[addonSubtitleStartupModeKey]),
+                subtitleStyle = SubtitleStyleSettings(
+                    preferredLanguage = normalizeSelectableLanguageCode(
+                        prefs[subtitlePreferredLanguageKey] ?: "en"
+                    ),
+                    secondaryPreferredLanguage = prefs[subtitleSecondaryLanguageKey]
+                        ?.let(::normalizeSelectableLanguageCode),
+                    size = prefs[subtitleSizeKey] ?: 100,
+                    verticalOffset = prefs[subtitleVerticalOffsetKey] ?: 5,
+                    bold = prefs[subtitleBoldKey] ?: false,
+                    textColor = prefs[subtitleTextColorKey] ?: Color.White.toArgb(),
+                    backgroundColor = prefs[subtitleBackgroundColorKey] ?: Color.Transparent.toArgb(),
+                    outlineEnabled = prefs[subtitleOutlineEnabledKey] ?: true,
+                    outlineColor = prefs[subtitleOutlineColorKey] ?: Color.Black.toArgb(),
+                    outlineWidth = prefs[subtitleOutlineWidthKey] ?: 2
+                ),
+                bufferSettings = BufferSettings(
+                    minBufferMs = prefs[minBufferMsKey] ?: 50_000,
+                    maxBufferMs = prefs[maxBufferMsKey] ?: 50_000,
+                    bufferForPlaybackMs = prefs[bufferForPlaybackMsKey] ?: 2_500,
+                    bufferForPlaybackAfterRebufferMs = prefs[bufferForPlaybackAfterRebufferMsKey] ?: 5_000,
+                    targetBufferSizeMb = prefs[targetBufferSizeMbKey] ?: 0,
+                    backBufferDurationMs = prefs[backBufferDurationMsKey] ?: 0,
+                    retainBackBufferFromKeyframe = prefs[retainBackBufferFromKeyframeKey] ?: false
                 useParallelConnections = prefs[useParallelConnectionsKey] ?: PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS,
             parallelConnectionCount = (prefs[parallelConnectionCountKey] ?: PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT),
             parallelChunkSizeMb = (prefs[parallelChunkSizeMbKey] ?: PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB),
@@ -505,6 +557,19 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setSecondaryPreferredAudioLanguage(language: String?) {
+        store().edit { prefs ->
+            val normalizedLanguage = language
+                ?.takeIf { it.isNotBlank() }
+                ?.let(::normalizeSecondaryAudioLanguageCode)
+            if (normalizedLanguage != null) {
+                prefs[secondaryPreferredAudioLanguageKey] = normalizedLanguage
+            } else {
+                prefs.remove(secondaryPreferredAudioLanguageKey)
+            }
+        }
+    }
+
     suspend fun setPauseOverlayEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[pauseOverlayEnabledKey] = enabled
@@ -533,6 +598,12 @@ class PlayerSettingsDataStore @Inject constructor(
         store().edit { prefs ->
             prefs[frameRateMatchingModeKey] = mode.name
             prefs[frameRateMatchingKey] = mode != FrameRateMatchingMode.OFF
+        }
+    }
+
+    suspend fun setResolutionMatchingEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[resolutionMatchingEnabledKey] = enabled
         }
     }
 
@@ -633,12 +704,27 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setAddonSubtitleStartupMode(mode: AddonSubtitleStartupMode) {
+        store().edit { prefs ->
+            prefs[addonSubtitleStartupModeKey] = mode.name
+        }
+    }
+
     private fun parseSubtitleOrganizationMode(value: String?): SubtitleOrganizationMode {
         return when (value) {
             null, "NONE" -> SubtitleOrganizationMode.NONE
             "BY_LANGUAGE" -> SubtitleOrganizationMode.BY_LANGUAGE
             "BY_ADDON" -> SubtitleOrganizationMode.BY_ADDON
             else -> SubtitleOrganizationMode.NONE
+        }
+    }
+
+    private fun parseAddonSubtitleStartupMode(value: String?): AddonSubtitleStartupMode {
+        return when (value) {
+            null, "ALL_SUBTITLES" -> AddonSubtitleStartupMode.ALL_SUBTITLES
+            "PREFERRED_ONLY" -> AddonSubtitleStartupMode.PREFERRED_ONLY
+            "FAST_STARTUP" -> AddonSubtitleStartupMode.FAST_STARTUP
+            else -> AddonSubtitleStartupMode.ALL_SUBTITLES
         }
     }
 
@@ -649,6 +735,16 @@ class PlayerSettingsDataStore @Inject constructor(
             "pt-pt", "pt_pt", "por" -> "pt"
             "forced", "force", "forc" -> SUBTITLE_LANGUAGE_FORCED
             else -> code
+        }
+    }
+
+    private fun normalizeSecondaryAudioLanguageCode(language: String): String? {
+        val normalized = normalizeSelectableLanguageCode(language)
+        return when (normalized) {
+            AudioLanguageOption.DEFAULT,
+            AudioLanguageOption.DEVICE,
+            SUBTITLE_LANGUAGE_FORCED -> null
+            else -> normalized
         }
     }
 

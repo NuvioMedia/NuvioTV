@@ -4,6 +4,7 @@ import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
 import com.nuvio.tv.data.local.StreamAutoPlayMode
+import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.components.SourceChipItem
@@ -276,8 +277,9 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
 
     flushPlaybackSnapshotForSwitchOrExit()
 
-    val newHeaders = stream.behaviorHints?.proxyHeaders?.request.orEmpty()
-        .filterKeys { !it.equals("Range", ignoreCase = true) }
+    val newHeaders = PlayerMediaSourceFactory.sanitizeHeaders(
+        stream.behaviorHints?.proxyHeaders?.request
+    )
     currentStreamUrl = url
     currentHeaders = newHeaders
     currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
@@ -289,8 +291,10 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
     pendingAddonSubtitleLanguage = null
     pendingAddonSubtitleTrackId = null
     pendingAudioSelectionAfterSubtitleRefresh = null
+    attachedAddonSubtitleKeys = emptySet()
     hasRetriedCurrentStreamAfter416 = false
     lastSavedPosition = 0L
+    _exoPlayer?.stop()
     resetLoadingOverlayForNewStream()
 
     _uiState.update {
@@ -318,7 +322,8 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
                 runAfrPreflightIfEnabled(
                     url = url,
                     headers = newHeaders,
-                    frameRateMatchingMode = playerSettings.frameRateMatchingMode
+                    frameRateMatchingMode = playerSettings.frameRateMatchingMode,
+                    resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
                 )
                 player.setMediaSource(mediaSourceFactory.createMediaSource(url, newHeaders))
                 player.playWhenReady = true
@@ -559,8 +564,9 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
 
     flushPlaybackSnapshotForSwitchOrExit()
 
-    val newHeaders = stream.behaviorHints?.proxyHeaders?.request.orEmpty()
-        .filterKeys { !it.equals("Range", ignoreCase = true) }
+    val newHeaders = PlayerMediaSourceFactory.sanitizeHeaders(
+        stream.behaviorHints?.proxyHeaders?.request
+    )
     val targetVideo = forcedTargetVideo
         ?: _uiState.value.episodes.firstOrNull { it.id == _uiState.value.episodeStreamsForVideoId }
 
@@ -575,6 +581,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
     pendingAddonSubtitleLanguage = null
     pendingAddonSubtitleTrackId = null
     pendingAudioSelectionAfterSubtitleRefresh = null
+    attachedAddonSubtitleKeys = emptySet()
     hasRetriedCurrentStreamAfter416 = false
     currentVideoId = targetVideo?.id ?: _uiState.value.episodeStreamsForVideoId ?: currentVideoId
     currentSeason = targetVideo?.season ?: _uiState.value.episodeStreamsSeason ?: currentSeason
@@ -583,6 +590,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
     refreshScrobbleItem()
 
     lastSavedPosition = 0L
+    _exoPlayer?.stop()
     resetLoadingOverlayForNewStream()
 
     _uiState.update {
@@ -592,7 +600,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
             currentSeason = currentSeason,
             currentEpisode = currentEpisode,
             currentEpisodeTitle = currentEpisodeTitle,
-            currentStreamName = stream.name ?: stream.addonName, 
+            currentStreamName = stream.name ?: stream.addonName,
             currentStreamUrl = url,
             audioTracks = emptyList(),
             subtitleTracks = emptyList(),
@@ -638,7 +646,8 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
                 runAfrPreflightIfEnabled(
                     url = url,
                     headers = newHeaders,
-                    frameRateMatchingMode = playerSettings.frameRateMatchingMode
+                    frameRateMatchingMode = playerSettings.frameRateMatchingMode,
+                    resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
                 )
                 player.setMediaSource(mediaSourceFactory.createMediaSource(url, newHeaders))
                 player.playWhenReady = true
@@ -689,7 +698,13 @@ internal fun PlayerRuntimeController.playNextEpisode() {
     nextEpisodeAutoPlayJob = scope.launch {
         try {
             val playerSettings = playerSettingsDataStore.playerSettings.first()
-            if (playerSettings.streamAutoPlayMode == StreamAutoPlayMode.MANUAL) {
+            val shouldAutoSelectInManualMode =
+                playerSettings.streamAutoPlayMode == StreamAutoPlayMode.MANUAL &&
+                    (
+                        playerSettings.streamAutoPlayNextEpisodeEnabled ||
+                            playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode
+                        )
+            if (playerSettings.streamAutoPlayMode == StreamAutoPlayMode.MANUAL && !shouldAutoSelectInManualMode) {
                 _uiState.update {
                     it.copy(
                         showNextEpisodeCard = false,
@@ -715,6 +730,31 @@ internal fun PlayerRuntimeController.playNextEpisode() {
 
             val installedAddons = addonRepository.getInstalledAddons().first()
             val installedAddonOrder = installedAddons.map { it.displayName }
+            val effectiveMode = if (shouldAutoSelectInManualMode) {
+                StreamAutoPlayMode.FIRST_STREAM
+            } else {
+                playerSettings.streamAutoPlayMode
+            }
+            val effectiveSource = if (shouldAutoSelectInManualMode) {
+                StreamAutoPlaySource.ALL_SOURCES
+            } else {
+                playerSettings.streamAutoPlaySource
+            }
+            val effectiveSelectedAddons = if (shouldAutoSelectInManualMode) {
+                emptySet()
+            } else {
+                playerSettings.streamAutoPlaySelectedAddons
+            }
+            val effectiveSelectedPlugins = if (shouldAutoSelectInManualMode) {
+                emptySet()
+            } else {
+                playerSettings.streamAutoPlaySelectedPlugins
+            }
+            val effectiveRegex = if (shouldAutoSelectInManualMode) {
+                ""
+            } else {
+                playerSettings.streamAutoPlayRegex
+            }
             var selectedStream: Stream? = null
             val terminalResult = streamRepository.getStreamsFromAllAddons(
                 type = type,
@@ -728,12 +768,12 @@ internal fun PlayerRuntimeController.playNextEpisode() {
                         val allStreams = orderedStreams.flatMap { it.streams }
                         selectedStream = StreamAutoPlaySelector.selectAutoPlayStream(
                             streams = allStreams,
-                            mode = playerSettings.streamAutoPlayMode,
-                            regexPattern = playerSettings.streamAutoPlayRegex,
-                            source = playerSettings.streamAutoPlaySource,
+                            mode = effectiveMode,
+                            regexPattern = effectiveRegex,
+                            source = effectiveSource,
                             installedAddonNames = installedAddonOrder.toSet(),
-                            selectedAddons = playerSettings.streamAutoPlaySelectedAddons,
-                            selectedPlugins = playerSettings.streamAutoPlaySelectedPlugins,
+                            selectedAddons = effectiveSelectedAddons,
+                            selectedPlugins = effectiveSelectedPlugins,
                             preferredBingeGroup = if (playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode) {
                                 currentStreamBingeGroup
                             } else {

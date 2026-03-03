@@ -659,7 +659,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         PlayerEvent.OnSkipIntro -> {
             _uiState.value.activeSkipInterval?.let { interval ->
-                _exoPlayer?.seekTo((interval.endTime * 1000).toLong())
+                val duration = _exoPlayer?.duration?.takeIf { it > 0 } ?: Long.MAX_VALUE
+                val seekMs = if (interval.endTime == Double.MAX_VALUE) duration
+                             else (interval.endTime * 1000).toLong()
+                _exoPlayer?.seekTo(seekMs.coerceAtMost(duration))
                 scheduleProgressSyncAfterSeek()
                 _uiState.update { it.copy(activeSkipInterval = null, skipIntervalDismissed = true) }
             }

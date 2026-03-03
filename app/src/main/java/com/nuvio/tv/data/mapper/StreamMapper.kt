@@ -32,6 +32,22 @@ fun BehaviorHintsDto.toDomain(): StreamBehaviorHints = StreamBehaviorHints(
 )
 
 fun ProxyHeadersDto.toDomain(): ProxyHeaders = ProxyHeaders(
-    request = request,
-    response = response
+    request = sanitizeHeaderMap(request),
+    response = sanitizeHeaderMap(response)
 )
+
+private fun sanitizeHeaderMap(headers: Map<String, String>?): Map<String, String>? {
+    if (headers == null) return null
+    val raw: Map<*, *> = headers
+    if (raw.isEmpty()) return null
+
+    val sanitized = LinkedHashMap<String, String>(raw.size)
+    raw.forEach { (rawKey, rawValue) ->
+        val key = (rawKey as? String)?.trim().orEmpty()
+        val value = (rawValue as? String)?.trim().orEmpty()
+        if (key.isEmpty() || value.isEmpty()) return@forEach
+        if (key.equals("Range", ignoreCase = true)) return@forEach
+        sanitized[key] = value
+    }
+    return sanitized.takeIf { it.isNotEmpty() }
+}

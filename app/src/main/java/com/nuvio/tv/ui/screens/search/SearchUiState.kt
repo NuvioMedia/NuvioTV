@@ -30,7 +30,8 @@ data class SearchUiState(
     val catalogTypeSuffixEnabled: Boolean = true,
     val posterCardWidthDp: Int = 126,
     val posterCardHeightDp: Int = 189,
-    val posterCardCornerRadiusDp: Int = 12
+    val posterCardCornerRadiusDp: Int = 12,
+    val suggestions: List<String> = emptyList()
 )
 
 @Immutable

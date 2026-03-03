@@ -39,6 +39,8 @@ data class MetaDetailsUiState(
     val episodeWatchedPendingKeys: Set<String> = emptySet(),
     val blurUnwatchedEpisodes: Boolean = false,
     val moreLikeThis: List<MetaPreview> = emptyList(),
+    val collection: List<MetaPreview> = emptyList(),
+    val collectionName: String? = null,
     val episodeImdbRatings: Map<Pair<Int, Int>, Double> = emptyMap(),
     val isEpisodeRatingsLoading: Boolean = false,
     val episodeRatingsError: String? = null,

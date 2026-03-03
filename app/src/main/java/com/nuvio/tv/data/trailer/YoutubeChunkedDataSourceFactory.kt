@@ -91,9 +91,8 @@ class YoutubeChunkedDataSourceFactory(
                 .build()
 
             bytesReadInChunk = 0
-            val opened = upstream.open(chunkedSpec)
-            Log.d(TAG, "Opened chunk range=$currentChunkStart-$currentChunkEnd opened=$opened uri=${rangedUri.toString().take(80)}")
-            return if (totalContentLength != C.LENGTH_UNSET.toLong()) totalContentLength else opened
+            upstream.open(chunkedSpec)
+            return if (totalContentLength != C.LENGTH_UNSET.toLong()) totalContentLength else C.LENGTH_UNSET.toLong()
         }
 
         override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
@@ -106,6 +105,11 @@ class YoutubeChunkedDataSourceFactory(
                 // Current chunk exhausted — open the next one
                 val chunkBytesReceived = bytesReadInChunk
                 upstream.close()
+
+                // If this chunk returned fewer bytes than requested, the stream is done
+                if (chunkBytesReceived < (currentChunkEnd - currentChunkStart + 1)) {
+                    return C.RESULT_END_OF_INPUT
+                }
 
                 currentChunkStart += chunkBytesReceived
                 if (totalContentLength != C.LENGTH_UNSET.toLong()) {

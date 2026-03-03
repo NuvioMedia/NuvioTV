@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.local.ThemeDataStore
+import com.nuvio.tv.domain.model.AppFont
 import com.nuvio.tv.domain.model.AppTheme
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,11 +17,14 @@ import javax.inject.Inject
 
 data class ThemeSettingsUiState(
     val selectedTheme: AppTheme = AppTheme.WHITE,
-    val availableThemes: List<AppTheme> = listOf(AppTheme.WHITE) + AppTheme.entries.filterNot { it == AppTheme.WHITE }
+    val availableThemes: List<AppTheme> = listOf(AppTheme.WHITE) + AppTheme.entries.filterNot { it == AppTheme.WHITE },
+    val selectedFont: AppFont = AppFont.INTER,
+    val availableFonts: List<AppFont> = AppFont.entries.toList()
 )
 
 sealed class ThemeSettingsEvent {
     data class SelectTheme(val theme: AppTheme) : ThemeSettingsEvent()
+    data class SelectFont(val font: AppFont) : ThemeSettingsEvent()
 }
 
 @HiltViewModel
@@ -41,6 +45,15 @@ class ThemeSettingsViewModel @Inject constructor(
                     }
                 }
         }
+        viewModelScope.launch {
+            themeDataStore.selectedFont
+                .distinctUntilChanged()
+                .collectLatest { font ->
+                    _uiState.update { state ->
+                        if (state.selectedFont == font) state else state.copy(selectedFont = font)
+                    }
+                }
+        }
     }
 
     private fun currentTheme(): AppTheme {
@@ -50,6 +63,7 @@ class ThemeSettingsViewModel @Inject constructor(
     fun onEvent(event: ThemeSettingsEvent) {
         when (event) {
             is ThemeSettingsEvent.SelectTheme -> selectTheme(event.theme)
+            is ThemeSettingsEvent.SelectFont -> selectFont(event.font)
         }
     }
 
@@ -57,6 +71,13 @@ class ThemeSettingsViewModel @Inject constructor(
         if (currentTheme() == theme) return
         viewModelScope.launch {
             themeDataStore.setTheme(theme)
+        }
+    }
+
+    private fun selectFont(font: AppFont) {
+        if (_uiState.value.selectedFont == font) return
+        viewModelScope.launch {
+            themeDataStore.setFont(font)
         }
     }
 }

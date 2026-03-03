@@ -35,8 +35,9 @@ class SubtitleRepositoryImpl @Inject constructor(
         videoSize: Long?,
         filename: String?
     ): List<Subtitle> = withContext(Dispatchers.IO) {
+        val requestType = canonicalSubtitleType(type)
         val startedAtMs = System.currentTimeMillis()
-        Log.d(TAG, "Fetching subtitles for type=$type, id=$id, videoId=$videoId")
+        Log.d(TAG, "Fetching subtitles for type=$requestType, id=$id, videoId=$videoId")
         
         // Get installed addons
         val addons = try {
@@ -51,7 +52,7 @@ class SubtitleRepositoryImpl @Inject constructor(
         // Filter addons that support subtitles resource
         val subtitleAddons = addons.filter { addon ->
             addon.resources.any { resource ->
-                isSubtitleResource(resource.name) && supportsType(resource, type, id)
+                isSubtitleResource(resource.name) && supportsType(resource, requestType, id)
             }
         }
         
@@ -91,10 +92,14 @@ class SubtitleRepositoryImpl @Inject constructor(
         )
         result
     }
+
+    private fun canonicalSubtitleType(type: String): String {
+        return if (type.equals("tv", ignoreCase = true)) "series" else type.lowercase()
+    }
     
     private fun supportsType(resource: com.nuvio.tv.domain.model.AddonResource, type: String, id: String): Boolean {
         // Check if type is supported
-        if (resource.types.isNotEmpty() && !resource.types.contains(type)) {
+        if (resource.types.isNotEmpty() && resource.types.none { it.equals(type, ignoreCase = true) }) {
             return false
         }
         
@@ -121,7 +126,8 @@ class SubtitleRepositoryImpl @Inject constructor(
         videoSize: Long?,
         filename: String?
     ): List<Subtitle> {
-        val actualId = if (type == "series" && videoId != null) {
+        val normalizedType = canonicalSubtitleType(type)
+        val actualId = if (normalizedType == "series" && videoId != null) {
             // For series, use videoId which includes season/episode
             videoId
         } else {
@@ -132,9 +138,9 @@ class SubtitleRepositoryImpl @Inject constructor(
         val baseUrl = addon.baseUrl.trimEnd('/')
         val extraParams = buildExtraParams(videoHash, videoSize, filename)
         val subtitleUrl = if (extraParams.isNotEmpty()) {
-            "$baseUrl/subtitles/$type/$actualId/$extraParams.json"
+            "$baseUrl/subtitles/$normalizedType/$actualId/$extraParams.json"
         } else {
-            "$baseUrl/subtitles/$type/$actualId.json"
+            "$baseUrl/subtitles/$normalizedType/$actualId.json"
         }
         
         Log.d(TAG, "Fetching subtitles from ${addon.name}: $subtitleUrl")

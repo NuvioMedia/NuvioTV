@@ -41,6 +41,7 @@ class SearchViewModel @Inject constructor(
     private var activeSearchJobs: List<Job> = emptyList()
     private var discoverJob: Job? = null
     private var catalogRowsUpdateJob: Job? = null
+    private var suggestionJob: Job? = null
     private var hasRenderedFirstCatalog = false
     private var pendingCatalogResponses = 0
     private var revealBatchAfterNextDiscoverFetch = false
@@ -49,6 +50,8 @@ class SearchViewModel @Inject constructor(
     private companion object {
         const val DISCOVER_INITIAL_LIMIT = 100
         const val DISCOVER_SHOW_MORE_BATCH = 50
+        const val SUGGESTION_DEBOUNCE_MS = 150L
+        const val MAX_SUGGESTIONS = 8
     }
 
     init {
@@ -145,6 +148,82 @@ class SearchViewModel @Inject constructor(
         // Search is explicit on submit only; stop any in-flight requests while editing.
         activeSearchJobs.forEach { it.cancel() }
         activeSearchJobs = emptyList()
+
+        fetchSuggestions(query.trim())
+    }
+
+    private fun fetchSuggestions(query: String) {
+        suggestionJob?.cancel()
+
+        if (query.length < 2) {
+            _uiState.update { it.copy(suggestions = emptyList()) }
+            return
+        }
+
+        // Don't show suggestions if the query already matches the submitted search
+        if (query == _uiState.value.submittedQuery.trim() && _uiState.value.catalogRows.isNotEmpty()) {
+            _uiState.update { it.copy(suggestions = emptyList()) }
+            return
+        }
+
+        suggestionJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(SUGGESTION_DEBOUNCE_MS)
+
+            val addons = try {
+                addonRepository.getInstalledAddons().first()
+            } catch (_: Exception) {
+                return@launch
+            }
+
+            val allTargets = buildSearchTargets(addons)
+            val firstAddonId = allTargets.firstOrNull()?.first?.id
+            val searchTargets = if (firstAddonId != null) allTargets.filter { it.first.id == firstAddonId } else emptyList()
+            if (searchTargets.isEmpty()) {
+                _uiState.update { it.copy(suggestions = emptyList()) }
+                return@launch
+            }
+
+            val collectedNames = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+            val queryLower = query.lowercase()
+            val suggestionJobs = searchTargets.map { (addon, catalog) ->
+                launch {
+                    try {
+                        catalogRepository.getCatalog(
+                            addonBaseUrl = addon.baseUrl,
+                            addonId = addon.id,
+                            addonName = addon.displayName,
+                            catalogId = catalog.id,
+                            catalogName = catalog.name,
+                            type = catalog.apiType,
+                            skip = 0,
+                            extraArgs = mapOf("search" to query),
+                            supportsSkip = false
+                        ).collect { result ->
+                            if (result is NetworkResult.Success && _uiState.value.query.trim() == query) {
+                                var added = false
+                                result.data.items.forEach { item ->
+                                    if (collectedNames.add(item.name)) added = true
+                                }
+                                // Push updated suggestions immediately as each addon responds
+                                if (added) {
+                                    val sorted = collectedNames
+                                        .sortedWith(
+                                            compareByDescending<String> { it.lowercase().startsWith(queryLower) }
+                                                .thenBy { it.lowercase() }
+                                        )
+                                        .take(MAX_SUGGESTIONS)
+                                    _uiState.update { it.copy(suggestions = sorted) }
+                                }
+                            }
+                        }
+                    } catch (_: Exception) {
+                        // Ignore per-catalog errors for suggestions
+                    }
+                }
+            }
+
+            suggestionJobs.joinAll()
+        }
     }
 
     private fun submitSearch() {
@@ -153,10 +232,12 @@ class SearchViewModel @Inject constructor(
 
     private fun performSearch(rawQuery: String) {
         val query = rawQuery.trim()
+        suggestionJob?.cancel()
         _uiState.update {
             it.copy(
                 submittedQuery = query,
-                query = rawQuery
+                query = rawQuery,
+                suggestions = emptyList()
             )
         }
 

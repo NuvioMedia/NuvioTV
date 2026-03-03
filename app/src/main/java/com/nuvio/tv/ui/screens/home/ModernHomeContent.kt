@@ -96,6 +96,7 @@ import com.nuvio.tv.ui.components.ContinueWatchingCard
 import com.nuvio.tv.ui.components.ContinueWatchingOptionsDialog
 import com.nuvio.tv.ui.components.MonochromePosterPlaceholder
 import com.nuvio.tv.ui.components.TrailerPlayer
+import com.nuvio.tv.LocalSidebarExpanded
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
 import android.view.KeyEvent as AndroidKeyEvent
@@ -121,6 +122,7 @@ fun ModernHomeContent(
     onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
 ) {
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
+    val isSidebarExpanded = LocalSidebarExpanded.current
     val useLandscapePosters = uiState.modernLandscapePostersEnabled
     val showCatalogTypeSuffixInModern = uiState.catalogTypeSuffixEnabled
     val isLandscapeModern = useLandscapePosters
@@ -332,7 +334,7 @@ fun ModernHomeContent(
         if (!shouldActivateFocusedPosterFlow) return@LaunchedEffect
         if (isVerticalRowsScrolling) return@LaunchedEffect
         val selection = focusedCatalogSelection ?: return@LaunchedEffect
-        delay(uiState.focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(1) * 1000L)
+        delay(uiState.focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(0) * 1000L)
         if (shouldActivateFocusedPosterFlow &&
             !isVerticalRowsScrolling &&
             focusedCatalogSelection?.focusKey == selection.focusKey
@@ -581,10 +583,12 @@ fun ModernHomeContent(
             effectiveAutoplayEnabled,
             trailerPlaybackTarget,
             heroTrailerUrl,
-            isVerticalRowsScrolling
+            isVerticalRowsScrolling,
+            isSidebarExpanded
         ) {
             derivedStateOf {
                 effectiveAutoplayEnabled &&
+                    !isSidebarExpanded &&
                     !isVerticalRowsScrolling &&
                     trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA &&
                     !heroTrailerUrl.isNullOrBlank()
@@ -606,7 +610,7 @@ fun ModernHomeContent(
         val catalogBottomPadding = 0.dp
         val heroToCatalogGap = 16.dp
         val rowTitleBottom = 14.dp
-        val rowsViewportHeightFraction = if (useLandscapePosters) 0.50f else 0.54f
+        val rowsViewportHeightFraction = if (useLandscapePosters) 0.49f else 0.52f
         val rowsViewportHeight = maxHeight * rowsViewportHeightFraction
         val localDensity = LocalDensity.current
         val verticalRowBringIntoViewSpec = remember(localDensity, defaultBringIntoViewSpec) {
@@ -696,7 +700,7 @@ fun ModernHomeContent(
                         }
                         false
                     },
-                contentPadding = PaddingValues(bottom = 0.dp),
+                contentPadding = PaddingValues(bottom = rowsViewportHeight),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 itemsIndexed(

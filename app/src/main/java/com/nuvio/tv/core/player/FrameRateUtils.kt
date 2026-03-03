@@ -31,6 +31,8 @@ object FrameRateUtils {
     private const val REFRESH_MATCH_MIN_TOLERANCE_HZ = 0.08f
     private const val NTSC_FILM_FPS = 24000f / 1001f
     private const val CINEMA_24_FPS = 24f
+    private const val MIN_VALID_VIDEO_FPS = 10f
+    private const val MAX_VALID_VIDEO_FPS = 120f
     private val NEXTLIB_HTTP_SCHEMES = setOf("http", "https")
     private val LIVE_STREAM_EXTENSIONS = listOf(".m3u8", ".mpd", ".ism/manifest")
     private const val MKV_EXTENSION = ".mkv"
@@ -45,7 +47,9 @@ object FrameRateUtils {
 
     data class FrameRateDetection(
         val raw: Float,
-        val snapped: Float
+        val snapped: Float,
+        val videoWidth: Int? = null,
+        val videoHeight: Int? = null
     )
 
     private fun matchesTargetRefresh(refreshRate: Float, target: Float): Boolean {
@@ -136,9 +140,38 @@ object FrameRateUtils {
         return modeExact ?: modeDouble ?: modePulldown ?: modeFallback ?: activeMode
     }
 
+    private fun hasValidVideoSize(videoWidth: Int?, videoHeight: Int?): Boolean {
+        return (videoWidth ?: 0) > 0 && (videoHeight ?: 0) > 0
+    }
+
+    private fun normalizedSize(width: Int, height: Int): Pair<Int, Int> {
+        return if (width >= height) width to height else height to width
+    }
+
+    private fun resolutionDistanceSquared(mode: Display.Mode, targetWidth: Int, targetHeight: Int): Long {
+        val (modeWidth, modeHeight) = normalizedSize(mode.physicalWidth, mode.physicalHeight)
+        val dw = modeWidth - targetWidth
+        val dh = modeHeight - targetHeight
+        return dw.toLong() * dw.toLong() + dh.toLong() * dh.toLong()
+    }
+
+    private fun selectModesForVideoResolution(
+        modes: List<Display.Mode>,
+        videoWidth: Int,
+        videoHeight: Int
+    ): List<Display.Mode> {
+        if (modes.isEmpty()) return modes
+        val (targetWidth, targetHeight) = normalizedSize(videoWidth, videoHeight)
+        val minDistance = modes.minOfOrNull { resolutionDistanceSquared(it, targetWidth, targetHeight) } ?: return modes
+        return modes.filter { resolutionDistanceSquared(it, targetWidth, targetHeight) == minDistance }
+    }
+
     suspend fun matchFrameRateAndWait(
         activity: Activity,
-        frameRate: Float
+        frameRate: Float,
+        videoWidth: Int? = null,
+        videoHeight: Int? = null,
+        resolutionMatchingEnabled: Boolean = false
     ): DisplayModeSwitchResult? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return null
         if (frameRate <= 0f) return null
@@ -152,7 +185,22 @@ object FrameRateUtils {
                 it.physicalWidth == activeMode.physicalWidth &&
                     it.physicalHeight == activeMode.physicalHeight
             }
-            if (sameSizeModes.size <= 1) {
+            val candidateModes = if (resolutionMatchingEnabled && hasValidVideoSize(videoWidth, videoHeight)) {
+                selectModesForVideoResolution(
+                    modes = display.supportedModes.toList(),
+                    videoWidth = videoWidth ?: activeMode.physicalWidth,
+                    videoHeight = videoHeight ?: activeMode.physicalHeight
+                )
+            } else {
+                sameSizeModes
+            }
+            if (candidateModes.isEmpty()) {
+                return@withContext Pair<Display.Mode?, DisplayModeSwitchResult?>(
+                    null,
+                    DisplayModeSwitchResult(activeMode)
+                )
+            }
+            if (!resolutionMatchingEnabled && candidateModes.size <= 1) {
                 return@withContext Pair<Display.Mode?, DisplayModeSwitchResult?>(
                     null,
                     DisplayModeSwitchResult(activeMode)
@@ -161,7 +209,7 @@ object FrameRateUtils {
 
             val modeBest = chooseBestModeForFrameRate(
                 activeMode = activeMode,
-                modes = sameSizeModes,
+                modes = candidateModes,
                 frameRate = frameRate
             )
             recordOriginalMode(display)
@@ -289,13 +337,32 @@ object FrameRateUtils {
         return snapToStandardRate(measuredFps)
     }
 
+    private fun isValidVideoFrameRate(frameRate: Float): Boolean {
+        return frameRate.isFinite() && frameRate in MIN_VALID_VIDEO_FPS..MAX_VALID_VIDEO_FPS
+    }
+
     fun detectFrameRateFromSource(
         context: Context,
         sourceUrl: String,
         headers: Map<String, String> = emptyMap()
     ): FrameRateDetection? {
-        detectFrameRateWithNextLib(context, sourceUrl, headers)?.let { return it }
+        detectFrameRateFromNextLib(context, sourceUrl, headers)?.let { return it }
+        return detectFrameRateFromExtractor(context, sourceUrl, headers)
+    }
 
+    fun detectFrameRateFromNextLib(
+        context: Context,
+        sourceUrl: String,
+        headers: Map<String, String> = emptyMap()
+    ): FrameRateDetection? {
+        return detectFrameRateWithNextLib(context, sourceUrl, headers)
+    }
+
+    fun detectFrameRateFromExtractor(
+        context: Context,
+        sourceUrl: String,
+        headers: Map<String, String> = emptyMap()
+    ): FrameRateDetection? {
         if (isResolveProxyUrl(sourceUrl)) {
             val embeddedResolveUrl = extractEmbeddedResolveUrl(sourceUrl)
             if (!embeddedResolveUrl.isNullOrBlank()) {
@@ -336,11 +403,13 @@ object FrameRateUtils {
 
                 val video = mediaInfo.videoStream ?: return@forEach
                 val measured = video.frameRate.toFloat()
-                if (!measured.isFinite() || measured <= 0f) return@forEach
+                if (!isValidVideoFrameRate(measured)) return@forEach
 
                 return FrameRateDetection(
                     raw = measured,
-                    snapped = snapToStandardRate(measured)
+                    snapped = snapToStandardRate(measured),
+                    videoWidth = video.frameWidth.takeIf { it > 0 },
+                    videoHeight = video.frameHeight.takeIf { it > 0 }
                 )
             } catch (e: Throwable) {
                 Log.w(TAG, "NextLib frame rate probe failed: ${e.message}")
@@ -365,19 +434,45 @@ object FrameRateUtils {
             }
 
             var videoTrackIndex = -1
+            var videoFormat: android.media.MediaFormat? = null
             for (i in 0 until extractor.trackCount) {
                 val format = extractor.getTrackFormat(i)
                 val mime = format.getString(android.media.MediaFormat.KEY_MIME)
                 if (mime?.startsWith("video/") == true) {
                     videoTrackIndex = i
+                    videoFormat = format
                     break
                 }
             }
             if (videoTrackIndex < 0) return null
 
+            val detectedVideoWidth = videoFormat
+                ?.takeIf { it.containsKey(android.media.MediaFormat.KEY_WIDTH) }
+                ?.runCatching { getInteger(android.media.MediaFormat.KEY_WIDTH) }
+                ?.getOrNull()
+                ?.takeIf { it > 0 }
+            val detectedVideoHeight = videoFormat
+                ?.takeIf { it.containsKey(android.media.MediaFormat.KEY_HEIGHT) }
+                ?.runCatching { getInteger(android.media.MediaFormat.KEY_HEIGHT) }
+                ?.getOrNull()
+                ?.takeIf { it > 0 }
+
+            val declaredFrameRate = videoFormat
+                ?.takeIf { it.containsKey(android.media.MediaFormat.KEY_FRAME_RATE) }
+                ?.runCatching { getFloat(android.media.MediaFormat.KEY_FRAME_RATE) }
+                ?.getOrNull()
+            if (declaredFrameRate != null && isValidVideoFrameRate(declaredFrameRate)) {
+                return FrameRateDetection(
+                    raw = declaredFrameRate,
+                    snapped = snapToStandardRate(declaredFrameRate),
+                    videoWidth = detectedVideoWidth,
+                    videoHeight = detectedVideoHeight
+                )
+            }
+
             extractor.selectTrack(videoTrackIndex)
             val timestamps = ArrayList<Long>(400)
-            val ignoreSamples = 30
+            val ignoreSamples = 3
             val targetSamples = 350 + ignoreSamples
 
             while (timestamps.size < targetSamples) {
@@ -395,17 +490,19 @@ object FrameRateUtils {
             }
 
             val sampleCount = (timestamps.size - ignoreSamples - 1).coerceAtLeast(1)
-            if (sampleCount < 90) return null
+            if (sampleCount < 30) return null
 
             val averageFrameDurationUs = totalFrameDurationUs.toFloat() / sampleCount.toFloat()
             if (averageFrameDurationUs <= 0f) return null
 
             val measured = 1_000_000f / averageFrameDurationUs
-            if (measured < 10f || measured > 120f) return null
+            if (!isValidVideoFrameRate(measured)) return null
 
             FrameRateDetection(
                 raw = measured,
-                snapped = snapProbeRateByFrameDuration(measured, averageFrameDurationUs)
+                snapped = snapProbeRateByFrameDuration(measured, averageFrameDurationUs),
+                videoWidth = detectedVideoWidth,
+                videoHeight = detectedVideoHeight
             )
         } catch (e: Exception) {
             Log.w(TAG, "Frame rate probe failed: ${e.message}")

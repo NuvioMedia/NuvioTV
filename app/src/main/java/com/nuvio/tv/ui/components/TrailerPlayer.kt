@@ -84,6 +84,7 @@ fun TrailerPlayer(
                 .build()
             ExoPlayer.Builder(context)
                 .setLoadControl(loadControl)
+                .setVideoChangeFrameRateStrategy(C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF)
                 .build()
                 .apply {
                     repeatMode = Player.REPEAT_MODE_OFF
