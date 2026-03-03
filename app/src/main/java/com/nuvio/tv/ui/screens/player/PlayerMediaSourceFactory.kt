@@ -23,10 +23,12 @@ internal class PlayerMediaSourceFactory {
         val sanitizedHeaders = sanitizeHeaders(headers)
         val okHttpFactory = OkHttpDataSource.Factory(getOrCreateOkHttpClient()).apply {
             setDefaultRequestProperties(sanitizedHeaders)
-            setUserAgent(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            )
+            if (!sanitizedHeaders.containsKey("User-Agent")) {
+                setUserAgent(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+                            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                )
+            }
         }
 
         val isHls = url.contains(".m3u8", ignoreCase = true) ||
@@ -83,6 +85,20 @@ internal class PlayerMediaSourceFactory {
             .retryOnConnectionFailure(true)
             .followRedirects(true)
             .followSslRedirects(true)
+            .addInterceptor { chain ->
+                val originalRequest = chain.request()
+                val response = chain.proceed(originalRequest)
+
+                if (response.isRedirect) {
+                    val location = response.header("Location") ?: return@addInterceptor response
+                    val newRequest = originalRequest.newBuilder()
+                        .url(location)
+                        .build()
+                    response.close()
+                    return@addInterceptor chain.proceed(newRequest)
+                }
+                response
+            }
             .build()
             .also { okHttpClient = it }
     }
