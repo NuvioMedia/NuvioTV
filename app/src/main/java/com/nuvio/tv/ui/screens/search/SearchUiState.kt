@@ -44,5 +44,6 @@ data class DiscoverCatalog(
     val catalogName: String,
     val type: String,
     val genres: List<String>,
-    val supportsSkip: Boolean
+    val supportsSkip: Boolean,
+    val skipStep: Int
 )

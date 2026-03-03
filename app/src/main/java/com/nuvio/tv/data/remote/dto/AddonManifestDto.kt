@@ -21,12 +21,5 @@ data class CatalogDescriptorDto(
     @Json(name = "type") val type: String,
     @Json(name = "id") val id: String,
     @Json(name = "name") val name: String,
-    @Json(name = "extra") val extra: List<ExtraDto>? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class ExtraDto(
-    @Json(name = "name") val name: String,
-    @Json(name = "isRequired") val isRequired: Boolean? = false,
-    @Json(name = "options") val options: List<String>? = null
+    @Json(name = "extra") val extra: List<Any>? = null
 )

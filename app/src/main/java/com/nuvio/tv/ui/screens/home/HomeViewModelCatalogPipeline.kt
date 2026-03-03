@@ -7,6 +7,8 @@ import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.HomeLayout
+import com.nuvio.tv.domain.model.skipStep
+import com.nuvio.tv.domain.model.supportsExtra
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -159,10 +161,11 @@ internal fun HomeViewModel.loadCatalogPipeline(
         var hasCountedCompletion = false
         catalogLoadSemaphore.withPermit {
             if (generation != catalogLoadGeneration) return@withPermit
-            val supportsSkip = catalog.extra.any { it.name == "skip" }
+            val supportsSkip = catalog.supportsExtra("skip")
+            val skipStep = catalog.skipStep()
             Log.d(
                 HomeViewModel.TAG,
-                "Loading home catalog addonId=${addon.id} addonName=${addon.name} type=${catalog.apiType} catalogId=${catalog.id} catalogName=${catalog.name} supportsSkip=$supportsSkip"
+                "Loading home catalog addonId=${addon.id} addonName=${addon.name} type=${catalog.apiType} catalogId=${catalog.id} catalogName=${catalog.name} supportsSkip=$supportsSkip skipStep=$skipStep"
             )
             catalogRepository.getCatalog(
                 addonBaseUrl = addon.baseUrl,
@@ -172,6 +175,7 @@ internal fun HomeViewModel.loadCatalogPipeline(
                 catalogName = catalog.name,
                 type = catalog.apiType,
                 skip = 0,
+                skipStep = skipStep,
                 supportsSkip = supportsSkip
             ).collect { result ->
                 if (generation != catalogLoadGeneration) return@collect
@@ -233,7 +237,7 @@ internal fun HomeViewModel.loadMoreCatalogItemsPipeline(catalogId: String, addon
     viewModelScope.launch {
         val addon = addonsCache.find { it.id == addonId } ?: return@launch
 
-        val nextSkip = currentRow.items.size
+        val nextSkip = (currentRow.currentPage + 1) * currentRow.skipStep
         catalogRepository.getCatalog(
             addonBaseUrl = addon.baseUrl,
             addonId = addon.id,
@@ -242,6 +246,7 @@ internal fun HomeViewModel.loadMoreCatalogItemsPipeline(catalogId: String, addon
             catalogName = currentRow.catalogName,
             type = currentRow.apiType,
             skip = nextSkip,
+            skipStep = currentRow.skipStep,
             supportsSkip = currentRow.supportsSkip
         ).collect { result ->
             when (result) {
