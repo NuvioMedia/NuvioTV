@@ -59,7 +59,7 @@ class TraktViewModel @Inject constructor(
     val uiState: StateFlow<TraktUiState> = _uiState.asStateFlow()
 
     private var pollJob: Job? = null
-    private var lastMode: TraktConnectionMode = TraktConnectionMode.DISCONNECTED
+    private var lastMode: TraktConnectionMode? = null
     private var lastAutoSyncAtMs: Long = 0L
 
     init {
@@ -235,7 +235,9 @@ class TraktViewModel @Inject constructor(
             )
         }
 
-        if (mode == TraktConnectionMode.CONNECTED &&
+        if (mode == TraktConnectionMode.CONNECTED && lastMode == null) {
+            loadConnectedStats(forceRefresh = false)
+        } else if (mode == TraktConnectionMode.CONNECTED &&
             (lastMode != TraktConnectionMode.CONNECTED || shouldAutoSyncNow())
         ) {
             autoSyncAfterConnected()
@@ -317,6 +319,17 @@ class TraktViewModel @Inject constructor(
                                 statusMessage = context.getString(R.string.trakt_waiting_approval)
                             )
                         }
+                    }
+
+                    TraktTokenPollResult.AlreadyUsed -> {
+                        _uiState.update {
+                            it.copy(
+                                isPolling = false,
+                                errorMessage = "Device code already used. Start again.",
+                                statusMessage = null
+                            )
+                        }
+                        break
                     }
 
                     TraktTokenPollResult.Expired -> {

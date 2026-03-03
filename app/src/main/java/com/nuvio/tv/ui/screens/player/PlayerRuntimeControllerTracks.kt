@@ -6,9 +6,9 @@ import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.core.player.FrameRateUtils
-import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -43,19 +43,6 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                                     detectedFrameRateRaw = raw,
                                     detectedFrameRate = snapped,
                                     detectedFrameRateSource = FrameRateSource.TRACK
-                                )
-                            }
-                            if (ambiguousCinemaTrack &&
-                                _uiState.value.frameRateMatchingMode != FrameRateMatchingMode.OFF &&
-                                currentStreamUrl.isNotBlank() &&
-                                frameRateProbeJob?.isActive != true
-                            ) {
-                                startFrameRateProbe(
-                                    url = currentStreamUrl,
-                                    headers = currentHeaders,
-                                    frameRateMatchingEnabled = true,
-                                    preserveCurrentDetection = true,
-                                    allowAmbiguousTrackOverride = true
                                 )
                             }
                         }
@@ -98,13 +85,20 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                     val isSelected = trackGroup.isTrackSelected(i)
                     if (isSelected) selectedSubtitleIndex = subtitleTracks.size
                     
+                    val hasForcedFlag = (format.selectionFlags and C.SELECTION_FLAG_FORCED) != 0
+                    val trackTexts = listOfNotNull(format.label, format.language, format.id)
+                    val nameHintForced = trackTexts.any { it.contains("forced", ignoreCase = true) }
+                    val isSongsAndSigns = trackTexts.any {
+                        it.contains("songs", ignoreCase = true) && it.contains("sign", ignoreCase = true)
+                    }
+
                     subtitleTracks.add(
                         TrackInfo(
                             index = subtitleTracks.size,
                             name = format.label ?: format.language ?: "Subtitle ${subtitleTracks.size + 1}",
                             language = format.language,
                             trackId = format.id,
-                            isForced = (format.selectionFlags and C.SELECTION_FLAG_FORCED) != 0,
+                            isForced = hasForcedFlag || nameHintForced || isSongsAndSigns,
                             isSelected = isSelected
                         )
                     )
@@ -328,16 +322,8 @@ internal fun PlayerRuntimeController.findBestInternalSubtitleTrackIndex(
 }
 
 private fun findBestForcedSubtitleTrackIndex(subtitleTracks: List<TrackInfo>): Int {
-    val forcedByFlag = subtitleTracks.indexOfFirst { it.isForced }
-    if (forcedByFlag >= 0) return forcedByFlag
-
-    // Some providers don't propagate selection flags, so use conservative name hints as fallback.
-    return subtitleTracks.indexOfFirst { track ->
-        val text = listOfNotNull(track.name, track.language, track.trackId)
-            .joinToString(" ")
-            .lowercase(Locale.ROOT)
-        "forced" in text
-    }
+    // isForced is set from both the ExoPlayer SELECTION_FLAG_FORCED and name/label/id containing "forced"
+    return subtitleTracks.indexOfFirst { it.isForced }
 }
 
 internal fun PlayerRuntimeController.findBrazilianPortugueseInGenericPtTracks(
@@ -425,8 +411,12 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
     }
 
     if (targets.contains(SUBTITLE_LANGUAGE_FORCED)) {
-        autoSubtitleSelected = true
-        Log.d(PlayerRuntimeController.TAG, "AUTO_SUB stop: forced subtitles requested but no forced internal track found")
+        if (hasScannedTextTracksOnce) {
+            autoSubtitleSelected = true
+            Log.d(PlayerRuntimeController.TAG, "AUTO_SUB stop: forced subtitles requested but no forced internal track found")
+            return
+        }
+        Log.d(PlayerRuntimeController.TAG, "AUTO_SUB defer forced: text tracks not scanned yet")
         return
     }
 
@@ -470,45 +460,70 @@ internal fun PlayerRuntimeController.startFrameRateProbe(
     allowAmbiguousTrackOverride: Boolean = false
 ) {
     frameRateProbeJob?.cancel()
-    if (!preserveCurrentDetection) {
-        _uiState.update {
-            it.copy(
+    _uiState.update { state ->
+        if (!preserveCurrentDetection) {
+            state.copy(
                 detectedFrameRateRaw = 0f,
                 detectedFrameRate = 0f,
-                detectedFrameRateSource = null
+                detectedFrameRateSource = null,
+                afrProbeRunning = false
             )
+        } else {
+            state.copy(afrProbeRunning = false)
         }
     }
     if (!frameRateMatchingEnabled) return
 
     val token = ++frameRateProbeToken
     frameRateProbeJob = scope.launch(Dispatchers.IO) {
-        delay(PlayerRuntimeController.TRACK_FRAME_RATE_GRACE_MS)
-        if (!isActive) return@launch
-        val trackAlreadySet = withContext(Dispatchers.Main) {
-            _uiState.value.detectedFrameRateSource == FrameRateSource.TRACK &&
-                _uiState.value.detectedFrameRate > 0f
-        }
-        if (trackAlreadySet && !allowAmbiguousTrackOverride) return@launch
+        try {
+            delay(PlayerRuntimeController.TRACK_FRAME_RATE_GRACE_MS)
+            if (!isActive) return@launch
+            val stateSnapshot = withContext(Dispatchers.Main) { _uiState.value }
+            val trackAlreadySet = stateSnapshot.detectedFrameRateSource == FrameRateSource.TRACK &&
+                stateSnapshot.detectedFrameRate > 0f
+            if (trackAlreadySet) {
+                if (!allowAmbiguousTrackOverride) return@launch
 
-        val detection = FrameRateUtils.detectFrameRateFromSource(context, url, headers)
-            ?: return@launch
-        if (!isActive) return@launch
-        withContext(Dispatchers.Main) {
-            if (token == frameRateProbeToken) {
-                val state = _uiState.value
-                val shouldApplyInitial = state.detectedFrameRate <= 0f
-                val shouldOverrideAmbiguousTrack = allowAmbiguousTrackOverride &&
-                    PlayerFrameRateHeuristics.shouldProbeOverrideTrack(state, detection)
+                val trackRaw = if (stateSnapshot.detectedFrameRateRaw > 0f) {
+                    stateSnapshot.detectedFrameRateRaw
+                } else {
+                    stateSnapshot.detectedFrameRate
+                }
+                if (!PlayerFrameRateHeuristics.isAmbiguousCinema24(trackRaw)) return@launch
+            }
 
-                if (shouldApplyInitial || shouldOverrideAmbiguousTrack) {
-                    _uiState.update {
-                        it.copy(
-                            detectedFrameRateRaw = detection.raw,
-                            detectedFrameRate = detection.snapped,
-                            detectedFrameRateSource = FrameRateSource.PROBE
-                        )
+            withContext(Dispatchers.Main) {
+                if (token == frameRateProbeToken) {
+                    _uiState.update { it.copy(afrProbeRunning = true) }
+                }
+            }
+
+            val detection = FrameRateUtils.detectFrameRateFromSource(context, url, headers)
+                ?: return@launch
+            if (!isActive) return@launch
+            withContext(Dispatchers.Main) {
+                if (token == frameRateProbeToken) {
+                    val state = _uiState.value
+                    val shouldApplyInitial = state.detectedFrameRate <= 0f
+                    val shouldOverrideAmbiguousTrack = allowAmbiguousTrackOverride &&
+                        PlayerFrameRateHeuristics.shouldProbeOverrideTrack(state, detection)
+
+                    if (shouldApplyInitial || shouldOverrideAmbiguousTrack) {
+                        _uiState.update {
+                            it.copy(
+                                detectedFrameRateRaw = detection.raw,
+                                detectedFrameRate = detection.snapped,
+                                detectedFrameRateSource = FrameRateSource.PROBE
+                            )
+                        }
                     }
+                }
+            }
+        } finally {
+            withContext(NonCancellable + Dispatchers.Main) {
+                if (token == frameRateProbeToken) {
+                    _uiState.update { it.copy(afrProbeRunning = false) }
                 }
             }
         }

@@ -124,6 +124,7 @@ fun GridContentCard(
                         longPressTriggered &&
                         isSelectKey(native.keyCode)
                     ) {
+                        longPressTriggered = false
                         return@onPreviewKeyEvent true
                     }
                     false

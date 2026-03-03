@@ -15,12 +15,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -44,6 +48,7 @@ internal fun ModernHeroMediaLayer(
     heroBackdropAlpha: Float,
     shouldPlayHeroTrailer: Boolean,
     heroTrailerUrl: String?,
+    heroTrailerAudioUrl: String?,
     heroTrailerAlpha: Float,
     muted: Boolean,
     bgColor: Color,
@@ -82,6 +87,7 @@ internal fun ModernHeroMediaLayer(
         if (shouldPlayHeroTrailer) {
             TrailerPlayer(
                 trailerUrl = heroTrailerUrl,
+                trailerAudioUrl = heroTrailerAudioUrl,
                 isPlaying = true,
                 onEnded = onTrailerEnded,
                 onFirstFrameRendered = onFirstFrameRendered,
@@ -98,10 +104,19 @@ internal fun ModernHeroMediaLayer(
             modifier = Modifier
                 .fillMaxSize()
                 .drawWithCache {
+                    val leftBlendSolidWidth = size.width * 0.018f
+                    val horizontalGradientStartX = leftBlendSolidWidth
+                    val horizontalFadeEndX = horizontalGradientStartX + (size.width * 0.36f)
                     val horizontalGradient = Brush.horizontalGradient(
-                        0.0f to bgColor.copy(alpha = 0.96f),
-                        0.10f to bgColor.copy(alpha = 0.72f),
-                        0.30f to Color.Transparent
+                        colorStops = arrayOf(
+                            0.0f to bgColor,
+                            0.18f to bgColor.copy(alpha = 0.82f),
+                            0.40f to bgColor.copy(alpha = 0.48f),
+                            0.70f to bgColor.copy(alpha = 0.14f),
+                            1.0f to Color.Transparent
+                        ),
+                        startX = horizontalGradientStartX,
+                        endX = horizontalFadeEndX
                     )
                     val radialGradient = Brush.radialGradient(
                         colorStops = arrayOf(
@@ -120,6 +135,10 @@ internal fun ModernHeroMediaLayer(
                         1.0f to bgColor
                     )
                     onDrawBehind {
+                        drawRect(
+                            color = bgColor,
+                            size = Size(leftBlendSolidWidth, size.height)
+                        )
                         drawRect(brush = horizontalGradient, size = size)
                         drawRect(brush = radialGradient, size = size)
                         drawRect(brush = verticalGradient, size = size)
@@ -183,10 +202,13 @@ internal fun HeroTitleBlock(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(titleSpacing)
     ) {
-        if (!preview.logo.isNullOrBlank()) {
+        var logoLoadFailed by remember(preview.logo) { mutableStateOf(false) }
+        val showLogo = !preview.logo.isNullOrBlank() && !logoLoadFailed
+        if (showLogo) {
             AsyncImage(
                 model = logoModel,
                 contentDescription = preview.title,
+                onError = { logoLoadFailed = true },
                 modifier = Modifier
                     .height(100.dp)
                     .widthIn(min = 100.dp, max = 220.dp)

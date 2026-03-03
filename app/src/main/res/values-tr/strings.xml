@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
+﻿<resources>
+    <string name="app_name">Nuvio</string>
     <string name="type_movie">Film</string>
     <string name="type_series">Dizi</string>
     <string name="type_unknown">Bilinmeyen</string>
@@ -22,8 +22,10 @@
     <string name="cw_almost_done">Neredeyse bitti</string>
     <string name="cw_airs_date">Yayın tarihi: %1$s</string>
     <string name="cw_action_go_to_details">Detaylara git</string>
+    <string name="cw_action_start_from_beginning">Baştan başla</string>
     <string name="cw_action_remove">Kaldır</string>
     <string name="cw_dialog_subtitle">Bu öğe ile ne yapmak istediğinizi seçin.</string>
+    <string name="home_poster_dialog_subtitle">İçerik işlemleri</string>
 
     <!-- CatalogRowSection -->
     <string name="catalog_from_addon">Kaynak: %1$s</string>
@@ -57,13 +59,28 @@
     <string name="episodes_play">Oynat</string>
     <string name="episodes_season_actions">Sezon ayarları</string>
 
+    <!-- MetaDetailsViewModel -->
+    <string name="detail_added_to_library">Kütüphaneye eklendi</string>
+    <string name="detail_removed_from_library">Kütüphaneden kaldırıldı</string>
+    <string name="detail_episode_marked_watched">Bölüm izlendi olarak işaretlendi</string>
+    <string name="detail_episode_marked_unwatched">Bölüm izlenmedi olarak işaretlendi</string>
+    <string name="detail_lists_updated">Listeler güncellendi</string>
+    <string name="detail_movie_marked_watched">İzlendi olarak işaretlendi</string>
+    <string name="detail_movie_marked_unwatched">İzlenmedi olarak işaretlendi</string>
+    <string name="detail_all_episodes_watched">Tüm bölümler zaten izlenmiş</string>
+    <string name="detail_no_watched_episodes">Bu sezonda izlenen bölüm yok</string>
+    <string name="detail_all_previous_watched">Önceki tüm bölümler zaten izlenmiş</string>
+    <string name="detail_marked_episodes_watched">İzlendi olarak işaretlenen bölümler: %1$d</string>
+    <string name="detail_marked_episodes_unwatched">İzlenmedi olarak işaretlenen bölümler: %1$d</string>
+    <string name="detail_marked_previous_watched">İzlendi olarak işaretlenen önceki bölümler: %1$d</string>
+
     <!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Oynat</string>
     <string name="detail_btn_resume">Devam Et</string>
     <string name="detail_btn_play_episode">Oynat S%1$dB%2$d</string>
     <string name="detail_btn_resume_episode">Devam Et S%1$dB%2$d</string>
     <string name="detail_btn_next_episode">Sıradaki S%1$dB%2$d</string>
-    <string name="detail_tab_cast">Yaratıcı ve Oyuncular</string>
+    <string name="detail_tab_cast">Oyuncular</string>
     <string name="cast_role_creator">Yapımcı</string>
     <string name="cast_role_director">Yönetmen</string>
     <string name="cast_role_writer">Yazar</string>
@@ -91,7 +108,7 @@
     <!-- AboutScreen -->
     <string name="about_title">Hakkında</string>
     <string name="about_subtitle">Uygulama bilgileri, güncellemeler ve yasal bağlantılar</string>
-    <string name="about_made_with_love">Tapframe ve ekibi tarafından ❤️ ile yapıldı</string>
+    <string name="about_made_with_love">Tapframe ve arkadaşları tarafından ❤️ ile yapıldı</string>
     <string name="about_version">Sürüm %1$s</string>
     <string name="about_check_updates">Güncellemeleri kontrol et</string>
     <string name="about_check_updates_subtitle">En son sürümü indir</string>
@@ -195,6 +212,7 @@
     <!-- PlaybackSubtitleSettings -->
     <string name="sub_section">Altyazılar</string>
     <string name="sub_not_set">Ayarlanmadı</string>
+    <string name="sub_forced_lang">Zorunlu</string>
     <string name="sub_preferred_lang">Tercih Edilen Dil</string>
     <string name="sub_secondary_lang">İkinci Tercih Edilen Dil</string>
     <string name="sub_organization">Altyazı Ayarları</string>
@@ -302,6 +320,8 @@
     <string name="layout_addon_name_sub">Katalog başlıklarının altında kaynağın (eklenti) adını göster.</string>
     <string name="layout_catalog_type">Katalog Türünü Göster</string>
     <string name="layout_catalog_type_sub">Katalog adının yanında tür sonekini (Film/Dizi) göster.</string>
+    <string name="layout_hide_unreleased">Yayınlanmamış İçerikleri Gizle</string>
+    <string name="layout_hide_unreleased_sub">Henüz yayınlanmamış film ve dizileri gizler.</string>
     <string name="layout_section_detail">Detay Sayfası</string>
     <string name="layout_section_detail_desc">Detay ve bölüm ekranları için ayarlar.</string>
     <string name="layout_blur_unwatched">İzlenmemiş Bölümleri Bulanıklaştır</string>
@@ -346,6 +366,7 @@
     <string name="layout_card_radius">Köşe Yarıçapı</string>
     <string name="layout_reset_default">Varsayılana Sıfırla</string>
     <string name="layout_custom">Özel</string>
+
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">MDBList Değerlendirmeleri</string>
@@ -545,6 +566,7 @@
     <string name="sources_title">Kaynaklar</string>
     <string name="sources_reload">Yenile</string>
     <string name="sources_close">Kapat</string>
+    <string name="sources_playing">Oynatılıyor</string>
     <string name="sources_no_streams">Kaynak bulunamadı</string>
 
     <!-- EpisodesSidePanel -->
@@ -591,6 +613,16 @@
     <string name="subtitle_style_title">Altyazı Stili</string>
     <string name="subtitle_style_color">Renk</string>
     <string name="subtitle_style_reset">Sıfırla</string>
+    <string name="subtitle_style_font_size">Yazı Boyutu</string>
+    <string name="subtitle_style_bold">Kalın</string>
+    <string name="subtitle_style_text_color">Metin Rengi</string>
+    <string name="subtitle_style_outline">Dış Çizgi</string>
+    <string name="subtitle_style_bottom_offset">Alt Konum</string>
+    <string name="subtitle_style_defaults">Varsayılanlar</string>
+    <string name="subtitle_style_on">Açık</string>
+    <string name="subtitle_style_off">Kapalı</string>
+    <string name="panel_failed_load_streams">Kaynaklar yüklenemedi</string>
+    <string name="panel_failed_load_episodes">Bölümler yüklenemedi</string>
 
     <!-- PauseOverlay -->
     <string name="pause_you_are_watching">Şu an izliyorsunuz:</string>
@@ -600,6 +632,17 @@
 
     <!-- NextEpisodeCardOverlay -->
     <string name="next_episode_label">Sıradaki Bölüm</string>
+    <string name="next_episode_finding_source">Kaynak aranıyor…</string>
+    <string name="next_episode_playing_via">%1$s üzerinden %2$d sn içinde oynatılıyor</string>
+    <string name="next_episode_play">Oynat</string>
+    <string name="next_episode_unaired">Yayınlanmadı</string>
+    <string name="skip_intro">İntroyu Atla</string>
+    <string name="skip_ending">Kapanışı Atla</string>
+    <string name="skip_recap">Özeti Atla</string>
+    <string name="skip_generic">Atla</string>
+    <string name="display_mode_refresh">Yenile</string>
+    <string name="display_mode_resolution">Çözünürlük</string>
+
 
     <!-- SearchScreen -->
     <string name="search_keyboard_hint">Aramak için klavyede Bitti\'ye basın</string>
@@ -658,6 +701,18 @@
     <string name="auth_qr_finishing">Hesap doğrulanıyor\u2026</string>
     <string name="auth_qr_code_label">Kodunuz: %1$s</string>
     <string name="auth_qr_expires">Geçerlilik süresi doluyor: %1$s</string>
+    <string name="auth_qr_phone_hint">E-posta/şifre ile giriş yapmak için telefonunuzu kullanın. Daha hızlı giriş için TV sadece QR ekranında kalır.</string>
+    <string name="auth_qr_scan_instruction">QR kodunu tarayın, tarayıcıda onaylayın ve ardından buraya dönün.</string>
+    <string name="auth_qr_code_display">Kod: %1$s</string>
+    <string name="auth_qr_refresh">QR Kodunu Yenile</string>
+    <string name="auth_qr_continue_without_account">Hesapsız devam et</string>
+    <string name="auth_qr_connected">Hesabınız bu TV\'ye bağlandı.</string>
+    <string name="auth_qr_synced_data">Senkronize edilmiş verileriniz</string>
+    <string name="auth_qr_generating">QR oluşturuluyor\u2026</string>
+    <string name="auth_qr_unavailable">QR kodu kullanılamıyor. Yeniden denemek için yenileyin.</string>
+    <string name="auth_qr_please_wait">Lütfen bekleyin\u2026</string>
+    <string name="auth_qr_continue">Devam Et</string>
+    <string name="auth_qr_back">Geri</string>
 
     <!-- SyncCodeGenerateScreen -->
     <string name="sync_generate_title">Senkronizasyon Kodu Oluştur</string>
@@ -725,10 +780,9 @@
     <string name="layout_selection_continue">Uygulamaya Devam Et</string>
 
     <!-- UpdatePromptDialog -->
-    <string name="update_title">Yeni Uygulama Sürümü Mevcut</string>
-    <string name="update_downloading">Güncelleme İnternetten İndiriliyor</string>
+    <string name="update_title">Uygulama Güncellemesi</string>
+    <string name="update_downloading">Güncelleme İndiriliyor</string>
     <string name="update_unknown_sources">Nuvio\'nun indirdiği eklentileri yüklayabilmek adına `Bilinmeyen kaynaklar` veya `Dışarıdan yükleme` iznine ihtiyaç var.</string>
-
     <!-- AccountScreen -->
     <string name="account_title">Ana Bilgi Modülleri</string>
     <string name="account_sign_in_description">Senkron başlatmak için oturumunuzun aktif olduğundan emin olmalısınız. Ayrıca bağlantıların her türlü kopya dosyaları da bulutta bekleyecektir.</string>
@@ -741,7 +795,7 @@
     <!-- EpisodeRatingsSection -->
     <string name="ratings_loading">Kullanıcı geri dönüşü verisi sunucu merkezine ulaşıyor.</string>
     <string name="ratings_unavailable">Bu bölüm tablosu için harici Puan formatı bulunmamaktadır.</string>
-    <string name="ratings_season_summary">Sezon %1$d | Toplam %2$d İzlem Tablosu Uzunluğu</string>
+    <string name="ratings_season_summary">Sezon %1$d | %2$d Bölüm</string>
 
     <!-- SearchDiscoverSection -->
     <string name="discover_title">Keşfet</string>
@@ -783,6 +837,7 @@
     <string name="nav_library">Kütüphanem</string>
     <string name="nav_addons">Eklentiler</string>
     <string name="nav_settings">Ayarlar</string>
+    <string name="settings_rounded_ui">Yuvarlak Arayüz</string>
     <string name="cd_expand_sidebar">Panel Sekmesini Büyüt</string>
 
     <string name="update_close">Kapat</string>

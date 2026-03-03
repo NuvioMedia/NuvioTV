@@ -26,7 +26,7 @@ class LayoutPreferenceDataStore @Inject constructor(
         private const val DEFAULT_POSTER_CARD_HEIGHT_DP = 189
         private const val DEFAULT_POSTER_CARD_CORNER_RADIUS_DP = 12
         private const val DEFAULT_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS = 3
-        private const val MIN_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS = 1
+        private const val MIN_FOCUSED_POSTER_BACKDROP_EXPAND_DELAY_SECONDS = 0
     }
 
     private fun store(profileId: Int = profileManager.activeProfileId.value) =
@@ -62,6 +62,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val blurUnwatchedEpisodesKey = booleanPreferencesKey("blur_unwatched_episodes")
     private val detailPageTrailerButtonEnabledKey = booleanPreferencesKey("detail_page_trailer_button_enabled")
     private val preferExternalMetaAddonDetailKey = booleanPreferencesKey("prefer_external_meta_addon_detail")
+    private val hideUnreleasedContentKey = booleanPreferencesKey("hide_unreleased_content")
 
     private fun <T> profileFlow(extract: (prefs: androidx.datastore.preferences.core.Preferences) -> T): Flow<T> =
         profileManager.activeProfileId.flatMapLatest { pid ->
@@ -196,6 +197,10 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     val preferExternalMetaAddonDetail: Flow<Boolean> = profileFlow { prefs ->
         prefs[preferExternalMetaAddonDetailKey] ?: false
+    }
+
+    val hideUnreleasedContent: Flow<Boolean> = profileFlow { prefs ->
+        prefs[hideUnreleasedContentKey] ?: false
     }
 
     suspend fun setLayout(layout: HomeLayout) {
@@ -386,6 +391,12 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setPreferExternalMetaAddonDetail(enabled: Boolean) {
         store().edit { prefs ->
             prefs[preferExternalMetaAddonDetailKey] = enabled
+        }
+    }
+
+    suspend fun setHideUnreleasedContent(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[hideUnreleasedContentKey] = enabled
         }
     }
 

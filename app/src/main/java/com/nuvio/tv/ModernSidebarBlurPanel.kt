@@ -75,6 +75,7 @@ internal fun ModernSidebarBlurPanel(
     onDrawerItemClick: (String) -> Unit,
     activeProfileName: String,
     activeProfileColorHex: String,
+    showProfileSelector: Boolean,
     onSwitchProfile: () -> Unit
 ) {
     val delayedBlurProgress =
@@ -179,7 +180,7 @@ internal fun ModernSidebarBlurPanel(
             }
         }
 
-        if (activeProfileName.isNotEmpty()) {
+        if (showProfileSelector && activeProfileName.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
             Box(
                 modifier = Modifier.fillMaxWidth(),

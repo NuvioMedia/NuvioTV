@@ -33,7 +33,13 @@ data class MetaDto(
     @Json(name = "awards") val awards: String? = null,
     @Json(name = "language") val language: String? = null,
     @Json(name = "links") val links: List<MetaLinkDto>? = null,
+    @Json(name = "trailerStreams") val trailerStreams: List<TrailerStreamDto>? = null,
     @Json(name = "app_extras") val appExtras: AppExtrasDto? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TrailerStreamDto(
+    @Json(name = "ytId") val ytId: String? = null
 )
 
 @JsonClass(generateAdapter = true)

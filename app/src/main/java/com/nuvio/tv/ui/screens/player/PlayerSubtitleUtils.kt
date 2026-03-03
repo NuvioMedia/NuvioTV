@@ -4,7 +4,31 @@ import androidx.media3.common.MimeTypes
 
 internal object PlayerSubtitleUtils {
     fun normalizeLanguageCode(lang: String): String {
-        val code = lang.lowercase()
+        val code = lang.trim().lowercase()
+        if (code.isBlank()) return ""
+
+        val normalizedCode = code.replace('_', '-')
+        val tokenized = normalizedCode
+            .replace('-', ' ')
+            .replace('.', ' ')
+            .replace('/', ' ')
+            .replace(Regex("\\s+"), " ")
+            .trim()
+
+        fun containsAny(vararg values: String): Boolean = values.any { value ->
+            tokenized.contains(value)
+        }
+
+        if (containsAny("portuguese", "portugues")) {
+            if (containsAny("brazil", "brasil", "brazilian", "brasileiro", "pt br", "ptbr", "pob")) {
+                return "pt-br"
+            }
+            if (containsAny("portugal", "european", "europeu", "iberian", "pt pt", "ptpt")) {
+                return "pt"
+            }
+            return "pt"
+        }
+
         return when (code) {
             "pt-br", "pt_br", "br", "pob" -> "pt-br"
             "pt", "pt-pt", "pt_pt", "por" -> "pt"
@@ -41,7 +65,7 @@ internal object PlayerSubtitleUtils {
             "srp" -> "sr"
             "slk", "slo" -> "sk"
             "slv" -> "sl"
-            else -> code
+            else -> normalizedCode
         }
     }
 

@@ -13,7 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,6 +90,7 @@ private fun CompanyLogoCard(company: MetaCompany) {
                 .build()
         }
     }
+    var logoLoadFailed by remember(company.logo) { mutableStateOf(false) }
 
     Card(
         onClick = { },
@@ -113,10 +117,11 @@ private fun CompanyLogoCard(company: MetaCompany) {
                 .background(Color.White),
         contentAlignment = Alignment.Center
         ) {
-            if (logoModel != null) {
+            if (logoModel != null && !logoLoadFailed) {
                 AsyncImage(
                     model = logoModel,
                     contentDescription = company.name,
+                    onError = { logoLoadFailed = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 14.dp, vertical = 10.dp),

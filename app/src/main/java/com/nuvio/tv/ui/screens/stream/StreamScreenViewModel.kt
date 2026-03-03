@@ -180,6 +180,14 @@ class StreamScreenViewModel @Inject constructor(
                 directAutoPlayModeInitializedForSession = true
             }
 
+            val rawRegex = playerSettings.streamAutoPlayRegex.orEmpty().trim()
+            val isEffectivelyEmptyRegex = rawRegex.isEmpty() || !rawRegex.any { it.isLetterOrDigit() }
+
+            if (playerSettings.streamAutoPlayMode == StreamAutoPlayMode.REGEX_MATCH && isEffectivelyEmptyRegex) {
+                directAutoPlayFlowEnabledForSession = false
+                autoPlayHandledForSession = true
+            }
+
             val directFlowActive = directAutoPlayFlowEnabledForSession
             var resolvedAutoPlayTarget = false
 

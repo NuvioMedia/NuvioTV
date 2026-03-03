@@ -32,6 +32,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.Key
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -54,13 +64,20 @@ internal fun StreamItem(
     focusRequester: FocusRequester,
     requestInitialFocus: Boolean,
     isCurrentStream: Boolean = false,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onUpKey: (() -> Unit)? = null
 ) {
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (requestInitialFocus) Modifier.focusRequester(focusRequester) else Modifier),
+            .then(if (requestInitialFocus) Modifier.focusRequester(focusRequester) else Modifier)
+            .then(if (onUpKey != null) Modifier.onKeyEvent { event ->
+                if (event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN &&
+                    event.key == Key.DirectionUp) {
+                    onUpKey(); true
+                } else false
+            } else Modifier),
         colors = CardDefaults.colors(
             containerColor = NuvioColors.BackgroundElevated,
             focusedContainerColor = NuvioColors.BackgroundElevated
@@ -199,30 +216,63 @@ internal fun AddonFilterChips(
     addons: List<String>,
     sourceChips: List<SourceChipItem> = emptyList(),
     selectedAddon: String?,
-    onAddonSelected: (String?) -> Unit
+    onAddonSelected: (String?) -> Unit,
+    externalFocusRequesters: List<FocusRequester>? = null,
+    externalOrderedNames: List<String>? = null
 ) {
     val chipMap = sourceChips.associateBy { it.name }
-    val orderedNames = buildList {
+    val orderedNames = externalOrderedNames ?: buildList {
         addAll(addons)
-        sourceChips.forEach { chip ->
-            if (chip.name !in this) add(chip.name)
+        sourceChips.forEach { chip -> if (chip.name !in this) add(chip.name) }
+    }
+    val focusRequesters = externalFocusRequesters ?: remember(orderedNames.size) {
+        List(orderedNames.size + 1) { FocusRequester() }
+    }
+
+
+    val selectedIndex = if (selectedAddon == null) 0 else orderedNames.indexOf(selectedAddon) + 1
+    LaunchedEffect(selectedAddon) {
+        if (selectedIndex >= 0 && selectedIndex < focusRequesters.size) {
+            try { focusRequesters[selectedIndex].requestFocus() } catch (_: Exception) {}
         }
     }
 
+    var chipRowHasFocus by remember { mutableStateOf(false) }
+
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+        modifier = Modifier
+            .onFocusChanged { chipRowHasFocus = it.hasFocus }
+            .onKeyEvent { event ->
+                if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) return@onKeyEvent false
+                val allOptions = listOf<String?>(null) + orderedNames
+                val currentIdx = allOptions.indexOf(selectedAddon)
+                when (event.key) {
+                    androidx.compose.ui.input.key.Key.DirectionLeft -> {
+                        if (currentIdx > 0) { onAddonSelected(allOptions[currentIdx - 1]); true } else false
+                    }
+                    androidx.compose.ui.input.key.Key.DirectionRight -> {
+                        if (currentIdx < allOptions.lastIndex) { onAddonSelected(allOptions[currentIdx + 1]); true } else false
+                    }
+                    else -> false
+                }
+            }
     ) {
         item {
             SourceStatusFilterChip(
                 name = "All",
                 isSelected = selectedAddon == null,
                 status = SourceChipStatus.SUCCESS,
-                onClick = { onAddonSelected(null) }
+                onClick = { onAddonSelected(null) },
+                modifier = Modifier
+                    .focusRequester(focusRequesters[0])
+                    .focusProperties { canFocus = selectedAddon == null || chipRowHasFocus }
             )
         }
 
-        items(orderedNames) { addon ->
+        items(orderedNames.size) { i ->
+            val addon = orderedNames[i]
             val chipStatus = chipMap[addon]?.status ?: SourceChipStatus.SUCCESS
             val isSelectable = addon in addons && chipStatus == SourceChipStatus.SUCCESS
             SourceStatusFilterChip(
@@ -230,7 +280,8 @@ internal fun AddonFilterChips(
                 isSelected = selectedAddon == addon,
                 status = chipStatus,
                 isSelectable = isSelectable,
-                onClick = { onAddonSelected(addon) }
+                onClick = { onAddonSelected(addon) },
+                modifier = Modifier.focusRequester(focusRequesters[i + 1])
             )
         }
     }

@@ -28,6 +28,14 @@ data class TraktPlaybackItemDto(
 )
 
 @JsonClass(generateAdapter = true)
+data class TraktWatchedMovieItemDto(
+    @Json(name = "plays") val plays: Int? = null,
+    @Json(name = "last_watched_at") val lastWatchedAt: String? = null,
+    @Json(name = "last_updated_at") val lastUpdatedAt: String? = null,
+    @Json(name = "movie") val movie: TraktMovieDto? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class TraktUserEpisodeHistoryItemDto(
     @Json(name = "id") val id: Long? = null,
     @Json(name = "watched_at") val watchedAt: String? = null,

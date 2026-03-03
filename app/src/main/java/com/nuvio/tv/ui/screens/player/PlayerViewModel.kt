@@ -84,6 +84,14 @@ class PlayerViewModel @Inject constructor(
         controller.hideControls()
     }
 
+    fun attachHostActivity(activity: android.app.Activity?) {
+        controller.attachHostActivity(activity)
+    }
+
+    fun startInitialPlaybackIfNeeded() {
+        controller.startInitialPlaybackIfNeeded()
+    }
+
     fun onEvent(event: PlayerEvent) {
         controller.onEvent(event)
     }

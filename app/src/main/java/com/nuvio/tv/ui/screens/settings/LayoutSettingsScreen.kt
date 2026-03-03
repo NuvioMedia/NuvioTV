@@ -223,7 +223,7 @@ fun LayoutSettingsContent(
                         )
                     }
 
-                    if (uiState.heroSectionEnabled && uiState.availableCatalogs.isNotEmpty()) {
+                    if (uiState.heroSectionEnabled && uiState.availableCatalogs.isNotEmpty() && uiState.selectedLayout != HomeLayout.MODERN) {
                         Text(
                             text = stringResource(R.string.layout_hero_catalogs),
                             style = MaterialTheme.typography.labelLarge,
@@ -361,6 +361,17 @@ fun LayoutSettingsContent(
                         },
                         onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                     )
+                    CompactToggleRow(
+                        title = stringResource(R.string.layout_hide_unreleased),
+                        subtitle = stringResource(R.string.layout_hide_unreleased_sub),
+                        checked = uiState.hideUnreleasedContent,
+                        onToggle = {
+                            viewModel.onEvent(
+                                LayoutSettingsEvent.SetHideUnreleasedContent(!uiState.hideUnreleasedContent)
+                            )
+                        },
+                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                    )
                 }
             }
 
@@ -415,6 +426,7 @@ fun LayoutSettingsContent(
                 }
             }
 
+            if (uiState.selectedLayout != HomeLayout.GRID) {
             item(key = "focused_poster_section") {
                 CollapsibleSectionCard(
                     title = stringResource(R.string.layout_section_focused),
@@ -451,7 +463,7 @@ fun LayoutSettingsContent(
                             subtitle = stringResource(R.string.layout_expand_delay_sub),
                             value = uiState.focusedPosterBackdropExpandDelaySeconds,
                             valueText = "${uiState.focusedPosterBackdropExpandDelaySeconds}s",
-                            minValue = 1,
+                            minValue = 0,
                             maxValue = 10,
                             step = 1,
                             onValueChange = { seconds ->
@@ -523,6 +535,7 @@ fun LayoutSettingsContent(
                         )
                     }
                 }
+            }
             }
 
             item(key = "poster_style_section") {

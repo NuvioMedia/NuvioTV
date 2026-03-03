@@ -1,9 +1,9 @@
 package com.nuvio.tv.core.plugin
 
 import android.util.Log
-import com.dokar.quickjs.binding.asyncFunction
 import com.dokar.quickjs.binding.define
 import com.dokar.quickjs.binding.function
+import com.dokar.quickjs.binding.asyncFunction
 import com.dokar.quickjs.quickJs
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -54,10 +54,6 @@ class PluginRuntime @Inject constructor() {
         .followSslRedirects(true)
         .proxy(java.net.Proxy.NO_PROXY)
         .build()
-
-    // Store parsed documents for cheerio
-    private val documentCache = ConcurrentHashMap<String, Document>()
-    private val elementCache = ConcurrentHashMap<String, Element>()
 
     // Pre-compiled regex for :contains() selector conversion
     private val containsRegex = Regex(""":contains\(["']([^"']+)["']\)""")
@@ -144,87 +140,99 @@ class PluginRuntime @Inject constructor() {
         scraperId: String,
         scraperSettings: Map<String, Any>
     ): List<LocalScraperResult> {
-        // Clear caches before execution
-        documentCache.clear()
-        elementCache.clear()
+        val documentCache = ConcurrentHashMap<String, Document>()
+        val elementCache = ConcurrentHashMap<String, Element>()
         val inFlightCalls = ConcurrentHashMap.newKeySet<Call>()
 
         var resultJson = "[]"
 
         try {
             quickJs(Dispatchers.IO) {
-                // Define console object - must return null to avoid quickjs conversion issues
-                define("console") {
-                    function("log") { args ->
-                        Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                        null
-                    }
-                    function("error") { args ->
-                        Log.e("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                        null
-                    }
-                    function("warn") { args ->
-                        Log.w("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                        null
-                    }
-                    function("info") { args ->
-                        Log.i("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                        null
-                    }
-                    function("debug") { args ->
-                        Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
-                        null
-                    }
-                }
-
-                // Define native fetch function (async)
-                asyncFunction("__native_fetch") { args ->
-                    val url = args.getOrNull(0)?.toString() ?: ""
-                    val method = args.getOrNull(1)?.toString() ?: "GET"
-                    val headersJson = args.getOrNull(2)?.toString() ?: "{}"
-                    val body = args.getOrNull(3)?.toString() ?: ""
-                    performNativeFetch(url, method, headersJson, body, inFlightCalls)
-                }
-
-                // Define URL parser
-                function("__parse_url") { args ->
-                    val urlString = args.getOrNull(0)?.toString() ?: ""
-                    parseUrl(urlString)
-                }
-
-                // Define cheerio load function
-                function("__cheerio_load") { args ->
-                    val html = args.getOrNull(0)?.toString() ?: ""
-                    val docId = UUID.randomUUID().toString()
-                    val doc = Jsoup.parse(html)
-                    documentCache[docId] = doc
-                    docId
-                }
-
-                // Define cheerio select function
-                function("__cheerio_select") { args ->
-                    val docId = args.getOrNull(0)?.toString() ?: ""
-                    var selector = args.getOrNull(1)?.toString() ?: ""
-                    val doc = documentCache[docId] ?: return@function "[]"
-                    try {
-                        // Convert cheerio :contains("text") to jsoup :contains(text)
-                        selector = selector.replace(containsRegex, ":contains($1)")
-                        val elements = if (selector.isEmpty()) {
-                            Elements()
-                        } else {
-                            doc.select(selector)
+                    // Define console object - must return null to avoid quickjs conversion issues
+                    define("console") {
+                        function("log") { args ->
+                            Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                            null
                         }
-                        val ids = elements.mapIndexed { index, el ->
-                            val elId = "$docId:$index:${el.hashCode()}"
-                            elementCache[elId] = el
-                            elId
+                        function("error") { args ->
+                            Log.e("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                            null
                         }
-                        // Use simple JSON array construction to avoid Gson issues
-                        "[" + ids.joinToString(",") { "\"${it.replace("\"", "\\\"")}\"" } + "]"
-                    } catch (e: Exception) {
-                        "[]"
+                        function("warn") { args ->
+                            Log.w("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                            null
+                        }
+                        function("info") { args ->
+                            Log.i("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                            null
+                        }
+                        function("debug") { args ->
+                            Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                            null
+                        }
                     }
-                }
+
+                    asyncFunction("__native_fetch") { args ->
+                        val url = args.getOrNull(0)?.toString() ?: ""
+                        val method = args.getOrNull(1)?.toString() ?: "GET"
+                        val headersJson = args.getOrNull(2)?.toString() ?: "{}"
+                        val body = args.getOrNull(3)?.toString() ?: ""
+                        try {
+                            performNativeFetch(url, method, headersJson, body, inFlightCalls)
+                        } catch (t: Throwable) {
+                            Log.e(TAG, "Async fetch bridge error for $method $url: ${t.message}")
+                            gson.toJson(
+                                mapOf(
+                                    "ok" to false,
+                                    "status" to 0,
+                                    "statusText" to (t.message ?: "Fetch failed"),
+                                    "url" to url,
+                                    "body" to "",
+                                    "headers" to emptyMap<String, String>()
+                                )
+                            )
+                        }
+                    }
+
+                    // Define URL parser
+                    function("__parse_url") { args ->
+                        val urlString = args.getOrNull(0)?.toString() ?: ""
+                        parseUrl(urlString)
+                    }
+
+                    // Define cheerio load function
+                    function("__cheerio_load") { args ->
+                        val html = args.getOrNull(0)?.toString() ?: ""
+                        val docId = UUID.randomUUID().toString()
+                        val doc = Jsoup.parse(html)
+                        documentCache[docId] = doc
+                        docId
+                    }
+
+                    // Define cheerio select function
+                    function("__cheerio_select") { args ->
+                        val docId = args.getOrNull(0)?.toString() ?: ""
+                        var selector = args.getOrNull(1)?.toString() ?: ""
+                        val doc = documentCache[docId] ?: return@function "[]"
+                        try {
+                            // Convert cheerio :contains("text") to jsoup :contains(text)
+                            selector = selector.replace(containsRegex, ":contains($1)")
+                            val elements = if (selector.isEmpty()) {
+                                Elements()
+                            } else {
+                                doc.select(selector)
+                            }
+                            val ids = elements.mapIndexed { index, el ->
+                                val elId = "$docId:$index:${el.hashCode()}"
+                                elementCache[elId] = el
+                                elId
+                            }
+                            // Use simple JSON array construction to avoid Gson issues
+                            "[" + ids.joinToString(",") { "\"${it.replace("\"", "\\\"")}\"" } + "]"
+                        } catch (e: Exception) {
+                            "[]"
+                        }
+                    }
 
                 // Define cheerio find function
                 function("__cheerio_find") { args ->
@@ -360,8 +368,8 @@ class PluginRuntime @Inject constructor() {
                     })();
                 """.trimIndent()
 
-                evaluate<Any?>(callCode)
-            }
+                    evaluate<Any?>(callCode)
+                }
 
             return parseJsonResults(resultJson)
 
@@ -543,6 +551,15 @@ class PluginRuntime @Inject constructor() {
             globalThis.SCRAPER_SETTINGS = $settingsJson;
             if (typeof TMDB_API_KEY === 'undefined') {
                 globalThis.TMDB_API_KEY = "1865f43a0549ca50d341dd9ab8b29f49";
+            }
+            if (typeof globalThis.global === 'undefined') {
+                globalThis.global = globalThis;
+            }
+            if (typeof globalThis.window === 'undefined') {
+                globalThis.window = globalThis;
+            }
+            if (typeof globalThis.self === 'undefined') {
+                globalThis.self = globalThis;
             }
 
             // Fetch implementation (async)

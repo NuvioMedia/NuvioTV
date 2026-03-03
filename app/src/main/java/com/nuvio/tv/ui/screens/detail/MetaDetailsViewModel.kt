@@ -27,6 +27,8 @@ import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.data.local.TrailerSettingsDataStore
 import com.nuvio.tv.data.trailer.TrailerService
+import com.nuvio.tv.core.util.isUnreleased
+import java.time.LocalDate
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -73,6 +75,7 @@ class MetaDetailsViewModel @Inject constructor(
     private var idleTimerJob: Job? = null
     private var trailerFetchJob: Job? = null
     private var moreLikeThisJob: Job? = null
+    private var collectionJob: Job? = null
     private var episodeRatingsJob: Job? = null
     private var nextToWatchJob: Job? = null
 
@@ -80,6 +83,7 @@ class MetaDetailsViewModel @Inject constructor(
     private var trailerAutoplayEnabled = false
 
     private var isPlayButtonFocused = false
+    private var hideUnreleasedContent = false
 
     init {
         observeMetaViewSettings()
@@ -89,7 +93,18 @@ class MetaDetailsViewModel @Inject constructor(
         observeWatchedEpisodes()
         observeMovieWatched()
         observeBlurUnwatchedEpisodes()
+        observeHideUnreleasedContent()
         loadMeta()
+    }
+
+    private fun observeHideUnreleasedContent() {
+        viewModelScope.launch {
+            layoutPreferenceDataStore.hideUnreleasedContent
+                .distinctUntilChanged()
+                .collectLatest { enabled ->
+                    hideUnreleasedContent = enabled
+                }
+        }
     }
 
     private fun observeMetaViewSettings() {
@@ -131,8 +146,19 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun updateNextToWatch(nextToWatch: NextToWatch) {
         _uiState.update { state ->
-            if (state.nextToWatch == nextToWatch) {
-                state
+            if (state.nextToWatch == nextToWatch) return@update state
+            val nextSeason = nextToWatch.nextSeason
+            val meta = state.meta
+            val shouldSwitchSeason = nextSeason != null &&
+                nextSeason != state.selectedSeason &&
+                meta != null &&
+                state.seasons.contains(nextSeason)
+            if (shouldSwitchSeason && meta != null && nextSeason != null) {
+                state.copy(
+                    nextToWatch = nextToWatch,
+                    selectedSeason = nextSeason,
+                    episodesForSeason = getEpisodesForSeason(meta.videos, nextSeason)
+                )
             } else {
                 state.copy(nextToWatch = nextToWatch)
             }
@@ -310,7 +336,9 @@ class MetaDetailsViewModel @Inject constructor(
                     episodeRatingsError = null,
                     mdbListRatings = null,
                     showMdbListImdb = false,
-                    moreLikeThis = emptyList()
+                    moreLikeThis = emptyList(),
+                    collection = emptyList(),
+                    collectionName = null
                 )
             }
 
@@ -444,7 +472,7 @@ class MetaDetailsViewModel @Inject constructor(
                 return@launch
             }
 
-            val recommendations = runCatching {
+            val rawRecommendations = runCatching {
                 tmdbMetadataService.fetchMoreLikeThis(
                     tmdbId = tmdbId,
                     contentType = tmdbContentType,
@@ -453,6 +481,13 @@ class MetaDetailsViewModel @Inject constructor(
             }.getOrElse {
                 Log.w(TAG, "Failed to load More like this for ${meta.id}: ${it.message}")
                 emptyList()
+            }
+
+            val recommendations = if (hideUnreleasedContent) {
+                val today = LocalDate.now()
+                rawRecommendations.filterNot { it.isUnreleased(today) }
+            } else {
+                rawRecommendations
             }
 
             _uiState.update { state ->
@@ -467,6 +502,37 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun shouldLoadMoreLikeThis(settings: TmdbSettings): Boolean {
         return settings.enabled && settings.useMoreLikeThis
+    }
+
+    private fun loadCollectionAsync(collectionId: Int, collectionName: String?, settings: TmdbSettings) {
+        collectionJob?.cancel()
+        collectionJob = viewModelScope.launch {
+            if (!settings.enabled || !settings.useCollections) {
+                _uiState.update { it.copy(collection = emptyList(), collectionName = null) }
+                return@launch
+            }
+
+            val items = runCatching {
+                tmdbMetadataService.fetchMovieCollection(
+                    collectionId = collectionId,
+                    language = settings.language
+                )
+            }.getOrElse {
+                Log.w(TAG, "Failed to load collection $collectionId: ${it.message}")
+                emptyList()
+            }
+
+            val filteredItems = if (hideUnreleasedContent) {
+                val today = LocalDate.now()
+                items.filterNot { it.isUnreleased(today) }
+            } else {
+                items
+            }
+
+            _uiState.update { state ->
+                state.copy(collection = filteredItems, collectionName = collectionName)
+            }
+        }
     }
 
     private suspend fun loadMDBListRatings(meta: Meta) {
@@ -686,6 +752,10 @@ class MetaDetailsViewModel @Inject constructor(
                     }
                 )
             }
+        }
+
+        if (enrichment?.collectionId != null) {
+            loadCollectionAsync(enrichment.collectionId, enrichment.collectionName, settings)
         }
 
         return updated
@@ -919,7 +989,14 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     private fun shouldResumeProgress(progress: WatchProgress): Boolean {
-        return progress.progressPercentage >= 0.02f && !progress.isCompleted()
+        if (progress.isCompleted()) return false
+        if (progress.progressPercentage >= 0.02f) return true
+
+        val hasStartedPlayback = progress.position > 0L ||
+            progress.progressPercent?.let { it > 0f } == true
+        return hasStartedPlayback &&
+            progress.source != WatchProgress.SOURCE_TRAKT_HISTORY &&
+            progress.source != WatchProgress.SOURCE_TRAKT_SHOW_PROGRESS
     }
 
     private fun toggleLibrary() {
@@ -933,7 +1010,7 @@ class MetaDetailsViewModel @Inject constructor(
                 val message = if (_uiState.value.librarySourceMode == LibrarySourceMode.TRAKT) {
                     if (wasInWatchlist) "Removed from watchlist" else "Added to watchlist"
                 } else {
-                    if (wasInLibrary) "Removed from library" else "Added to library"
+                    if (wasInLibrary) context.getString(R.string.detail_removed_from_library) else context.getString(R.string.detail_added_to_library)
                 }
                 showMessage(message)
             }.onFailure { error ->
@@ -1007,7 +1084,7 @@ class MetaDetailsViewModel @Inject constructor(
                         pickerError = null
                     )
                 }
-                showMessage("Lists updated")
+                showMessage(context.getString(R.string.detail_lists_updated))
             }.onFailure { error ->
                 _uiState.update {
                     it.copy(
@@ -1040,10 +1117,10 @@ class MetaDetailsViewModel @Inject constructor(
             runCatching {
                 if (_uiState.value.isMovieWatched) {
                     watchProgressRepository.removeFromHistory(itemId)
-                    showMessage("Marked as unwatched")
+                    showMessage(context.getString(R.string.detail_movie_marked_unwatched))
                 } else {
                     watchProgressRepository.markAsCompleted(buildCompletedMovieProgress(meta))
-                    showMessage("Marked as watched")
+                    showMessage(context.getString(R.string.detail_movie_marked_watched))
                 }
             }.onFailure { error ->
                 showMessage(
@@ -1072,10 +1149,10 @@ class MetaDetailsViewModel @Inject constructor(
             runCatching {
                 if (isWatched) {
                     watchProgressRepository.removeFromHistory(itemId, season, episode)
-                    showMessage("Episode marked as unwatched")
+                    showMessage(context.getString(R.string.detail_episode_marked_unwatched))
                 } else {
                     watchProgressRepository.markAsCompleted(buildCompletedEpisodeProgress(meta, video))
-                    showMessage("Episode marked as watched")
+                    showMessage(context.getString(R.string.detail_episode_marked_watched))
                 }
             }.onFailure { error ->
                 showMessage(
@@ -1115,7 +1192,7 @@ class MetaDetailsViewModel @Inject constructor(
                 !isWatched
             }
             if (unwatched.isEmpty()) {
-                showMessage("All episodes already watched")
+                showMessage(context.getString(R.string.detail_all_episodes_watched))
                 return@launch
             }
 
@@ -1138,7 +1215,7 @@ class MetaDetailsViewModel @Inject constructor(
                 }
             }
 
-            showMessage("Marked $marked episode${if (marked != 1) "s" else ""} as watched")
+            showMessage(context.getString(R.string.detail_marked_episodes_watched, marked))
         }
     }
 
@@ -1153,7 +1230,7 @@ class MetaDetailsViewModel @Inject constructor(
                     || _uiState.value.watchedEpisodes.contains(s to e)
             }
             if (watched.isEmpty()) {
-                showMessage("No watched episodes in this season")
+                showMessage(context.getString(R.string.detail_no_watched_episodes))
                 return@launch
             }
 
@@ -1176,7 +1253,7 @@ class MetaDetailsViewModel @Inject constructor(
                 }
             }
 
-            showMessage("Marked $unmarked episode${if (unmarked != 1) "s" else ""} as unwatched")
+            showMessage(context.getString(R.string.detail_marked_episodes_unwatched, unmarked))
         }
     }
 
@@ -1197,7 +1274,7 @@ class MetaDetailsViewModel @Inject constructor(
                 !isWatched
             }
             if (unwatched.isEmpty()) {
-                showMessage("All previous episodes already watched")
+                showMessage(context.getString(R.string.detail_all_previous_watched))
                 return@launch
             }
 
@@ -1220,7 +1297,7 @@ class MetaDetailsViewModel @Inject constructor(
                 }
             }
 
-            showMessage("Marked $marked previous episode${if (marked != 1) "s" else ""} as watched")
+            showMessage(context.getString(R.string.detail_marked_previous_watched, marked))
         }
     }
 
@@ -1342,7 +1419,10 @@ class MetaDetailsViewModel @Inject constructor(
                 if (state.isTrailerLoading) state else state.copy(isTrailerLoading = true)
             }
 
-            val year = meta.releaseInfo?.split("-")?.firstOrNull()
+            val year = meta.releaseInfo?.let { info ->
+                if (info.isBlank()) null
+                else Regex("""\b(19|20)\d{2}\b""").find(info)?.value
+            }
 
             val tmdbId = try {
                 tmdbService.ensureTmdbId(meta.id, meta.apiType)
@@ -1350,25 +1430,33 @@ class MetaDetailsViewModel @Inject constructor(
                 null
             }
 
-            val type = when (meta.type) {
-                com.nuvio.tv.domain.model.ContentType.MOVIE -> "movie"
-                com.nuvio.tv.domain.model.ContentType.SERIES,
-                com.nuvio.tv.domain.model.ContentType.TV -> "tv"
-                else -> null
-            }
-
-            val url = trailerService.getTrailerUrl(
+            val source = trailerService.getTrailerPlaybackSource(
                 title = meta.name,
                 year = year,
                 tmdbId = tmdbId,
-                type = type
-            )
+                type = meta.apiType
+            ) ?: meta.trailerYtIds.firstOrNull()?.let { ytId ->
+                trailerService.getTrailerPlaybackSourceFromYouTubeUrl(
+                    youtubeUrl = "https://www.youtube.com/watch?v=$ytId",
+                    title = meta.name,
+                    year = year
+                )
+            }
+            val url = source?.videoUrl
+            val audioUrl = source?.audioUrl
 
             _uiState.update { state ->
-                if (state.trailerUrl == url && !state.isTrailerLoading) {
+                if (state.trailerUrl == url &&
+                    state.trailerAudioUrl == audioUrl &&
+                    !state.isTrailerLoading
+                ) {
                     state
                 } else {
-                    state.copy(trailerUrl = url, isTrailerLoading = false)
+                    state.copy(
+                        trailerUrl = url,
+                        trailerAudioUrl = audioUrl,
+                        isTrailerLoading = false
+                    )
                 }
             }
 

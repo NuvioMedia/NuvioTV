@@ -90,7 +90,8 @@ class LibraryRepositoryImpl @Inject constructor(
                             releaseInfo = saved.releaseInfo,
                             imdbRating = saved.imdbRating,
                             genres = saved.genres,
-                            addonBaseUrl = saved.addonBaseUrl
+                            addonBaseUrl = saved.addonBaseUrl,
+                            listedAt = saved.addedAt
                         )
                     }
                 }

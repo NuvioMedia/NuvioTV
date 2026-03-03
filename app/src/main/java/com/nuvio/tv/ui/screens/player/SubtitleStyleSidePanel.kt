@@ -120,7 +120,7 @@ internal fun SubtitleStyleSidePanel(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SubtitleStyleSection(
-                    title = "Font Size",
+                    title = stringResource(R.string.subtitle_style_font_size),
                     modifier = Modifier
                         .width(StyleCardWidth)
                         .height(StyleCardHeight)
@@ -139,7 +139,7 @@ internal fun SubtitleStyleSidePanel(
                     }
                 }
                 SubtitleStyleSection(
-                    title = "Bold",
+                    title = stringResource(R.string.subtitle_style_bold),
                     modifier = Modifier
                         .width(StyleCardWidth)
                         .height(StyleCardHeight)
@@ -155,7 +155,7 @@ internal fun SubtitleStyleSidePanel(
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SubtitleStyleSection(
-                    title = "Text Color",
+                    title = stringResource(R.string.subtitle_style_text_color),
                     modifier = Modifier
                         .width(StyleCardWidth)
                         .height(StyleCardHeight)
@@ -171,7 +171,7 @@ internal fun SubtitleStyleSidePanel(
                     }
                 }
                 SubtitleStyleSection(
-                    title = "Outline",
+                    title = stringResource(R.string.subtitle_style_outline),
                     centerContent = false,
                     modifier = Modifier
                         .width(StyleCardWidth)
@@ -212,7 +212,7 @@ internal fun SubtitleStyleSidePanel(
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SubtitleStyleSection(
-                    title = "Bottom Offset",
+                    title = stringResource(R.string.subtitle_style_bottom_offset),
                     modifier = Modifier
                         .width(StyleCardWidth)
                         .height(StyleCardHeight)
@@ -230,7 +230,7 @@ internal fun SubtitleStyleSidePanel(
                     }
                 }
                 SubtitleStyleSection(
-                    title = "Defaults",
+                    title = stringResource(R.string.subtitle_style_defaults),
                     modifier = Modifier
                         .width(StyleCardWidth)
                         .height(StyleCardHeight)
@@ -406,7 +406,7 @@ private fun SubtitleStyleToggleButton(
         shape = CardDefaults.shape(RoundedCornerShape(10.dp))
     ) {
         Text(
-            text = if (isEnabled) "On" else "Off",
+            text = if (isEnabled) stringResource(R.string.subtitle_style_on) else stringResource(R.string.subtitle_style_off),
             style = MaterialTheme.typography.bodySmall,
             color = if (isEnabled) Color.White else Color.White.copy(alpha = 0.55f),
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
