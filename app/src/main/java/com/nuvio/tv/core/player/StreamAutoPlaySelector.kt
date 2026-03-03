@@ -31,7 +31,7 @@ object StreamAutoPlaySelector {
         val lower = url.lowercase()
 
         // Skip probing for signed or tokened URLs
-        if (listOf("token=", "expires=", "signature=", "sig=", "auth=", "key=", "hash=", "x-amz-", "hdnts=", "cf_")
+        if (listOf("expires=", "signature=", "sig=", "auth=", "key=", "hash=", "x-amz-", "hdnts=", "cf_")
                 .any { lower.contains(it) }) {
             return true
         }
@@ -39,7 +39,8 @@ object StreamAutoPlaySelector {
         // Safe HEAD probe for everything else
         return runCatching {
             val connection = URL(url).openConnection() as HttpURLConnection
-            connection.requestMethod = "HEAD"
+            connection.requestMethod = "GET"
+            connection.setRequestProperty("Range", "bytes=0-1")
             connection.connectTimeout = 3000
             connection.readTimeout = 3000
             connection.instanceFollowRedirects = true
