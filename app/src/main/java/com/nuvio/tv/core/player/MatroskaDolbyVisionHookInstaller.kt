@@ -3,10 +3,14 @@ package com.nuvio.tv.core.player
 import android.net.Uri
 import android.util.Log
 import androidx.media3.common.util.DolbyVisionCompatibility
+import androidx.media3.common.util.ParsableByteArray
+import androidx.media3.container.DolbyVisionConfig
 import androidx.media3.extractor.DefaultExtractorsFactory
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 object MatroskaDolbyVisionHookInstaller {
     private const val TAG = "Dv7ExtractorHook"
@@ -104,10 +108,38 @@ object MatroskaDolbyVisionHookInstaller {
     }
 
     private fun createInvocationHandler(host: String): InvocationHandler {
+        val lastDetectedProfile = AtomicReference<Int?>(null)
+        val nonDv7ProfileLogged = AtomicBoolean(false)
+
+        fun rememberProfile(profile: Int?): Int? {
+            if (profile != null) {
+                lastDetectedProfile.set(profile)
+            }
+            return profile ?: lastDetectedProfile.get()
+        }
+
+        fun shouldAllowConversion(profile: Int?): Boolean {
+            val resolvedProfile = rememberProfile(profile)
+            if (resolvedProfile == 7) {
+                return true
+            }
+            if (resolvedProfile != null && nonDv7ProfileLogged.compareAndSet(false, true)) {
+                Log.i(
+                    TAG,
+                    "Skipping experimental DV conversion for non-DV7 profile=$resolvedProfile host=$host"
+                )
+            }
+            return false
+        }
+
         return InvocationHandler { proxy, method, args ->
             when (method.name) {
                 "onDolbyVisionBlockAdditionalData" -> {
                     val blockAdditionalData = args?.getOrNull(0) as? ByteArray ?: return@InvocationHandler null
+                    val dolbyVisionConfigBytes = args.getOrNull(2) as? ByteArray
+                    if (!shouldAllowConversion(resolveDolbyVisionProfile(configBytes = dolbyVisionConfigBytes))) {
+                        return@InvocationHandler null
+                    }
                     DoviBridge.convertDv7RpuToDv81(blockAdditionalData, mode = 2)
                         ?.takeIf { it.isNotEmpty() }
                 }
@@ -115,13 +147,30 @@ object MatroskaDolbyVisionHookInstaller {
                 "onHevcSample" -> null
                 "onDolbyVisionCodecString" -> {
                     val codecs = args?.getOrNull(0) as? String
+                    val dolbyVisionConfigBytes = args?.getOrNull(1) as? ByteArray
+                    val profile = resolveDolbyVisionProfile(codecs = codecs, configBytes = dolbyVisionConfigBytes)
+                    if (!shouldAllowConversion(profile)) {
+                        return@InvocationHandler null
+                    }
                     normalizeDolbyVisionCodecString(codecs)
                 }
                 "transformHevcSample" -> {
                     val sampleLengthDelimited = args?.getOrNull(0) as? ByteArray ?: return@InvocationHandler null
                     val nalUnitLengthFieldLength =
                         (args.getOrNull(1) as? Number)?.toInt() ?: return@InvocationHandler null
-                    val blockAdditionalData = args.getOrNull(2) as? ByteArray
+                    val thirdArg = args.getOrNull(2)
+                    val blockAdditionalData = thirdArg as? ByteArray
+                    val codecs = thirdArg as? String
+                    val dolbyVisionConfigBytes = args.getOrNull(3) as? ByteArray
+                    if (!shouldAllowConversion(
+                            resolveDolbyVisionProfile(
+                                codecs = codecs,
+                                configBytes = dolbyVisionConfigBytes
+                            )
+                        )
+                    ) {
+                        return@InvocationHandler null
+                    }
                     val rewrittenSample =
                         rewriteMp4HevcSample(sampleLengthDelimited, nalUnitLengthFieldLength)
                             ?: sampleLengthDelimited
@@ -141,6 +190,10 @@ object MatroskaDolbyVisionHookInstaller {
                 }
                 "transformDolbyVisionRpuNal" -> {
                     val nalPayload = args?.getOrNull(0) as? ByteArray ?: return@InvocationHandler null
+                    val codecs = args?.getOrNull(1) as? String
+                    if (!shouldAllowConversion(resolveDolbyVisionProfile(codecs = codecs))) {
+                        return@InvocationHandler null
+                    }
                     maybeConvertDolbyVisionRpuNal(nalPayload)
                 }
                 "equals" -> proxy === args?.getOrNull(0)
@@ -274,6 +327,27 @@ object MatroskaDolbyVisionHookInstaller {
         val width = parts[1].length.coerceAtLeast(2)
         parts[1] = "8".padStart(width, '0')
         return parts.joinToString(".")
+    }
+
+    private fun resolveDolbyVisionProfile(
+        codecs: String? = null,
+        configBytes: ByteArray? = null
+    ): Int? {
+        resolveDolbyVisionProfileFromCodecString(codecs)?.let { return it }
+        if (configBytes == null || configBytes.isEmpty()) return null
+        return runCatching {
+            DolbyVisionConfig.parse(ParsableByteArray(configBytes))?.profile
+        }.getOrNull()
+    }
+
+    private fun resolveDolbyVisionProfileFromCodecString(codecs: String?): Int? {
+        val raw = codecs?.trim().orEmpty()
+        if (raw.isEmpty()) return null
+        val parts = raw.split('.')
+        if (parts.size < 2) return null
+        val prefix = parts[0].lowercase()
+        if (prefix != "dvhe" && prefix != "dvh1") return null
+        return parts[1].toIntOrNull()
     }
 
     private fun appendLengthDelimitedNal(
