@@ -1,4 +1,5 @@
 <resources>
+    <string name="app_name">Nuvio</string>
     <string name="type_movie">Película</string>
     <string name="type_series">Serie</string>
     <string name="type_unknown">Desconocido</string>
@@ -16,10 +17,15 @@
     <string name="cw_upcoming">Próximamente</string>
     <string name="cw_next_up">A continuación</string>
     <string name="cw_resume">Reanudar</string>
+    <string name="cw_hours_min_left">Faltan %1$dh %2$dm</string>
+    <string name="cw_min_left">Faltan %1$dm</string>
+    <string name="cw_almost_done">Casi terminado</string>
     <string name="cw_airs_date">Se emite el %1$s</string>
     <string name="cw_action_go_to_details">Ir a detalles</string>
+    <string name="cw_action_start_from_beginning">Empezar desde el principio</string>
     <string name="cw_action_remove">Eliminar</string>
     <string name="cw_dialog_subtitle">Elige qué quieres hacer con este elemento.</string>
+    <string name="home_poster_dialog_subtitle">Acciones del título</string>
 
     <!-- CatalogRowSection -->
     <string name="catalog_from_addon">de %1$s</string>
@@ -53,8 +59,31 @@
     <string name="episodes_play">Reproducir</string>
     <string name="episodes_season_actions">Acciones de la temporada</string>
 
+    <!-- MetaDetailsViewModel -->
+    <string name="detail_added_to_library">Agregado a la biblioteca</string>
+    <string name="detail_removed_from_library">Eliminado de la biblioteca</string>
+    <string name="detail_episode_marked_watched">Episodio marcado como visto</string>
+    <string name="detail_episode_marked_unwatched">Episodio marcado como no visto</string>
+    <string name="detail_lists_updated">Listas actualizadas</string>
+    <string name="detail_movie_marked_watched">Marcado como visto</string>
+    <string name="detail_movie_marked_unwatched">Marcado como no visto</string>
+    <string name="detail_all_episodes_watched">Todos los episodios ya están vistos</string>
+    <string name="detail_no_watched_episodes">No hay episodios vistos en esta temporada</string>
+    <string name="detail_all_previous_watched">Todos los episodios anteriores ya están vistos</string>
+    <string name="detail_marked_episodes_watched">Episodios marcados como vistos: %1$d</string>
+    <string name="detail_marked_episodes_unwatched">Episodios marcados como no vistos: %1$d</string>
+    <string name="detail_marked_previous_watched">Episodios anteriores marcados como vistos: %1$d</string>
+
     <!-- MetaDetailsScreen -->
+    <string name="detail_btn_play">Reproducir</string>
+    <string name="detail_btn_resume">Reanudar</string>
+    <string name="detail_btn_play_episode">Reproducir T%1$dE%2$d</string>
+    <string name="detail_btn_resume_episode">Reanudar T%1$dE%2$d</string>
+    <string name="detail_btn_next_episode">Siguiente T%1$dE%2$d</string>
     <string name="detail_tab_cast">Creadores y Elenco</string>
+    <string name="cast_role_creator">Creador</string>
+    <string name="cast_role_director">Director</string>
+    <string name="cast_role_writer">Escritor</string>
     <string name="detail_tab_ratings">Calificaciones</string>
     <string name="detail_tab_more_like_this">Similares</string>
     <string name="detail_section_network">Cadena</string>
@@ -70,6 +99,11 @@
     <string name="appearance_language_system">Predeterminado del sistema</string>
     <string name="appearance_language_dialog_title">Elegir Idioma</string>
     <string name="appearance_language_restart_hint">Reinicia la app para aplicar el cambio de idioma.</string>
+
+    <!-- Font -->
+    <string name="appearance_font">Fuente de la App</string>
+    <string name="appearance_font_subtitle">Elige tu fuente preferida</string>
+    <string name="appearance_font_dialog_title">Elegir Fuente</string>
 
     <!-- ThemeSettingsScreen -->
     <string name="appearance_title">Apariencia</string>
@@ -104,10 +138,16 @@
     <string name="settings_debug_subtitle">Herramientas de desarrollador y funciones experimentales.</string>
     <string name="settings_plugins_section_subtitle">Administrar repositorios, proveedores y estado de los plugins.</string>
     <string name="settings_account_section_subtitle">Estado de la cuenta y sincronización.</string>
+    <string name="account_stat_addons">addons</string>
+    <string name="account_stat_plugins">plugins</string>
+    <string name="account_stat_library">biblioteca</string>
+    <string name="account_stat_progress">progreso</string>
+    <string name="account_stat_watched">vistos</string>
     <string name="settings_integrations_section">Integraciones</string>
     <string name="settings_integrations_section_subtitle">Elegir configuraciones de TMDB o MDBList</string>
     <string name="settings_tmdb_subtitle">Controles de enriquecimiento de metadatos</string>
     <string name="settings_mdblist_subtitle">Proveedores de calificaciones externos</string>
+    <string name="settings_animeskip_subtitle">Marcas de tiempo para omitir intro/outro de anime</string>
 
     <!-- PlaybackSettingsScreen -->
     <string name="playback_title">Ajustes de Reproducción</string>
@@ -125,6 +165,7 @@
     <string name="playback_pause_overlay">Pantalla de Pausa</string>
     <string name="playback_pause_overlay_sub">Mostrar detalles superpuestos después de 5 segundos al estar en pausa.</string>
     <string name="playback_show_clock_sub">Mostrar hora actual y hora de finalización mientras los controles sean visibles.</string>
+    <string name="playback_osd_clock">Reloj OSD (En pantalla)</string>
     <string name="playback_skip_intro">Omitir Intro</string>
     <string name="playback_skip_intro_sub">Usar introdb.app para detectar intros y resúmenes.</string>
     <string name="playback_auto_frame_rate">Tasa de Refresco Automática (AFR)</string>
@@ -146,6 +187,8 @@
     <string name="playback_afr_on_start_sub">Cambiar cuando inicie la reproducción.</string>
     <string name="playback_afr_on_start_stop">Al iniciar/detener</string>
     <string name="playback_afr_on_start_stop_sub">Cambiar al iniciar y restaurar al detener.</string>
+    <string name="playback_resolution_matching">Coincidencia de resolución</string>
+    <string name="playback_resolution_matching_sub">Permitir cambios en el modo de pantalla para coincidir con la resolución del video.</string>
     <string name="playback_player_external_desc">Abrir siempre los enlaces en una app externa</string>
     <string name="playback_player_ask_desc">Elegir el reproductor en cada ocasión</string>
 
@@ -177,6 +220,7 @@
     <!-- PlaybackSubtitleSettings -->
     <string name="sub_section">Subtítulos</string>
     <string name="sub_not_set">No configurado</string>
+    <string name="sub_forced_lang">Forzados</string>
     <string name="sub_preferred_lang">Idioma Preferido</string>
     <string name="sub_secondary_lang">Segundo Idioma Preferido</string>
     <string name="sub_organization">Organización de Subtítulos</string>
@@ -208,6 +252,13 @@
     <string name="sub_org_none_desc">Mostrar subtítulos en el orden predeterminado del addon.</string>
     <string name="sub_org_by_lang_desc">Agrupar subtítulos por idioma.</string>
     <string name="sub_org_by_addon_desc">Agrupar subtítulos por el addon de origen.</string>
+    <string name="sub_startup_mode_title">Carga de Subtítulos de Addons</string>
+    <string name="sub_startup_mode_fast">Inicio rápido</string>
+    <string name="sub_startup_mode_preferred">Idiomas preferidos</string>
+    <string name="sub_startup_mode_all">Todos los subtítulos de addons</string>
+    <string name="sub_startup_mode_fast_desc">Iniciar reproducción inmediatamente. Seleccionar subtítulos de addons podría recargar el reproductor una vez.</string>
+    <string name="sub_startup_mode_preferred_desc">Obtener subtítulos de addons antes de la reproducción y adjuntar pistas de idioma preferido/secundario.</string>
+    <string name="sub_startup_mode_all_desc">Obtener y adjuntar todos los subtítulos de addons antes de la reproducción. El inicio más lento.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Reutilizar Último Enlace</string>
@@ -266,7 +317,7 @@
     <string name="layout_preview_row_sub">Mostrar una vista previa parcial de la fila inferior en el diseño de Inicio Moderno.</string>
     <string name="layout_hero_catalogs">Catálogos Destacados</string>
     <string name="layout_hero_catalogs_sub">Selecciona uno o más catálogos para el contenido destacado.</string>
-    <string name="layout_section_content">Home Content</string>
+    <string name="layout_section_content">Contenido de Inicio</string>
     <string name="layout_section_content_desc">Controla lo que aparece en inicio y búsqueda.</string>
     <string name="layout_collapse_sidebar">Contraer Barra Lateral</string>
     <string name="layout_collapse_sidebar_sub">Ocultar la barra lateral por defecto; mostrarla al interactuar con ella.</string>
@@ -284,6 +335,8 @@
     <string name="layout_addon_name_sub">Mostrar el nombre de la fuente debajo de los títulos del catálogo.</string>
     <string name="layout_catalog_type">Mostrar Tipo de Catálogo</string>
     <string name="layout_catalog_type_sub">Mostrar el sufijo de tipo junto al nombre del catálogo (Película/Serie).</string>
+    <string name="layout_hide_unreleased">Ocultar contenido no estrenado</string>
+    <string name="layout_hide_unreleased_sub">Ocultar películas y series que aún no se han estrenado.</string>
     <string name="layout_section_detail">Página de Detalles</string>
     <string name="layout_section_detail_desc">Ajustes para las pantallas de detalles y episodios.</string>
     <string name="layout_blur_unwatched">Desenfocar Episodios No Vistos</string>
@@ -355,6 +408,17 @@
     <string name="mdblist_dialog_subtitle">Ingresa tu clave de API para obtener calificaciones externas</string>
     <string name="mdblist_dialog_placeholder">Ingresar clave de API de MDBList</string>
     <string name="mdblist_not_set">No configurado</string>
+
+    <!-- Anime-Skip -->
+    <string name="animeskip_title">Anime Skip</string>
+    <string name="animeskip_subtitle">Configura tu Client ID de Anime Skip para omitir intro/outro</string>
+    <string name="animeskip_enable_title">Habilitar Anime Skip</string>
+    <string name="animeskip_enable_subtitle">Obtener marcas de tiempo desde anime-skip.com</string>
+    <string name="animeskip_client_id_title">Client ID</string>
+    <string name="animeskip_client_id_subtitle">Necesario para obtener marcas de tiempo desde anime-skip.com</string>
+    <string name="animeskip_dialog_title">Client ID de Anime Skip</string>
+    <string name="animeskip_dialog_subtitle">Crea tu propio Client ID en anime-skip.com/account/settings</string>
+    <string name="animeskip_dialog_placeholder">Ingresar Client ID</string>
     <string name="action_clear">Borrar</string>
 
     <!-- TmdbSettingsScreen -->
@@ -380,6 +444,9 @@
     <string name="tmdb_episodes_subtitle">Títulos de episodios, descripciones, miniaturas y duración desde TMDB</string>
     <string name="tmdb_more_like_this_title">Similares</string>
     <string name="tmdb_more_like_this_subtitle">Fondos de recomendaciones de TMDB en la página de detalles</string>
+    <string name="tmdb_collections_title">Colecciones</string>
+    <string name="tmdb_collections_subtitle">Colecciones de películas de TMDB en orden de lanzamiento</string>
+
     <string name="tmdb_language_dialog_title">Idioma de TMDB</string>
 
     <!-- TraktScreen -->
@@ -387,6 +454,10 @@
     <string name="trakt_connected_as">Conectado como %1$s</string>
     <string name="trakt_account_login">Iniciar Sesión en la Cuenta</string>
     <string name="trakt_awaiting_instruction">Ve a trakt.tv/activate e ingresa este código:</string>
+    <string name="trakt_waiting_approval">Esperando aprobación…</string>
+    <string name="qr_login_approved">Inicio de sesión aprobado. Finalizando…</string>
+    <string name="qr_login_pending">Esperando aprobación en tu teléfono…</string>
+    <string name="qr_login_expired">El inicio de sesión QR ha expirado. Genera un nuevo código.</string>
     <string name="trakt_code_expires">El código expira en %1$s</string>
     <string name="trakt_token_refreshes">El token de acceso de Trakt se actualiza en %1$s</string>
     <string name="trakt_login_instruction">Presiona Iniciar Sesión para comenzar la autenticación del dispositivo con Trakt. Aquí aparecerá un código QR.</string>
@@ -524,6 +595,7 @@
     <string name="sources_title">Fuentes</string>
     <string name="sources_reload">Recargar</string>
     <string name="sources_close">Cerrar</string>
+    <string name="sources_playing">Reproduciendo</string>
     <string name="sources_no_streams">No se encontraron fuentes</string>
 
     <!-- EpisodesSidePanel -->
@@ -532,6 +604,14 @@
     <string name="episodes_panel_reload">Recargar</string>
     <string name="episodes_panel_no_streams">No se encontraron enlaces</string>
     <string name="episodes_panel_no_episodes">No hay episodios disponibles</string>
+    <string name="episodes_panel_title">Episodios</string>
+    <string name="episodes_panel_streams_title">Fuentes</string>
+    <string name="player_speed_normal">Normal</string>
+    <string name="player_aspect_fit">Ajustar (Original)</string>
+    <string name="player_aspect_stretch">Estirar</string>
+    <string name="player_aspect_fit_width">Ajustar al Ancho</string>
+    <string name="player_aspect_fit_height">Ajustar al Alto</string>
+    <string name="player_aspect_crop">Recortar</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
@@ -544,9 +624,34 @@
     <string name="subtitle_text_color">Color del Texto</string>
     <string name="subtitle_outline_color">Color del Contorno</string>
     <string name="subtitle_reset_defaults">Restablecer Valores</string>
+    <string name="subtitle_tab_builtin">Integrados</string>
+    <string name="subtitle_tab_addons">Addons</string>
+    <string name="subtitle_tab_languages">Idiomas</string>
+    <string name="subtitle_tab_style">Estilo</string>
+    <string name="subtitle_tab_delay">Retraso</string>
+    <string name="subtitle_none">Ninguno</string>
+    <string name="subtitle_all">Todos</string>
+    <string name="subtitle_section_core">Principal</string>
+    <string name="subtitle_section_advanced">Avanzado</string>
+    <string name="subtitle_font_size">Tamaño de Fuente</string>
+    <string name="subtitle_bold">Negrita</string>
+    <string name="subtitle_outline">Contorno</string>
+    <string name="subtitle_bottom_offset">Desplazamiento Inferior</string>
+    <string name="subtitle_on">Activado</string>
+    <string name="subtitle_off">Desactivado</string>
     <string name="subtitle_style_title">Estilo de Subtítulos</string>
     <string name="subtitle_style_color">Color</string>
     <string name="subtitle_style_reset">Restablecer</string>
+    <string name="subtitle_style_font_size">Tamaño de Fuente</string>
+    <string name="subtitle_style_bold">Negrita</string>
+    <string name="subtitle_style_text_color">Color del Texto</string>
+    <string name="subtitle_style_outline">Contorno</string>
+    <string name="subtitle_style_bottom_offset">Desplazamiento Inferior</string>
+    <string name="subtitle_style_defaults">Predeterminados</string>
+    <string name="subtitle_style_on">Activado</string>
+    <string name="subtitle_style_off">Desactivado</string>
+    <string name="panel_failed_load_streams">Error al cargar fuentes</string>
+    <string name="panel_failed_load_episodes">Error al cargar episodios</string>
 
     <!-- PauseOverlay -->
     <string name="pause_you_are_watching">Estás viendo</string>
@@ -556,11 +661,24 @@
 
     <!-- NextEpisodeCardOverlay -->
     <string name="next_episode_label">Siguiente Episodio</string>
+    <string name="next_episode_finding_source">Buscando fuente…</string>
+    <string name="next_episode_playing_via">Reproduciendo vía %1$s en %2$ds</string>
+    <string name="next_episode_play">Reproducir</string>
+    <string name="next_episode_unaired">Sin emitir</string>
+    <string name="skip_intro">Omitir Intro</string>
+    <string name="skip_ending">Omitir Final</string>
+    <string name="skip_recap">Omitir Resumen</string>
+    <string name="skip_generic">Omitir</string>
+    <string name="display_mode_refresh">Refrescar</string>
+    <string name="display_mode_resolution">Resolución</string>
 
 
     <!-- SearchScreen -->
     <string name="search_keyboard_hint">Presiona Listo en el teclado para buscar</string>
     <string name="search_placeholder">Buscar películas y series</string>
+    <string name="search_start_title">Empezar a buscar</string>
+    <string name="search_start_subtitle">Ingresa al menos 2 caracteres</string>
+    <string name="search_start_subtitle_no_discover">Descubrir está desactivado. Ingresa al menos 2 caracteres</string>
 
     <!-- LibraryScreen -->
     <string name="library_syncing">Sincronizando biblioteca de Trakt\u2026</string>
@@ -612,6 +730,18 @@
     <string name="auth_qr_finishing">Finalizando inicio de sesión\u2026</string>
     <string name="auth_qr_code_label">Código: %1$s</string>
     <string name="auth_qr_expires">Expira en %1$s</string>
+    <string name="auth_qr_phone_hint">Usa tu teléfono para iniciar sesión con correo/contraseña. El TV se mantiene solo con QR para un inicio más rápido.</string>
+    <string name="auth_qr_scan_instruction">Escanea el QR, aprueba en el navegador y luego vuelve aquí.</string>
+    <string name="auth_qr_code_display">Código: %1$s</string>
+    <string name="auth_qr_refresh">Refrescar QR</string>
+    <string name="auth_qr_continue_without_account">Continuar sin cuenta</string>
+    <string name="auth_qr_connected">Tu cuenta está conectada en este TV.</string>
+    <string name="auth_qr_synced_data">Tus datos sincronizados</string>
+    <string name="auth_qr_generating">Generando QR…</string>
+    <string name="auth_qr_unavailable">QR no disponible. Refresca para reintentar.</string>
+    <string name="auth_qr_please_wait">Por favor espera…</string>
+    <string name="auth_qr_continue">Continuar</string>
+    <string name="auth_qr_back">Atrás</string>
 
     <!-- SyncCodeGenerateScreen -->
     <string name="sync_generate_title">Generar Código de Sincronización</string>
@@ -736,6 +866,7 @@
     <string name="nav_library">Biblioteca</string>
     <string name="nav_addons">Addons</string>
     <string name="nav_settings">Ajustes</string>
+    <string name="settings_rounded_ui">Interfaz Redondeada</string>
     <string name="cd_expand_sidebar">Expandir barra lateral</string>
 
     <string name="update_close">Cerrar</string>
