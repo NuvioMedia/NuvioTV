@@ -31,13 +31,7 @@ fun CatalogDescriptorDto.toDomain(): CatalogDescriptor {
         rawType = manifestType,
         id = id,
         name = name,
-        extra = extra.orEmpty().map { dto ->
-            CatalogExtra(
-                name = dto.name,
-                isRequired = dto.isRequired ?: false,
-                options = dto.options
-            )
-        }
+        extra = parseCatalogExtras(extra)
     )
 }
 
@@ -66,4 +60,44 @@ private fun parseResources(resources: List<Any>, defaultTypes: List<String>): Li
             else -> null
         }
     }
+}
+
+private fun parseCatalogExtras(rawExtras: List<Any>?): List<CatalogExtra> {
+    return rawExtras.orEmpty().mapNotNull { raw ->
+        when (raw) {
+            is String -> {
+                val name = raw.trim().lowercase()
+                if (name.isBlank()) {
+                    null
+                } else {
+                    CatalogExtra(name = name)
+                }
+            }
+            is Map<*, *> -> {
+                val name = (raw["name"] as? String)?.trim()?.lowercase().orEmpty()
+                if (name.isBlank()) return@mapNotNull null
+
+                val isRequired = when (val required = raw["isRequired"]) {
+                    is Boolean -> required
+                    is String -> required.equals("true", ignoreCase = true)
+                    is Number -> required.toInt() != 0
+                    else -> false
+                }
+                val options = (raw["options"] as? List<*>)?.mapNotNull { option ->
+                    when (option) {
+                        null -> null
+                        is String -> option
+                        else -> option.toString()
+                    }
+                }?.takeIf { it.isNotEmpty() }
+
+                CatalogExtra(
+                    name = name,
+                    isRequired = isRequired,
+                    options = options
+                )
+            }
+            else -> null
+        }
+    }.distinct()
 }

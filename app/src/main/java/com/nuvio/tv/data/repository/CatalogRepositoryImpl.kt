@@ -33,6 +33,7 @@ class CatalogRepositoryImpl @Inject constructor(
         catalogName: String,
         type: String,
         skip: Int,
+        skipStep: Int,
         extraArgs: Map<String, String>,
         supportsSkip: Boolean
     ): Flow<NetworkResult<CatalogRow>> = flow {
@@ -42,6 +43,7 @@ class CatalogRepositoryImpl @Inject constructor(
             type = type,
             catalogId = catalogId,
             skip = skip,
+            skipStep = skipStep,
             extraArgs = extraArgs
         )
 
@@ -56,7 +58,7 @@ class CatalogRepositoryImpl @Inject constructor(
         val url = buildCatalogUrl(addonBaseUrl, type, catalogId, skip, extraArgs)
         Log.d(
             TAG,
-            "Fetching catalog addonId=$addonId addonName=$addonName type=$type catalogId=$catalogId skip=$skip supportsSkip=$supportsSkip url=$url"
+            "Fetching catalog addonId=$addonId addonName=$addonName type=$type catalogId=$catalogId skip=$skip skipStep=$skipStep supportsSkip=$supportsSkip url=$url"
         )
 
         when (val result = safeApiCall { api.getCatalog(url) }) {
@@ -78,8 +80,9 @@ class CatalogRepositoryImpl @Inject constructor(
                     items = items,
                     isLoading = false,
                     hasMore = supportsSkip && items.isNotEmpty(),
-                    currentPage = skip / 100,
-                    supportsSkip = supportsSkip
+                    currentPage = if (skipStep > 0) skip / skipStep else 0,
+                    supportsSkip = supportsSkip,
+                    skipStep = skipStep
                 )
                 catalogCache[cacheKey] = catalogRow
                 // Only emit fresh data if it differs from cache
@@ -143,12 +146,13 @@ class CatalogRepositoryImpl @Inject constructor(
         type: String,
         catalogId: String,
         skip: Int,
+        skipStep: Int,
         extraArgs: Map<String, String>
     ): String {
         val normalizedArgs = extraArgs.entries
             .sortedBy { it.key }
             .joinToString("&") { "${it.key}=${it.value}" }
         val normalizedBaseUrl = addonBaseUrl.trim().trimEnd('/').lowercase()
-        return "${normalizedBaseUrl}_${addonId}_${type}_${catalogId}_${skip}_${normalizedArgs}"
+        return "${normalizedBaseUrl}_${addonId}_${type}_${catalogId}_${skip}_${skipStep}_${normalizedArgs}"
     }
 }

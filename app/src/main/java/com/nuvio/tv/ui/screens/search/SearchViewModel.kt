@@ -7,6 +7,8 @@ import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.domain.model.skipStep
+import com.nuvio.tv.domain.model.supportsExtra
 import com.nuvio.tv.core.util.filterReleasedItems
 import com.nuvio.tv.core.util.isUnreleased
 import com.nuvio.tv.domain.repository.AddonRepository
@@ -196,6 +198,7 @@ class SearchViewModel @Inject constructor(
                             catalogName = catalog.name,
                             type = catalog.apiType,
                             skip = 0,
+                            skipStep = 100,
                             extraArgs = mapOf("search" to query),
                             supportsSkip = false
                         ).collect { result ->
@@ -324,7 +327,8 @@ class SearchViewModel @Inject constructor(
     }
 
     private suspend fun loadCatalog(addon: Addon, catalog: CatalogDescriptor, query: String) {
-        val supportsSkip = catalog.extra.any { it.name == "skip" }
+        val supportsSkip = catalog.supportsExtra("skip")
+        val skipStep = catalog.skipStep()
         catalogRepository.getCatalog(
             addonBaseUrl = addon.baseUrl,
             addonId = addon.id,
@@ -333,6 +337,7 @@ class SearchViewModel @Inject constructor(
             catalogName = catalog.name,
             type = catalog.apiType,
             skip = 0,
+            skipStep = skipStep,
             extraArgs = mapOf("search" to query),
             supportsSkip = supportsSkip
         ).collect { result ->
@@ -383,8 +388,7 @@ class SearchViewModel @Inject constructor(
                 return@launch
             }
 
-            // Use actual loaded item count for skip, not fixed 100-page size
-            val nextSkip = currentRow.items.size
+            val nextSkip = (currentRow.currentPage + 1) * currentRow.skipStep
             catalogRepository.getCatalog(
                 addonBaseUrl = addon.baseUrl,
                 addonId = addon.id,
@@ -393,6 +397,7 @@ class SearchViewModel @Inject constructor(
                 catalogName = currentRow.catalogName,
                 type = currentRow.apiType,
                 skip = nextSkip,
+                skipStep = currentRow.skipStep,
                 extraArgs = mapOf("search" to query),
                 supportsSkip = currentRow.supportsSkip
             ).collect { result ->
@@ -465,11 +470,12 @@ class SearchViewModel @Inject constructor(
         val discoverCatalogs = addons.flatMap { addon ->
             addon.catalogs
                 .filter { catalog ->
-                    !catalog.extra.any { it.name == "search" && it.isRequired }
+                    !(catalog.supportsExtra("search") &&
+                        catalog.extra.any { it.name.equals("search", ignoreCase = true) && it.isRequired })
                 }
                 .map { catalog ->
                     val genres = catalog.extra
-                        .firstOrNull { it.name == "genre" }
+                        .firstOrNull { it.name.equals("genre", ignoreCase = true) }
                         ?.options
                         .orEmpty()
                     DiscoverCatalog(
@@ -481,7 +487,8 @@ class SearchViewModel @Inject constructor(
                         catalogName = catalog.name,
                         type = catalog.apiType,
                         genres = genres,
-                        supportsSkip = catalog.extra.any { it.name == "skip" }
+                        supportsSkip = catalog.supportsExtra("skip"),
+                        skipStep = catalog.skipStep()
                     )
                 }
         }
@@ -618,7 +625,7 @@ class SearchViewModel @Inject constructor(
             }
 
             val currentPage = if (reset) 1 else state.discoverPage + 1
-            val skip = if (currentPage <= 1) 0 else state.discoverResults.size + state.pendingDiscoverResults.size
+            val skip = if (currentPage <= 1) 0 else (currentPage - 1) * selectedCatalog.skipStep
             val visibleCountBeforeRequest = state.discoverResults.size
             val extraArgs = buildMap<String, String> {
                 state.selectedDiscoverGenre?.takeIf { it.isNotBlank() }?.let { put("genre", it) }
@@ -632,6 +639,7 @@ class SearchViewModel @Inject constructor(
                 catalogName = selectedCatalog.catalogName,
                 type = selectedCatalog.type,
                 skip = skip,
+                skipStep = selectedCatalog.skipStep,
                 extraArgs = extraArgs,
                 supportsSkip = selectedCatalog.supportsSkip
             ).collect { result ->
@@ -710,13 +718,9 @@ class SearchViewModel @Inject constructor(
         val allSearchTargets = addons.flatMap { addon ->
             addon.catalogs
                 .filter { catalog ->
-                    catalog.extra.any { it.name == "search" }
+                    catalog.supportsExtra("search")
                 }
                 .map { catalog -> addon to catalog }
-        }
-
-        val requiredSearchTargets = allSearchTargets.filter { (_, catalog) ->
-            catalog.extra.any { it.name == "search" && it.isRequired }
         }
 
         return allSearchTargets
