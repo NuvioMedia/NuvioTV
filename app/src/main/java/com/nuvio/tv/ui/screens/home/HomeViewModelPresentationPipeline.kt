@@ -204,7 +204,8 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(item: MetaPreview) {
         itemId = item.id,
         title = item.name,
         releaseInfo = item.releaseInfo,
-        apiType = item.apiType
+        apiType = item.apiType,
+        fallbackYtId = item.trailerYtIds.firstOrNull()
     )
 }
 
@@ -212,7 +213,8 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
     itemId: String,
     title: String,
     releaseInfo: String?,
-    apiType: String
+    apiType: String,
+    fallbackYtId: String? = null
 ) {
     if (startupGracePeriodActive) return
     if (activeTrailerPreviewItemId != itemId) {
@@ -248,9 +250,28 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
         }
 
         if (trailerSource?.videoUrl.isNullOrBlank()) {
-            trailerPreviewNegativeCache.add(itemId)
-            trailerPreviewUrlsState.remove(itemId)
-            trailerPreviewAudioUrlsState.remove(itemId)
+            val fallbackSource = fallbackYtId?.let { ytId ->
+                trailerService.getTrailerPlaybackSourceFromYouTubeUrl(
+                    youtubeUrl = "https://www.youtube.com/watch?v=$ytId",
+                    title = title,
+                    year = extractYear(releaseInfo)
+                )
+            }
+            if (fallbackSource?.videoUrl != null) {
+                if (trailerPreviewUrlsState[itemId] != fallbackSource.videoUrl) {
+                    trailerPreviewUrlsState[itemId] = fallbackSource.videoUrl
+                }
+                val fallbackAudio = fallbackSource.audioUrl
+                if (fallbackAudio.isNullOrBlank()) {
+                    trailerPreviewAudioUrlsState.remove(itemId)
+                } else if (trailerPreviewAudioUrlsState[itemId] != fallbackAudio) {
+                    trailerPreviewAudioUrlsState[itemId] = fallbackAudio
+                }
+            } else {
+                trailerPreviewNegativeCache.add(itemId)
+                trailerPreviewUrlsState.remove(itemId)
+                trailerPreviewAudioUrlsState.remove(itemId)
+            }
         } else {
             val videoUrl = trailerSource.videoUrl
             if (trailerPreviewUrlsState[itemId] != videoUrl) {
@@ -300,13 +321,16 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
 }
 
 private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) {
+    val incomingTrailerYtIds = meta.trailerYtIds
+
     fun mergeItem(currentItem: MetaPreview): MetaPreview = currentItem.copy(
         background = meta.background ?: currentItem.background,
         logo = meta.logo ?: currentItem.logo,
         description = meta.description ?: currentItem.description,
         releaseInfo = meta.releaseInfo ?: currentItem.releaseInfo,
         imdbRating = meta.imdbRating ?: currentItem.imdbRating,
-        genres = if (meta.genres.isNotEmpty()) meta.genres else currentItem.genres
+        genres = if (meta.genres.isNotEmpty()) meta.genres else currentItem.genres,
+        trailerYtIds = if (incomingTrailerYtIds.isNotEmpty()) incomingTrailerYtIds else currentItem.trailerYtIds
     )
 
     catalogsMap.forEach { (key, row) ->
@@ -341,6 +365,16 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
             }
         }
         if (changed) state.copy(catalogRows = updatedRows) else state
+    }
+
+    // If external meta brought new trailerYtIds and the item was previously a negative cache miss,
+    // clear the negative cache and retry the trailer pipeline with the updated fallback.
+    if (incomingTrailerYtIds.isNotEmpty() && trailerPreviewNegativeCache.remove(itemId)) {
+        trailerPreviewUrlsState.remove(itemId)
+        val currentItem = catalogsMap.values.firstNotNullOfOrNull { row ->
+            row.items.firstOrNull { it.id == itemId }
+        } ?: return
+        requestTrailerPreviewPipeline(currentItem)
     }
 }
 

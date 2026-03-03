@@ -20,7 +20,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -77,7 +79,7 @@ import java.util.TimeZone
 
 private const val EPISODE_CARD_CONTENT_TYPE = "episode_card"
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun SeasonTabs(
     seasons: List<Int>,
@@ -95,7 +97,9 @@ fun SeasonTabs(
     }
 
     LazyRow(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .focusRestorer { selectedTabFocusRequester },
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -202,11 +206,14 @@ fun EpisodesRow(
     restoreEpisodeId: String? = null,
     restoreFocusToken: Int = 0,
     onRestoreFocusHandled: () -> Unit = {},
-    onEpisodeFocused: (episodeId: String) -> Unit = {}
+    onEpisodeFocused: (episodeId: String) -> Unit = {},
+    scrollToEpisodeId: String? = null
 ) {
     val restoreTargetRequester = restoreEpisodeId?.let { episodeFocusRequesters[it] }
     var optionsEpisode by remember { mutableStateOf<Video?>(null) }
     val cardMetrics = rememberEpisodeCardMetrics()
+    val density = LocalDensity.current
+    val lazyListState = rememberLazyListState()
 
     LaunchedEffect(restoreFocusToken, restoreEpisodeId, restoreTargetRequester, episodes) {
         if (restoreFocusToken <= 0 || restoreEpisodeId.isNullOrBlank()) return@LaunchedEffect
@@ -214,9 +221,18 @@ fun EpisodesRow(
         restoreTargetRequester?.requestFocusAfterFrames()
     }
 
+    LaunchedEffect(scrollToEpisodeId, episodes) {
+        if (scrollToEpisodeId.isNullOrBlank()) return@LaunchedEffect
+        val index = episodes.indexOfFirst { it.id == scrollToEpisodeId }
+        if (index < 0) return@LaunchedEffect
+        val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
+        lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
+    }
+
     LazyRow(
         modifier = Modifier
             .fillMaxWidth(),
+        state = lazyListState,
         contentPadding = PaddingValues(
             horizontal = cardMetrics.rowHorizontalPadding,
             vertical = cardMetrics.rowVerticalPadding

@@ -15,7 +15,8 @@ private const val AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS = 5500L
 internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
     url: String,
     headers: Map<String, String>,
-    frameRateMatchingMode: FrameRateMatchingMode
+    frameRateMatchingMode: FrameRateMatchingMode,
+    resolutionMatchingEnabled: Boolean
 ) {
     if (frameRateMatchingMode == FrameRateMatchingMode.OFF) {
         _uiState.update {
@@ -99,7 +100,10 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
 
         val result = FrameRateUtils.matchFrameRateAndWait(
             activity = activity,
-            frameRate = targetFrameRate
+            frameRate = targetFrameRate,
+            videoWidth = detection.videoWidth,
+            videoHeight = detection.videoHeight,
+            resolutionMatchingEnabled = resolutionMatchingEnabled
         )
 
         if (result != null) {

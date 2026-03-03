@@ -19,5 +19,7 @@ data class TmdbSettings(
     // Group: Episodes (episode titles, overviews, thumbnails)
     val useEpisodes: Boolean = true,
     // Group: Recommendations (more like this)
-    val useMoreLikeThis: Boolean = true
+    val useMoreLikeThis: Boolean = true,
+    // Group: Collections
+    val useCollections: Boolean = true
 )

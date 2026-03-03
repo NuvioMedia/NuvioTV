@@ -25,12 +25,6 @@
         android:supportsRtl="true"
         android:localeConfig="@xml/locale_config"
         android:theme="@style/Theme.MyApplication">
-        <meta-data
-            android:name="io.sentry.dsn"
-            android:value="https://151aefbf907d5fd4a6c8533d9d064441@o4510894222278656.ingest.us.sentry.io/4510894227259392" />
-        <meta-data
-            android:name="io.sentry.send-default-pii"
-            android:value="true" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

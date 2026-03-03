@@ -26,7 +26,7 @@ import com.nuvio.tv.ui.theme.NuvioColors
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun MoreLikeThisSection(
+fun CollectionSection(
     items: List<MetaPreview>,
     upFocusRequester: FocusRequester? = null,
     restoreItemId: String? = null,

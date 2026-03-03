@@ -75,6 +75,7 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.ContinueWatchingCard
 import com.nuvio.tv.ui.components.MonochromePosterPlaceholder
 import com.nuvio.tv.ui.components.TrailerPlayer
+import com.nuvio.tv.LocalSidebarExpanded
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlin.math.abs
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -141,8 +142,10 @@ private fun ModernCatalogRowItem(
         effectiveExpandEnabled &&
             expandedCatalogFocusKey == focusKey &&
             !suppressCardExpansionForHeroTrailer
+    val isSidebarExpanded = LocalSidebarExpanded.current
     val playTrailerInExpandedCard =
         effectiveAutoplayEnabled &&
+            !isSidebarExpanded &&
             trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD &&
             isBackdropExpanded
     val trailerPreviewUrl = if (playTrailerInExpandedCard) {

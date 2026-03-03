@@ -27,8 +27,9 @@ class TrailerService @Inject constructor(
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
     private val tmdbService: TmdbService
 ) {
-    // Cache: "title|year|tmdbId|type" -> trailer playback source (null for negative cache)
-    private val cache = ConcurrentHashMap<String, TrailerPlaybackSource?>()
+    // Cache: "title|year|tmdbId|type" -> trailer playback source (NEGATIVE_CACHE sentinel for misses)
+    private val cache = ConcurrentHashMap<String, TrailerPlaybackSource>()
+    private val NEGATIVE_CACHE = TrailerPlaybackSource(videoUrl = "")
     // Session cache: youtubeVideoId -> resolved playback source (success-only)
     private val youtubeSourceCache = ConcurrentHashMap<String, TrailerPlaybackSource>()
 
@@ -44,10 +45,10 @@ class TrailerService @Inject constructor(
     ): TrailerPlaybackSource? = withContext(Dispatchers.IO) {
         val cacheKey = "$title|$year|$tmdbId|$type"
 
-        if (cache.containsKey(cacheKey)) {
-            val cached = cache[cacheKey]
-            Log.d(TAG, "Cache hit for $cacheKey: ${cached != null}")
-            return@withContext cached
+        cache[cacheKey]?.let { cached ->
+            val hit = cached !== NEGATIVE_CACHE
+            Log.d(TAG, "Cache hit for $cacheKey: $hit")
+            return@withContext if (hit) cached else null
         }
 
         try {
@@ -65,7 +66,7 @@ class TrailerService @Inject constructor(
                 return@withContext tmdbSource
             }
             Log.w(TAG, "TMDB path exhausted; no YouTube trailer key resolved for backend /trailer fallback")
-            cache[cacheKey] = null
+            cache[cacheKey] = NEGATIVE_CACHE
             null
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching trailer for $title: ${e.message}", e)

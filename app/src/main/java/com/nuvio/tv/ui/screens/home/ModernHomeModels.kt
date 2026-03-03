@@ -129,40 +129,56 @@ internal fun buildContinueWatchingItem(
     upcomingLabel: String
 ): ModernCarouselItem {
     val heroPreview = when (item) {
-        is ContinueWatchingItem.InProgress -> HeroPreview(
-            title = item.progress.name,
-            logo = item.progress.logo,
-            description = item.episodeDescription ?: item.progress.episodeTitle,
-            contentTypeText = item.progress.contentType.replaceFirstChar { ch -> ch.uppercase() },
-            yearText = null,
-            imdbText = null,
-            genres = emptyList(),
-            poster = item.progress.poster,
-            backdrop = item.progress.backdrop,
-            imageUrl = if (useLandscapePosters) {
-                item.progress.backdrop ?: item.progress.poster
-            } else {
-                item.progress.poster ?: item.progress.backdrop
+        is ContinueWatchingItem.InProgress -> {
+            val isSeries = isSeriesType(item.progress.contentType)
+            val episodeCode = item.progress.episodeDisplayString
+            val episodeTitle = item.progress.episodeTitle?.takeIf { it.isNotBlank() }
+            val episodeLabel = when {
+                isSeries && episodeCode != null && episodeTitle != null -> "$episodeCode · $episodeTitle"
+                isSeries && episodeCode != null -> episodeCode
+                isSeries && episodeTitle != null -> episodeTitle
+                else -> item.progress.contentType.replaceFirstChar { ch -> ch.uppercase() }
             }
-        )
-        is ContinueWatchingItem.NextUp -> HeroPreview(
-            title = item.info.name,
-            logo = item.info.logo,
-            description = item.info.episodeDescription
-                ?: item.info.episodeTitle
-                ?: item.info.airDateLabel?.let { airsDateTemplate.format(it) },
-            contentTypeText = item.info.contentType.replaceFirstChar { ch -> ch.uppercase() },
-            yearText = null,
-            imdbText = null,
-            genres = emptyList(),
-            poster = item.info.poster,
-            backdrop = item.info.backdrop,
-            imageUrl = if (useLandscapePosters) {
-                firstNonBlank(item.info.backdrop, item.info.poster, item.info.thumbnail)
-            } else {
-                firstNonBlank(item.info.poster, item.info.backdrop, item.info.thumbnail)
-            }
-        )
+            HeroPreview(
+                title = item.progress.name,
+                logo = item.progress.logo,
+                description = item.episodeDescription ?: item.progress.episodeTitle,
+                contentTypeText = episodeLabel,
+                yearText = extractYear(item.releaseInfo),
+                imdbText = item.episodeImdbRating?.let { String.format("%.1f", it) },
+                genres = item.genres,
+                poster = item.progress.poster,
+                backdrop = item.progress.backdrop,
+                imageUrl = if (useLandscapePosters) {
+                    item.progress.backdrop ?: item.progress.poster
+                } else {
+                    item.progress.poster ?: item.progress.backdrop
+                }
+            )
+        }
+        is ContinueWatchingItem.NextUp -> {
+            val episodeCode = "S${item.info.season}E${item.info.episode}"
+            val episodeTitle = item.info.episodeTitle?.takeIf { it.isNotBlank() }
+            val episodeLabel = if (episodeTitle != null) "$episodeCode · $episodeTitle" else episodeCode
+            HeroPreview(
+                title = item.info.name,
+                logo = item.info.logo,
+                description = item.info.episodeDescription
+                    ?: item.info.episodeTitle
+                    ?: item.info.airDateLabel?.let { airsDateTemplate.format(it) },
+                contentTypeText = episodeLabel,
+                yearText = extractYear(item.info.releaseInfo),
+                imdbText = item.info.imdbRating?.let { String.format("%.1f", it) },
+                genres = item.info.genres,
+                poster = item.info.poster,
+                backdrop = item.info.backdrop,
+                imageUrl = if (useLandscapePosters) {
+                    firstNonBlank(item.info.backdrop, item.info.poster, item.info.thumbnail)
+                } else {
+                    firstNonBlank(item.info.poster, item.info.backdrop, item.info.thumbnail)
+                }
+            )
+        }
     }
 
     val imageUrl = when (item) {

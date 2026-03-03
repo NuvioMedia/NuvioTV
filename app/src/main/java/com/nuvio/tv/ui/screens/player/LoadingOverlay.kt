@@ -1,7 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -156,24 +155,18 @@ fun LoadingOverlay(
                     }
                 }
 
-                val messageOffset = if (showLogo || !title.isNullOrBlank()) 94.dp else 86.dp
-                Crossfade(
-                    targetState = message.orEmpty(),
-                    animationSpec = tween(durationMillis = 220),
-                    label = "loadingMessageCrossfade"
-                ) { targetMessage ->
-                    if (targetMessage.isNotBlank()) {
-                        Text(
-                            text = targetMessage,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.72f),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .offset(y = messageOffset)
-                                .padding(horizontal = 24.dp)
-                        )
-                    }
+                if (!message.isNullOrBlank()) {
+                    val messageOffset = if (showLogo || !title.isNullOrBlank()) 94.dp else 86.dp
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.72f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .offset(y = messageOffset)
+                            .padding(horizontal = 24.dp)
+                    )
                 }
             }
         }
