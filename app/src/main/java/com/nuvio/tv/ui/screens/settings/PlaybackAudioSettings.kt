@@ -68,6 +68,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onSetTunnelingEnabled: (Boolean) -> Unit,
     onSetMapDV7ToHevc: (Boolean) -> Unit,
     onSetExperimentalDv7ToDv81Enabled: (Boolean) -> Unit,
+    onSetExperimentalDtsIecPassthroughEnabled: (Boolean) -> Unit,
     onItemFocused: () -> Unit = {},
     enabled: Boolean = true
 ) {
@@ -242,6 +243,18 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             subtitle = stringResource(R.string.audio_dv_experimental_sub),
             isChecked = playerSettings.experimentalDv7ToDv81Enabled,
             onCheckedChange = onSetExperimentalDv7ToDv81Enabled,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
+    }
+
+    item(key = "audio_dts_iec_experimental") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Tune,
+            title = stringResource(R.string.audio_dts_iec_experimental_title),
+            subtitle = stringResource(R.string.audio_dts_iec_experimental_sub),
+            isChecked = playerSettings.experimentalDtsIecPassthroughEnabled,
+            onCheckedChange = onSetExperimentalDtsIecPassthroughEnabled,
             onFocused = onItemFocused,
             enabled = enabled
         )

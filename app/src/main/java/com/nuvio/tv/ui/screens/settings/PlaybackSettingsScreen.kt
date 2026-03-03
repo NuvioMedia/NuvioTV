@@ -257,6 +257,11 @@ fun PlaybackSettingsContent(
                 onSetExperimentalDv7ToDv81Enabled = {
                     enabled -> coroutineScope.launch { viewModel.setExperimentalDv7ToDv81Enabled(enabled) }
                 },
+                onSetExperimentalDtsIecPassthroughEnabled = {
+                    enabled -> coroutineScope.launch {
+                        viewModel.setExperimentalDtsIecPassthroughEnabled(enabled)
+                    }
+                },
                 onSetSubtitleSize = { newSize -> coroutineScope.launch { viewModel.setSubtitleSize(newSize) } },
                 onSetSubtitleVerticalOffset = { newOffset -> coroutineScope.launch { viewModel.setSubtitleVerticalOffset(newOffset) } },
                 onSetSubtitleBold = { bold -> coroutineScope.launch { viewModel.setSubtitleBold(bold) } },

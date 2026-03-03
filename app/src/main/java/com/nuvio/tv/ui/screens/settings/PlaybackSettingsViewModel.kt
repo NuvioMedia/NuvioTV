@@ -118,6 +118,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setExperimentalDv7ToDv81Enabled(enabled)
     }
 
+    suspend fun setExperimentalDtsIecPassthroughEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setExperimentalDtsIecPassthroughEnabled(enabled)
+    }
+
     /**
      * Set whether to use libass for ASS/SSA subtitle rendering
      */
