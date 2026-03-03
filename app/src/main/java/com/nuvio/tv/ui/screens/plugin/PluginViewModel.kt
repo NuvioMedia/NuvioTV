@@ -212,6 +212,7 @@ class PluginViewModel @Inject constructor(
         stopRepoServerInternal()
 
         repoServer = RepositoryConfigServer.startOnAvailablePort(
+            context = context,
             currentRepositoriesProvider = {
                 _uiState.value.repositories.map { repo ->
                     RepositoryConfigServer.RepositoryInfo(

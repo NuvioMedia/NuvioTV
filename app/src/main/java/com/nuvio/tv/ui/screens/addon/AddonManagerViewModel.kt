@@ -166,6 +166,7 @@ class AddonManagerViewModel @Inject constructor(
         stopServerInternal()
 
         server = AddonConfigServer.startOnAvailablePort(
+            context = context,
             currentPageStateProvider = {
                 val addons = _uiState.value.installedAddons
                 val orderedCatalogs = buildOrderedCatalogEntries(
