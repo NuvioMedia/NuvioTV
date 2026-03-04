@@ -49,6 +49,7 @@ internal fun ModernHeroMediaLayer(
     heroBackdropAlpha: Float,
     shouldPlayHeroTrailer: Boolean,
     heroTrailerUrl: String?,
+    heroTrailerAudioUrl: String?,
     heroTrailerAlpha: Float,
     muted: Boolean,
     bgColor: Color,
@@ -87,6 +88,7 @@ internal fun ModernHeroMediaLayer(
         if (shouldPlayHeroTrailer) {
             TrailerPlayer(
                 trailerUrl = heroTrailerUrl,
+                trailerAudioUrl = heroTrailerAudioUrl,
                 isPlaying = true,
                 onEnded = onTrailerEnded,
                 onFirstFrameRendered = onFirstFrameRendered,
@@ -128,9 +130,7 @@ internal fun ModernHeroMediaLayer(
                         0.74f to bgColor.copy(alpha = 0.88f),
                         0.82f to bgColor
                     )
-                    onDrawWithContent {
-                        drawContent()
-                        // Blend strip to avoid visible seam at media start edge.
+                    onDrawBehind {
                         drawRect(
                             color = bgColor,
                             size = Size(leftBlendSolidWidth, size.height)

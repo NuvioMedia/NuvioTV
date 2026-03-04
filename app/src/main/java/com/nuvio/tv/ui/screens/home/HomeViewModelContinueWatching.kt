@@ -152,10 +152,14 @@ private suspend fun HomeViewModel.resolveCurrentEpisodeDescription(
     progress: WatchProgress,
     metaCache: MutableMap<String, Meta?>
 ): String? {
-    if (!isSeriesTypeCW(progress.contentType)) return null
     val meta = resolveMetaForProgress(progress, metaCache) ?: return null
-    val video = resolveVideoForProgress(progress, meta) ?: return null
-    return video.overview?.takeIf { it.isNotBlank() }
+    if (isSeriesTypeCW(progress.contentType)) {
+        val video = resolveVideoForProgress(progress, meta)
+        val episodeOverview = video?.overview?.takeIf { it.isNotBlank() }
+        if (episodeOverview != null) return episodeOverview
+    }
+    // For movies (or series with no per-episode overview), fall back to show/movie description
+    return meta.description?.takeIf { it.isNotBlank() }
 }
 
 private suspend fun HomeViewModel.resolveCurrentEpisodeThumbnail(
@@ -166,6 +170,30 @@ private suspend fun HomeViewModel.resolveCurrentEpisodeThumbnail(
     val meta = resolveMetaForProgress(progress, metaCache) ?: return null
     val video = resolveVideoForProgress(progress, meta) ?: return null
     return video.thumbnail?.takeIf { it.isNotBlank() }
+}
+
+private suspend fun HomeViewModel.resolveCurrentEpisodeImdbRating(
+    progress: WatchProgress,
+    metaCache: MutableMap<String, Meta?>
+): Float? {
+    val meta = resolveMetaForProgress(progress, metaCache) ?: return null
+    return meta.imdbRating
+}
+
+private suspend fun HomeViewModel.resolveCurrentGenres(
+    progress: WatchProgress,
+    metaCache: MutableMap<String, Meta?>
+): List<String> {
+    val meta = resolveMetaForProgress(progress, metaCache) ?: return emptyList()
+    return meta.genres.take(3)
+}
+
+private suspend fun HomeViewModel.resolveCurrentReleaseInfo(
+    progress: WatchProgress,
+    metaCache: MutableMap<String, Meta?>
+): String? {
+    val meta = resolveMetaForProgress(progress, metaCache) ?: return null
+    return meta.releaseInfo?.takeIf { it.isNotBlank() }
 }
 
 private fun resolveVideoForProgress(progress: WatchProgress, meta: Meta): Video? {
@@ -301,6 +329,7 @@ private suspend fun HomeViewModel.enrichInProgressEpisodeDetailsProgressively(
         val enrichedItem = item.copy(
             episodeDescription = description ?: item.episodeDescription,
             episodeThumbnail = thumbnail ?: item.episodeThumbnail,
+            episodeImdbRating = meta?.imdbRating ?: item.episodeImdbRating,
             genres = meta?.genres?.takeIf { it.isNotEmpty() } ?: item.genres,
             releaseInfo = meta?.releaseInfo ?: item.releaseInfo,
             imdbRating = meta?.imdbRating ?: item.imdbRating,
@@ -438,10 +467,11 @@ private suspend fun HomeViewModel.buildNextUpItem(
             formatEpisodeAirDateLabel(releaseDate)
         },
         lastWatched = nextUp.lastWatched,
-        genres = meta.genres,
+        genres = meta.genres.take(3),
         contentReleaseInfo = meta.releaseInfo,
         imdbRating = meta.imdbRating,
-        contentDescription = meta.description
+        contentDescription = meta.description,
+        releaseInfo = meta.releaseInfo?.takeIf { it.isNotBlank() }
     )
     return ContinueWatchingItem.NextUp(info)
 }

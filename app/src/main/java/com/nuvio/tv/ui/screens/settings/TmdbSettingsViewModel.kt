@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
+import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.domain.model.TmdbSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +16,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TmdbSettingsViewModel @Inject constructor(
-    private val dataStore: TmdbSettingsDataStore
+    private val dataStore: TmdbSettingsDataStore,
+    private val trailerService: TrailerService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TmdbSettingsUiState())
@@ -32,7 +34,14 @@ class TmdbSettingsViewModel @Inject constructor(
     fun onEvent(event: TmdbSettingsEvent) {
         when (event) {
             is TmdbSettingsEvent.ToggleEnabled -> update { dataStore.setEnabled(event.enabled) }
-            is TmdbSettingsEvent.SetLanguage -> update { dataStore.setLanguage(event.language) }
+            is TmdbSettingsEvent.SetLanguage -> update {
+                val newLanguage = event.language.ifBlank { "en" }
+                val currentLanguage = _uiState.value.language.ifBlank { "en" }
+                dataStore.setLanguage(newLanguage)
+                if (!newLanguage.equals(currentLanguage, ignoreCase = true)) {
+                    trailerService.clearCache()
+                }
+            }
             is TmdbSettingsEvent.ToggleArtwork -> update { dataStore.setUseArtwork(event.enabled) }
             is TmdbSettingsEvent.ToggleBasicInfo -> update { dataStore.setUseBasicInfo(event.enabled) }
             is TmdbSettingsEvent.ToggleDetails -> update { dataStore.setUseDetails(event.enabled) }
@@ -41,6 +50,7 @@ class TmdbSettingsViewModel @Inject constructor(
             is TmdbSettingsEvent.ToggleNetworks -> update { dataStore.setUseNetworks(event.enabled) }
             is TmdbSettingsEvent.ToggleEpisodes -> update { dataStore.setUseEpisodes(event.enabled) }
             is TmdbSettingsEvent.ToggleMoreLikeThis -> update { dataStore.setUseMoreLikeThis(event.enabled) }
+            is TmdbSettingsEvent.ToggleCollections -> update { dataStore.setUseCollections(event.enabled) }
         }
     }
 
@@ -59,7 +69,8 @@ data class TmdbSettingsUiState(
     val useProductions: Boolean = true,
     val useNetworks: Boolean = true,
     val useEpisodes: Boolean = true,
-    val useMoreLikeThis: Boolean = true
+    val useMoreLikeThis: Boolean = true,
+    val useCollections: Boolean = true
 ) {
     fun fromSettings(settings: TmdbSettings): TmdbSettingsUiState = copy(
         enabled = settings.enabled,
@@ -71,7 +82,8 @@ data class TmdbSettingsUiState(
         useProductions = settings.useProductions,
         useNetworks = settings.useNetworks,
         useEpisodes = settings.useEpisodes,
-        useMoreLikeThis = settings.useMoreLikeThis
+        useMoreLikeThis = settings.useMoreLikeThis,
+        useCollections = settings.useCollections
     )
 }
 
@@ -86,4 +98,5 @@ sealed class TmdbSettingsEvent {
     data class ToggleNetworks(val enabled: Boolean) : TmdbSettingsEvent()
     data class ToggleEpisodes(val enabled: Boolean) : TmdbSettingsEvent()
     data class ToggleMoreLikeThis(val enabled: Boolean) : TmdbSettingsEvent()
+    data class ToggleCollections(val enabled: Boolean) : TmdbSettingsEvent()
 }

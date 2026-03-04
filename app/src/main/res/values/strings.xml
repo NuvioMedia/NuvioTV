@@ -100,9 +100,14 @@
     <string name="appearance_language_dialog_title">Choose Language</string>
     <string name="appearance_language_restart_hint">Restart the app to apply the language change.</string>
 
+    <!-- Font -->
+    <string name="appearance_font">App Font</string>
+    <string name="appearance_font_subtitle">Choose your preferred font</string>
+    <string name="appearance_font_dialog_title">Choose Font</string>
+
     <!-- ThemeSettingsScreen -->
     <string name="appearance_title">Appearance</string>
-    <string name="appearance_subtitle">Choose your color theme and language</string>
+    <string name="appearance_subtitle">Choose your color theme, font and language</string>
     <string name="cd_selected">Selected</string>
 
     <!-- AboutScreen -->
@@ -139,9 +144,10 @@
     <string name="account_stat_progress">progress</string>
     <string name="account_stat_watched">watched</string>
     <string name="settings_integrations_section">Integrations</string>
-    <string name="settings_integrations_section_subtitle">Choose TMDB or MDBList settings</string>
+    <string name="settings_integrations_section_subtitle">Choose TMDB or MDBList</string>
     <string name="settings_tmdb_subtitle">Metadata enrichment controls</string>
     <string name="settings_mdblist_subtitle">External ratings providers</string>
+    <string name="settings_animeskip_subtitle">Anime intro/outro skip timestamps</string>
 
     <!-- PlaybackSettingsScreen -->
     <string name="playback_title">Playback Settings</string>
@@ -181,6 +187,8 @@
     <string name="playback_afr_on_start_sub">Switch when playback starts.</string>
     <string name="playback_afr_on_start_stop">On start/stop</string>
     <string name="playback_afr_on_start_stop_sub">Switch on start and restore on stop.</string>
+    <string name="playback_resolution_matching">Resolution matching</string>
+    <string name="playback_resolution_matching_sub">Allow display mode changes to match video resolution.</string>
     <string name="playback_player_external_desc">Always open streams in an external app</string>
     <string name="playback_player_ask_desc">Choose the player each time</string>
 
@@ -244,6 +252,13 @@
     <string name="sub_org_none_desc">Show subtitles in default addon result order.</string>
     <string name="sub_org_by_lang_desc">Group subtitles by language.</string>
     <string name="sub_org_by_addon_desc">Group subtitles by addon source.</string>
+    <string name="sub_startup_mode_title">Addon Subtitle Loading</string>
+    <string name="sub_startup_mode_fast">Fast startup</string>
+    <string name="sub_startup_mode_preferred">Preferred languages</string>
+    <string name="sub_startup_mode_all">All addon subtitles</string>
+    <string name="sub_startup_mode_fast_desc">Start playback immediately. Selecting addon subtitles may reload the player once.</string>
+    <string name="sub_startup_mode_preferred_desc">Prefetch addon subtitles before playback and attach preferred/secondary language tracks.</string>
+    <string name="sub_startup_mode_all_desc">Prefetch and attach all addon subtitles before playback. Slowest startup.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Reuse Last Link</string>
@@ -255,6 +270,8 @@
     <string name="autoplay_stream_selection">Auto Stream Selection</string>
     <string name="autoplay_next_episode">Auto-play Next Episode</string>
     <string name="autoplay_next_episode_sub">Start next episode automatically when prompt appears.</string>
+    <string name="autoplay_prefer_binge_group">Prefer Binge Group (Next Episode)</string>
+    <string name="autoplay_prefer_binge_group_sub">Try the same source profile first (same addon/quality group) before normal auto-play rules.</string>
     <string name="autoplay_threshold_pct">Percentage</string>
     <string name="autoplay_threshold_min">Minutes before end</string>
     <string name="autoplay_threshold_mode">Next Episode Threshold Mode</string>
@@ -393,6 +410,19 @@
     <string name="mdblist_dialog_subtitle">Enter your API key to fetch external ratings</string>
     <string name="mdblist_dialog_placeholder">Enter MDBList API key</string>
     <string name="mdblist_not_set">Not set</string>
+    <string name="mdblist_invalid_api_key">Invalid MDBList API key</string>
+
+    <!-- Anime-Skip -->
+    <string name="animeskip_title">Anime Skip</string>
+    <string name="animeskip_subtitle">Configure your Anime Skip Client ID for anime intro/outro skipping</string>
+    <string name="animeskip_enable_title">Enable Anime Skip</string>
+    <string name="animeskip_enable_subtitle">Fetch skip timestamps from anime-skip.com</string>
+    <string name="animeskip_client_id_title">Client ID</string>
+    <string name="animeskip_client_id_subtitle">Required to fetch skip timestamps from anime-skip.com</string>
+    <string name="animeskip_dialog_title">Anime Skip Client ID</string>
+    <string name="animeskip_dialog_subtitle">Create your own Client ID at anime-skip.com/account/settings</string>
+    <string name="animeskip_dialog_placeholder">Enter Client ID</string>
+    <string name="animeskip_invalid_client_id">Invalid Client ID</string>
     <string name="action_clear">Clear</string>
 
     <!-- TmdbSettingsScreen -->
@@ -418,6 +448,9 @@
     <string name="tmdb_episodes_subtitle">Episode titles, overviews, thumbnails, and runtime from TMDB</string>
     <string name="tmdb_more_like_this_title">More Like This</string>
     <string name="tmdb_more_like_this_subtitle">TMDB recommendation backdrops on detail page</string>
+    <string name="tmdb_collections_title">Collections</string>
+    <string name="tmdb_collections_subtitle">TMDB movie collections in release order</string>
+
     <string name="tmdb_language_dialog_title">TMDB Language</string>
 
     <!-- TraktScreen -->
@@ -439,6 +472,8 @@
     <string name="trakt_unaired_next_up_subtitle">Show upcoming episodes before they air</string>
     <string name="trakt_unaired_shown">Shown</string>
     <string name="trakt_unaired_hidden">Hidden</string>
+    <string name="trakt_unaired_now_shown">Unaired Next Up episodes are now shown</string>
+    <string name="trakt_unaired_now_hidden">Unaired Next Up episodes are now hidden</string>
     <string name="trakt_cached_label">Cached</string>
     <string name="trakt_stat_movies">Movies</string>
     <string name="trakt_stat_shows">Shows</string>
@@ -551,6 +586,17 @@
     <string name="stream_player_external">External</string>
 
     <!-- PlayerScreen -->
+    <string name="player_no_external_player">No external player found</string>
+
+    <!-- ParentalGuideOverlay -->
+    <string name="parental_nudity">Nudity</string>
+    <string name="parental_violence">Violence</string>
+    <string name="parental_profanity">Profanity</string>
+    <string name="parental_alcohol">Alcohol/Drugs</string>
+    <string name="parental_frightening">Frightening</string>
+    <string name="parental_severity_severe">Severe</string>
+    <string name="parental_severity_moderate">Moderate</string>
+    <string name="parental_severity_mild">Mild</string>
     <string name="player_ends_at">Ends at %1$s</string>
     <string name="player_via">via %1$s</string>
     <string name="player_subtitle_delay">Subtitles Delay</string>
@@ -636,6 +682,7 @@
     <string name="next_episode_playing_via">Playing via %1$s in %2$ds</string>
     <string name="next_episode_play">Play</string>
     <string name="next_episode_unaired">Unaired</string>
+    <string name="next_episode_not_aired_yet">Next episode hasn\'t aired yet</string>
     <string name="skip_intro">Skip Intro</string>
     <string name="skip_ending">Skip Ending</string>
     <string name="skip_recap">Skip Recap</string>
@@ -650,6 +697,10 @@
     <string name="search_start_title">Start Searching</string>
     <string name="search_start_subtitle">Enter at least 2 characters</string>
     <string name="search_start_subtitle_no_discover">Discover is disabled. Enter at least 2 characters</string>
+    <string name="search_voice_no_speech">No speech detected. Try again.</string>
+    <string name="search_voice_mic_permission">Microphone permission is required for voice search.</string>
+    <string name="search_voice_failed">Voice recognition failed. Try again.</string>
+    <string name="search_voice_unavailable">Voice search is unavailable on this device.</string>
 
     <!-- LibraryScreen -->
     <string name="library_syncing">Syncing Trakt library\u2026</string>

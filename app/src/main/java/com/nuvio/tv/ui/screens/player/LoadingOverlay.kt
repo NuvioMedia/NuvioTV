@@ -15,9 +15,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -153,17 +153,20 @@ fun LoadingOverlay(
                             LoadingIndicator()
                         }
                     }
+                }
 
-                    if (!message.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Text(
-                            text = message,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.72f),
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 24.dp)
-                        )
-                    }
+                if (!message.isNullOrBlank()) {
+                    val messageOffset = if (showLogo || !title.isNullOrBlank()) 94.dp else 86.dp
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.72f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .offset(y = messageOffset)
+                            .padding(horizontal = 24.dp)
+                    )
                 }
             }
         }

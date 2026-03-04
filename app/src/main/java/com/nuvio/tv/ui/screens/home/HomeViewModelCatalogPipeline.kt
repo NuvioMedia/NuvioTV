@@ -7,6 +7,8 @@ import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.HomeLayout
+import com.nuvio.tv.domain.model.skipStep
+import com.nuvio.tv.domain.model.supportsExtra
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -17,6 +19,13 @@ import kotlinx.coroutines.sync.withPermit
 import com.nuvio.tv.core.util.filterReleasedItems
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
+
+private data class CatalogUpdateResult(
+    val displayRows: List<CatalogRow>,
+    val heroItems: List<com.nuvio.tv.domain.model.MetaPreview>,
+    val gridItems: List<GridItem>,
+    val fullRows: List<CatalogRow>
+)
 
 internal fun HomeViewModel.loadHomeCatalogOrderPreferencePipeline() {
     viewModelScope.launch {
@@ -95,6 +104,7 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
     trailerPreviewLoadingIds.clear()
     trailerPreviewNegativeCache.clear()
     trailerPreviewUrlsState.clear()
+    trailerPreviewAudioUrlsState.clear()
     activeTrailerPreviewItemId = null
     trailerPreviewRequestVersion = 0L
     prefetchedExternalMetaIds.clear()
@@ -151,10 +161,11 @@ internal fun HomeViewModel.loadCatalogPipeline(
         var hasCountedCompletion = false
         catalogLoadSemaphore.withPermit {
             if (generation != catalogLoadGeneration) return@withPermit
-            val supportsSkip = catalog.extra.any { it.name == "skip" }
+            val supportsSkip = catalog.supportsExtra("skip")
+            val skipStep = catalog.skipStep()
             Log.d(
                 HomeViewModel.TAG,
-                "Loading home catalog addonId=${addon.id} addonName=${addon.name} type=${catalog.apiType} catalogId=${catalog.id} catalogName=${catalog.name} supportsSkip=$supportsSkip"
+                "Loading home catalog addonId=${addon.id} addonName=${addon.name} type=${catalog.apiType} catalogId=${catalog.id} catalogName=${catalog.name} supportsSkip=$supportsSkip skipStep=$skipStep"
             )
             catalogRepository.getCatalog(
                 addonBaseUrl = addon.baseUrl,
@@ -164,6 +175,7 @@ internal fun HomeViewModel.loadCatalogPipeline(
                 catalogName = catalog.name,
                 type = catalog.apiType,
                 skip = 0,
+                skipStep = skipStep,
                 supportsSkip = supportsSkip
             ).collect { result ->
                 if (generation != catalogLoadGeneration) return@collect
@@ -225,7 +237,7 @@ internal fun HomeViewModel.loadMoreCatalogItemsPipeline(catalogId: String, addon
     viewModelScope.launch {
         val addon = addonsCache.find { it.id == addonId } ?: return@launch
 
-        val nextSkip = currentRow.items.size
+        val nextSkip = (currentRow.currentPage + 1) * currentRow.skipStep
         catalogRepository.getCatalog(
             addonBaseUrl = addon.baseUrl,
             addonId = addon.id,
@@ -234,6 +246,7 @@ internal fun HomeViewModel.loadMoreCatalogItemsPipeline(catalogId: String, addon
             catalogName = currentRow.catalogName,
             type = currentRow.apiType,
             skip = nextSkip,
+            skipStep = currentRow.skipStep,
             supportsSkip = currentRow.supportsSkip
         ).collect { result ->
             when (result) {
@@ -270,7 +283,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
     val heroSectionEnabled = _uiState.value.heroSectionEnabled
     val hideUnreleased = _uiState.value.hideUnreleasedContent
 
-    val (displayRows, baseHeroItems, baseGridItems) = withContext(Dispatchers.Default) {
+    val (displayRows, baseHeroItems, baseGridItems, fullRowsFiltered) = withContext(Dispatchers.Default) {
         val rawRows = orderedKeys.mapNotNull { key -> catalogSnapshot[key] }
         val orderedRows = if (hideUnreleased) {
             val today = LocalDate.now()
@@ -377,18 +390,11 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             currentGridItems
         }
 
-        Triple(computedDisplayRows, computedHeroItems, computedGridItems)
+        CatalogUpdateResult(computedDisplayRows, computedHeroItems, computedGridItems, orderedRows)
     }
 
-    val rawFullRows = orderedKeys.mapNotNull { key -> catalogSnapshot[key] }
-    val fullRows = if (hideUnreleased) {
-        val today = LocalDate.now()
-        rawFullRows.map { it.filterReleasedItems(today) }
-    } else {
-        rawFullRows
-    }
     _fullCatalogRows.update { rows ->
-        if (rows == fullRows) rows else fullRows
+        if (rows == fullRowsFiltered) rows else fullRowsFiltered
     }
 
     val nextGridItems = if (currentLayout == HomeLayout.GRID) {

@@ -75,7 +75,7 @@ class TraktLibraryService @Inject constructor(
     private var lastRefreshMs: Long = 0L
 
     private val cacheTtlMs = 60_000L
-    private val metadataHydrationLimit = 250
+    private val metadataHydrationLimit = 110
     private val listFetchConcurrency = 3
     private val metadataFetchSemaphore = Semaphore(5)
 
@@ -383,7 +383,10 @@ class TraktLibraryService @Inject constructor(
             releaseInfo = item.releaseInfo ?: item.year?.toString(),
             imdbRating = item.imdbRating,
             genres = item.genres,
-            addonBaseUrl = item.addonBaseUrl
+            addonBaseUrl = item.addonBaseUrl,
+            imdbId = item.imdbId,
+            tmdbId = item.tmdbId,
+            traktId = item.traktId
         )).copy(
             listedAt = System.currentTimeMillis(),
             listKeys = existing?.listKeys.orEmpty() + listKey
@@ -411,8 +414,11 @@ class TraktLibraryService @Inject constructor(
         val membership = mutableMapOf<String, MutableSet<String>>()
         rawEntriesByList.forEach { (listKey, entries) ->
             entries.forEach { entry ->
-                membership.getOrPut(contentKey(entry.id, entry.type)) { mutableSetOf() }
-                    .add(listKey)
+                val lists = membership.getOrPut(contentKey(entry.id, entry.type)) { mutableSetOf() }
+                lists.add(listKey)
+                for (alias in allContentKeys(entry)) {
+                    membership.getOrPut(alias) { mutableSetOf() }.add(listKey)
+                }
             }
         }
 
@@ -470,8 +476,11 @@ class TraktLibraryService @Inject constructor(
         val membership = mutableMapOf<String, MutableSet<String>>()
         rawEntriesByList.forEach { (listKey, entries) ->
             entries.forEach { entry ->
-                val contentKey = contentKey(entry.id, entry.type)
-                membership.getOrPut(contentKey) { mutableSetOf() }.add(listKey)
+                val primaryKey = contentKey(entry.id, entry.type)
+                membership.getOrPut(primaryKey) { mutableSetOf() }.add(listKey)
+                for (alias in allContentKeys(entry)) {
+                    membership.getOrPut(alias) { mutableSetOf() }.add(listKey)
+                }
             }
         }
 
@@ -523,6 +532,10 @@ class TraktLibraryService @Inject constructor(
 
         return (moviesResponse.body().orEmpty() + showsResponse.body().orEmpty())
             .mapNotNull { mapListItem(listKey = WATCHLIST_KEY, item = it) }
+            .sortedWith(
+                compareBy<LibraryEntry> { it.traktRank ?: Int.MAX_VALUE }
+                    .thenByDescending { it.listedAt }
+            )
     }
 
     private data class PersonalListFetchResult(
@@ -557,7 +570,10 @@ class TraktLibraryService @Inject constructor(
                         } else {
                             val movies = fetchPersonalListItems(listIdPath, "movie", tab.key)
                             val shows = fetchPersonalListItems(listIdPath, "show", tab.key)
-                            tab.key to (movies + shows)
+                            tab.key to (movies + shows).sortedWith(
+                                compareBy<LibraryEntry> { it.traktRank ?: Int.MAX_VALUE }
+                                    .thenByDescending { it.listedAt }
+                            )
                         }
                     }
                 }
@@ -654,7 +670,11 @@ class TraktLibraryService @Inject constructor(
             genres = emptyList(),
             addonBaseUrl = null,
             listKeys = setOf(listKey),
-            listedAt = parseIsoToMillis(item.listedAt)
+            listedAt = parseIsoToMillis(item.listedAt),
+            traktRank = item.rank,
+            imdbId = ids?.imdb?.takeIf { it.isNotBlank() },
+            tmdbId = ids?.tmdb,
+            traktId = ids?.trakt
         )
     }
 
@@ -795,6 +815,15 @@ class TraktLibraryService @Inject constructor(
         val normalizedId = normalizeContentId(toTraktIds(parsed), fallback = itemId.trim())
         val stableId = normalizedId.ifBlank { itemId.trim() }
         return "$normalizedType:$stableId"
+    }
+
+    private fun allContentKeys(entry: LibraryEntry): Set<String> {
+        val type = normalizeItemType(entry.type)
+        val keys = mutableSetOf(contentKey(entry.id, entry.type))
+        entry.imdbId?.takeIf { it.isNotBlank() }?.let { keys.add("$type:$it") }
+        entry.tmdbId?.let { keys.add("$type:tmdb:$it") }
+        entry.traktId?.let { keys.add("$type:trakt:$it") }
+        return keys
     }
 
     private fun normalizeItemType(itemType: String): String {

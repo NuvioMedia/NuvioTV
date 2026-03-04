@@ -1,6 +1,7 @@
 package com.nuvio.tv.domain.model
 
 import androidx.compose.runtime.Immutable
+import java.util.Locale
 
 /**
  * Represents a subtitle from a Stremio addon
@@ -21,95 +22,70 @@ data class Subtitle(
     }
     
     companion object {
-        private val languageNames = mapOf(
-            "en" to "English",
-            "eng" to "English",
-            "es" to "Spanish",
-            "spa" to "Spanish",
-            "fr" to "French",
-            "fra" to "French",
-            "fre" to "French",
-            "de" to "German",
-            "deu" to "German",
-            "ger" to "German",
-            "it" to "Italian",
-            "ita" to "Italian",
-            "pt" to "Portuguese (Portugal)",
-            "pt-pt" to "Portuguese (Portugal)",
-            "pt_pt" to "Portuguese (Portugal)",
-            "por" to "Portuguese (Portugal)",
-            "pt-br" to "Portuguese (Brazil)",
-            "pt_br" to "Portuguese (Brazil)",
-            "br" to "Portuguese (Brazil)",
-            "pob" to "Portuguese (Brazil)",
-            "ru" to "Russian",
-            "rus" to "Russian",
-            "ja" to "Japanese",
-            "jpn" to "Japanese",
-            "ko" to "Korean",
-            "kor" to "Korean",
-            "zh" to "Chinese",
-            "chi" to "Chinese",
-            "zho" to "Chinese",
-            "ar" to "Arabic",
-            "ara" to "Arabic",
-            "hi" to "Hindi",
-            "hin" to "Hindi",
-            "nl" to "Dutch",
-            "nld" to "Dutch",
-            "dut" to "Dutch",
-            "pl" to "Polish",
-            "pol" to "Polish",
-            "sv" to "Swedish",
-            "swe" to "Swedish",
-            "no" to "Norwegian",
-            "nor" to "Norwegian",
-            "da" to "Danish",
-            "dan" to "Danish",
-            "fi" to "Finnish",
-            "fin" to "Finnish",
-            "tr" to "Turkish",
-            "tur" to "Turkish",
-            "el" to "Greek",
-            "ell" to "Greek",
-            "gre" to "Greek",
-            "he" to "Hebrew",
-            "heb" to "Hebrew",
-            "th" to "Thai",
-            "tha" to "Thai",
-            "vi" to "Vietnamese",
-            "vie" to "Vietnamese",
-            "id" to "Indonesian",
-            "ind" to "Indonesian",
-            "ms" to "Malay",
-            "msa" to "Malay",
-            "may" to "Malay",
-            "cs" to "Czech",
-            "ces" to "Czech",
-            "cze" to "Czech",
-            "hu" to "Hungarian",
-            "hun" to "Hungarian",
-            "ro" to "Romanian",
-            "ron" to "Romanian",
-            "rum" to "Romanian",
-            "uk" to "Ukrainian",
-            "ukr" to "Ukrainian",
-            "bg" to "Bulgarian",
-            "bul" to "Bulgarian",
-            "hr" to "Croatian",
-            "hrv" to "Croatian",
-            "sr" to "Serbian",
-            "srp" to "Serbian",
-            "sk" to "Slovak",
-            "slk" to "Slovak",
-            "slo" to "Slovak",
-            "sl" to "Slovenian",
-            "slv" to "Slovenian"
+        private val languageOverrides = mapOf(
+            "pt" to "pt",
+            "pt-pt" to "pt",
+            "pt_pt" to "pt",
+            "por" to "pt",
+            "pt-br" to "pt-BR",
+            "pt_br" to "pt-BR",
+            "br" to "pt-BR",
+            "pob" to "pt-BR",
+            "fre" to "fr",
+            "ger" to "de",
+            "deu" to "de",
+            "dut" to "nl",
+            "nld" to "nl",
+            "chi" to "zh",
+            "zho" to "zh",
+            "jpn" to "ja",
+            "kor" to "ko",
+            "ara" to "ar",
+            "hin" to "hi",
+            "rus" to "ru",
+            "pol" to "pl",
+            "spa" to "es",
+            "fra" to "fr",
+            "ita" to "it",
+            "eng" to "en",
+            "swe" to "sv",
+            "nor" to "no",
+            "dan" to "da",
+            "fin" to "fi",
+            "tur" to "tr",
+            "ell" to "el",
+            "gre" to "el",
+            "heb" to "he",
+            "tha" to "th",
+            "vie" to "vi",
+            "ind" to "id",
+            "msa" to "ms",
+            "may" to "ms",
+            "ces" to "cs",
+            "cze" to "cs",
+            "hun" to "hu",
+            "ron" to "ro",
+            "rum" to "ro",
+            "ukr" to "uk",
+            "bul" to "bg",
+            "hrv" to "hr",
+            "srp" to "sr",
+            "slk" to "sk",
+            "slo" to "sk",
+            "slv" to "sl"
         )
-        
+
         fun languageCodeToName(code: String): String {
             val lowerCode = code.lowercase()
-            return languageNames[lowerCode] ?: code.uppercase()
+            val bcp47 = languageOverrides[lowerCode] ?: lowerCode
+            return try {
+                val locale = Locale.forLanguageTag(bcp47)
+                val name = locale.getDisplayLanguage(Locale.getDefault())
+                if (name.isNotBlank() && name != bcp47) name.replaceFirstChar { it.uppercase() }
+                else code.uppercase()
+            } catch (_: Exception) {
+                code.uppercase()
+            }
         }
     }
 }

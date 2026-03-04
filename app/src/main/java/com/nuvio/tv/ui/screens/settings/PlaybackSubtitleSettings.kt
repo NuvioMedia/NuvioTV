@@ -33,6 +33,7 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.PlayerSettings
+import com.nuvio.tv.data.local.AddonSubtitleStartupMode
 import com.nuvio.tv.data.local.SubtitleOrganizationMode
 import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
 import com.nuvio.tv.ui.components.NuvioDialog
@@ -70,6 +71,7 @@ internal fun LazyListScope.subtitleSettingsItems(
     onShowLanguageDialog: () -> Unit,
     onShowSecondaryLanguageDialog: () -> Unit,
     onShowSubtitleOrganizationDialog: () -> Unit,
+    onShowSubtitleStartupModeDialog: () -> Unit,
     onShowTextColorDialog: () -> Unit,
     onShowBackgroundColorDialog: () -> Unit,
     onShowOutlineColorDialog: () -> Unit,
@@ -135,6 +137,17 @@ internal fun LazyListScope.subtitleSettingsItems(
             title = stringResource(R.string.sub_organization),
             subtitle = subtitleOrganizationModeLabel(playerSettings.subtitleOrganizationMode),
             onClick = onShowSubtitleOrganizationDialog,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
+    }
+
+    item(key = "subtitle_startup_mode") {
+        NavigationSettingsItem(
+            icon = Icons.Default.Subtitles,
+            title = stringResource(R.string.sub_startup_mode_title),
+            subtitle = subtitleStartupModeLabel(playerSettings.addonSubtitleStartupMode),
+            onClick = onShowSubtitleStartupModeDialog,
             onFocused = onItemFocused,
             enabled = enabled
         )
@@ -319,6 +332,7 @@ internal fun SubtitleSettingsDialogs(
     showLanguageDialog: Boolean,
     showSecondaryLanguageDialog: Boolean,
     showSubtitleOrganizationDialog: Boolean,
+    showSubtitleStartupModeDialog: Boolean,
     showTextColorDialog: Boolean,
     showBackgroundColorDialog: Boolean,
     showOutlineColorDialog: Boolean,
@@ -326,12 +340,14 @@ internal fun SubtitleSettingsDialogs(
     onSetPreferredLanguage: (String?) -> Unit,
     onSetSecondaryLanguage: (String?) -> Unit,
     onSetSubtitleOrganizationMode: (SubtitleOrganizationMode) -> Unit,
+    onSetAddonSubtitleStartupMode: (AddonSubtitleStartupMode) -> Unit,
     onSetTextColor: (Color) -> Unit,
     onSetBackgroundColor: (Color) -> Unit,
     onSetOutlineColor: (Color) -> Unit,
     onDismissLanguageDialog: () -> Unit,
     onDismissSecondaryLanguageDialog: () -> Unit,
     onDismissSubtitleOrganizationDialog: () -> Unit,
+    onDismissSubtitleStartupModeDialog: () -> Unit,
     onDismissTextColorDialog: () -> Unit,
     onDismissBackgroundColorDialog: () -> Unit,
     onDismissOutlineColorDialog: () -> Unit
@@ -372,6 +388,17 @@ internal fun SubtitleSettingsDialogs(
                 onDismissSubtitleOrganizationDialog()
             },
             onDismiss = onDismissSubtitleOrganizationDialog
+        )
+    }
+
+    if (showSubtitleStartupModeDialog) {
+        AddonSubtitleStartupModeDialog(
+            selectedMode = playerSettings.addonSubtitleStartupMode,
+            onModeSelected = {
+                onSetAddonSubtitleStartupMode(it)
+                onDismissSubtitleStartupModeDialog()
+            },
+            onDismiss = onDismissSubtitleStartupModeDialog
         )
     }
 
@@ -422,6 +449,15 @@ private fun subtitleOrganizationModeLabel(mode: SubtitleOrganizationMode): Strin
         SubtitleOrganizationMode.NONE -> stringResource(R.string.sub_org_none)
         SubtitleOrganizationMode.BY_LANGUAGE -> stringResource(R.string.sub_org_by_lang)
         SubtitleOrganizationMode.BY_ADDON -> stringResource(R.string.sub_org_by_addon)
+    }
+}
+
+@Composable
+private fun subtitleStartupModeLabel(mode: AddonSubtitleStartupMode): String {
+    return when (mode) {
+        AddonSubtitleStartupMode.FAST_STARTUP -> stringResource(R.string.sub_startup_mode_fast)
+        AddonSubtitleStartupMode.PREFERRED_ONLY -> stringResource(R.string.sub_startup_mode_preferred)
+        AddonSubtitleStartupMode.ALL_SUBTITLES -> stringResource(R.string.sub_startup_mode_all)
     }
 }
 
@@ -499,6 +535,69 @@ private fun SubtitleOrganizationModeDialog(
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddonSubtitleStartupModeDialog(
+    selectedMode: AddonSubtitleStartupMode,
+    onModeSelected: (AddonSubtitleStartupMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = listOf(
+        Triple(
+            AddonSubtitleStartupMode.FAST_STARTUP,
+            stringResource(R.string.sub_startup_mode_fast),
+            stringResource(R.string.sub_startup_mode_fast_desc)
+        ),
+        Triple(
+            AddonSubtitleStartupMode.PREFERRED_ONLY,
+            stringResource(R.string.sub_startup_mode_preferred),
+            stringResource(R.string.sub_startup_mode_preferred_desc)
+        ),
+        Triple(
+            AddonSubtitleStartupMode.ALL_SUBTITLES,
+            stringResource(R.string.sub_startup_mode_all),
+            stringResource(R.string.sub_startup_mode_all_desc)
+        )
+    )
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                .background(NuvioColors.BackgroundCard)
+        ) {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier
+                    .width(460.dp)
+                    .padding(24.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.sub_startup_mode_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = NuvioColors.TextPrimary
+                )
+                Spacer(modifier = androidx.compose.ui.Modifier.height(16.dp))
+
+                androidx.compose.foundation.lazy.LazyColumn(
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                ) {
+                    items(
+                        items = options,
+                        key = { it.first.name }
+                    ) { (mode, title, description) ->
+                        RenderTypeSettingsItem(
+                            title = title,
+                            subtitle = description,
+                            isSelected = mode == selectedMode,
+                            onClick = { onModeSelected(mode) },
+                            onFocused = {}
+                        )
                     }
                 }
             }

@@ -180,6 +180,14 @@ class StreamScreenViewModel @Inject constructor(
                 directAutoPlayModeInitializedForSession = true
             }
 
+            val rawRegex = playerSettings.streamAutoPlayRegex.orEmpty().trim()
+            val isEffectivelyEmptyRegex = rawRegex.isEmpty() || !rawRegex.any { it.isLetterOrDigit() }
+
+            if (playerSettings.streamAutoPlayMode == StreamAutoPlayMode.REGEX_MATCH && isEffectivelyEmptyRegex) {
+                directAutoPlayFlowEnabledForSession = false
+                autoPlayHandledForSession = true
+            }
+
             val directFlowActive = directAutoPlayFlowEnabledForSession
             var resolvedAutoPlayTarget = false
 
@@ -225,7 +233,10 @@ class StreamScreenViewModel @Inject constructor(
                                 episodeTitle = episodeName,
                                 bingeGroup = null,
                                 rememberedAudioLanguage = cached.rememberedAudioLanguage,
-                                rememberedAudioName = cached.rememberedAudioName
+                                rememberedAudioName = cached.rememberedAudioName,
+                                filename = cached.filename,
+                                videoHash = cached.videoHash,
+                                videoSize = cached.videoSize
                             )
                         )
                     }
@@ -631,7 +642,10 @@ class StreamScreenViewModel @Inject constructor(
                     contentKey = streamCacheKey,
                     url = url,
                     streamName = playbackInfo.streamName,
-                    headers = playbackInfo.headers
+                    headers = playbackInfo.headers,
+                    filename = playbackInfo.filename,
+                    videoHash = playbackInfo.videoHash,
+                    videoSize = playbackInfo.videoSize
                 )
             }
         }

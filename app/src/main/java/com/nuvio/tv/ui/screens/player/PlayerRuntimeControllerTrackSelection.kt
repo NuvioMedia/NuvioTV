@@ -5,6 +5,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
+import com.nuvio.tv.domain.model.Subtitle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -79,7 +80,10 @@ internal fun PlayerRuntimeController.persistRememberedLinkAudioSelection(trackIn
             streamName = streamName,
             headers = currentHeaders,
             rememberedAudioLanguage = selectedTrack?.language,
-            rememberedAudioName = selectedTrack?.name
+            rememberedAudioName = selectedTrack?.name,
+            filename = currentFilename,
+            videoHash = currentVideoHash,
+            videoSize = currentVideoSize
         )
     }
 }
@@ -103,6 +107,40 @@ internal fun PlayerRuntimeController.applyAddonSubtitleOverride(addonTrackId: St
         }
     }
     Log.d(PlayerRuntimeController.TAG, "applyAddonSubtitleOverride: track not found yet for id=$addonTrackId")
+    return false
+}
+
+internal fun PlayerRuntimeController.applyAddonSubtitleOverrideByLanguage(
+    language: String
+): Boolean {
+    val player = _exoPlayer ?: return false
+    player.currentTracks.groups.forEach { trackGroup ->
+        if (trackGroup.type != C.TRACK_TYPE_TEXT) return@forEach
+        for (i in 0 until trackGroup.length) {
+            val format = trackGroup.getTrackFormat(i)
+            if (format.id?.contains(PlayerRuntimeController.ADDON_SUBTITLE_TRACK_ID_PREFIX) != true) {
+                continue
+            }
+            if (!PlayerSubtitleUtils.matchesLanguageCode(format.language, language)) {
+                continue
+            }
+            val override = TrackSelectionOverride(trackGroup.mediaTrackGroup, i)
+            player.trackSelectionParameters = player.trackSelectionParameters
+                .buildUpon()
+                .setOverrideForType(override)
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                .build()
+            Log.d(
+                PlayerRuntimeController.TAG,
+                "applyAddonSubtitleOverrideByLanguage: found id=${format.id} lang=${format.language} at group/track $i"
+            )
+            return true
+        }
+    }
+    Log.d(
+        PlayerRuntimeController.TAG,
+        "applyAddonSubtitleOverrideByLanguage: track not found yet for language=$language"
+    )
     return false
 }
 
@@ -142,7 +180,31 @@ internal fun PlayerRuntimeController.disableSubtitles() {
     }
 }
 
-internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: com.nuvio.tv.domain.model.Subtitle) {
+internal fun PlayerRuntimeController.buildAddonSubtitleTrackId(subtitle: Subtitle): String {
+    val urlHashSuffix = subtitle.url.hashCode().toUInt().toString(16)
+    return "${PlayerRuntimeController.ADDON_SUBTITLE_TRACK_ID_PREFIX}${subtitle.id}:$urlHashSuffix"
+}
+
+internal fun PlayerRuntimeController.addonSubtitleKey(subtitle: Subtitle): String {
+    return "${subtitle.id}|${subtitle.url}"
+}
+
+internal fun PlayerRuntimeController.toSubtitleConfiguration(subtitle: Subtitle): MediaItem.SubtitleConfiguration {
+    val normalizedLang = PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)
+    val subtitleMimeType = PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url)
+    val addonTrackId = buildAddonSubtitleTrackId(subtitle)
+
+    return MediaItem.SubtitleConfiguration.Builder(
+        android.net.Uri.parse(subtitle.url)
+    )
+        .setId(addonTrackId)
+        .setLanguage(normalizedLang)
+        .setMimeType(subtitleMimeType)
+        .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+        .build()
+}
+
+internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
     _exoPlayer?.let { player ->
         val currentlySelected = _uiState.value.selectedAddonSubtitle
         if (currentlySelected?.id == subtitle.id && currentlySelected.url == subtitle.url) {
@@ -151,21 +213,40 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: com.nuvio.tv.
         Log.d(PlayerRuntimeController.TAG, "Selecting ADDON subtitle lang=${subtitle.lang} id=${subtitle.id}")
 
         val normalizedLang = PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)
-        val addonTrackId = "${PlayerRuntimeController.ADDON_SUBTITLE_TRACK_ID_PREFIX}${subtitle.id}"
+        val addonTrackId = buildAddonSubtitleTrackId(subtitle)
+        val preAttachedByStartup = attachedAddonSubtitleKeys.contains(addonSubtitleKey(subtitle))
+        val appliedWithoutReload = applyAddonSubtitleOverride(addonTrackId) ||
+            (preAttachedByStartup && applyAddonSubtitleOverrideByLanguage(normalizedLang))
+
+        if (appliedWithoutReload) {
+            Log.d(
+                PlayerRuntimeController.TAG,
+                "Switching ADDON subtitle without media reload id=${subtitle.id}"
+            )
+            pendingAddonSubtitleLanguage = null
+            pendingAddonSubtitleTrackId = null
+            pendingAudioSelectionAfterSubtitleRefresh = null
+
+            _uiState.update {
+                it.copy(
+                    selectedAddonSubtitle = subtitle,
+                    selectedSubtitleTrackIndex = -1
+                )
+            }
+            return@let
+        }
+
         pendingAddonSubtitleLanguage = normalizedLang
         pendingAddonSubtitleTrackId = addonTrackId
         pendingAudioSelectionAfterSubtitleRefresh =
             captureCurrentAudioSelectionForSubtitleRefresh(player)
-        val subtitleMimeType = PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url)
-
-        val subtitleConfigBuilder = MediaItem.SubtitleConfiguration.Builder(
-            android.net.Uri.parse(subtitle.url)
-        )
-            .setId(addonTrackId)
-            .setLanguage(normalizedLang)
-            .setMimeType(subtitleMimeType)
-            .setSelectionFlags(0)
-        val subtitleConfig = subtitleConfigBuilder.build()
+        val subtitleConfigurations = (_uiState.value.addonSubtitles + subtitle)
+            .distinctBy { "${it.id}|${it.url}" }
+            .map(::toSubtitleConfiguration)
+        attachedAddonSubtitleKeys = (_uiState.value.addonSubtitles + subtitle)
+            .distinctBy { addonSubtitleKey(it) }
+            .map(::addonSubtitleKey)
+            .toSet()
 
         val currentPosition = player.currentPosition
         val playWhenReady = player.playWhenReady
@@ -174,7 +255,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: com.nuvio.tv.
             mediaSourceFactory.createMediaSource(
                 url = currentStreamUrl,
                 headers = currentHeaders,
-                subtitleConfigurations = listOf(subtitleConfig)
+                subtitleConfigurations = subtitleConfigurations
             ),
             currentPosition
         )

@@ -5,18 +5,26 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.PosterCardStyle
+import com.nuvio.tv.ui.theme.NuvioColors
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun MoreLikeThisSection(
     items: List<MetaPreview>,
@@ -29,6 +37,7 @@ fun MoreLikeThisSection(
 ) {
     if (items.isEmpty()) return
 
+    val firstItemFocusRequester = remember { FocusRequester() }
     val restoreFocusRequester = remember { FocusRequester() }
     val itemFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
 
@@ -59,36 +68,54 @@ fun MoreLikeThisSection(
             .padding(top = 8.dp, bottom = 8.dp)
     ) {
         LazyRow(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRestorer { firstItemFocusRequester },
             contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             itemsIndexed(
                 items = items,
                 key = { index, item -> item.id + "|" + item.name + "|" + index }
-            ) { _, item ->
+            ) { index, item ->
                 val isRestoreTarget = item.id == restoreItemId
-                val focusRequester = if (isRestoreTarget) {
-                    restoreFocusRequester
-                } else {
-                    itemFocusRequesters.getOrPut(item.id) { FocusRequester() }
+                val isFirstItem = index == 0
+                val focusRequester = when {
+                    isRestoreTarget -> restoreFocusRequester
+                    isFirstItem -> firstItemFocusRequester
+                    else -> itemFocusRequesters.getOrPut(item.id) { FocusRequester() }
                 }
 
-                GridContentCard(
-                    item = item,
-                    onClick = { onItemClick(item) },
-                    posterCardStyle = landscapeStyle,
-                    showLabel = true,
-                    imageCrossfade = true,
-                    focusRequester = focusRequester,
-                    upFocusRequester = upFocusRequester,
-                    onFocused = {
-                        onItemFocused(item)
-                        if (isRestoreTarget && restoreFocusToken > 0) {
-                            onRestoreFocusHandled()
+                Column {
+                    GridContentCard(
+                        item = item,
+                        onClick = { onItemClick(item) },
+                        posterCardStyle = landscapeStyle,
+                        showLabel = true,
+                        imageCrossfade = true,
+                        focusRequester = focusRequester,
+                        upFocusRequester = upFocusRequester,
+                        onFocused = {
+                            onItemFocused(item)
+                            if (isRestoreTarget && restoreFocusToken > 0) {
+                                onRestoreFocusHandled()
+                            }
                         }
+                    )
+                    val year = item.releaseInfo
+                    if (!year.isNullOrBlank()) {
+                        Text(
+                            text = year,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = NuvioColors.TextTertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .width(landscapeStyle.width)
+                                .padding(start = 2.dp, end = 2.dp, top = 2.dp)
+                        )
                     }
-                )
+                }
             }
         }
     }

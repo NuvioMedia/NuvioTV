@@ -122,30 +122,26 @@ internal fun LazyListScope.autoPlaySettingsItems(
         )
     }
 
-    if (playerSettings.streamAutoPlayMode != StreamAutoPlayMode.MANUAL) {
-        item(key = "autoplay_next_episode") {
-            ToggleSettingsItem(
-                icon = Icons.Default.SkipNext,
-                title = stringResource(R.string.autoplay_next_episode),
-                subtitle = stringResource(R.string.autoplay_next_episode_sub),
-                isChecked = playerSettings.streamAutoPlayNextEpisodeEnabled,
-                onCheckedChange = onSetStreamAutoPlayNextEpisodeEnabled,
-                onFocused = onItemFocused
-            )
-        }
+    item(key = "autoplay_next_episode") {
+        ToggleSettingsItem(
+            icon = Icons.Default.SkipNext,
+            title = stringResource(R.string.autoplay_next_episode),
+            subtitle = stringResource(R.string.autoplay_next_episode_sub),
+            isChecked = playerSettings.streamAutoPlayNextEpisodeEnabled,
+            onCheckedChange = onSetStreamAutoPlayNextEpisodeEnabled,
+            onFocused = onItemFocused
+        )
+    }
 
-        if (playerSettings.streamAutoPlayNextEpisodeEnabled) {
-            item {
-                ToggleSettingsItem(
-                    icon = Icons.Default.Tune,
-                    title = "Prefer Binge Group (Next Episode)",
-                    subtitle = "Try the same source profile first (same addon/quality group) before normal auto-play rules.",
-                    isChecked = playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode,
-                    onCheckedChange = onSetStreamAutoPlayPreferBingeGroupForNextEpisode,
-                    onFocused = onItemFocused
-                )
-            }
-        }
+    item(key = "autoplay_next_episode_prefer_binge_group") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Tune,
+            title = stringResource(R.string.autoplay_prefer_binge_group),
+            subtitle = stringResource(R.string.autoplay_prefer_binge_group_sub),
+            isChecked = playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode,
+            onCheckedChange = onSetStreamAutoPlayPreferBingeGroupForNextEpisode,
+            onFocused = onItemFocused
+        )
     }
 
     item(key = "autoplay_threshold_mode") {
@@ -910,7 +906,8 @@ private fun StreamRegexDialog(
             "HDR / Dolby Vision" to "(hdr|hdr10\\+?|dv|dolby\\s*vision)",
             "Dolby Atmos / DTS" to "(atmos|truehd|dts[-\\s]?hd|dtsx?)",
             "English" to "(\\beng\\b|english)",
-            "No CAM/TS" to "^(?!.*\\b(cam|hdcam|ts|telesync)\\b).*$"
+            "No CAM/TS" to "^(?!.*\\b(cam|hdcam|ts|telesync)\\b).*$",
+            "No REMUX/HDR" to "(?is)^(?!.*\\b(hdr|hdr10|dv|dolby|vision|hevc|remux|2160p)\\b).+$"
         )
     }
 

@@ -178,6 +178,20 @@ fun TmdbSettingsContent(
                     )
                 }
 
+                item(key = "tmdb_collections") {
+                    SettingsToggleRow(
+                        title = stringResource(R.string.tmdb_collections_title),
+                        subtitle = stringResource(R.string.tmdb_collections_subtitle),
+                        checked = uiState.useCollections,
+                        enabled = uiState.enabled,
+                        onToggle = {
+                            viewModel.onEvent(
+                                TmdbSettingsEvent.ToggleCollections(!uiState.useCollections)
+                            )
+                        }
+                    )
+                }
+
             }
         }
     }

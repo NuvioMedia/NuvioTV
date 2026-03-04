@@ -3,7 +3,10 @@ package com.nuvio.tv.data.remote.api
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import retrofit2.Response
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -73,21 +76,114 @@ data class AniSkipInterval(
 // --- ARM API (IMDB -> MAL ID resolution) ---
 
 interface ArmApi {
+    // /imdb?id=...&include=myanimelist  → List<ArmEntry> (one per season)
     @GET("imdb")
-    suspend fun resolveByImdb(
+    suspend fun resolveImdbToMal(
         @Query("id") imdbId: String,
         @Query("include") include: String = "myanimelist"
     ): Response<List<ArmEntry>>
 
+    // /imdb?id=...&include=anilist  → List<ArmEntry> (one per season)
+    @GET("imdb")
+    suspend fun resolveImdbToAnilist(
+        @Query("id") imdbId: String,
+        @Query("include") include: String = "anilist"
+    ): Response<List<ArmEntry>>
+
+    // /ids?source=myanimelist&id=...&include=anilist  → single ArmEntry
     @GET("ids")
-    suspend fun resolveByKitsu(
+    suspend fun resolveMalToAnilist(
+        @Query("source") source: String = "myanimelist",
+        @Query("id") malId: String,
+        @Query("include") include: String = "anilist"
+    ): Response<ArmEntry>
+
+    // /ids?source=myanimelist&id=...&include=imdb  → single ArmEntry
+    @GET("ids")
+    suspend fun resolveMalToImdb(
+        @Query("source") source: String = "myanimelist",
+        @Query("id") malId: String,
+        @Query("include") include: String = "imdb"
+    ): Response<ArmEntry>
+
+    // /ids?source=kitsu&id=...&include=myanimelist  → single ArmEntry
+    @GET("ids")
+    suspend fun resolveKitsuToMal(
         @Query("source") source: String = "kitsu",
         @Query("id") kitsuId: String,
         @Query("include") include: String = "myanimelist"
+    ): Response<ArmEntry>
+
+    // /ids?source=kitsu&id=...&include=anilist  → single ArmEntry
+    @GET("ids")
+    suspend fun resolveKitsuToAnilist(
+        @Query("source") source: String = "kitsu",
+        @Query("id") kitsuId: String,
+        @Query("include") include: String = "anilist"
+    ): Response<ArmEntry>
+
+    // /ids?source=kitsu&id=...&include=imdb  → single ArmEntry
+    @GET("ids")
+    suspend fun resolveKitsuToImdb(
+        @Query("source") source: String = "kitsu",
+        @Query("id") kitsuId: String,
+        @Query("include") include: String = "imdb"
     ): Response<ArmEntry>
 }
 
 @JsonClass(generateAdapter = true)
 data class ArmEntry(
-    @Json(name = "myanimelist") val myanimelist: Int? = null
+    @Json(name = "myanimelist") val myanimelist: Int? = null,
+    @Json(name = "anilist") val anilist: Int? = null,
+    @Json(name = "imdb") val imdb: String? = null
+)
+
+// --- Anime-Skip API (GraphQL) ---
+
+interface AnimeSkipApi {
+    @POST("graphql")
+    suspend fun query(
+        @Header("X-Client-ID") clientId: String,
+        @Body body: AnimeSkipRequest
+    ): Response<AnimeSkipResponse>
+}
+
+@JsonClass(generateAdapter = true)
+data class AnimeSkipRequest(
+    @Json(name = "query") val query: String,
+    @Json(name = "variables") val variables: Map<String, String> = emptyMap()
+)
+
+@JsonClass(generateAdapter = true)
+data class AnimeSkipResponse(
+    @Json(name = "data") val data: AnimeSkipData? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AnimeSkipData(
+    @Json(name = "findShowsByExternalId") val findShowsByExternalId: List<AnimeSkipShow>? = null,
+    @Json(name = "findEpisodesByShowId") val findEpisodesByShowId: List<AnimeSkipEpisode>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AnimeSkipShow(
+    @Json(name = "id") val id: String
+)
+
+@JsonClass(generateAdapter = true)
+data class AnimeSkipEpisode(
+    @Json(name = "season") val season: String? = null,
+    @Json(name = "number") val number: String? = null,
+    @Json(name = "timestamps") val timestamps: List<AnimeSkipTimestamp>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AnimeSkipTimestamp(
+    @Json(name = "at") val at: Double,
+    @Json(name = "type") val type: AnimeSkipTimestampType
+)
+
+@JsonClass(generateAdapter = true)
+data class AnimeSkipTimestampType(
+    @Json(name = "name") val name: String
 )

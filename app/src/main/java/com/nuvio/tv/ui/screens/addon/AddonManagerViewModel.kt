@@ -515,7 +515,7 @@ class AddonManagerViewModel @Inject constructor(
     }
 
     private fun CatalogDescriptor.isSearchOnlyCatalog(): Boolean {
-        return extra.any { extra -> extra.name == "search" && extra.isRequired }
+        return extra.any { extra -> extra.name.equals("search", ignoreCase = true) && extra.isRequired }
     }
 
     private data class QrCatalogEntry(
