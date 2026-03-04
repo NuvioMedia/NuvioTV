@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.detail
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListPrefetchStrategy
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -35,8 +37,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -78,6 +80,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 private const val EPISODE_CARD_CONTENT_TYPE = "episode_card"
+private const val EPISODE_SCROLL_REPEAT_THROTTLE_MS = 80L
 
 @OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
@@ -184,7 +187,7 @@ fun SeasonTabs(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun EpisodesRow(
     episodes: List<Video>,
@@ -213,7 +216,14 @@ fun EpisodesRow(
     var optionsEpisode by remember { mutableStateOf<Video?>(null) }
     val cardMetrics = rememberEpisodeCardMetrics()
     val density = LocalDensity.current
-    val lazyListState = rememberLazyListState()
+    val rowPrefetchStrategy = remember { LazyListPrefetchStrategy(nestedPrefetchItemCount = 2) }
+    val lazyListState = rememberLazyListState(prefetchStrategy = rowPrefetchStrategy)
+    var lastHorizontalKeyRepeatTime by remember { mutableStateOf(0L) }
+    val episodeIds = remember(episodes) { episodes.mapTo(mutableSetOf()) { it.id } }
+
+    LaunchedEffect(episodeIds, episodeFocusRequesters) {
+        episodeFocusRequesters.keys.retainAll(episodeIds)
+    }
 
     LaunchedEffect(restoreFocusToken, restoreEpisodeId, restoreTargetRequester, episodes) {
         if (restoreFocusToken <= 0 || restoreEpisodeId.isNullOrBlank()) return@LaunchedEffect
@@ -231,7 +241,24 @@ fun EpisodesRow(
 
     LazyRow(
         modifier = Modifier
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .onPreviewKeyEvent { event ->
+                val native = event.nativeKeyEvent
+                val isHorizontalKey = native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_LEFT ||
+                    native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_RIGHT
+                if (
+                    isHorizontalKey &&
+                    native.action == AndroidKeyEvent.ACTION_DOWN &&
+                    native.repeatCount > 0
+                ) {
+                    val now = System.currentTimeMillis()
+                    if (now - lastHorizontalKeyRepeatTime < EPISODE_SCROLL_REPEAT_THROTTLE_MS) {
+                        return@onPreviewKeyEvent true
+                    }
+                    lastHorizontalKeyRepeatTime = now
+                }
+                false
+            },
         state = lazyListState,
         contentPadding = PaddingValues(
             horizontal = cardMetrics.rowHorizontalPadding,
@@ -491,8 +518,11 @@ private fun EpisodeCard(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .alpha(overlayAlpha)
-                    .background(overlayBrush)
+                    .drawWithCache {
+                        onDrawBehind {
+                            drawRect(brush = overlayBrush, alpha = overlayAlpha)
+                        }
+                    }
             )
 
             Column(

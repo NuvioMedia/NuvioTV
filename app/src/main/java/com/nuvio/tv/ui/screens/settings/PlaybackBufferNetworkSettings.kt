@@ -81,16 +81,21 @@ internal fun LazyListScope.bufferAndNetworkSettingsItems(
 
     item {
         val minBufferSeconds = playerSettings.bufferSettings.minBufferMs / 1000
+        val maxBufferSeconds = playerSettings.bufferSettings.maxBufferMs / 1000
         SliderSettingsItem(
             icon = Icons.Default.Speed,
             title = "Max Buffer Duration",
-            subtitle = "Maximum amount of media to buffer. Higher values use more memory but provide smoother playback on unstable connections.",
-            value = playerSettings.bufferSettings.maxBufferMs / 1000,
-            valueText = "${playerSettings.bufferSettings.maxBufferMs / 1000}s",
-            minValue = minBufferSeconds,
+            subtitle = "Maximum amount of media to buffer. Must be at least the minimum buffer duration. Higher values use more memory but provide smoother playback on unstable connections.",
+            value = maxBufferSeconds,
+            valueText = if (maxBufferSeconds == minBufferSeconds) {
+                "${maxBufferSeconds}s (same as min)"
+            } else {
+                "${maxBufferSeconds}s"
+            },
+            minValue = 5,
             maxValue = 120,
             step = 5,
-            onValueChange = { onSetBufferMaxBufferMs(it * 1000) }
+            onValueChange = { onSetBufferMaxBufferMs(maxOf(it, minBufferSeconds) * 1000) }
         )
     }
 

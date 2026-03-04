@@ -341,6 +341,8 @@ class PlayerSettingsDataStore @Inject constructor(
     private val migrationLoadControlDefaultsAlignedDoneKey = booleanPreferencesKey("migration_load_control_defaults_aligned_done")
     private val migrationLoadControlDefaultsRetunedDoneKey =
         booleanPreferencesKey("migration_load_control_defaults_retuned_done")
+    private val migrationLoadControlMinBufferRetunedDoneKey =
+        booleanPreferencesKey("migration_load_control_min_buffer_retuned_done")
 
     init {
         ioScope.launch {
@@ -390,6 +392,34 @@ class PlayerSettingsDataStore @Inject constructor(
                     }
 
                     prefs[migrationLoadControlDefaultsRetunedDoneKey] = true
+                }
+
+                val minBufferRetuned = prefs[migrationLoadControlMinBufferRetunedDoneKey] ?: false
+                if (!minBufferRetuned) {
+                    val currentMin = prefs[minBufferMsKey]
+                    val currentMax = prefs[maxBufferMsKey]
+                    val currentPlayback = prefs[bufferForPlaybackMsKey]
+                    val currentPlaybackAfterRebuffer = prefs[bufferForPlaybackAfterRebufferMsKey]
+                    val currentTargetBuffer = prefs[targetBufferSizeMbKey]
+                    val currentBackBuffer = prefs[backBufferDurationMsKey]
+                    val currentRetainBackBuffer = prefs[retainBackBufferFromKeyframeKey]
+
+                    val previousRetunedDefaultsDetected =
+                        currentMin == 50_000 &&
+                            currentMax == 50_000 &&
+                            currentPlayback == BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_MS &&
+                            currentPlaybackAfterRebuffer ==
+                            BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS &&
+                            currentTargetBuffer == BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB &&
+                            (currentBackBuffer == null ||
+                                currentBackBuffer == BufferSettings.DEFAULT_BACK_BUFFER_DURATION_MS) &&
+                            (currentRetainBackBuffer == null || !currentRetainBackBuffer)
+
+                    if (previousRetunedDefaultsDetected) {
+                        prefs[minBufferMsKey] = BufferSettings.DEFAULT_MIN_BUFFER_MS
+                    }
+
+                    prefs[migrationLoadControlMinBufferRetunedDoneKey] = true
                 }
 
                 val min = prefs[minBufferMsKey]

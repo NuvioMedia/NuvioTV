@@ -29,12 +29,18 @@ object MatroskaDolbyVisionHookInstaller {
     private const val TS_H265_SETTER_NAME = "setTsDolbyVisionNalTransformer"
     private const val NAL_TYPE_UNSPEC62 = 62
     private val codecStringRewriteCount = AtomicLong(0L)
+    private val lastDetectedSourceProfile = AtomicReference<Int?>(null)
+    private val lastSelectedConversionMode = AtomicReference<Int?>(null)
 
     fun resetRuntimeCounters() {
         codecStringRewriteCount.set(0L)
+        lastDetectedSourceProfile.set(null)
+        lastSelectedConversionMode.set(null)
     }
 
     fun getCodecStringRewriteCount(): Long = codecStringRewriteCount.get()
+    fun getLastDetectedSourceProfile(): Int? = lastDetectedSourceProfile.get()
+    fun getLastSelectedConversionMode(): Int? = lastSelectedConversionMode.get()
 
     fun maybeInstall(
         extractorsFactory: DefaultExtractorsFactory,
@@ -132,6 +138,7 @@ object MatroskaDolbyVisionHookInstaller {
         fun rememberProfile(profile: Int?): Int? {
             if (profile != null) {
                 lastDetectedProfile.set(profile)
+                lastDetectedSourceProfile.set(profile)
             }
             return profile ?: lastDetectedProfile.get()
         }
@@ -144,6 +151,7 @@ object MatroskaDolbyVisionHookInstaller {
             if (resolvedProfile == 5 && allowDv5Conversion) {
                 return true
             }
+            lastSelectedConversionMode.set(null)
             if (resolvedProfile != null && nonDv7ProfileLogged.compareAndSet(false, true)) {
                 Log.i(
                     TAG,
@@ -155,6 +163,9 @@ object MatroskaDolbyVisionHookInstaller {
 
         fun selectedConversionMode(profile: Int?): Int {
             val resolvedProfile = rememberProfile(profile)
+            val mode = if (resolvedProfile == 7 && preserveMappingEnabled) 5 else 2
+            lastSelectedConversionMode.set(mode)
+            return mode
             return if (resolvedProfile == 7 && preserveMappingEnabled) 5 else 2
         }
 

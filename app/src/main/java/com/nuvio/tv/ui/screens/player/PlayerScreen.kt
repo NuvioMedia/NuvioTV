@@ -115,7 +115,8 @@ import kotlinx.coroutines.delay
 fun PlayerScreen(
     viewModel: PlayerViewModel = hiltViewModel(),
     onBackPress: () -> Unit,
-    onPlaybackErrorBack: () -> Unit = onBackPress
+    onPlaybackErrorBack: () -> Unit = onBackPress,
+    onPlaybackEnded: ((nextVideoId: String?, nextSeason: Int?, nextEpisode: Int?) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -174,8 +175,17 @@ fun PlayerScreen(
     }
 
     LaunchedEffect(uiState.playbackEnded, uiState.error) {
-        if (uiState.playbackEnded && uiState.error == null) {
-            exitPlayer()
+        if (uiState.playbackEnded && uiState.error == null &&
+            !uiState.nextEpisodeAutoPlaySearching &&
+            uiState.nextEpisodeAutoPlayCountdownSec == null
+        ) {
+            viewModel.stopAndRelease()
+            val next = uiState.nextEpisode
+            if (onPlaybackEnded != null) {
+                onPlaybackEnded(next?.videoId, next?.season, next?.episode)
+            } else {
+                onBackPress()
+            }
         }
     }
 
@@ -407,44 +417,31 @@ fun PlayerScreen(
                                 false
                             }
                         }
-                        KeyEvent.KEYCODE_DPAD_LEFT -> {
-                            if (!uiState.showControls) {
-                                val repeatCount = keyEvent.nativeKeyEvent.repeatCount
-                                val deltaMs = when {
-                                    repeatCount >= 8 -> -30_000L
-                                    repeatCount >= 3 -> -20_000L
-                                    else -> -10_000L
-                                }
-                                viewModel.onEvent(PlayerEvent.OnPreviewSeekBy(deltaMs))
-                                true
-                            } else {
-                                // Let focus system handle navigation when controls are visible
-                                false
-                            }
-                        }
                         KeyEvent.KEYCODE_DPAD_UP -> {
-                            if (!uiState.showControls) {
-                                viewModel.onEvent(PlayerEvent.OnToggleControls)
-                            } else {
-                                val skipVisible = skipButtonActuallyVisible
-                                if (skipVisible) {
-                                    try {
-                                        skipIntroFocusRequester.requestFocus()
-                                    } catch (_: Exception) {
-                                        // Focus requester may not be ready yet
-                                    }
-                                } else if (uiState.showNextEpisodeCard && uiState.nextEpisode != null) {
-                                    try {
-                                        nextEpisodeFocusRequester.requestFocus()
-                                    } catch (_: Exception) {
-                                        // Focus requester may not be ready yet
-                                    }
+                                if (!uiState.showControls) {
+                                    viewModel.onEvent(PlayerEvent.OnToggleControls)
                                 } else {
-                                    viewModel.hideControls()
+                                    try {
+                                        progressBarFocusRequester.requestFocus()
+                                    } catch (_: Exception) {
+                                        val skipVisible = skipButtonActuallyVisible
+                                        if (skipVisible) {
+                                            try {
+                                                skipIntroFocusRequester.requestFocus()
+                                            } catch (_: Exception) {
+                                            }
+                                        } else if (uiState.showNextEpisodeCard && uiState.nextEpisode != null) {
+                                            try {
+                                                nextEpisodeFocusRequester.requestFocus()
+                                            } catch (_: Exception) {
+                                            }
+                                        } else {
+                                            viewModel.hideControls()
+                                        }
+                                    }
                                 }
+                                true
                             }
-                            true
-                        }
                         KeyEvent.KEYCODE_DPAD_DOWN -> {
                             if (!uiState.showControls) {
                                 viewModel.onEvent(PlayerEvent.OnToggleControls)
@@ -632,6 +629,7 @@ fun PlayerScreen(
             autoPlayCountdownSec = uiState.nextEpisodeAutoPlayCountdownSec,
             onPlayNext = { viewModel.onEvent(PlayerEvent.OnPlayNextEpisode) },
             focusRequester = nextEpisodeFocusRequester,
+            downFocusRequester = if (uiState.showControls) progressBarFocusRequester else null,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 26.dp, bottom = if (uiState.showControls) 122.dp else 30.dp)
@@ -705,8 +703,14 @@ fun PlayerScreen(
             val context = LocalContext.current
             PlayerControlsOverlay(
                 uiState = uiState,
+                viewModel = viewModel,
                 playPauseFocusRequester = playPauseFocusRequester,
                 progressBarFocusRequester = progressBarFocusRequester,
+                progressBarUpFocusRequester = when {
+                    skipButtonActuallyVisible -> skipIntroFocusRequester
+                    uiState.showNextEpisodeCard && uiState.nextEpisode != null -> nextEpisodeFocusRequester
+                    else -> null
+                },
                 onPlayPause = { viewModel.onEvent(PlayerEvent.OnPlayPause) },
                 onPlayNextEpisode = { viewModel.onEvent(PlayerEvent.OnPlayNextEpisode) },
                 onSeekForward = { viewModel.onEvent(PlayerEvent.OnSeekForward) },
@@ -969,8 +973,10 @@ fun PlayerScreen(
 @Composable
 private fun PlayerControlsOverlay(
     uiState: PlayerUiState,
+    viewModel: PlayerViewModel,
     playPauseFocusRequester: FocusRequester,
     progressBarFocusRequester: FocusRequester,
+    progressBarUpFocusRequester: FocusRequester? = null,
     onPlayPause: () -> Unit,
     onPlayNextEpisode: () -> Unit,
     onSeekForward: () -> Unit,
@@ -1109,13 +1115,19 @@ private fun PlayerControlsOverlay(
 
             // Progress bar
             ProgressBar(
-                currentPosition = uiState.currentPosition,
+                currentPosition = uiState.pendingPreviewSeekPosition ?: uiState.currentPosition,
                 duration = uiState.duration,
-                onSeekTo = onSeekTo,
+                onSeekPreview = { delta -> 
+                    viewModel.onEvent(PlayerEvent.OnPreviewSeekBy(delta))
+                },
+                onSeekCommit = { 
+                    viewModel.onEvent(PlayerEvent.OnCommitPreviewSeek)
+                },
                 focusRequester = progressBarFocusRequester,
+                upFocusRequester = progressBarUpFocusRequester,
                 downFocusRequester = playPauseFocusRequester,
                 onFocused = onResetHideTimer
-            )
+)
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -1339,8 +1351,10 @@ private fun ControlButton(
 private fun ProgressBar(
     currentPosition: Long,
     duration: Long,
-    onSeekTo: (Long) -> Unit,
+    onSeekPreview: (Long) -> Unit, 
+    onSeekCommit: () -> Unit,      
     focusRequester: FocusRequester? = null,
+    upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
     onFocused: (() -> Unit)? = null
 ) {
@@ -1364,8 +1378,11 @@ private fun ProgressBar(
                 else Modifier
             )
             .then(
-                if (downFocusRequester != null) {
-                    Modifier.focusProperties { down = downFocusRequester }
+                if (upFocusRequester != null || downFocusRequester != null) {
+                    Modifier.focusProperties {
+                        upFocusRequester?.let { up = it }
+                        downFocusRequester?.let { down = it }
+                    }
                 } else {
                     Modifier
                 }
@@ -1376,28 +1393,54 @@ private fun ProgressBar(
             }
             .focusable()
             .onPreviewKeyEvent { keyEvent ->
-                if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) {
-                    return@onPreviewKeyEvent false
-                }
-                when (keyEvent.nativeKeyEvent.keyCode) {
-                    KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        if (downFocusRequester != null) {
-                            try { downFocusRequester.requestFocus() } catch (_: Exception) {}
-                            true
-                        } else {
-                            false
+                if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_UP) {
+                    when (keyEvent.nativeKeyEvent.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_LEFT,
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            onSeekCommit()
+                            return@onPreviewKeyEvent true
                         }
                     }
-                    KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        onSeekTo((currentPosition - 10_000L).coerceAtLeast(0L))
-                        true
+                    return@onPreviewKeyEvent false
+                }
+
+                // testing additional key handling for DPAD_LEFT and DPAD_RIGHT to allow seek in focus (check)
+                if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                    when (keyEvent.nativeKeyEvent.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            if (downFocusRequester != null) {
+                                try {
+                                    downFocusRequester.requestFocus()
+                                } catch (_: Exception) {
+                                }
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        KeyEvent.KEYCODE_DPAD_UP -> {
+                            if (upFocusRequester != null) {
+                                try {
+                                    upFocusRequester.requestFocus()
+                                } catch (_: Exception) {
+                                }
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        KeyEvent.KEYCODE_DPAD_LEFT -> {
+                            onSeekPreview(-10_000L)
+                            true
+                        }
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            onSeekPreview(10_000L)
+                            true
+                        }
+                        else -> false
                     }
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        val maxTarget = duration.takeIf { it > 0L } ?: Long.MAX_VALUE
-                        onSeekTo((currentPosition + 10_000L).coerceAtMost(maxTarget))
-                        true
-                    }
-                    else -> false
+                } else {
+                    false
                 }
             }
             .clip(RoundedCornerShape(3.dp))
@@ -1411,10 +1454,7 @@ private fun ProgressBar(
                 .fillMaxHeight()
                 .fillMaxWidth(animatedProgress)
                 .clip(RoundedCornerShape(3.dp))
-                .background(
-                    if (isFocused) NuvioColors.Primary
-                    else NuvioColors.Secondary
-                )
+                .background(NuvioColors.Secondary)
         )
     }
 }
@@ -1429,7 +1469,8 @@ private fun SeekOverlay(uiState: PlayerUiState) {
         ProgressBar(
             currentPosition = uiState.currentPosition,
             duration = uiState.duration,
-            onSeekTo = {}
+            onSeekPreview = {},
+            onSeekCommit = {}
         )
 
         Spacer(modifier = Modifier.height(12.dp))

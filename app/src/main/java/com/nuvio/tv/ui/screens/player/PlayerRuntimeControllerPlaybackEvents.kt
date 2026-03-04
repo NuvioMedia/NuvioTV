@@ -70,6 +70,10 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         val vodCache = cachedVodCacheLogState
                         val signalingRewrites =
                             MatroskaDolbyVisionHookInstaller.getCodecStringRewriteCount()
+                        val sourceProfile =
+                            MatroskaDolbyVisionHookInstaller.getLastDetectedSourceProfile()
+                        val conversionMode =
+                            MatroskaDolbyVisionHookInstaller.getLastSelectedConversionMode()
                         val conversionCalls = DoviBridge.getConversionCallCount()
                         val conversionSuccess = DoviBridge.getConversionSuccessCount()
                         val conversionAttempted =
@@ -84,6 +88,10 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                                 append(if (experimentalDvEnabled) "on" else "off")
                                 append(",attempted=")
                                 append(if (conversionAttempted) "yes" else "no")
+                                append(",sourceProfile=")
+                                append(sourceProfile ?: "n/a")
+                                append(",mode=")
+                                append(conversionMode ?: "n/a")
                                 append(",signalRewrites=")
                                 append(signalingRewrites)
                                 append(",calls=")
@@ -133,6 +141,7 @@ internal fun PlayerRuntimeController.stopWatchProgressSaving() {
 }
 
 internal fun PlayerRuntimeController.saveWatchProgressIfNeeded() {
+    if (!hasRenderedFirstFrame) return
     val currentPosition = _exoPlayer?.currentPosition ?: return
     val duration = getEffectiveDuration(currentPosition)
     
@@ -144,6 +153,7 @@ internal fun PlayerRuntimeController.saveWatchProgressIfNeeded() {
 }
 
 internal fun PlayerRuntimeController.saveWatchProgress() {
+    if (!hasRenderedFirstFrame) return
     val currentPosition = _exoPlayer?.currentPosition ?: return
     val duration = getEffectiveDuration(currentPosition)
     saveWatchProgressInternal(currentPosition, duration)
@@ -206,6 +216,7 @@ internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, d
 }
 
 internal fun PlayerRuntimeController.currentPlaybackProgressPercent(): Float {
+    if (!hasRenderedFirstFrame) return 0f
     val player = _exoPlayer ?: return 0f
     val duration = player.duration.takeIf { it > 0 } ?: lastKnownDuration
     if (duration <= 0L) return 0f
@@ -215,6 +226,8 @@ internal fun PlayerRuntimeController.currentPlaybackProgressPercent(): Float {
 internal fun PlayerRuntimeController.refreshScrobbleItem() {
     currentScrobbleItem = buildScrobbleItem()
     hasSentScrobbleStartForCurrentItem = false
+    hasRequestedScrobbleStartForCurrentItem = false
+    scrobbleStartRequestGeneration++
     hasSentCompletionScrobbleForCurrentItem = false
 }
 
@@ -228,7 +241,7 @@ internal fun PlayerRuntimeController.buildScrobbleItem(): TraktScrobbleItem? {
     val isEpisode = normalizedType in listOf("series", "tv") &&
         currentSeason != null && currentEpisode != null
 
-    return if (isEpisode) {
+    val item = if (isEpisode) {
         TraktScrobbleItem.Episode(
             showTitle = contentName ?: title,
             showYear = parsedYear,
@@ -244,39 +257,51 @@ internal fun PlayerRuntimeController.buildScrobbleItem(): TraktScrobbleItem? {
             ids = ids
         )
     }
+    return item
 }
 
 internal fun PlayerRuntimeController.emitScrobbleStart() {
-    val item = currentScrobbleItem ?: buildScrobbleItem().also { currentScrobbleItem = it } ?: return
-    if (hasSentScrobbleStartForCurrentItem) return
+    val item = currentScrobbleItem ?: buildScrobbleItem().also { currentScrobbleItem = it }
+    if (item == null) return
+    if (hasRequestedScrobbleStartForCurrentItem) return
 
+    hasRequestedScrobbleStartForCurrentItem = true
+    val requestGeneration = ++scrobbleStartRequestGeneration
     scope.launch {
+        val progressPercent = currentPlaybackProgressPercent()
         traktScrobbleService.scrobbleStart(
             item = item,
-            progressPercent = currentPlaybackProgressPercent()
+            progressPercent = progressPercent
         )
+        if (requestGeneration != scrobbleStartRequestGeneration || !hasRequestedScrobbleStartForCurrentItem) return@launch
         hasSentScrobbleStartForCurrentItem = true
     }
 }
 
 internal fun PlayerRuntimeController.emitScrobbleStop(progressPercent: Float? = null) {
-    val item = currentScrobbleItem ?: return
-    if (!hasSentScrobbleStartForCurrentItem && (progressPercent ?: 0f) < 80f) return
+    val item = currentScrobbleItem
+    if (item == null) return
 
-    val percent = progressPercent ?: currentPlaybackProgressPercent()
+    val provided = progressPercent
+    if (!hasRequestedScrobbleStartForCurrentItem && (provided ?: 0f) < 80f) return
+
+    val percent = provided ?: currentPlaybackProgressPercent()
     scope.launch {
         traktScrobbleService.scrobbleStop(
             item = item,
             progressPercent = percent
         )
     }
+    scrobbleStartRequestGeneration++
+    hasRequestedScrobbleStartForCurrentItem = false
     hasSentScrobbleStartForCurrentItem = false
 }
 
 internal fun PlayerRuntimeController.emitPauseScrobbleStop(progressPercent: Float) {
     if (progressPercent < 1f || progressPercent >= 80f) return
-    val item = currentScrobbleItem ?: return
-    if (!hasSentScrobbleStartForCurrentItem) return
+    val item = currentScrobbleItem
+    if (item == null) return
+    if (!hasRequestedScrobbleStartForCurrentItem) return
 
     scope.launch {
         traktScrobbleService.scrobbleStop(
@@ -284,6 +309,8 @@ internal fun PlayerRuntimeController.emitPauseScrobbleStop(progressPercent: Floa
             progressPercent = progressPercent
         )
     }
+    scrobbleStartRequestGeneration++
+    hasRequestedScrobbleStartForCurrentItem = false
     hasSentScrobbleStartForCurrentItem = false
 }
 
@@ -451,8 +478,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 val target = (player.currentPosition + event.deltaMs)
                     .coerceAtLeast(0L)
                     .coerceAtMost(maxDuration)
-                pendingSeekTelemetryRequestedAtMs = System.currentTimeMillis()
-                pendingSeekTelemetryTargetMs = target
+                beginSeekTelemetry(target)
                 player.seekTo(target)
                 _uiState.update { it.copy(currentPosition = target) }
                 scheduleProgressSyncAfterSeek()
@@ -482,8 +508,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         PlayerEvent.OnCommitPreviewSeek -> {
             val target = pendingPreviewSeekPosition
             if (target != null) {
-                pendingSeekTelemetryRequestedAtMs = System.currentTimeMillis()
-                pendingSeekTelemetryTargetMs = target
+                beginSeekTelemetry(target)
                 _exoPlayer?.seekTo(target)
                 _uiState.update { it.copy(currentPosition = target) }
                 pendingPreviewSeekPosition = null
@@ -497,8 +522,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         is PlayerEvent.OnSeekTo -> {
             pendingPreviewSeekPosition = null
-            pendingSeekTelemetryRequestedAtMs = System.currentTimeMillis()
-            pendingSeekTelemetryTargetMs = event.position
+            beginSeekTelemetry(event.position)
             _exoPlayer?.seekTo(event.position)
             _uiState.update { it.copy(currentPosition = event.position) }
             scheduleProgressSyncAfterSeek()
@@ -743,8 +767,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 val target = if (interval.endTime == Double.MAX_VALUE) duration
                 else (interval.endTime * 1000).toLong()
                 val seekMs = target.coerceAtMost(duration)
-                pendingSeekTelemetryRequestedAtMs = System.currentTimeMillis()
-                pendingSeekTelemetryTargetMs = seekMs
+                beginSeekTelemetry(seekMs)
                 _exoPlayer?.seekTo(seekMs)
                 scheduleProgressSyncAfterSeek()
                 _uiState.update { it.copy(activeSkipInterval = null, skipIntervalDismissed = true) }
@@ -820,4 +843,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             }
         }
     }
+}
+
+private fun PlayerRuntimeController.beginSeekTelemetry(targetMs: Long) {
+    pendingSeekTelemetryRequestedAtMs = System.currentTimeMillis()
+    pendingSeekTelemetryTargetMs = targetMs
+    pendingSeekTelemetryReadyAtMs = 0L
+    pendingSeekTelemetryReadyLatencyMs = -1L
+    pendingSeekTelemetryAwaitingFirstFrame = true
 }

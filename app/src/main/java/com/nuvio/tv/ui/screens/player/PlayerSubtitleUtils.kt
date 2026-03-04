@@ -73,6 +73,32 @@ internal object PlayerSubtitleUtils {
         if (language.isNullOrBlank()) return false
         val normalizedLanguage = normalizeLanguageCode(language)
         val normalizedTarget = normalizeLanguageCode(target)
+        if (matchesNormalizedLanguage(normalizedLanguage, normalizedTarget)) {
+            return true
+        }
+
+        val subtags = language.trim().lowercase()
+            .replace('_', '-')
+            .split('-', '.', '/', ' ')
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+        if (subtags.size <= 1) {
+            return false
+        }
+        for (subtag in subtags.drop(1)) {
+            if (subtag.length != 3) continue
+            val normalizedSubtag = normalizeLanguageCode(subtag)
+            if (matchesNormalizedLanguage(normalizedSubtag, normalizedTarget)) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun matchesNormalizedLanguage(
+        normalizedLanguage: String,
+        normalizedTarget: String
+    ): Boolean {
         if (normalizedTarget == "pt") {
             return normalizedLanguage == "pt"
         }

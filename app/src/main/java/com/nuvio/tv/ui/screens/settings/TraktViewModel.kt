@@ -90,9 +90,9 @@ class TraktViewModel @Inject constructor(
                 it.copy(
                     showUnairedNextUp = enabled,
                     statusMessage = if (enabled) {
-                        "Unaired Next Up episodes are now shown"
+                        context.getString(R.string.trakt_unaired_now_shown)
                     } else {
-                        "Unaired Next Up episodes are now hidden"
+                        context.getString(R.string.trakt_unaired_now_hidden)
                     }
                 )
             }

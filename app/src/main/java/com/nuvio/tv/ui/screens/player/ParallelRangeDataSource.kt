@@ -86,6 +86,8 @@ internal class ParallelRangeDataSource(
     private var bootstrapPrefetchDeferred: Boolean = false
     private var bootstrapChunk: DownloadedChunk? = null
     private var bootstrapStartPosition: Long = C.TIME_UNSET
+    private var continuationSource: OkHttpDataSource? = null
+    private var continuationEndPositionExclusive: Long = C.TIME_UNSET
 
     private val transferListeners = mutableListOf<TransferListener>()
 
@@ -99,6 +101,9 @@ internal class ParallelRangeDataSource(
         bootstrapPrefetchDeferred = false
         bootstrapChunk = null
         bootstrapStartPosition = C.TIME_UNSET
+        continuationSource?.close()
+        continuationSource = null
+        continuationEndPositionExclusive = C.TIME_UNSET
 
         // Cancel any in-flight chunks from a previous open (e.g., after seek)
         cancelAllChunks()
@@ -161,26 +166,28 @@ internal class ParallelRangeDataSource(
         if (openLength > 0L) {
             val bootstrapBytes = minOf(minOf(chunkSize, BOOTSTRAP_READ_BYTES), openLength).toInt()
             val chunk = readBootstrapChunk(probeSource, bootstrapBytes)
-            probeSource.close()
             bootstrapChunk = chunk
             bootstrapStartPosition = position
             // Avoid startup churn from immediate background fetches during repeated startup opens,
-            // but still start the target seek chunk download in parallel for non-zero positions.
+            // but do not redownload the active seek chunk from its start.
             bootstrapPrefetchDeferred = true
-            updateBootstrapCache(
-                BootstrapCacheEntry(
-                    requestUri = dataSpec.uri,
-                    startPosition = dataSpec.position,
-                    resolvedUri = resolvedUri,
-                    openLength = openLength,
-                    totalFileLength = totalFileLength,
-                    bootstrapData = chunk.data,
-                    bootstrapSize = chunk.size,
-                    createdAtUptimeMs = SystemClock.uptimeMillis()
+            if (position == 0L) {
+                updateBootstrapCache(
+                    BootstrapCacheEntry(
+                        requestUri = dataSpec.uri,
+                        startPosition = dataSpec.position,
+                        resolvedUri = resolvedUri,
+                        openLength = openLength,
+                        totalFileLength = totalFileLength,
+                        bootstrapData = chunk.data,
+                        bootstrapSize = chunk.size,
+                        createdAtUptimeMs = SystemClock.uptimeMillis()
+                    )
                 )
-            )
-            if (position != 0L) {
-                ensureChunkScheduled(firstChunkIndex)
+                probeSource.close()
+            } else {
+                continuationSource = probeSource
+                continuationEndPositionExclusive = minOf((firstChunkIndex + 1L) * chunkSize, totalFileLength)
             }
         } else {
             probeSource.close()
@@ -197,11 +204,6 @@ internal class ParallelRangeDataSource(
 
         val toRead = minOf(length.toLong(), bytesRemaining).toInt()
 
-        if (bootstrapPrefetchDeferred && shouldAllowBackgroundPrefetch()) {
-            bootstrapPrefetchDeferred = false
-            scheduleChunks()
-        }
-
         val chunkIndex = position / chunkSize
         val bootstrap = bootstrapChunk
         if (currentChunk == null &&
@@ -212,6 +214,41 @@ internal class ParallelRangeDataSource(
             currentChunk = bootstrap
             currentChunkIndex = chunkIndex
             currentChunkReadOffset = (position - bootstrapStartPosition).toInt()
+        }
+
+        if (bootstrapPrefetchDeferred && shouldAllowBackgroundPrefetch() && currentChunk == null) {
+            bootstrapPrefetchDeferred = false
+            scheduleChunks()
+        }
+
+        continuationSource?.let { source ->
+            if (position < continuationEndPositionExclusive &&
+                bytesRemaining > 0L &&
+                (bootstrap == null || position >= bootstrapStartPosition + bootstrap.size)
+            ) {
+                val read = source.read(buffer, offset, toRead)
+                if (read > 0) {
+                    position += read
+                    bytesRemaining -= read
+                    if (position >= continuationEndPositionExclusive) {
+                        source.close()
+                        continuationSource = null
+                        continuationEndPositionExclusive = C.TIME_UNSET
+                        scheduleChunks()
+                    }
+                    return read
+                }
+                if (read == C.RESULT_END_OF_INPUT || position >= continuationEndPositionExclusive) {
+                    source.close()
+                    continuationSource = null
+                    continuationEndPositionExclusive = C.TIME_UNSET
+                    scheduleChunks()
+                }
+            } else if (position >= continuationEndPositionExclusive || bytesRemaining <= 0L) {
+                source.close()
+                continuationSource = null
+                continuationEndPositionExclusive = C.TIME_UNSET
+            }
         }
 
         // Load the chunk for the current position
@@ -255,7 +292,12 @@ internal class ParallelRangeDataSource(
 
     private fun scheduleChunks() {
         if (!shouldAllowBackgroundPrefetch()) return
-        val currentChunkIdx = position / chunkSize
+        val currentChunkIdx =
+            if (continuationSource != null && continuationEndPositionExclusive != C.TIME_UNSET && position < continuationEndPositionExclusive) {
+                continuationEndPositionExclusive / chunkSize
+            } else {
+                position / chunkSize
+            }
         val maxAhead = parallelConnections + 1
 
         for (i in 0 until maxAhead) {
@@ -426,6 +468,9 @@ internal class ParallelRangeDataSource(
         closed.set(true)
         fallbackSource?.close()
         fallbackSource = null
+        continuationSource?.close()
+        continuationSource = null
+        continuationEndPositionExclusive = C.TIME_UNSET
 
         cancelAllChunks()
         executor.shutdownNow()
@@ -469,6 +514,7 @@ internal class ParallelRangeDataSource(
                         startupBootstrapCache = null
                         return@ParallelRangeDataSource null
                     }
+                    if (cached.startPosition != 0L || dataSpec.position != 0L) return@ParallelRangeDataSource null
                     if (dataSpec.position != cached.startPosition) return@ParallelRangeDataSource null
                     if (dataSpec.uri != cached.requestUri) return@ParallelRangeDataSource null
                     cached

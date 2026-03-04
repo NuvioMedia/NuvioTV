@@ -5,6 +5,7 @@ package com.nuvio.tv.ui.screens.player
 import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -237,7 +238,9 @@ private fun SubtitleTab(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f)
+                color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
             if (badgeCount != null && badgeCount > 0) {
@@ -994,7 +997,7 @@ internal fun TrackItem(
                 )
                 if (track.language != null) {
                     Text(
-                        text = track.language.uppercase(),
+                        text = Subtitle.languageCodeToName(track.language),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White.copy(alpha = 0.5f)
                     )

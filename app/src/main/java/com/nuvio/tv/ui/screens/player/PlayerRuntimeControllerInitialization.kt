@@ -395,7 +395,10 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                     
                         
                         if (playbackState == Player.STATE_READY) {
-                            if (pendingSeekTelemetryRequestedAtMs > 0L) {
+                            if (
+                                pendingSeekTelemetryRequestedAtMs > 0L &&
+                                    pendingSeekTelemetryReadyAtMs <= 0L
+                            ) {
                                 val latencyMs =
                                     (System.currentTimeMillis() - pendingSeekTelemetryRequestedAtMs)
                                         .coerceAtLeast(0L)
@@ -405,8 +408,8 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                                         "targetMs=$pendingSeekTelemetryTargetMs " +
                                         "host=${currentStreamUrl.safeHost()}"
                                 )
-                                pendingSeekTelemetryRequestedAtMs = 0L
-                                pendingSeekTelemetryTargetMs = -1L
+                                pendingSeekTelemetryReadyAtMs = System.currentTimeMillis()
+                                pendingSeekTelemetryReadyLatencyMs = latencyMs
                             }
                             if (!hasRenderedFirstFrame) {
                                 _uiState.update { state ->
@@ -484,15 +487,48 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                         val conversionSucceeded = DoviBridge.getConversionSuccessCount()
                         val signalingRewrites =
                             MatroskaDolbyVisionHookInstaller.getCodecStringRewriteCount()
+                        val sourceProfile =
+                            MatroskaDolbyVisionHookInstaller.getLastDetectedSourceProfile()
+                        val conversionMode =
+                            MatroskaDolbyVisionHookInstaller.getLastSelectedConversionMode()
                         val conversionAttempted =
                             hasAttemptedDv7ToDv81ForCurrentPlayback ||
                                 conversionCalls > 0 ||
                                 signalingRewrites > 0
+                        if (
+                            pendingSeekTelemetryAwaitingFirstFrame &&
+                                pendingSeekTelemetryRequestedAtMs > 0L
+                        ) {
+                            val now = System.currentTimeMillis()
+                            val totalLatencyMs =
+                                (now - pendingSeekTelemetryRequestedAtMs).coerceAtLeast(0L)
+                            val readyToFirstFrameMs =
+                                if (pendingSeekTelemetryReadyAtMs > 0L) {
+                                    (now - pendingSeekTelemetryReadyAtMs).coerceAtLeast(0L)
+                                } else {
+                                    -1L
+                                }
+                            Log.i(
+                                PlayerRuntimeController.TAG,
+                                "SEEK_FIRST_FRAME: totalLatencyMs=$totalLatencyMs " +
+                                    "readyLatencyMs=$pendingSeekTelemetryReadyLatencyMs " +
+                                    "readyToFirstFrameMs=$readyToFirstFrameMs " +
+                                    "targetMs=$pendingSeekTelemetryTargetMs " +
+                                    "host=${currentStreamUrl.safeHost()}"
+                            )
+                            pendingSeekTelemetryRequestedAtMs = 0L
+                            pendingSeekTelemetryTargetMs = -1L
+                            pendingSeekTelemetryReadyAtMs = 0L
+                            pendingSeekTelemetryReadyLatencyMs = -1L
+                            pendingSeekTelemetryAwaitingFirstFrame = false
+                        }
                         Log.i(
                             PlayerRuntimeController.TAG,
                             "PLAYBACK_STARTUP: firstFrameMs=$startupMs " +
                                 "dv7doviActive=$isExperimentalDv7ToDv81ActiveForCurrentPlayback " +
                                 "dv7doviAttempted=$conversionAttempted " +
+                                "dvSourceProfile=${sourceProfile ?: "n/a"} " +
+                                "dvConvertMode=${conversionMode ?: "n/a"} " +
                                 "dv7doviSignalRewrites=$signalingRewrites " +
                                 "dv7doviCalls=$conversionCalls " +
                                 "dv7doviSuccess=$conversionSucceeded " +
@@ -807,6 +843,9 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     playerInitializationStartedAtMs = 0L
     pendingSeekTelemetryRequestedAtMs = 0L
     pendingSeekTelemetryTargetMs = -1L
+    pendingSeekTelemetryReadyAtMs = 0L
+    pendingSeekTelemetryReadyLatencyMs = -1L
+    pendingSeekTelemetryAwaitingFirstFrame = false
     lastKnownDuration = 0L
     currentStreamHasVideoTrack = false
     currentVideoTrackIsLikelyVc1 = false
