@@ -220,6 +220,14 @@ fun ContinueWatchingCard(
 
     val progress = (item as? ContinueWatchingItem.InProgress)?.progress
     val nextUp = (item as? ContinueWatchingItem.NextUp)?.info
+    val inProgressItem = item as? ContinueWatchingItem.InProgress
+    val isSeries = when {
+        progress?.contentType.equals("series", ignoreCase = true) -> true
+        progress?.contentType.equals("tv", ignoreCase = true) -> true
+        nextUp?.contentType.equals("series", ignoreCase = true) -> true
+        nextUp?.contentType.equals("tv", ignoreCase = true) -> true
+        else -> false
+    }
     val episodeStr = progress?.episodeDisplayString ?: nextUp?.let { "S${it.season}E${it.episode}" }
     val strAirsDate = stringResource(R.string.cw_airs_date, nextUp?.airDateLabel ?: "")
     val strUpcoming = stringResource(R.string.cw_upcoming)
@@ -246,6 +254,7 @@ fun ContinueWatchingCard(
     }
     val badgeText = remainingText ?: nextUpBadgeText ?: strNextUp
     val progressFraction = progress?.progressPercentage ?: 0f
+    val episodeThumbnail = inProgressItem?.episodeThumbnail
     val imageModel = when {
         nextUp != null && !nextUp.hasAired -> firstNonBlank(
             nextUp.backdrop,
@@ -254,6 +263,7 @@ fun ContinueWatchingCard(
             progress?.backdrop,
             progress?.poster
         )
+        isSeries && episodeThumbnail != null -> episodeThumbnail
         else -> firstNonBlank(
             nextUp?.thumbnail,
             progress?.backdrop,
@@ -376,32 +386,53 @@ fun ContinueWatchingCard(
                         .align(Alignment.BottomStart)
                         .padding(12.dp)
                 ) {
-                    // Episode info (for series)
-                    if (episodeStr != null) {
-                        Text(
-                            text = episodeStr,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = NuvioColors.Primary
-                        )
-                    }
+                    // For series, emphasize the current episode; for movies, keep title-centric
+                    if (isSeries) {
+                        if (episodeStr != null) {
+                            Text(
+                                text = episodeStr,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = NuvioColors.Primary
+                            )
+                        }
 
-                    Text(
-                        text = titleText,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = NuvioColors.TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                        val primaryEpisodeTitle = episodeTitle ?: titleText
 
-                    // Episode title if available
-                    episodeTitle?.let { title ->
                         Text(
-                            text = title,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NuvioTheme.extendedColors.textSecondary,
+                            text = primaryEpisodeTitle,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = NuvioColors.TextPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+
+                        if (titleText.isNotBlank() && titleText != primaryEpisodeTitle) {
+                            Text(
+                                text = titleText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = NuvioTheme.extendedColors.textSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = titleText,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = NuvioColors.TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        episodeTitle?.let { title ->
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = NuvioTheme.extendedColors.textSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
 
