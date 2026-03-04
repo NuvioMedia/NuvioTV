@@ -29,6 +29,20 @@ internal object PlayerSubtitleUtils {
             return "pt"
         }
 
+        // Normalize Serbo-Croatian (HBS) macrolanguage tags and common scene variants.
+        // HBS is ISO 639-3 for Serbo-Croatian, a macrolanguage that includes Bosnian (bos),
+        // Croatian (hrv), Montenegrin (cnr) and Serbian (srp).
+        if (containsAny("hbs", "serbo croatian", "serbo-croatian", "bosnian/croatian/serbian", "bcs", "bhs")) {
+            // If a specific member language is hinted (e.g. HBS-HRV), prefer that.
+            return when {
+                containsAny("hrv", "croat", "hr ") || normalizedCode.startsWith("hrv-") || normalizedCode.startsWith("hr-") -> "hr"
+                containsAny("srp", "serb", "sr ") || normalizedCode.startsWith("srp-") || normalizedCode.startsWith("sr-") -> "sr"
+                containsAny("bos", "bosn", "bs ") || normalizedCode.startsWith("bos-") || normalizedCode.startsWith("bs-") -> "bs"
+                containsAny("cnr", "montenegrin", "mne") || normalizedCode.startsWith("cnr-") -> "cnr"
+                else -> "hbs"
+            }
+        }
+
         return when (code) {
             "pt-br", "pt_br", "br", "pob" -> "pt-br"
             "pt", "pt-pt", "pt_pt", "por" -> "pt"
