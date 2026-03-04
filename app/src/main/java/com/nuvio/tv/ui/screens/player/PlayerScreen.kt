@@ -619,6 +619,7 @@ fun PlayerScreen(
             autoPlayCountdownSec = uiState.nextEpisodeAutoPlayCountdownSec,
             onPlayNext = { viewModel.onEvent(PlayerEvent.OnPlayNextEpisode) },
             focusRequester = nextEpisodeFocusRequester,
+            downFocusRequester = if (uiState.showControls) progressBarFocusRequester else null,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 26.dp, bottom = if (uiState.showControls) 122.dp else 30.dp)
@@ -695,6 +696,11 @@ fun PlayerScreen(
                 viewModel = viewModel,
                 playPauseFocusRequester = playPauseFocusRequester,
                 progressBarFocusRequester = progressBarFocusRequester,
+                progressBarUpFocusRequester = when {
+                    skipButtonActuallyVisible -> skipIntroFocusRequester
+                    uiState.showNextEpisodeCard && uiState.nextEpisode != null -> nextEpisodeFocusRequester
+                    else -> null
+                },
                 onPlayPause = { viewModel.onEvent(PlayerEvent.OnPlayPause) },
                 onPlayNextEpisode = { viewModel.onEvent(PlayerEvent.OnPlayNextEpisode) },
                 onSeekForward = { viewModel.onEvent(PlayerEvent.OnSeekForward) },
@@ -960,6 +966,7 @@ private fun PlayerControlsOverlay(
     viewModel: PlayerViewModel,
     playPauseFocusRequester: FocusRequester,
     progressBarFocusRequester: FocusRequester,
+    progressBarUpFocusRequester: FocusRequester? = null,
     onPlayPause: () -> Unit,
     onPlayNextEpisode: () -> Unit,
     onSeekForward: () -> Unit,
@@ -1107,6 +1114,7 @@ private fun PlayerControlsOverlay(
                     viewModel.onEvent(PlayerEvent.OnCommitPreviewSeek)
                 },
                 focusRequester = progressBarFocusRequester,
+                upFocusRequester = progressBarUpFocusRequester,
                 downFocusRequester = playPauseFocusRequester,
                 onFocused = onResetHideTimer
 )
@@ -1336,6 +1344,7 @@ private fun ProgressBar(
     onSeekPreview: (Long) -> Unit, 
     onSeekCommit: () -> Unit,      
     focusRequester: FocusRequester? = null,
+    upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
     onFocused: (() -> Unit)? = null
 ) {
@@ -1359,8 +1368,11 @@ private fun ProgressBar(
                 else Modifier
             )
             .then(
-                if (downFocusRequester != null) {
-                    Modifier.focusProperties { down = downFocusRequester }
+                if (upFocusRequester != null || downFocusRequester != null) {
+                    Modifier.focusProperties {
+                        upFocusRequester?.let { up = it }
+                        downFocusRequester?.let { down = it }
+                    }
                 } else {
                     Modifier
                 }
@@ -1389,6 +1401,17 @@ private fun ProgressBar(
                             if (downFocusRequester != null) {
                                 try {
                                     downFocusRequester.requestFocus()
+                                } catch (_: Exception) {
+                                }
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        KeyEvent.KEYCODE_DPAD_UP -> {
+                            if (upFocusRequester != null) {
+                                try {
+                                    upFocusRequester.requestFocus()
                                 } catch (_: Exception) {
                                 }
                                 true
