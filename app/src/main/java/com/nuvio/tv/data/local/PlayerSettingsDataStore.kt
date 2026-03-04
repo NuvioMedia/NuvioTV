@@ -145,7 +145,7 @@ data class PlayerSettings(
     val mapDV7ToHevc: Boolean = false,
     // Experimental: try native DV7 -> DV8.1 conversion before HEVC fallback.
     val experimentalDv7ToDv81Enabled: Boolean = false,
-    // Experimental: allow IEC61937 DTS passthrough profiles for Fire TV style AVR paths.
+    // Experimental: enable Fire OS audio-path quirks (DTS core fallback, capability routing, etc).
     val experimentalDtsIecPassthroughEnabled: Boolean = false,
     // Display settings
     val frameRateMatchingMode: FrameRateMatchingMode = FrameRateMatchingMode.OFF,

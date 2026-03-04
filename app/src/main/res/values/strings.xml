@@ -214,8 +214,8 @@
     <string name="audio_dv_sub">Map Dolby Vision Profile 7 to standard HEVC for devices without DV hardware support</string>
     <string name="audio_dv_experimental_title">DV7 - Experimental DV8.1</string>
     <string name="audio_dv_experimental_sub">Experimental native conversion path. If conversion is unavailable or fails, playback falls back to HEVC mapping.</string>
-    <string name="audio_dts_iec_experimental_title">DTS - Experimental IEC Passthrough</string>
-    <string name="audio_dts_iec_experimental_sub">Experimental Fire TV compatibility mode. Enables IEC61937 DTS passthrough profiles in the Media3 audio path. May help DTS-HD core playback on some HDMI AVR setups, but can regress audio on other devices.</string>
+    <string name="audio_dts_iec_experimental_title">Fire OS - Experimental Audio Compatibility</string>
+    <string name="audio_dts_iec_experimental_sub">Experimental Fire OS audio quirk path. Enables the Fire TV compatibility layer in the Media3 audio stack, including DTS core fallback and capability-routing quirks. Default off because it can regress non-Fire devices.</string>
     <string name="audio_decoder_device_only_desc">Only use built-in hardware decoders. Most compatible but may not support all formats.</string>
     <string name="audio_decoder_prefer_device_desc">Use hardware decoders when available, fall back to FFmpeg. Recommended for most devices.</string>
     <string name="audio_decoder_prefer_app_desc">Use FFmpeg decoders when available. Better format support but higher CPU usage.</string>

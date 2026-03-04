@@ -69,7 +69,7 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
             resetLoadingOverlayForNewStream()
             playerInitializationStartedAtMs = System.currentTimeMillis()
             val playerSettings = playerSettingsDataStore.playerSettings.first()
-            AudioCapabilities.setExperimentalIec61937PassthroughEnabled(
+            AudioCapabilities.setExperimentalFireOsAudioQuirksEnabled(
                 playerSettings.experimentalDtsIecPassthroughEnabled
             )
             _uiState.update {
