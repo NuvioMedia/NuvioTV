@@ -1421,10 +1421,7 @@ private fun ProgressBar(
                 .fillMaxHeight()
                 .fillMaxWidth(animatedProgress)
                 .clip(RoundedCornerShape(3.dp))
-                .background(
-                    if (isFocused) NuvioColors.Primary
-                    else NuvioColors.Secondary
-                )
+                .background(NuvioColors.Secondary)
         )
     }
 }
