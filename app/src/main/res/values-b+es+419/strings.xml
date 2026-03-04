@@ -270,6 +270,8 @@
     <string name="autoplay_stream_selection">Selección Automática de Fuente</string>
     <string name="autoplay_next_episode">Auto-reproducir Siguiente Episodio</string>
     <string name="autoplay_next_episode_sub">Iniciar el siguiente episodio automáticamente cuando aparezca el aviso.</string>
+    <string name="autoplay_prefer_binge_group">Preferir Grupo de Maratón (Siguiente Episodio)</string>
+    <string name="autoplay_prefer_binge_group_sub">Intentar primero el mismo perfil de fuente (mismo addon/grupo de calidad) antes de las reglas normales de auto-reproducción.</string>
     <string name="autoplay_threshold_pct">Porcentaje</string>
     <string name="autoplay_threshold_min">Minutos antes del final</string>
     <string name="autoplay_threshold_mode">Modo de Umbral del Siguiente Episodio</string>
@@ -408,6 +410,7 @@
     <string name="mdblist_dialog_subtitle">Ingresa tu clave de API para obtener calificaciones externas</string>
     <string name="mdblist_dialog_placeholder">Ingresar clave de API de MDBList</string>
     <string name="mdblist_not_set">No configurado</string>
+    <string name="mdblist_invalid_api_key">Clave de API de MDBList inválida</string>
 
     <!-- Anime-Skip -->
     <string name="animeskip_title">Anime Skip</string>
@@ -419,6 +422,7 @@
     <string name="animeskip_dialog_title">Client ID de Anime Skip</string>
     <string name="animeskip_dialog_subtitle">Crea tu propio Client ID en anime-skip.com/account/settings</string>
     <string name="animeskip_dialog_placeholder">Ingresar Client ID</string>
+    <string name="animeskip_invalid_client_id">Client ID inválido</string>
     <string name="action_clear">Borrar</string>
 
     <!-- TmdbSettingsScreen -->
@@ -468,6 +472,8 @@
     <string name="trakt_unaired_next_up_subtitle">Mostrar los próximos episodios antes de su emisión</string>
     <string name="trakt_unaired_shown">Mostrados</string>
     <string name="trakt_unaired_hidden">Ocultos</string>
+    <string name="trakt_unaired_now_shown">Ahora se muestran los próximos episodios sin emitir</string>
+    <string name="trakt_unaired_now_hidden">Ahora se ocultan los próximos episodios sin emitir</string>
     <string name="trakt_cached_label">En caché</string>
     <string name="trakt_stat_movies">Películas</string>
     <string name="trakt_stat_shows">Series</string>
@@ -580,16 +586,27 @@
     <string name="stream_player_external">Externo</string>
 
     <!-- PlayerScreen -->
-    <string name="player_ends_at">Termina a las: %1$s</string>
+    <string name="player_no_external_player">No se encontró reproductor externo</string>
+
+    <!-- ParentalGuideOverlay -->
+    <string name="parental_nudity">Desnudez</string>
+    <string name="parental_violence">Violencia</string>
+    <string name="parental_profanity">Lenguaje inapropiado</string>
+    <string name="parental_alcohol">Alcohol/Drogas</string>
+    <string name="parental_frightening">Contenido aterrador</string>
+    <string name="parental_severity_severe">Severo</string>
+    <string name="parental_severity_moderate">Moderado</string>
+    <string name="parental_severity_mild">Leve</string>
+    <string name="player_ends_at">Termina a las %1$s</string>
     <string name="player_via">vía %1$s</string>
-    <string name="player_subtitle_delay">Retraso de Subtítulos</string>
-    <string name="player_error_title">Error de Reproducción</string>
+    <string name="player_subtitle_delay">Retraso de subtítulos</string>
+    <string name="player_error_title">Error de reproducción</string>
     <string name="player_go_back">Volver</string>
-    <string name="player_speed_title">Velocidad de Reproducción</string>
-    <string name="player_more_actions_title">Más Acciones</string>
-    <string name="player_more_speed">Velocidad de Reproducción</string>
-    <string name="player_more_aspect_ratio">Relación de Aspecto</string>
-    <string name="player_more_open_external">Abrir en un Reproductor Externo</string>
+    <string name="player_speed_title">Velocidad de reproducción</string>
+    <string name="player_more_actions_title">Más acciones</string>
+    <string name="player_more_speed">Velocidad de reproducción</string>
+    <string name="player_more_aspect_ratio">Relación de aspecto</string>
+    <string name="player_more_open_external">Abrir en reproductor externo</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Fuentes</string>
@@ -665,6 +682,7 @@
     <string name="next_episode_playing_via">Reproduciendo vía %1$s en %2$ds</string>
     <string name="next_episode_play">Reproducir</string>
     <string name="next_episode_unaired">Sin emitir</string>
+    <string name="next_episode_not_aired_yet">El siguiente episodio aún no se ha emitido</string>
     <string name="skip_intro">Omitir Intro</string>
     <string name="skip_ending">Omitir Final</string>
     <string name="skip_recap">Omitir Resumen</string>
@@ -679,6 +697,10 @@
     <string name="search_start_title">Empezar a buscar</string>
     <string name="search_start_subtitle">Ingresa al menos 2 caracteres</string>
     <string name="search_start_subtitle_no_discover">Descubrir está desactivado. Ingresa al menos 2 caracteres</string>
+    <string name="search_voice_no_speech">No se detectó voz. Inténtalo de nuevo.</string>
+    <string name="search_voice_mic_permission">Se requiere permiso de micrófono para la búsqueda por voz.</string>
+    <string name="search_voice_failed">Falló el reconocimiento de voz. Inténtalo de nuevo.</string>
+    <string name="search_voice_unavailable">La búsqueda por voz no está disponible en este dispositivo.</string>
 
     <!-- LibraryScreen -->
     <string name="library_syncing">Sincronizando biblioteca de Trakt\u2026</string>
