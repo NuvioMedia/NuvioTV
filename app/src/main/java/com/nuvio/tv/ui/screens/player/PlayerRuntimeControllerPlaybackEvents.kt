@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import android.util.Log
 import androidx.media3.common.Player
 import com.nuvio.tv.data.local.SubtitleStyleSettings
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.repository.TraktScrobbleItem
 import com.nuvio.tv.data.repository.extractYear
 import com.nuvio.tv.data.repository.parseContentIds
@@ -202,8 +203,13 @@ internal fun PlayerRuntimeController.emitScrobbleStop(progressPercent: Float? = 
     val item = currentScrobbleItem
     if (item == null) return
 
+    val stopThresholdPercent = if (usesLegacyFullSyncScrobbleFlow()) {
+        80f
+    } else {
+        scrobbleCompletionThresholdPercent()
+    }
     val provided = progressPercent
-    if (!hasRequestedScrobbleStartForCurrentItem && (provided ?: 0f) < 80f) return
+    if (!hasRequestedScrobbleStartForCurrentItem && (provided ?: 0f) < stopThresholdPercent) return
 
     val percent = provided ?: currentPlaybackProgressPercent()
     scope.launch {
@@ -218,13 +224,37 @@ internal fun PlayerRuntimeController.emitScrobbleStop(progressPercent: Float? = 
 }
 
 internal fun PlayerRuntimeController.emitPauseScrobbleStop(progressPercent: Float) {
-    if (progressPercent < 1f || progressPercent >= 80f) return
+    val pauseThresholdPercent = if (usesLegacyFullSyncScrobbleFlow()) {
+        80f
+    } else {
+        scrobbleCompletionThresholdPercent()
+    }
+    if (progressPercent < 1f || progressPercent >= pauseThresholdPercent) return
     val item = currentScrobbleItem
     if (item == null) return
     if (!hasRequestedScrobbleStartForCurrentItem) return
 
-    scope.launch {
-        traktScrobbleService.scrobbleStop(
+    if (usesLegacyFullSyncScrobbleFlow()) {
+        scope.launch {
+            traktScrobbleService.scrobbleStop(
+                item = item,
+                progressPercent = progressPercent
+            )
+        }
+        scrobbleStartRequestGeneration++
+        hasRequestedScrobbleStartForCurrentItem = false
+        hasSentScrobbleStartForCurrentItem = false
+        return
+    }
+
+    if (!hasSentScrobbleStartForCurrentItem) {
+        // If user exits quickly, ensure Trakt sees a valid in-progress transition.
+        traktScrobbleService.scrobbleStartThenPauseAsync(
+            item = item,
+            progressPercent = progressPercent
+        )
+    } else {
+        traktScrobbleService.scrobblePauseAsync(
             item = item,
             progressPercent = progressPercent
         )
@@ -235,7 +265,12 @@ internal fun PlayerRuntimeController.emitPauseScrobbleStop(progressPercent: Floa
 }
 
 internal fun PlayerRuntimeController.emitCompletionScrobbleStop(progressPercent: Float) {
-    if (progressPercent < 80f || hasSentCompletionScrobbleForCurrentItem) return
+    val completionThresholdPercent = if (usesLegacyFullSyncScrobbleFlow()) {
+        80f
+    } else {
+        scrobbleCompletionThresholdPercent()
+    }
+    if (progressPercent < completionThresholdPercent || hasSentCompletionScrobbleForCurrentItem) return
     hasSentCompletionScrobbleForCurrentItem = true
     emitScrobbleStop(progressPercent = progressPercent)
 }
@@ -247,7 +282,27 @@ internal fun PlayerRuntimeController.emitStopScrobbleForCurrentProgress() {
 }
 
 internal fun PlayerRuntimeController.flushPlaybackSnapshotForSwitchOrExit() {
-    emitStopScrobbleForCurrentProgress()
+    if (usesLegacyFullSyncScrobbleFlow()) {
+        emitStopScrobbleForCurrentProgress()
+        saveWatchProgress()
+        return
+    }
+
+    val progressPercent = currentPlaybackProgressPercent()
+    val completionThresholdPercent = scrobbleCompletionThresholdPercent()
+    if (progressPercent >= 1f && progressPercent < completionThresholdPercent) {
+        val item = currentScrobbleItem ?: buildScrobbleItem().also { currentScrobbleItem = it }
+        if (item != null) {
+            // For exit below completion threshold, force a valid start->pause sequence.
+            traktScrobbleService.scrobbleStartThenPauseAsync(
+                item = item,
+                progressPercent = progressPercent
+            )
+            hasSentScrobbleStartForCurrentItem = false
+        }
+    } else {
+        emitStopScrobbleForCurrentProgress()
+    }
     saveWatchProgress()
 }
 
@@ -260,10 +315,24 @@ internal fun PlayerRuntimeController.scheduleProgressSyncAfterSeek() {
         val progressPercent = currentPlaybackProgressPercent()
         emitPauseScrobbleStop(progressPercent = progressPercent)
 
-        if (_exoPlayer?.isPlaying == true && progressPercent >= 1f && progressPercent < 80f) {
+        val restartThresholdPercent = if (usesLegacyFullSyncScrobbleFlow()) {
+            80f
+        } else {
+            scrobbleCompletionThresholdPercent()
+        }
+        if (_exoPlayer?.isPlaying == true && progressPercent >= 1f && progressPercent < restartThresholdPercent) {
             emitScrobbleStart()
         }
     }
+}
+
+private fun PlayerRuntimeController.scrobbleCompletionThresholdPercent(): Float {
+    val configured = nextEpisodeThresholdPercentSetting
+    return if (configured.isFinite()) configured.coerceIn(90f, 99.5f) else 90f
+}
+
+private fun PlayerRuntimeController.usesLegacyFullSyncScrobbleFlow(): Boolean {
+    return traktIntegrationModeSetting == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC
 }
 
 fun PlayerRuntimeController.scheduleHideControls() {

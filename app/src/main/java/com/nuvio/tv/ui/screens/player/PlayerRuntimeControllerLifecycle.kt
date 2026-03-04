@@ -7,6 +7,7 @@ internal fun PlayerRuntimeController.releasePlayer() {
     flushPlaybackSnapshotForSwitchOrExit()
 
     notifyAudioSessionUpdate(false)
+    isReleasingPlayer = true
 
     try {
         loudnessEnhancer?.release()
@@ -31,6 +32,7 @@ internal fun PlayerRuntimeController.releasePlayer() {
     nextEpisodeAutoPlayJob = null
     _exoPlayer?.release()
     _exoPlayer = null
+    isReleasingPlayer = false
 }
 
 internal fun PlayerRuntimeController.notifyAudioSessionUpdate(active: Boolean) {

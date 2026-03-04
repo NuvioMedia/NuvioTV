@@ -83,6 +83,12 @@ interface TraktApi {
         @Body body: TraktScrobbleRequestDto
     ): Response<TraktScrobbleResponseDto>
 
+    @POST("scrobble/pause")
+    suspend fun scrobblePause(
+        @Header("Authorization") authorization: String,
+        @Body body: TraktScrobbleRequestDto
+    ): Response<TraktScrobbleResponseDto>
+
     @GET("sync/last_activities")
     suspend fun getLastActivities(
         @Header("Authorization") authorization: String

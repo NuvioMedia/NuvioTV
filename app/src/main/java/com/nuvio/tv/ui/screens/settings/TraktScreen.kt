@@ -6,6 +6,8 @@ import androidx.annotation.RawRes
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
@@ -70,6 +73,7 @@ fun TraktScreen(
     var showDisconnectConfirm by remember { mutableStateOf(false) }
     var showDaysCapDialog by remember { mutableStateOf(false) }
     var showUnairedNextUpDialog by remember { mutableStateOf(false) }
+    var showIntegrationModeDialog by remember { mutableStateOf(false) }
     val strAllHistory = stringResource(R.string.trakt_all_history)
     val strDaysFormat = stringResource(R.string.trakt_days_format)
     val cwWindowFormatter: (Int) -> String = { days ->
@@ -155,8 +159,9 @@ fun TraktScreen(
                 .fillMaxHeight()
                 .border(1.dp, NuvioColors.Border.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
                 .background(NuvioColors.BackgroundElevated.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(26.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             val expiresAt = uiState.deviceCodeExpiresAtMillis
             val remaining = expiresAt?.let { (it - nowMillis).coerceAtLeast(0L) } ?: 0L
@@ -261,17 +266,29 @@ fun TraktScreen(
 
             if (uiState.mode == TraktConnectionMode.CONNECTED) {
                 SettingsActionRow(
-                    title = stringResource(R.string.trakt_continue_watching_window),
-                    subtitle = stringResource(R.string.trakt_continue_watching_subtitle),
-                    value = cwWindowFormatter(uiState.continueWatchingDaysCap),
-                    onClick = { showDaysCapDialog = true }
+                    title = stringResource(R.string.trakt_integration_mode),
+                    subtitle = stringResource(R.string.trakt_integration_mode_subtitle),
+                    value = if (uiState.integrationMode == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC) {
+                        stringResource(R.string.trakt_mode_full_sync)
+                    } else {
+                        stringResource(R.string.trakt_mode_scrobble_only)
+                    },
+                    onClick = { showIntegrationModeDialog = true }
                 )
-                SettingsActionRow(
-                    title = stringResource(R.string.trakt_unaired_next_up),
-                    subtitle = stringResource(R.string.trakt_unaired_next_up_subtitle),
-                    value = if (uiState.showUnairedNextUp) stringResource(R.string.trakt_unaired_shown) else stringResource(R.string.trakt_unaired_hidden),
-                    onClick = { showUnairedNextUpDialog = true }
-                )
+                if (uiState.integrationMode == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC) {
+                    SettingsActionRow(
+                        title = stringResource(R.string.trakt_continue_watching_window),
+                        subtitle = stringResource(R.string.trakt_continue_watching_subtitle),
+                        value = cwWindowFormatter(uiState.continueWatchingDaysCap),
+                        onClick = { showDaysCapDialog = true }
+                    )
+                    SettingsActionRow(
+                        title = stringResource(R.string.trakt_unaired_next_up),
+                        subtitle = stringResource(R.string.trakt_unaired_next_up_subtitle),
+                        value = if (uiState.showUnairedNextUp) stringResource(R.string.trakt_unaired_shown) else stringResource(R.string.trakt_unaired_hidden),
+                        onClick = { showUnairedNextUpDialog = true }
+                    )
+                }
             }
 
             if (uiState.mode != TraktConnectionMode.CONNECTED) {
@@ -292,7 +309,7 @@ fun TraktScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (uiState.mode == TraktConnectionMode.AWAITING_APPROVAL) {
@@ -317,7 +334,10 @@ fun TraktScreen(
         }
     }
 
-    if (showDaysCapDialog) {
+    if (
+        showDaysCapDialog &&
+        uiState.integrationMode == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC
+    ) {
         NuvioDialog(
             onDismiss = { showDaysCapDialog = false },
             title = stringResource(R.string.trakt_cw_window_title),
@@ -371,7 +391,10 @@ fun TraktScreen(
         }
     }
 
-    if (showUnairedNextUpDialog) {
+    if (
+        showUnairedNextUpDialog &&
+        uiState.integrationMode == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC
+    ) {
         NuvioDialog(
             onDismiss = { showUnairedNextUpDialog = false },
             title = stringResource(R.string.trakt_unaired_dialog_title),
@@ -412,6 +435,86 @@ fun TraktScreen(
                 ) {
                     Button(
                         onClick = { showUnairedNextUpDialog = false },
+                        colors = ButtonDefaults.colors(
+                            containerColor = NuvioColors.BackgroundCard,
+                            contentColor = NuvioColors.TextPrimary
+                        )
+                    ) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                }
+            }
+        }
+    }
+
+    if (showIntegrationModeDialog) {
+        Dialog(onDismissRequest = { showIntegrationModeDialog = false }) {
+            Column(
+                modifier = Modifier
+                    .width(620.dp)
+                    .background(NuvioColors.BackgroundElevated, RoundedCornerShape(16.dp))
+                    .border(1.dp, NuvioColors.Border, RoundedCornerShape(16.dp))
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.trakt_mode_dialog_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = NuvioColors.TextPrimary
+                )
+                Text(
+                    text = stringResource(R.string.trakt_mode_dialog_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NuvioColors.TextSecondary
+                )
+                Button(
+                    onClick = {
+                        viewModel.onIntegrationModeSelected(TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC)
+                        showIntegrationModeDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = if (uiState.integrationMode == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC) {
+                            NuvioColors.Primary
+                        } else {
+                            NuvioColors.BackgroundCard
+                        },
+                        contentColor = if (uiState.integrationMode == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC) {
+                            Color.Black
+                        } else {
+                            NuvioColors.TextPrimary
+                        }
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.trakt_mode_full_sync))
+                }
+                Button(
+                    onClick = {
+                        viewModel.onIntegrationModeSelected(TraktSettingsDataStore.TraktIntegrationMode.SCROBBLE_ONLY)
+                        showIntegrationModeDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = if (uiState.integrationMode == TraktSettingsDataStore.TraktIntegrationMode.SCROBBLE_ONLY) {
+                            NuvioColors.Primary
+                        } else {
+                            NuvioColors.BackgroundCard
+                        },
+                        contentColor = if (uiState.integrationMode == TraktSettingsDataStore.TraktIntegrationMode.SCROBBLE_ONLY) {
+                            Color.Black
+                        } else {
+                            NuvioColors.TextPrimary
+                        }
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.trakt_mode_scrobble_only))
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(
+                        onClick = { showIntegrationModeDialog = false },
                         colors = ButtonDefaults.colors(
                             containerColor = NuvioColors.BackgroundCard,
                             contentColor = NuvioColors.TextPrimary

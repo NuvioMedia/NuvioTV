@@ -47,14 +47,19 @@ data class WatchProgress(
         }
 
     /**
-     * Returns true if the content has been watched past the threshold (default 85%)
+     * Returns true if the content has been watched past the configured completion threshold.
      */
-    fun isCompleted(threshold: Float = 0.85f): Boolean = progressPercentage >= threshold
+    fun isCompleted(
+        threshold: Float = PlaybackCompletionThresholds.getCompletionThresholdFraction()
+    ): Boolean = progressPercentage >= threshold
 
     /**
-     * Returns true if the content has been started but not completed
+     * Returns true if the content has been started but not completed.
      */
-    fun isInProgress(startThreshold: Float = 0.02f, endThreshold: Float = 0.85f): Boolean =
+    fun isInProgress(
+        startThreshold: Float = 0.02f,
+        endThreshold: Float = PlaybackCompletionThresholds.getCompletionThresholdFraction()
+    ): Boolean =
         progressPercentage >= startThreshold && progressPercentage < endThreshold
 
     /**

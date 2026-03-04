@@ -10,6 +10,7 @@ import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.repository.ParentalGuideRepository
 import com.nuvio.tv.data.repository.SkipIntroRepository
@@ -43,6 +44,7 @@ class PlayerRuntimeController(
     internal val traktScrobbleService: TraktScrobbleService,
     internal val skipIntroRepository: SkipIntroRepository,
     internal val playerSettingsDataStore: PlayerSettingsDataStore,
+    internal val traktSettingsDataStore: TraktSettingsDataStore,
     internal val streamLinkCacheDataStore: StreamLinkCacheDataStore,
     internal val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     internal val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
@@ -179,8 +181,10 @@ class PlayerRuntimeController(
     internal var streamAutoPlayNextEpisodeEnabledSetting: Boolean = false
     internal var streamAutoPlayPreferBingeGroupForNextEpisodeSetting: Boolean = false
     internal var nextEpisodeThresholdModeSetting: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE
-    internal var nextEpisodeThresholdPercentSetting: Float = 98f
+    internal var nextEpisodeThresholdPercentSetting: Float = 90f
     internal var nextEpisodeThresholdMinutesBeforeEndSetting: Float = 2f
+    internal var traktIntegrationModeSetting: TraktSettingsDataStore.TraktIntegrationMode =
+        TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC
     internal var currentStreamBingeGroup: String? = navigationArgs.bingeGroup
     internal var hasAppliedRememberedAudioSelection: Boolean = false
 
@@ -201,6 +205,7 @@ class PlayerRuntimeController(
     internal var hasRequestedScrobbleStartForCurrentItem: Boolean = false
     internal var scrobbleStartRequestGeneration: Long = 0L
     internal var hasSentCompletionScrobbleForCurrentItem: Boolean = false
+    internal var isReleasingPlayer: Boolean = false
     internal var episodeStreamsJob: Job? = null
     internal var episodeStreamsCacheRequestKey: String? = null
     internal val streamCacheKey: String? by lazy {

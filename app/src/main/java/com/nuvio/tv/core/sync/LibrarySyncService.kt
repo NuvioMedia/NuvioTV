@@ -5,6 +5,7 @@ import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.LibraryPreferences
 import com.nuvio.tv.data.local.TraktAuthDataStore
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.remote.supabase.SupabaseLibraryItem
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.model.SavedLibraryItem
@@ -27,6 +28,7 @@ class LibrarySyncService @Inject constructor(
     private val postgrest: Postgrest,
     private val libraryPreferences: LibraryPreferences,
     private val traktAuthDataStore: TraktAuthDataStore,
+    private val traktSettingsDataStore: TraktSettingsDataStore,
     private val profileManager: ProfileManager
 ) {
     private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
@@ -40,8 +42,8 @@ class LibrarySyncService @Inject constructor(
 
     suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            if (traktAuthDataStore.isAuthenticated.first()) {
-                Log.d(TAG, "Trakt connected, skipping library push")
+            if (shouldSkipBecauseTraktOwnsData()) {
+                Log.d(TAG, "Trakt full-sync mode active, skipping library push")
                 return@withContext Result.success(Unit)
             }
 
@@ -85,8 +87,8 @@ class LibrarySyncService @Inject constructor(
 
     suspend fun pullFromRemote(): Result<List<SavedLibraryItem>> = withContext(Dispatchers.IO) {
         try {
-            if (traktAuthDataStore.isAuthenticated.first()) {
-                Log.d(TAG, "Trakt connected, skipping library pull")
+            if (shouldSkipBecauseTraktOwnsData()) {
+                Log.d(TAG, "Trakt full-sync mode active, skipping library pull")
                 return@withContext Result.success(emptyList())
             }
 
@@ -120,5 +122,12 @@ class LibrarySyncService @Inject constructor(
             Log.e(TAG, "Failed to pull library from remote", e)
             Result.failure(e)
         }
+    }
+
+    private suspend fun shouldSkipBecauseTraktOwnsData(): Boolean {
+        val isAuthenticated = traktAuthDataStore.isAuthenticated.first()
+        val integrationMode = traktSettingsDataStore.integrationMode.first()
+        return isAuthenticated &&
+            integrationMode == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC
     }
 }

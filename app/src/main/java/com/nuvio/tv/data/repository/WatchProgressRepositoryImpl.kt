@@ -5,7 +5,9 @@ import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.sync.WatchProgressSyncService
 import com.nuvio.tv.core.sync.WatchedItemsSyncService
 import android.util.Log
+import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.TraktAuthDataStore
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchProgressPreferences
 import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.domain.model.WatchProgress
@@ -38,7 +40,9 @@ import javax.inject.Singleton
 @OptIn(ExperimentalCoroutinesApi::class)
 class WatchProgressRepositoryImpl @Inject constructor(
     private val watchProgressPreferences: WatchProgressPreferences,
+    private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val traktAuthDataStore: TraktAuthDataStore,
+    private val traktSettingsDataStore: TraktSettingsDataStore,
     private val traktProgressService: TraktProgressService,
     private val watchProgressSyncService: WatchProgressSyncService,
     private val watchedItemsPreferences: WatchedItemsPreferences,
@@ -74,6 +78,13 @@ class WatchProgressRepositoryImpl @Inject constructor(
     private val metadataMutex = Mutex()
     private val inFlightMetadataKeys = mutableSetOf<String>()
     private val metadataHydrationLimit = 30
+    private val useTraktProgressDataSource: Flow<Boolean> = combine(
+        traktAuthDataStore.isEffectivelyAuthenticated,
+        traktSettingsDataStore.integrationMode
+    ) { isAuthenticated, integrationMode ->
+        isAuthenticated &&
+            integrationMode == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC
+    }.distinctUntilChanged()
 
     private fun triggerRemoteSync() {
         if (isSyncingFromRemote) return
@@ -214,10 +225,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
     }
 
     override val allProgress: Flow<List<WatchProgress>>
-        get() = traktAuthDataStore.isEffectivelyAuthenticated
-            .distinctUntilChanged()
-            .flatMapLatest { isAuthenticated ->
-                if (isAuthenticated) {
+        get() = useTraktProgressDataSource
+            .flatMapLatest { useTraktSource ->
+                if (useTraktSource) {
                     combine(
                         traktProgressService.observeAllProgress()
                             .onStart {
@@ -247,10 +257,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
         get() = allProgress.map { list -> list.filter { it.isInProgress() } }
 
     override fun getProgress(contentId: String): Flow<WatchProgress?> {
-        return traktAuthDataStore.isEffectivelyAuthenticated
-            .distinctUntilChanged()
-            .flatMapLatest { isAuthenticated ->
-                if (isAuthenticated) {
+        return useTraktProgressDataSource
+            .flatMapLatest { useTraktSource ->
+                if (useTraktSource) {
                     allProgress.map { items ->
                         items
                             .filter { it.contentId == contentId }
@@ -263,10 +272,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
     }
 
     override fun getEpisodeProgress(contentId: String, season: Int, episode: Int): Flow<WatchProgress?> {
-        return traktAuthDataStore.isEffectivelyAuthenticated
-            .distinctUntilChanged()
-            .flatMapLatest { isAuthenticated ->
-                if (isAuthenticated) {
+        return useTraktProgressDataSource
+            .flatMapLatest { useTraktSource ->
+                if (useTraktSource) {
                     allProgress.map { items ->
                         items.firstOrNull {
                             it.contentId == contentId && it.season == season && it.episode == episode
@@ -279,10 +287,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
     }
 
     override fun getAllEpisodeProgress(contentId: String): Flow<Map<Pair<Int, Int>, WatchProgress>> {
-        return traktAuthDataStore.isEffectivelyAuthenticated
-            .distinctUntilChanged()
-            .flatMapLatest { isAuthenticated ->
-                if (isAuthenticated) {
+        return useTraktProgressDataSource
+            .flatMapLatest { useTraktSource ->
+                if (useTraktSource) {
                     combine(
                         traktProgressService.observeEpisodeProgress(contentId),
                         allProgress.map { items ->
@@ -304,10 +311,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
     }
 
     override fun isWatched(contentId: String, season: Int?, episode: Int?): Flow<Boolean> {
-        return traktAuthDataStore.isEffectivelyAuthenticated
-            .distinctUntilChanged()
-            .flatMapLatest { isAuthenticated ->
-                if (!isAuthenticated) {
+        return useTraktProgressDataSource
+            .flatMapLatest { useTraktSource ->
+                if (!useTraktSource) {
                     val progressFlow = if (season != null && episode != null) {
                         watchProgressPreferences.getEpisodeProgress(contentId, season, episode)
                     } else {
@@ -343,7 +349,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveProgress(progress: WatchProgress, syncRemote: Boolean) {
-        if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
+        if (shouldUseTraktProgressDataSource()) {
             traktProgressService.applyOptimisticProgress(progress)
             watchProgressPreferences.saveProgress(progress)
             return
@@ -376,12 +382,12 @@ class WatchProgressRepositoryImpl @Inject constructor(
     }
 
     override suspend fun removeProgress(contentId: String, season: Int?, episode: Int?) {
-        val isAuthenticated = traktAuthDataStore.isEffectivelyAuthenticated.first()
+        val shouldUseTraktSource = shouldUseTraktProgressDataSource()
         Log.d(
             TAG,
-            "removeProgress called contentId=$contentId season=$season episode=$episode authenticated=$isAuthenticated"
+            "removeProgress called contentId=$contentId season=$season episode=$episode useTraktSource=$shouldUseTraktSource"
         )
-        if (isAuthenticated) {
+        if (shouldUseTraktSource) {
             traktProgressService.applyOptimisticRemoval(contentId, season, episode)
             traktProgressService.removeProgress(contentId, season, episode)
             watchProgressPreferences.removeProgress(contentId, season, episode)
@@ -399,7 +405,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
     }
 
     override suspend fun removeFromHistory(contentId: String, season: Int?, episode: Int?) {
-        if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
+        if (shouldUseTraktProgressDataSource()) {
             traktProgressService.removeFromHistory(contentId, season, episode)
             watchProgressPreferences.removeProgress(contentId, season, episode)
             return
@@ -418,7 +424,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
     }
 
     override suspend fun markAsCompleted(progress: WatchProgress) {
-        if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
+        if (shouldUseTraktProgressDataSource()) {
             val now = System.currentTimeMillis()
             val duration = progress.duration.takeIf { it > 0L } ?: 1L
             val completed = progress.copy(
@@ -444,6 +450,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
             }
             return
         }
+
         watchProgressPreferences.markAsCompleted(progress)
         watchedItemsPreferences.markAsWatched(
             WatchedItem(
@@ -455,12 +462,31 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 watchedAt = System.currentTimeMillis()
             )
         )
+        if (shouldWriteToTraktScrobbleMode()) {
+            val now = System.currentTimeMillis()
+            val duration = progress.duration.takeIf { it > 0L } ?: 1L
+            val completed = progress.copy(
+                position = duration,
+                duration = duration,
+                progressPercent = 100f,
+                lastWatched = now
+            )
+            runCatching {
+                traktProgressService.markAsWatched(
+                    progress = completed,
+                    title = completed.name.takeIf { it.isNotBlank() },
+                    year = null
+                )
+            }.onFailure { error ->
+                Log.w(TAG, "Failed to write completed item to Trakt in scrobble-only mode", error)
+            }
+        }
         triggerRemoteSync()
         triggerWatchedItemsSync()
     }
 
     override suspend fun clearAll() {
-        if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
+        if (shouldUseTraktProgressDataSource()) {
             traktProgressService.clearOptimistic()
             watchProgressPreferences.clearAll()
             return
@@ -496,6 +522,20 @@ class WatchProgressRepositoryImpl @Inject constructor(
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .distinct()
+    }
+
+    private suspend fun shouldUseTraktProgressDataSource(): Boolean {
+        val isAuthenticated = traktAuthDataStore.isEffectivelyAuthenticated.first()
+        val integrationMode = traktSettingsDataStore.integrationMode.first()
+        return isAuthenticated &&
+            integrationMode == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC
+    }
+
+    private suspend fun shouldWriteToTraktScrobbleMode(): Boolean {
+        val isAuthenticated = traktAuthDataStore.isEffectivelyAuthenticated.first()
+        val integrationMode = traktSettingsDataStore.integrationMode.first()
+        return isAuthenticated &&
+            integrationMode == TraktSettingsDataStore.TraktIntegrationMode.SCROBBLE_ONLY
     }
 
     private fun mergeProgressLists(

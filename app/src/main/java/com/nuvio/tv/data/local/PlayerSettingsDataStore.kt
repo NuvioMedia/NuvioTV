@@ -9,9 +9,11 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.domain.model.PlaybackCompletionThresholds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -348,6 +350,13 @@ class PlayerSettingsDataStore @Inject constructor(
                 }
             }
         }
+        ioScope.launch {
+            playerSettings.collectLatest { settings ->
+                PlaybackCompletionThresholds.setCompletionThresholdPercent(
+                    settings.nextEpisodeThresholdPercent
+                )
+            }
+        }
     }
 
     /**
@@ -609,7 +618,7 @@ class PlayerSettingsDataStore @Inject constructor(
         store().edit { prefs ->
             prefs[nextEpisodeThresholdPercentKey] = normalizeHalfStep(
                 value = percent,
-                min = 97f,
+                min = 90f,
                 max = 99.5f
             )
         }

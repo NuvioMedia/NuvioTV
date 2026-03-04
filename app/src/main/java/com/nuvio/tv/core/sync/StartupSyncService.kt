@@ -6,6 +6,7 @@ import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.LibraryPreferences
 import com.nuvio.tv.data.local.TraktAuthDataStore
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchProgressPreferences
 import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.data.repository.AddonRepositoryImpl
@@ -38,6 +39,7 @@ class StartupSyncService @Inject constructor(
     private val watchProgressRepository: WatchProgressRepositoryImpl,
     private val libraryRepository: LibraryRepositoryImpl,
     private val traktAuthDataStore: TraktAuthDataStore,
+    private val traktSettingsDataStore: TraktSettingsDataStore,
     private val watchProgressPreferences: WatchProgressPreferences,
     private val libraryPreferences: LibraryPreferences,
     private val watchedItemsPreferences: WatchedItemsPreferences,
@@ -169,7 +171,9 @@ class StartupSyncService @Inject constructor(
             }
 
             val isPrimaryProfile = profileManager.activeProfileId.value == 1
-            val isTraktConnected = isPrimaryProfile && traktAuthDataStore.isAuthenticated.first()
+            val isTraktConnected = isPrimaryProfile &&
+                traktAuthDataStore.isAuthenticated.first() &&
+                traktSettingsDataStore.integrationMode.first() == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC
             Log.d(TAG, "Watch progress sync: isTraktConnected=$isTraktConnected isPrimaryProfile=$isPrimaryProfile")
             if (!isTraktConnected) {
                 // Pull library and watched items first — these are lightweight and critical.

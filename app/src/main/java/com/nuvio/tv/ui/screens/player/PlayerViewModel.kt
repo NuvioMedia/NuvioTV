@@ -8,6 +8,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.repository.ParentalGuideRepository
 import com.nuvio.tv.data.repository.SkipIntroRepository
 import com.nuvio.tv.data.repository.TraktScrobbleService
@@ -33,6 +34,7 @@ class PlayerViewModel @Inject constructor(
     private val traktScrobbleService: TraktScrobbleService,
     private val skipIntroRepository: SkipIntroRepository,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
+    private val traktSettingsDataStore: TraktSettingsDataStore,
     private val streamLinkCacheDataStore: StreamLinkCacheDataStore,
     private val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     private val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
@@ -51,6 +53,7 @@ class PlayerViewModel @Inject constructor(
         traktScrobbleService = traktScrobbleService,
         skipIntroRepository = skipIntroRepository,
         playerSettingsDataStore = playerSettingsDataStore,
+        traktSettingsDataStore = traktSettingsDataStore,
         streamLinkCacheDataStore = streamLinkCacheDataStore,
         layoutPreferenceDataStore = layoutPreferenceDataStore,
         watchedItemsPreferences = watchedItemsPreferences,

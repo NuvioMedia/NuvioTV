@@ -468,6 +468,8 @@
     <string name="trakt_missing_credentials">Missing TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET in local.properties.</string>
     <string name="trakt_continue_watching_window">Continue Watching Window</string>
     <string name="trakt_continue_watching_subtitle">Trakt history considered for continue watching</string>
+    <string name="trakt_integration_mode">Integration Mode</string>
+    <string name="trakt_integration_mode_subtitle">Choose whether Trakt is full sync or send-updates-only mode</string>
     <string name="trakt_unaired_next_up">Unaired Next Up Episodes</string>
     <string name="trakt_unaired_next_up_subtitle">Show upcoming episodes before they air</string>
     <string name="trakt_unaired_shown">Shown</string>
@@ -491,6 +493,10 @@
     <string name="trakt_unaired_dialog_subtitle">Choose whether Continue Watching should include upcoming episodes before release.</string>
     <string name="trakt_show_unaired">Show unaired episodes</string>
     <string name="trakt_hide_unaired">Hide unaired episodes</string>
+    <string name="trakt_mode_dialog_title">Trakt Integration Mode</string>
+    <string name="trakt_mode_dialog_subtitle">Full Sync uses Trakt for app library/progress. Scrobble Only keeps local library/progress and only sends scrobble and watched updates to Trakt.</string>
+    <string name="trakt_mode_full_sync">Full Sync</string>
+    <string name="trakt_mode_scrobble_only">Scrobble Only</string>
     <string name="trakt_all_history">All history</string>
     <string name="trakt_days_format">%1$d days</string>
 

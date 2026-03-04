@@ -42,6 +42,7 @@ data class TraktUiState(
     val deviceCodeExpiresAtMillis: Long? = null,
     val continueWatchingDaysCap: Int = TraktSettingsDataStore.DEFAULT_CONTINUE_WATCHING_DAYS_CAP,
     val showUnairedNextUp: Boolean = TraktSettingsDataStore.DEFAULT_SHOW_UNAIRED_NEXT_UP,
+    val integrationMode: TraktSettingsDataStore.TraktIntegrationMode = TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC,
     val connectedStats: TraktProgressService.TraktCachedStats? = null,
     val statusMessage: String? = null,
     val errorMessage: String? = null
@@ -93,6 +94,23 @@ class TraktViewModel @Inject constructor(
                         context.getString(R.string.trakt_unaired_now_shown)
                     } else {
                         context.getString(R.string.trakt_unaired_now_hidden)
+                    }
+                )
+            }
+        }
+    }
+
+    fun onIntegrationModeSelected(mode: TraktSettingsDataStore.TraktIntegrationMode) {
+        viewModelScope.launch {
+            traktSettingsDataStore.setIntegrationMode(mode)
+            traktProgressService.refreshNow()
+            _uiState.update {
+                it.copy(
+                    integrationMode = mode,
+                    statusMessage = if (mode == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC) {
+                        "Trakt full sync enabled"
+                    } else {
+                        "Trakt scrobble-only mode enabled"
                     }
                 )
             }
@@ -195,14 +213,16 @@ class TraktViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 traktSettingsDataStore.continueWatchingDaysCap,
-                traktSettingsDataStore.showUnairedNextUp
-            ) { daysCap, showUnairedNextUp ->
-                daysCap to showUnairedNextUp
-            }.collectLatest { (daysCap, showUnairedNextUp) ->
+                traktSettingsDataStore.showUnairedNextUp,
+                traktSettingsDataStore.integrationMode
+            ) { daysCap, showUnairedNextUp, integrationMode ->
+                Triple(daysCap, showUnairedNextUp, integrationMode)
+            }.collectLatest { (daysCap, showUnairedNextUp, integrationMode) ->
                 _uiState.update {
                     it.copy(
                         continueWatchingDaysCap = daysCap,
-                        showUnairedNextUp = showUnairedNextUp
+                        showUnairedNextUp = showUnairedNextUp,
+                        integrationMode = integrationMode
                     )
                 }
             }

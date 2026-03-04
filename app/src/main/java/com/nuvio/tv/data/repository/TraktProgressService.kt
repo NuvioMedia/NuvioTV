@@ -177,6 +177,8 @@ class TraktProgressService @Inject constructor(
     private var consecutiveRefreshFailures = 0
     @Volatile
     private var continueWatchingWindowDays: Int = TraktSettingsDataStore.DEFAULT_CONTINUE_WATCHING_DAYS_CAP
+    @Volatile
+    private var useTraktDataSource: Boolean = true
 
     init {
         scope.launch {
@@ -185,7 +187,13 @@ class TraktProgressService @Inject constructor(
             }
         }
         scope.launch {
+            traktSettingsDataStore.integrationMode.collectLatest { mode ->
+                useTraktDataSource = mode == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC
+            }
+        }
+        scope.launch {
             refreshEvents().collectLatest {
+                if (!useTraktDataSource) return@collectLatest
                 val success = try {
                     refreshRemoteSnapshot()
                     true

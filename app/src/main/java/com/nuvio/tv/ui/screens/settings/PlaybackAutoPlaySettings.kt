@@ -167,7 +167,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
                     subtitle = stringResource(R.string.autoplay_threshold_pct_sub),
                     value = (playerSettings.nextEpisodeThresholdPercent * 2f).roundToInt(),
                     valueText = "${formatHalfStepValue(playerSettings.nextEpisodeThresholdPercent)}%",
-                    minValue = 194,
+                    minValue = 180,
                     maxValue = 199,
                     step = 1,
                     onValueChange = { onSetNextEpisodeThresholdPercent(it / 2f) },
