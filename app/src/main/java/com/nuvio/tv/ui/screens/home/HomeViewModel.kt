@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
+import com.nuvio.tv.data.local.HiddenItemsPreferences
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
@@ -12,6 +13,7 @@ import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.domain.model.HiddenItemEntry
 import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.TmdbSettings
@@ -26,6 +28,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
@@ -45,7 +49,8 @@ class HomeViewModel @Inject constructor(
     internal val traktSettingsDataStore: TraktSettingsDataStore,
     internal val tmdbService: TmdbService,
     internal val tmdbMetadataService: TmdbMetadataService,
-    internal val trailerService: TrailerService
+    internal val trailerService: TrailerService,
+    internal val hiddenItemsPreferences: HiddenItemsPreferences
 ) : ViewModel() {
     companion object {
         internal const val TAG = "HomeViewModel"
@@ -123,12 +128,38 @@ class HomeViewModel @Inject constructor(
         loadHomeCatalogOrderPreference()
         loadDisabledHomeCatalogPreference()
         observeLibraryState()
+        observeHiddenItems()
         observeTmdbSettings()
         loadContinueWatching()
         observeInstalledAddons()
         viewModelScope.launch {
             delay(3000)
             startupGracePeriodActive = false
+        }
+    }
+
+    private fun observeHiddenItems() {
+        viewModelScope.launch {
+            hiddenItemsPreferences.hiddenKeys
+                .distinctUntilChanged()
+                .collectLatest { keys ->
+                    _uiState.update { it.copy(hiddenItemKeys = keys) }
+                    scheduleUpdateCatalogRows()
+                }
+        }
+    }
+
+    fun hidePosterItem(item: MetaPreview) {
+        viewModelScope.launch {
+            hiddenItemsPreferences.hideItem(
+                HiddenItemEntry(
+                    itemId = item.id,
+                    itemType = item.apiType,
+                    name = item.name,
+                    poster = item.poster,
+                    posterShape = item.posterShape
+                )
+            )
         }
     }
 

@@ -41,6 +41,7 @@
     <string name="hero_remove_from_library">Remove from library</string>
     <string name="hero_mark_watched">Mark as watched</string>
     <string name="hero_mark_unwatched">Mark as unwatched</string>
+    <string name="home_poster_hide">Hide</string>
     <string name="hero_play_trailer">Play trailer</string>
     <string name="hero_press_back_trailer">Press back to exit trailer</string>
     <string name="cd_rating">Rating</string>
@@ -730,6 +731,13 @@
     <string name="library_empty_trakt_title">No %1$s in this list</string>
     <string name="library_empty_local_subtitle">Start saving your favorites to see them here</string>
     <string name="library_empty_trakt_subtitle">Use + in details to add items to watchlist or lists</string>
+    <string name="library_hidden_title">Hidden (%1$d)</string>
+    <string name="library_hidden_show_all">Show All</string>
+    <string name="library_hidden_empty_title">No hidden items</string>
+    <string name="library_hidden_empty_subtitle">Items you hide will appear here</string>
+    <string name="library_item_unhidden">Item unhidden</string>
+    <string name="library_unhide">Unhide</string>
+    <string name="library_list_library">Library</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Loading\u2026</string>

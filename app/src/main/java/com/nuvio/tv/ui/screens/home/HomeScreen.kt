@@ -261,6 +261,10 @@ fun HomeScreen(
             onToggleWatched = {
                 viewModel.togglePosterMovieWatched(item)
                 posterOptionsTarget = null
+            },
+            onHide = {
+                viewModel.hidePosterItem(item)
+                posterOptionsTarget = null
             }
         )
     }
@@ -418,7 +422,8 @@ private fun HomePosterOptionsDialog(
     onDismiss: () -> Unit,
     onDetails: () -> Unit,
     onToggleLibrary: () -> Unit,
-    onToggleWatched: () -> Unit
+    onToggleWatched: () -> Unit,
+    onHide: () -> Unit
 ) {
     val primaryFocusRequester = remember { FocusRequester() }
 
@@ -484,6 +489,17 @@ private fun HomePosterOptionsDialog(
                     }
                 )
             }
+        }
+
+        Button(
+            onClick = onHide,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.colors(
+                containerColor = NuvioColors.BackgroundCard,
+                contentColor = NuvioColors.TextPrimary
+            )
+        ) {
+            Text(stringResource(R.string.home_poster_hide))
         }
     }
 }

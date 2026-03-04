@@ -67,6 +67,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.nuvio.tv.domain.model.LibraryEntry
 import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.PosterShape
@@ -103,6 +104,7 @@ fun LibraryScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var expandedPicker by remember { mutableStateOf<String?>(null) }
+    var unhideTarget by remember { mutableStateOf<LibraryEntry?>(null) }
     val primaryFocusRequester = remember { FocusRequester() }
     val gridState = rememberLazyGridState()
     var pendingPrimaryFocus by remember { mutableStateOf(true) }
@@ -254,6 +256,7 @@ fun LibraryScreen(
                 selectedListKey = uiState.selectedListKey,
                 selectedTypeTab = uiState.selectedTypeTab,
                 selectedSortOption = uiState.selectedSortOption,
+                hiddenItemCount = uiState.hiddenItems.size,
                 primaryFocusRequester = primaryFocusRequester,
                 expandedPicker = expandedPicker,
                 onExpandedChange = { picker, shouldExpand ->
@@ -284,6 +287,7 @@ fun LibraryScreen(
                 )
             }
         }
+
 
         if (uiState.visibleItems.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -317,7 +321,10 @@ fun LibraryScreen(
                 onClick = {
                     lastFocusedPosterKey = focusKey
                     onNavigateToDetail(item.id, item.type, item.addonBaseUrl)
-                }
+                },
+                onLongPress = if (uiState.isHiddenListSelected) {
+                    { unhideTarget = item }
+                } else null
             )
         }
 
@@ -382,6 +389,29 @@ fun LibraryScreen(
             )
         }
     }
+
+    val unhideItem = unhideTarget
+    if (unhideItem != null) {
+        NuvioDialog(
+            onDismiss = { unhideTarget = null },
+            title = unhideItem.name,
+            width = 400.dp
+        ) {
+            Button(
+                onClick = {
+                    viewModel.unhideItem(unhideItem.id, unhideItem.type)
+                    unhideTarget = null
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioColors.BackgroundCard,
+                    contentColor = NuvioColors.TextPrimary
+                )
+            ) {
+                Text(stringResource(R.string.library_unhide))
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -394,6 +424,7 @@ private fun LibrarySelectorsRow(
     selectedListKey: String?,
     selectedTypeTab: LibraryTypeTab?,
     selectedSortOption: LibrarySortOption,
+    hiddenItemCount: Int,
     primaryFocusRequester: FocusRequester,
     expandedPicker: String?,
     onExpandedChange: (String, Boolean) -> Unit,
@@ -401,7 +432,23 @@ private fun LibrarySelectorsRow(
     onSelectType: (LibraryTypeTab) -> Unit,
     onSelectSort: (LibrarySortOption) -> Unit
 ) {
-    val selectedListLabel = listTabs.firstOrNull { it.key == selectedListKey }?.title ?: "Select"
+    val hiddenLabel = stringResource(R.string.library_hidden_title, hiddenItemCount)
+    val libraryLabel = stringResource(R.string.library_list_library)
+    val showListPicker = sourceMode == LibrarySourceMode.TRAKT || hiddenItemCount > 0
+
+    val listOptions = if (sourceMode == LibrarySourceMode.TRAKT) {
+        listTabs.map { LibraryOption(it.title, it.key) } +
+            if (hiddenItemCount > 0) listOf(LibraryOption(hiddenLabel, LibraryUiState.HIDDEN_LIST_KEY)) else emptyList()
+    } else {
+        listOf(LibraryOption(libraryLabel, "")) +
+            if (hiddenItemCount > 0) listOf(LibraryOption(hiddenLabel, LibraryUiState.HIDDEN_LIST_KEY)) else emptyList()
+    }
+
+    val selectedListLabel = when {
+        selectedListKey == LibraryUiState.HIDDEN_LIST_KEY -> hiddenLabel
+        sourceMode == LibrarySourceMode.TRAKT -> listTabs.firstOrNull { it.key == selectedListKey }?.title ?: "Select"
+        else -> libraryLabel
+    }
     val selectedTypeLabel = selectedTypeTab?.let { localizedTypeLabel(it.key) } ?: stringResource(R.string.library_type_all)
     val selectedSortLabel = selectedSortOption.label
 
@@ -409,7 +456,7 @@ private fun LibrarySelectorsRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        if (sourceMode == LibrarySourceMode.TRAKT) {
+        if (showListPicker) {
             LibraryDropdownPicker(
                 modifier = Modifier
                     .weight(1f)
@@ -417,14 +464,14 @@ private fun LibrarySelectorsRow(
                 title = stringResource(R.string.library_filter_list),
                 value = selectedListLabel,
                 expanded = expandedPicker == "list",
-                options = listTabs.map { LibraryOption(it.title, it.key) },
+                options = listOptions,
                 onExpandedChange = { onExpandedChange("list", it) },
                 onSelect = { onSelectList(it.value) }
             )
         }
 
         LibraryDropdownPicker(
-            modifier = if (sourceMode == LibrarySourceMode.TRAKT) {
+            modifier = if (showListPicker) {
                 Modifier.weight(1f)
             } else {
                 Modifier

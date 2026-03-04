@@ -2,11 +2,14 @@ package com.nuvio.tv.ui.screens.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.data.local.HiddenItemsPreferences
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.repository.TraktLibraryService
+import com.nuvio.tv.domain.model.HiddenItemEntry
 import com.nuvio.tv.domain.model.LibraryEntry
 import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
+import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.model.TraktListPrivacy
 import com.nuvio.tv.domain.repository.LibraryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -81,12 +84,19 @@ data class LibraryUiState(
     val showManageDialog: Boolean = false,
     val manageSelectedListKey: String? = null,
     val listEditorState: LibraryListEditorState? = null,
-    val pendingOperation: Boolean = false
-)
+    val pendingOperation: Boolean = false,
+    val hiddenItems: List<HiddenItemEntry> = emptyList(),
+    val isHiddenListSelected: Boolean = false
+) {
+    companion object {
+        const val HIDDEN_LIST_KEY = "__hidden__"
+    }
+}
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val libraryRepository: LibraryRepository,
+    private val hiddenItemsPreferences: HiddenItemsPreferences
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore
 ) : ViewModel() {
 
@@ -98,6 +108,26 @@ class LibraryViewModel @Inject constructor(
     init {
         observeLayoutPreferences()
         observeLibraryData()
+        observeHiddenItems()
+    }
+
+    private fun observeHiddenItems() {
+        viewModelScope.launch {
+            hiddenItemsPreferences.hiddenItems
+                .collectLatest { items ->
+                    _uiState.update { current ->
+                        val updated = current.copy(hiddenItems = items)
+                        updated.withVisibleItems()
+                    }
+                }
+        }
+    }
+
+    fun unhideItem(itemId: String, itemType: String) {
+        viewModelScope.launch {
+            hiddenItemsPreferences.unhideItem(itemId, itemType)
+            setTransientMessage("Item unhidden")
+        }
     }
 
     fun onSelectTypeTab(tab: LibraryTypeTab) {
@@ -109,7 +139,8 @@ class LibraryViewModel @Inject constructor(
 
     fun onSelectListTab(listKey: String) {
         _uiState.update { current ->
-            val updated = current.copy(selectedListKey = listKey)
+            val effectiveKey = listKey.ifBlank { null }
+            val updated = current.copy(selectedListKey = effectiveKey)
             updated.withVisibleItems()
         }
     }
@@ -309,6 +340,7 @@ class LibraryViewModel @Inject constructor(
             }.collectLatest { (sourceMode, isSyncing, items, listTabs) ->
                 _uiState.update { current ->
                     val nextSelectedList = when {
+                        current.selectedListKey == LibraryUiState.HIDDEN_LIST_KEY -> LibraryUiState.HIDDEN_LIST_KEY
                         sourceMode == LibrarySourceMode.TRAKT -> {
                             current.selectedListKey
                                 ?.takeIf { key -> listTabs.any { it.key == key } }
@@ -482,6 +514,35 @@ class LibraryViewModel @Inject constructor(
     }
 
     private fun LibraryUiState.withVisibleItems(): LibraryUiState {
+        val isHidden = selectedListKey == LibraryUiState.HIDDEN_LIST_KEY
+
+        if (isHidden) {
+            val hiddenAsEntries = hiddenItems.map { hidden ->
+                LibraryEntry(
+                    id = hidden.itemId,
+                    type = hidden.itemType,
+                    name = hidden.name,
+                    poster = hidden.poster,
+                    posterShape = hidden.posterShape,
+                    background = null,
+                    logo = null,
+                    description = null,
+                    releaseInfo = null,
+                    imdbRating = null,
+                    genres = emptyList(),
+                    addonBaseUrl = null,
+                    listedAt = hidden.hiddenAt
+                )
+            }
+            val selectedTypeKey = selectedTypeTab?.key
+            val typeFiltered = hiddenAsEntries.filter { entry ->
+                selectedTypeKey == null ||
+                    selectedTypeKey == LibraryTypeTab.ALL_KEY ||
+                    entry.type.trim().lowercase(Locale.ROOT) == selectedTypeKey
+            }
+            return copy(visibleItems = typeFiltered, isHiddenListSelected = true)
+        }
+
         val selectedTypeKey = selectedTypeTab?.key
         val typeFiltered = allItems.filter { entry ->
             selectedTypeKey == null ||
@@ -527,6 +588,6 @@ class LibraryViewModel @Inject constructor(
             )
         }
 
-        return copy(visibleItems = sorted)
+        return copy(visibleItems = sorted, isHiddenListSelected = false)
     }
 }
