@@ -389,6 +389,14 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                                 }
                             }
                         }
+                        if (playbackState == Player.STATE_BUFFERING &&
+                            pendingSeekTelemetryAwaitingFirstFrame &&
+                            pendingSeekTelemetryReadyAssumed
+                        ) {
+                            pendingSeekTelemetryReadyAtMs = 0L
+                            pendingSeekTelemetryReadyLatencyMs = -1L
+                            pendingSeekTelemetryReadyAssumed = false
+                        }
                     
                         
                         if (playbackState == Player.STATE_READY) {
@@ -519,21 +527,23 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                             pendingSeekTelemetryReadyLatencyMs = -1L
                             pendingSeekTelemetryAwaitingFirstFrame = false
                         }
-                        Log.i(
-                            PlayerRuntimeController.TAG,
-                            "PLAYBACK_STARTUP: firstFrameMs=$startupMs " +
-                                "dv7doviActive=$isExperimentalDv7ToDv81ActiveForCurrentPlayback " +
-                                "dv7doviAttempted=$conversionAttempted " +
-                                "dvSourceProfile=${sourceProfile ?: "n/a"} " +
-                                "dvConvertMode=${conversionMode ?: "n/a"} " +
-                                "dv7doviSignalRewrites=$signalingRewrites " +
-                                "dv7doviCalls=$conversionCalls " +
-                                "dv7doviSuccess=$conversionSucceeded " +
-                                "dv7doviReason=${dv7ToDv81LastProbeReasonForCurrentPlayback ?: "n/a"} " +
-                                "dv7doviBridge=${dv7ToDv81BridgeVersionForCurrentPlayback ?: "n/a"} " +
-                                "dv7hevcActive=$isMapDv7ToHevcActiveForCurrentPlayback " +
-                                "host=${currentStreamUrl.safeHost()}"
-                        )
+                        if (!hasRenderedFirstFrame) {
+                            Log.i(
+                                PlayerRuntimeController.TAG,
+                                "PLAYBACK_STARTUP: firstFrameMs=$startupMs " +
+                                    "dv7doviActive=$isExperimentalDv7ToDv81ActiveForCurrentPlayback " +
+                                    "dv7doviAttempted=$conversionAttempted " +
+                                    "dvSourceProfile=${sourceProfile ?: "n/a"} " +
+                                    "dvConvertMode=${conversionMode ?: "n/a"} " +
+                                    "dv7doviSignalRewrites=$signalingRewrites " +
+                                    "dv7doviCalls=$conversionCalls " +
+                                    "dv7doviSuccess=$conversionSucceeded " +
+                                    "dv7doviReason=${dv7ToDv81LastProbeReasonForCurrentPlayback ?: "n/a"} " +
+                                    "dv7doviBridge=${dv7ToDv81BridgeVersionForCurrentPlayback ?: "n/a"} " +
+                                    "dv7hevcActive=$isMapDv7ToHevcActiveForCurrentPlayback " +
+                                    "host=${currentStreamUrl.safeHost()}"
+                            )
+                        }
                         hasRenderedFirstFrame = true
                         _uiState.update { it.copy(showLoadingOverlay = false) }
                     }
@@ -843,6 +853,7 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     pendingSeekTelemetryReadyAtMs = 0L
     pendingSeekTelemetryReadyLatencyMs = -1L
     pendingSeekTelemetryAwaitingFirstFrame = false
+    pendingSeekTelemetryReadyAssumed = false
     lastKnownDuration = 0L
     currentStreamHasVideoTrack = false
     currentVideoTrackIsLikelyVc1 = false

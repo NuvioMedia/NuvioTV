@@ -827,9 +827,21 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
 }
 
 private fun PlayerRuntimeController.beginSeekTelemetry(targetMs: Long) {
-    pendingSeekTelemetryRequestedAtMs = System.currentTimeMillis()
+    val requestTimeMs = System.currentTimeMillis()
+    pendingSeekTelemetryRequestedAtMs = requestTimeMs
     pendingSeekTelemetryTargetMs = targetMs
-    pendingSeekTelemetryReadyAtMs = 0L
-    pendingSeekTelemetryReadyLatencyMs = -1L
+    val player = _exoPlayer
+    if (player != null &&
+        player.playbackState == Player.STATE_READY &&
+        !_uiState.value.isBuffering
+    ) {
+        pendingSeekTelemetryReadyAtMs = requestTimeMs
+        pendingSeekTelemetryReadyLatencyMs = 0L
+        pendingSeekTelemetryReadyAssumed = true
+    } else {
+        pendingSeekTelemetryReadyAtMs = 0L
+        pendingSeekTelemetryReadyLatencyMs = -1L
+        pendingSeekTelemetryReadyAssumed = false
+    }
     pendingSeekTelemetryAwaitingFirstFrame = true
 }

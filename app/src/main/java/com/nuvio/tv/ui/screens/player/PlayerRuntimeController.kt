@@ -230,6 +230,7 @@ class PlayerRuntimeController(
     internal var pendingSeekTelemetryReadyAtMs: Long = 0L
     internal var pendingSeekTelemetryReadyLatencyMs: Long = -1L
     internal var pendingSeekTelemetryAwaitingFirstFrame: Boolean = false
+    internal var pendingSeekTelemetryReadyAssumed: Boolean = false
     internal var currentScrobbleItem: TraktScrobbleItem? = null
     internal var hasSentScrobbleStartForCurrentItem: Boolean = false
     internal var hasSentCompletionScrobbleForCurrentItem: Boolean = false

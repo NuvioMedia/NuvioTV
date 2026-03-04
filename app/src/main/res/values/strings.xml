@@ -175,8 +175,8 @@
     <string name="playback_player_internal">Internal</string>
     <string name="playback_player_external">External</string>
     <string name="playback_player_ask">Ask every time</string>
-    <string name="playback_section_audio">Audio &amp; Trailer</string>
-    <string name="playback_section_audio_desc">Trailer behavior and audio controls.</string>
+    <string name="playback_section_audio">Video &amp; Audio</string>
+    <string name="playback_section_audio_desc">Video compatibility, trailer behavior, and audio controls.</string>
     <string name="playback_section_subtitles">Subtitles</string>
     <string name="playback_section_subtitles_desc">Language, style, and render mode.</string>
     <string name="playback_afr_open">Open</string>
@@ -193,6 +193,7 @@
     <string name="playback_player_ask_desc">Choose the player each time</string>
 
     <!-- PlaybackAudioSettings -->
+    <string name="video_section">Video</string>
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Auto-play Trailers</string>
     <string name="audio_autoplay_trailers_sub">Automatically play trailers on the detail screen after a period of inactivity</string>

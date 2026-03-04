@@ -73,42 +73,61 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onItemFocused: () -> Unit = {},
     enabled: Boolean = true
 ) {
-    item(key = "audio_trailer_section_header") {
+    item(key = "video_header") {
         Text(
-            text = stringResource(R.string.audio_trailer_section),
+            text = stringResource(R.string.video_section),
             style = MaterialTheme.typography.titleMedium,
             color = NuvioColors.TextSecondary,
             modifier = Modifier.padding(vertical = 8.dp)
         )
     }
 
-    item(key = "audio_trailer_enabled") {
+    item(key = "audio_dv7_hevc_fallback") {
         ToggleSettingsItem(
-            icon = Icons.Default.PlayCircle,
-            title = stringResource(R.string.audio_autoplay_trailers),
-            subtitle = stringResource(R.string.audio_autoplay_trailers_sub),
-            isChecked = trailerSettings.enabled,
-            onCheckedChange = onSetTrailerEnabled,
+            icon = Icons.Default.Tune,
+            title = stringResource(R.string.audio_dv_title),
+            subtitle = stringResource(R.string.audio_dv_sub),
+            isChecked = playerSettings.mapDV7ToHevc,
+            onCheckedChange = onSetMapDV7ToHevc,
             onFocused = onItemFocused,
             enabled = enabled
         )
     }
 
-    if (trailerSettings.enabled) {
-        item(key = "audio_trailer_delay") {
-            SliderSettingsItem(
-                icon = Icons.Default.Timer,
-                title = stringResource(R.string.audio_trailer_delay),
-                value = trailerSettings.delaySeconds,
-                valueText = "${trailerSettings.delaySeconds}s",
-                minValue = 3,
-                maxValue = 15,
-                step = 1,
-                onValueChange = onSetTrailerDelaySeconds,
-                onFocused = onItemFocused,
-                enabled = enabled
-            )
-        }
+    item(key = "audio_dv7_dovi_experimental") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Tune,
+            title = stringResource(R.string.audio_dv_experimental_title),
+            subtitle = stringResource(R.string.audio_dv_experimental_sub),
+            isChecked = playerSettings.experimentalDv7ToDv81Enabled,
+            onCheckedChange = onSetExperimentalDv7ToDv81Enabled,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
+    }
+
+    item(key = "audio_dv7_dovi_experimental_preserve_mapping") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Tune,
+            title = stringResource(R.string.audio_dv_experimental_preserve_mapping_title),
+            subtitle = stringResource(R.string.audio_dv_experimental_preserve_mapping_sub),
+            isChecked = playerSettings.experimentalDv7ToDv81PreserveMappingEnabled,
+            onCheckedChange = onSetExperimentalDv7ToDv81PreserveMappingEnabled,
+            onFocused = onItemFocused,
+            enabled = enabled && playerSettings.experimentalDv7ToDv81Enabled
+        )
+    }
+
+    item(key = "audio_dv5_dovi_experimental") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Tune,
+            title = stringResource(R.string.audio_dv5_compatibility_title),
+            subtitle = stringResource(R.string.audio_dv5_compatibility_sub),
+            isChecked = playerSettings.experimentalDv5ToDv81Enabled,
+            onCheckedChange = onSetExperimentalDv5ToDv81Enabled,
+            onFocused = onItemFocused,
+            enabled = enabled && playerSettings.experimentalDv7ToDv81Enabled
+        )
     }
 
     item(key = "audio_header") {
@@ -225,52 +244,43 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
         )
     }
 
-    item(key = "audio_dv7_hevc_fallback") {
+    item(key = "audio_trailer_section_header") {
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = stringResource(R.string.audio_trailer_section),
+            style = MaterialTheme.typography.titleMedium,
+            color = NuvioColors.TextSecondary,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+    }
+
+    item(key = "audio_trailer_enabled") {
         ToggleSettingsItem(
-            icon = Icons.Default.Tune,
-            title = stringResource(R.string.audio_dv_title),
-            subtitle = stringResource(R.string.audio_dv_sub),
-            isChecked = playerSettings.mapDV7ToHevc,
-            onCheckedChange = onSetMapDV7ToHevc,
+            icon = Icons.Default.PlayCircle,
+            title = stringResource(R.string.audio_autoplay_trailers),
+            subtitle = stringResource(R.string.audio_autoplay_trailers_sub),
+            isChecked = trailerSettings.enabled,
+            onCheckedChange = onSetTrailerEnabled,
             onFocused = onItemFocused,
             enabled = enabled
         )
     }
 
-    item(key = "audio_dv7_dovi_experimental") {
-        ToggleSettingsItem(
-            icon = Icons.Default.Tune,
-            title = stringResource(R.string.audio_dv_experimental_title),
-            subtitle = stringResource(R.string.audio_dv_experimental_sub),
-            isChecked = playerSettings.experimentalDv7ToDv81Enabled,
-            onCheckedChange = onSetExperimentalDv7ToDv81Enabled,
-            onFocused = onItemFocused,
-            enabled = enabled
-        )
-    }
-
-    item(key = "audio_dv7_dovi_experimental_preserve_mapping") {
-        ToggleSettingsItem(
-            icon = Icons.Default.Tune,
-            title = stringResource(R.string.audio_dv_experimental_preserve_mapping_title),
-            subtitle = stringResource(R.string.audio_dv_experimental_preserve_mapping_sub),
-            isChecked = playerSettings.experimentalDv7ToDv81PreserveMappingEnabled,
-            onCheckedChange = onSetExperimentalDv7ToDv81PreserveMappingEnabled,
-            onFocused = onItemFocused,
-            enabled = enabled && playerSettings.experimentalDv7ToDv81Enabled
-        )
-    }
-
-    item(key = "audio_dv5_dovi_experimental") {
-        ToggleSettingsItem(
-            icon = Icons.Default.Tune,
-            title = stringResource(R.string.audio_dv5_compatibility_title),
-            subtitle = stringResource(R.string.audio_dv5_compatibility_sub),
-            isChecked = playerSettings.experimentalDv5ToDv81Enabled,
-            onCheckedChange = onSetExperimentalDv5ToDv81Enabled,
-            onFocused = onItemFocused,
-            enabled = enabled && playerSettings.experimentalDv7ToDv81Enabled
-        )
+    if (trailerSettings.enabled) {
+        item(key = "audio_trailer_delay") {
+            SliderSettingsItem(
+                icon = Icons.Default.Timer,
+                title = stringResource(R.string.audio_trailer_delay),
+                value = trailerSettings.delaySeconds,
+                valueText = "${trailerSettings.delaySeconds}s",
+                minValue = 3,
+                maxValue = 15,
+                step = 1,
+                onValueChange = onSetTrailerDelaySeconds,
+                onFocused = onItemFocused,
+                enabled = enabled
+            )
+        }
     }
 }
 
