@@ -129,30 +129,16 @@ private data class DetailReturnEpisodeFocusRequest(
 
 private fun resolveDetailReturnEpisodeFocusTarget(
     meta: Meta,
-    request: DetailReturnEpisodeFocusRequest?,
-    episodeProgressMap: Map<Pair<Int, Int>, WatchProgress>,
-    watchedEpisodes: Set<Pair<Int, Int>>
+    request: DetailReturnEpisodeFocusRequest?
 ): Video? {
     val requestedSeason = request?.season ?: return null
     val requestedEpisode = request.episode ?: return null
 
-    val orderedEpisodes = meta.videos
+    return meta.videos
         .filter { it.season != null && it.episode != null }
         .sortedWith(compareBy({ it.season }, { it.episode }))
-    if (orderedEpisodes.isEmpty()) return null
-
-    val matchedIndex = orderedEpisodes.indexOfFirst {
+        .firstOrNull {
         it.season == requestedSeason && it.episode == requestedEpisode
-    }
-    if (matchedIndex < 0) return null
-
-    val isCompleted = episodeProgressMap[requestedSeason to requestedEpisode]?.isCompleted() == true ||
-        watchedEpisodes.contains(requestedSeason to requestedEpisode)
-
-    return if (isCompleted) {
-        orderedEpisodes.getOrNull(matchedIndex + 1) ?: orderedEpisodes[matchedIndex]
-    } else {
-        orderedEpisodes[matchedIndex]
     }
 }
 
@@ -681,9 +667,6 @@ private fun MetaDetailsContent(
         meta.id,
         detailReturnEpisodeFocusRequest?.season,
         detailReturnEpisodeFocusRequest?.episode,
-        nextToWatch,
-        episodeProgressMap,
-        watchedEpisodes
     ) {
         if (initialDetailReturnFocusHandled) return@LaunchedEffect
         if (!isSeries) {
@@ -695,13 +678,10 @@ private fun MetaDetailsContent(
             initialDetailReturnFocusHandled = true
             return@LaunchedEffect
         }
-        if (nextToWatch == null) return@LaunchedEffect
 
         val targetEpisode = resolveDetailReturnEpisodeFocusTarget(
             meta = meta,
-            request = request,
-            episodeProgressMap = episodeProgressMap,
-            watchedEpisodes = watchedEpisodes
+            request = request
         )
         initialDetailReturnFocusHandled = true
         targetEpisode ?: return@LaunchedEffect
@@ -1102,7 +1082,8 @@ private fun MetaDetailsContent(
                         onSeasonSelected = onSeasonSelected,
                         onSeasonLongPress = { seasonOptionsDialogSeason = it },
                         selectedTabFocusRequester = selectedSeasonFocusRequester,
-                        downFocusRequester = seasonDownFocusRequester
+                        downFocusRequester = seasonDownFocusRequester,
+                        focusEnabled = pendingRestoreType != RestoreTarget.EPISODE
                     )
                 }
                 item(key = "episodes_$selectedSeason", contentType = "episodes") {

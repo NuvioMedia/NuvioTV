@@ -68,6 +68,14 @@ class MetaDetailsViewModel @Inject constructor(
     private val itemId: String = savedStateHandle["itemId"] ?: ""
     private val itemType: String = savedStateHandle["itemType"] ?: ""
     private val preferredAddonBaseUrl: String? = savedStateHandle["addonBaseUrl"]
+    private val returnFocusSeason: Int? = savedStateHandle
+        .get<String>("returnFocusSeason")
+        ?.toIntOrNull()
+    private val returnFocusEpisode: Int? = savedStateHandle
+        .get<String>("returnFocusEpisode")
+        ?.toIntOrNull()
+    private val hasDetailReturnEpisodeRequest: Boolean =
+        returnFocusSeason != null && returnFocusEpisode != null
 
     private val _uiState = MutableStateFlow(MetaDetailsUiState())
     val uiState: StateFlow<MetaDetailsUiState> = _uiState.asStateFlow()
@@ -151,6 +159,7 @@ class MetaDetailsViewModel @Inject constructor(
             val meta = state.meta
             val shouldSwitchSeason = nextSeason != null &&
                 nextSeason != state.selectedSeason &&
+                !hasDetailReturnEpisodeRequest &&
                 meta != null &&
                 state.seasons.contains(nextSeason)
             if (shouldSwitchSeason && meta != null && nextSeason != null) {
@@ -423,8 +432,12 @@ class MetaDetailsViewModel @Inject constructor(
             .distinct()
             .sorted()
 
-        // Prefer first regular season (> 0), fallback to season 0 (specials)
-        val selectedSeason = seasons.firstOrNull { it > 0 } ?: seasons.firstOrNull() ?: 1
+        // Prefer return-focus season when present to avoid visible season switching after load.
+        val selectedSeason = returnFocusSeason
+            ?.takeIf { seasons.contains(it) }
+            ?: seasons.firstOrNull { it > 0 }
+            ?: seasons.firstOrNull()
+            ?: 1
         val episodesForSeason = getEpisodesForSeason(meta.videos, selectedSeason)
 
         _uiState.update {

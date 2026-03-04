@@ -114,8 +114,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun PlayerScreen(
     viewModel: PlayerViewModel = hiltViewModel(),
-    onBackPress: () -> Unit,
-    onPlaybackErrorBack: () -> Unit = onBackPress,
+    onBackPress: (currentSeason: Int?, currentEpisode: Int?) -> Unit,
+    onPlaybackErrorBack: (currentSeason: Int?, currentEpisode: Int?) -> Unit = onBackPress,
     onPlaybackEnded: ((nextVideoId: String?, nextSeason: Int?, nextEpisode: Int?) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -129,13 +129,15 @@ fun PlayerScreen(
     val skipIntroFocusRequester = remember { FocusRequester() }
     var skipButtonActuallyVisible by remember { mutableStateOf(false) }
     val nextEpisodeFocusRequester = remember { FocusRequester() }
+    val currentSeason = uiState.currentSeason
+    val currentEpisode = uiState.currentEpisode
     val exitPlayer: () -> Unit = {
         viewModel.stopAndRelease()
-        onBackPress()
+        onBackPress(currentSeason, currentEpisode)
     }
     val exitPlayerFromError: () -> Unit = {
         viewModel.stopAndRelease()
-        onPlaybackErrorBack()
+        onPlaybackErrorBack(currentSeason, currentEpisode)
     }
 
     val handleBackPress = {
@@ -184,7 +186,7 @@ fun PlayerScreen(
             if (onPlaybackEnded != null) {
                 onPlaybackEnded(next?.videoId, next?.season, next?.episode)
             } else {
-                onBackPress()
+                onBackPress(currentSeason, currentEpisode)
             }
         }
     }
@@ -737,7 +739,7 @@ fun PlayerScreen(
                     val title = uiState.title
                     val headers = viewModel.getCurrentHeaders()
                     viewModel.stopAndRelease()
-                    onBackPress()
+                    onBackPress(currentSeason, currentEpisode)
                     ExternalPlayerLauncher.launch(
                         context = context,
                         url = url,
@@ -746,7 +748,7 @@ fun PlayerScreen(
                     )
                 },
                 onResetHideTimer = { viewModel.scheduleHideControls(); viewModel.onUserInteraction() },
-                onBack = onBackPress,
+                onBack = { onBackPress(currentSeason, currentEpisode) },
                 skipButtonVisible = skipButtonActuallyVisible
             )
         }

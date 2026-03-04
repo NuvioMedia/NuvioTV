@@ -35,6 +35,9 @@ import com.nuvio.tv.ui.screens.account.AuthSignInScreen
 import com.nuvio.tv.ui.screens.account.AuthQrSignInScreen
 import com.nuvio.tv.ui.screens.cast.CastDetailScreen
 
+private const val STREAM_RETURN_FOCUS_SEASON_KEY = "stream_return_focus_season"
+private const val STREAM_RETURN_FOCUS_EPISODE_KEY = "stream_return_focus_episode"
+
 @Composable
 fun NuvioNavHost(
     navController: NavHostController,
@@ -347,6 +350,12 @@ fun NuvioNavHost(
                 onBackPress = {
                     val streamContentType = streamArgs?.getString("contentType").orEmpty()
                     val streamContentId = streamArgs?.getString("contentId").orEmpty()
+                    val returnFocusSeason = backStackEntry.savedStateHandle
+                        .get<Int>(STREAM_RETURN_FOCUS_SEASON_KEY)
+                        ?: streamArgs?.getString("season")?.toIntOrNull()
+                    val returnFocusEpisode = backStackEntry.savedStateHandle
+                        .get<Int>(STREAM_RETURN_FOCUS_EPISODE_KEY)
+                        ?: streamArgs?.getString("episode")?.toIntOrNull()
                     if (
                         returnToDetailOnBack &&
                         streamContentType.equals("series", ignoreCase = true) &&
@@ -357,8 +366,8 @@ fun NuvioNavHost(
                                 itemId = streamContentId,
                                 itemType = streamContentType,
                                 addonBaseUrl = null,
-                                returnFocusSeason = streamArgs?.getString("season")?.toIntOrNull(),
-                                returnFocusEpisode = streamArgs?.getString("episode")?.toIntOrNull()
+                                returnFocusSeason = returnFocusSeason,
+                                returnFocusEpisode = returnFocusEpisode
                             )
                         ) {
                             popUpTo(Screen.Stream.route) { inclusive = true }
@@ -555,7 +564,13 @@ fun NuvioNavHost(
             )
         ) { backStackEntry ->
             PlayerScreen(
-                onBackPress = {
+                onBackPress = { currentSeason, currentEpisode ->
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set(STREAM_RETURN_FOCUS_SEASON_KEY, currentSeason)
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set(STREAM_RETURN_FOCUS_EPISODE_KEY, currentEpisode)
                     val returnedToStream = navController.popBackStack(Screen.Stream.route, inclusive = false)
                     if (!returnedToStream) {
                         val args = backStackEntry.arguments
@@ -573,8 +588,8 @@ fun NuvioNavHost(
                                     itemId = contentId,
                                     itemType = contentType,
                                     addonBaseUrl = null,
-                                    returnFocusSeason = args?.getString("season")?.toIntOrNull(),
-                                    returnFocusEpisode = args?.getString("episode")?.toIntOrNull()
+                                    returnFocusSeason = currentSeason ?: args.getString("season")?.toIntOrNull(),
+                                    returnFocusEpisode = currentEpisode ?: args.getString("episode")?.toIntOrNull()
                                 )
                             ) {
                                 popUpTo(Screen.Player.route) { inclusive = true }
@@ -627,7 +642,13 @@ fun NuvioNavHost(
                         navController.popBackStack(Screen.Stream.route, inclusive = true)
                     }
                 },
-                onPlaybackErrorBack = {
+                onPlaybackErrorBack = { currentSeason, currentEpisode ->
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set(STREAM_RETURN_FOCUS_SEASON_KEY, currentSeason)
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set(STREAM_RETURN_FOCUS_EPISODE_KEY, currentEpisode)
                     val returnedToStream = navController.popBackStack(Screen.Stream.route, inclusive = false)
                     if (!returnedToStream) {
                         val args = backStackEntry.arguments
@@ -645,8 +666,8 @@ fun NuvioNavHost(
                                 poster = args?.getString("poster"),
                                 backdrop = args?.getString("backdrop"),
                                 logo = args?.getString("logo"),
-                                season = args?.getString("season")?.toIntOrNull(),
-                                episode = args?.getString("episode")?.toIntOrNull(),
+                                season = currentSeason ?: args?.getString("season")?.toIntOrNull(),
+                                episode = currentEpisode ?: args?.getString("episode")?.toIntOrNull(),
                                 episodeName = args?.getString("episodeTitle"),
                                 genres = null,
                                 year = args?.getString("year"),

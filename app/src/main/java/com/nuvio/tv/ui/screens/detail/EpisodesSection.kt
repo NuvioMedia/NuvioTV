@@ -90,7 +90,8 @@ fun SeasonTabs(
     onSeasonSelected: (Int) -> Unit,
     onSeasonLongPress: (Int) -> Unit = {},
     selectedTabFocusRequester: FocusRequester,
-    downFocusRequester: FocusRequester? = null
+    downFocusRequester: FocusRequester? = null,
+    focusEnabled: Boolean = true
 ) {
     // Move season 0 (specials) to the end
     val sortedSeasons = remember(seasons) {
@@ -120,8 +121,15 @@ fun SeasonTabs(
                     }
                 },
                 modifier = Modifier
-                    .then(if (isSelected) Modifier.focusRequester(selectedTabFocusRequester) else Modifier)
+                    .then(
+                        if (isSelected && focusEnabled) {
+                            Modifier.focusRequester(selectedTabFocusRequester)
+                        } else {
+                            Modifier
+                        }
+                    )
                     .focusProperties {
+                        canFocus = focusEnabled
                         if (isSelected && downFocusRequester != null) {
                             down = downFocusRequester
                         }
@@ -227,7 +235,15 @@ fun EpisodesRow(
 
     LaunchedEffect(restoreFocusToken, restoreEpisodeId, restoreTargetRequester, episodes) {
         if (restoreFocusToken <= 0 || restoreEpisodeId.isNullOrBlank()) return@LaunchedEffect
-        if (episodes.none { it.id == restoreEpisodeId }) return@LaunchedEffect
+        val targetIndex = episodes.indexOfFirst { it.id == restoreEpisodeId }
+        if (targetIndex < 0) return@LaunchedEffect
+        val targetVisible = lazyListState.layoutInfo.visibleItemsInfo.any { it.index == targetIndex }
+        if (!targetVisible) {
+            val offsetPx = with(density) {
+                (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx()
+            }
+            lazyListState.scrollToItem(targetIndex, scrollOffset = -offsetPx)
+        }
         restoreTargetRequester?.requestFocusAfterFrames()
     }
 
