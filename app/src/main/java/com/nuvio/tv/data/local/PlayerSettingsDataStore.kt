@@ -105,11 +105,11 @@ data class BufferSettings(
     val retainBackBufferFromKeyframe: Boolean = false
 ) {
     companion object {
-        const val DEFAULT_MIN_BUFFER_MS = 50_000
+        const val DEFAULT_MIN_BUFFER_MS = 20_000
         const val DEFAULT_MAX_BUFFER_MS = 50_000
-        const val DEFAULT_BUFFER_FOR_PLAYBACK_MS = 2_500
+        const val DEFAULT_BUFFER_FOR_PLAYBACK_MS = 3_000
         const val DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 5_000
-        const val DEFAULT_TARGET_BUFFER_SIZE_MB: Int = 0
+        const val DEFAULT_TARGET_BUFFER_SIZE_MB: Int = 100
         const val DEFAULT_BACK_BUFFER_DURATION_MS = 0
     }
 }
@@ -327,6 +327,8 @@ class PlayerSettingsDataStore @Inject constructor(
     private val retainBackBufferFromKeyframeKey = booleanPreferencesKey("retain_back_buffer_from_keyframe")
 
     private val migrationLoadControlDefaultsAlignedDoneKey = booleanPreferencesKey("migration_load_control_defaults_aligned_done")
+    private val migrationLoadControlDefaultsRetunedDoneKey =
+        booleanPreferencesKey("migration_load_control_defaults_retuned_done")
 
     init {
         ioScope.launch {
@@ -345,6 +347,37 @@ class PlayerSettingsDataStore @Inject constructor(
                     }
 
                     prefs[migrationLoadControlDefaultsAlignedDoneKey] = true
+                }
+
+                val loadControlRetuned = prefs[migrationLoadControlDefaultsRetunedDoneKey] ?: false
+                if (!loadControlRetuned) {
+                    val currentMin = prefs[minBufferMsKey]
+                    val currentMax = prefs[maxBufferMsKey]
+                    val currentPlayback = prefs[bufferForPlaybackMsKey]
+                    val currentPlaybackAfterRebuffer = prefs[bufferForPlaybackAfterRebufferMsKey]
+                    val currentTargetBuffer = prefs[targetBufferSizeMbKey]
+
+                    val previousDefaultsDetected =
+                        currentMin == 50_000 &&
+                            currentMax == 50_000 &&
+                            currentPlayback == 2_500 &&
+                            currentPlaybackAfterRebuffer == 5_000 &&
+                            currentTargetBuffer == 0
+
+                    val olderDefaultsDetected =
+                        currentMin == 15_000 &&
+                            currentMax == 25_000
+
+                    if (previousDefaultsDetected || olderDefaultsDetected) {
+                        prefs[minBufferMsKey] = BufferSettings.DEFAULT_MIN_BUFFER_MS
+                        prefs[maxBufferMsKey] = BufferSettings.DEFAULT_MAX_BUFFER_MS
+                        prefs[bufferForPlaybackMsKey] = BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_MS
+                        prefs[bufferForPlaybackAfterRebufferMsKey] =
+                            BufferSettings.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
+                        prefs[targetBufferSizeMbKey] = BufferSettings.DEFAULT_TARGET_BUFFER_SIZE_MB
+                    }
+
+                    prefs[migrationLoadControlDefaultsRetunedDoneKey] = true
                 }
 
                 val min = prefs[minBufferMsKey]
