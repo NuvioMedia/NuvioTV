@@ -1,0 +1,217 @@
+name: Bug report
+description: Report a reproducible bug (one per issue).
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug.
+
+        If we can reproduce it, we can usually fix it. This form is just to get the basics in one place.
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Quick checks
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I can reproduce this on the latest release or latest main build.
+          required: false
+        - label: This issue is limited to a single bug (not multiple unrelated problems).
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Version & device
+
+  - type: input
+    id: app_version
+    attributes:
+      label: App version / commit
+      description: Release version (e.g. 1.2.3) or commit hash. If unsure, say where you got the APK/build from.
+      placeholder: "e.g. 1.2.3, or main@abc1234"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Install method
+      options:
+        - GitHub Release APK
+        - CI build / Nightly
+        - Built from source
+        - Other (please describe below)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android TV
+        - Google TV
+        - Fire TV
+        - Android phone/tablet
+        - Android emulator
+        - Other (please describe below)
+    validations:
+      required: true
+
+  - type: input
+    id: device_model
+    attributes:
+      label: Device model
+      description: "Example: Chromecast 4K, Shield TV, Mi Box, Fire TV Stick 4K, Pixel 8, etc."
+      placeholder: "e.g. NVIDIA Shield TV (2019)"
+    validations:
+      required: true
+
+  - type: input
+    id: android_version
+    attributes:
+      label: Android version
+      placeholder: "e.g. Android 12"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: player_mode
+    attributes:
+      label: Player mode
+      description: If you are using an external player, most playback issues must be reported to that player instead.
+      options:
+        - Internal player
+        - External player
+        - Ask every time
+        - Not sure
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## What happened?
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area (tag)
+      description: Pick the closest match. It helps triage.
+      options:
+        - Playback (start/stop/buffering)
+        - Streams / Sources (selection, loading, errors)
+        - Next Episode / Auto-play
+        - Skip Intro / Skip intervals
+        - Watch Progress (resume, watched state, history)
+        - Subtitles (download, styling, sync)
+        - Audio tracks
+        - Focus / Remote navigation
+        - UI / Layout
+        - Settings
+        - Sync (Trakt / remote)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact steps. If it depends on specific content, describe it (movie/series, season/episode, source/addon name) without sharing private links.
+      placeholder: |
+        1. Open ...
+        2. Navigate to ...
+        3. Press ...
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: "What you expected to happen."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: "What actually happened (include any on-screen error text/codes)."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Frequency
+      options:
+        - Always
+        - Often (more than 50%)
+        - Sometimes
+        - Rarely
+        - Once
+    validations:
+      required: true
+
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Did this work before?
+      options:
+        - Not sure
+        - Yes, it used to work
+        - No, it never worked
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Extra context (optional)
+
+  - type: textarea
+    id: media_details
+    attributes:
+      label: Media details (optional)
+      description: Only include what you can safely share.
+      placeholder: |
+        - Content type: series/movie
+        - Season/Episode: S1E2
+        - Stream/source: (addon name / source label)
+        - Video format: (if known)
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (optional but helpful)
+      description: |
+        Not required, but super helpful for playback/crash issues.
+        If you can, include a short snippet from around the time the bug happens.
+      render: shell
+      placeholder: |
+        adb logcat -d | tail -n 300
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else? (optional)
+      description: Screenshots/recordings, related issues, workarounds, etc.
+    validations:
+      required: false

@@ -10,6 +10,7 @@ import com.nuvio.tv.domain.model.ScraperManifestInfo
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -422,15 +423,17 @@ class PluginManager @Inject constructor(
             val settings = dataStore.getScraperSettings(scraper.id)
             
             Log.d(TAG, "Executing scraper: ${scraper.name}")
-            val results = runtime.executePlugin(
-                code = code,
-                tmdbId = tmdbId,
-                mediaType = mediaType,
-                season = season,
-                episode = episode,
-                scraperId = scraper.id,
-                scraperSettings = settings
-            )
+            val results = withContext(Dispatchers.IO + NonCancellable) {
+                runtime.executePlugin(
+                    code = code,
+                    tmdbId = tmdbId,
+                    mediaType = mediaType,
+                    season = season,
+                    episode = episode,
+                    scraperId = scraper.id,
+                    scraperSettings = settings
+                )
+            }
             
             Log.d(TAG, "Scraper ${scraper.name} returned ${results.size} results")
             results.map { it.copy(provider = scraper.name) }

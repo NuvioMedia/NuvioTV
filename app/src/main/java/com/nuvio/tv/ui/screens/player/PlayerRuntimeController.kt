@@ -232,6 +232,8 @@ class PlayerRuntimeController(
     internal var pendingSeekTelemetryAwaitingFirstFrame: Boolean = false
     internal var currentScrobbleItem: TraktScrobbleItem? = null
     internal var hasSentScrobbleStartForCurrentItem: Boolean = false
+    internal var hasRequestedScrobbleStartForCurrentItem: Boolean = false
+    internal var scrobbleStartRequestGeneration: Long = 0L
     internal var hasSentCompletionScrobbleForCurrentItem: Boolean = false
     internal var currentStreamHasVideoTrack: Boolean = false
     internal var currentVideoTrackIsLikelyVc1: Boolean = false

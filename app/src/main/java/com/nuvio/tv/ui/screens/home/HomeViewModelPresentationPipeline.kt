@@ -367,10 +367,15 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
         if (changed) state.copy(catalogRows = updatedRows) else state
     }
 
-    // If external meta brought new trailerYtIds and the item was previously a negative cache miss,
-    // clear the negative cache and retry the trailer pipeline with the updated fallback.
-    if (incomingTrailerYtIds.isNotEmpty() && trailerPreviewNegativeCache.remove(itemId)) {
-        trailerPreviewUrlsState.remove(itemId)
+    // If external meta brought new trailerYtIds and the item has no trailer resolved yet, retry.
+    // Covers: (a) item was in negative cache, (b) pipeline finished without result but wasn't
+    // cached as negative (e.g. focus changed mid-flight), (c) pipeline still in-flight.
+    if (incomingTrailerYtIds.isNotEmpty() && !trailerPreviewUrlsState.containsKey(itemId)) {
+        trailerPreviewNegativeCache.remove(itemId)
+        trailerPreviewLoadingIds.remove(itemId)
+        // Bump version so any in-flight pipeline for this item treats itself as stale
+        // and won't overwrite the retry result with a negative cache entry.
+        if (activeTrailerPreviewItemId == itemId) trailerPreviewRequestVersion++
         val currentItem = catalogsMap.values.firstNotNullOfOrNull { row ->
             row.items.firstOrNull { it.id == itemId }
         } ?: return

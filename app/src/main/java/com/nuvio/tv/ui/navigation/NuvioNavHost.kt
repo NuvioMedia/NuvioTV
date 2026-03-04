@@ -585,6 +585,48 @@ fun NuvioNavHost(
                         }
                     }
                 },
+                onPlaybackEnded = { nextVideoId, nextSeason, nextEpisode ->
+                    val args = backStackEntry.arguments
+                    val contentType = args?.getString("contentType").orEmpty()
+                    val contentId = args?.getString("contentId").orEmpty()
+                    val returnToDetailOnBack = args?.getString("returnToDetailOnBack")
+                        ?.toBooleanStrictOrNull() == true
+                    if (nextVideoId != null && nextSeason != null && nextEpisode != null) {
+                        val route = Screen.Stream.createRoute(
+                            videoId = nextVideoId,
+                            contentType = contentType,
+                            title = args?.getString("title").orEmpty(),
+                            poster = args?.getString("poster"),
+                            backdrop = args?.getString("backdrop"),
+                            logo = args?.getString("logo"),
+                            season = nextSeason,
+                            episode = nextEpisode,
+                            episodeName = null,
+                            genres = null,
+                            year = args?.getString("year"),
+                            contentId = contentId.takeIf { it.isNotBlank() },
+                            contentName = args?.getString("contentName"),
+                            runtime = null,
+                            returnToDetailOnBack = returnToDetailOnBack
+                        )
+                        navController.navigate(route) {
+                            popUpTo(Screen.Stream.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    } else if (contentId.isNotBlank() && contentType.isNotBlank()) {
+                        navController.navigate(
+                            Screen.Detail.createRoute(
+                                itemId = contentId,
+                                itemType = contentType
+                            )
+                        ) {
+                            popUpTo(Screen.Stream.route) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    } else {
+                        navController.popBackStack(Screen.Stream.route, inclusive = true)
+                    }
+                },
                 onPlaybackErrorBack = {
                     val returnedToStream = navController.popBackStack(Screen.Stream.route, inclusive = false)
                     if (!returnedToStream) {

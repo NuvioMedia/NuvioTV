@@ -1,0 +1,126 @@
+name: Triage (needs-info)
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  issues: write
+
+jobs:
+  needs_info:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Label low-context issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.payload.issue.number;
+
+            const issue = context.payload.issue;
+            const body = issue.body || "";
+            const labels = (issue.labels || []).map(l => (typeof l === "string" ? l : l.name).toLowerCase());
+
+            const NEEDS_INFO = "needs-info";
+            const NEEDS_INFO_COLOR = "d4c5f9"; // light purple (GitHub-ish)
+            const NEEDS_INFO_DESC = "More details needed to reproduce / triage.";
+
+            function hasLabel(name) {
+              return labels.includes(name.toLowerCase());
+            }
+
+            function extractSection(title) {
+              // Issue forms render headings like "### Steps to reproduce"
+              const re = new RegExp(`^###\\s+${title.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\s*$`, "m");
+              const match = body.match(re);
+              if (!match) return "";
+              const start = match.index + match[0].length;
+              const rest = body.slice(start);
+              const next = rest.search(/^###\s+/m);
+              const section = (next === -1 ? rest : rest.slice(0, next));
+              return section.trim();
+            }
+
+            const steps = extractSection("Steps to reproduce");
+            const expected = extractSection("Expected behavior");
+            const actual = extractSection("Actual behavior");
+
+            // Only triage bug-style issues.
+            // Skip feature/enhancement issues so they don't get "missing repro" comments.
+            const looksLikeBugForm = !!(steps || expected || actual);
+            const isBugIssue = hasLabel("bug") || looksLikeBugForm;
+            const isFeatureIssue =
+              hasLabel("enhancement") ||
+              hasLabel("feature") ||
+              hasLabel("feature request");
+
+            if (!isBugIssue || isFeatureIssue) {
+              return;
+            }
+
+            // Keep checks simple and forgiving: required fields can still be low-effort (e.g. "doesn't work").
+            const problems = [];
+            if (!steps || steps.length < 30) problems.push("Steps to reproduce (please list exact steps)");
+            if (!expected || expected.length < 10) problems.push("Expected behavior");
+            if (!actual || actual.length < 10) problems.push("Actual behavior (include any on-screen error text)");
+
+            async function ensureLabel(name, color, description) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (e) {
+                // Create if missing.
+                try {
+                  await github.rest.issues.createLabel({ owner, repo, name, color, description });
+                } catch (_) {
+                  // Ignore if it was created concurrently or permissions differ.
+                }
+              }
+            }
+
+            const hasNeedsInfo = hasLabel(NEEDS_INFO);
+
+            if (problems.length > 0) {
+              await ensureLabel(NEEDS_INFO, NEEDS_INFO_COLOR, NEEDS_INFO_DESC);
+              if (!hasNeedsInfo) {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number,
+                  labels: [NEEDS_INFO],
+                });
+              }
+
+              const marker = "<!-- nuviotv-bot:needs-info -->";
+              const commentBody =
+                `${marker}\n` +
+                `Thanks for the report. Could you add a bit more detail so we can reproduce it?\n\n` +
+                `Missing / too short:\n` +
+                problems.map(p => `- ${p}`).join("\n") +
+                `\n\n` +
+                `Logcat is optional, but if this is playback/crash related it helps a lot.\n` +
+                `Example: \`adb logcat -d | tail -n 300\``;
+
+              // Avoid spamming duplicate bot comments on every edit.
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number,
+                per_page: 100,
+              });
+              const alreadyCommented = comments.some(c => (c.body || "").includes(marker));
+              if (!alreadyCommented) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number,
+                  body: commentBody,
+                });
+              }
+            } else if (hasNeedsInfo) {
+              // If the user filled things in later, remove needs-info automatically.
+              try {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number, name: NEEDS_INFO });
+              } catch (_) {}
+            }
