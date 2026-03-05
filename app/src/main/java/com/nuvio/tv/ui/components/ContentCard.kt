@@ -60,6 +60,8 @@ import kotlinx.coroutines.delay
 
 private const val BACKDROP_ASPECT_RATIO = 16f / 9f
 private const val TRAILER_PREVIEW_REQUEST_FOCUS_DEBOUNCE_MS = 140L
+private const val TRAILER_PRE_FADE_DURATION_MS = 400L
+private const val TRAILER_URL_POLL_INTERVAL_MS = 200L
 private val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -100,6 +102,10 @@ fun ContentCard(
     var interactionNonce by remember { mutableIntStateOf(0) }
     var isBackdropExpanded by remember { mutableStateOf(false) }
     var trailerFirstFrameRendered by remember(trailerPreviewUrl) { mutableStateOf(false) }
+
+    // Controls the black overlay that fades in before card expansion and snaps away on first frame
+    var blackOverlayVisible by remember { mutableStateOf(false) }
+
     val watchedIconEndPadding by animateDpAsState(
         targetValue = if (isFocused) 18.dp else 8.dp,
         animationSpec = tween(durationMillis = 180),
@@ -116,18 +122,53 @@ fun ContentCard(
             interactionNonce,
             item.id
         ) {
+            // Reset everything when focus is lost or interaction resets
             if (!isFocused) {
                 isBackdropExpanded = false
+                blackOverlayVisible = false
                 return@LaunchedEffect
             }
 
             val delaySeconds = focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(0)
-
             isBackdropExpanded = false
-            val backdropDelayMs = delaySeconds * 1000L
-            delay(backdropDelayMs)
-            if (isFocused && focusedPosterBackdropExpandEnabled) {
+            blackOverlayVisible = false
+
+            if (focusedPosterBackdropTrailerEnabled) {
+                // --- Trailer-aware expand sequence ---
+                // Phase 1: Wait for (delay - 0.4s), keeping poster fully visible.
+                // If delay <= 0.4s, skip straight to fade.
+                val fadeStartMs = (delaySeconds * 1000L - TRAILER_PRE_FADE_DURATION_MS).coerceAtLeast(0L)
+                if (fadeStartMs > 0L) {
+                    delay(fadeStartMs)
+                }
+                if (!isFocused) return@LaunchedEffect
+
+                // Phase 2: Wait for trailer URL. If not resolved yet, keep polling.
+                // Only proceed (fade + expand) once URL is confirmed.
+                // If focus is lost during polling, the LaunchedEffect will restart and bail above.
+                while (trailerPreviewUrl == null) {
+                    delay(TRAILER_URL_POLL_INTERVAL_MS)
+                    if (!isFocused) return@LaunchedEffect
+                }
+
+                // URL resolved — begin 400ms fade to black (card still collapsed)
+                blackOverlayVisible = true
+                delay(TRAILER_PRE_FADE_DURATION_MS)
+                if (!isFocused) {
+                    blackOverlayVisible = false
+                    return@LaunchedEffect
+                }
+
+                // Phase 3: Expand card. Black overlay stays until first trailer frame renders.
                 isBackdropExpanded = true
+
+            } else {
+                // --- Original expand behavior (no trailer) ---
+                val backdropDelayMs = delaySeconds * 1000L
+                delay(backdropDelayMs)
+                if (isFocused && focusedPosterBackdropExpandEnabled) {
+                    isBackdropExpanded = true
+                }
             }
         }
     }
@@ -146,8 +187,15 @@ fun ContentCard(
         }
     }
 
+    // Reset black overlay and expansion state when focus is lost
+    LaunchedEffect(isFocused) {
+        if (!isFocused) {
+            blackOverlayVisible = false
+            trailerFirstFrameRendered = false
+        }
+    }
+
     // Only pay the animation cost on the card that is actually focused/expanding.
-    // Unfocused cards snap directly to baseCardWidth — no animation state overhead.
     val animatedCardWidth = when {
         !focusedPosterBackdropExpandEnabled -> baseCardWidth
         !isFocused && !isBackdropExpanded -> baseCardWidth
@@ -180,7 +228,6 @@ fun ContentCard(
     ) {
         val context = LocalContext.current
         val density = LocalDensity.current
-        // Keep decode size stable during width animation to avoid recreating requests/painters every frame.
         val maxRequestCardWidth = if (focusedPosterBackdropExpandEnabled) {
             maxOf(baseCardWidth, expandedCardWidth)
         } else {
@@ -325,18 +372,6 @@ fun ContentCard(
                     }
                 }
 
-                // Only allocate animation state when trailer is actually playing.
-                val trailerCoverAlpha = if (shouldPlayTrailerPreview) {
-                    val alpha by animateFloatAsState(
-                        targetValue = if (!trailerFirstFrameRendered) 1f else 0f,
-                        animationSpec = tween(durationMillis = 250),
-                        label = "trailerCoverAlpha"
-                    )
-                    alpha
-                } else {
-                    0f
-                }
-
                 if (shouldPlayTrailerPreview) {
                     TrailerPlayer(
                         trailerUrl = trailerPreviewUrl,
@@ -345,24 +380,35 @@ fun ContentCard(
                         onEnded = {
                             trailerFirstFrameRendered = false
                             isBackdropExpanded = false
+                            blackOverlayVisible = false
                         },
                         onFirstFrameRendered = {
                             trailerFirstFrameRendered = true
+                            // Snap black overlay away instantly — clean cut to video
+                            blackOverlayVisible = false
                         },
                         modifier = Modifier.fillMaxSize(),
                         muted = focusedPosterBackdropTrailerMuted
                     )
                 }
 
-                if (shouldPlayTrailerPreview && !imageUrl.isNullOrBlank()) {
-                    AsyncImage(
-                        model = imageModel,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer { alpha = trailerCoverAlpha },
-                        contentScale = ContentScale.Crop
+                // Black overlay: fades IN over 400ms before trailer starts,
+                // snaps away instantly when the first trailer frame renders.
+                // Replaces the old backdrop image cover for both portrait and landscape modes.
+                if (focusedPosterBackdropTrailerEnabled) {
+                    val blackAlpha by animateFloatAsState(
+                        targetValue = if (blackOverlayVisible && !trailerFirstFrameRendered) 1f else 0f,
+                        animationSpec = tween(durationMillis = TRAILER_PRE_FADE_DURATION_MS.toInt()),
+                        label = "blackOverlayAlpha"
                     )
+                    if (blackAlpha > 0f) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer { alpha = blackAlpha }
+                                .background(Color.Black)
+                        )
+                    }
                 }
 
                 if (isBackdropExpanded) {
