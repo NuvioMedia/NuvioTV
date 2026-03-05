@@ -30,6 +30,12 @@ object StreamAutoPlaySelector {
     private fun urlWorks(url: String): Boolean {
         val lower = url.lowercase()
 
+        // Excempt pixeldrain and cloudnestra from health check
+                if (lower.contains("pixeldrain") || lower.contains("cloudnestra")) {
+            
+            return true
+        }
+
         // Skip probing for signed or tokened URLs
         if (listOf("expires=", "signature=", "sig=", "auth=", "key=", "hash=", "x-amz-", "hdnts=", "cf_")
                 .any { lower.contains(it) }) {
@@ -120,7 +126,7 @@ object StreamAutoPlaySelector {
                         append(stream.name.orEmpty()).append(' ')
                         append(stream.title.orEmpty()).append(' ')
                         append(stream.description.orEmpty()).append(' ')
-                        append(url)
+                        
                     }
 
                     // Must match include pattern
