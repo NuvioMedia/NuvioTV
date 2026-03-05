@@ -1,7 +1,5 @@
 package com.nuvio.tv
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.content.Context
 import android.content.res.Configuration
@@ -134,7 +132,6 @@ import kotlinx.coroutines.launch
 import coil.compose.rememberAsyncImagePainter
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
-import com.nuvio.tv.core.recommendations.RecommendationConstants
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 
@@ -183,10 +180,6 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var appOnboardingDataStore: AppOnboardingDataStore
 
-    /** Deep link URI queued before the NavController is ready. */
-    private var pendingDeepLink = mutableStateOf<Uri?>(null)
-
-    @OptIn(ExperimentalTvMaterial3Api::class)
     private lateinit var jankStats: JankStats
 
     @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -208,7 +201,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
-        handleRecommendationDeepLink(intent)
         setContent {
             var hasSelectedProfileThisSession by remember { mutableStateOf(false) }
             var onboardingCompletedThisSession by remember { mutableStateOf(false) }
@@ -357,12 +349,6 @@ class MainActivity : ComponentActivity() {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
 
-                    // Consume deep link from TV recommendation cards
-                    val deepLinkUri by pendingDeepLink
-                    LaunchedEffect(deepLinkUri) {
-                        deepLinkUri?.let { uri ->
-                            consumeDeepLink(uri, navController)
-                            pendingDeepLink.value = null
                     val view = LocalView.current
                     LaunchedEffect(currentRoute) {
                         val holder = PerformanceMetricsState.getHolderForHierarchy(view)
@@ -506,64 +492,6 @@ class MainActivity : ComponentActivity() {
         startupSyncService.requestSyncNow()
         lifecycleScope.launch {
             traktProgressService.refreshNow()
-        }
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        handleRecommendationDeepLink(intent)
-    }
-
-    /**
-     * Parses a `nuviotv://content/…` deep link from a TV recommendation card
-     * and queues it for consumption once the NavController is ready.
-     */
-    private fun handleRecommendationDeepLink(intent: Intent?) {
-        val uri = intent?.data ?: return
-        if (uri.scheme != RecommendationConstants.DEEP_LINK_SCHEME) return
-        pendingDeepLink.value = uri
-    }
-
-    /**
-     * Processes a queued deep link URI and navigates accordingly.
-     * Call from a Composable scope that has the NavController.
-     */
-    private fun consumeDeepLink(uri: Uri, navController: NavHostController) {
-        val pathSegments = uri.pathSegments ?: return
-        val action = pathSegments.getOrNull(0) ?: return
-        val contentId = pathSegments.getOrNull(1) ?: return
-        val contentType = uri.getQueryParameter(RecommendationConstants.PARAM_CONTENT_TYPE) ?: "movie"
-
-        when (action) {
-            RecommendationConstants.DEEP_LINK_PATH_DETAIL -> {
-                val route = Screen.Detail.createRoute(
-                    itemId = contentId,
-                    itemType = contentType
-                )
-                navController.navigate(route)
-            }
-            RecommendationConstants.DEEP_LINK_PATH_PLAY -> {
-                val videoId = uri.getQueryParameter(RecommendationConstants.PARAM_VIDEO_ID) ?: contentId
-                val season = uri.getQueryParameter(RecommendationConstants.PARAM_SEASON)?.toIntOrNull()
-                val episode = uri.getQueryParameter(RecommendationConstants.PARAM_EPISODE)?.toIntOrNull()
-                val name = uri.getQueryParameter(RecommendationConstants.PARAM_NAME)
-                val poster = uri.getQueryParameter(RecommendationConstants.PARAM_POSTER)
-                val backdrop = uri.getQueryParameter(RecommendationConstants.PARAM_BACKDROP)
-
-                val route = Screen.Stream.createRoute(
-                    videoId = videoId,
-                    contentType = contentType,
-                    title = name ?: contentId,
-                    poster = poster,
-                    backdrop = backdrop,
-                    season = season,
-                    episode = episode,
-                    contentId = contentId,
-                    contentName = name
-                )
-                navController.navigate(route)
-            }
-            else -> { /* Unknown deep link action */ }
         }
     }
 }
