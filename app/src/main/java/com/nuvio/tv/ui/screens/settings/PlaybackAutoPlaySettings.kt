@@ -136,8 +136,8 @@ internal fun LazyListScope.autoPlaySettingsItems(
     item(key = "autoplay_next_episode_prefer_binge_group") {
         ToggleSettingsItem(
             icon = Icons.Default.Tune,
-            title = "Prefer Binge Group (Next Episode)",
-            subtitle = "Try the same source profile first (same addon/quality group) before normal auto-play rules.",
+            title = stringResource(R.string.autoplay_prefer_binge_group),
+            subtitle = stringResource(R.string.autoplay_prefer_binge_group_sub),
             isChecked = playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode,
             onCheckedChange = onSetStreamAutoPlayPreferBingeGroupForNextEpisode,
             onFocused = onItemFocused

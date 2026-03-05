@@ -1,4 +1,5 @@
 <resources>
+    <string name="app_name">Nuvio</string>
     <string name="type_movie">Película</string>
     <string name="type_series">Series</string>
     <string name="type_unknown">Desconocido</string>
@@ -16,10 +17,15 @@
     <string name="cw_upcoming">Próximamente</string>
     <string name="cw_next_up">Siguiente</string>
     <string name="cw_resume">Reanudar</string>
+    <string name="cw_hours_min_left">%1$dh %2$dm restantes</string>
+    <string name="cw_min_left">%1$dm restantes</string>
+    <string name="cw_almost_done">Casi terminado</string>
     <string name="cw_airs_date">Se transmite %1$s</string>
     <string name="cw_action_go_to_details">Ir a detalles</string>
+    <string name="cw_action_start_from_beginning">Empezar desde el principio</string>
     <string name="cw_action_remove">Eliminar</string>
     <string name="cw_dialog_subtitle">Elige qué hacer con este elemento.</string>
+    <string name="home_poster_dialog_subtitle">Acciones del título</string>
 
     <!-- CatalogRowSection -->
     <string name="catalog_from_addon">de %1$s</string>
@@ -53,8 +59,31 @@
     <string name="episodes_play">Reproducir</string>
     <string name="episodes_season_actions">Acciones de la temporada</string>
 
+    <!-- MetaDetailsViewModel -->
+    <string name="detail_added_to_library">Añadido a la biblioteca</string>
+    <string name="detail_removed_from_library">Eliminado de la biblioteca</string>
+    <string name="detail_episode_marked_watched">Episodio marcado como visto</string>
+    <string name="detail_episode_marked_unwatched">Episodio marcado como no visto</string>
+    <string name="detail_lists_updated">Listas actualizadas</string>
+    <string name="detail_movie_marked_watched">Marcado como visto</string>
+    <string name="detail_movie_marked_unwatched">Marcado como no visto</string>
+    <string name="detail_all_episodes_watched">Todos los episodios ya vistos</string>
+    <string name="detail_no_watched_episodes">No hay episodios vistos en esta temporada</string>
+    <string name="detail_all_previous_watched">Todos los episodios anteriores ya vistos</string>
+    <string name="detail_marked_episodes_watched">Episodios marcados como vistos: %1$d</string>
+    <string name="detail_marked_episodes_unwatched">Episodios marcados como no vistos: %1$d</string>
+    <string name="detail_marked_previous_watched">Episodios anteriores marcados como vistos: %1$d</string>
+
     <!-- MetaDetailsScreen -->
+    <string name="detail_btn_play">Reproducir</string>
+    <string name="detail_btn_resume">Reanudar</string>
+    <string name="detail_btn_play_episode">Reproducir T%1$dE%2$d</string>
+    <string name="detail_btn_resume_episode">Reanudar T%1$dE%2$d</string>
+    <string name="detail_btn_next_episode">Siguiente T%1$dE%2$d</string>
     <string name="detail_tab_cast">Creador y elenco</string>
+    <string name="cast_role_creator">Creador</string>
+    <string name="cast_role_director">Director</string>
+    <string name="cast_role_writer">Guionista</string>
     <string name="detail_tab_ratings">Calificaciones</string>
     <string name="detail_tab_more_like_this">Más como esto</string>
     <string name="detail_section_network">Red</string>
@@ -104,6 +133,11 @@
     <string name="settings_debug_subtitle">Herramientas de desarrollador y marcas de características.</string>
     <string name="settings_plugins_section_subtitle">Administra repositorios, proveedores y estados de complementos.</string>
     <string name="settings_account_section_subtitle">Estado de la cuenta y sincronización.</string>
+    <string name="account_stat_addons">complementos</string>
+    <string name="account_stat_plugins">complementos</string>
+    <string name="account_stat_library">biblioteca</string>
+    <string name="account_stat_progress">progreso</string>
+    <string name="account_stat_watched">visto</string>
     <string name="settings_integrations_section">Integraciones</string>
     <string name="settings_integrations_section_subtitle">Elige configuración de TMDB o MDBList</string>
     <string name="settings_tmdb_subtitle">Controles de enriquecimiento de metadatos</string>
@@ -125,6 +159,7 @@
     <string name="playback_pause_overlay">Superposición de pausa</string>
     <string name="playback_pause_overlay_sub">Muestra superposición de detalles después de 5 segundos mientras está en pausa.</string>
     <string name="playback_show_clock_sub">Muestra la hora actual y la hora de finalización mientras los controles están visibles.</string>
+    <string name="playback_osd_clock">Reloj en pantalla</string>
     <string name="playback_skip_intro">Saltar introducción</string>
     <string name="playback_skip_intro_sub">Utiliza introdb.app para detectar introducciones y recapitulaciones.</string>
     <string name="playback_auto_frame_rate">Frecuencia de fotogramas automática</string>
@@ -177,6 +212,7 @@
     <!-- PlaybackSubtitleSettings -->
     <string name="sub_section">Subtítulos</string>
     <string name="sub_not_set">No configurado</string>
+    <string name="sub_forced_lang">Forzado</string>
     <string name="sub_preferred_lang">Idioma preferido</string>
     <string name="sub_secondary_lang">Idioma preferido secundario</string>
     <string name="sub_organization">Organización de subtítulos</string>
@@ -284,6 +320,8 @@
     <string name="layout_addon_name_sub">Muestra nombre de fuente bajo títulos de catálogo.</string>
     <string name="layout_catalog_type">Mostrar tipo de catálogo</string>
     <string name="layout_catalog_type_sub">Muestra sufijo de tipo junto al nombre del catálogo (Película/Series).</string>
+    <string name="layout_hide_unreleased">Ocultar contenido no estrenado</string>
+    <string name="layout_hide_unreleased_sub">Oculta películas y series que aún no se han estrenado.</string>
     <string name="layout_section_detail">Página de detalles</string>
     <string name="layout_section_detail_desc">Configuración para pantallas de detalles y episodios.</string>
     <string name="layout_blur_unwatched">Desenfocar episodios no vistos</string>
@@ -387,6 +425,10 @@
     <string name="trakt_connected_as">Conectado como %1$s</string>
     <string name="trakt_account_login">Inicio de sesión de cuenta</string>
     <string name="trakt_awaiting_instruction">Ve a trakt.tv/activate e introduce este código:</string>
+    <string name="trakt_waiting_approval">Esperando aprobación…</string>
+    <string name="qr_login_approved">Inicio de sesión aprobado. Finalizando acceso…</string>
+    <string name="qr_login_pending">Esperando aprobación en tu teléfono…</string>
+    <string name="qr_login_expired">Inicio de sesión con QR expirado. Genera un nuevo código.</string>
     <string name="trakt_code_expires">El código caduca en %1$s</string>
     <string name="trakt_token_refreshes">El token de acceso de Trakt se actualiza en %1$s</string>
     <string name="trakt_login_instruction">Presiona Iniciar sesión para comenzar la autenticación de dispositivo de Trakt. Un código QR aparecerá aquí.</string>
@@ -524,6 +566,7 @@
     <string name="sources_title">Fuentes</string>
     <string name="sources_reload">Recargar</string>
     <string name="sources_close">Cerrar</string>
+    <string name="sources_playing">Reproduciendo</string>
     <string name="sources_no_streams">No se encontraron transmisiones</string>
 
     <!-- EpisodesSidePanel -->
@@ -532,6 +575,14 @@
     <string name="episodes_panel_reload">Recargar</string>
     <string name="episodes_panel_no_streams">No se encontraron transmisiones</string>
     <string name="episodes_panel_no_episodes">No hay episodios disponibles</string>
+    <string name="episodes_panel_title">Episodios</string>
+    <string name="episodes_panel_streams_title">Transmisiones</string>
+    <string name="player_speed_normal">Normal</string>
+    <string name="player_aspect_fit">Ajustar (Original)</string>
+    <string name="player_aspect_stretch">Estirar</string>
+    <string name="player_aspect_fit_width">Ajustar ancho</string>
+    <string name="player_aspect_fit_height">Ajustar alto</string>
+    <string name="player_aspect_crop">Recortar</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
@@ -544,9 +595,34 @@
     <string name="subtitle_text_color">Color del texto</string>
     <string name="subtitle_outline_color">Color del contorno</string>
     <string name="subtitle_reset_defaults">Restablecer valores predeterminados</string>
+    <string name="subtitle_tab_builtin">Incorporados</string>
+    <string name="subtitle_tab_addons">Complementos</string>
+    <string name="subtitle_tab_languages">Idiomas</string>
+    <string name="subtitle_tab_style">Estilo</string>
+    <string name="subtitle_tab_delay">Retraso</string>
+    <string name="subtitle_none">Ninguno</string>
+    <string name="subtitle_all">Todos</string>
+    <string name="subtitle_section_core">Principal</string>
+    <string name="subtitle_section_advanced">Avanzado</string>
+    <string name="subtitle_font_size">Tamaño de fuente</string>
+    <string name="subtitle_bold">Negrita</string>
+    <string name="subtitle_outline">Contorno</string>
+    <string name="subtitle_bottom_offset">Desplazamiento inferior</string>
+    <string name="subtitle_on">Activado</string>
+    <string name="subtitle_off">Desactivado</string>
     <string name="subtitle_style_title">Estilo de subtítulo</string>
     <string name="subtitle_style_color">Color</string>
     <string name="subtitle_style_reset">Restablecer</string>
+    <string name="subtitle_style_font_size">Tamaño de fuente</string>
+    <string name="subtitle_style_bold">Negrita</string>
+    <string name="subtitle_style_text_color">Color del texto</string>
+    <string name="subtitle_style_outline">Contorno</string>
+    <string name="subtitle_style_bottom_offset">Desplazamiento inferior</string>
+    <string name="subtitle_style_defaults">Predeterminados</string>
+    <string name="subtitle_style_on">Activado</string>
+    <string name="subtitle_style_off">Desactivado</string>
+    <string name="panel_failed_load_streams">Error al cargar transmisiones</string>
+    <string name="panel_failed_load_episodes">Error al cargar episodios</string>
 
     <!-- PauseOverlay -->
     <string name="pause_you_are_watching">Estás viendo</string>
@@ -556,11 +632,24 @@
 
     <!-- NextEpisodeCardOverlay -->
     <string name="next_episode_label">Siguiente episodio</string>
+    <string name="next_episode_finding_source">Buscando fuente…</string>
+    <string name="next_episode_playing_via">Reproduciendo vía %1$s en %2$ds</string>
+    <string name="next_episode_play">Reproducir</string>
+    <string name="next_episode_unaired">No transmitido</string>
+    <string name="skip_intro">Saltar introducción</string>
+    <string name="skip_ending">Saltar créditos</string>
+    <string name="skip_recap">Saltar resumen</string>
+    <string name="skip_generic">Saltar</string>
+    <string name="display_mode_refresh">Actualizar</string>
+    <string name="display_mode_resolution">Resolución</string>
 
 
     <!-- SearchScreen -->
     <string name="search_keyboard_hint">Presiona Listo en el teclado para buscar</string>
     <string name="search_placeholder">Buscar películas y series</string>
+    <string name="search_start_title">Empezar a buscar</string>
+    <string name="search_start_subtitle">Introduce al menos 2 caracteres</string>
+    <string name="search_start_subtitle_no_discover">El descubrimiento está desactivado. Introduce al menos 2 caracteres</string>
 
     <!-- LibraryScreen -->
     <string name="library_syncing">Sincronizando biblioteca de Trakt\u2026</string>
@@ -612,6 +701,18 @@
     <string name="auth_qr_finishing">Finalizando inicio de sesión\u2026</string>
     <string name="auth_qr_code_label">Código: %1$s</string>
     <string name="auth_qr_expires">Caduca en %1$s</string>
+    <string name="auth_qr_phone_hint">Usa tu teléfono para iniciar sesión con correo/contraseña. La TV se queda solo con QR para un inicio más rápido.</string>
+    <string name="auth_qr_scan_instruction">Escanea el QR, aprueba en el navegador y luego vuelve aquí.</string>
+    <string name="auth_qr_code_display">Código: %1$s</string>
+    <string name="auth_qr_refresh">Actualizar QR</string>
+    <string name="auth_qr_continue_without_account">Continuar sin cuenta</string>
+    <string name="auth_qr_connected">Tu cuenta está conectada en esta TV.</string>
+    <string name="auth_qr_synced_data">Tus datos sincronizados</string>
+    <string name="auth_qr_generating">Generando QR…</string>
+    <string name="auth_qr_unavailable">QR no disponible. Actualiza para reintentar.</string>
+    <string name="auth_qr_please_wait">Por favor, espera…</string>
+    <string name="auth_qr_continue">Continuar</string>
+    <string name="auth_qr_back">Atrás</string>
 
     <!-- SyncCodeGenerateScreen -->
     <string name="sync_generate_title">Generar código de sincronización</string>
@@ -736,6 +837,7 @@
     <string name="nav_library">Biblioteca</string>
     <string name="nav_addons">Complementos</string>
     <string name="nav_settings">Configuración</string>
+    <string name="settings_rounded_ui">Interfaz redondeada</string>
     <string name="cd_expand_sidebar">Expandir barra lateral</string>
 
     <string name="update_close">Cerrar</string>

@@ -80,7 +80,10 @@ internal fun PlayerRuntimeController.persistRememberedLinkAudioSelection(trackIn
             streamName = streamName,
             headers = currentHeaders,
             rememberedAudioLanguage = selectedTrack?.language,
-            rememberedAudioName = selectedTrack?.name
+            rememberedAudioName = selectedTrack?.name,
+            filename = currentFilename,
+            videoHash = currentVideoHash,
+            videoSize = currentVideoSize
         )
     }
 }

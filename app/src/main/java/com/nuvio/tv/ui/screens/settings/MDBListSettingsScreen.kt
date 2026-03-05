@@ -3,6 +3,7 @@
 package com.nuvio.tv.ui.screens.settings
 
 import android.view.KeyEvent
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,6 +28,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -168,14 +171,9 @@ fun MDBListSettingsContent(
     if (showApiKeyDialog) {
         MDBListApiKeyDialog(
             currentValue = uiState.apiKey,
-            onSave = { value ->
-                viewModel.onEvent(MDBListSettingsEvent.SetApiKey(value))
-                showApiKeyDialog = false
-            },
-            onClear = {
-                viewModel.onEvent(MDBListSettingsEvent.SetApiKey(""))
-                showApiKeyDialog = false
-            },
+            viewModel = viewModel,
+            onSaved = { showApiKeyDialog = false },
+            onClear = { viewModel.validateAndSaveApiKey("") {}; showApiKeyDialog = false },
             onDismiss = { showApiKeyDialog = false }
         )
     }
@@ -184,7 +182,8 @@ fun MDBListSettingsContent(
 @Composable
 private fun MDBListApiKeyDialog(
     currentValue: String,
-    onSave: (String) -> Unit,
+    viewModel: MDBListSettingsViewModel,
+    onSaved: () -> Unit,
     onClear: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -192,6 +191,15 @@ private fun MDBListApiKeyDialog(
     var isInputFocused by remember { mutableStateOf(false) }
     val inputFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val validating by viewModel.validating.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val invalidApiKeyMsg = stringResource(R.string.mdblist_invalid_api_key)
+
+    LaunchedEffect(Unit) {
+        viewModel.validationError.collect {
+            Toast.makeText(context, invalidApiKeyMsg, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     NuvioDialog(
         onDismiss = onDismiss,
@@ -280,13 +288,13 @@ private fun MDBListApiKeyDialog(
             }
             Spacer(modifier = Modifier.width(8.dp))
             Button(
-                onClick = { onSave(value.trim()) },
+                onClick = { if (!validating) viewModel.validateAndSaveApiKey(value, onSaved) },
                 colors = ButtonDefaults.colors(
                     containerColor = NuvioColors.BackgroundCard,
                     contentColor = NuvioColors.TextPrimary
                 )
             ) {
-                Text(stringResource(R.string.action_save))
+                Text(if (validating) stringResource(R.string.action_saving) else stringResource(R.string.action_save))
             }
         }
     }

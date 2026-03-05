@@ -20,21 +20,10 @@ internal data class SubtitleFetchRequest(
 internal fun PlayerRuntimeController.buildSubtitleFetchRequest(): SubtitleFetchRequest? {
     val id = contentId ?: return null
     val type = contentType ?: return null
-    val baseId = id.split(":").firstOrNull() ?: id
-    val normalizedType = type.lowercase()
-    val videoId = if (
-        (normalizedType == "series" || normalizedType == "tv") &&
-        currentSeason != null &&
-        currentEpisode != null
-    ) {
-        "$baseId:$currentSeason:$currentEpisode"
-    } else {
-        null
-    }
     return SubtitleFetchRequest(
         type = type.lowercase(),
-        id = baseId,
-        videoId = videoId
+        id = id,
+        videoId = currentVideoId
     )
 }
 
@@ -47,6 +36,24 @@ internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(): List<Subt
         if (result != null) {
             currentVideoHash = result.hash
             if (currentVideoSize == null) currentVideoSize = result.fileSize
+            // Update cache now that we have the computed hash
+            val key = streamCacheKey
+            val url = currentStreamUrl.takeIf { it.isNotBlank() }
+            if (key != null && url != null) {
+                val state = _uiState.value
+                val selectedAudio = state.audioTracks.getOrNull(state.selectedAudioTrackIndex)
+                streamLinkCacheDataStore.save(
+                    contentKey = key,
+                    url = url,
+                    streamName = state.currentStreamName ?: title,
+                    headers = currentHeaders,
+                    rememberedAudioLanguage = selectedAudio?.language ?: rememberedAudioLanguage,
+                    rememberedAudioName = selectedAudio?.name ?: rememberedAudioName,
+                    filename = currentFilename,
+                    videoHash = currentVideoHash,
+                    videoSize = currentVideoSize
+                )
+            }
         }
     }
 

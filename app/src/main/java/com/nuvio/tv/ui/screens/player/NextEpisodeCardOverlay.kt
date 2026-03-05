@@ -32,10 +32,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,6 +52,7 @@ import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import android.view.KeyEvent
 
 @Composable
 fun NextEpisodeCardOverlay(
@@ -63,6 +66,7 @@ fun NextEpisodeCardOverlay(
     autoPlayCountdownSec: Int?,
     onPlayNext: () -> Unit,
     focusRequester: FocusRequester? = null,
+    downFocusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier
 ) {
     if (nextEpisode == null) return
@@ -107,6 +111,25 @@ fun NextEpisodeCardOverlay(
             modifier = Modifier
                 .width(420.dp)
                 .focusRequester(activeFocusRequester)
+                .then(
+                    if (downFocusRequester != null) {
+                        Modifier.focusProperties { down = downFocusRequester }
+                    } else {
+                        Modifier
+                    }
+                )
+                .onPreviewKeyEvent { keyEvent ->
+                    if (
+                        downFocusRequester != null &&
+                        keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                        keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                    ) {
+                        runCatching { downFocusRequester.requestFocus() }
+                        true
+                    } else {
+                        false
+                    }
+                }
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),

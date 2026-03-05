@@ -177,6 +177,8 @@
     <string name="playback_afr_on_start_sub">Przełącz przy rozpoczęciu odtwarzania.</string>
     <string name="playback_afr_on_start_stop">Przy starcie/zatrzymaniu</string>
     <string name="playback_afr_on_start_stop_sub">Przełącz przy starcie i przywróć przy zatrzymaniu.</string>
+    <string name="playback_resolution_matching">Dopasowanie rozdzielczości</string>
+    <string name="playback_resolution_matching_sub">Zezwól na zmianę trybu wyświetlania w celu dopasowania rozdzielczości wideo.</string>
     <string name="playback_player_external_desc">Zawsze otwieraj strumienie w zewnętrznej aplikacji</string>
     <string name="playback_player_ask_desc">Wybieraj odtwarzacz za każdym razem</string>
 
@@ -240,6 +242,13 @@
     <string name="sub_org_none_desc">Pokaż napisy w domyślnej kolejności wyników dodatku.</string>
     <string name="sub_org_by_lang_desc">Grupuj napisy według języka.</string>
     <string name="sub_org_by_addon_desc">Grupuj napisy według źródła dodatku.</string>
+    <string name="sub_startup_mode_title">Wczytywanie napisów z dodatków</string>
+    <string name="sub_startup_mode_fast">Szybki start</string>
+    <string name="sub_startup_mode_preferred">Preferowane języki</string>
+    <string name="sub_startup_mode_all">Wszystkie napisy z dodatków</string>
+    <string name="sub_startup_mode_fast_desc">Uruchom odtwarzanie natychmiast. Wybór napisów z dodatku może raz przeładować odtwarzacz.</string>
+    <string name="sub_startup_mode_preferred_desc">Pobierz napisy z dodatków przed odtwarzaniem i dołącz preferowane/drugorzedne ścieżki językowe.</string>
+    <string name="sub_startup_mode_all_desc">Pobierz i dołącz wszystkie napisy z dodatków przed odtwarzaniem. Najwolniejszy start.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Ponownie użyj ostatniego linku</string>
@@ -251,6 +260,8 @@
     <string name="autoplay_stream_selection">Automatyczny wybór strumienia</string>
     <string name="autoplay_next_episode">Auto-odtwarzaj następny odcinek</string>
     <string name="autoplay_next_episode_sub">Automatycznie rozpocznij następny odcinek gdy pojawi się monit.</string>
+    <string name="autoplay_prefer_binge_group">Preferuj grupę Binge (następny odcinek)</string>
+    <string name="autoplay_prefer_binge_group_sub">Najpierw spróbuj tego samego profilu źródła przed normalnymi regułami auto-odtwarzania.</string>
     <string name="autoplay_threshold_pct">Procent</string>
     <string name="autoplay_threshold_min">Minut przed końcem</string>
     <string name="autoplay_threshold_mode">Określanie progu następnego odcinka</string>
@@ -387,6 +398,7 @@
     <string name="mdblist_dialog_subtitle">Wprowadź klucz API, aby pobierać zewnętrzne oceny</string>
     <string name="mdblist_dialog_placeholder">Wprowadź klucz API MDBList</string>
     <string name="mdblist_not_set">Nie ustawiono</string>
+    <string name="mdblist_invalid_api_key">Nieprawidłowy klucz API MDBList</string>
     <string name="action_clear">Wyczyść</string>
 
     <!-- Anime-Skip -->
@@ -399,6 +411,7 @@
     <string name="animeskip_dialog_title">Anime Skip Client ID</string>
     <string name="animeskip_dialog_subtitle">Utwórz własny Client ID na anime-skip.com/account/settings</string>
     <string name="animeskip_dialog_placeholder">Wprowadź Client ID</string>
+    <string name="animeskip_invalid_client_id">Nieprawidłowy Client ID</string>
     <string name="settings_animeskip_subtitle">Znaczniki czasu czołówek i napisów końcowych anime</string>
 
     <!-- TmdbSettingsScreen -->
@@ -445,6 +458,8 @@
     <string name="trakt_unaired_next_up_subtitle">Pokaż nadchodzące odcinki przed emisją</string>
     <string name="trakt_unaired_shown">Widoczne</string>
     <string name="trakt_unaired_hidden">Ukryte</string>
+    <string name="trakt_unaired_now_shown">Niewyemitowane odcinki są teraz widoczne</string>
+    <string name="trakt_unaired_now_hidden">Niewyemitowane odcinki są teraz ukryte</string>
     <string name="trakt_cached_label">Zbuforowane</string>
     <string name="trakt_stat_movies">Filmy</string>
     <string name="trakt_stat_shows">Seriale</string>
@@ -558,6 +573,17 @@
 
     <!-- PlayerScreen -->
     <string name="player_ends_at">Koniec o: %1$s</string>
+    <string name="player_no_external_player">Nie znaleziono zewnętrznego odtwarzacza</string>
+
+    <!-- ParentalGuideOverlay -->
+    <string name="parental_nudity">Nagość</string>
+    <string name="parental_violence">Przemoc</string>
+    <string name="parental_profanity">Wulgaryzmy</string>
+    <string name="parental_alcohol">Alkohol/Narkotyki</string>
+    <string name="parental_frightening">Przerażające sceny</string>
+    <string name="parental_severity_severe">Silne</string>
+    <string name="parental_severity_moderate">Umiarkowane</string>
+    <string name="parental_severity_mild">Łagodne</string>
     <string name="player_via">przez %1$s</string>
     <string name="player_subtitle_delay">Opóźnienie napisów</string>
     <string name="player_error_title">Błąd odtwarzania</string>
@@ -641,6 +667,7 @@
     <string name="next_episode_playing_via">Odtwarzanie przez %1$s za %2$ds</string>
     <string name="next_episode_play">Odtwórz</string>
     <string name="next_episode_unaired">Niewyemitowany</string>
+    <string name="next_episode_not_aired_yet">Następny odcinek nie został jeszcze wyemitowany</string>
     <string name="skip_intro">Pomiń czołówkę</string>
     <string name="skip_ending">Pomiń zakończenie</string>
     <string name="skip_recap">Pomiń podsumowanie</string>
@@ -655,6 +682,10 @@
     <string name="search_start_title">Zacznij szukać</string>
     <string name="search_start_subtitle">Wpisz co najmniej 2 znaki</string>
     <string name="search_start_subtitle_no_discover">Odkrywanie jest wyłączone. Wpisz co najmniej 2 znaki</string>
+    <string name="search_voice_no_speech">Nie wykryto mowy. Spróbuj ponownie.</string>
+    <string name="search_voice_mic_permission">Uprawnienie do mikrofonu jest wymagane do wyszukiwania głosowego.</string>
+    <string name="search_voice_failed">Rozpoznawanie głosu nie powiodło się. Spróbuj ponownie.</string>
+    <string name="search_voice_unavailable">Wyszukiwanie głosowe jest niedostępne na tym urządzeniu.</string>
 
     <!-- LibraryScreen -->
     <string name="library_syncing">Synchronizowanie biblioteki Trakt\u2026</string>

@@ -8,6 +8,7 @@ import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
+import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
@@ -45,7 +46,8 @@ class HomeViewModel @Inject constructor(
     internal val traktSettingsDataStore: TraktSettingsDataStore,
     internal val tmdbService: TmdbService,
     internal val tmdbMetadataService: TmdbMetadataService,
-    internal val trailerService: TrailerService
+    internal val trailerService: TrailerService,
+    internal val watchedItemsPreferences: WatchedItemsPreferences
 ) : ViewModel() {
     companion object {
         internal const val TAG = "HomeViewModel"

@@ -56,6 +56,13 @@ class WatchedItemsPreferences @Inject constructor(
         }
     }
 
+    fun getWatchedEpisodesWithTimestamps(contentId: String): Flow<Map<Pair<Int, Int>, Long>> {
+        return allItems.map { items ->
+            items.filter { it.contentId == contentId && it.season != null && it.episode != null }
+                .associate { (it.season!! to it.episode!!) to it.watchedAt }
+        }
+    }
+
     suspend fun markAsWatched(item: WatchedItem) {
         store().edit { preferences ->
             val current = preferences[watchedItemsKey] ?: emptySet()

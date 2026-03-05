@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.local.TraktSettingsDataStore
+import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Video
@@ -484,6 +485,11 @@ private suspend fun HomeViewModel.findNextUpEpisodeFromProgressMap(
     }
     if (progressMap.isEmpty()) return null
 
+    val watchedEpisodesMap = runCatching {
+        watchedItemsPreferences.getWatchedEpisodesWithTimestamps(contentId).first()
+    }.getOrElse { emptyMap() }
+    val watchedEpisodes = watchedEpisodesMap.keys
+
     val completedProgress = progressMap.values
         .filter {
             val season = it.season
@@ -493,14 +499,45 @@ private suspend fun HomeViewModel.findNextUpEpisodeFromProgressMap(
                 season != 0 &&
                 it.isCompleted()
         }
-    if (completedProgress.isEmpty()) return null
 
-    val furthestCompleted = completedProgress.maxWithOrNull(
+    val latestWatchedSeason = watchedEpisodes.maxByOrNull { (s, e) -> s * 10000 + e }
+    val completedSeasonEpisode = completedProgress.maxWithOrNull(
         compareBy<WatchProgress>({ it.season ?: -1 }, { it.episode ?: -1 }, { it.lastWatched })
-    ) ?: return null
+    )
+
+    val furthestSeason: Int
+    val furthestEpisode: Int
+    val furthestLastWatched: Long
+
+    if (completedSeasonEpisode != null && latestWatchedSeason != null) {
+        val progKey = (completedSeasonEpisode.season ?: 0) * 10000 + (completedSeasonEpisode.episode ?: 0)
+        val watchedKey = latestWatchedSeason.first * 10000 + latestWatchedSeason.second
+        if (watchedKey > progKey) {
+            furthestSeason = latestWatchedSeason.first
+            furthestEpisode = latestWatchedSeason.second
+            furthestLastWatched = watchedEpisodesMap[latestWatchedSeason] ?: completedSeasonEpisode.lastWatched
+        } else {
+            furthestSeason = completedSeasonEpisode.season ?: return null
+            furthestEpisode = completedSeasonEpisode.episode ?: return null
+            furthestLastWatched = maxOf(
+                completedSeasonEpisode.lastWatched,
+                watchedEpisodesMap.values.maxOrNull() ?: 0L
+            )
+        }
+    } else if (latestWatchedSeason != null) {
+        furthestSeason = latestWatchedSeason.first
+        furthestEpisode = latestWatchedSeason.second
+        furthestLastWatched = watchedEpisodesMap[latestWatchedSeason] ?: System.currentTimeMillis()
+    } else if (completedSeasonEpisode != null) {
+        furthestSeason = completedSeasonEpisode.season ?: return null
+        furthestEpisode = completedSeasonEpisode.episode ?: return null
+        furthestLastWatched = completedSeasonEpisode.lastWatched
+    } else {
+        return null
+    }
 
     val furthestIndex = episodes.indexOfFirst {
-        it.season == furthestCompleted.season && it.episode == furthestCompleted.episode
+        it.season == furthestSeason && it.episode == furthestEpisode
     }
     if (furthestIndex < 0) return null
 
@@ -510,7 +547,8 @@ private suspend fun HomeViewModel.findNextUpEpisodeFromProgressMap(
             val season = candidate.season ?: return@firstOrNull false
             val episode = candidate.episode ?: return@firstOrNull false
             val candidateProgress = progressMap[season to episode]
-            candidateProgress?.isCompleted() != true
+            candidateProgress?.isCompleted() != true &&
+                (season to episode) !in watchedEpisodes
         }
         ?: return null
 
@@ -522,14 +560,18 @@ private suspend fun HomeViewModel.findNextUpEpisodeFromProgressMap(
     }
     if (!shouldIncludeNextUpEpisode(nextEpisode, showUnairedNextUp)) return null
 
-    val lastWatched = completedProgress.maxOfOrNull { it.lastWatched } ?: 0L
+    val lastWatched = maxOf(
+        completedProgress.maxOfOrNull { it.lastWatched } ?: 0L,
+        furthestLastWatched,
+        watchedEpisodesMap.values.maxOrNull() ?: 0L
+    )
     return NextUpResolution(
         episode = nextEpisode,
         lastWatched = lastWatched
     )
 }
 
-private fun findNextUpEpisodeFromLatestProgress(
+private suspend fun HomeViewModel.findNextUpEpisodeFromLatestProgress(
     progress: WatchProgress,
     meta: Meta,
     showUnairedNextUp: Boolean
@@ -541,24 +583,32 @@ private fun findNextUpEpisodeFromLatestProgress(
 
     val currentSeason = progress.season ?: return null
     val currentEpisode = progress.episode ?: return null
-    val maxEpisodeInSeason = episodes.asSequence()
-        .filter { it.season == currentSeason }
-        .mapNotNull { it.episode }
-        .maxOrNull()
+
+    val watchedEpisodesMap = runCatching {
+        watchedItemsPreferences.getWatchedEpisodesWithTimestamps(progress.contentId).first()
+    }.getOrElse { emptyMap() }
+    val watchedEpisodes = watchedEpisodesMap.keys
+
+    val currentIndex = episodes.indexOfFirst {
+        it.season == currentSeason && it.episode == currentEpisode
+    }
+    if (currentIndex < 0) return null
+
+    val nextEpisode = episodes
+        .drop(currentIndex + 1)
+        .firstOrNull { candidate ->
+            val s = candidate.season ?: return@firstOrNull false
+            val e = candidate.episode ?: return@firstOrNull false
+            (s to e) !in watchedEpisodes
+        }
         ?: return null
-
-    val targetSeason = if (currentEpisode >= maxEpisodeInSeason) currentSeason + 1 else currentSeason
-    val targetEpisode = if (currentEpisode >= maxEpisodeInSeason) 1 else currentEpisode + 1
-
-    val nextEpisode = episodes.firstOrNull {
-        it.season == targetSeason && it.episode == targetEpisode
-    } ?: return null
 
     if (!shouldIncludeNextUpEpisode(nextEpisode, showUnairedNextUp)) return null
 
+    val latestWatchedAt = watchedEpisodesMap.values.maxOrNull() ?: 0L
     return NextUpResolution(
         episode = nextEpisode,
-        lastWatched = progress.lastWatched
+        lastWatched = maxOf(progress.lastWatched, latestWatchedAt)
     )
 }
 

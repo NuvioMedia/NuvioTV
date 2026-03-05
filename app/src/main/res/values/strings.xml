@@ -270,6 +270,8 @@
     <string name="autoplay_stream_selection">Auto Stream Selection</string>
     <string name="autoplay_next_episode">Auto-play Next Episode</string>
     <string name="autoplay_next_episode_sub">Start next episode automatically when prompt appears.</string>
+    <string name="autoplay_prefer_binge_group">Prefer Binge Group (Next Episode)</string>
+    <string name="autoplay_prefer_binge_group_sub">Try the same source profile first (same addon/quality group) before normal auto-play rules.</string>
     <string name="autoplay_threshold_pct">Percentage</string>
     <string name="autoplay_threshold_min">Minutes before end</string>
     <string name="autoplay_threshold_mode">Next Episode Threshold Mode</string>
@@ -408,6 +410,7 @@
     <string name="mdblist_dialog_subtitle">Enter your API key to fetch external ratings</string>
     <string name="mdblist_dialog_placeholder">Enter MDBList API key</string>
     <string name="mdblist_not_set">Not set</string>
+    <string name="mdblist_invalid_api_key">Invalid MDBList API key</string>
 
     <!-- Anime-Skip -->
     <string name="animeskip_title">Anime Skip</string>
@@ -419,6 +422,7 @@
     <string name="animeskip_dialog_title">Anime Skip Client ID</string>
     <string name="animeskip_dialog_subtitle">Create your own Client ID at anime-skip.com/account/settings</string>
     <string name="animeskip_dialog_placeholder">Enter Client ID</string>
+    <string name="animeskip_invalid_client_id">Invalid Client ID</string>
     <string name="action_clear">Clear</string>
 
     <!-- TmdbSettingsScreen -->
@@ -468,6 +472,8 @@
     <string name="trakt_unaired_next_up_subtitle">Show upcoming episodes before they air</string>
     <string name="trakt_unaired_shown">Shown</string>
     <string name="trakt_unaired_hidden">Hidden</string>
+    <string name="trakt_unaired_now_shown">Unaired Next Up episodes are now shown</string>
+    <string name="trakt_unaired_now_hidden">Unaired Next Up episodes are now hidden</string>
     <string name="trakt_cached_label">Cached</string>
     <string name="trakt_stat_movies">Movies</string>
     <string name="trakt_stat_shows">Shows</string>
@@ -580,6 +586,17 @@
     <string name="stream_player_external">External</string>
 
     <!-- PlayerScreen -->
+    <string name="player_no_external_player">No external player found</string>
+
+    <!-- ParentalGuideOverlay -->
+    <string name="parental_nudity">Nudity</string>
+    <string name="parental_violence">Violence</string>
+    <string name="parental_profanity">Profanity</string>
+    <string name="parental_alcohol">Alcohol/Drugs</string>
+    <string name="parental_frightening">Frightening</string>
+    <string name="parental_severity_severe">Severe</string>
+    <string name="parental_severity_moderate">Moderate</string>
+    <string name="parental_severity_mild">Mild</string>
     <string name="player_ends_at">Ends at %1$s</string>
     <string name="player_via">via %1$s</string>
     <string name="player_subtitle_delay">Subtitles Delay</string>
@@ -665,6 +682,7 @@
     <string name="next_episode_playing_via">Playing via %1$s in %2$ds</string>
     <string name="next_episode_play">Play</string>
     <string name="next_episode_unaired">Unaired</string>
+    <string name="next_episode_not_aired_yet">Next episode hasn\'t aired yet</string>
     <string name="skip_intro">Skip Intro</string>
     <string name="skip_ending">Skip Ending</string>
     <string name="skip_recap">Skip Recap</string>
@@ -679,6 +697,10 @@
     <string name="search_start_title">Start Searching</string>
     <string name="search_start_subtitle">Enter at least 2 characters</string>
     <string name="search_start_subtitle_no_discover">Discover is disabled. Enter at least 2 characters</string>
+    <string name="search_voice_no_speech">No speech detected. Try again.</string>
+    <string name="search_voice_mic_permission">Microphone permission is required for voice search.</string>
+    <string name="search_voice_failed">Voice recognition failed. Try again.</string>
+    <string name="search_voice_unavailable">Voice search is unavailable on this device.</string>
 
     <!-- LibraryScreen -->
     <string name="library_syncing">Syncing Trakt library\u2026</string>

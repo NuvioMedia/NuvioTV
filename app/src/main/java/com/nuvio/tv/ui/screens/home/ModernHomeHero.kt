@@ -227,39 +227,37 @@ internal fun HeroTitleBlock(
         }
 
         Row(
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(metaSpacing)
         ) {
-            var hasLeadingMeta = false
-
-            preview.contentTypeText?.takeIf { it.isNotBlank() }?.let { contentType ->
-                Text(
-                    text = contentType,
-                    style = labelMedium,
-                    color = NuvioColors.TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                hasLeadingMeta = true
+            val leadingMetaText = remember(preview.contentTypeText, preview.genres) {
+                buildList {
+                    preview.contentTypeText?.takeIf { it.isNotBlank() }?.let(::add)
+                    preview.genres.firstOrNull()?.takeIf { it.isNotBlank() }?.let(::add)
+                }.joinToString(separator = " • ")
             }
-
-            preview.genres.firstOrNull()?.takeIf { it.isNotBlank() }?.let { genre ->
-                if (hasLeadingMeta) {
-                    HeroMetaDivider(metaScale)
-                }
-                Text(
-                    text = genre,
-                    style = labelMedium,
-                    color = NuvioColors.TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                hasLeadingMeta = true
-            }
+            val hasLeadingMeta = leadingMetaText.isNotBlank()
 
             val yearText = preview.yearText
             val imdbText = preview.imdbText
             val hasYearOrImdb = !yearText.isNullOrBlank() || !imdbText.isNullOrBlank()
+
+            if (hasLeadingMeta) {
+                Text(
+                    text = leadingMetaText,
+                    style = labelMedium,
+                    color = NuvioColors.TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = if (hasYearOrImdb) {
+                        Modifier.weight(1f, fill = false)
+                    } else {
+                        Modifier
+                    }
+                )
+            }
+
             if (hasYearOrImdb) {
                 if (hasLeadingMeta) {
                     HeroMetaDivider(metaScale)
@@ -291,12 +289,12 @@ internal fun HeroTitleBlock(
                                 text = imdbText,
                                 style = labelMedium,
                                 color = NuvioColors.TextSecondary,
-                                maxLines = 1
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
                 }
-                hasLeadingMeta = true
             }
         }
 

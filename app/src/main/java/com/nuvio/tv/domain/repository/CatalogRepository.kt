@@ -13,6 +13,7 @@ interface CatalogRepository {
         catalogName: String,
         type: String,
         skip: Int = 0,
+        skipStep: Int = 100,
         extraArgs: Map<String, String> = emptyMap(),
         supportsSkip: Boolean = false
     ): Flow<NetworkResult<CatalogRow>>

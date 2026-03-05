@@ -96,6 +96,10 @@ fun SearchScreen(
     val context = LocalContext.current
     val view = LocalView.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val strVoiceNoSpeech = stringResource(R.string.search_voice_no_speech)
+    val strVoiceMicPermission = stringResource(R.string.search_voice_mic_permission)
+    val strVoiceFailed = stringResource(R.string.search_voice_failed)
+    val strVoiceUnavailable = stringResource(R.string.search_voice_unavailable)
     val voiceFocusRequester = remember { FocusRequester() }
     val searchFocusRequester = remember { FocusRequester() }
     val discoverFirstItemFocusRequester = remember { FocusRequester() }
@@ -120,7 +124,7 @@ fun SearchScreen(
             pendingFocusMoveHadExistingSearchRows =
                 uiState.submittedQuery.trim().length >= 2 && uiState.catalogRows.any { it.items.isNotEmpty() }
         } else {
-            Toast.makeText(context, "No speech detected. Try again.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, strVoiceNoSpeech, Toast.LENGTH_SHORT).show()
         }
     }
     val isVoiceSearchAvailable = remember(context) { SpeechRecognizer.isRecognitionAvailable(context) }
@@ -158,7 +162,7 @@ fun SearchScreen(
                 }
             )
         } else {
-            Toast.makeText(context, "Microphone permission is required for voice search.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, strVoiceMicPermission, Toast.LENGTH_SHORT).show()
         }
     }
     LaunchedEffect(hasRecordAudioPermission) {
@@ -176,7 +180,7 @@ fun SearchScreen(
             override fun onError(error: Int) {
                 isVoiceListening = false
                 if (error != SpeechRecognizer.ERROR_CLIENT) {
-                    Toast.makeText(context, "Voice recognition failed. Try again.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, strVoiceFailed, Toast.LENGTH_SHORT).show()
                 }
             }
 
@@ -204,7 +208,7 @@ fun SearchScreen(
     }
     val launchVoiceSearch: () -> Unit = {
         if (!isVoiceSearchAvailable || speechRecognizer == null) {
-            Toast.makeText(context, "Voice search is unavailable on this device.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, strVoiceUnavailable, Toast.LENGTH_SHORT).show()
         } else if (!recordAudioPermissionGranted) {
             requestAudioPermission.launch(Manifest.permission.RECORD_AUDIO)
         } else {
@@ -220,7 +224,7 @@ fun SearchScreen(
                 )
             }.onFailure {
                 isVoiceListening = false
-                Toast.makeText(context, "Voice search is unavailable on this device.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, strVoiceUnavailable, Toast.LENGTH_SHORT).show()
             }
         }
     }

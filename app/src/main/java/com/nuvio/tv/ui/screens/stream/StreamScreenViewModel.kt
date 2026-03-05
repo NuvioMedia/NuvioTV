@@ -233,7 +233,10 @@ class StreamScreenViewModel @Inject constructor(
                                 episodeTitle = episodeName,
                                 bingeGroup = null,
                                 rememberedAudioLanguage = cached.rememberedAudioLanguage,
-                                rememberedAudioName = cached.rememberedAudioName
+                                rememberedAudioName = cached.rememberedAudioName,
+                                filename = cached.filename,
+                                videoHash = cached.videoHash,
+                                videoSize = cached.videoSize
                             )
                         )
                     }
@@ -639,7 +642,10 @@ class StreamScreenViewModel @Inject constructor(
                     contentKey = streamCacheKey,
                     url = url,
                     streamName = playbackInfo.streamName,
-                    headers = playbackInfo.headers
+                    headers = playbackInfo.headers,
+                    filename = playbackInfo.filename,
+                    videoHash = playbackInfo.videoHash,
+                    videoSize = playbackInfo.videoSize
                 )
             }
         }

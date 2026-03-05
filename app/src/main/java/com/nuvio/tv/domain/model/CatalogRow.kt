@@ -15,7 +15,8 @@ data class CatalogRow(
     val isLoading: Boolean = false,
     val hasMore: Boolean = true,
     val currentPage: Int = 0,
-    val supportsSkip: Boolean = false
+    val supportsSkip: Boolean = false,
+    val skipStep: Int = 100
 ) {
     val apiType: String
         get() = type.toApiString(rawType)

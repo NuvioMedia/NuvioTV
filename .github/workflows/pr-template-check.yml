@@ -1,0 +1,75 @@
+name: PR Template Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  validate_pr_body:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate required PR sections
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = (pr.body || "").trim();
+
+            function sectionContent(title) {
+              const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+              const re = new RegExp(`^##\\s+${escaped}\\s*$`, "m");
+              const match = body.match(re);
+              if (!match) return null;
+              const start = match.index + match[0].length;
+              const rest = body.slice(start);
+              const next = rest.search(/^##\s+/m);
+              return (next === -1 ? rest : rest.slice(0, next)).trim();
+            }
+
+            const required = ["Summary", "Why", "Testing", "Breaking changes", "Linked issues"];
+            const missing = [];
+            const empty = [];
+
+            for (const name of required) {
+              const content = sectionContent(name);
+              if (content === null) {
+                missing.push(name);
+                continue;
+              }
+
+              const cleaned = content
+                .replace(/<!--[\s\S]*?-->/g, "")
+                .replace(/`/g, "")
+                .replace(/\s+/g, " ")
+                .trim()
+                .toLowerCase();
+
+              if (
+                cleaned.length < 4 ||
+                cleaned === "none" ||
+                cleaned.includes("what changed in this pr") ||
+                cleaned.includes("why this change is needed") ||
+                cleaned.includes("what you tested") ||
+                cleaned.includes("example: fixes #123")
+              ) {
+                empty.push(name);
+              }
+            }
+
+            if (missing.length || empty.length) {
+              const lines = [
+                "PR description is missing required detail.",
+                "",
+              ];
+              if (missing.length) lines.push(`Missing sections: ${missing.join(", ")}`);
+              if (empty.length) lines.push(`Incomplete sections: ${empty.join(", ")}`);
+              lines.push("");
+              lines.push("Please fill the PR template before merging.");
+              core.setFailed(lines.join("\n"));
+            } else {
+              core.info("PR template check passed.");
+            }
+
