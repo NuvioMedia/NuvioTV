@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -75,7 +76,8 @@ private enum class IntegrationSettingsSection {
     Hub,
     Tmdb,
     MdbList,
-    AnimeSkip
+    AnimeSkip,
+    TvRecommendations
 }
 
 internal enum class SettingsSectionDestination {
@@ -214,6 +216,7 @@ fun SettingsScreen(
     val integrationTmdbFocusRequester = remember { FocusRequester() }
     val integrationMdbListFocusRequester = remember { FocusRequester() }
     val integrationAnimeSkipFocusRequester = remember { FocusRequester() }
+    val integrationTvRecommendationsFocusRequester = remember { FocusRequester() }
     var integrationSection by remember { mutableStateOf(IntegrationSettingsSection.Hub) }
     var pendingContentFocusCategory by remember { mutableStateOf<SettingsCategory?>(null) }
     var pendingContentFocusRequestId by remember { mutableLongStateOf(0L) }
@@ -392,6 +395,7 @@ fun SettingsScreen(
                             tmdbFocusRequester = integrationTmdbFocusRequester,
                             mdbListFocusRequester = integrationMdbListFocusRequester,
                             animeSkipFocusRequester = integrationAnimeSkipFocusRequester,
+                            tvRecommendationsFocusRequester = integrationTvRecommendationsFocusRequester,
                             autoFocusEnabled = allowDetailAutofocus
                         )
                         SettingsCategory.ABOUT -> AboutSettingsContent(
@@ -478,6 +482,7 @@ private fun IntegrationSettingsContent(
     tmdbFocusRequester: FocusRequester,
     mdbListFocusRequester: FocusRequester,
     animeSkipFocusRequester: FocusRequester,
+    tvRecommendationsFocusRequester: FocusRequester,
     autoFocusEnabled: Boolean
 ) {
     BackHandler(enabled = selectedSection != IntegrationSettingsSection.Hub) {
@@ -492,6 +497,7 @@ private fun IntegrationSettingsContent(
             IntegrationSettingsSection.Tmdb -> tmdbFocusRequester
             IntegrationSettingsSection.MdbList -> mdbListFocusRequester
             IntegrationSettingsSection.AnimeSkip -> animeSkipFocusRequester
+            IntegrationSettingsSection.TvRecommendations -> tvRecommendationsFocusRequester
         }
         runCatching { requester.requestFocus() }
     }
@@ -537,6 +543,13 @@ private fun IntegrationSettingsContent(
                                 onClick = { onSelectSection(IntegrationSettingsSection.AnimeSkip) }
                             )
                         }
+                        item(key = "integration_hub_tv_recommendations") {
+                            SettingsActionRow(
+                                title = stringResource(R.string.settings_tv_recommendations),
+                                subtitle = stringResource(R.string.settings_tv_recommendations_subtitle),
+                                onClick = { onSelectSection(IntegrationSettingsSection.TvRecommendations) }
+                            )
+                        }
                     }
                 }
             }
@@ -557,6 +570,12 @@ private fun IntegrationSettingsContent(
         IntegrationSettingsSection.AnimeSkip -> {
             AnimeSkipSettingsContent(
                 initialFocusRequester = animeSkipFocusRequester
+            )
+        }
+
+        IntegrationSettingsSection.TvRecommendations -> {
+            TvRecommendationsSettingsContent(
+                initialFocusRequester = tvRecommendationsFocusRequester
             )
         }
     }
