@@ -183,6 +183,8 @@
     <string name="contributors_error_title">Couldn’t load contributors</string>
     <string name="contributors_total_contributions">%1$d total contributions</string>
     <string name="contributors_open_github">Open GitHub Profile</string>
+    <string name="contributors_show_kofi_qr">Show Ko-fi QR</string>
+    <string name="contributors_hide_kofi_qr">Hide Ko-fi QR</string>
     <string name="contributors_profile_unavailable">GitHub profile link unavailable.</string>
 
     <!-- PlaybackSettingsSections -->

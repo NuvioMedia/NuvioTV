@@ -20,7 +20,7 @@ enum class SupportersContributorsTab {
 }
 
 data class SupportersContributorsUiState(
-    val selectedTab: SupportersContributorsTab = SupportersContributorsTab.Supporters,
+    val selectedTab: SupportersContributorsTab = SupportersContributorsTab.Contributors,
     val isSupportersLoading: Boolean = false,
     val hasLoadedSupporters: Boolean = false,
     val supporters: List<SupporterDonation> = emptyList(),
@@ -43,7 +43,7 @@ class SupportersContributorsViewModel @Inject constructor(
     val uiState: StateFlow<SupportersContributorsUiState> = _uiState.asStateFlow()
 
     init {
-        loadSupportersIfNeeded()
+        loadContributorsIfNeeded()
     }
 
     fun onSelectTab(tab: SupportersContributorsTab) {
