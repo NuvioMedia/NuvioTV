@@ -27,6 +27,7 @@ import com.nuvio.tv.data.local.AddonSubtitleStartupMode
 import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
 import com.nuvio.tv.data.local.FrameRateMatchingMode
+import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.domain.model.Subtitle
 import io.github.peerless2012.ass.media.kt.buildWithAssSupport
 import kotlinx.coroutines.flow.first
@@ -56,11 +57,38 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
             hasScannedTextTracksOnce = false
             resetLoadingOverlayForNewStream()
             val playerSettings = playerSettingsDataStore.playerSettings.first()
+            val preferredAudioLanguages = resolvePreferredAudioLanguages(
+                preferredAudioLanguage = playerSettings.preferredAudioLanguage,
+                secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
+                deviceLanguages = resolveDeviceAudioLanguages()
+            )
+            mpvPreferredAudioLanguages = preferredAudioLanguages
+            currentInternalPlayerEngine = playerSettings.internalPlayerEngine
             _uiState.update {
                 it.copy(
+                    internalPlayerEngine = playerSettings.internalPlayerEngine,
                     frameRateMatchingMode = playerSettings.frameRateMatchingMode
                 )
             }
+            if (playerSettings.internalPlayerEngine == InternalPlayerEngine.MVP_PLAYER) {
+                mpvInitializationInProgress = true
+                try {
+                    runAfrPreflightIfEnabled(
+                        url = url,
+                        headers = headers,
+                        frameRateMatchingMode = playerSettings.frameRateMatchingMode,
+                        resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
+                    )
+                    initializeMpvPlayer(url = url, headers = headers)
+                    // Keep addon subtitle discovery available on the mpv path too.
+                    // Exo does this later in this method, but this branch returns early.
+                    fetchAddonSubtitles()
+                } finally {
+                    mpvInitializationInProgress = false
+                }
+                return@launch
+            }
+            mpvInitializationInProgress = false
             runAfrPreflightIfEnabled(
                 url = url,
                 headers = headers,
@@ -88,17 +116,6 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                     )
                 }
 
-                val deviceLanguages = if (Build.VERSION.SDK_INT >= 24) {
-                    val localeList = Resources.getSystem().configuration.locales
-                    List(localeList.size()) { localeList[it].isO3Language }
-                } else {
-                    listOf(Resources.getSystem().configuration.locale.isO3Language)
-                }
-                val preferredAudioLanguages = resolvePreferredAudioLanguages(
-                    preferredAudioLanguage = playerSettings.preferredAudioLanguage,
-                    secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
-                    deviceLanguages = deviceLanguages
-                )
                 if (preferredAudioLanguages.isNotEmpty()) {
                     setParameters(
                         buildUponParameters().setPreferredAudioLanguages(*preferredAudioLanguages.toTypedArray())
@@ -383,6 +400,15 @@ internal fun resolvePreferredAudioLanguages(
             normalize(preferredAudioLanguage),
             normalize(secondaryPreferredAudioLanguage)
         ).distinct()
+    }
+}
+
+internal fun resolveDeviceAudioLanguages(): List<String> {
+    return if (Build.VERSION.SDK_INT >= 24) {
+        val localeList = Resources.getSystem().configuration.locales
+        List(localeList.size()) { localeList[it].isO3Language }
+    } else {
+        listOf(Resources.getSystem().configuration.locale.isO3Language)
     }
 }
 

@@ -118,6 +118,7 @@ object AudioLanguageOption {
  */
 data class PlayerSettings(
     val playerPreference: PlayerPreference = PlayerPreference.INTERNAL,
+    val internalPlayerEngine: InternalPlayerEngine = InternalPlayerEngine.EXOPLAYER,
     val useLibass: Boolean = false,
     val libassRenderType: LibassRenderType = LibassRenderType.OVERLAY_OPEN_GL,
     val subtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(),
@@ -195,6 +196,11 @@ enum class PlayerPreference {
     ASK_EVERY_TIME
 }
 
+enum class InternalPlayerEngine {
+    EXOPLAYER,
+    MVP_PLAYER
+}
+
 /**
  * Enum representing the different libass render types
  * Maps to io.github.peerless2012.ass.media.type.AssRenderType
@@ -223,6 +229,7 @@ class PlayerSettingsDataStore @Inject constructor(
 
     // Player preference key
     private val playerPreferenceKey = stringPreferencesKey("player_preference")
+    private val internalPlayerEngineKey = stringPreferencesKey("internal_player_engine")
 
     // Libass settings keys
     private val useLibassKey = booleanPreferencesKey("use_libass")
@@ -359,6 +366,9 @@ class PlayerSettingsDataStore @Inject constructor(
                 playerPreference = prefs[playerPreferenceKey]?.let {
                     runCatching { PlayerPreference.valueOf(it) }.getOrDefault(PlayerPreference.INTERNAL)
                 } ?: PlayerPreference.INTERNAL,
+                internalPlayerEngine = prefs[internalPlayerEngineKey]?.let {
+                    runCatching { InternalPlayerEngine.valueOf(it) }.getOrDefault(InternalPlayerEngine.EXOPLAYER)
+                } ?: InternalPlayerEngine.EXOPLAYER,
                 useLibass = prefs[useLibassKey] ?: false,
                 libassRenderType = prefs[libassRenderTypeKey]?.let {
                     try { LibassRenderType.valueOf(it) } catch (e: Exception) { LibassRenderType.OVERLAY_OPEN_GL }
@@ -470,6 +480,12 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setPlayerPreference(preference: PlayerPreference) {
         store().edit { prefs ->
             prefs[playerPreferenceKey] = preference.name
+        }
+    }
+
+    suspend fun setInternalPlayerEngine(engine: InternalPlayerEngine) {
+        store().edit { prefs ->
+            prefs[internalPlayerEngineKey] = engine.name
         }
     }
 

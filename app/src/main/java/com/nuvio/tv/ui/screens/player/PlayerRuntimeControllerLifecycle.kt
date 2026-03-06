@@ -29,6 +29,7 @@ internal fun PlayerRuntimeController.releasePlayer() {
     hideSubtitleDelayOverlayJob?.cancel()
     nextEpisodeAutoPlayJob?.cancel()
     nextEpisodeAutoPlayJob = null
+    releaseMpvPlayer()
     _exoPlayer?.release()
     _exoPlayer = null
 }

@@ -157,6 +157,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                     showLoadingOverlay = shouldShowOverlay,
                     pauseOverlayEnabled = settings.pauseOverlayEnabled,
                     osdClockEnabled = settings.osdClockEnabled,
+                    internalPlayerEngine = settings.internalPlayerEngine,
                     frameRateMatchingMode = settings.frameRateMatchingMode
                 )
             }
@@ -181,6 +182,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                 schedulePauseOverlay()
             }
             streamReuseLastLinkEnabled = settings.streamReuseLastLinkEnabled
+            currentInternalPlayerEngine = settings.internalPlayerEngine
             streamAutoPlayModeSetting = settings.streamAutoPlayMode
             streamAutoPlayNextEpisodeEnabledSetting = settings.streamAutoPlayNextEpisodeEnabled
             streamAutoPlayPreferBingeGroupForNextEpisodeSetting =
@@ -188,6 +190,19 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             nextEpisodeThresholdModeSetting = settings.nextEpisodeThresholdMode
             nextEpisodeThresholdPercentSetting = settings.nextEpisodeThresholdPercent
             nextEpisodeThresholdMinutesBeforeEndSetting = settings.nextEpisodeThresholdMinutesBeforeEnd
+
+            val resolvedAudioLanguages = resolvePreferredAudioLanguages(
+                preferredAudioLanguage = settings.preferredAudioLanguage,
+                secondaryPreferredAudioLanguage = settings.secondaryPreferredAudioLanguage,
+                deviceLanguages = resolveDeviceAudioLanguages()
+            )
+            if (resolvedAudioLanguages != mpvPreferredAudioLanguages) {
+                mpvPreferredAudioLanguages = resolvedAudioLanguages
+                if (isUsingMpvEngine()) {
+                    mpvView?.applyAudioLanguagePreferences(resolvedAudioLanguages)
+                    updateMpvAvailableTracks()
+                }
+            }
 
             applySubtitlePreferences(
                 settings.subtitleStyle.preferredLanguage,
@@ -236,9 +251,22 @@ internal fun PlayerRuntimeController.loadSavedProgressFor(season: Int?, episode:
             
             if (saved.isInProgress()) {
                 pendingResumeProgress = saved
-                _exoPlayer?.let { player ->
-                    if (player.playbackState == Player.STATE_READY) {
-                        tryApplyPendingResumeProgress(player)
+                if (isUsingMpvEngine()) {
+                    val target = saved.position.coerceAtLeast(0L)
+                    if (target > 0L) {
+                        if (mpvView != null) {
+                            seekPlaybackTo(target)
+                            _uiState.update { it.copy(pendingSeekPosition = null) }
+                            pendingResumeProgress = null
+                        } else {
+                            _uiState.update { it.copy(pendingSeekPosition = target) }
+                        }
+                    }
+                } else {
+                    _exoPlayer?.let { player ->
+                        if (player.playbackState == Player.STATE_READY) {
+                            tryApplyPendingResumeProgress(player)
+                        }
                     }
                 }
             }

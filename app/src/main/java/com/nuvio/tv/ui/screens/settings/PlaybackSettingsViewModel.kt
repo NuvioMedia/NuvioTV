@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.data.local.LibassRenderType
+import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.PlayerPreference
@@ -55,6 +56,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setPlayerPreference(preference: PlayerPreference) {
         playerSettingsDataStore.setPlayerPreference(preference)
+    }
+
+    suspend fun setInternalPlayerEngine(engine: InternalPlayerEngine) {
+        playerSettingsDataStore.setInternalPlayerEngine(engine)
     }
 
     suspend fun setTrailerEnabled(enabled: Boolean) {

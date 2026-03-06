@@ -103,6 +103,7 @@ import coil.request.ImageRequest
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.core.player.ExternalPlayerLauncher
+import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
 import android.text.format.DateFormat
@@ -194,7 +195,7 @@ fun PlayerScreen(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
-                    viewModel.exoPlayer?.pause()
+                    viewModel.pauseForLifecycle()
                 }
                 Lifecycle.Event.ON_RESUME -> {
                     // Don't auto-resume, let user control
@@ -481,70 +482,90 @@ fun PlayerScreen(
             }
     ) {
         // Video Player
-        viewModel.exoPlayer?.let { player ->
-            val subtitleStyle = uiState.subtitleStyle
-            val resizeMode = uiState.resizeMode
-            
+        if (uiState.internalPlayerEngine == InternalPlayerEngine.MVP_PLAYER) {
             AndroidView(
                 factory = { context ->
-                    PlayerView(context).apply {
-                        this.player = player
-                        useController = false
-                        keepScreenOn = true
-                        setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+                    NuvioMpvSurfaceView(context).also { view ->
+                        viewModel.attachMpvView(view)
                     }
                 },
-                update = { playerView ->
-                    Log.d("PlayerScreen", "Applying resizeMode: $resizeMode")
-                    playerView.resizeMode = resizeMode
-                    playerView.subtitleView?.apply {
-                        // Calculate font size based on percentage (100% = 24sp base)
-                        val baseFontSize = 24f
-                        val scaledFontSize = baseFontSize * (subtitleStyle.size / 100f)
-                        setFixedTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, scaledFontSize)
-                        setApplyEmbeddedFontSizes(false)
-                        
-                        // Apply bold style via typeface
-                        val typeface = if (subtitleStyle.bold) {
-                            android.graphics.Typeface.DEFAULT_BOLD
-                        } else {
-                            android.graphics.Typeface.DEFAULT
-                        }
-                        
-                        // Calculate edge type based on outline setting
-                        val edgeType = if (subtitleStyle.outlineEnabled) {
-                            androidx.media3.ui.CaptionStyleCompat.EDGE_TYPE_OUTLINE
-                        } else {
-                            androidx.media3.ui.CaptionStyleCompat.EDGE_TYPE_NONE
-                        }
-                        
-                        setStyle(
-                            androidx.media3.ui.CaptionStyleCompat(
-                                subtitleStyle.textColor,
-                                subtitleStyle.backgroundColor,
-                                android.graphics.Color.TRANSPARENT, // Window color
-                                edgeType,
-                                subtitleStyle.outlineColor,
-                                typeface
-                            )
-                        )
-                        
-                        setApplyEmbeddedStyles(false)
-                        
-                        // Apply vertical offset (-20 = very bottom, 0 = default, 50 = middle)
-                        // Convert percentage to fraction for bottom padding
-                        val bottomPaddingFraction = (0.06f + (subtitleStyle.verticalOffset / 250f)).coerceIn(0f, 0.4f)
-                        setBottomPaddingFraction(bottomPaddingFraction)
-
-                        // Also apply explicit bottom padding based on view height for stronger offset effect
-                        post {
-                            val extraPadding = (height * (subtitleStyle.verticalOffset / 400f)).toInt().coerceAtLeast(0)
-                            setPadding(paddingLeft, paddingTop, paddingRight, extraPadding)
-                        }
-                    }
+                update = { view ->
+                    viewModel.attachMpvView(view)
+                    view.applySubtitleStyle(uiState.subtitleStyle)
                 },
                 modifier = Modifier.fillMaxSize()
             )
+            DisposableEffect(Unit) {
+                onDispose {
+                    viewModel.attachMpvView(null)
+                }
+            }
+        } else {
+            viewModel.exoPlayer?.let { player ->
+                val subtitleStyle = uiState.subtitleStyle
+                val resizeMode = uiState.resizeMode
+
+                AndroidView(
+                    factory = { context ->
+                        PlayerView(context).apply {
+                            this.player = player
+                            useController = false
+                            keepScreenOn = true
+                            setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+                        }
+                    },
+                    update = { playerView ->
+                        Log.d("PlayerScreen", "Applying resizeMode: $resizeMode")
+                        playerView.resizeMode = resizeMode
+                        playerView.subtitleView?.apply {
+                            // Calculate font size based on percentage (100% = 24sp base)
+                            val baseFontSize = 24f
+                            val scaledFontSize = baseFontSize * (subtitleStyle.size / 100f)
+                            setFixedTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, scaledFontSize)
+                            setApplyEmbeddedFontSizes(false)
+
+                            // Apply bold style via typeface
+                            val typeface = if (subtitleStyle.bold) {
+                                android.graphics.Typeface.DEFAULT_BOLD
+                            } else {
+                                android.graphics.Typeface.DEFAULT
+                            }
+
+                            // Calculate edge type based on outline setting
+                            val edgeType = if (subtitleStyle.outlineEnabled) {
+                                androidx.media3.ui.CaptionStyleCompat.EDGE_TYPE_OUTLINE
+                            } else {
+                                androidx.media3.ui.CaptionStyleCompat.EDGE_TYPE_NONE
+                            }
+
+                            setStyle(
+                                androidx.media3.ui.CaptionStyleCompat(
+                                    subtitleStyle.textColor,
+                                    subtitleStyle.backgroundColor,
+                                    android.graphics.Color.TRANSPARENT, // Window color
+                                    edgeType,
+                                    subtitleStyle.outlineColor,
+                                    typeface
+                                )
+                            )
+
+                            setApplyEmbeddedStyles(false)
+
+                            // Apply vertical offset (-20 = very bottom, 0 = default, 50 = middle)
+                            // Convert percentage to fraction for bottom padding
+                            val bottomPaddingFraction = (0.06f + (subtitleStyle.verticalOffset / 250f)).coerceIn(0f, 0.4f)
+                            setBottomPaddingFraction(bottomPaddingFraction)
+
+                            // Also apply explicit bottom padding based on view height for stronger offset effect
+                            post {
+                                val extraPadding = (height * (subtitleStyle.verticalOffset / 400f)).toInt().coerceAtLeast(0)
+                                setPadding(paddingLeft, paddingTop, paddingRight, extraPadding)
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
 
         LoadingOverlay(

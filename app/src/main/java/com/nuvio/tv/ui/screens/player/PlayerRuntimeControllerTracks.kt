@@ -434,7 +434,11 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
         return
     }
 
-    val playerReady = _exoPlayer?.playbackState == Player.STATE_READY
+    val playerReady = if (isUsingMpvEngine()) {
+        mpvView != null
+    } else {
+        _exoPlayer?.playbackState == Player.STATE_READY
+    }
     if (!playerReady) {
         Log.d(PlayerRuntimeController.TAG, "AUTO_SUB defer addon fallback: player not ready")
         return
@@ -531,6 +535,20 @@ internal fun PlayerRuntimeController.startFrameRateProbe(
 }
 
 internal fun PlayerRuntimeController.applySubtitlePreferences(preferred: String, secondary: String?) {
+    if (isUsingMpvEngine()) {
+        mpvView?.applySubtitleLanguagePreferences(preferred, secondary)
+        if (preferred == "none") {
+            mpvView?.disableSubtitles()
+            _uiState.update {
+                it.copy(
+                    selectedSubtitleTrackIndex = -1,
+                    selectedAddonSubtitle = null
+                )
+            }
+        }
+        return
+    }
+
     _exoPlayer?.let { player ->
         val builder = player.trackSelectionParameters.buildUpon()
 
