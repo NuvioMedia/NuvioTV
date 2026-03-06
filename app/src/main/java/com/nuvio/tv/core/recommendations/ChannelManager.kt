@@ -3,10 +3,15 @@ package com.nuvio.tv.core.recommendations
 import android.content.ContentUris
 import android.content.Context
 import android.database.Cursor
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.net.Uri
+import androidx.core.content.ContextCompat
 import androidx.tvprovider.media.tv.Channel
+import androidx.tvprovider.media.tv.ChannelLogoUtils
 import androidx.tvprovider.media.tv.PreviewProgram
 import androidx.tvprovider.media.tv.TvContractCompat
+import com.nuvio.tv.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -52,7 +57,7 @@ class ChannelManager @Inject constructor(
                 .setType(TvContractCompat.Channels.TYPE_PREVIEW)
                 .setDisplayName(displayName)
                 .setAppLinkIntentUri(
-                    Uri.parse("${RecommendationConstants.DEEP_LINK_SCHEME}://${RecommendationConstants.DEEP_LINK_HOST}")
+                    Uri.parse("${RecommendationConstants.DEEP_LINK_SCHEME}://${RecommendationConstants.DEEP_LINK_HOST}/$internalId")
                 )
                 .setInternalProviderId(internalId)
                 .build()
@@ -68,6 +73,9 @@ class ChannelManager @Inject constructor(
 
             val channelId = ContentUris.parseId(channelUri)
             dataStore.setChannelId(internalId, channelId)
+
+            // Store a channel logo so the launcher can distinguish channels visually.
+            storeChannelLogo(channelId)
 
             // Request the system to make this channel visible on the home screen.
             // On first call the user gets a prompt; subsequent calls are no-ops.
@@ -135,6 +143,31 @@ class ChannelManager @Inject constructor(
             false
         } finally {
             cursor?.close()
+        }
+    }
+
+    /**
+     * Stores the app launcher icon as the channel logo.
+     * Each channel gets its own copy so the launcher treats them as distinct.
+     */
+    private fun storeChannelLogo(channelId: Long) {
+        try {
+            val drawable = ContextCompat.getDrawable(context, R.drawable.ic_launcher) ?: return
+            val bitmap = if (drawable is android.graphics.drawable.BitmapDrawable) {
+                drawable.bitmap
+            } else {
+                val bmp = Bitmap.createBitmap(
+                    drawable.intrinsicWidth.coerceAtLeast(1),
+                    drawable.intrinsicHeight.coerceAtLeast(1),
+                    Bitmap.Config.ARGB_8888
+                )
+                val canvas = Canvas(bmp)
+                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                drawable.draw(canvas)
+                bmp
+            }
+            ChannelLogoUtils.storeChannelLogo(context, channelId, bitmap)
+        } catch (_: Exception) {
         }
     }
 
