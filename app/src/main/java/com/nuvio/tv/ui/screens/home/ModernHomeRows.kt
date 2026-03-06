@@ -5,8 +5,10 @@ package com.nuvio.tv.ui.screens.home
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +46,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -79,6 +82,8 @@ import com.nuvio.tv.LocalSidebarExpanded
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlin.math.abs
 import kotlinx.coroutines.flow.distinctUntilChanged
+
+private const val TRAILER_PRE_FADE_DURATION_MS = 400
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -123,6 +128,7 @@ private fun ModernCatalogRowItem(
     effectiveAutoplayEnabled: Boolean,
     trailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget,
     expandedCatalogFocusKey: String?,
+    blackOverlayFocusKey: String?,
     expandedTrailerPreviewUrl: String?,
     expandedTrailerPreviewAudioUrl: String?,
     isWatched: Boolean,
@@ -137,17 +143,24 @@ private fun ModernCatalogRowItem(
     val focusKey = payload.focusKey
     val suppressCardExpansionForHeroTrailer =
         effectiveAutoplayEnabled &&
-            trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA
+                trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA
     val isBackdropExpanded =
         effectiveExpandEnabled &&
-            expandedCatalogFocusKey == focusKey &&
-            !suppressCardExpansionForHeroTrailer
+                expandedCatalogFocusKey == focusKey &&
+                !suppressCardExpansionForHeroTrailer
     val isSidebarExpanded = LocalSidebarExpanded.current
     val playTrailerInExpandedCard =
         effectiveAutoplayEnabled &&
-            !isSidebarExpanded &&
-            trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD &&
-            isBackdropExpanded
+                !isSidebarExpanded &&
+                trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD &&
+                isBackdropExpanded
+
+// Black overlay should be visible when this card is the one about to expand
+    val showBlackOverlay =
+        effectiveAutoplayEnabled &&
+                !suppressCardExpansionForHeroTrailer &&
+                blackOverlayFocusKey == focusKey
+
     val trailerPreviewUrl = if (playTrailerInExpandedCard) {
         expandedTrailerPreviewUrl
     } else {
@@ -158,7 +171,6 @@ private fun ModernCatalogRowItem(
     } else {
         null
     }
-
     ModernCarouselCard(
         item = item,
         useLandscapePosters = useLandscapePosters,
@@ -168,6 +180,7 @@ private fun ModernCatalogRowItem(
         cardHeight = modernCatalogCardHeight,
         focusedPosterBackdropExpandEnabled = effectiveExpandEnabled,
         isBackdropExpanded = isBackdropExpanded,
+        showBlackOverlay = showBlackOverlay,
         playTrailerInExpandedCard = playTrailerInExpandedCard,
         focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
         trailerPreviewUrl = trailerPreviewUrl,
@@ -218,6 +231,7 @@ internal fun ModernRowSection(
     effectiveAutoplayEnabled: Boolean,
     trailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget,
     expandedCatalogFocusKey: String?,
+    blackOverlayFocusKey: String?,
     expandedTrailerPreviewUrl: String?,
     expandedTrailerPreviewAudioUrl: String?,
     modernCatalogCardWidth: Dp,
@@ -439,6 +453,7 @@ internal fun ModernRowSection(
                                 effectiveAutoplayEnabled = effectiveAutoplayEnabled && !isRowScrolling,
                                 trailerPlaybackTarget = trailerPlaybackTarget,
                                 expandedCatalogFocusKey = expandedCatalogFocusKey,
+                                blackOverlayFocusKey = blackOverlayFocusKey,
                                 expandedTrailerPreviewUrl = expandedTrailerPreviewUrl,
                                 expandedTrailerPreviewAudioUrl = expandedTrailerPreviewAudioUrl,
                                 isWatched = item.metaPreview?.let(isCatalogItemWatched) == true,
@@ -474,6 +489,7 @@ private fun ModernCarouselCard(
     cardHeight: Dp,
     focusedPosterBackdropExpandEnabled: Boolean,
     isBackdropExpanded: Boolean,
+    showBlackOverlay: Boolean,
     playTrailerInExpandedCard: Boolean,
     focusedPosterBackdropTrailerMuted: Boolean,
     trailerPreviewUrl: String?,
@@ -508,8 +524,6 @@ private fun ModernCarouselCard(
     } else {
         item.imageUrl ?: item.heroPreview.poster ?: item.heroPreview.backdrop
     }
-    // Keep decode target stable across expand/collapse to avoid recreating image requests/painters
-    // purely due to animated width changes.
     val maxRequestCardWidth = if (focusedPosterBackdropExpandEnabled) {
         maxOf(cardWidth, expandedCardWidth)
     } else {
@@ -548,11 +562,20 @@ private fun ModernCarouselCard(
     }
     var landscapeLogoLoadFailed by remember(item.heroPreview.logo) { mutableStateOf(false) }
     val shouldPlayTrailerInCard = playTrailerInExpandedCard && !trailerPreviewUrl.isNullOrBlank()
+
+    // Track whether the trailer's first frame has rendered so we can snap the overlay away
+    var trailerFirstFrameRendered by remember(trailerPreviewUrl) { mutableStateOf(false) }
+    LaunchedEffect(shouldPlayTrailerInCard) {
+        if (!shouldPlayTrailerInCard) {
+            trailerFirstFrameRendered = false
+        }
+    }
+
     val hasImage = !imageUrl.isNullOrBlank()
     val hasLandscapeLogo =
         useLandscapePosters &&
-            !item.heroPreview.logo.isNullOrBlank() &&
-            !landscapeLogoLoadFailed
+                !item.heroPreview.logo.isNullOrBlank() &&
+                !landscapeLogoLoadFailed
     var isFocused by remember { mutableStateOf(false) }
     var longPressTriggered by remember { mutableStateOf(false) }
     val watchedIconEndPadding by animateDpAsState(
@@ -572,6 +595,19 @@ private fun ModernCarouselCard(
     val titleStyle = remember(titleMedium) {
         titleMedium.copy(fontWeight = FontWeight.Medium)
     }
+
+    // Black overlay alpha:
+    // - Fades IN over 400ms when showBlackOverlay becomes true (poster fading to black before expand)
+    // - Snaps to 0 instantly when trailerFirstFrameRendered becomes true (clean cut to video)
+    val blackOverlayAlpha by animateFloatAsState(
+        targetValue = if ((showBlackOverlay || (isBackdropExpanded && playTrailerInExpandedCard)) && !trailerFirstFrameRendered) 1f else 0f,
+        animationSpec = if (!trailerFirstFrameRendered) {
+            tween(durationMillis = TRAILER_PRE_FADE_DURATION_MS)
+        } else {
+            tween(durationMillis = 150) // slight overlap with TrailerPlayer fade-in
+        },
+        label = "modernCardBlackOverlayAlpha"
+    )
 
     Column(
         modifier = Modifier.width(animatedCardWidth),
@@ -664,12 +700,25 @@ private fun ModernCarouselCard(
                             trailerAudioUrl = trailerPreviewAudioUrl,
                             isPlaying = true,
                             onEnded = onTrailerEnded,
+                            onFirstFrameRendered = { trailerFirstFrameRendered = true },
                             muted = focusedPosterBackdropTrailerMuted,
                             cropToFill = true,
                             overscanZoom = MODERN_TRAILER_OVERSCAN_ZOOM,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
+
+                    // Black overlay: fades in before card expands, snaps away on first trailer frame
+                }
+
+                // Black overlay: outside media layer so logo renders on top
+                if (blackOverlayAlpha > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer { alpha = blackOverlayAlpha }
+                            .background(Color.Black)
+                    )
                 }
 
                 if (hasLandscapeLogo) {

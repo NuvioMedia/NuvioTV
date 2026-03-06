@@ -103,6 +103,8 @@ import android.view.KeyEvent as AndroidKeyEvent
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 private const val KEY_REPEAT_THROTTLE_MS = 80L
+private const val TRAILER_PRE_FADE_DURATION_MS = 400L
+private const val TRAILER_URL_POLL_INTERVAL_MS = 200L
 
 @Composable
 fun ModernHomeContent(
@@ -320,6 +322,9 @@ fun ModernHomeContent(
     var focusedCatalogSelection by remember { mutableStateOf<FocusedCatalogSelection?>(null) }
     var lastRequestedTrailerFocusKey by remember { mutableStateOf<String?>(null) }
     var expandedCatalogFocusKey by remember { mutableStateOf<String?>(null) }
+    // Tracks which card should show the black overlay (set 400ms before expansion)
+    var blackOverlayFocusKey by remember { mutableStateOf<String?>(null) }
+    var trailerEndedFocusKey by remember { mutableStateOf<String?>(null) }
     var expansionInteractionNonce by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(
@@ -328,18 +333,67 @@ fun ModernHomeContent(
         shouldActivateFocusedPosterFlow,
         trailerPlaybackTarget,
         uiState.focusedPosterBackdropExpandDelaySeconds,
-        isVerticalRowsScrolling
+        isVerticalRowsScrolling,
+        trailerEndedFocusKey
     ) {
         expandedCatalogFocusKey = null
+        blackOverlayFocusKey = null
         if (!shouldActivateFocusedPosterFlow) return@LaunchedEffect
         if (isVerticalRowsScrolling) return@LaunchedEffect
         val selection = focusedCatalogSelection ?: return@LaunchedEffect
-        delay(uiState.focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(0) * 1000L)
-        if (shouldActivateFocusedPosterFlow &&
-            !isVerticalRowsScrolling &&
-            focusedCatalogSelection?.focusKey == selection.focusKey
+        if (selection.focusKey == trailerEndedFocusKey) return@LaunchedEffect
+
+        if (effectiveExpandEnabled &&
+            trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD &&
+            effectiveAutoplayEnabled
         ) {
+            // --- Trailer-aware expand sequence ---
+            val delayMs = uiState.focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(0) * 1000L
+
+            // Phase 1: Wait for (delay - 400ms), poster fully visible
+            val fadeStartMs = (delayMs - TRAILER_PRE_FADE_DURATION_MS).coerceAtLeast(0L)
+            if (fadeStartMs > 0L) {
+                delay(fadeStartMs)
+            }
+            if (!shouldActivateFocusedPosterFlow ||
+                isVerticalRowsScrolling ||
+                focusedCatalogSelection?.focusKey != selection.focusKey
+            ) return@LaunchedEffect
+
+            // Phase 2: Wait for trailer URL to resolve before starting fade.
+            // Poll until URL is available or focus changes.
+            val itemId = selection.payload.itemId
+            while (trailerPreviewUrls[itemId] == null) {
+                delay(TRAILER_URL_POLL_INTERVAL_MS)
+                if (!shouldActivateFocusedPosterFlow ||
+                    isVerticalRowsScrolling ||
+                    focusedCatalogSelection?.focusKey != selection.focusKey
+                ) return@LaunchedEffect
+            }
+
+            // URL resolved — trigger black overlay fade-in (card still collapsed)
+            blackOverlayFocusKey = selection.focusKey
+            delay(TRAILER_PRE_FADE_DURATION_MS)
+            if (!shouldActivateFocusedPosterFlow ||
+                isVerticalRowsScrolling ||
+                focusedCatalogSelection?.focusKey != selection.focusKey
+            ) {
+                blackOverlayFocusKey = null
+                return@LaunchedEffect
+            }
+
+            // Phase 3: Expand card. Black overlay stays until first trailer frame renders.
             expandedCatalogFocusKey = selection.focusKey
+
+        } else {
+            // --- Original expand behavior (no trailer in expanded card) ---
+            delay(uiState.focusedPosterBackdropExpandDelaySeconds.coerceAtLeast(0) * 1000L)
+            if (shouldActivateFocusedPosterFlow &&
+                !isVerticalRowsScrolling &&
+                focusedCatalogSelection?.focusKey == selection.focusKey
+            ) {
+                expandedCatalogFocusKey = selection.focusKey
+            }
         }
     }
 
@@ -384,6 +438,7 @@ fun ModernHomeContent(
         if (focusedCatalogSelection?.payload?.itemId !in activeCatalogItemIds) {
             focusedCatalogSelection = null
             expandedCatalogFocusKey = null
+            blackOverlayFocusKey = null
         }
 
         carouselRows.forEach { row ->
@@ -650,7 +705,11 @@ fun ModernHomeContent(
             heroTrailerAlpha = heroTrailerAlpha,
             muted = uiState.focusedPosterBackdropTrailerMuted,
             bgColor = bgColor,
-            onTrailerEnded = { expandedCatalogFocusKey = null },
+            onTrailerEnded = {
+                expandedCatalogFocusKey = null
+                blackOverlayFocusKey = null
+                trailerEndedFocusKey = focusedCatalogSelection?.focusKey
+            },
             onFirstFrameRendered = { heroTrailerFirstFrameRendered = true },
             modifier = heroMediaModifier,
             requestWidthPx = heroMediaWidthPx,
@@ -749,6 +808,7 @@ fun ModernHomeContent(
                         effectiveAutoplayEnabled = effectiveAutoplayEnabled,
                         trailerPlaybackTarget = trailerPlaybackTarget,
                         expandedCatalogFocusKey = expandedCatalogFocusKey,
+                        blackOverlayFocusKey = blackOverlayFocusKey,
                         expandedTrailerPreviewUrl = expandedCatalogTrailerUrl,
                         expandedTrailerPreviewAudioUrl = expandedCatalogTrailerAudioUrl,
                         modernCatalogCardWidth = modernCatalogCardWidth,
@@ -763,6 +823,7 @@ fun ModernHomeContent(
                         onCatalogSelectionFocused = { selection ->
                             if (focusedCatalogSelection != selection) {
                                 focusedCatalogSelection = selection
+                                trailerEndedFocusKey = null
                             }
                         },
                         onNavigateToDetail = onNavigateToDetail,
@@ -770,7 +831,13 @@ fun ModernHomeContent(
                         onBackdropInteraction = {
                             expansionInteractionNonce++
                         },
-                        onExpandedCatalogFocusKeyChange = { expandedCatalogFocusKey = it }
+                        onExpandedCatalogFocusKeyChange = { newKey ->
+                            expandedCatalogFocusKey = newKey
+                            if (newKey == null) {
+                                blackOverlayFocusKey = null
+                                trailerEndedFocusKey = focusedCatalogSelection?.focusKey
+                            }
+                        }
                     )
                 }
             }
