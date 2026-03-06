@@ -43,8 +43,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -294,7 +297,11 @@ private fun StreamBackdrop(
     isLoading: Boolean
 ) {
     val context = LocalContext.current
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
     val backgroundColor = NuvioColors.Background
+    val widthPx = remember(configuration, density) { with(density) { configuration.screenWidthDp.dp.roundToPx() }.coerceAtLeast(1) }
+    val heightPx = remember(configuration, density) { with(density) { configuration.screenHeightDp.dp.roundToPx() }.coerceAtLeast(1) }
     val backdropModel = remember(context, backdrop) {
         backdrop?.let { image ->
             ImageRequest.Builder(context)
@@ -308,29 +315,50 @@ private fun StreamBackdrop(
         animationSpec = tween(500),
         label = "backdrop_alpha"
     )
-    val leftGradient = remember(backgroundColor) {
-        Brush.horizontalGradient(
-            colorStops = arrayOf(
-                0.0f to backgroundColor,
-                0.25f to backgroundColor.copy(alpha = 0.95f),
-                0.4f to backgroundColor.copy(alpha = 0.8f),
-                0.5f to backgroundColor.copy(alpha = 0.5f),
-                0.6f to Color.Transparent,
-                1.0f to Color.Transparent
-            )
+    val leftGradientBitmap = remember(backgroundColor, widthPx) {
+        val transparent = backgroundColor.copy(alpha = 0f).toArgb()
+        val bmp = android.graphics.Bitmap.createBitmap(widthPx.coerceAtLeast(1), 1, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bmp)
+        val shader = android.graphics.LinearGradient(
+            0f, 0f, widthPx * 0.65f, 0f,
+            intArrayOf(
+                backgroundColor.toArgb(),
+                backgroundColor.copy(alpha = 0.92f).toArgb(),
+                backgroundColor.copy(alpha = 0.78f).toArgb(),
+                backgroundColor.copy(alpha = 0.58f).toArgb(),
+                backgroundColor.copy(alpha = 0.36f).toArgb(),
+                backgroundColor.copy(alpha = 0.16f).toArgb(),
+                backgroundColor.copy(alpha = 0.05f).toArgb(),
+                transparent
+            ),
+            floatArrayOf(0f, 0.12f, 0.26f, 0.44f, 0.62f, 0.78f, 0.90f, 1f),
+            android.graphics.Shader.TileMode.CLAMP
         )
+        canvas.drawRect(0f, 0f, widthPx * 0.65f, 1f, android.graphics.Paint().apply { this.shader = shader })
+        bmp.asImageBitmap()
     }
-    val rightGradient = remember(backgroundColor) {
-        Brush.horizontalGradient(
-            colorStops = arrayOf(
-                0.0f to Color.Transparent,
-                0.4f to Color.Transparent,
-                0.5f to backgroundColor.copy(alpha = 0.3f),
-                0.7f to backgroundColor.copy(alpha = 0.7f),
-                0.85f to backgroundColor.copy(alpha = 0.9f),
-                1.0f to backgroundColor
-            )
+    val rightGradientBitmap = remember(backgroundColor, widthPx) {
+        val transparent = backgroundColor.copy(alpha = 0f).toArgb()
+        val bmp = android.graphics.Bitmap.createBitmap(widthPx.coerceAtLeast(1), 1, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bmp)
+        val startX = widthPx * 0.35f
+        val shader = android.graphics.LinearGradient(
+            startX, 0f, widthPx.toFloat(), 0f,
+            intArrayOf(
+                transparent,
+                backgroundColor.copy(alpha = 0.05f).toArgb(),
+                backgroundColor.copy(alpha = 0.16f).toArgb(),
+                backgroundColor.copy(alpha = 0.36f).toArgb(),
+                backgroundColor.copy(alpha = 0.58f).toArgb(),
+                backgroundColor.copy(alpha = 0.78f).toArgb(),
+                backgroundColor.copy(alpha = 0.92f).toArgb(),
+                backgroundColor.toArgb()
+            ),
+            floatArrayOf(0f, 0.10f, 0.22f, 0.38f, 0.56f, 0.74f, 0.88f, 1f),
+            android.graphics.Shader.TileMode.CLAMP
         )
+        canvas.drawRect(startX, 0f, widthPx.toFloat(), 1f, android.graphics.Paint().apply { this.shader = shader })
+        bmp.asImageBitmap()
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -355,14 +383,30 @@ private fun StreamBackdrop(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(leftGradient)
+                .drawWithCache {
+                    onDrawBehind {
+                        drawImage(
+                            leftGradientBitmap,
+                            dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt()),
+                            filterQuality = androidx.compose.ui.graphics.FilterQuality.Low
+                        )
+                    }
+                }
         )
 
         // Right gradient for streams panel
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(rightGradient)
+                .drawWithCache {
+                    onDrawBehind {
+                        drawImage(
+                            rightGradientBitmap,
+                            dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt()),
+                            filterQuality = androidx.compose.ui.graphics.FilterQuality.Low
+                        )
+                    }
+                }
         )
     }
 }

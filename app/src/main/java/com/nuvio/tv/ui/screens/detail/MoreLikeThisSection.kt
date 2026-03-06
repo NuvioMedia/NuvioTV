@@ -83,7 +83,7 @@ fun MoreLikeThisSection(
                 val focusRequester = when {
                     isRestoreTarget -> restoreFocusRequester
                     isFirstItem -> firstItemFocusRequester
-                    else -> itemFocusRequesters.getOrPut(item.id) { FocusRequester() }
+                    else -> remember(item.id) { itemFocusRequesters.getOrPut(item.id) { FocusRequester() } }
                 }
 
                 Column {

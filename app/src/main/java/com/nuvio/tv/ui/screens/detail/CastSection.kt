@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.detail
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
@@ -31,8 +32,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyListPrefetchStrategy
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -47,7 +50,7 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.MetaCastMember
 import com.nuvio.tv.ui.theme.NuvioColors
 
-@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun CastSection(
     cast: List<MetaCastMember>,
@@ -66,6 +69,8 @@ fun CastSection(
     val firstItemFocusRequester = remember { FocusRequester() }
     val restoreFocusRequester = remember { FocusRequester() }
     val itemFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val castPrefetchStrategy = remember { LazyListPrefetchStrategy(nestedPrefetchItemCount = 2) }
+    val lazyListState = rememberLazyListState(prefetchStrategy = castPrefetchStrategy)
 
     LaunchedEffect(cast, leadingCast) {
         val validKeys = buildSet {
@@ -115,6 +120,7 @@ fun CastSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRestorer { firstItemFocusRequester },
+            state = lazyListState,
             contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.Start
         ) {
@@ -136,7 +142,7 @@ fun CastSection(
                     val focusRequester = when {
                         isRestoreTarget -> restoreFocusRequester
                         isFirstItem -> firstItemFocusRequester
-                        else -> itemFocusRequesters.getOrPut(focusKey) { FocusRequester() }
+                        else -> remember(focusKey) { itemFocusRequesters.getOrPut(focusKey) { FocusRequester() } }
                     }
 
                     Box(modifier = Modifier.padding(end = endPadding)) {
@@ -188,7 +194,7 @@ fun CastSection(
                 val focusRequester = when {
                     isRestoreTarget -> restoreFocusRequester
                     isFirstCastItem -> firstItemFocusRequester
-                    else -> itemFocusRequesters.getOrPut(focusKey) { FocusRequester() }
+                    else -> remember(focusKey) { itemFocusRequesters.getOrPut(focusKey) { FocusRequester() } }
                 }
 
                 Box(modifier = Modifier.padding(end = standardGap)) {
@@ -228,12 +234,16 @@ private fun CastMemberItem(
     val cardSizePx = remember(cardSize, density) {
         with(density) { cardSize.roundToPx() }
     }
+    val typography = MaterialTheme.typography
+    val nameStyle = remember(typography) { typography.labelMedium }
+    val characterStyle = remember(typography) { typography.labelSmall }
+    val initialsStyle = remember(typography) { typography.titleLarge }
     val photo = member.photo
     val photoModel = remember(context, photo, cardSizePx) {
         photo?.takeIf { it.isNotBlank() }?.let { url ->
             ImageRequest.Builder(context)
                 .data(url)
-                .crossfade(true)
+                .crossfade(false)
                 .size(width = cardSizePx, height = cardSizePx)
                 .build()
         }
@@ -266,9 +276,7 @@ private fun CastMemberItem(
             )
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(CircleShape),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 if (photoModel != null) {
@@ -281,7 +289,7 @@ private fun CastMemberItem(
                 } else {
                     Text(
                         text = member.name.firstOrNull()?.uppercase() ?: "?",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = initialsStyle,
                         color = NuvioColors.TextPrimary
                     )
                 }
@@ -292,7 +300,7 @@ private fun CastMemberItem(
 
         Text(
             text = member.name,
-            style = MaterialTheme.typography.labelMedium,
+            style = nameStyle,
             color = NuvioColors.TextSecondary,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
@@ -309,7 +317,7 @@ private fun CastMemberItem(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = displayCharacter,
-                style = MaterialTheme.typography.labelSmall,
+                style = characterStyle,
                 color = NuvioColors.TextTertiary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
