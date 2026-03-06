@@ -104,6 +104,7 @@ import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.core.player.ExternalPlayerLauncher
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
 import android.text.format.DateFormat
@@ -115,8 +116,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun PlayerScreen(
     viewModel: PlayerViewModel = hiltViewModel(),
-    onBackPress: () -> Unit,
-    onPlaybackErrorBack: () -> Unit = onBackPress,
+    onBackPress: (currentSeason: Int?, currentEpisode: Int?, autoPlayEnabled: Boolean) -> Unit,
+    onPlaybackErrorBack: () -> Unit = { onBackPress(null, null, false) },
     onPlaybackEnded: ((nextVideoId: String?, nextSeason: Int?, nextEpisode: Int?) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -132,7 +133,7 @@ fun PlayerScreen(
     val nextEpisodeFocusRequester = remember { FocusRequester() }
     val exitPlayer: () -> Unit = {
         viewModel.stopAndRelease()
-        onBackPress()
+        onBackPress(uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL)
     }
     val exitPlayerFromError: () -> Unit = {
         viewModel.stopAndRelease()
@@ -185,7 +186,7 @@ fun PlayerScreen(
             if (onPlaybackEnded != null) {
                 onPlaybackEnded(next?.videoId, next?.season, next?.episode)
             } else {
-                onBackPress()
+                onBackPress(uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL)
             }
         }
     }
@@ -764,7 +765,7 @@ fun PlayerScreen(
                     val title = uiState.title
                     val headers = viewModel.getCurrentHeaders()
                     viewModel.stopAndRelease()
-                    onBackPress()
+                    onBackPress(uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL)
                     ExternalPlayerLauncher.launch(
                         context = context,
                         url = url,
@@ -774,7 +775,7 @@ fun PlayerScreen(
                 },
                 onResetHideTimer = { viewModel.scheduleHideControls(); viewModel.onUserInteraction() },
                 onHideControls = { viewModel.hideControls() },
-                onBack = onBackPress,
+                onBack = { exitPlayer() },
                 skipButtonVisible = skipButtonActuallyVisible
             )
         }

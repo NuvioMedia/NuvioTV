@@ -557,33 +557,87 @@ fun NuvioNavHost(
             )
         ) { backStackEntry ->
             PlayerScreen(
-                onBackPress = {
-                    val returnedToStream = navController.popBackStack(Screen.Stream.route, inclusive = false)
-                    if (!returnedToStream) {
-                        val args = backStackEntry.arguments
-                        val returnToDetailOnBack = args?.getString("returnToDetailOnBack")
-                            ?.toBooleanStrictOrNull() == true
-                        val contentType = args?.getString("contentType").orEmpty()
-                        val contentId = args?.getString("contentId").orEmpty()
-                        if (
-                            returnToDetailOnBack &&
-                            contentType.equals("series", ignoreCase = true) &&
-                            contentId.isNotBlank()
-                        ) {
-                            navController.navigate(
-                                Screen.Detail.createRoute(
-                                    itemId = contentId,
-                                    itemType = contentType,
-                                    addonBaseUrl = null,
-                                    returnFocusSeason = args?.getString("season")?.toIntOrNull(),
-                                    returnFocusEpisode = args?.getString("episode")?.toIntOrNull()
-                                )
-                            ) {
-                                popUpTo(Screen.Player.route) { inclusive = true }
-                                launchSingleTop = true
+                onBackPress = { currentSeason, currentEpisode, autoPlayEnabled ->
+                    val args = backStackEntry.arguments
+                    val initialSeason = args?.getString("season")?.toIntOrNull()
+                    val initialEpisode = args?.getString("episode")?.toIntOrNull()
+                    val episodeChangedInPlace = (currentSeason != null || currentEpisode != null) &&
+                        (currentSeason != initialSeason || currentEpisode != initialEpisode)
+                    val returnToDetailOnBack = args?.getString("returnToDetailOnBack")
+                        ?.toBooleanStrictOrNull() == true
+                    val contentType = args?.getString("contentType").orEmpty()
+                    val contentId = args?.getString("contentId").orEmpty()
+                    val focusSeason = currentSeason ?: initialSeason
+                    val focusEpisode = currentEpisode ?: initialEpisode
+
+                    when {
+                        episodeChangedInPlace && autoPlayEnabled -> {
+                            // autoplay moved to next episode — skip Stream, go to detail
+                            if (returnToDetailOnBack && contentType.equals("series", ignoreCase = true) && contentId.isNotBlank()) {
+                                navController.navigate(
+                                    Screen.Detail.createRoute(
+                                        itemId = contentId,
+                                        itemType = contentType,
+                                        addonBaseUrl = null,
+                                        returnFocusSeason = focusSeason,
+                                        returnFocusEpisode = focusEpisode
+                                    )
+                                ) {
+                                    popUpTo(Screen.Player.route) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            } else {
+                                navController.popBackStack()
                             }
-                        } else {
-                            navController.popBackStack()
+                        }
+                        episodeChangedInPlace && !autoPlayEnabled -> {
+                            // manual stream switch to next episode — go to Stream of current episode
+                            val videoId = args?.getString("videoId").orEmpty()
+                            if (videoId.isNotBlank() && contentType.isNotBlank()) {
+                                navController.navigate(
+                                    Screen.Stream.createRoute(
+                                        videoId = videoId,
+                                        contentType = contentType,
+                                        title = args?.getString("title").orEmpty(),
+                                        poster = args?.getString("poster"),
+                                        backdrop = args?.getString("backdrop"),
+                                        logo = args?.getString("logo"),
+                                        season = focusSeason,
+                                        episode = focusEpisode,
+                                        year = args?.getString("year"),
+                                        contentId = contentId.takeIf { it.isNotBlank() },
+                                        contentName = args?.getString("contentName"),
+                                        returnToDetailOnBack = returnToDetailOnBack
+                                    )
+                                ) {
+                                    popUpTo(Screen.Player.route) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            } else {
+                                navController.popBackStack()
+                            }
+                        }
+                        else -> {
+                            // normal back — try returning to Stream of this episode
+                            val returnedToStream = navController.popBackStack(Screen.Stream.route, inclusive = false)
+                            if (!returnedToStream) {
+                                if (returnToDetailOnBack && contentType.equals("series", ignoreCase = true) && contentId.isNotBlank()) {
+                                    navController.navigate(
+                                        Screen.Detail.createRoute(
+                                            itemId = contentId,
+                                            itemType = contentType,
+                                            addonBaseUrl = null,
+                                            returnFocusSeason = focusSeason,
+                                            returnFocusEpisode = focusEpisode
+                                        )
+                                    ) {
+                                        popUpTo(Screen.Player.route) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                } else {
+                                    navController.popBackStack()
+                                }
+                            }
                         }
                     }
                 },
@@ -612,7 +666,7 @@ fun NuvioNavHost(
                             returnToDetailOnBack = returnToDetailOnBack
                         )
                         navController.navigate(route) {
-                            popUpTo(Screen.Stream.route) { inclusive = true }
+                            popUpTo(Screen.Player.route) { inclusive = true }
                             launchSingleTop = true
                         }
                     } else if (contentId.isNotBlank() && contentType.isNotBlank()) {

@@ -5,6 +5,7 @@ import androidx.media3.common.TrackGroup
 import androidx.media3.ui.AspectRatioFrameLayout
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.SubtitleOrganizationMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.repository.SkipInterval
@@ -109,6 +110,7 @@ data class PlayerUiState(
     val nextEpisodeAutoPlaySearching: Boolean = false,
     val nextEpisodeAutoPlaySourceName: String? = null,
     val nextEpisodeAutoPlayCountdownSec: Int? = null,
+    val streamAutoPlayMode: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL,
     // Stream source badge
     val showStreamSourceIndicator: Boolean = false,
     val streamSourceIndicatorText: String = "",

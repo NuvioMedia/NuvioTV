@@ -161,6 +161,25 @@ private fun resolveDetailReturnEpisodeFocusTarget(
 
 private const val USER_INTERACTION_DISPATCH_DEBOUNCE_MS = 120L
 
+private fun applyDither(bmp: android.graphics.Bitmap) {
+    val pixels = IntArray(bmp.width * bmp.height)
+    bmp.getPixels(pixels, 0, bmp.width, 0, 0, bmp.width, bmp.height)
+    val rng = java.util.Random(0)
+    for (i in pixels.indices) {
+        val p = pixels[i]
+        val a = (p ushr 24) and 0xFF
+        val r = (p ushr 16) and 0xFF
+        val g = (p ushr 8) and 0xFF
+        val b = p and 0xFF
+        val noise = rng.nextInt(3) - 1
+        pixels[i] = ((a shl 24) or
+            ((r + noise).coerceIn(0, 255) shl 16) or
+            ((g + noise).coerceIn(0, 255) shl 8) or
+            (b + noise).coerceIn(0, 255))
+    }
+    bmp.setPixels(pixels, 0, bmp.width, 0, 0, bmp.width, bmp.height)
+}
+
 @Stable
 private class TrailerSeekOverlayState {
     var positionMs by mutableLongStateOf(0L)
@@ -1032,8 +1051,9 @@ private fun MetaDetailsContent(
 
     val leftGradientBitmap = remember(backgroundColor, backdropWidthPx, backdropHeightPx) {
         val w = backdropWidthPx.coerceAtLeast(1)
+        val h = backdropHeightPx.coerceAtLeast(1)
         val transparent = backgroundColor.copy(alpha = 0f).toArgb()
-        val bmp = android.graphics.Bitmap.createBitmap(w, 1, android.graphics.Bitmap.Config.ARGB_8888)
+        val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bmp)
         val shader = android.graphics.LinearGradient(
             0f, 0f, w * 0.78f, 0f,
@@ -1051,13 +1071,18 @@ private fun MetaDetailsContent(
             floatArrayOf(0f, 0.10f, 0.22f, 0.36f, 0.52f, 0.66f, 0.78f, 0.90f, 1f),
             android.graphics.Shader.TileMode.CLAMP
         )
-        canvas.drawRect(0f, 0f, w.toFloat(), 1f, android.graphics.Paint().apply { this.shader = shader })
+        canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), android.graphics.Paint().apply {
+            this.shader = shader
+            isDither = true
+        })
+        applyDither(bmp)
         bmp.asImageBitmap()
     }
-    val bottomGradientBitmap = remember(backgroundColor, backdropHeightPx) {
+    val bottomGradientBitmap = remember(backgroundColor, backdropWidthPx, backdropHeightPx) {
+        val w = backdropWidthPx.coerceAtLeast(1)
         val h = backdropHeightPx.coerceAtLeast(1)
         val transparent = backgroundColor.copy(alpha = 0f).toArgb()
-        val bmp = android.graphics.Bitmap.createBitmap(1, h, android.graphics.Bitmap.Config.ARGB_8888)
+        val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bmp)
         val startY = h * 0.38f
         val shader = android.graphics.LinearGradient(
@@ -1076,7 +1101,11 @@ private fun MetaDetailsContent(
             floatArrayOf(0f, 0.10f, 0.22f, 0.36f, 0.52f, 0.66f, 0.78f, 0.90f, 1f),
             android.graphics.Shader.TileMode.CLAMP
         )
-        canvas.drawRect(0f, startY, 1f, h.toFloat(), android.graphics.Paint().apply { this.shader = shader })
+        canvas.drawRect(0f, startY, w.toFloat(), h.toFloat(), android.graphics.Paint().apply {
+            this.shader = shader
+            isDither = true
+        })
+        applyDither(bmp)
         bmp.asImageBitmap()
     }
 

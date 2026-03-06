@@ -95,6 +95,25 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 
+private fun applyDither(bmp: android.graphics.Bitmap) {
+    val pixels = IntArray(bmp.width * bmp.height)
+    bmp.getPixels(pixels, 0, bmp.width, 0, 0, bmp.width, bmp.height)
+    val rng = java.util.Random(0)
+    for (i in pixels.indices) {
+        val p = pixels[i]
+        val a = (p ushr 24) and 0xFF
+        val r = (p ushr 16) and 0xFF
+        val g = (p ushr 8) and 0xFF
+        val b = p and 0xFF
+        val noise = rng.nextInt(3) - 1
+        pixels[i] = ((a shl 24) or
+            ((r + noise).coerceIn(0, 255) shl 16) or
+            ((g + noise).coerceIn(0, 255) shl 8) or
+            (b + noise).coerceIn(0, 255))
+    }
+    bmp.setPixels(pixels, 0, bmp.width, 0, 0, bmp.width, bmp.height)
+}
+
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun StreamScreen(
@@ -299,9 +318,9 @@ private fun StreamBackdrop(
     val context = LocalContext.current
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val backgroundColor = NuvioColors.Background
     val widthPx = remember(configuration, density) { with(density) { configuration.screenWidthDp.dp.roundToPx() }.coerceAtLeast(1) }
     val heightPx = remember(configuration, density) { with(density) { configuration.screenHeightDp.dp.roundToPx() }.coerceAtLeast(1) }
+    val backgroundColor = NuvioColors.Background
     val backdropModel = remember(context, backdrop) {
         backdrop?.let { image ->
             ImageRequest.Builder(context)
@@ -315,9 +334,9 @@ private fun StreamBackdrop(
         animationSpec = tween(500),
         label = "backdrop_alpha"
     )
-    val leftGradientBitmap = remember(backgroundColor, widthPx) {
+    val leftGradientBitmap = remember(backgroundColor, widthPx, heightPx) {
         val transparent = backgroundColor.copy(alpha = 0f).toArgb()
-        val bmp = android.graphics.Bitmap.createBitmap(widthPx.coerceAtLeast(1), 1, android.graphics.Bitmap.Config.ARGB_8888)
+        val bmp = android.graphics.Bitmap.createBitmap(widthPx, heightPx, android.graphics.Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bmp)
         val shader = android.graphics.LinearGradient(
             0f, 0f, widthPx * 0.65f, 0f,
@@ -334,12 +353,16 @@ private fun StreamBackdrop(
             floatArrayOf(0f, 0.12f, 0.26f, 0.44f, 0.62f, 0.78f, 0.90f, 1f),
             android.graphics.Shader.TileMode.CLAMP
         )
-        canvas.drawRect(0f, 0f, widthPx * 0.65f, 1f, android.graphics.Paint().apply { this.shader = shader })
+        canvas.drawRect(0f, 0f, widthPx.toFloat(), heightPx.toFloat(), android.graphics.Paint().apply {
+            this.shader = shader
+            isDither = true
+        })
+        applyDither(bmp)
         bmp.asImageBitmap()
     }
-    val rightGradientBitmap = remember(backgroundColor, widthPx) {
+    val rightGradientBitmap = remember(backgroundColor, widthPx, heightPx) {
         val transparent = backgroundColor.copy(alpha = 0f).toArgb()
-        val bmp = android.graphics.Bitmap.createBitmap(widthPx.coerceAtLeast(1), 1, android.graphics.Bitmap.Config.ARGB_8888)
+        val bmp = android.graphics.Bitmap.createBitmap(widthPx, heightPx, android.graphics.Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bmp)
         val startX = widthPx * 0.35f
         val shader = android.graphics.LinearGradient(
@@ -357,7 +380,11 @@ private fun StreamBackdrop(
             floatArrayOf(0f, 0.10f, 0.22f, 0.38f, 0.56f, 0.74f, 0.88f, 1f),
             android.graphics.Shader.TileMode.CLAMP
         )
-        canvas.drawRect(startX, 0f, widthPx.toFloat(), 1f, android.graphics.Paint().apply { this.shader = shader })
+        canvas.drawRect(startX, 0f, widthPx.toFloat(), heightPx.toFloat(), android.graphics.Paint().apply {
+            this.shader = shader
+            isDither = true
+        })
+        applyDither(bmp)
         bmp.asImageBitmap()
     }
 

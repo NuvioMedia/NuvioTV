@@ -270,6 +270,8 @@
     <string name="autoplay_stream_selection">Selección Automática de Fuente</string>
     <string name="autoplay_next_episode">Auto-reproducir Siguiente Episodio</string>
     <string name="autoplay_next_episode_sub">Iniciar el siguiente episodio automáticamente cuando aparezca el aviso.</string>
+    <string name="autoplay_prefer_binge_group">Preferir grupo de maratón (Binge)</string>
+    <string name="autoplay_prefer_binge_group_sub">Intenta primero con el mismo perfil de fuente (mismo addon/calidad) antes de las reglas normales.</string>
     <string name="autoplay_threshold_pct">Porcentaje</string>
     <string name="autoplay_threshold_min">Minutos antes del final</string>
     <string name="autoplay_threshold_mode">Modo de Umbral del Siguiente Episodio</string>
@@ -408,17 +410,19 @@
     <string name="mdblist_dialog_subtitle">Ingresa tu clave de API para obtener calificaciones externas</string>
     <string name="mdblist_dialog_placeholder">Ingresar clave de API de MDBList</string>
     <string name="mdblist_not_set">No configurado</string>
+    <string name="mdblist_invalid_api_key">Clave API de MDBList inválida</string>
 
     <!-- Anime-Skip -->
     <string name="animeskip_title">Anime Skip</string>
-    <string name="animeskip_subtitle">Configura tu Client ID de Anime Skip para omitir intro/outro</string>
-    <string name="animeskip_enable_title">Habilitar Anime Skip</string>
-    <string name="animeskip_enable_subtitle">Obtener marcas de tiempo desde anime-skip.com</string>
-    <string name="animeskip_client_id_title">Client ID</string>
-    <string name="animeskip_client_id_subtitle">Necesario para obtener marcas de tiempo desde anime-skip.com</string>
-    <string name="animeskip_dialog_title">Client ID de Anime Skip</string>
-    <string name="animeskip_dialog_subtitle">Crea tu propio Client ID en anime-skip.com/account/settings</string>
-    <string name="animeskip_dialog_placeholder">Ingresar Client ID</string>
+    <string name="animeskip_subtitle">Configura tu ID de cliente de Anime Skip para saltar intros y outros de anime</string>
+    <string name="animeskip_enable_title">Activar Anime Skip</string>
+    <string name="animeskip_enable_subtitle">Obtener marcas de tiempo para saltos desde anime-skip.com</string>
+    <string name="animeskip_client_id_title">ID de cliente</string>
+    <string name="animeskip_client_id_subtitle">Requerido para obtener marcas de tiempo de salto desde anime-skip.com</string>
+    <string name="animeskip_dialog_title">ID de cliente de Anime Skip</string>
+    <string name="animeskip_dialog_subtitle">Crea tu propio ID de cliente en anime-skip.com/account/settings</string>
+    <string name="animeskip_dialog_placeholder">Ingresa el ID de cliente</string>
+    <string name="animeskip_invalid_client_id">ID de cliente inválido</string>
     <string name="action_clear">Borrar</string>
 
     <!-- TmdbSettingsScreen -->
@@ -468,6 +472,8 @@
     <string name="trakt_unaired_next_up_subtitle">Mostrar los próximos episodios antes de su emisión</string>
     <string name="trakt_unaired_shown">Mostrados</string>
     <string name="trakt_unaired_hidden">Ocultos</string>
+    <string name="trakt_unaired_now_shown">Los episodios no emitidos ahora se muestran</string>
+    <string name="trakt_unaired_now_hidden">Los episodios no emitidos ahora están ocultos</string>
     <string name="trakt_cached_label">En caché</string>
     <string name="trakt_stat_movies">Películas</string>
     <string name="trakt_stat_shows">Series</string>
@@ -580,7 +586,18 @@
     <string name="stream_player_external">Externo</string>
 
     <!-- PlayerScreen -->
-    <string name="player_ends_at">Termina a las: %1$s</string>
+    <string name="player_no_external_player">No se encontró un reproductor externo</string>
+
+    <!-- ParentalGuideOverlay -->
+    <string name="parental_nudity">Nudez</string>
+    <string name="parental_violence">Violencia</string>
+    <string name="parental_profanity">Lenguaje soez</string>
+    <string name="parental_alcohol">Alcohol/Drogas</string>
+    <string name="parental_frightening">Terror</string>
+    <string name="parental_severity_severe">Severo</string>
+    <string name="parental_severity_moderate">Moderado</string>
+    <string name="parental_severity_mild">Leve</string>
+    <string name="player_ends_at">Termina a las %1$s</string>
     <string name="player_via">vía %1$s</string>
     <string name="player_subtitle_delay">Retraso de Subtítulos</string>
     <string name="player_error_title">Error de Reproducción</string>
@@ -664,7 +681,8 @@
     <string name="next_episode_finding_source">Buscando fuente…</string>
     <string name="next_episode_playing_via">Reproduciendo vía %1$s en %2$ds</string>
     <string name="next_episode_play">Reproducir</string>
-    <string name="next_episode_unaired">Sin emitir</string>
+    <string name="next_episode_unaired">No emitido</string>
+    <string name="next_episode_not_aired_yet">El siguiente episodio aún no se ha emitido</string>
     <string name="skip_intro">Omitir Intro</string>
     <string name="skip_ending">Omitir Final</string>
     <string name="skip_recap">Omitir Resumen</string>
@@ -679,6 +697,10 @@
     <string name="search_start_title">Empezar a buscar</string>
     <string name="search_start_subtitle">Ingresa al menos 2 caracteres</string>
     <string name="search_start_subtitle_no_discover">Descubrir está desactivado. Ingresa al menos 2 caracteres</string>
+    <string name="search_voice_no_speech">No se detectó voz. Intenta de nuevo.</string>
+    <string name="search_voice_mic_permission">Se requiere permiso de micrófono para búsqueda por voz.</string>
+    <string name="search_voice_failed">Error en el reconocimiento de voz. Intenta de nuevo.</string>
+    <string name="search_voice_unavailable">La búsqueda por voz no está disponible en este dispositivo.</string>
 
     <!-- LibraryScreen -->
     <string name="library_syncing">Sincronizando biblioteca de Trakt\u2026</string>
