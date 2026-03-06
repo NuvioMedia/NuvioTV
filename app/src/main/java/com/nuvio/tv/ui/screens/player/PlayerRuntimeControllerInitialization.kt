@@ -52,6 +52,7 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
 
     scope.launch {
         try {
+            isReleasingPlayer = false
             autoSubtitleSelected = false
             hasScannedTextTracksOnce = false
             resetLoadingOverlayForNewStream()
@@ -284,11 +285,12 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                             }
                             stopProgressUpdates()
                             stopWatchProgressSaving()
-                            if (playbackState != Player.STATE_BUFFERING) {
-                                emitStopScrobbleForCurrentProgress()
+                            if (!isReleasingPlayer) {
+                                if (playbackState != Player.STATE_BUFFERING) {
+                                    emitStopScrobbleForCurrentProgress()
+                                }
+                                saveWatchProgress()
                             }
-                            
-                            saveWatchProgress()
                         }
                     }
 

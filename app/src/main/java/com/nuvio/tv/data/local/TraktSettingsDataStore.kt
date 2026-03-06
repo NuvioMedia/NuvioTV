@@ -3,6 +3,7 @@ package com.nuvio.tv.data.local
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import kotlinx.coroutines.flow.Flow
@@ -16,6 +17,20 @@ class TraktSettingsDataStore @Inject constructor(
     private val factory: ProfileDataStoreFactory,
     private val profileManager: ProfileManager
 ) {
+    enum class TraktIntegrationMode(val storageValue: String) {
+        FULL_SYNC("full_sync"),
+        SCROBBLE_ONLY("scrobble_only");
+
+        companion object {
+            fun fromStorageValue(value: String?): TraktIntegrationMode {
+                return when (value) {
+                    SCROBBLE_ONLY.storageValue -> SCROBBLE_ONLY
+                    else -> FULL_SYNC
+                }
+            }
+        }
+    }
+
     companion object {
         private const val FEATURE = "trakt_settings"
         const val CONTINUE_WATCHING_DAYS_CAP_ALL = 0
@@ -31,6 +46,7 @@ class TraktSettingsDataStore @Inject constructor(
     private val continueWatchingDaysCapKey = intPreferencesKey("continue_watching_days_cap")
     private val dismissedNextUpKeysKey = stringSetPreferencesKey("dismissed_next_up_keys")
     private val showUnairedNextUpKey = booleanPreferencesKey("show_unaired_next_up")
+    private val integrationModeKey = stringPreferencesKey("integration_mode")
 
     val continueWatchingDaysCap: Flow<Int> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
@@ -49,6 +65,12 @@ class TraktSettingsDataStore @Inject constructor(
     val showUnairedNextUp: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             prefs[showUnairedNextUpKey] ?: DEFAULT_SHOW_UNAIRED_NEXT_UP
+        }
+    }
+
+    val integrationMode: Flow<TraktIntegrationMode> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            TraktIntegrationMode.fromStorageValue(prefs[integrationModeKey])
         }
     }
 
@@ -77,6 +99,12 @@ class TraktSettingsDataStore @Inject constructor(
     suspend fun setShowUnairedNextUp(enabled: Boolean) {
         store().edit { prefs ->
             prefs[showUnairedNextUpKey] = enabled
+        }
+    }
+
+    suspend fun setIntegrationMode(mode: TraktIntegrationMode) {
+        store().edit { prefs ->
+            prefs[integrationModeKey] = mode.storageValue
         }
     }
 }

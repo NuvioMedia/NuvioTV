@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.repository
 
+import android.util.Log
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.data.remote.api.TraktApi
 import com.nuvio.tv.data.remote.dto.trakt.TraktEpisodeDto
@@ -8,6 +9,10 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktMovieDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktScrobbleRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktShowDto
 import com.nuvio.tv.core.profile.ProfileManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
@@ -44,6 +49,10 @@ class TraktScrobbleService @Inject constructor(
     private val traktProgressService: TraktProgressService,
     private val profileManager: ProfileManager
 ) {
+    companion object {
+        private const val TAG = "TraktScrobbleSvc"
+    }
+
     private data class ScrobbleStamp(
         val action: String,
         val itemKey: String,
@@ -54,6 +63,7 @@ class TraktScrobbleService @Inject constructor(
     private var lastScrobbleStamp: ScrobbleStamp? = null
     private val minSendIntervalMs = 8_000L
     private val progressWindow = 1.5f
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     suspend fun scrobbleStart(item: TraktScrobbleItem, progressPercent: Float) {
         sendScrobble(action = "start", item = item, progressPercent = progressPercent)
@@ -65,6 +75,38 @@ class TraktScrobbleService @Inject constructor(
 
     suspend fun scrobblePause(item: TraktScrobbleItem, progressPercent: Float) {
         sendScrobble(action = "pause", item = item, progressPercent = progressPercent)
+    }
+
+    fun scrobbleStartAsync(item: TraktScrobbleItem, progressPercent: Float) {
+        serviceScope.launch {
+            scrobbleStart(item = item, progressPercent = progressPercent)
+        }
+    }
+
+    fun scrobbleStopAsync(item: TraktScrobbleItem, progressPercent: Float) {
+        serviceScope.launch {
+            scrobbleStop(item = item, progressPercent = progressPercent)
+        }
+    }
+
+    fun scrobblePauseAsync(item: TraktScrobbleItem, progressPercent: Float) {
+        serviceScope.launch {
+            scrobblePause(item = item, progressPercent = progressPercent)
+        }
+    }
+
+    fun scrobbleStartThenPauseAsync(item: TraktScrobbleItem, progressPercent: Float) {
+        serviceScope.launch {
+            scrobbleStart(item = item, progressPercent = progressPercent)
+            scrobblePause(item = item, progressPercent = progressPercent)
+        }
+    }
+
+    fun scrobbleStartThenStopAsync(item: TraktScrobbleItem, progressPercent: Float) {
+        serviceScope.launch {
+            scrobbleStart(item = item, progressPercent = progressPercent)
+            scrobbleStop(item = item, progressPercent = progressPercent)
+        }
     }
 
     private suspend fun sendScrobble(
@@ -84,20 +126,30 @@ class TraktScrobbleService @Inject constructor(
         val response = traktAuthService.executeAuthorizedWriteRequest { authHeader ->
             when (action) {
                 "start" -> traktApi.scrobbleStart(authHeader, requestBody)
+                "pause" -> traktApi.scrobblePause(authHeader, requestBody)
                 else -> traktApi.scrobbleStop(authHeader, requestBody)
             }
-        } ?: return
+        } ?: run {
+            Log.w(TAG, "Trakt scrobble $action failed: no response")
+            return
+        }
 
         if (response.isSuccessful || response.code() == 409) {
+            Log.d(
+                TAG,
+                "Trakt scrobble $action accepted (HTTP ${response.code()}) progress=$clampedProgress item=${item.itemKey}"
+            )
             lastScrobbleStamp = ScrobbleStamp(
                 action = action,
                 itemKey = item.itemKey,
                 progress = clampedProgress,
                 timestampMs = System.currentTimeMillis()
             )
-            if (action == "stop") {
+            if (action == "pause" || action == "stop") {
                 traktProgressService.refreshNow()
             }
+        } else {
+            Log.w(TAG, "Trakt scrobble $action failed with HTTP ${response.code()} for ${item.itemKey}")
         }
     }
 

@@ -19,6 +19,7 @@ import com.nuvio.tv.core.sync.WatchedItemsSyncService
 import com.nuvio.tv.data.local.LibraryPreferences
 import com.nuvio.tv.data.local.WatchedItemsPreferences
 import com.nuvio.tv.data.local.TraktAuthDataStore
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchProgressPreferences
 import com.nuvio.tv.data.repository.AddonRepositoryImpl
 import com.nuvio.tv.data.repository.LibraryRepositoryImpl
@@ -60,6 +61,7 @@ class AccountViewModel @Inject constructor(
     private val libraryPreferences: LibraryPreferences,
     private val watchedItemsPreferences: WatchedItemsPreferences,
     private val traktAuthDataStore: TraktAuthDataStore,
+    private val traktSettingsDataStore: TraktSettingsDataStore,
     private val postgrest: Postgrest,
     private val profileManager: ProfileManager,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context
@@ -593,7 +595,9 @@ class AccountViewModel @Inject constructor(
             addonRepository.isSyncingFromRemote = false
 
             val isPrimaryProfile = profileManager.activeProfileId.value == 1
-            val isTraktConnected = isPrimaryProfile && traktAuthDataStore.isAuthenticated.first()
+            val isTraktConnected = isPrimaryProfile &&
+                traktAuthDataStore.isAuthenticated.first() &&
+                traktSettingsDataStore.integrationMode.first() == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC
             Log.d("AccountViewModel", "pullRemoteData: isTraktConnected=$isTraktConnected isPrimaryProfile=$isPrimaryProfile")
             if (!isTraktConnected) {
                 watchProgressRepository.isSyncingFromRemote = true

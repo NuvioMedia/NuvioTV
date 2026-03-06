@@ -219,6 +219,12 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             }
         }
     }
+
+    scope.launch {
+        traktSettingsDataStore.integrationMode.collectLatest { mode ->
+            traktIntegrationModeSetting = mode
+        }
+    }
 }
 
 internal fun PlayerRuntimeController.loadSavedProgressFor(season: Int?, episode: Int?) {

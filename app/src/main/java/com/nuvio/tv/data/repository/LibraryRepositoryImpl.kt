@@ -4,6 +4,7 @@ import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.sync.LibrarySyncService
 import com.nuvio.tv.data.local.LibraryPreferences
 import com.nuvio.tv.data.local.TraktAuthDataStore
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.domain.model.LibraryEntry
 import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.LibraryListTab
@@ -20,6 +21,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -34,6 +36,7 @@ import javax.inject.Singleton
 class LibraryRepositoryImpl @Inject constructor(
     private val libraryPreferences: LibraryPreferences,
     private val traktAuthDataStore: TraktAuthDataStore,
+    private val traktSettingsDataStore: TraktSettingsDataStore,
     private val traktLibraryService: TraktLibraryService,
     private val librarySyncService: LibrarySyncService,
     private val authManager: AuthManager
@@ -55,9 +58,18 @@ class LibraryRepositoryImpl @Inject constructor(
         }
     }
 
-    override val sourceMode: Flow<LibrarySourceMode> = traktAuthDataStore.isEffectivelyAuthenticated
-        .map { isAuthenticated ->
-            if (isAuthenticated) LibrarySourceMode.TRAKT else LibrarySourceMode.LOCAL
+    override val sourceMode: Flow<LibrarySourceMode> = combine(
+        traktAuthDataStore.isEffectivelyAuthenticated,
+        traktSettingsDataStore.integrationMode
+    ) { isAuthenticated, integrationMode ->
+            if (
+                isAuthenticated &&
+                integrationMode == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC
+            ) {
+                LibrarySourceMode.TRAKT
+            } else {
+                LibrarySourceMode.LOCAL
+            }
         }
         .distinctUntilChanged()
 
@@ -135,7 +147,7 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun toggleDefault(item: LibraryEntryInput) {
-        if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
+        if (isTraktLibraryModeEnabled()) {
             traktLibraryService.toggleWatchlist(item)
             return
         }
@@ -150,7 +162,7 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getMembershipSnapshot(item: LibraryEntryInput): ListMembershipSnapshot {
-        if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
+        if (isTraktLibraryModeEnabled()) {
             return traktLibraryService.getMembershipSnapshot(item)
         }
         val inLocal = libraryPreferences.isInLibrary(item.itemId, item.itemType).first()
@@ -158,7 +170,7 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun applyMembershipChanges(item: LibraryEntryInput, changes: ListMembershipChanges) {
-        if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
+        if (isTraktLibraryModeEnabled()) {
             traktLibraryService.applyMembershipChanges(item, changes)
             return
         }
@@ -203,15 +215,22 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     override suspend fun refreshNow() {
-        if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
+        if (isTraktLibraryModeEnabled()) {
             traktLibraryService.refreshNow()
         }
     }
 
     private suspend fun requireTraktAuth() {
-        if (!traktAuthDataStore.isEffectivelyAuthenticated.first()) {
+        if (!isTraktLibraryModeEnabled()) {
             throw IllegalStateException("Trakt authentication required")
         }
+    }
+
+    private suspend fun isTraktLibraryModeEnabled(): Boolean {
+        val isAuthenticated = traktAuthDataStore.isEffectivelyAuthenticated.first()
+        val integrationMode = traktSettingsDataStore.integrationMode.first()
+        return isAuthenticated &&
+            integrationMode == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC
     }
 
     private fun LibraryEntryInput.toSavedLibraryItem(): SavedLibraryItem {

@@ -4,6 +4,7 @@ import android.util.Log
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.TraktAuthDataStore
+import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchProgressPreferences
 import com.nuvio.tv.data.remote.supabase.SupabaseWatchProgress
 import com.nuvio.tv.domain.model.WatchProgress
@@ -27,6 +28,7 @@ class WatchProgressSyncService @Inject constructor(
     private val postgrest: Postgrest,
     private val watchProgressPreferences: WatchProgressPreferences,
     private val traktAuthDataStore: TraktAuthDataStore,
+    private val traktSettingsDataStore: TraktSettingsDataStore,
     private val profileManager: ProfileManager
 ) {
     private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
@@ -40,8 +42,8 @@ class WatchProgressSyncService @Inject constructor(
 
     suspend fun deleteFromRemote(keys: Collection<String>): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            if (traktAuthDataStore.isAuthenticated.first()) {
-                Log.d(TAG, "Trakt connected, skipping watch progress delete")
+            if (shouldSkipBecauseTraktOwnsData()) {
+                Log.d(TAG, "Trakt full-sync mode active, skipping watch progress delete")
                 return@withContext Result.success(Unit)
             }
 
@@ -77,8 +79,8 @@ class WatchProgressSyncService @Inject constructor(
      */
     suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            if (traktAuthDataStore.isAuthenticated.first()) {
-                Log.d(TAG, "Trakt connected, skipping watch progress push")
+            if (shouldSkipBecauseTraktOwnsData()) {
+                Log.d(TAG, "Trakt full-sync mode active, skipping watch progress push")
                 return@withContext Result.success(Unit)
             }
 
@@ -125,8 +127,8 @@ class WatchProgressSyncService @Inject constructor(
     
     suspend fun pushSingleToRemote(key: String, progress: WatchProgress): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            if (traktAuthDataStore.isAuthenticated.first()) {
-                Log.d(TAG, "Trakt connected, skipping single watch progress push")
+            if (shouldSkipBecauseTraktOwnsData()) {
+                Log.d(TAG, "Trakt full-sync mode active, skipping single watch progress push")
                 return@withContext Result.success(Unit)
             }
 
@@ -168,8 +170,8 @@ class WatchProgressSyncService @Inject constructor(
      */
     suspend fun pullFromRemote(): Result<List<Pair<String, WatchProgress>>> = withContext(Dispatchers.IO) {
         try {
-            if (traktAuthDataStore.isAuthenticated.first()) {
-                Log.d(TAG, "Trakt connected, skipping watch progress pull")
+            if (shouldSkipBecauseTraktOwnsData()) {
+                Log.d(TAG, "Trakt full-sync mode active, skipping watch progress pull")
                 return@withContext Result.success(emptyList())
             }
 
@@ -213,6 +215,13 @@ class WatchProgressSyncService @Inject constructor(
             Log.e(TAG, "Failed to pull watch progress from remote", e)
             Result.failure(e)
         }
+    }
+
+    private suspend fun shouldSkipBecauseTraktOwnsData(): Boolean {
+        val isAuthenticated = traktAuthDataStore.isAuthenticated.first()
+        val integrationMode = traktSettingsDataStore.integrationMode.first()
+        return isAuthenticated &&
+            integrationMode == TraktSettingsDataStore.TraktIntegrationMode.FULL_SYNC
     }
 
     private fun canonicalizeForRemote(
