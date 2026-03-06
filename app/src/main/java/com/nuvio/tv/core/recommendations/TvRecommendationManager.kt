@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.async
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,7 +50,8 @@ class TvRecommendationManager @Inject constructor(
         withContext(Dispatchers.IO) {
             try {
                 // Determine which catalogs are valid
-                val validIds = dataStore.getEnabledCatalogs().toList()
+                val validIds = dataStore.getEnabledCatalogs().toMutableList()
+                validIds.add("nuvio_play_next")
                 channelManager.cleanupLegacyChannels(validIds)
                 
                 // Force sync Watch Next items right on startup to refresh launcher UI and bust caches
@@ -114,6 +116,33 @@ class TvRecommendationManager @Inject constructor(
                         val internalId = "wn_${progress.contentId}"
                         programBuilder.upsertWatchNextProgram(program, internalId)
                     }
+
+                    // --- Create a dedicated "Play Next" Preview Channel ---
+                    // This is for Google TV / newer launchers where the global Watch Next row is hidden or restricted.
+                    // We generate a standard channel that behaves exactly like "Continue Watching".
+                    if (dataStore.getPlayNextEnabled()) {
+                        val playNextChannelId = channelManager.getOrCreateChannel(
+                            internalId = "nuvio_play_next",
+                            displayName = "Play Next"
+                        )
+                        
+                        if (playNextChannelId != null) {
+                            channelManager.clearProgramsForChannel(playNextChannelId)
+                            val previewPrograms = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                kotlinx.coroutines.coroutineScope {
+                                    items.map { progress ->
+                                        async { programBuilder.buildContinueWatchingProgram(playNextChannelId, progress) }
+                                    }.map { it.await() }
+                                }
+                            }
+                            channelManager.insertPrograms(previewPrograms)
+                        }
+                    } else {
+                        val playNextChannelId = channelManager.getChannelId("nuvio_play_next")
+                        if (playNextChannelId != null) {
+                            channelManager.clearProgramsForChannel(playNextChannelId)
+                        }
+                    }
                 } catch (_: Exception) {
                 }
             }
@@ -146,6 +175,13 @@ class TvRecommendationManager @Inject constructor(
         withContext(Dispatchers.IO) {
             // Delete ALL preview channels
             channelManager.cleanupLegacyChannels(emptyList())
+            
+            // Just clear the "Play Next" channel programs instead of deleting it
+            // so it hides but doesn't require user re-approval if toggled back on
+            val playNextChannelId = channelManager.getChannelId("nuvio_play_next")
+            if (playNextChannelId != null) {
+                channelManager.clearProgramsForChannel(playNextChannelId)
+            }
             
             // Delete ALL watch next items
             programBuilder.clearAllWatchNextPrograms()

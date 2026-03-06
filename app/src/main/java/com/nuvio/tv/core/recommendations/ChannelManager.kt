@@ -79,7 +79,13 @@ class ChannelManager @Inject constructor(
 
             // Request the system to make this channel visible on the home screen.
             // On first call the user gets a prompt; subsequent calls are no-ops.
-            TvContractCompat.requestChannelBrowsable(context, channelId)
+            try {
+                val intent = android.content.Intent(TvContractCompat.ACTION_REQUEST_CHANNEL_BROWSABLE)
+                intent.putExtra(TvContractCompat.EXTRA_CHANNEL_ID, channelId)
+                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+            } catch (_: Exception) {
+            }
 
             channelId
         } catch (_: Exception) {
@@ -124,6 +130,22 @@ class ChannelManager @Inject constructor(
             dataStore.clearChannelId(internalId)
         } catch (_: Exception) {
         }
+    }
+
+    /**
+     * Resolves the real internal channel ID without creating it.
+     */
+    suspend fun getChannelId(internalId: String): Long? {
+        val cachedId = dataStore.getChannelId(internalId)
+        if (cachedId != null && channelExists(cachedId)) {
+            return cachedId
+        }
+        val existingId = findChannelByInternalId(internalId)
+        if (existingId != null) {
+            dataStore.setChannelId(internalId, existingId)
+            return existingId
+        }
+        return null
     }
 
     // ────────────────────────────────────────────────────────────────

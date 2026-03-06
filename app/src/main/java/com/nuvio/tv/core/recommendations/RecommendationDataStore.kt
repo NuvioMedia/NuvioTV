@@ -35,6 +35,7 @@ class RecommendationDataStore @Inject constructor(
         private val KEY_SYNC_INTERVAL_HOURS = intPreferencesKey("sync_interval_hours")
         private val KEY_MAX_ITEMS_PER_CHANNEL = intPreferencesKey("max_items_per_channel")
         private val KEY_USE_WIDE_POSTER = booleanPreferencesKey("use_wide_poster")
+        private val KEY_PLAY_NEXT_ENABLED = booleanPreferencesKey("play_next_enabled")
     }
 
     // ── Configuration ──
@@ -51,9 +52,14 @@ class RecommendationDataStore @Inject constructor(
         it[KEY_USE_WIDE_POSTER] ?: false
     }
 
+    val playNextEnabledFlow = context.recommendationDataStore.data.map {
+        it[KEY_PLAY_NEXT_ENABLED] ?: true
+    }
+
     suspend fun getSyncIntervalHours(): Int = syncIntervalHoursFlow.first()
     suspend fun getMaxItemsPerChannel(): Int = maxItemsPerChannelFlow.first()
     suspend fun getUseWidePoster(): Boolean = useWidePosterFlow.first()
+    suspend fun getPlayNextEnabled(): Boolean = playNextEnabledFlow.first()
 
     suspend fun setSyncIntervalHours(hours: Int) {
         context.recommendationDataStore.edit { it[KEY_SYNC_INTERVAL_HOURS] = hours }
@@ -65,6 +71,10 @@ class RecommendationDataStore @Inject constructor(
 
     suspend fun setUseWidePoster(useWide: Boolean) {
         context.recommendationDataStore.edit { it[KEY_USE_WIDE_POSTER] = useWide }
+    }
+
+    suspend fun setPlayNextEnabled(enabled: Boolean) {
+        context.recommendationDataStore.edit { it[KEY_PLAY_NEXT_ENABLED] = enabled }
     }
 
     // ── Enabled Catalogs ──

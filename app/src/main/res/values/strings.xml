@@ -907,6 +907,9 @@
     <string name="settings_tv_recommendations_appearance">Appearance &amp; Sync</string>
     <string name="settings_tv_recommendations_appearance_sub">Configure poster style, row limits, and update frequency</string>
     
+    <string name="settings_tv_recommendations_play_next_title">Play Next Channel</string>
+    <string name="settings_tv_recommendations_play_next_sub">Create a dedicated row simulating Continue Watching with progress bars</string>
+    
     <string name="settings_tv_recommendations_poster_style_title">Use Wide Posters</string>
     <string name="settings_tv_recommendations_poster_style_sub">Display landscape (backdrop) posters instead of standard vertical ones</string>
     

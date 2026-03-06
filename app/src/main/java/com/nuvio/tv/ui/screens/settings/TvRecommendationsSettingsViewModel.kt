@@ -48,6 +48,12 @@ class TvRecommendationsSettingsViewModel @Inject constructor(
         initialValue = true
     )
 
+    val isPlayNextEnabled: StateFlow<Boolean> = dataStore.playNextEnabledFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = true
+    )
+
     init {
         // Load Addon Catalogs
         viewModelScope.launch {
@@ -97,6 +103,13 @@ class TvRecommendationsSettingsViewModel @Inject constructor(
     fun setRecommendationsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             dataStore.setEnabled(enabled)
+            triggerImmediateSync()
+        }
+    }
+
+    fun setPlayNextEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            dataStore.setPlayNextEnabled(enabled)
             triggerImmediateSync()
         }
     }

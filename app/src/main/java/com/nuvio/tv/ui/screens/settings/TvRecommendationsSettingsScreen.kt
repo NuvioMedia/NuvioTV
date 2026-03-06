@@ -38,6 +38,7 @@ fun TvRecommendationsSettingsContent(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRecommendationsEnabled by viewModel.isRecommendationsEnabled.collectAsStateWithLifecycle()
+    val isPlayNextEnabled by viewModel.isPlayNextEnabled.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -138,6 +139,21 @@ fun TvRecommendationsSettingsContent(
                                 color = NuvioColors.TextTertiary
                             )
                         }
+                    }
+                }
+
+                item(key = "tv_recommendations_play_next") {
+                    AnimatedVisibility(
+                        visible = isRecommendationsEnabled,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        SettingsToggleRow(
+                            title = stringResource(R.string.settings_tv_recommendations_play_next_title),
+                            subtitle = stringResource(R.string.settings_tv_recommendations_play_next_sub),
+                            checked = isPlayNextEnabled,
+                            onToggle = { viewModel.setPlayNextEnabled(!isPlayNextEnabled) }
+                        )
                     }
                 }
                 
