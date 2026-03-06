@@ -91,6 +91,23 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         mpv.setPropertyDouble("speed", speed.toDouble())
     }
 
+    fun applyAudioLanguagePreferences(languages: List<String>) {
+        if (!initialized) return
+        val normalized = languages
+            .mapNotNull { language ->
+                language.trim().takeIf { it.isNotBlank() }
+            }
+            .distinct()
+        runCatching {
+            // Empty value resets language preference back to default behavior.
+            mpv.setPropertyString("alang", normalized.joinToString(","))
+            // Re-run automatic audio selection with the latest preferences.
+            mpv.setPropertyString("aid", "auto")
+        }.onFailure {
+            Log.w(TAG, "Failed to set audio language preference: ${it.message}")
+        }
+    }
+
     fun setSubtitleDelayMs(delayMs: Int) {
         if (!initialized) return
         runCatching {

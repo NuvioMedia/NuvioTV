@@ -57,6 +57,12 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
             hasScannedTextTracksOnce = false
             resetLoadingOverlayForNewStream()
             val playerSettings = playerSettingsDataStore.playerSettings.first()
+            val preferredAudioLanguages = resolvePreferredAudioLanguages(
+                preferredAudioLanguage = playerSettings.preferredAudioLanguage,
+                secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
+                deviceLanguages = resolveDeviceAudioLanguages()
+            )
+            mpvPreferredAudioLanguages = preferredAudioLanguages
             currentInternalPlayerEngine = playerSettings.internalPlayerEngine
             _uiState.update {
                 it.copy(
@@ -104,17 +110,6 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                     )
                 }
 
-                val deviceLanguages = if (Build.VERSION.SDK_INT >= 24) {
-                    val localeList = Resources.getSystem().configuration.locales
-                    List(localeList.size()) { localeList[it].isO3Language }
-                } else {
-                    listOf(Resources.getSystem().configuration.locale.isO3Language)
-                }
-                val preferredAudioLanguages = resolvePreferredAudioLanguages(
-                    preferredAudioLanguage = playerSettings.preferredAudioLanguage,
-                    secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
-                    deviceLanguages = deviceLanguages
-                )
                 if (preferredAudioLanguages.isNotEmpty()) {
                     setParameters(
                         buildUponParameters().setPreferredAudioLanguages(*preferredAudioLanguages.toTypedArray())
@@ -399,6 +394,15 @@ internal fun resolvePreferredAudioLanguages(
             normalize(preferredAudioLanguage),
             normalize(secondaryPreferredAudioLanguage)
         ).distinct()
+    }
+}
+
+internal fun resolveDeviceAudioLanguages(): List<String> {
+    return if (Build.VERSION.SDK_INT >= 24) {
+        val localeList = Resources.getSystem().configuration.locales
+        List(localeList.size()) { localeList[it].isO3Language }
+    } else {
+        listOf(Resources.getSystem().configuration.locale.isO3Language)
     }
 }
 

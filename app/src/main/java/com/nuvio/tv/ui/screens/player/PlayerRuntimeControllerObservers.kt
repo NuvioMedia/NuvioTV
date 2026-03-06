@@ -191,6 +191,19 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             nextEpisodeThresholdPercentSetting = settings.nextEpisodeThresholdPercent
             nextEpisodeThresholdMinutesBeforeEndSetting = settings.nextEpisodeThresholdMinutesBeforeEnd
 
+            val resolvedAudioLanguages = resolvePreferredAudioLanguages(
+                preferredAudioLanguage = settings.preferredAudioLanguage,
+                secondaryPreferredAudioLanguage = settings.secondaryPreferredAudioLanguage,
+                deviceLanguages = resolveDeviceAudioLanguages()
+            )
+            if (resolvedAudioLanguages != mpvPreferredAudioLanguages) {
+                mpvPreferredAudioLanguages = resolvedAudioLanguages
+                if (isUsingMpvEngine()) {
+                    mpvView?.applyAudioLanguagePreferences(resolvedAudioLanguages)
+                    updateMpvAvailableTracks()
+                }
+            }
+
             applySubtitlePreferences(
                 settings.subtitleStyle.preferredLanguage,
                 settings.subtitleStyle.secondaryPreferredLanguage
