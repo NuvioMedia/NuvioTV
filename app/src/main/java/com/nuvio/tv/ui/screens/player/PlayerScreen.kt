@@ -485,6 +485,7 @@ fun PlayerScreen(
                 },
                 update = { view ->
                     viewModel.attachMpvView(view)
+                    view.applySubtitleStyle(uiState.subtitleStyle)
                 },
                 modifier = Modifier.fillMaxSize()
             )

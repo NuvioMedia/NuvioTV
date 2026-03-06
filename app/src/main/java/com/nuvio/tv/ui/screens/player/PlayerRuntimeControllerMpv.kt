@@ -21,6 +21,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
             preferred = _uiState.value.subtitleStyle.preferredLanguage,
             secondary = _uiState.value.subtitleStyle.secondaryPreferredLanguage
         )
+        view.applySubtitleStyle(_uiState.value.subtitleStyle)
         view.setPaused(false)
         val pendingSeek = _uiState.value.pendingSeekPosition
             ?: pendingResumeProgress?.position
@@ -91,6 +92,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(url: String, headers: M
             preferred = _uiState.value.subtitleStyle.preferredLanguage,
             secondary = _uiState.value.subtitleStyle.secondaryPreferredLanguage
         )
+        view.applySubtitleStyle(_uiState.value.subtitleStyle)
         view.setPaused(false)
         val pendingSeek = _uiState.value.pendingSeekPosition
             ?: pendingResumeProgress?.position

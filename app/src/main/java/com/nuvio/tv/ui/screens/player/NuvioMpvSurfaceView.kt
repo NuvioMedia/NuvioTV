@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
+import com.nuvio.tv.data.local.SubtitleStyleSettings
 import `is`.xyz.mpv.BaseMPVView
 import `is`.xyz.mpv.Utils
 import kotlin.math.roundToLong
@@ -87,6 +88,27 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     fun setPlaybackSpeed(speed: Float) {
         if (!initialized) return
         mpv.setPropertyDouble("speed", speed.toDouble())
+    }
+
+    fun applySubtitleStyle(style: SubtitleStyleSettings) {
+        if (!initialized) return
+        runCatching {
+            val scale = (style.size / 100.0).coerceIn(0.5, 3.0)
+            val normalizedOffset = ((style.verticalOffset + 20).coerceIn(0, 70)) / 70.0
+            val subPos = (95.0 - (normalizedOffset * 25.0)).coerceIn(65.0, 100.0)
+            val borderSize = if (style.outlineEnabled) {
+                style.outlineWidth.coerceIn(1, 6).toDouble()
+            } else {
+                0.0
+            }
+
+            mpv.setPropertyDouble("sub-scale", scale)
+            mpv.setPropertyBoolean("sub-bold", style.bold)
+            mpv.setPropertyDouble("sub-border-size", borderSize)
+            mpv.setPropertyDouble("sub-pos", subPos)
+        }.onFailure {
+            Log.w(TAG, "Failed to apply subtitle style on mpv: ${it.message}")
+        }
     }
 
     fun selectAudioTrackById(trackId: Int): Boolean {
