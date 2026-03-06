@@ -63,10 +63,6 @@ import kotlin.math.roundToInt
 import java.util.concurrent.TimeUnit
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 
-private val CwCardShape = RoundedCornerShape(12.dp)
-private val CwClipShape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
-private val BadgeShape = RoundedCornerShape(4.dp)
-
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun ContinueWatchingSection(
@@ -226,6 +222,7 @@ fun ContinueWatchingCard(
     var isFocused by remember { mutableStateOf(false) }
     var longPressTriggered by remember { mutableStateOf(false) }
 
+    val themeShape = NuvioTheme.extendedColors.posterShape
     val progress = (item as? ContinueWatchingItem.InProgress)?.progress
     val nextUp = (item as? ContinueWatchingItem.NextUp)?.info
     val episodeStr = progress?.episodeDisplayString ?: nextUp?.let { "S${it.season}E${it.episode}" }
@@ -338,7 +335,7 @@ fun ContinueWatchingCard(
                 }
                 false
             },
-        shape = CardDefaults.shape(shape = CwCardShape),
+        shape = CardDefaults.shape(shape = themeShape),
         colors = CardDefaults.colors(
             containerColor = NuvioColors.BackgroundCard,
             focusedContainerColor = NuvioColors.FocusBackground
@@ -346,7 +343,7 @@ fun ContinueWatchingCard(
         border = CardDefaults.border(
             focusedBorder = Border(
                 border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = CwCardShape
+                shape = themeShape
             )
         ),
         scale = CardDefaults.scale(focusedScale = 1.02f)
@@ -357,7 +354,7 @@ fun ContinueWatchingCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(imageHeight)
-                    .clip(CwClipShape)
+                    .clip(themeShape)
             ) {
                 // Background image with size hints for efficient decoding
                 if (imageModel.isNullOrBlank()) {
@@ -418,7 +415,7 @@ fun ContinueWatchingCard(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
-                        .clip(BadgeShape)
+                        .clip(themeShape)
                         .background(badgeBackground)
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {

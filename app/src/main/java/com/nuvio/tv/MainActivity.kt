@@ -152,7 +152,9 @@ private data class MainUiPrefs(
     val hasChosenLayout: Boolean? = null,
     val sidebarCollapsed: Boolean = false,
     val modernSidebarEnabled: Boolean = false,
-    val modernSidebarBlurPref: Boolean = false
+    val modernSidebarBlurPref: Boolean = false,
+    val posterWidth: Int = 120,    
+    val posterRadius: Int = 12
 )
 
 @AndroidEntryPoint
@@ -249,21 +251,30 @@ class MainActivity : ComponentActivity() {
                     layoutPreferenceDataStore.hasChosenLayout,
                     layoutPreferenceDataStore.sidebarCollapsedByDefault,
                     layoutPreferenceDataStore.modernSidebarEnabled,
-                ) { theme, font, hasChosenLayout, sidebarCollapsed, modernSidebarEnabled ->
+                    layoutPreferenceDataStore.posterCardWidthDp,        // 6º
+                    layoutPreferenceDataStore.posterCardCornerRadiusDp  // 7º
+                ) { args: Array<Any?> ->
                     MainUiPrefs(
-                        theme = theme,
-                        font = font,
-                        hasChosenLayout = hasChosenLayout,
-                        sidebarCollapsed = sidebarCollapsed,
-                        modernSidebarEnabled = modernSidebarEnabled,
+                        theme = args[0] as AppTheme,
+                        font = args[1] as AppFont,
+                        hasChosenLayout = args[2] as? Boolean,
+                        sidebarCollapsed = args[3] as Boolean,
+                        modernSidebarEnabled = args[4] as Boolean,
+                        posterWidth = args[5] as Int,
+                        posterRadius = args[6] as Int
                     )
-                }.combine(layoutPreferenceDataStore.modernSidebarBlurEnabled) { prefs, modernSidebarBlurPref ->
-                    prefs.copy(modernSidebarBlurPref = modernSidebarBlurPref)
+                }.combine(layoutPreferenceDataStore.modernSidebarBlurEnabled) { prefs, blur ->
+                    prefs.copy(modernSidebarBlurPref = blur)
                 }
             }
-            val mainUiPrefs by mainUiPrefsFlow.collectAsState(initial = MainUiPrefs(hasChosenLayout = null))
+            val mainUiPrefs by mainUiPrefsFlow.collectAsState(initial = MainUiPrefs())
 
-            NuvioTheme(appTheme = mainUiPrefs.theme, appFont = mainUiPrefs.font) {
+            NuvioTheme(
+             appTheme = mainUiPrefs.theme,
+             appFont = mainUiPrefs.font,
+             posterRadiusDp = mainUiPrefs.posterRadius,
+             posterWidthDp = mainUiPrefs.posterWidth
+             ) {
                 CompositionLocalProvider(
                     LocalBringIntoViewSpec provides NuvioScrollDefaults.smoothScrollSpec
                 ) {

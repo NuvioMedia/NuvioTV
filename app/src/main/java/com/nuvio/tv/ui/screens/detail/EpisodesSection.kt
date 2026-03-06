@@ -382,6 +382,7 @@ private fun EpisodeCard(
     onFocused: (() -> Unit)? = null,
     onFocusRestored: (() -> Unit)? = null
 ) {
+    val themeShape = NuvioTheme.extendedColors.posterShape
     val context = LocalContext.current
     val density = LocalDensity.current
     val formattedDate = remember(episode.released) {

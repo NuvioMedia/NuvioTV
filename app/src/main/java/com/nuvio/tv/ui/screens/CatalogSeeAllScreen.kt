@@ -68,13 +68,15 @@ fun CatalogSeeAllScreen(
     val uiState by viewModel.uiState.collectAsState()
     val fullCatalogRows by viewModel.fullCatalogRows.collectAsState()
     val computedHeightDp = (uiState.posterCardWidthDp * 1.5f).roundToInt()
-    val posterCardStyle = PosterCardStyle(
+    val posterCardStyle = remember(uiState.posterCardWidthDp) { 
+        val computedHeightDp = (uiState.posterCardWidthDp * 1.5f).roundToInt()
+        PosterCardStyle(
         width = uiState.posterCardWidthDp.dp,
         height = computedHeightDp.dp,
-        cornerRadius = uiState.posterCardCornerRadiusDp.dp,
         focusedBorderWidth = PosterCardDefaults.Style.focusedBorderWidth,
         focusedScale = PosterCardDefaults.Style.focusedScale
-    )
+        )
+    }
 
     BackHandler { onBackPress() }
 

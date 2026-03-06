@@ -56,6 +56,7 @@ import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.NuvioTheme
 
 /** Minimum interval between processed key repeat events to prevent HWUI overload. */
 private const val KEY_REPEAT_THROTTLE_MS = 80L
@@ -478,7 +479,7 @@ private fun SeeAllGridCard(
     focusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier
 ) {
-    val seeAllCardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
+    val seeAllCardShape = NuvioTheme.extendedColors.posterShape
     Card(
         onClick = onClick,
         modifier = modifier

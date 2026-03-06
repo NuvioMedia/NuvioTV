@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -62,7 +63,7 @@ fun GridContentCard(
     onLongPress: (() -> Unit)? = null,
     onFocused: () -> Unit = {}
 ) {
-    val cardShape = remember(posterCardStyle.cornerRadius) { RoundedCornerShape(posterCardStyle.cornerRadius) }
+    val cardShape = NuvioTheme.extendedColors.posterShape
     val density = LocalDensity.current
     val requestWidthPx = remember(density, posterCardStyle.width) { with(density) { posterCardStyle.width.roundToPx() } }
     val requestHeightPx = remember(density, posterCardStyle.height) { with(density) { posterCardStyle.height.roundToPx() } }
