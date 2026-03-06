@@ -93,10 +93,11 @@ fun ThemeSettingsContent(
     val strLanguageSystem = stringResource(R.string.appearance_language_system)
     val supportedLocales = remember(strLanguageSystem) {
         val tags = listOf(
-            "en", "es", "es-419", "hu", "fr", "it", "pl",
+            "ar", "en", "es", "es-419", "hu", "fr", "it", "pl",
             "pt-PT", "pt-BR", "tr", "se", "sk", "sl", "ro", "ja",
             "nl", "vi"
         )
+
         listOf(null to strLanguageSystem) + tags.map { tag ->
             val locale = Locale.forLanguageTag(tag)
             tag to locale.getDisplayName(locale).replaceFirstChar { it.uppercase() }
