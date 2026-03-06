@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.data.local.DebugSettingsDataStore
+import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +17,7 @@ import javax.inject.Inject
 @HiltViewModel
 class DebugSettingsViewModel @Inject constructor(
     private val dataStore: DebugSettingsDataStore,
+    private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val authManager: AuthManager
 ) : ViewModel() {
 
@@ -31,6 +33,11 @@ class DebugSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             dataStore.syncCodeFeaturesEnabled.collectLatest { enabled ->
                 _uiState.update { it.copy(syncCodeFeaturesEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            playerSettingsDataStore.playerSettings.collectLatest { settings ->
+                _uiState.update { it.copy(bufferLogsEnabled = settings.enableBufferLogs) }
             }
         }
     }
@@ -55,6 +62,9 @@ class DebugSettingsViewModel @Inject constructor(
                     }
                 }
             }
+            is DebugSettingsEvent.ToggleBufferLogs -> {
+                viewModelScope.launch { playerSettingsDataStore.setEnableBufferLogs(event.enabled) }
+            }
         }
     }
 }
@@ -62,6 +72,7 @@ class DebugSettingsViewModel @Inject constructor(
 data class DebugSettingsUiState(
     val accountTabEnabled: Boolean = false,
     val syncCodeFeaturesEnabled: Boolean = false,
+    val bufferLogsEnabled: Boolean = false,
     val signInLoading: Boolean = false,
     val signInResult: String? = null
 )
@@ -69,5 +80,6 @@ data class DebugSettingsUiState(
 sealed class DebugSettingsEvent {
     data class ToggleAccountTab(val enabled: Boolean) : DebugSettingsEvent()
     data class ToggleSyncCodeFeatures(val enabled: Boolean) : DebugSettingsEvent()
+    data class ToggleBufferLogs(val enabled: Boolean) : DebugSettingsEvent()
     data class SignIn(val email: String, val password: String) : DebugSettingsEvent()
 }

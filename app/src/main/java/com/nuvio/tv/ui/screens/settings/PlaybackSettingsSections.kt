@@ -58,6 +58,7 @@ import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.TrailerSettings
+import com.nuvio.tv.data.local.VodCacheSizeMode
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
 
@@ -65,7 +66,8 @@ private enum class PlaybackSection {
     GENERAL,
     STREAM_SELECTION,
     AUDIO_TRAILER,
-    SUBTITLES
+    SUBTITLES,
+    BUFFER_NETWORK
 }
 
 private data class PlaybackGeneralUi(
@@ -124,24 +126,42 @@ internal fun PlaybackSettingsSections(
     onSetSkipSilence: (Boolean) -> Unit,
     onSetTunnelingEnabled: (Boolean) -> Unit,
     onSetMapDV7ToHevc: (Boolean) -> Unit,
+    onSetExperimentalDv7ToDv81Enabled: (Boolean) -> Unit,
+    onSetExperimentalDv5ToDv81Enabled: (Boolean) -> Unit,
+    onSetExperimentalDv7ToDv81PreserveMappingEnabled: (Boolean) -> Unit,
     onSetSubtitleSize: (Int) -> Unit,
     onSetSubtitleVerticalOffset: (Int) -> Unit,
     onSetSubtitleBold: (Boolean) -> Unit,
     onSetSubtitleOutlineEnabled: (Boolean) -> Unit,
     onSetUseLibass: (Boolean) -> Unit,
-    onSetLibassRenderType: (com.nuvio.tv.data.local.LibassRenderType) -> Unit
+    onSetLibassRenderType: (com.nuvio.tv.data.local.LibassRenderType) -> Unit,
+    onSetUseParallelConnections: (Boolean) -> Unit,
+    onSetParallelConnectionCount: (Int) -> Unit,
+    onSetParallelChunkSizeMb: (Int) -> Unit,
+    onSetBufferMinBufferMs: (Int) -> Unit,
+    onSetBufferMaxBufferMs: (Int) -> Unit,
+    onSetBufferForPlaybackMs: (Int) -> Unit,
+    onSetBufferForPlaybackAfterRebufferMs: (Int) -> Unit,
+    onSetBufferTargetSizeMb: (Int) -> Unit,
+    onSetBufferBackBufferDurationMs: (Int) -> Unit,
+    onSetVodCacheSizeMode: (VodCacheSizeMode) -> Unit,
+    onSetVodCacheSizeMb: (Int) -> Unit,
+    onResetBufferSettingsToDefaults: () -> Unit,
+    onResetNetworkSettingsToDefaults: () -> Unit
 ) {
     var generalExpanded by rememberSaveable { mutableStateOf(false) }
     var afrExpanded by rememberSaveable { mutableStateOf(false) }
     var streamExpanded by rememberSaveable { mutableStateOf(false) }
     var audioTrailerExpanded by rememberSaveable { mutableStateOf(false) }
     var subtitlesExpanded by rememberSaveable { mutableStateOf(false) }
+    var bufferAndNetworkExpanded by rememberSaveable { mutableStateOf(false) }
 
     val defaultGeneralHeaderFocus = remember { FocusRequester() }
     val afrHeaderFocus = remember { FocusRequester() }
     val streamHeaderFocus = remember { FocusRequester() }
     val audioTrailerHeaderFocus = remember { FocusRequester() }
     val subtitlesHeaderFocus = remember { FocusRequester() }
+    val bufferAndNetworkHeaderFocus = remember { FocusRequester() }
     val generalHeaderFocus = initialFocusRequester ?: defaultGeneralHeaderFocus
 
     var focusedSection by remember { mutableStateOf<PlaybackSection?>(null) }
@@ -192,6 +212,11 @@ internal fun PlaybackSettingsSections(
     LaunchedEffect(subtitlesExpanded, focusedSection) {
         if (!subtitlesExpanded && focusedSection == PlaybackSection.SUBTITLES) {
             subtitlesHeaderFocus.requestFocus()
+        }
+    }
+    LaunchedEffect(bufferAndNetworkExpanded, focusedSection) {
+        if (!bufferAndNetworkExpanded && focusedSection == PlaybackSection.BUFFER_NETWORK) {
+            bufferAndNetworkHeaderFocus.requestFocus()
         }
     }
 
@@ -340,6 +365,10 @@ internal fun PlaybackSettingsSections(
                 onSetSkipSilence = onSetSkipSilence,
                 onSetTunnelingEnabled = onSetTunnelingEnabled,
                 onSetMapDV7ToHevc = onSetMapDV7ToHevc,
+                onSetExperimentalDv7ToDv81Enabled = onSetExperimentalDv7ToDv81Enabled,
+                onSetExperimentalDv5ToDv81Enabled = onSetExperimentalDv5ToDv81Enabled,
+                onSetExperimentalDv7ToDv81PreserveMappingEnabled =
+                    onSetExperimentalDv7ToDv81PreserveMappingEnabled,
                 onItemFocused = { focusedSection = PlaybackSection.AUDIO_TRAILER },
                 enabled = !generalUi.isExternalPlayer
             )
@@ -371,6 +400,33 @@ internal fun PlaybackSettingsSections(
                 onSetLibassRenderType = onSetLibassRenderType,
                 onItemFocused = { focusedSection = PlaybackSection.SUBTITLES },
                 enabled = !generalUi.isExternalPlayer
+            )
+        }
+
+        playbackCollapsibleSection(
+            keyPrefix = "buffer_network",
+            title = "Buffer & Network",
+            description = "How much content to keep in memory and how to fetch streams.",
+            expanded = bufferAndNetworkExpanded,
+            onToggle = { bufferAndNetworkExpanded = !bufferAndNetworkExpanded },
+            focusRequester = bufferAndNetworkHeaderFocus,
+            onHeaderFocused = { focusedSection = PlaybackSection.BUFFER_NETWORK }
+        ) {
+            bufferAndNetworkSettingsItems(
+                playerSettings = playerSettings,
+                onSetBufferMinBufferMs = onSetBufferMinBufferMs,
+                onSetBufferMaxBufferMs = onSetBufferMaxBufferMs,
+                onSetBufferForPlaybackMs = onSetBufferForPlaybackMs,
+                onSetBufferForPlaybackAfterRebufferMs = onSetBufferForPlaybackAfterRebufferMs,
+                onSetBufferTargetSizeMb = onSetBufferTargetSizeMb,
+                onSetBufferBackBufferDurationMs = onSetBufferBackBufferDurationMs,
+                onSetVodCacheSizeMode = onSetVodCacheSizeMode,
+                onSetVodCacheSizeMb = onSetVodCacheSizeMb,
+                onResetToDefaults = onResetBufferSettingsToDefaults,
+                onSetUseParallelConnections = onSetUseParallelConnections,
+                onSetParallelConnectionCount = onSetParallelConnectionCount,
+                onSetParallelChunkSizeMb = onSetParallelChunkSizeMb,
+                onResetNetworkToDefaults = onResetNetworkSettingsToDefaults
             )
         }
     }

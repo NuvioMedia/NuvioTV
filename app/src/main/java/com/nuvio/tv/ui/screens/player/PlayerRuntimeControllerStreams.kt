@@ -295,6 +295,8 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
     pendingAudioSelectionAfterSubtitleRefresh = null
     attachedAddonSubtitleKeys = emptySet()
     hasRetriedCurrentStreamAfter416 = false
+    hasRetriedCurrentStreamAfterUnexpectedNpe = false
+    hasRetriedCurrentStreamAfterMediaPeriodHolderCrash = false
     lastSavedPosition = 0L
 
     _uiState.update {
@@ -586,6 +588,8 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
     pendingAudioSelectionAfterSubtitleRefresh = null
     attachedAddonSubtitleKeys = emptySet()
     hasRetriedCurrentStreamAfter416 = false
+    hasRetriedCurrentStreamAfterUnexpectedNpe = false
+    hasRetriedCurrentStreamAfterMediaPeriodHolderCrash = false
     currentVideoId = targetVideo?.id ?: _uiState.value.episodeStreamsForVideoId ?: currentVideoId
     currentSeason = targetVideo?.season ?: _uiState.value.episodeStreamsSeason ?: currentSeason
     currentEpisode = targetVideo?.episode ?: _uiState.value.episodeStreamsEpisode ?: currentEpisode

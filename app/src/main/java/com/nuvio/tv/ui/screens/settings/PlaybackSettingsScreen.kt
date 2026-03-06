@@ -4,6 +4,7 @@ package com.nuvio.tv.ui.screens.settings
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,6 +51,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -133,6 +137,8 @@ fun PlaybackSettingsContent(
     val installedAddonNames by viewModel.installedAddonNames.collectAsStateWithLifecycle(initialValue = emptyList())
     val enabledPluginNames by viewModel.enabledPluginNames.collectAsStateWithLifecycle(initialValue = emptyList())
     val coroutineScope = rememberCoroutineScope()
+    var memoryUsageTrigger by remember { mutableStateOf(0) }
+    var showMemoryUsage by remember { mutableStateOf(false) }
 
     // Dialog states
     var showLanguageDialog by remember { mutableStateOf(false) }
@@ -178,6 +184,13 @@ fun PlaybackSettingsContent(
     fun openDialog(setter: () -> Unit) {
         dismissAllDialogs()
         setter()
+    }
+
+    LaunchedEffect(memoryUsageTrigger) {
+        if (memoryUsageTrigger == 0) return@LaunchedEffect
+        showMemoryUsage = true
+        kotlinx.coroutines.delay(2200)
+        showMemoryUsage = false
     }
 
     Column(
@@ -244,13 +257,106 @@ fun PlaybackSettingsContent(
                 onSetSkipSilence = { enabled -> coroutineScope.launch { viewModel.setSkipSilence(enabled) } },
                 onSetTunnelingEnabled = { enabled -> coroutineScope.launch { viewModel.setTunnelingEnabled(enabled) } },
                 onSetMapDV7ToHevc = { enabled -> coroutineScope.launch { viewModel.setMapDV7ToHevc(enabled) } },
+                onSetExperimentalDv7ToDv81Enabled = {
+                    enabled -> coroutineScope.launch { viewModel.setExperimentalDv7ToDv81Enabled(enabled) }
+                },
+                onSetExperimentalDv5ToDv81Enabled = {
+                    enabled -> coroutineScope.launch { viewModel.setExperimentalDv5ToDv81Enabled(enabled) }
+                },
+                onSetExperimentalDv7ToDv81PreserveMappingEnabled = {
+                    enabled ->
+                    coroutineScope.launch {
+                        viewModel.setExperimentalDv7ToDv81PreserveMappingEnabled(enabled)
+                    }
+                },
                 onSetSubtitleSize = { newSize -> coroutineScope.launch { viewModel.setSubtitleSize(newSize) } },
                 onSetSubtitleVerticalOffset = { newOffset -> coroutineScope.launch { viewModel.setSubtitleVerticalOffset(newOffset) } },
                 onSetSubtitleBold = { bold -> coroutineScope.launch { viewModel.setSubtitleBold(bold) } },
                 onSetSubtitleOutlineEnabled = { enabled -> coroutineScope.launch { viewModel.setSubtitleOutlineEnabled(enabled) } },
                 onSetUseLibass = { enabled -> coroutineScope.launch { viewModel.setUseLibass(enabled) } },
-                onSetLibassRenderType = { renderType -> coroutineScope.launch { viewModel.setLibassRenderType(renderType) } }
+                onSetLibassRenderType = { renderType -> coroutineScope.launch { viewModel.setLibassRenderType(renderType) } },
+                onSetUseParallelConnections = { enabled ->
+                    coroutineScope.launch { viewModel.setUseParallelConnections(enabled) }
+                    memoryUsageTrigger++
+                },
+                onSetParallelConnectionCount = { count ->
+                    coroutineScope.launch { viewModel.setParallelConnectionCount(count) }
+                    memoryUsageTrigger++
+                },
+                onSetParallelChunkSizeMb = { mb ->
+                    coroutineScope.launch { viewModel.setParallelChunkSizeMb(mb) }
+                    memoryUsageTrigger++
+                },
+                onSetBufferMinBufferMs = { ms ->
+                    coroutineScope.launch { viewModel.setBufferMinBufferMs(ms) }
+                },
+                onSetBufferMaxBufferMs = { ms ->
+                    coroutineScope.launch { viewModel.setBufferMaxBufferMs(ms) }
+                },
+                onSetBufferForPlaybackMs = { ms ->
+                    coroutineScope.launch { viewModel.setBufferForPlaybackMs(ms) }
+                },
+                onSetBufferForPlaybackAfterRebufferMs = { ms ->
+                    coroutineScope.launch { viewModel.setBufferForPlaybackAfterRebufferMs(ms) }
+                },
+                onSetBufferTargetSizeMb = { mb ->
+                    coroutineScope.launch { viewModel.setBufferTargetSizeMb(mb) }
+                    memoryUsageTrigger++
+                },
+                onSetBufferBackBufferDurationMs = { ms ->
+                    coroutineScope.launch { viewModel.setBufferBackBufferDurationMs(ms) }
+                },
+                onSetVodCacheSizeMode = { mode ->
+                    coroutineScope.launch { viewModel.setVodCacheSizeMode(mode) }
+                },
+                onSetVodCacheSizeMb = { mb ->
+                    coroutineScope.launch { viewModel.setVodCacheSizeMb(mb) }
+                },
+                onResetBufferSettingsToDefaults = {
+                    coroutineScope.launch { viewModel.resetBufferSettingsToDefaults() }
+                    memoryUsageTrigger++
+                },
+                onResetNetworkSettingsToDefaults = {
+                    coroutineScope.launch { viewModel.resetNetworkSettingsToDefaults() }
+                    memoryUsageTrigger++
+                }
             )
+        }
+
+        AnimatedVisibility(
+            visible = showMemoryUsage,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            val effectiveBufferMb = MemoryBudget.effectiveBufferMb(playerSettings.bufferSettings.targetBufferSizeMb)
+            val totalUsageMb = MemoryBudget.totalUsageMb(
+                effectiveBufferMb,
+                playerSettings.parallelConnectionCount,
+                playerSettings.parallelChunkSizeMb,
+                playerSettings.useParallelConnections
+            )
+            val usageRatio = totalUsageMb.toFloat() / MemoryBudget.budgetMb.coerceAtLeast(1)
+            val usageColor = when {
+                usageRatio > 0.9f -> Color(0xFFF44336)
+                usageRatio > 0.7f -> Color(0xFFFF9800)
+                else -> Color(0xFF4CAF50)
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = NuvioColors.BackgroundCard,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    .border(1.dp, usageColor.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    text = "Estimated memory usage: $totalUsageMb / ${MemoryBudget.budgetMb} MB",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = usageColor
+                )
+            }
         }
     }
 
@@ -416,8 +522,13 @@ internal fun ToggleSettingsItem(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextSecondary.copy(alpha = contentAlpha),
+                    modifier = if (isFocused) {
+                        Modifier.basicMarquee()
+                    } else {
+                        Modifier
+                    },
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Clip
                 )
             }
 

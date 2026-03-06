@@ -1,15 +1,21 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.net.Uri
 import android.util.Log
 import com.nuvio.tv.core.player.OpenSubtitlesHasher
+import androidx.media3.common.C
 import androidx.media3.common.Player
+import androidx.media3.common.util.Util
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.domain.model.Subtitle
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 
 internal data class SubtitleFetchRequest(
     val type: String,
@@ -142,12 +148,10 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
     scope.launch {
         playerSettingsDataStore.playerSettings.collect { settings ->
             _uiState.update { state ->
-                val shouldShowOverlay = if (settings.loadingOverlayEnabled && !hasRenderedFirstFrame) {
-                    true
-                } else if (!settings.loadingOverlayEnabled) {
-                    false
-                } else {
-                    state.showLoadingOverlay
+                val shouldShowOverlay = when {
+                    !settings.loadingOverlayEnabled -> false
+                    !hasRenderedFirstFrame && state.isBuffering -> true
+                    else -> false
                 }
 
                 state.copy(
@@ -160,6 +164,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                     frameRateMatchingMode = settings.frameRateMatchingMode
                 )
             }
+            bufferLogsEnabled = settings.enableBufferLogs
             if (settings.frameRateMatchingMode == FrameRateMatchingMode.OFF) {
                 frameRateProbeJob?.cancel()
                 _uiState.update {
@@ -183,11 +188,11 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             streamReuseLastLinkEnabled = settings.streamReuseLastLinkEnabled
             streamAutoPlayModeSetting = settings.streamAutoPlayMode
             streamAutoPlayNextEpisodeEnabledSetting = settings.streamAutoPlayNextEpisodeEnabled
-            streamAutoPlayPreferBingeGroupForNextEpisodeSetting =
-                settings.streamAutoPlayPreferBingeGroupForNextEpisode
             nextEpisodeThresholdModeSetting = settings.nextEpisodeThresholdMode
             nextEpisodeThresholdPercentSetting = settings.nextEpisodeThresholdPercent
             nextEpisodeThresholdMinutesBeforeEndSetting = settings.nextEpisodeThresholdMinutesBeforeEnd
+            mediaSourceFactory.vodCacheSizeMode = settings.vodCacheSizeMode
+            mediaSourceFactory.vodCacheSizeMb = settings.vodCacheSizeMb
 
             applySubtitlePreferences(
                 settings.subtitleStyle.preferredLanguage,
@@ -321,21 +326,135 @@ internal fun PlayerRuntimeController.retryCurrentStreamFromStartAfter416() {
     if (hasRetriedCurrentStreamAfter416) return
     hasRetriedCurrentStreamAfter416 = true
     pendingResumeProgress = null
+    scheduleDeferredPlayerReinitialize(fromPositionMs = 0L, clearResumeProgress = true)
+}
+
+@androidx.annotation.OptIn(UnstableApi::class)
+@OptIn(UnstableApi::class)
+internal fun PlayerRuntimeController.retryCurrentStreamAfterTimeout(fromPositionMs: Long) {
+    if (timeoutRecoveryAttempts >= PlayerRuntimeController.MAX_TIMEOUT_RECOVERY_ATTEMPTS) return
+    timeoutRecoveryAttempts += 1
+    Log.w(
+        PlayerRuntimeController.TAG,
+        "Retrying stream after timeout attempt=$timeoutRecoveryAttempts/" +
+            "${PlayerRuntimeController.MAX_TIMEOUT_RECOVERY_ATTEMPTS} " +
+            "host=${Uri.parse(currentStreamUrl).host ?: "unknown"} " +
+            "fromPositionMs=$fromPositionMs"
+    )
+    scheduleDeferredPlayerReinitialize(fromPositionMs = fromPositionMs)
+}
+
+@androidx.annotation.OptIn(UnstableApi::class)
+@OptIn(UnstableApi::class)
+internal fun PlayerRuntimeController.retryCurrentStreamAfterUnexpectedNpe(fromPositionMs: Long) {
+    scheduleDeferredPlayerReinitialize(fromPositionMs = fromPositionMs)
+}
+
+internal fun PlayerRuntimeController.retryCurrentStreamAfterMediaPeriodHolderCrash(fromPositionMs: Long) {
+    scheduleDeferredPlayerReinitialize(fromPositionMs = fromPositionMs)
+}
+
+internal fun PlayerRuntimeController.retryCurrentStreamWithSafeAudioFallback(fromPositionMs: Long) {
+    scheduleDeferredPlayerReinitialize(fromPositionMs = fromPositionMs)
+}
+
+internal fun PlayerRuntimeController.retryCurrentStreamWithAudioDisabled(fromPositionMs: Long) {
+    scheduleDeferredPlayerReinitialize(fromPositionMs = fromPositionMs)
+}
+
+internal fun PlayerRuntimeController.retryCurrentStreamWithDolbyVisionFallback(fromPositionMs: Long) {
+    scheduleDeferredPlayerReinitialize(fromPositionMs = fromPositionMs, clearResumeProgress = true)
+}
+
+internal fun PlayerRuntimeController.retryCurrentStreamWithVc1SoftwareFallback(fromPositionMs: Long) {
+    scheduleDeferredPlayerReinitialize(fromPositionMs = fromPositionMs)
+}
+
+internal fun PlayerRuntimeController.retryCurrentStreamWithVc1TrackSelectionBypass(fromPositionMs: Long) {
+    scheduleDeferredPlayerReinitialize(fromPositionMs = fromPositionMs)
+}
+
+internal fun PlayerRuntimeController.cancelFirstFrameWatchdog() {
+    firstFrameWatchdogJob?.cancel()
+    firstFrameWatchdogJob = null
+}
+
+internal fun PlayerRuntimeController.maybeScheduleFirstFrameWatchdog() {
+    if (hasRenderedFirstFrame || !currentStreamHasVideoTrack) return
+    val player = _exoPlayer ?: return
+    if (player.playbackState != Player.STATE_READY || !player.playWhenReady) return
+    if (firstFrameWatchdogJob?.isActive == true) return
+
+    firstFrameWatchdogJob = scope.launch {
+        delay(PlayerRuntimeController.FIRST_FRAME_TIMEOUT_MS)
+
+        val livePlayer = _exoPlayer ?: return@launch
+        if (hasRenderedFirstFrame) return@launch
+        if (livePlayer.playbackState != Player.STATE_READY || !livePlayer.playWhenReady) return@launch
+
+        val currentPosition = livePlayer.currentPosition
+        Log.w(
+            PlayerRuntimeController.TAG,
+            "VIDEO_TIMEOUT: no first frame after ${PlayerRuntimeController.FIRST_FRAME_TIMEOUT_MS}ms " +
+                "mime=${currentVideoTrackMimeType ?: "unknown"} " +
+                "codecs=${currentVideoTrackCodecs ?: "unknown"} " +
+                "size=${currentVideoTrackWidth}x${currentVideoTrackHeight} " +
+                "vc1=$currentVideoTrackIsLikelyVc1 " +
+                "selected=$currentVideoTrackSelected " +
+                "bestSupport=${Util.getFormatSupportString(currentVideoTrackBestSupport)} " +
+                "vc1FallbackActive=$isVc1SoftwareFallbackActiveForCurrentPlayback " +
+                "vc1TrackBypassActive=$isVc1TrackSelectionBypassActiveForCurrentPlayback " +
+                "positionMs=$currentPosition " +
+                "host=${Uri.parse(currentStreamUrl).host ?: "unknown"}"
+        )
+
+        if (currentVideoTrackIsLikelyVc1 && !isVc1SoftwareFallbackActiveForCurrentPlayback) {
+            vc1SoftwarePreferredStreamUrls.add(currentStreamUrl)
+            Log.w(
+                PlayerRuntimeController.TAG,
+                "VIDEO_TIMEOUT: retrying with VC-1 software-preferred decoder path " +
+                    "host=${Uri.parse(currentStreamUrl).host ?: "unknown"} positionMs=$currentPosition"
+            )
+            retryCurrentStreamWithVc1SoftwareFallback(currentPosition)
+            return@launch
+        }
+
+        if (currentVideoTrackIsLikelyVc1 &&
+            !currentVideoTrackSelected &&
+            isVc1SoftwareFallbackActiveForCurrentPlayback &&
+            !isVc1TrackSelectionBypassActiveForCurrentPlayback
+        ) {
+            vc1TrackSelectionBypassStreamUrls.add(currentStreamUrl)
+            Log.w(
+                PlayerRuntimeController.TAG,
+                "VIDEO_TIMEOUT: retrying with VC-1 track-selection bypass " +
+                    "host=${Uri.parse(currentStreamUrl).host ?: "unknown"} positionMs=$currentPosition"
+            )
+            retryCurrentStreamWithVc1TrackSelectionBypass(currentPosition)
+        }
+    }
+}
+
+private fun PlayerRuntimeController.scheduleDeferredPlayerReinitialize(
+    fromPositionMs: Long,
+    clearResumeProgress: Boolean = false
+) {
+    cancelFirstFrameWatchdog()
+    if (clearResumeProgress) {
+        pendingResumeProgress = null
+    }
     _uiState.update {
         it.copy(
-            pendingSeekPosition = null,
+            pendingSeekPosition = if (fromPositionMs > 0L) fromPositionMs else null,
             error = null,
             showLoadingOverlay = it.loadingOverlayEnabled
         )
     }
-    _exoPlayer?.let { player ->
+    scope.launch {
+        yield()
         runCatching {
-            player.stop()
-            player.clearMediaItems()
-            player.setMediaSource(mediaSourceFactory.createMediaSource(currentStreamUrl, currentHeaders))
-            player.seekTo(0L)
-            player.playWhenReady = true
-            player.prepare()
+            releasePlayer()
+            initializePlayer(currentStreamUrl, currentHeaders)
         }.onFailure { e ->
             _uiState.update {
                 it.copy(

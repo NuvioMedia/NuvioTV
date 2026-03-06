@@ -176,8 +176,8 @@
     <string name="playback_player_internal">Internal</string>
     <string name="playback_player_external">External</string>
     <string name="playback_player_ask">Ask every time</string>
-    <string name="playback_section_audio">Audio &amp; Trailer</string>
-    <string name="playback_section_audio_desc">Trailer behavior and audio controls.</string>
+    <string name="playback_section_audio">Video &amp; Audio</string>
+    <string name="playback_section_audio_desc">Video compatibility, trailer behavior, and audio controls.</string>
     <string name="playback_section_subtitles">Subtitles</string>
     <string name="playback_section_subtitles_desc">Language, style, and render mode.</string>
     <string name="playback_afr_open">Open</string>
@@ -194,6 +194,7 @@
     <string name="playback_player_ask_desc">Choose the player each time</string>
 
     <!-- PlaybackAudioSettings -->
+    <string name="video_section">Video</string>
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Auto-play Trailers</string>
     <string name="audio_autoplay_trailers_sub">Automatically play trailers on the detail screen after a period of inactivity</string>
@@ -213,6 +214,12 @@
     <string name="audio_tunneled">Tunneled Playback</string>
     <string name="audio_tunneled_sub">Hardware-level audio/video sync. May improve playback on some Android TV devices</string>
     <string name="audio_dv_sub">Map Dolby Vision Profile 7 to standard HEVC for devices without DV hardware support</string>
+    <string name="audio_dv_experimental_title">DV7 - Experimental DV8.1</string>
+    <string name="audio_dv_experimental_sub">Experimental native conversion path. If conversion is unavailable or fails, playback falls back to HEVC mapping.</string>
+    <string name="audio_dv5_compatibility_title">DV5 - Compatibility Remap</string>
+    <string name="audio_dv5_compatibility_sub">Allows DV5 streams to use the DV8.1 compatibility path. May fix color/signaling issues on some devices, but can regress others.</string>
+    <string name="audio_dv_experimental_preserve_mapping_title">DV7 - Preserve Mapping</string>
+    <string name="audio_dv_experimental_preserve_mapping_sub">Experimental higher-fidelity DV8.1 conversion that preserves mapping metadata. May be less compatible than the default DV7 conversion path.</string>
     <string name="audio_decoder_device_only_desc">Only use built-in hardware decoders. Most compatible but may not support all formats.</string>
     <string name="audio_decoder_prefer_device_desc">Use hardware decoders when available, fall back to FFmpeg. Recommended for most devices.</string>
     <string name="audio_decoder_prefer_app_desc">Use FFmpeg decoders when available. Better format support but higher CPU usage.</string>
@@ -506,6 +513,8 @@
     <string name="debug_account_tab_subtitle">Show the Account tab in Settings navigation</string>
     <string name="debug_sync_code_title">Sync Code Features</string>
     <string name="debug_sync_code_subtitle">Show Generate/Enter Sync Code buttons in Account settings</string>
+    <string name="debug_buffer_logs_title">Enable BUFFER Logs</string>
+    <string name="debug_buffer_logs_subtitle">Emit periodic player buffer diagnostics to logcat (disabled by default)</string>
     <string name="debug_section_account">Account</string>
     <string name="debug_manual_signin_title">Manual Sign In</string>
     <string name="debug_manual_signin_subtitle">Sign in with email and password (Supabase auth)</string>
