@@ -328,17 +328,31 @@ class ProgramBuilder @Inject constructor(
         return try {
             val cursor = context.contentResolver.query(
                 TvContractCompat.WatchNextPrograms.CONTENT_URI,
-                arrayOf(TvContractCompat.WatchNextPrograms._ID),
-                "${TvContractCompat.WatchNextPrograms.COLUMN_INTERNAL_PROVIDER_ID} = ?",
-                arrayOf(internalId),
+                arrayOf(
+                    TvContractCompat.WatchNextPrograms._ID,
+                    TvContractCompat.WatchNextPrograms.COLUMN_INTERNAL_PROVIDER_ID
+                ),
+                null, 
+                null, 
                 null
             )
+            var foundId: Long? = null
             cursor?.use {
-                if (it.moveToFirst()) {
-                    val idx = it.getColumnIndex(TvContractCompat.WatchNextPrograms._ID)
-                    if (idx >= 0) it.getLong(idx) else null
-                } else null
+                while (it.moveToNext()) {
+                    val providerIdIdx = it.getColumnIndex(TvContractCompat.WatchNextPrograms.COLUMN_INTERNAL_PROVIDER_ID)
+                    if (providerIdIdx >= 0) {
+                        val currentProviderId = it.getString(providerIdIdx)
+                        if (currentProviderId == internalId) {
+                            val idIdx = it.getColumnIndex(TvContractCompat.WatchNextPrograms._ID)
+                            if (idIdx >= 0) {
+                                foundId = it.getLong(idIdx)
+                                break
+                            }
+                        }
+                    }
+                }
             }
+            foundId
         } catch (_: Exception) {
             null
         }
