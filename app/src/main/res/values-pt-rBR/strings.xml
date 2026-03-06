@@ -127,7 +127,7 @@
     <string name="settings_profiles_subtitle">Gerenciar perfis de usuário.</string>
     <string name="settings_layout">Interface</string>
     <string name="settings_layout_subtitle">Estrutura da home e estilo dos pôsteres.</string>
-    <string name="settings_plugins">Addons</string>
+    <string name="settings_plugins">Plugins</string>
     <string name="settings_plugins_subtitle">Repositórios e provedores.</string>
     <string name="settings_integration">Integrações</string>
     <string name="settings_playback">Reprodução</string>
@@ -179,8 +179,8 @@
     <string name="playback_section_audio_desc">Controle de áudio e comportamento de trailers.</string>
     <string name="playback_section_subtitles">Legendas</string>
     <string name="playback_section_subtitles_desc">Idioma, estilo e modo de renderização.</string>
-    <string name="playback_afr_open">Sempre</string>
-    <string name="playback_afr_closed">Nunca</string>
+    <string name="playback_afr_open">Exibir</string>
+    <string name="playback_afr_closed">Esconder</string>
     <string name="playback_afr_off">Desativado</string>
     <string name="playback_afr_off_sub">Não alterar a taxa de atualização da tela.</string>
     <string name="playback_afr_on_start">Ao iniciar</string>
@@ -362,8 +362,8 @@
     <string name="layout_trailer_muted_sub_expanded">Silenciar áudio do trailer nos cartões expandidos.</string>
     <string name="layout_section_card_style">Estilo dos Cartões</string>
     <string name="layout_section_card_style_desc">Ajustar largura e arredondamento.</string>
-    <string name="layout_open">Aberto</string>
-    <string name="layout_closed">Fechado</string>
+    <string name="layout_open">Exibir</string>
+    <string name="layout_closed">Esconder</string>
     <string name="layout_trailer_location">Local do trailer no modo Moderno</string>
     <string name="layout_trailer_location_sub">Onde a prévia do trailer deve ser exibida.</string>
     <string name="layout_trailer_expanded_card">Cartão Expandido</string>

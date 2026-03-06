@@ -113,6 +113,8 @@ fun ModernHomeContent(
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
+    onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit = {},
+    showContinueWatchingManualPlayOption: Boolean = false,
     onRequestTrailerPreview: (String, String, String?, String) -> Unit,
     onLoadMoreCatalog: (String, String, String) -> Unit,
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
@@ -810,6 +812,11 @@ fun ModernHomeContent(
             },
             onStartFromBeginning = {
                 onContinueWatchingStartFromBeginning(selectedOptionsItem)
+                optionsItem = null
+            },
+            showPlayManually = showContinueWatchingManualPlayOption,
+            onPlayManually = {
+                onContinueWatchingPlayManually(selectedOptionsItem)
                 optionsItem = null
             }
         )

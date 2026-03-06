@@ -25,7 +25,7 @@ import androidx.compose.foundation.relocation.BringIntoViewResponder
 import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -47,9 +47,12 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -187,9 +190,27 @@ fun MetaDetailsScreen(
         genres: String?,
         year: String?,
         runtime: Int?
+    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _ -> },
+    onPlayManuallyClick: (
+        videoId: String,
+        contentType: String,
+        contentId: String,
+        title: String,
+        poster: String?,
+        backdrop: String?,
+        logo: String?,
+        season: Int?,
+        episode: Int?,
+        episodeName: String?,
+        genres: String?,
+        year: String?,
+        runtime: Int?
     ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val effectiveAutoplayEnabled by viewModel.effectiveAutoplayEnabled.collectAsStateWithLifecycle(
+        initialValue = false
+    )
     var restorePlayFocusAfterTrailerBackToken by rememberSaveable { mutableIntStateOf(0) }
 
     BackHandler {
@@ -358,6 +379,23 @@ fun MetaDetailsScreen(
                             video.runtime
                         )
                     },
+                    onEpisodeManualPlayClick = { video ->
+                        onPlayManuallyClick(
+                            video.id,
+                            meta.apiType,
+                            meta.id,
+                            meta.name,
+                            video.thumbnail ?: meta.poster,
+                            meta.background,
+                            meta.logo,
+                            video.season,
+                            video.episode,
+                            video.title,
+                            null,
+                            null,
+                            video.runtime
+                        )
+                    },
                     onPlayClick = { videoId ->
                         onPlayClick(
                             videoId,
@@ -375,6 +413,24 @@ fun MetaDetailsScreen(
                             null
                         )
                     },
+                    onPlayManuallyClick = { videoId ->
+                        onPlayManuallyClick(
+                            videoId,
+                            meta.apiType,
+                            meta.id,
+                            meta.name,
+                            meta.poster,
+                            meta.background,
+                            meta.logo,
+                            null,
+                            null,
+                            null,
+                            genresString,
+                            yearString,
+                            null
+                        )
+                    },
+                    showManualPlayOption = effectiveAutoplayEnabled,
                     onPlayButtonFocused = { viewModel.onEvent(MetaDetailsEvent.OnPlayButtonFocused) },
                     onToggleLibrary = { viewModel.onEvent(MetaDetailsEvent.OnToggleLibrary) },
                     onLibraryLongPress = { viewModel.onEvent(MetaDetailsEvent.OnLibraryLongPress) },
@@ -540,7 +596,10 @@ private fun MetaDetailsContent(
     showMdbListImdb: Boolean,
     onSeasonSelected: (Int) -> Unit,
     onEpisodeClick: (Video) -> Unit,
+    onEpisodeManualPlayClick: (Video) -> Unit,
     onPlayClick: (String) -> Unit,
+    onPlayManuallyClick: (String) -> Unit,
+    showManualPlayOption: Boolean,
     onPlayButtonFocused: () -> Unit,
     onToggleLibrary: () -> Unit,
     onLibraryLongPress: () -> Unit,
@@ -591,6 +650,14 @@ private fun MetaDetailsContent(
             override suspend fun bringChildIntoView(localRect: () -> Rect?) { }
         }
     }
+    // Suppress vertical scroll from LazyColumn when focus moves horizontally inside nested LazyRows,
+    // but still pass the rect upward so focus traversal works correctly.
+    val noVerticalScrollResponder = remember {
+        object : BringIntoViewResponder {
+            override fun calculateRectForParent(localRect: Rect): Rect = localRect
+            override suspend fun bringChildIntoView(localRect: () -> Rect?) { }
+        }
+    }
     val selectedSeasonFocusRequester = remember { FocusRequester() }
     val heroPlayFocusRequester = remember { FocusRequester() }
     val castTabFocusRequester = remember { FocusRequester() }
@@ -604,6 +671,7 @@ private fun MetaDetailsContent(
     var pendingRestoreMoreLikeItemId by rememberSaveable { mutableStateOf<String?>(null) }
     var restoreFocusToken by rememberSaveable { mutableIntStateOf(0) }
     var initialHeroFocusRequested by rememberSaveable(meta.id) { mutableStateOf(false) }
+    var showHeroPlayOptionsDialog by rememberSaveable(meta.id) { mutableStateOf(false) }
     var initialDetailReturnFocusHandled by rememberSaveable(
         meta.id,
         detailReturnEpisodeFocusRequest?.season,
@@ -877,42 +945,9 @@ private fun MetaDetailsContent(
     }
 
     // Backdrop alpha for crossfade
-    val backdropAlpha by animateFloatAsState(
-        targetValue = if (isTrailerPlaying) 0f else 1f,
-        animationSpec = tween(durationMillis = 800),
-        label = "backdropFade"
-    )
-
     val backgroundColor = NuvioColors.Background
 
     // Pre-compute gradient brushes once
-    val leftGradient = remember(backgroundColor) {
-        Brush.horizontalGradient(
-            colorStops = arrayOf(
-                0.0f to backgroundColor,
-                0.20f to backgroundColor.copy(alpha = 0.95f),
-                0.35f to backgroundColor.copy(alpha = 0.8f),
-                0.45f to backgroundColor.copy(alpha = 0.6f),
-                0.55f to backgroundColor.copy(alpha = 0.4f),
-                0.65f to backgroundColor.copy(alpha = 0.2f),
-                0.75f to Color.Transparent,
-                1.0f to Color.Transparent
-            )
-        )
-    }
-    val bottomGradient = remember(backgroundColor) {
-        Brush.verticalGradient(
-            colorStops = arrayOf(
-                0.0f to Color.Transparent,
-                0.38f to Color.Transparent,
-                0.56f to backgroundColor.copy(alpha = 0.38f),
-                0.72f to backgroundColor.copy(alpha = 0.74f),
-                0.86f to backgroundColor.copy(alpha = 0.94f),
-                1.0f to backgroundColor.copy(alpha = 1.0f)
-            )
-        )
-    }
-    val dimColor = remember(backgroundColor) { backgroundColor.copy(alpha = 0.08f) }
 
     // Stable hero play callback
     val heroPlayClick = remember(heroVideo, meta.id, onEpisodeClick, onPlayClick) {
@@ -925,11 +960,27 @@ private fun MetaDetailsContent(
             }
         }
     }
+    val heroPlayManualClick = remember(heroVideo, meta.id, onEpisodeManualPlayClick, onPlayManuallyClick) {
+        {
+            markHeroRestore()
+            if (heroVideo != null) {
+                onEpisodeManualPlayClick(heroVideo)
+            } else {
+                onPlayManuallyClick(meta.id)
+            }
+        }
+    }
 
     val episodeClick = remember(onEpisodeClick) {
         { video: Video ->
             markEpisodeRestore(video.id)
             onEpisodeClick(video)
+        }
+    }
+    val episodeManualClick = remember(onEpisodeManualPlayClick) {
+        { video: Video ->
+            markEpisodeRestore(video.id)
+            onEpisodeManualPlayClick(video)
         }
     }
 
@@ -979,69 +1030,77 @@ private fun MetaDetailsContent(
             .build()
     }
 
+    val leftGradientBitmap = remember(backgroundColor, backdropWidthPx, backdropHeightPx) {
+        val w = backdropWidthPx.coerceAtLeast(1)
+        val transparent = backgroundColor.copy(alpha = 0f).toArgb()
+        val bmp = android.graphics.Bitmap.createBitmap(w, 1, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bmp)
+        val shader = android.graphics.LinearGradient(
+            0f, 0f, w * 0.78f, 0f,
+            intArrayOf(
+                backgroundColor.copy(alpha = 1f).toArgb(),
+                backgroundColor.copy(alpha = 0.95f).toArgb(),
+                backgroundColor.copy(alpha = 0.84f).toArgb(),
+                backgroundColor.copy(alpha = 0.70f).toArgb(),
+                backgroundColor.copy(alpha = 0.52f).toArgb(),
+                backgroundColor.copy(alpha = 0.34f).toArgb(),
+                backgroundColor.copy(alpha = 0.18f).toArgb(),
+                backgroundColor.copy(alpha = 0.07f).toArgb(),
+                transparent
+            ),
+            floatArrayOf(0f, 0.10f, 0.22f, 0.36f, 0.52f, 0.66f, 0.78f, 0.90f, 1f),
+            android.graphics.Shader.TileMode.CLAMP
+        )
+        canvas.drawRect(0f, 0f, w.toFloat(), 1f, android.graphics.Paint().apply { this.shader = shader })
+        bmp.asImageBitmap()
+    }
+    val bottomGradientBitmap = remember(backgroundColor, backdropHeightPx) {
+        val h = backdropHeightPx.coerceAtLeast(1)
+        val transparent = backgroundColor.copy(alpha = 0f).toArgb()
+        val bmp = android.graphics.Bitmap.createBitmap(1, h, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bmp)
+        val startY = h * 0.38f
+        val shader = android.graphics.LinearGradient(
+            0f, startY, 0f, h.toFloat(),
+            intArrayOf(
+                transparent,
+                backgroundColor.copy(alpha = 0.05f).toArgb(),
+                backgroundColor.copy(alpha = 0.18f).toArgb(),
+                backgroundColor.copy(alpha = 0.38f).toArgb(),
+                backgroundColor.copy(alpha = 0.60f).toArgb(),
+                backgroundColor.copy(alpha = 0.78f).toArgb(),
+                backgroundColor.copy(alpha = 0.91f).toArgb(),
+                backgroundColor.copy(alpha = 0.97f).toArgb(),
+                backgroundColor.copy(alpha = 1f).toArgb()
+            ),
+            floatArrayOf(0f, 0.10f, 0.22f, 0.36f, 0.52f, 0.66f, 0.78f, 0.90f, 1f),
+            android.graphics.Shader.TileMode.CLAMP
+        )
+        canvas.drawRect(0f, startY, 1f, h.toFloat(), android.graphics.Paint().apply { this.shader = shader })
+        bmp.asImageBitmap()
+    }
+
     // Animated gradient alpha (moved outside subcomposition scope)
-    val gradientAlpha by animateFloatAsState(
-        targetValue = if (isTrailerPlaying) 0f else 1f,
-        animationSpec = tween(durationMillis = 800),
-        label = "gradientFade"
-    )
 
     // Always-composed bottom gradient alpha (avoids add/remove during scroll)
-    val bottomGradientAlpha by animateFloatAsState(
-        targetValue = if (isScrolledPastHero) 1f else 0f,
-        animationSpec = tween(durationMillis = 300),
-        label = "bottomGradientFade"
-    )
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Sticky background — backdrop or trailer
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Backdrop image (fades out when trailer plays)
-            AsyncImage(
-                model = backdropRequest,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = backdropAlpha },
-                contentScale = ContentScale.Crop
-            )
-
-            // Trailer video (fades in when trailer plays)
-            TrailerPlayer(
-                trailerUrl = trailerUrl,
-                trailerAudioUrl = trailerAudioUrl,
-                isPlaying = isTrailerPlaying,
-                seekRequestToken = if (showTrailerControls) trailerSeekToken else 0,
-                seekDeltaMs = if (showTrailerControls) trailerSeekDeltaMs else 0L,
-                onRemoteKey = onTrailerControlKey,
-                onProgressChanged = onTrailerProgressChanged,
-                onEnded = onTrailerEnded,
-                modifier = Modifier.fillMaxSize()
-            )
-
-            // Light global dim so text remains readable
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(dimColor)
-            )
-
-            // Left side gradient fade for text readability (fades out during trailer)
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = gradientAlpha }
-                    .background(leftGradient)
-            )
-
-            // Bottom gradient — always composed, alpha-controlled to avoid layout churn
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = bottomGradientAlpha }
-                    .background(bottomGradient)
-            )
-        }
+        BackdropLayer(
+            backdropRequest = backdropRequest,
+            trailerUrl = trailerUrl,
+            trailerAudioUrl = trailerAudioUrl,
+            isTrailerPlaying = isTrailerPlaying,
+            showTrailerControls = showTrailerControls,
+            trailerSeekToken = trailerSeekToken,
+            trailerSeekDeltaMs = trailerSeekDeltaMs,
+            onTrailerControlKey = onTrailerControlKey,
+            onTrailerProgressChanged = onTrailerProgressChanged,
+            onTrailerEnded = onTrailerEnded,
+            isScrolledPastHero = isScrolledPastHero,
+            leftGradient = leftGradientBitmap,
+            bottomGradient = bottomGradientBitmap,
+        )
 
         // Single scrollable column with hero + content
         LazyColumn(
@@ -1056,6 +1115,11 @@ private fun MetaDetailsContent(
                         nextEpisode = nextEpisode,
                         nextToWatch = nextToWatch,
                         onPlayClick = heroPlayClick,
+                        onPlayLongPress = if (showManualPlayOption) {
+                            { showHeroPlayOptionsDialog = true }
+                        } else {
+                            null
+                        },
                         isInLibrary = isInLibrary,
                         onToggleLibrary = onToggleLibrary,
                         onLibraryLongPress = {
@@ -1096,51 +1160,57 @@ private fun MetaDetailsContent(
             // Season tabs and episodes for series
             if (isSeries && seasons.isNotEmpty()) {
                 item(key = "season_tabs", contentType = "season_tabs") {
-                    SeasonTabs(
-                        seasons = seasons,
-                        selectedSeason = selectedSeason,
-                        onSeasonSelected = onSeasonSelected,
-                        onSeasonLongPress = { seasonOptionsDialogSeason = it },
-                        selectedTabFocusRequester = selectedSeasonFocusRequester,
-                        downFocusRequester = seasonDownFocusRequester
-                    )
+                    Box(modifier = Modifier.bringIntoViewResponder(noVerticalScrollResponder)) {
+                        SeasonTabs(
+                            seasons = seasons,
+                            selectedSeason = selectedSeason,
+                            onSeasonSelected = onSeasonSelected,
+                            onSeasonLongPress = { seasonOptionsDialogSeason = it },
+                            selectedTabFocusRequester = selectedSeasonFocusRequester,
+                            downFocusRequester = seasonDownFocusRequester
+                        )
+                    }
                 }
                 item(key = "episodes_$selectedSeason", contentType = "episodes") {
-                    EpisodesRow(
-                        episodes = episodesForSeason,
-                        episodeProgressMap = episodeProgressMap,
-                        episodeRatings = episodeImdbRatings,
-                        watchedEpisodes = watchedEpisodes,
-                        episodeWatchedPendingKeys = episodeWatchedPendingKeys,
-                        blurUnwatchedEpisodes = blurUnwatchedEpisodes,
-                        onEpisodeClick = episodeClick,
-                        onToggleEpisodeWatched = onToggleEpisodeWatched,
-                        onMarkSeasonWatched = onMarkSeasonWatched,
-                        onMarkSeasonUnwatched = onMarkSeasonUnwatched,
-                        isSeasonFullyWatched = isSeasonFullyWatched(selectedSeason),
-                        selectedSeason = selectedSeason,
-                        onMarkPreviousEpisodesWatched = onMarkPreviousEpisodesWatched,
-                        upFocusRequester = selectedSeasonFocusRequester,
-                        downFocusRequester = episodesDownFocusRequester,
-                        episodeFocusRequesters = seasonEpisodeFocusRequesters,
-                        restoreEpisodeId = if (pendingRestoreType == RestoreTarget.EPISODE) pendingRestoreEpisodeId else null,
-                        restoreFocusToken = if (pendingRestoreType == RestoreTarget.EPISODE) restoreFocusToken else 0,
-                        onRestoreFocusHandled = {
-                            clearPendingRestore()
-                        },
-                        onEpisodeFocused = { episodeId ->
-                            lastFocusedEpisodeIdBySeason[selectedSeason] = episodeId
-                        },
-                        scrollToEpisodeId = if (lastFocusedEpisodeIdBySeason[selectedSeason] == null) {
-                            nextToWatch?.nextVideoId
-                                ?: nextToWatch?.let { ntw -> episodesForSeason.firstOrNull { it.season == ntw.nextSeason && it.episode == ntw.nextEpisode }?.id }
-                        } else null
-                    )
-                }
+                    Box(modifier = Modifier.bringIntoViewResponder(noVerticalScrollResponder)) {
+                        EpisodesRow(
+                            episodes = episodesForSeason,
+                            episodeProgressMap = episodeProgressMap,
+                            episodeRatings = episodeImdbRatings,
+                            watchedEpisodes = watchedEpisodes,
+                            episodeWatchedPendingKeys = episodeWatchedPendingKeys,
+                            blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                            onEpisodeClick = episodeClick,
+                            onEpisodeManualPlayClick = episodeManualClick,
+                            showManualPlayOption = showManualPlayOption,
+                            onToggleEpisodeWatched = onToggleEpisodeWatched,
+                            onMarkSeasonWatched = onMarkSeasonWatched,
+                            onMarkSeasonUnwatched = onMarkSeasonUnwatched,
+                            isSeasonFullyWatched = isSeasonFullyWatched(selectedSeason),
+                            selectedSeason = selectedSeason,
+                            onMarkPreviousEpisodesWatched = onMarkPreviousEpisodesWatched,
+                            upFocusRequester = selectedSeasonFocusRequester,
+                            downFocusRequester = episodesDownFocusRequester,
+                            episodeFocusRequesters = seasonEpisodeFocusRequesters,
+                            restoreEpisodeId = if (pendingRestoreType == RestoreTarget.EPISODE) pendingRestoreEpisodeId else null,
+                            restoreFocusToken = if (pendingRestoreType == RestoreTarget.EPISODE) restoreFocusToken else 0,
+                            onRestoreFocusHandled = {
+                                clearPendingRestore()
+                            },
+                            onEpisodeFocused = { episodeId ->
+                                lastFocusedEpisodeIdBySeason[selectedSeason] = episodeId
+                            },
+                            scrollToEpisodeId = if (lastFocusedEpisodeIdBySeason[selectedSeason] == null) {
+                                nextToWatch?.nextVideoId
+                                    ?: nextToWatch?.let { ntw -> episodesForSeason.firstOrNull { it.season == ntw.nextSeason && it.episode == ntw.nextEpisode }?.id }
+                            } else null
+                        )
+                    }
             }
+        }
 
-            // Cast / More like this section
-            if (hasPeopleSection) {
+        // Cast / More like this section
+        if (hasPeopleSection) {
                 if (hasPeopleTabs) {
                     item(key = "cast_more_like_tabs", contentType = "horizontal_row") {
                         PeopleSectionTabs(
@@ -1297,6 +1367,128 @@ private fun MetaDetailsContent(
                 }
             )
         }
+
+        if (showHeroPlayOptionsDialog) {
+            PlayManualOverrideDialog(
+                title = meta.name,
+                subtitle = nextToWatch?.displayText ?: stringResource(R.string.hero_play),
+                onDismiss = { showHeroPlayOptionsDialog = false },
+                onPlayManually = {
+                    showHeroPlayOptionsDialog = false
+                    heroPlayManualClick()
+                }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun PlayManualOverrideDialog(
+    title: String,
+    subtitle: String?,
+    onDismiss: () -> Unit,
+    onPlayManually: () -> Unit
+) {
+    val primaryFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        primaryFocusRequester.requestFocus()
+    }
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = title,
+        subtitle = subtitle
+    ) {
+        Button(
+            onClick = onPlayManually,
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(primaryFocusRequester),
+            colors = ButtonDefaults.colors(
+                containerColor = NuvioColors.BackgroundCard,
+                contentColor = NuvioColors.TextPrimary
+            )
+        ) {
+            Text(stringResource(R.string.play_manually))
+        }
+    }
+}
+
+@Composable
+private fun BackdropLayer(
+    backdropRequest: ImageRequest,
+    trailerUrl: String?,
+    trailerAudioUrl: String?,
+    isTrailerPlaying: Boolean,
+    showTrailerControls: Boolean,
+    trailerSeekToken: Int,
+    trailerSeekDeltaMs: Long,
+    onTrailerControlKey: (keyCode: Int, action: Int, repeatCount: Int) -> Boolean,
+    onTrailerProgressChanged: (Long, Long) -> Unit,
+    onTrailerEnded: () -> Unit,
+    isScrolledPastHero: Boolean,
+    leftGradient: ImageBitmap,
+    bottomGradient: ImageBitmap,
+) {
+    val backdropAlphaState = animateFloatAsState(
+        targetValue = if (isTrailerPlaying) 0f else 1f,
+        animationSpec = tween(durationMillis = 800),
+        label = "backdropFade"
+    )
+    val gradientAlphaState = animateFloatAsState(
+        targetValue = if (isTrailerPlaying) 0f else 1f,
+        animationSpec = tween(durationMillis = 800),
+        label = "gradientFade"
+    )
+    val bottomGradientAlphaState = animateFloatAsState(
+        targetValue = if (isScrolledPastHero) 1f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "bottomGradientFade"
+    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        AsyncImage(
+            model = backdropRequest,
+            contentDescription = null,
+            modifier = if (isTrailerPlaying || backdropAlphaState.value < 1f) {
+                Modifier.fillMaxSize().graphicsLayer { alpha = backdropAlphaState.value }
+            } else {
+                Modifier.fillMaxSize()
+            },
+            contentScale = ContentScale.Crop
+        )
+        TrailerPlayer(
+            trailerUrl = trailerUrl,
+            trailerAudioUrl = trailerAudioUrl,
+            isPlaying = isTrailerPlaying,
+            seekRequestToken = if (showTrailerControls) trailerSeekToken else 0,
+            seekDeltaMs = if (showTrailerControls) trailerSeekDeltaMs else 0L,
+            onRemoteKey = onTrailerControlKey,
+            onProgressChanged = onTrailerProgressChanged,
+            onEnded = onTrailerEnded,
+            modifier = Modifier.fillMaxSize()
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .drawWithCache {
+                    onDrawBehind {
+                        drawImage(
+                            leftGradient,
+                            dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt()),
+                            alpha = gradientAlphaState.value,
+                            filterQuality = androidx.compose.ui.graphics.FilterQuality.Low
+                        )
+                        drawImage(
+                            bottomGradient,
+                            dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt()),
+                            alpha = bottomGradientAlphaState.value,
+                            filterQuality = androidx.compose.ui.graphics.FilterQuality.Low
+                        )
+                    }
+                }
+        )
     }
 }
 
@@ -1318,9 +1510,7 @@ private fun PeopleSectionTabs(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 20.dp, start = 48.dp, end = 48.dp)
-            .focusRestorer {
-                restorerRequester
-            },
+            .focusRestorer(restorerRequester),
         verticalAlignment = Alignment.CenterVertically
     ) {
         tabs.forEachIndexed { index, item ->
@@ -1548,7 +1738,7 @@ private fun LibraryListPickerDialog(
             }
         }
 
-        Divider(color = NuvioColors.Border, thickness = 1.dp)
+        HorizontalDivider(color = NuvioColors.Border, thickness = 1.dp)
 
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
             Button(
