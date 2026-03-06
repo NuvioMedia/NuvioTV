@@ -87,3 +87,15 @@
 # Keep line numbers for crash reports
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# ── TV Recommendations (WorkManager + TvProvider) ─────────────────────────────
+# Keep HiltWorker-annotated classes
+-keep class com.nuvio.tv.data.worker.** { *; }
+# Keep BroadcastReceiver for INITIALIZE_PROGRAMS
+-keep class com.nuvio.tv.core.recommendations.RecommendationReceiver { *; }
+# Keep TvProvider / TvContractCompat classes
+-keep class androidx.tvprovider.** { *; }
+-dontwarn androidx.tvprovider.**
+# Keep WorkManager + Hilt integration
+-keep class androidx.work.** { *; }
+-keep class androidx.hilt.work.** { *; }

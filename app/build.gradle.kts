@@ -287,6 +287,14 @@ dependencies {
     // Bundle real crypto-js (JS) for QuickJS plugins
     implementation("org.webjars.npm:crypto-js:4.2.0")
 
+    // TV Recommendations (Home Screen Channels)
+    implementation(libs.androidx.tvprovider)
+
+    // WorkManager (periodic recommendation sync)
+    implementation(libs.androidx.work.runtime)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.hilt.work.compiler)
+
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation("junit:junit:4.13.2")

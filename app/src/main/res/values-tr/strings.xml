@@ -868,4 +868,29 @@
     <string name="update_open_settings">Ayarları Aç</string>
     <string name="update_install">Yükle</string>
     <string name="update_ignore">Atla</string>
+    
+    <!-- TV Recommendations -->
+    <string name="settings_tv_recommendations">Android TV Entegrasyonu</string>
+    <string name="settings_tv_recommendations_subtitle">Ana ekran önerilerini yönet</string>
+    <string name="settings_tv_recommendations_toggle">Ana Ekran Kanalları</string>
+    <string name="settings_tv_recommendations_toggle_sub">Keşfet ve İzlemeye Devam Et içeriklerini Android TV ana ekranına iletmeyi etkinleştirir</string>
+    <string name="settings_tv_recommendations_catalogs">Katalogları Seç</string>
+    <string name="settings_tv_recommendations_catalogs_sub">Ana ekranda gösterilecek listeleri belirle</string>
+    
+    <string name="settings_tv_recommendations_appearance">Görünüm &amp; Senkronizasyon</string>
+    <string name="settings_tv_recommendations_appearance_sub">Poster stili, satır limitleri ve güncelleme sıklığını ayarla</string>
+    
+    <string name="settings_tv_recommendations_play_next_title">Sıradakini İzle Kanalı</string>
+    <string name="settings_tv_recommendations_play_next_sub">İzlemeye Devam Et satırını desteklemeyen cihazlar için yatay ve izleme çubuklu özel bir kanal oluştur</string>
+    
+    <string name="settings_tv_recommendations_poster_style_title">Geniş Posterler Kullan</string>
+    <string name="settings_tv_recommendations_poster_style_sub">Standart dikey posterler yerine manzara görünümlü (backdrop) posterler göster</string>
+    
+    <string name="settings_tv_recommendations_item_limit_title">Satır Başına Öğe</string>
+    <string name="settings_tv_recommendations_item_limit_sub">Ana ekran kanallarında gösterilecek maksimum içerik sayısı</string>
+    
+    <string name="settings_tv_recommendations_sync_interval_title">Arka Plan Senkronizasyonu</string>
+    <string name="settings_tv_recommendations_sync_interval_sub">Uygulama kapalıyken kanalların hangi sıklıkta yenileneceği</string>
+    <string name="settings_tv_recommendations_interval_hours">%1$d saat</string>
+    <string name="settings_tv_recommendations_interval_off">Kapalı</string>
 </resources>

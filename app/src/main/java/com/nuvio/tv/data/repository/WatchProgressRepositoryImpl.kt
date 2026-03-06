@@ -2,6 +2,7 @@ package com.nuvio.tv.data.repository
 
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.recommendations.TvRecommendationManager
 import com.nuvio.tv.core.sync.WatchProgressSyncService
 import com.nuvio.tv.core.sync.WatchedItemsSyncService
 import android.util.Log
@@ -33,6 +34,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+import dagger.Lazy
 
 @Singleton
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -44,7 +46,8 @@ class WatchProgressRepositoryImpl @Inject constructor(
     private val watchedItemsPreferences: WatchedItemsPreferences,
     private val watchedItemsSyncService: WatchedItemsSyncService,
     private val authManager: AuthManager,
-    private val metaRepository: MetaRepository
+    private val metaRepository: MetaRepository,
+    private val tvRecommendationManagerLazy: Lazy<TvRecommendationManager>
 ) : WatchProgressRepository {
     companion object {
         private const val TAG = "WatchProgressRepo"
@@ -385,10 +388,11 @@ class WatchProgressRepositoryImpl @Inject constructor(
         if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
             traktProgressService.applyOptimisticProgress(progress)
             watchProgressPreferences.saveProgress(progress)
+            triggerRecommendationUpdate(progress)
             return
         }
         watchProgressPreferences.saveProgress(progress)
-        
+        triggerRecommendationUpdate(progress)
         
         if (syncRemote && authManager.isAuthenticated) {
             syncScope.launch {
@@ -398,7 +402,6 @@ class WatchProgressRepositoryImpl @Inject constructor(
                     }
             }
         }
-
         if (progress.isCompleted()) {
             watchedItemsPreferences.markAsWatched(
                 WatchedItem(
@@ -424,6 +427,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
             traktProgressService.applyOptimisticRemoval(contentId, season, episode)
             traktProgressService.removeProgress(contentId, season, episode)
             watchProgressPreferences.removeProgress(contentId, season, episode)
+            triggerRecommendationRemoval(contentId)
             return
         }
         val remoteDeleteKeys = resolveRemoteDeleteKeys(contentId, season, episode)
@@ -435,12 +439,14 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 }
         }
         triggerRemoteSync()
+        triggerRecommendationRemoval(contentId)
     }
 
     override suspend fun removeFromHistory(contentId: String, season: Int?, episode: Int?) {
         if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
             traktProgressService.removeFromHistory(contentId, season, episode)
             watchProgressPreferences.removeProgress(contentId, season, episode)
+            triggerRecommendationRemoval(contentId)
             return
         }
         val remoteDeleteKeys = resolveRemoteDeleteKeys(contentId, season, episode)
@@ -454,6 +460,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
         }
         triggerRemoteSync()
         triggerWatchedItemsSync()
+        triggerRecommendationRemoval(contentId)
     }
 
     override suspend fun markAsCompleted(progress: WatchProgress) {
@@ -535,6 +542,32 @@ class WatchProgressRepositoryImpl @Inject constructor(
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .distinct()
+    }
+
+    /**
+     * Fire-and-forget update of TV Home Screen recommendation channels.
+     * Failures are silently swallowed and never propagate to the caller.
+     */
+    private fun triggerRecommendationUpdate(progress: WatchProgress) {
+        syncScope.launch {
+            try {
+                tvRecommendationManagerLazy.get().onProgressUpdated(progress)
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    /**
+     * Fire-and-forget removal of a Watch Next entry and Continue Watching channel refresh.
+     * Failures are silently swallowed and never propagate to the caller.
+     */
+    private fun triggerRecommendationRemoval(contentId: String) {
+        syncScope.launch {
+            try {
+                tvRecommendationManagerLazy.get().onProgressRemoved(contentId)
+            } catch (_: Exception) {
+            }
+        }
     }
 
     private fun mergeProgressLists(

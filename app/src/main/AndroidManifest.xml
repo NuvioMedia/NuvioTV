@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="com.android.providers.tv.permission.WRITE_EPG_DATA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <uses-feature
@@ -36,6 +37,24 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <provider
+            android:name=".core.recommendations.ExportedImageProvider"
+            android:authorities="${applicationId}.tvimages"
+            android:exported="true" />
+
+        <!-- Disable default WorkManager initializer because we supply our own
+             via Configuration.Provider in NuvioApplication (needed for HiltWorkerFactory) -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -46,7 +65,27 @@
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
+
+            <!-- Deep link for TV Home Screen Recommendations -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="nuviotv"
+                    android:host="content" />
+            </intent-filter>
         </activity>
+
+        <!-- TV Recommendations: system requests channel population after reboot / install -->
+        <receiver
+            android:name=".core.recommendations.RecommendationReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.media.tv.action.INITIALIZE_PROGRAMS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
