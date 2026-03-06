@@ -116,6 +116,15 @@ fun DebugSettingsContent(
                 )
             }
 
+            item(key = "debug_toggle_buffer_logs") {
+                DebugToggleCard(
+                    title = stringResource(R.string.debug_buffer_logs_title),
+                    subtitle = stringResource(R.string.debug_buffer_logs_subtitle),
+                    checked = uiState.bufferLogsEnabled,
+                    onToggle = { viewModel.onEvent(DebugSettingsEvent.ToggleBufferLogs(it)) }
+                )
+            }
+
             // ── Manual Sign In ──
             item(key = "debug_account_header") {
                 Spacer(modifier = Modifier.height(8.dp))

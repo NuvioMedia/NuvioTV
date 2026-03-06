@@ -10,6 +10,19 @@
 
 import java.util.Properties
 
+fun parseBooleanProperty(value: String?): Boolean {
+    val normalized = value?.trim()?.lowercase() ?: return false
+    return normalized == "1" || normalized == "true" || normalized == "yes" || normalized == "on"
+}
+
+fun resolveProperty(dev: Properties, local: Properties, key: String, fallback: String = ""): String {
+    return dev.getProperty(key)?.trim()?.takeIf { it.isNotBlank() }
+        ?: local.getProperty(key)?.trim()?.takeIf { it.isNotBlank() }
+        ?: fallback
+}
+
+fun cmakePath(path: String): String = path.replace("\\", "/")
+
 val localProperties = Properties().apply {
     val localPropertiesFile = rootProject.file("local.properties")
     if (localPropertiesFile.exists()) {
@@ -23,6 +36,22 @@ val devProperties = Properties().apply {
         load(devPropertiesFile.inputStream())
     }
 }
+
+val enableDoviNative = parseBooleanProperty(
+    resolveProperty(devProperties, localProperties, "DOVI_NATIVE_ENABLED")
+)
+val doviExtractorHookReady = parseBooleanProperty(
+    resolveProperty(devProperties, localProperties, "DOVI_EXTRACTOR_HOOK_READY")
+)
+val doviEnableRealLink = parseBooleanProperty(
+    resolveProperty(devProperties, localProperties, "DOVI_ENABLE_REAL_LINK")
+)
+val doviStaticLibPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_STATIC_LIB")
+val doviIncludeDirPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_INCLUDE_DIR")
+val doviPrebuiltRootPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_PREBUILT_ROOT")
+val useMedia3Source = parseBooleanProperty(
+    resolveProperty(devProperties, localProperties, "USE_MEDIA3_SOURCE")
+)
 
 android {
     namespace = "com.nuvio.tv"
@@ -46,10 +75,32 @@ android {
         buildConfigField("String", "TRAKT_REDIRECT_URI", "\"${localProperties.getProperty("TRAKT_REDIRECT_URI", "urn:ietf:wg:oauth:2.0:oob")}\"")
         buildConfigField("String", "TMDB_API_KEY", "\"${localProperties.getProperty("TMDB_API_KEY", "")}\"")
         buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "https://app.nuvio.tv/tv-login")}\"")
+        buildConfigField("boolean", "DOVI_NATIVE_ENABLED", enableDoviNative.toString())
+        buildConfigField("boolean", "DOVI_EXTRACTOR_HOOK_READY", doviExtractorHookReady.toString())
+        if (enableDoviNative) {
+            externalNativeBuild {
+                cmake {
+                    arguments(
+                        "-DDOVI_ENABLE_LIBDOVI=${if (doviEnableRealLink) "ON" else "OFF"}",
+                        "-DDOVI_LIBDOVI_STATIC_LIB=${cmakePath(doviStaticLibPath)}",
+                        "-DDOVI_LIBDOVI_INCLUDE_DIR=${cmakePath(doviIncludeDirPath)}",
+                        "-DDOVI_LIBDOVI_PREBUILT_ROOT=${cmakePath(doviPrebuiltRootPath)}"
+                    )
+                }
+            }
+        }
 
         // In-app updater (GitHub Releases)
         buildConfigField("String", "GITHUB_OWNER", "\"tapframe\"")
         buildConfigField("String", "GITHUB_REPO", "\"NuvioTV\"")
+    }
+
+    if (enableDoviNative) {
+        externalNativeBuild {
+            cmake {
+                path = file("src/main/cpp/CMakeLists.txt")
+            }
+        }
     }
 
     signingConfigs {
@@ -162,8 +213,10 @@ composeCompiler {
 
 // Globally exclude stock media3-exoplayer and media3-ui — replaced by forked local AARs
 configurations.all {
-    exclude(group = "androidx.media3", module = "media3-exoplayer")
-    exclude(group = "androidx.media3", module = "media3-ui")
+    if (!useMedia3Source) {
+        exclude(group = "androidx.media3", module = "media3-exoplayer")
+        exclude(group = "androidx.media3", module = "media3-ui")
+    }
 }
 
 dependencies {
@@ -217,9 +270,11 @@ dependencies {
     // ViewModel
     implementation(libs.lifecycle.viewmodel.compose)
 
-    // Media3 ExoPlayer — using custom forked ExoPlayer from local AARs (like Just Player)
-    // The forked lib-exoplayer-release.aar replaces stock media3-exoplayer (globally excluded above)
-    // lib-ui-release.aar replaces stock media3-ui (globally excluded above)
+    // Media3 core modules.
+    if (useMedia3Source) {
+        implementation(libs.media3.exoplayer)
+        implementation(libs.media3.ui)
+    }
     implementation(libs.media3.exoplayer.hls)
     implementation(libs.media3.exoplayer.dash)
     implementation(libs.media3.exoplayer.smoothstreaming)
@@ -232,15 +287,14 @@ dependencies {
     implementation(libs.media3.container)
     implementation(libs.media3.extractor)
 
-    
-    // Local AAR libraries from forked ExoPlayer (matching Just Player setup):
-    // - lib-exoplayer-release.aar    — Custom forked ExoPlayer core (replaces media3-exoplayer)
-    // - lib-ui-release.aar           — Custom forked ExoPlayer UI
-    // - lib-decoder-ffmpeg-release.aar — FFmpeg audio decoders (vorbis,opus,flac,alac,pcm,mp3,amr,aac,ac3,eac3,dca,mlp,truehd)
-    // - lib-decoder-av1-release.aar  — AV1 software video decoder (libgav1)
-    // - lib-decoder-iamf-release.aar — IAMF immersive audio decoder
-    // - lib-decoder-mpegh-release.aar — MPEG-H 3D audio decoder
-    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("lib-*.aar"))))
+    // Local AAR libraries from forked ExoPlayer.
+    if (useMedia3Source) {
+        // Source mode uses media/ for ExoPlayer + UI and keeps decoder extensions as AARs.
+        implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("lib-decoder-*.aar"))))
+    } else {
+        // AAR mode uses prebuilt core/UI + decoder extensions.
+        implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("lib-*.aar"))))
+    }
 
     // libass-android for ASS/SSA subtitle support (from Maven Central)
     implementation("io.github.peerless2012:ass-media:0.4.0-beta01")

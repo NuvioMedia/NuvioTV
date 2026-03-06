@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.media.audiofx.LoudnessEnhancer
 import androidx.lifecycle.SavedStateHandle
+import androidx.media3.common.C
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import com.nuvio.tv.core.plugin.PluginManager
@@ -53,6 +54,8 @@ class PlayerRuntimeController(
     companion object {
         internal const val TAG = "PlayerViewModel"
         internal const val TRACK_FRAME_RATE_GRACE_MS = 1500L
+        internal const val FIRST_FRAME_TIMEOUT_MS = 12_000L
+        internal const val MAX_TIMEOUT_RECOVERY_ATTEMPTS = 2
         internal const val ADDON_SUBTITLE_TRACK_ID_PREFIX = "nuvio-addon-sub:"
         internal val PORTUGUESE_BRAZILIAN_TAGS = listOf(
             "pt-br", "pt_br", "pob", "brazilian", "brazil", "brasil"
@@ -86,7 +89,7 @@ class PlayerRuntimeController(
     internal val initialEpisodeTitle: String? = navigationArgs.initialEpisodeTitle
     internal val rememberedAudioLanguage: String? = navigationArgs.rememberedAudioLanguage
     internal val rememberedAudioName: String? = navigationArgs.rememberedAudioName
-    internal val mediaSourceFactory = PlayerMediaSourceFactory()
+    internal val mediaSourceFactory = PlayerMediaSourceFactory(context.applicationContext)
 
     internal var currentVideoHash: String? = navigationArgs.videoHash
     internal var currentVideoSize: Long? = navigationArgs.videoSize
@@ -132,6 +135,8 @@ class PlayerRuntimeController(
         get() = _exoPlayer
 
     internal var progressJob: Job? = null
+    internal var vodTelemetryJob: Job? = null
+    internal var firstFrameWatchdogJob: Job? = null
     internal var hideControlsJob: Job? = null
     internal var hideSeekOverlayJob: Job? = null
     internal var watchProgressSaveJob: Job? = null
@@ -177,7 +182,6 @@ class PlayerRuntimeController(
     internal var streamReuseLastLinkEnabled: Boolean = false
     internal var streamAutoPlayModeSetting: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL
     internal var streamAutoPlayNextEpisodeEnabledSetting: Boolean = false
-    internal var streamAutoPlayPreferBingeGroupForNextEpisodeSetting: Boolean = false
     internal var nextEpisodeThresholdModeSetting: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE
     internal var nextEpisodeThresholdPercentSetting: Float = 98f
     internal var nextEpisodeThresholdMinutesBeforeEndSetting: Float = 2f
@@ -185,6 +189,13 @@ class PlayerRuntimeController(
     internal var hasAppliedRememberedAudioSelection: Boolean = false
 
     internal var lastBufferLogTimeMs: Long = 0L
+    internal var lastVodTelemetryRefreshTimeMs: Long = 0L
+    internal var cachedVodCacheLogState: String = "vod=warming"
+    internal var bufferLogsEnabled: Boolean = false
+    internal var lastProgressUiUpdateUptimeMs: Long = 0L
+    internal var lastSkipIntervalEvaluationUptimeMs: Long = 0L
+    internal var lastNextEpisodeEvaluationUptimeMs: Long = 0L
+    internal var bufferLogJob: Job? = null
     
     internal var loudnessEnhancer: LoudnessEnhancer? = null
     internal var trackSelector: DefaultTrackSelector? = null
@@ -196,11 +207,44 @@ class PlayerRuntimeController(
     internal var pendingPreviewSeekPosition: Long? = null
     internal var pendingResumeProgress: WatchProgress? = null
     internal var hasRetriedCurrentStreamAfter416: Boolean = false
+    internal var hasRetriedCurrentStreamAfterUnexpectedNpe: Boolean = false
+    internal var hasRetriedCurrentStreamAfterMediaPeriodHolderCrash: Boolean = false
+    internal var timeoutRecoveryAttempts: Int = 0
+    internal val dv7ToHevcForcedStreamUrls: MutableSet<String> = mutableSetOf()
+    internal val vc1SoftwarePreferredStreamUrls: MutableSet<String> = mutableSetOf()
+    internal val vc1TrackSelectionBypassStreamUrls: MutableSet<String> = mutableSetOf()
+    internal val safeAudioForcedStreamUrls: MutableSet<String> = mutableSetOf()
+    internal val audioDisabledForcedStreamUrls: MutableSet<String> = mutableSetOf()
+    internal var isMapDv7ToHevcActiveForCurrentPlayback: Boolean = false
+    internal var isExperimentalDv7ToDv81ActiveForCurrentPlayback: Boolean = false
+    internal var isVc1SoftwareFallbackActiveForCurrentPlayback: Boolean = false
+    internal var isVc1TrackSelectionBypassActiveForCurrentPlayback: Boolean = false
+    internal var isSafeAudioModeActiveForCurrentPlayback: Boolean = false
+    internal var isAudioDisabledForCurrentPlayback: Boolean = false
+    internal var hasAttemptedDv7ToDv81ForCurrentPlayback: Boolean = false
+    internal var dv7ToDv81BridgeVersionForCurrentPlayback: String? = null
+    internal var dv7ToDv81LastProbeReasonForCurrentPlayback: String? = null
+    internal var playerInitializationStartedAtMs: Long = 0L
+    internal var pendingSeekTelemetryRequestedAtMs: Long = 0L
+    internal var pendingSeekTelemetryTargetMs: Long = -1L
+    internal var pendingSeekTelemetryReadyAtMs: Long = 0L
+    internal var pendingSeekTelemetryReadyLatencyMs: Long = -1L
+    internal var pendingSeekTelemetryAwaitingFirstFrame: Boolean = false
+    internal var pendingSeekTelemetryReadyAssumed: Boolean = false
     internal var currentScrobbleItem: TraktScrobbleItem? = null
     internal var hasSentScrobbleStartForCurrentItem: Boolean = false
     internal var hasRequestedScrobbleStartForCurrentItem: Boolean = false
     internal var scrobbleStartRequestGeneration: Long = 0L
     internal var hasSentCompletionScrobbleForCurrentItem: Boolean = false
+    internal var currentStreamHasVideoTrack: Boolean = false
+    internal var currentVideoTrackIsLikelyVc1: Boolean = false
+    internal var currentVideoTrackMimeType: String? = null
+    internal var currentVideoTrackCodecs: String? = null
+    internal var currentVideoTrackWidth: Int = 0
+    internal var currentVideoTrackHeight: Int = 0
+    internal var currentVideoTrackSelected: Boolean = false
+    internal var currentVideoTrackBestSupport: Int = C.FORMAT_UNSUPPORTED_TYPE
+    internal var lastLoggedVideoTrackSignature: String? = null
     internal var episodeStreamsJob: Job? = null
     internal var episodeStreamsCacheRequestKey: String? = null
     internal val streamCacheKey: String? by lazy {
@@ -211,6 +255,7 @@ class PlayerRuntimeController(
 
     init {
         refreshScrobbleItem()
+        mediaSourceFactory.warmupVodCacheAsync()
         if (!navigationArgs.startFromBeginning) {
             loadSavedProgressFor(currentSeason, currentEpisode)
         }
@@ -224,6 +269,7 @@ class PlayerRuntimeController(
 
     fun onCleared() {
         releasePlayer()
+        vodTelemetryJob?.cancel()
         mediaSourceFactory.shutdown()
         sourceChipErrorDismissJob?.cancel()
     }

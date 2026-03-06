@@ -1,13 +1,17 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.os.SystemClock
 import android.util.Log
 import androidx.media3.common.Player
+import com.nuvio.tv.core.player.DoviBridge
+import com.nuvio.tv.core.player.MatroskaDolbyVisionHookInstaller
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.repository.TraktScrobbleItem
 import com.nuvio.tv.data.repository.extractYear
 import com.nuvio.tv.data.repository.parseContentIds
 import com.nuvio.tv.data.repository.toTraktIds
 import com.nuvio.tv.domain.model.WatchProgress
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -18,35 +22,92 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
     progressJob = scope.launch {
         while (isActive) {
             _exoPlayer?.let { player ->
+                val nowUptime = SystemClock.uptimeMillis()
                 val pos = player.currentPosition.coerceAtLeast(0L)
                 val playerDuration = player.duration
                 if (playerDuration > lastKnownDuration) {
                     lastKnownDuration = playerDuration
                 }
                 val displayPosition = pendingPreviewSeekPosition ?: pos
-                _uiState.update {
-                    it.copy(
-                        currentPosition = displayPosition,
-                        duration = playerDuration.coerceAtLeast(0L)
+                val controlsVisible = _uiState.value.showControls
+                val progressUpdateIntervalMs =
+                    if (controlsVisible || pendingPreviewSeekPosition != null) 500L else 1_000L
+                if (
+                    nowUptime - lastProgressUiUpdateUptimeMs >= progressUpdateIntervalMs ||
+                    _uiState.value.currentPosition != displayPosition ||
+                    _uiState.value.duration != playerDuration.coerceAtLeast(0L)
+                ) {
+                    lastProgressUiUpdateUptimeMs = nowUptime
+                    _uiState.update {
+                        it.copy(
+                            currentPosition = displayPosition,
+                            duration = playerDuration.coerceAtLeast(0L)
+                        )
+                    }
+                }
+                if (nowUptime - lastSkipIntervalEvaluationUptimeMs >= 1_000L) {
+                    lastSkipIntervalEvaluationUptimeMs = nowUptime
+                    updateActiveSkipInterval(pos)
+                }
+                if (nowUptime - lastNextEpisodeEvaluationUptimeMs >= 1_000L) {
+                    lastNextEpisodeEvaluationUptimeMs = nowUptime
+                    evaluateNextEpisodeCardVisibility(
+                        positionMs = pos,
+                        durationMs = playerDuration.coerceAtLeast(0L)
                     )
                 }
-                updateActiveSkipInterval(pos)
-                evaluateNextEpisodeCardVisibility(
-                    positionMs = pos,
-                    durationMs = playerDuration.coerceAtLeast(0L)
-                )
 
-                
-                if (player.isPlaying) {
+                if (player.isPlaying && bufferLogsEnabled) {
                     val now = System.currentTimeMillis()
-                    if (now - lastBufferLogTimeMs >= 10_000) {
+                    maybeRefreshVodTelemetry(now)
+                    if (now - lastBufferLogTimeMs >= 30_000 && bufferLogJob?.isActive != true) {
                         lastBufferLogTimeMs = now
                         val bufAhead = (player.bufferedPosition - player.currentPosition) / 1000
                         val loading = player.isLoading
                         val runtime = Runtime.getRuntime()
                         val usedMb = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
                         val maxMb = runtime.maxMemory() / (1024 * 1024)
-                        Log.d(PlayerRuntimeController.TAG, "BUFFER: ahead=${bufAhead}s, loading=$loading, heap=${usedMb}/${maxMb}MB, pos=${pos / 1000}s")
+                        val vodCache = cachedVodCacheLogState
+                        val signalingRewrites =
+                            MatroskaDolbyVisionHookInstaller.getCodecStringRewriteCount()
+                        val sourceProfile =
+                            MatroskaDolbyVisionHookInstaller.getLastDetectedSourceProfile()
+                        val conversionMode =
+                            MatroskaDolbyVisionHookInstaller.getLastSelectedConversionMode()
+                        val conversionCalls = DoviBridge.getConversionCallCount()
+                        val conversionSuccess = DoviBridge.getConversionSuccessCount()
+                        val conversionAttempted =
+                            hasAttemptedDv7ToDv81ForCurrentPlayback ||
+                                conversionCalls > 0 ||
+                                signalingRewrites > 0
+                        val experimentalDvEnabled = isExperimentalDv7ToDv81ActiveForCurrentPlayback
+                        val dv7ProbeReason = dv7ToDv81LastProbeReasonForCurrentPlayback ?: "n/a"
+                        bufferLogJob = scope.launch(Dispatchers.Default) {
+                            val dv7doviState = buildString {
+                                append("dv7dovi=")
+                                append(if (experimentalDvEnabled) "on" else "off")
+                                append(",attempted=")
+                                append(if (conversionAttempted) "yes" else "no")
+                                append(",sourceProfile=")
+                                append(sourceProfile ?: "n/a")
+                                append(",mode=")
+                                append(conversionMode ?: "n/a")
+                                append(",signalRewrites=")
+                                append(signalingRewrites)
+                                append(",calls=")
+                                append(conversionCalls)
+                                append(",success=")
+                                append(conversionSuccess)
+                                append(",hook=")
+                                append(if (DoviBridge.isExtractorHookReadyInBuild) "ready" else "missing")
+                                append(",reason=")
+                                append(dv7ProbeReason)
+                            }
+                            Log.d(
+                                PlayerRuntimeController.TAG,
+                                "BUFFER: ahead=${bufAhead}s, loading=$loading, heap=${usedMb}/${maxMb}MB, pos=${pos / 1000}s, $vodCache, $dv7doviState"
+                            )
+                        }
                     }
                 }
             }
@@ -58,6 +119,10 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
 internal fun PlayerRuntimeController.stopProgressUpdates() {
     progressJob?.cancel()
     progressJob = null
+    vodTelemetryJob?.cancel()
+    vodTelemetryJob = null
+    bufferLogJob?.cancel()
+    bufferLogJob = null
 }
 
 internal fun PlayerRuntimeController.startWatchProgressSaving() {
@@ -103,6 +168,21 @@ internal fun PlayerRuntimeController.getEffectiveDuration(position: Long): Long 
     if (!isEnded && effectiveDuration < position) return 0L
 
     return effectiveDuration
+}
+
+private fun PlayerRuntimeController.maybeRefreshVodTelemetry(now: Long) {
+    if (vodTelemetryJob?.isActive == true) return
+    if (now - lastVodTelemetryRefreshTimeMs < 30_000) return
+    lastVodTelemetryRefreshTimeMs = now
+    val streamUrl = currentStreamUrl
+    vodTelemetryJob = scope.launch(Dispatchers.IO) {
+        val nextState = runCatching {
+            mediaSourceFactory.getVodCacheLogState(streamUrl)
+        }.getOrElse {
+            cachedVodCacheLogState
+        }
+        cachedVodCacheLogState = nextState
+    }
 }
 
 internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, duration: Long, syncRemote: Boolean = true) {
@@ -398,6 +478,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 val target = (player.currentPosition + event.deltaMs)
                     .coerceAtLeast(0L)
                     .coerceAtMost(maxDuration)
+                beginSeekTelemetry(target)
                 player.seekTo(target)
                 _uiState.update { it.copy(currentPosition = target) }
                 scheduleProgressSyncAfterSeek()
@@ -427,6 +508,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         PlayerEvent.OnCommitPreviewSeek -> {
             val target = pendingPreviewSeekPosition
             if (target != null) {
+                beginSeekTelemetry(target)
                 _exoPlayer?.seekTo(target)
                 _uiState.update { it.copy(currentPosition = target) }
                 pendingPreviewSeekPosition = null
@@ -440,6 +522,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         is PlayerEvent.OnSeekTo -> {
             pendingPreviewSeekPosition = null
+            beginSeekTelemetry(event.position)
             _exoPlayer?.seekTo(event.position)
             _uiState.update { it.copy(currentPosition = event.position) }
             scheduleProgressSyncAfterSeek()
@@ -648,6 +731,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         PlayerEvent.OnRetry -> {
             hasRenderedFirstFrame = false
             hasRetriedCurrentStreamAfter416 = false
+            hasRetriedCurrentStreamAfterUnexpectedNpe = false
+            hasRetriedCurrentStreamAfterMediaPeriodHolderCrash = false
             resetNextEpisodeCardState(clearEpisode = false)
             _uiState.update { state ->
                 state.copy(
@@ -679,9 +764,11 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         PlayerEvent.OnSkipIntro -> {
             _uiState.value.activeSkipInterval?.let { interval ->
                 val duration = _exoPlayer?.duration?.takeIf { it > 0 } ?: Long.MAX_VALUE
-                val seekMs = if (interval.endTime == Double.MAX_VALUE) duration
-                             else (interval.endTime * 1000).toLong()
-                _exoPlayer?.seekTo(seekMs.coerceAtMost(duration))
+                val target = if (interval.endTime == Double.MAX_VALUE) duration
+                else (interval.endTime * 1000).toLong()
+                val seekMs = target.coerceAtMost(duration)
+                beginSeekTelemetry(seekMs)
+                _exoPlayer?.seekTo(seekMs)
                 scheduleProgressSyncAfterSeek()
                 _uiState.update { it.copy(activeSkipInterval = null, skipIntervalDismissed = true) }
             }
@@ -756,4 +843,24 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             }
         }
     }
+}
+
+private fun PlayerRuntimeController.beginSeekTelemetry(targetMs: Long) {
+    val requestTimeMs = System.currentTimeMillis()
+    pendingSeekTelemetryRequestedAtMs = requestTimeMs
+    pendingSeekTelemetryTargetMs = targetMs
+    val player = _exoPlayer
+    if (player != null &&
+        player.playbackState == Player.STATE_READY &&
+        !_uiState.value.isBuffering
+    ) {
+        pendingSeekTelemetryReadyAtMs = requestTimeMs
+        pendingSeekTelemetryReadyLatencyMs = 0L
+        pendingSeekTelemetryReadyAssumed = true
+    } else {
+        pendingSeekTelemetryReadyAtMs = 0L
+        pendingSeekTelemetryReadyLatencyMs = -1L
+        pendingSeekTelemetryReadyAssumed = false
+    }
+    pendingSeekTelemetryAwaitingFirstFrame = true
 }

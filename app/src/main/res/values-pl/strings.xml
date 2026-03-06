@@ -202,6 +202,8 @@
     <string name="audio_tunneled">Tunelowane odtwarzanie</string>
     <string name="audio_tunneled_sub">Synchronizacja audio/wideo na poziomie sprzętu. Może poprawić odtwarzanie na niektórych urządzeniach Android TV</string>
     <string name="audio_dv_sub">Mapuj Dolby Vision Profil 7 na standardowy HEVC dla urządzeń bez obsługi DV</string>
+    <string name="audio_dv_experimental_title">DV7 - Eksperymentalne DV8.1</string>
+    <string name="audio_dv_experimental_sub">Eksperymentalna natywna ścieżka konwersji. Gdy konwersja jest niedostępna lub się nie powiedzie, odtwarzanie wraca do mapowania HEVC.</string>
     <string name="audio_decoder_device_only_desc">Używaj tylko wbudowanych dekoderów sprzętowych. Najbardziej kompatybilne, ale może nie obsługiwać wszystkich formatów.</string>
     <string name="audio_decoder_prefer_device_desc">Używaj dekoderów sprzętowych gdy dostępne, w przeciwnym razie FFmpeg. Zalecane dla większości urządzeń.</string>
     <string name="audio_decoder_prefer_app_desc">Używaj dekoderów FFmpeg gdy dostępne. Lepsza obsługa formatów, ale wyższe użycie CPU.</string>

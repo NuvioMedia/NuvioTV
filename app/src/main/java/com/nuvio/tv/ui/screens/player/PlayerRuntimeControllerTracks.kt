@@ -1,9 +1,12 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.net.Uri
 import android.util.Log
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
+import androidx.media3.common.util.Util
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.core.player.FrameRateUtils
 import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
@@ -21,16 +24,33 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
     val subtitleTracks = mutableListOf<TrackInfo>()
     var selectedAudioIndex = -1
     var selectedSubtitleIndex = -1
+    var hasVideoTrack = false
+    var firstVideoFormat: Format? = null
+    var selectedVideoFormat: Format? = null
+    var bestVideoTrackSupport = C.FORMAT_UNSUPPORTED_TYPE
+    var selectedVideoTrackSupport = C.FORMAT_UNSUPPORTED_TYPE
 
     tracks.groups.forEachIndexed { groupIndex, trackGroup ->
         val trackType = trackGroup.type
         
         when (trackType) {
             C.TRACK_TYPE_VIDEO -> {
+                if (trackGroup.length > 0) {
+                    hasVideoTrack = true
+                    if (firstVideoFormat == null) {
+                        firstVideoFormat = trackGroup.getTrackFormat(0)
+                    }
+                }
                 
                 for (i in 0 until trackGroup.length) {
+                    val support = trackGroup.getTrackSupport(i)
+                    if (formatSupportRank(support) > formatSupportRank(bestVideoTrackSupport)) {
+                        bestVideoTrackSupport = support
+                    }
                     if (trackGroup.isTrackSelected(i)) {
                         val format = trackGroup.getTrackFormat(i)
+                        selectedVideoFormat = format
+                        selectedVideoTrackSupport = support
                         if (format.frameRate > 0f) {
                             val raw = format.frameRate
                             val snapped = FrameRateUtils.snapToStandardRate(raw)
@@ -107,6 +127,84 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         }
     }
 
+    currentStreamHasVideoTrack = hasVideoTrack
+    val effectiveVideoFormat = selectedVideoFormat ?: firstVideoFormat
+    if (effectiveVideoFormat != null) {
+        currentVideoTrackMimeType = effectiveVideoFormat.sampleMimeType
+        currentVideoTrackCodecs = effectiveVideoFormat.codecs
+        currentVideoTrackWidth = effectiveVideoFormat.width.coerceAtLeast(0)
+        currentVideoTrackHeight = effectiveVideoFormat.height.coerceAtLeast(0)
+        currentVideoTrackSelected = selectedVideoFormat != null
+        currentVideoTrackBestSupport = if (selectedVideoFormat != null) {
+            selectedVideoTrackSupport
+        } else {
+            bestVideoTrackSupport
+        }
+        currentVideoTrackIsLikelyVc1 = isLikelyVc1VideoFormat(
+            sampleMimeType = effectiveVideoFormat.sampleMimeType,
+            codecs = effectiveVideoFormat.codecs,
+            label = effectiveVideoFormat.label
+        )
+        val videoTrackSignature = buildString {
+            append(currentVideoTrackMimeType ?: "unknown")
+            append('|')
+            append(currentVideoTrackCodecs ?: "unknown")
+            append('|')
+            append(currentVideoTrackWidth)
+            append('x')
+            append(currentVideoTrackHeight)
+            append("|vc1=")
+            append(currentVideoTrackIsLikelyVc1)
+            append("|selected=")
+            append(currentVideoTrackSelected)
+            append("|support=")
+            append(Util.getFormatSupportString(currentVideoTrackBestSupport))
+            append("|vc1Fallback=")
+            append(isVc1SoftwareFallbackActiveForCurrentPlayback)
+            append("|vc1TrackBypass=")
+            append(isVc1TrackSelectionBypassActiveForCurrentPlayback)
+        }
+        if (videoTrackSignature != lastLoggedVideoTrackSignature) {
+            lastLoggedVideoTrackSignature = videoTrackSignature
+            Log.i(
+                PlayerRuntimeController.TAG,
+                "VIDEO_TRACK: mime=${currentVideoTrackMimeType ?: "unknown"} " +
+                    "codecs=${currentVideoTrackCodecs ?: "unknown"} " +
+                    "size=${currentVideoTrackWidth}x${currentVideoTrackHeight} " +
+                    "vc1=$currentVideoTrackIsLikelyVc1 " +
+                    "selected=$currentVideoTrackSelected " +
+                    "support=${Util.getFormatSupportString(currentVideoTrackBestSupport)} " +
+                    "vc1FallbackActive=$isVc1SoftwareFallbackActiveForCurrentPlayback " +
+                    "vc1TrackBypassActive=$isVc1TrackSelectionBypassActiveForCurrentPlayback"
+            )
+        }
+        if (currentVideoTrackIsLikelyVc1 &&
+            !currentVideoTrackSelected &&
+            isVc1SoftwareFallbackActiveForCurrentPlayback &&
+            !isVc1TrackSelectionBypassActiveForCurrentPlayback
+        ) {
+            val currentPosition = _exoPlayer?.currentPosition ?: 0L
+            vc1TrackSelectionBypassStreamUrls.add(currentStreamUrl)
+            Log.w(
+                PlayerRuntimeController.TAG,
+                    "VIDEO_TRACK: VC-1 track present but unselected after software-preferred retry, " +
+                        "forcing track-selection bypass support=${Util.getFormatSupportString(currentVideoTrackBestSupport)} " +
+                    "host=${Uri.parse(currentStreamUrl).host ?: "unknown"} positionMs=$currentPosition"
+            )
+            retryCurrentStreamWithVc1TrackSelectionBypass(currentPosition)
+            return
+        }
+    } else {
+        currentVideoTrackMimeType = null
+        currentVideoTrackCodecs = null
+        currentVideoTrackWidth = 0
+        currentVideoTrackHeight = 0
+        currentVideoTrackSelected = false
+        currentVideoTrackBestSupport = C.FORMAT_UNSUPPORTED_TYPE
+        currentVideoTrackIsLikelyVc1 = false
+        lastLoggedVideoTrackSignature = null
+    }
+
     hasScannedTextTracksOnce = true
     Log.d(
         PlayerRuntimeController.TAG,
@@ -160,7 +258,36 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
             selectedSubtitleTrackIndex = selectedSubtitleIndex
         )
     }
+    if (currentStreamHasVideoTrack) {
+        maybeScheduleFirstFrameWatchdog()
+    } else {
+        cancelFirstFrameWatchdog()
+    }
     tryAutoSelectPreferredSubtitleFromAvailableTracks()
+}
+
+private fun isLikelyVc1VideoFormat(
+    sampleMimeType: String?,
+    codecs: String?,
+    label: String?
+): Boolean {
+    val haystack = listOfNotNull(sampleMimeType, codecs, label)
+        .joinToString(" ")
+        .lowercase(Locale.ROOT)
+    return haystack.contains("wvc1") ||
+        haystack.contains("vc-1") ||
+        haystack.contains("vc1") ||
+        haystack.contains("wmv3")
+}
+
+private fun formatSupportRank(@C.FormatSupport formatSupport: Int): Int {
+    return when (formatSupport) {
+        C.FORMAT_HANDLED -> 4
+        C.FORMAT_EXCEEDS_CAPABILITIES -> 3
+        C.FORMAT_UNSUPPORTED_DRM -> 2
+        C.FORMAT_UNSUPPORTED_SUBTYPE -> 1
+        else -> 0
+    }
 }
 
 internal fun PlayerRuntimeController.maybeApplyRememberedAudioSelection(audioTracks: List<TrackInfo>) {

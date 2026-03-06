@@ -67,6 +67,10 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onSetSkipSilence: (Boolean) -> Unit,
     onSetTunnelingEnabled: (Boolean) -> Unit,
     onSetMapDV7ToHevc: (Boolean) -> Unit,
+    onSetExperimentalDv7ToDv81Enabled: (Boolean) -> Unit,
+    onSetExperimentalDtsIecPassthroughEnabled: (Boolean) -> Unit,
+    onSetExperimentalDv5ToDv81Enabled: (Boolean) -> Unit,
+    onSetExperimentalDv7ToDv81PreserveMappingEnabled: (Boolean) -> Unit,
     onItemFocused: () -> Unit = {},
     enabled: Boolean = true
 ) {
@@ -231,6 +235,54 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             onCheckedChange = onSetMapDV7ToHevc,
             onFocused = onItemFocused,
             enabled = enabled
+        )
+    }
+
+    item(key = "audio_dv7_dovi_experimental") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Tune,
+            title = stringResource(R.string.audio_dv_experimental_title),
+            subtitle = stringResource(R.string.audio_dv_experimental_sub),
+            isChecked = playerSettings.experimentalDv7ToDv81Enabled,
+            onCheckedChange = onSetExperimentalDv7ToDv81Enabled,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
+    }
+
+    item(key = "audio_dts_iec_experimental") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Tune,
+            title = stringResource(R.string.audio_dts_iec_experimental_title),
+            subtitle = stringResource(R.string.audio_dts_iec_experimental_sub),
+            isChecked = playerSettings.experimentalDtsIecPassthroughEnabled,
+            onCheckedChange = onSetExperimentalDtsIecPassthroughEnabled,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
+    }
+
+    item(key = "audio_dv7_dovi_experimental_preserve_mapping") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Tune,
+            title = stringResource(R.string.audio_dv_experimental_preserve_mapping_title),
+            subtitle = stringResource(R.string.audio_dv_experimental_preserve_mapping_sub),
+            isChecked = playerSettings.experimentalDv7ToDv81PreserveMappingEnabled,
+            onCheckedChange = onSetExperimentalDv7ToDv81PreserveMappingEnabled,
+            onFocused = onItemFocused,
+            enabled = enabled && playerSettings.experimentalDv7ToDv81Enabled
+        )
+    }
+
+    item(key = "audio_dv5_dovi_experimental") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Tune,
+            title = stringResource(R.string.audio_dv5_compatibility_title),
+            subtitle = stringResource(R.string.audio_dv5_compatibility_sub),
+            isChecked = playerSettings.experimentalDv5ToDv81Enabled,
+            onCheckedChange = onSetExperimentalDv5ToDv81Enabled,
+            onFocused = onItemFocused,
+            enabled = enabled && playerSettings.experimentalDv7ToDv81Enabled
         )
     }
 }
