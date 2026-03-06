@@ -35,43 +35,29 @@ class TvRecommendationWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         return try {
             if (!recommendationDataStore.isEnabled()) {
+                recommendationManager.clearAll()
                 return Result.success()
             }
 
             // 1. Sync WatchNext and cleanup legacy channels
             recommendationManager.syncAllChannels()
 
-            // 2. Refresh Trending and New Releases silently from Addons (without opening the app)
+            // 2. Refresh dynamic channels from Addons
             val addons = addonRepository.getInstalledAddons().firstOrNull() ?: emptyList()
             if (addons.isNotEmpty()) {
-                val catalogs = loadEssentialCatalogs(addons)
+                val enabledCatalogs = recommendationDataStore.getEnabledCatalogs()
+                val catalogs = loadEssentialCatalogs(addons, enabledCatalogs)
                 
-                // Update Trending (Interleave 1st and 2nd lists, usually popular movies + series)
-                val trending1 = catalogs.getOrNull(0)?.items.orEmpty().take(15)
-                val trending2 = catalogs.getOrNull(1)?.items.orEmpty().take(15)
-                val mixedTrending = buildList {
-                    val maxT = maxOf(trending1.size, trending2.size)
-                    for (i in 0 until maxT) {
-                        if (i < trending1.size) add(trending1[i])
-                        if (i < trending2.size) add(trending2[i])
+                catalogs.forEach { row ->
+                    val catalogKey = "${row.addonId}_${row.apiType}_${row.catalogId}"
+                    val catalogName = "${row.catalogName} (${row.addonName})"
+                    if (enabledCatalogs.contains(catalogKey)) {
+                        recommendationManager.updateCatalogChannel(
+                            catalogKey = catalogKey,
+                            catalogName = catalogName,
+                            items = row.items
+                        )
                     }
-                }.distinctBy { it.id }
-
-                if (mixedTrending.isNotEmpty()) {
-                    recommendationManager.updateTrending(mixedTrending)
-                }
-                
-                // Update New Releases (Mix of newest movie / series lists)
-                val newMovies = catalogs.firstOrNull { it.apiType == "movie" && it.items.isNotEmpty() }?.items.orEmpty().take(15)
-                val newSeries = catalogs.firstOrNull { it.apiType == "series" && it.items.isNotEmpty() }?.items.orEmpty().take(15)
-                
-                val newReleases = (newMovies + newSeries)
-                    .distinctBy { it.id }
-                    .filter { !it.releaseInfo.isNullOrBlank() }
-                    .sortedByDescending { it.releaseInfo }
-                
-                if (newReleases.isNotEmpty()) {
-                    recommendationManager.updateNewReleases(newReleases)
                 }
             }
 
@@ -81,15 +67,18 @@ class TvRecommendationWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun loadEssentialCatalogs(addons: List<com.nuvio.tv.domain.model.Addon>): List<com.nuvio.tv.domain.model.CatalogRow> {
+    private suspend fun loadEssentialCatalogs(
+        addons: List<com.nuvio.tv.domain.model.Addon>, 
+        enabledCatalogs: Set<String>
+    ): List<com.nuvio.tv.domain.model.CatalogRow> {
         val loadedRows = mutableListOf<com.nuvio.tv.domain.model.CatalogRow>()
         
-        // Grab top 2 addons to fetch fresh basic lists
-        for (addon in addons.take(2)) {
+        for (addon in addons) {
             val catalogsToLoad = addon.catalogs
-                .filter { it.apiType == "movie" || it.apiType == "series" } 
-                .filter { it.extra.none { extra -> extra.isRequired } } // Avoid catalog elements requiring user search queries
-                .take(5) // Enough to hit popular/trending/new categories
+                .filter { catalog ->
+                    val key = "${addon.id}_${catalog.apiType}_${catalog.id}"
+                    enabledCatalogs.contains(key)
+                }
 
             for (catalog in catalogsToLoad) {
                 val result = catalogRepository.getCatalog(
@@ -107,7 +96,6 @@ class TvRecommendationWorker @AssistedInject constructor(
                     loadedRows.add(result.data)
                 }
             }
-            if (loadedRows.size >= 4) break // Stop unnecessarily hitting APIs if we have enough lines
         }
         return loadedRows
     }

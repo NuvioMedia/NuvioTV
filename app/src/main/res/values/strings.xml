@@ -895,4 +895,26 @@
     <string name="update_open_settings">Open Settings</string>
     <string name="update_install">Install</string>
     <string name="update_ignore">Ignore</string>
+    
+    <!-- TV Recommendations -->
+    <string name="settings_tv_recommendations">Android TV Integration</string>
+    <string name="settings_tv_recommendations_subtitle">Manage home screen recommendations</string>
+    <string name="settings_tv_recommendations_toggle">Home Screen Channels</string>
+    <string name="settings_tv_recommendations_toggle_sub">Enable sending Discovery and Continue Watching content to Android TV launcher</string>
+    <string name="settings_tv_recommendations_catalogs">Home Screen Catalogs</string>
+    <string name="settings_tv_recommendations_catalogs_sub">Choose which lists to display as channels on the launcher</string>
+    
+    <string name="settings_tv_recommendations_appearance">Appearance &amp; Sync</string>
+    <string name="settings_tv_recommendations_appearance_sub">Configure poster style, row limits, and update frequency</string>
+    
+    <string name="settings_tv_recommendations_poster_style_title">Use Wide Posters</string>
+    <string name="settings_tv_recommendations_poster_style_sub">Display landscape (backdrop) posters instead of standard vertical ones</string>
+    
+    <string name="settings_tv_recommendations_item_limit_title">Items Per Row</string>
+    <string name="settings_tv_recommendations_item_limit_sub">Maximum number of items to show in each home screen channel</string>
+    
+    <string name="settings_tv_recommendations_sync_interval_title">Background Sync</string>
+    <string name="settings_tv_recommendations_sync_interval_sub">How often channels refresh when the app is closed</string>
+    <string name="settings_tv_recommendations_interval_hours">%1$d hours</string>
+    <string name="settings_tv_recommendations_interval_off">Manual</string>
 </resources>

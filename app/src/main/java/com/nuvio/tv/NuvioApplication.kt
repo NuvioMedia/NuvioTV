@@ -13,6 +13,7 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.nuvio.tv.core.recommendations.RecommendationConstants
+import com.nuvio.tv.core.recommendations.RecommendationDataStore
 import com.nuvio.tv.core.recommendations.TvRecommendationManager
 import com.nuvio.tv.core.sync.StartupSyncService
 import com.nuvio.tv.data.worker.TvRecommendationWorker
@@ -30,6 +31,7 @@ class NuvioApplication : Application(), ImageLoaderFactory, Configuration.Provid
     @Inject lateinit var startupSyncService: StartupSyncService
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var tvRecommendationManager: TvRecommendationManager
+    @Inject lateinit var recommendationDataStore: RecommendationDataStore
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -80,18 +82,29 @@ class NuvioApplication : Application(), ImageLoaderFactory, Configuration.Provid
     }
 
     private fun scheduleRecommendationSync() {
-        val workRequest = PeriodicWorkRequestBuilder<TvRecommendationWorker>(
-            RecommendationConstants.SYNC_INTERVAL_MINUTES, TimeUnit.MINUTES
-        ).setConstraints(
-            Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-        ).build()
+        appScope.launch {
+            recommendationDataStore.syncIntervalHoursFlow.collect { intervalHours ->
+                val workManager = WorkManager.getInstance(this@NuvioApplication)
+                val workName = RecommendationConstants.WORK_NAME_PERIODIC_SYNC
 
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-            RecommendationConstants.WORK_NAME_PERIODIC_SYNC,
-            ExistingPeriodicWorkPolicy.KEEP,
-            workRequest
-        )
+                if (intervalHours <= 0) {
+                    workManager.cancelUniqueWork(workName)
+                } else {
+                    val workRequest = PeriodicWorkRequestBuilder<TvRecommendationWorker>(
+                        intervalHours.toLong(), TimeUnit.HOURS
+                    ).setConstraints(
+                        Constraints.Builder()
+                            .setRequiredNetworkType(NetworkType.CONNECTED)
+                            .build()
+                    ).build()
+
+                    workManager.enqueueUniquePeriodicWork(
+                        workName,
+                        ExistingPeriodicWorkPolicy.UPDATE,
+                        workRequest
+                    )
+                }
+            }
+        }
     }
 }
