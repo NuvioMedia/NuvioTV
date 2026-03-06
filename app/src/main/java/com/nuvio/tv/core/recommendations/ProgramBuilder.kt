@@ -101,22 +101,27 @@ class ProgramBuilder @Inject constructor(
     }
 
     // ────────────────────────────────────────────────────────────────
-    //  Trending → PreviewProgram
+    //  Catalog Item → PreviewProgram
     // ────────────────────────────────────────────────────────────────
 
     fun buildTrendingProgram(
         channelId: Long,
-        item: MetaPreview
+        item: MetaPreview,
+        useWidePoster: Boolean
     ): PreviewProgram {
         val programType = when (item.type.toApiString()) {
             "series" -> TvContractCompat.PreviewPrograms.TYPE_TV_SERIES
             else -> TvContractCompat.PreviewPrograms.TYPE_MOVIE
         }
 
-        val aspectRatio = when (item.posterShape) {
-            PosterShape.LANDSCAPE -> TvContractCompat.PreviewPrograms.ASPECT_RATIO_16_9
-            PosterShape.SQUARE -> TvContractCompat.PreviewPrograms.ASPECT_RATIO_1_1
-            else -> TvContractCompat.PreviewPrograms.ASPECT_RATIO_2_3
+        val aspectRatio = if (useWidePoster) {
+            TvContractCompat.PreviewPrograms.ASPECT_RATIO_16_9
+        } else {
+            when (item.posterShape) {
+                PosterShape.LANDSCAPE -> TvContractCompat.PreviewPrograms.ASPECT_RATIO_16_9
+                PosterShape.SQUARE -> TvContractCompat.PreviewPrograms.ASPECT_RATIO_1_1
+                else -> TvContractCompat.PreviewPrograms.ASPECT_RATIO_2_3
+            }
         }
 
         val builder = PreviewProgram.Builder()
@@ -129,8 +134,15 @@ class ProgramBuilder @Inject constructor(
             .setLive(false)
 
         item.description?.let { builder.setDescription(it) }
-        item.poster?.let { builder.setPosterArtUri(Uri.parse(it)) }
-        item.background?.let { builder.setThumbnailUri(Uri.parse(it)) }
+
+        if (useWidePoster) {
+            val horizontalArt = item.background ?: item.poster
+            horizontalArt?.let { builder.setPosterArtUri(Uri.parse(it)) }
+        } else {
+            item.poster?.let { builder.setPosterArtUri(Uri.parse(it)) }
+            item.background?.let { builder.setThumbnailUri(Uri.parse(it)) }
+        }
+
         item.releaseInfo?.let { builder.setReleaseDate(it) }
         item.genres.firstOrNull()?.let { builder.setGenre(it) }
 

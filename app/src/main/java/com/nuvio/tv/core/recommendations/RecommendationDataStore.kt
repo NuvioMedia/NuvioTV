@@ -3,6 +3,7 @@ package com.nuvio.tv.core.recommendations
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -24,12 +25,60 @@ class RecommendationDataStore @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
-        private val KEY_NEW_RELEASES_CHANNEL_ID =
-            longPreferencesKey("new_releases_channel_id")
-        private val KEY_TRENDING_CHANNEL_ID =
-            longPreferencesKey("trending_channel_id")
         private val KEY_RECOMMENDATIONS_ENABLED =
             booleanPreferencesKey("recommendations_enabled")
+        
+        // This stores a set of catalog keys (e.g. from Addon config) that the user wants to push to Android TV
+        private val KEY_ENABLED_CATALOGS =
+            androidx.datastore.preferences.core.stringSetPreferencesKey("enabled_tv_catalogs")
+            
+        private val KEY_SYNC_INTERVAL_HOURS = intPreferencesKey("sync_interval_hours")
+        private val KEY_MAX_ITEMS_PER_CHANNEL = intPreferencesKey("max_items_per_channel")
+        private val KEY_USE_WIDE_POSTER = booleanPreferencesKey("use_wide_poster")
+    }
+
+    // ── Configuration ──
+    
+    val syncIntervalHoursFlow = context.recommendationDataStore.data.map {
+        it[KEY_SYNC_INTERVAL_HOURS] ?: 3
+    }
+
+    val maxItemsPerChannelFlow = context.recommendationDataStore.data.map {
+        it[KEY_MAX_ITEMS_PER_CHANNEL] ?: 25
+    }
+
+    val useWidePosterFlow = context.recommendationDataStore.data.map {
+        it[KEY_USE_WIDE_POSTER] ?: false
+    }
+
+    suspend fun getSyncIntervalHours(): Int = syncIntervalHoursFlow.first()
+    suspend fun getMaxItemsPerChannel(): Int = maxItemsPerChannelFlow.first()
+    suspend fun getUseWidePoster(): Boolean = useWidePosterFlow.first()
+
+    suspend fun setSyncIntervalHours(hours: Int) {
+        context.recommendationDataStore.edit { it[KEY_SYNC_INTERVAL_HOURS] = hours }
+    }
+
+    suspend fun setMaxItemsPerChannel(max: Int) {
+        context.recommendationDataStore.edit { it[KEY_MAX_ITEMS_PER_CHANNEL] = max }
+    }
+
+    suspend fun setUseWidePoster(useWide: Boolean) {
+        context.recommendationDataStore.edit { it[KEY_USE_WIDE_POSTER] = useWide }
+    }
+
+    // ── Enabled Catalogs ──
+
+    val enabledCatalogsFlow = context.recommendationDataStore.data.map {
+        it[KEY_ENABLED_CATALOGS] ?: emptySet()
+    }
+
+    suspend fun getEnabledCatalogs(): Set<String> = enabledCatalogsFlow.first()
+
+    suspend fun setEnabledCatalogs(catalogs: Set<String>) {
+        context.recommendationDataStore.edit {
+            it[KEY_ENABLED_CATALOGS] = catalogs
+        }
     }
 
     // ── Channel ID CRUD ──
@@ -51,10 +100,11 @@ class RecommendationDataStore @Inject constructor(
 
     // ── Global toggle ──
 
-    suspend fun isEnabled(): Boolean =
-        context.recommendationDataStore.data.map {
-            it[KEY_RECOMMENDATIONS_ENABLED] ?: true
-        }.first()
+    val isEnabledFlow = context.recommendationDataStore.data.map {
+        it[KEY_RECOMMENDATIONS_ENABLED] ?: true
+    }
+
+    suspend fun isEnabled(): Boolean = isEnabledFlow.first()
 
     suspend fun setEnabled(enabled: Boolean) {
         context.recommendationDataStore.edit {
@@ -64,9 +114,5 @@ class RecommendationDataStore @Inject constructor(
 
     // ── Helpers ──
 
-    private fun keyForType(channelType: String) = when (channelType) {
-        RecommendationConstants.CHANNEL_NEW_RELEASES -> KEY_NEW_RELEASES_CHANNEL_ID
-        RecommendationConstants.CHANNEL_TRENDING -> KEY_TRENDING_CHANNEL_ID
-        else -> throw IllegalArgumentException("Unknown channel type: $channelType")
-    }
+    private fun keyForType(channelType: String) = longPreferencesKey("channel_id_$channelType")
 }

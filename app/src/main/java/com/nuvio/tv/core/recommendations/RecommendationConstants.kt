@@ -6,12 +6,10 @@ package com.nuvio.tv.core.recommendations
 object RecommendationConstants {
 
     // ── Channel internal IDs (used as internalProviderId for channel lookup) ──
-    const val CHANNEL_NEW_RELEASES = "new_releases"
-    const val CHANNEL_TRENDING = "trending"
+    // Dynamic catalog channels use their backend ID.
 
     // ── Channel display names shown on the TV launcher ──
-    const val CHANNEL_DISPLAY_NEW_RELEASES = "New Releases"
-    const val CHANNEL_DISPLAY_TRENDING = "Trending"
+    // Display names are now fetched dynamically from Addon metadata.
 
     // ── Deep link URI components ──
     const val DEEP_LINK_SCHEME = "nuviotv"

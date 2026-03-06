@@ -33,42 +33,24 @@ class TvRecommendationManager @Inject constructor(
     /** Serializes channel-update operations to avoid races from multiple triggers. */
     private val mutex = Mutex()
 
-    /** Tracks the last set of trending items to avoid redundant ContentProvider writes. */
-    @Volatile
-    private var lastTrendingSignature: String? = null
-
-    /** Tracks the last set of new release items to avoid redundant ContentProvider writes. */
-    @Volatile
-    private var lastNewReleasesSignature: String? = null
+    /** Tracks the last set of items per channel to avoid redundant ContentProvider writes. */
+    private val channelSignatures = mutableMapOf<String, String>()
 
     // ────────────────────────────────────────────────────────────────
     //  Public API
     // ────────────────────────────────────────────────────────────────
 
     /**
-     * One-time initialization — creates channels if they don't exist yet.
+     * One-time initialization — clears orphan channels not in the user's enabled catalogs.
      * Called from [NuvioApplication.onCreate].
      */
     suspend fun initializeChannels() {
         if (!isTvDevice()) return
         withContext(Dispatchers.IO) {
             try {
-                // Clean up obsolete/legacy channels by aggressively sweeping all channels
-                // owned by the app except the valid ones
-                val validIds = listOf(
-                    RecommendationConstants.CHANNEL_NEW_RELEASES,
-                    RecommendationConstants.CHANNEL_TRENDING
-                )
+                // Determine which catalogs are valid
+                val validIds = dataStore.getEnabledCatalogs().toList()
                 channelManager.cleanupLegacyChannels(validIds)
-
-                channelManager.getOrCreateChannel(
-                    RecommendationConstants.CHANNEL_NEW_RELEASES,
-                    RecommendationConstants.CHANNEL_DISPLAY_NEW_RELEASES
-                )
-                channelManager.getOrCreateChannel(
-                    RecommendationConstants.CHANNEL_TRENDING,
-                    RecommendationConstants.CHANNEL_DISPLAY_TRENDING
-                )
                 
                 // Force sync Watch Next items right on startup to refresh launcher UI and bust caches
                 updateWatchNext()
@@ -78,30 +60,33 @@ class TvRecommendationManager @Inject constructor(
     }
 
     /**
-     * Updates the **New Releases** channel with new movies and series combined.
+     * Updates an arbitrary TV channel for a catalog. 
      * Called from [HomeViewModel] after catalog rows are loaded.
-     * Skips redundant writes when the item set hasn't changed.
      */
-    suspend fun updateNewReleases(items: List<MetaPreview>) {
+    suspend fun updateCatalogChannel(catalogKey: String, catalogName: String, items: List<MetaPreview>) {
         if (!shouldRun()) return
-        val trimmed = items.take(RecommendationConstants.MAX_NEW_RELEASES_ITEMS)
-        val signature = trimmed.joinToString("|") { it.id }
-        if (signature == lastNewReleasesSignature) return
+        
+        // Ensure this catalog is still chosen by the user
+        val enabledCatalogs = dataStore.getEnabledCatalogs()
+        if (!enabledCatalogs.contains(catalogKey)) return
+
+        val maxItems = dataStore.getMaxItemsPerChannel()
+        val useWidePoster = dataStore.getUseWidePoster()
+
+        val trimmed = items.take(maxItems) // Dynamic Max Limit
+        val signature = trimmed.joinToString("|") { it.id } + "_wide_$useWidePoster"
+        if (signature == channelSignatures[catalogKey]) return
+
         mutex.withLock {
             withContext(Dispatchers.IO) {
                 try {
-                    val channelId = channelManager.getOrCreateChannel(
-                        RecommendationConstants.CHANNEL_NEW_RELEASES,
-                        RecommendationConstants.CHANNEL_DISPLAY_NEW_RELEASES
-                    ) ?: return@withContext
-
+                    val channelId = channelManager.getOrCreateChannel(catalogKey, catalogName) ?: return@withContext
                     channelManager.clearProgramsForChannel(channelId)
 
-                    val programs = trimmed
-                        .map { programBuilder.buildTrendingProgram(channelId, it) }
-
+                    val programs = trimmed.map { programBuilder.buildTrendingProgram(channelId, it, useWidePoster) }
                     channelManager.insertPrograms(programs)
-                    lastNewReleasesSignature = signature
+                    
+                    channelSignatures[catalogKey] = signature
                 } catch (_: Exception) {
                 }
             }
@@ -137,8 +122,7 @@ class TvRecommendationManager @Inject constructor(
 
     /**
      * Convenience method called when a single progress entry is saved/updated.
-     * Refreshes Continue Watching channel + Watch Next row.
-     * Both are fully rebuilt to ensure no stale entries remain.
+     * Refreshes Watch Next row.
      */
     suspend fun onProgressUpdated(progress: WatchProgress) {
         if (!shouldRun()) return
@@ -146,57 +130,27 @@ class TvRecommendationManager @Inject constructor(
     }
 
     /**
-     * Publishes Trending items to the dedicated Trending channel.
-     * Called from [HomeViewModel] after catalog rows are loaded.
-     * Skips redundant writes when the item set hasn't changed.
-     */
-    suspend fun updateTrending(items: List<MetaPreview>) {
-        if (!shouldRun()) return
-        val trimmed = items.take(RecommendationConstants.MAX_TRENDING_ITEMS)
-        val signature = trimmed.joinToString("|") { it.id }
-        if (signature == lastTrendingSignature) return
-        mutex.withLock {
-            withContext(Dispatchers.IO) {
-                try {
-                    val channelId = channelManager.getOrCreateChannel(
-                        RecommendationConstants.CHANNEL_TRENDING,
-                        RecommendationConstants.CHANNEL_DISPLAY_TRENDING
-                    ) ?: return@withContext
-
-                    channelManager.clearProgramsForChannel(channelId)
-
-                    val programs = trimmed
-                        .map { programBuilder.buildTrendingProgram(channelId, it) }
-
-                    channelManager.insertPrograms(programs)
-                    lastTrendingSignature = signature
-                } catch (_: Exception) {
-                }
-            }
-        }
-    }
-
-    /**
-     * Full sync — updates all channels.  Called by [TvRecommendationWorker].
+     * Full sync — updates all base channels. Called by [TvRecommendationWorker].
      */
     suspend fun syncAllChannels() {
         if (!shouldRun()) return
         initializeChannels()
         updateWatchNext()
-        // Note: New Releases, Next Up and Trending are updated from HomeViewModel where the
-        // required meta / catalog data is already available.
+        // Note: Dynamic catalogs are updated from HomeViewModel when the row is successfully fetched
     }
 
     /**
-     * Removes all channels and Watch Next entries created by this app.
+     * Removes all dynamic channels and Watch Next entries created by this app.
      */
     suspend fun clearAll() {
         withContext(Dispatchers.IO) {
-            channelManager.deleteChannel(RecommendationConstants.CHANNEL_NEW_RELEASES)
-            channelManager.deleteChannel(RecommendationConstants.CHANNEL_TRENDING)
+            // Delete ALL preview channels
+            channelManager.cleanupLegacyChannels(emptyList())
+            
+            // Delete ALL watch next items
             programBuilder.clearAllWatchNextPrograms()
-            lastTrendingSignature = null
-            lastNewReleasesSignature = null
+            
+            channelSignatures.clear()
         }
     }
 
