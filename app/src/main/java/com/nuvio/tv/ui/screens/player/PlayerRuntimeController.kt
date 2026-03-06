@@ -68,6 +68,29 @@ class PlayerRuntimeController(
         val streamUrl: String
     )
 
+    internal data class RememberedTrackSelection(
+        val language: String?,
+        val name: String?,
+        val trackId: String? = null
+    )
+
+    internal sealed class RememberedSubtitleSelection {
+        data object Disabled : RememberedSubtitleSelection()
+        data class Internal(
+            val track: RememberedTrackSelection
+        ) : RememberedSubtitleSelection()
+        data class Addon(
+            val id: String,
+            val url: String,
+            val language: String
+        ) : RememberedSubtitleSelection()
+    }
+
+    internal data class EpisodeTrackSelectionPreference(
+        val audio: RememberedTrackSelection? = null,
+        val subtitle: RememberedSubtitleSelection? = null
+    )
+
     internal val navigationArgs = PlayerNavigationArgs.from(savedStateHandle)
     internal val initialStreamUrl: String = navigationArgs.streamUrl
     internal val title: String = navigationArgs.title
@@ -172,6 +195,8 @@ class PlayerRuntimeController(
     internal var pendingAddonSubtitleLanguage: String? = null
     internal var pendingAddonSubtitleTrackId: String? = null
     internal var pendingAudioSelectionAfterSubtitleRefresh: PendingAudioSelection? = null
+    internal var sameSeriesTrackSelectionPreference: EpisodeTrackSelectionPreference? = null
+    internal var pendingSameSeriesTrackSelectionRestore: EpisodeTrackSelectionPreference? = null
     internal var attachedAddonSubtitleKeys: Set<String> = emptySet()
     internal var hasScannedTextTracksOnce: Boolean = false
     internal var streamReuseLastLinkEnabled: Boolean = false

@@ -68,6 +68,8 @@ fun GridHomeContent(
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
+    onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit = {},
+    showContinueWatchingManualPlayOption: Boolean = false,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean = { false },
@@ -226,6 +228,8 @@ fun GridHomeContent(
                                         onContinueWatchingClick(item)
                                     },
                                     onStartFromBeginning = onContinueWatchingStartFromBeginning,
+                                    showManualPlayOption = showContinueWatchingManualPlayOption,
+                                    onPlayManually = onContinueWatchingPlayManually,
                                     onDetailsClick = { item ->
                                         onNavigateToDetail(
                                             when (item) {
@@ -369,6 +373,8 @@ fun GridHomeContent(
                             onContinueWatchingClick(item)
                         },
                         onStartFromBeginning = onContinueWatchingStartFromBeginning,
+                        showManualPlayOption = showContinueWatchingManualPlayOption,
+                        onPlayManually = onContinueWatchingPlayManually,
                         onDetailsClick = { item ->
                             onNavigateToDetail(
                                 when (item) {

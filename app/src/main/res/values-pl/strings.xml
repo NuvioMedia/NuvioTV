@@ -22,6 +22,7 @@
     <string name="cw_action_go_to_details">Przejdź do szczegółów</string>
     <string name="cw_action_remove">Usuń</string>
     <string name="cw_dialog_subtitle">Wybierz co chcesz zrobić z tym elementem.</string>
+    <string name="home_poster_dialog_subtitle">Akcje tytułu</string>
 
     <!-- CatalogRowSection -->
     <string name="catalog_from_addon">z %1$s</string>
@@ -53,6 +54,7 @@
     <string name="episodes_mark_season_unwatched">Oznacz sezon jako nieobejrzany</string>
     <string name="episodes_mark_previous_watched">Oznacz poprzednie w tym sezonie jako obejrzane</string>
     <string name="episodes_play">Odtwórz</string>
+    <string name="play_manually">Odtwórz ręcznie</string>
     <string name="episodes_season_actions">Akcje sezonu</string>
 
     <!-- MetaDetailsViewModel -->
@@ -95,6 +97,11 @@
     <string name="appearance_language_system">Domyślny systemowy</string>
     <string name="appearance_language_dialog_title">Wybierz język</string>
     <string name="appearance_language_restart_hint">Uruchom ponownie aplikację, aby zastosować zmianę języka.</string>
+
+    <!-- Font -->
+    <string name="appearance_font">Czcionka aplikacji</string>
+    <string name="appearance_font_subtitle">Wybierz preferowaną czcionkę</string>
+    <string name="appearance_font_dialog_title">Wybierz czcionkę</string>
 
     <!-- ThemeSettingsScreen -->
     <string name="appearance_title">Wygląd</string>
@@ -329,6 +336,8 @@
     <string name="layout_catalog_type_sub">Pokaż sufiks typu obok nazwy katalogu (Film/Serial).</string>
     <string name="layout_section_detail">Strona szczegółów</string>
     <string name="layout_section_detail_desc">Ustawienia dla ekranów szczegółów i odcinków.</string>
+    <string name="layout_hide_unreleased">Ukryj niewydane treści</string>
+    <string name="layout_hide_unreleased_sub">Ukryj filmy i seriale, które jeszcze nie zostały wydane.</string>
     <string name="layout_blur_unwatched">Rozmyj nieobejrzane odcinki</string>
     <string name="layout_blur_unwatched_sub">Rozmyj miniatury odcinków do czasu obejrzenia, aby uniknąć spoilerów.</string>
     <string name="layout_trailer_button">Pokaż przycisk zwiastuna</string>
@@ -437,6 +446,8 @@
     <string name="tmdb_episodes_subtitle">Tytuły, opisy, miniatury i czas trwania odcinków z TMDB</string>
     <string name="tmdb_more_like_this_title">Podobne</string>
     <string name="tmdb_more_like_this_subtitle">Tła rekomendacji TMDB na stronie szczegółów</string>
+    <string name="tmdb_collections_title">Kolekcje</string>
+    <string name="tmdb_collections_subtitle">Kolekcje filmów TMDB w kolejności wydania</string>
     <string name="tmdb_language_dialog_title">Język TMDB</string>
 
     <!-- TraktScreen -->
@@ -598,6 +609,7 @@
     <string name="sources_title">Źródła</string>
     <string name="sources_reload">Odśwież</string>
     <string name="sources_close">Zamknij</string>
+    <string name="sources_playing">Odtwarzane</string>
     <string name="sources_no_streams">Nie znaleziono źródeł</string>
 
     <!-- EpisodesSidePanel -->
@@ -693,6 +705,12 @@
     <string name="library_filter_list">Lista</string>
     <string name="library_filter_type">Typ</string>
     <string name="library_filter_sort">Sortuj</string>
+    <string name="library_sort_trakt_order">Kolejność Trakt</string>
+    <string name="library_sort_added_desc">Dodane ↓</string>
+    <string name="library_sort_added_asc">Dodane ↑</string>
+    <string name="library_sort_title_asc">Tytuł A-Z</string>
+    <string name="library_sort_title_desc">Tytuł Z-A</string>
+    <string name="cw_action_start_from_beginning">Zacznij od początku</string>
     <string name="library_manage_lists">Zarządzaj listami</string>
     <string name="library_manage_trakt_lists">Zarządzaj listami Trakt</string>
     <string name="library_no_lists">Brak osobistych list.</string>
@@ -831,6 +849,7 @@
     <!-- EpisodeRatingsSection -->
     <string name="ratings_loading">Ladowanie ocen odcinkow...</string>
     <string name="ratings_unavailable">Oceny odcinkow sa niedostepne.</string>
+    <string name="ratings_load_error">Nie udało się załadować ocen odcinków.</string>
     <string name="ratings_season_summary">Sezon %1$d - %2$d odcinkow</string>
 
     <!-- SearchDiscoverSection -->

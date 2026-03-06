@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import com.google.gson.Gson
 import com.nuvio.tv.domain.model.WatchedItem
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -14,6 +15,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
+@OptIn(ExperimentalCoroutinesApi::class)
 class WatchedItemsPreferences @Inject constructor(
     private val factory: ProfileDataStoreFactory,
     private val profileManager: ProfileManager
@@ -38,6 +40,8 @@ class WatchedItemsPreferences @Inject constructor(
         }
     }
 
+    fun observeAllItems(): Flow<List<WatchedItem>> = allItems
+
     fun isWatched(contentId: String, season: Int? = null, episode: Int? = null): Flow<Boolean> {
         return allItems.map { items ->
             items.any { item ->
@@ -53,6 +57,13 @@ class WatchedItemsPreferences @Inject constructor(
             items.filter { it.contentId == contentId && it.season != null && it.episode != null }
                 .map { it.season!! to it.episode!! }
                 .toSet()
+        }
+    }
+
+    fun getWatchedEpisodesWithTimestamps(contentId: String): Flow<Map<Pair<Int, Int>, Long>> {
+        return allItems.map { items ->
+            items.filter { it.contentId == contentId && it.season != null && it.episode != null }
+                .associate { (it.season!! to it.episode!!) to it.watchedAt }
         }
     }
 

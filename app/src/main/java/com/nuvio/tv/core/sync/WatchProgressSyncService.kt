@@ -83,7 +83,9 @@ class WatchProgressSyncService @Inject constructor(
             }
 
             val rawEntries = watchProgressPreferences.getAllRawEntries()
-            val entries = canonicalizeForRemote(rawEntries)
+            val entries = canonicalizeForRemote(rawEntries).filterValues { progress ->
+                !(progress.position <= 1L && progress.duration <= 1L && progress.duration > 0L)
+            }
             Log.d(TAG, "pushToRemote: ${rawEntries.size} local entries, ${entries.size} canonical entries to push")
             entries.forEach { (key, progress) ->
                 Log.d(TAG, "  push entry: key=$key contentId=${progress.contentId} type=${progress.contentType} pos=${progress.position} dur=${progress.duration} lastWatched=${progress.lastWatched}")

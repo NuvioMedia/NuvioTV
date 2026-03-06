@@ -102,15 +102,14 @@ class StartupSyncService @Inject constructor(
         startupPullJob = scope.launch {
             val maxAttempts = 3
             var syncCompleted = false
-            repeat(maxAttempts) { index ->
-                val attempt = index + 1
+            for (attempt in 1..maxAttempts) {
                 Log.d(TAG, "Startup sync attempt $attempt/$maxAttempts for key=$key")
                 val result = pullRemoteData()
                 if (result.isSuccess) {
                     lastPulledKey = key
                     Log.d(TAG, "Startup sync completed for key=$key")
                     syncCompleted = true
-                    return@repeat
+                    break
                 }
 
                 Log.w(TAG, "Startup sync attempt $attempt failed for key=$key", result.exceptionOrNull())

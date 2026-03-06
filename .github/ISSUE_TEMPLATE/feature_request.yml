@@ -9,6 +9,10 @@ body:
       value: |
         One feature request per issue, please. The more real-world your use case is, the easier it is to evaluate.
 
+        Feature requests are reviewed as product proposals first.
+        Please do not open a pull request for a new feature, major UX change, or broad cosmetic update unless a maintainer has explicitly approved it first.
+        Unapproved feature PRs will usually be closed.
+
   - type: dropdown
     id: area
     attributes:
@@ -17,7 +21,6 @@ body:
         - Playback
         - Streams / Sources
         - Next Episode / Auto-play
-        - Skip Intro / Skip intervals
         - Watch Progress
         - Subtitles
         - Audio
@@ -43,6 +46,18 @@ body:
     attributes:
       label: Proposed solution
       description: What would you like the app to do?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: contribution_plan
+    attributes:
+      label: Are you planning to implement this yourself?
+      description: Major features are usually implemented in-house unless approved first.
+      options:
+        - No, this is only a proposal
+        - Maybe, but only if approved first
+        - Yes, but I understand implementation still needs maintainer approval
     validations:
       required: true
 

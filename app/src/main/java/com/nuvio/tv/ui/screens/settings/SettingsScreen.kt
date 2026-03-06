@@ -175,6 +175,8 @@ fun SettingsScreen(
     showBuiltInHeader: Boolean = true,
     onNavigateToTrakt: () -> Unit = {},
     onNavigateToAuthQrSignIn: () -> Unit = {},
+    onNavigateToManageProfiles: () -> Unit = {},
+    onNavigateToSupportersContributors: () -> Unit = {},
     profileViewModel: ProfileSettingsViewModel = hiltViewModel()
 ) {
     val isPrimaryProfileActive by profileViewModel.isPrimaryProfileActive.collectAsStateWithLifecycle()
@@ -270,7 +272,7 @@ fun SettingsScreen(
                 LazyColumn(
                     modifier = Modifier
                         .focusRequester(railContainerFocusRequester)
-                        .width(282.dp)
+                        .width(220.dp)
                         .fillMaxHeight()
                         .onFocusChanged { state ->
                             val justGainedFocus = !railHadFocus && state.hasFocus
@@ -358,7 +360,9 @@ fun SettingsScreen(
                         }
                 ) {
                     when (selectedCategory) {
-                        SettingsCategory.PROFILES -> ProfileSettingsContent()
+                        SettingsCategory.PROFILES -> ProfileSettingsContent(
+                            onManageProfiles = onNavigateToManageProfiles
+                        )
                         SettingsCategory.APPEARANCE -> ThemeSettingsContent(
                             initialFocusRequester = if (allowDetailAutofocus) {
                                 contentFocusRequesters[SettingsCategory.APPEARANCE]
@@ -395,6 +399,7 @@ fun SettingsScreen(
                             autoFocusEnabled = allowDetailAutofocus
                         )
                         SettingsCategory.ABOUT -> AboutSettingsContent(
+                            onNavigateToSupportersContributors = onNavigateToSupportersContributors,
                             initialFocusRequester = if (allowDetailAutofocus) {
                                 contentFocusRequesters[SettingsCategory.ABOUT]
                             } else {

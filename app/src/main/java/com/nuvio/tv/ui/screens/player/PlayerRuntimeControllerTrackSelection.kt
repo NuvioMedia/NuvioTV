@@ -65,6 +65,20 @@ internal fun PlayerRuntimeController.selectAudioTrack(trackIndex: Int) {
     }
 }
 
+internal fun PlayerRuntimeController.rememberSameSeriesAudioSelection(trackIndex: Int) {
+    if (contentType?.lowercase() !in listOf("series", "tv")) return
+    val selectedTrack = _uiState.value.audioTracks.getOrNull(trackIndex) ?: return
+    sameSeriesTrackSelectionPreference =
+        (sameSeriesTrackSelectionPreference ?: PlayerRuntimeController.EpisodeTrackSelectionPreference())
+            .copy(
+                audio = PlayerRuntimeController.RememberedTrackSelection(
+                    language = selectedTrack.language,
+                    name = selectedTrack.name,
+                    trackId = null
+                )
+            )
+}
+
 internal fun PlayerRuntimeController.persistRememberedLinkAudioSelection(trackIndex: Int) {
     if (!streamReuseLastLinkEnabled) return
 
@@ -171,6 +185,22 @@ internal fun PlayerRuntimeController.selectSubtitleTrack(trackIndex: Int) {
     }
 }
 
+internal fun PlayerRuntimeController.rememberSameSeriesInternalSubtitleSelection(trackIndex: Int) {
+    if (contentType?.lowercase() !in listOf("series", "tv")) return
+    val selectedTrack = _uiState.value.subtitleTracks.getOrNull(trackIndex) ?: return
+    sameSeriesTrackSelectionPreference =
+        (sameSeriesTrackSelectionPreference ?: PlayerRuntimeController.EpisodeTrackSelectionPreference())
+            .copy(
+                subtitle = PlayerRuntimeController.RememberedSubtitleSelection.Internal(
+                    track = PlayerRuntimeController.RememberedTrackSelection(
+                        language = selectedTrack.language,
+                        name = selectedTrack.name,
+                        trackId = selectedTrack.trackId
+                    )
+                )
+            )
+}
+
 internal fun PlayerRuntimeController.disableSubtitles() {
     _exoPlayer?.let { player ->
         player.trackSelectionParameters = player.trackSelectionParameters
@@ -178,6 +208,13 @@ internal fun PlayerRuntimeController.disableSubtitles() {
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
             .build()
     }
+}
+
+internal fun PlayerRuntimeController.rememberSameSeriesSubtitleDisabled() {
+    if (contentType?.lowercase() !in listOf("series", "tv")) return
+    sameSeriesTrackSelectionPreference =
+        (sameSeriesTrackSelectionPreference ?: PlayerRuntimeController.EpisodeTrackSelectionPreference())
+            .copy(subtitle = PlayerRuntimeController.RememberedSubtitleSelection.Disabled)
 }
 
 internal fun PlayerRuntimeController.buildAddonSubtitleTrackId(subtitle: Subtitle): String {
@@ -277,6 +314,19 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
             )
         }
     }
+}
+
+internal fun PlayerRuntimeController.rememberSameSeriesAddonSubtitleSelection(subtitle: Subtitle) {
+    if (contentType?.lowercase() !in listOf("series", "tv")) return
+    sameSeriesTrackSelectionPreference =
+        (sameSeriesTrackSelectionPreference ?: PlayerRuntimeController.EpisodeTrackSelectionPreference())
+            .copy(
+                subtitle = PlayerRuntimeController.RememberedSubtitleSelection.Addon(
+                    id = subtitle.id,
+                    url = subtitle.url,
+                    language = PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)
+                )
+            )
 }
 
 internal fun PlayerRuntimeController.captureCurrentAudioSelectionForSubtitleRefresh(

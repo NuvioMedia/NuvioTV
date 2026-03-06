@@ -186,8 +186,20 @@ class WatchProgressPreferences @Inject constructor(
      * Mark content as completed
      */
     suspend fun markAsCompleted(progress: WatchProgress) {
+        // If the incoming duration is a dummy sentinel (≤ 1ms), check for an
+        // existing local entry with a real duration from prior playback.
+        // This creates a proper completed entry that syncs correctly cross-device.
+        val effectiveDuration = if (progress.duration <= 1L) {
+            val key = createKey(progress)
+            val existing = getAllRawEntries()[key]
+            existing?.duration?.takeIf { it > 1L } ?: progress.duration
+        } else {
+            progress.duration
+        }
+
         val completedProgress = progress.copy(
-            position = progress.duration,
+            position = effectiveDuration,
+            duration = effectiveDuration,
             lastWatched = System.currentTimeMillis()
         )
         saveProgress(completedProgress)

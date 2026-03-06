@@ -1,7 +1,6 @@
 <resources>
     <string name="type_movie">Filme</string>
     <string name="type_series">Série</string>
-    <string name="type_unknown">Desconhecido</string>
 
     <!-- HomeScreen -->
     <string name="home_no_addons">Sem complementos instalados. Adicione um para começar.</string>

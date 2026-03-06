@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.nuvio.tv.ui.util.languageCodeToName
 
 /**
  * Available subtitle languages
@@ -27,6 +28,9 @@ data class SubtitleLanguage(
     val code: String,
     val name: String
 )
+
+val SubtitleLanguage.displayName: String
+    get() = languageCodeToName(code)
 
 const val SUBTITLE_LANGUAGE_FORCED = "forced"
 
@@ -73,7 +77,42 @@ val AVAILABLE_SUBTITLE_LANGUAGES = listOf(
     SubtitleLanguage("mr", "Marathi"),
     SubtitleLanguage("gu", "Gujarati"),
     SubtitleLanguage("kn", "Kannada"),
-    SubtitleLanguage("pa", "Punjabi")
+    SubtitleLanguage("pa", "Punjabi"),
+    SubtitleLanguage("es-419", "Spanish (Latin America)"),
+    SubtitleLanguage("zh-TW", "Chinese (Traditional)"),
+    SubtitleLanguage("zh-CN", "Chinese (Simplified)"),
+    SubtitleLanguage("ca", "Catalan"),
+    SubtitleLanguage("sq", "Albanian"),
+    SubtitleLanguage("bs", "Bosnian"),
+    SubtitleLanguage("mk", "Macedonian"),
+    SubtitleLanguage("lv", "Latvian"),
+    SubtitleLanguage("lt", "Lithuanian"),
+    SubtitleLanguage("et", "Estonian"),
+    SubtitleLanguage("is", "Icelandic"),
+    SubtitleLanguage("gl", "Galician"),
+    SubtitleLanguage("eu", "Basque"),
+    SubtitleLanguage("cy", "Welsh"),
+    SubtitleLanguage("ga", "Irish"),
+    SubtitleLanguage("ur", "Urdu"),
+    SubtitleLanguage("fa", "Persian"),
+    SubtitleLanguage("am", "Amharic"),
+    SubtitleLanguage("sw", "Swahili"),
+    SubtitleLanguage("zu", "Zulu"),
+    SubtitleLanguage("af", "Afrikaans"),
+    SubtitleLanguage("mt", "Maltese"),
+    SubtitleLanguage("be", "Belarusian"),
+    SubtitleLanguage("ka", "Georgian"),
+    SubtitleLanguage("hy", "Armenian"),
+    SubtitleLanguage("az", "Azerbaijani"),
+    SubtitleLanguage("kk", "Kazakh"),
+    SubtitleLanguage("uz", "Uzbek"),
+    SubtitleLanguage("mn", "Mongolian"),
+    SubtitleLanguage("km", "Khmer"),
+    SubtitleLanguage("lo", "Lao"),
+    SubtitleLanguage("my", "Burmese"),
+    SubtitleLanguage("si", "Sinhala"),
+    SubtitleLanguage("ne", "Nepali"),
+    SubtitleLanguage("tl", "Filipino")
 )
 
 /**

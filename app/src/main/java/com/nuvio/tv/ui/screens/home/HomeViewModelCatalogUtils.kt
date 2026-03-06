@@ -41,6 +41,8 @@ internal fun HomeViewModel.cancelInFlightCatalogLoads() {
         activeCatalogLoadJobs.toList().also { activeCatalogLoadJobs.clear() }
     }
     jobsToCancel.forEach { it.cancel() }
+    deferredCatalogLoadJob?.cancel()
+    deferredCatalogLoadJob = null
 }
 
 internal fun HomeViewModel.rebuildCatalogOrder(addons: List<Addon>) {

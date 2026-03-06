@@ -103,6 +103,7 @@ import coil.request.ImageRequest
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.core.player.ExternalPlayerLauncher
+import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
 import android.text.format.DateFormat
@@ -114,8 +115,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun PlayerScreen(
     viewModel: PlayerViewModel = hiltViewModel(),
-    onBackPress: () -> Unit,
-    onPlaybackErrorBack: () -> Unit = onBackPress,
+    onBackPress: (currentSeason: Int?, currentEpisode: Int?, autoPlayEnabled: Boolean) -> Unit,
+    onPlaybackErrorBack: () -> Unit = { onBackPress(null, null, false) },
     onPlaybackEnded: ((nextVideoId: String?, nextSeason: Int?, nextEpisode: Int?) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -131,7 +132,7 @@ fun PlayerScreen(
     val nextEpisodeFocusRequester = remember { FocusRequester() }
     val exitPlayer: () -> Unit = {
         viewModel.stopAndRelease()
-        onBackPress()
+        onBackPress(uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL)
     }
     val exitPlayerFromError: () -> Unit = {
         viewModel.stopAndRelease()
@@ -184,7 +185,7 @@ fun PlayerScreen(
             if (onPlaybackEnded != null) {
                 onPlaybackEnded(next?.videoId, next?.season, next?.episode)
             } else {
-                onBackPress()
+                onBackPress(uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL)
             }
         }
     }
@@ -402,13 +403,19 @@ fun PlayerScreen(
                                 false
                             }
                         }
+                        KeyEvent.KEYCODE_DPAD_LEFT,
                         KeyEvent.KEYCODE_DPAD_RIGHT -> {
                             if (!uiState.showControls) {
                                 val repeatCount = keyEvent.nativeKeyEvent.repeatCount
-                                val deltaMs = when {
+                                val stepMs = when {
                                     repeatCount >= 8 -> 30_000L
                                     repeatCount >= 3 -> 20_000L
                                     else -> 10_000L
+                                }
+                                val deltaMs = if (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                                    -stepMs
+                                } else {
+                                    stepMs
                                 }
                                 viewModel.onEvent(PlayerEvent.OnPreviewSeekBy(deltaMs))
                                 true
@@ -737,7 +744,7 @@ fun PlayerScreen(
                     val title = uiState.title
                     val headers = viewModel.getCurrentHeaders()
                     viewModel.stopAndRelease()
-                    onBackPress()
+                    onBackPress(uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL)
                     ExternalPlayerLauncher.launch(
                         context = context,
                         url = url,
@@ -746,7 +753,8 @@ fun PlayerScreen(
                     )
                 },
                 onResetHideTimer = { viewModel.scheduleHideControls(); viewModel.onUserInteraction() },
-                onBack = onBackPress,
+                onHideControls = { viewModel.hideControls() },
+                onBack = { exitPlayer() },
                 skipButtonVisible = skipButtonActuallyVisible
             )
         }
@@ -991,6 +999,7 @@ private fun PlayerControlsOverlay(
     onToggleMoreActions: () -> Unit,
     onOpenInExternalPlayer: () -> Unit,
     onResetHideTimer: () -> Unit,
+    onHideControls: () -> Unit,
     onBack: () -> Unit,
     skipButtonVisible: Boolean = false
 ) {
@@ -1155,6 +1164,7 @@ private fun PlayerControlsOverlay(
                         onClick = onPlayPause,
                         focusRequester = playPauseFocusRequester,
                         upFocusRequester = progressBarFocusRequester,
+                        onDownKey = onHideControls,
                         onFocused = onResetHideTimer
                     )
 
@@ -1164,6 +1174,7 @@ private fun PlayerControlsOverlay(
                             contentDescription = stringResource(R.string.next_episode_label),
                             onClick = onPlayNextEpisode,
                             upFocusRequester = progressBarFocusRequester,
+                            onDownKey = onHideControls,
                             onFocused = onResetHideTimer
                         )
                     }
@@ -1175,6 +1186,7 @@ private fun PlayerControlsOverlay(
                             contentDescription = "Subtitles",
                             onClick = onShowSubtitleDialog,
                             upFocusRequester = progressBarFocusRequester,
+                            onDownKey = onHideControls,
                             onFocused = onResetHideTimer
                         )
                     }
@@ -1186,6 +1198,7 @@ private fun PlayerControlsOverlay(
                             contentDescription = "Audio tracks",
                             onClick = onShowAudioDialog,
                             upFocusRequester = progressBarFocusRequester,
+                            onDownKey = onHideControls,
                             onFocused = onResetHideTimer
                         )
                     }
@@ -1196,6 +1209,7 @@ private fun PlayerControlsOverlay(
                         contentDescription = "Sources",
                         onClick = onShowSourcesPanel,
                         upFocusRequester = progressBarFocusRequester,
+                        onDownKey = onHideControls,
                         onFocused = onResetHideTimer
                     )
 
@@ -1206,6 +1220,7 @@ private fun PlayerControlsOverlay(
                             contentDescription = "Episodes",
                             onClick = onShowEpisodesPanel,
                             upFocusRequester = progressBarFocusRequester,
+                            onDownKey = onHideControls,
                             onFocused = onResetHideTimer
                         )
                     }
@@ -1232,6 +1247,7 @@ private fun PlayerControlsOverlay(
                                     onShowSpeedDialog()
                                 },
                                 upFocusRequester = progressBarFocusRequester,
+                                onDownKey = onHideControls,
                                 onFocused = onResetHideTimer
                             )
                             ControlButton(
@@ -1242,6 +1258,7 @@ private fun PlayerControlsOverlay(
                                     onToggleAspectRatio()
                                 },
                                 upFocusRequester = progressBarFocusRequester,
+                                onDownKey = onHideControls,
                                 onFocused = onResetHideTimer
                             )
                             ControlButton(
@@ -1251,6 +1268,7 @@ private fun PlayerControlsOverlay(
                                     onOpenInExternalPlayer()
                                 },
                                 upFocusRequester = progressBarFocusRequester,
+                                onDownKey = onHideControls,
                                 onFocused = onResetHideTimer
                             )
                         }
@@ -1265,6 +1283,7 @@ private fun PlayerControlsOverlay(
                         contentDescription = if (uiState.showMoreDialog) "Close more actions" else "More actions",
                         onClick = onToggleMoreActions,
                         upFocusRequester = progressBarFocusRequester,
+                        onDownKey = onHideControls,
                         onFocused = onResetHideTimer
                     )
                 }
@@ -1288,6 +1307,7 @@ private fun ControlButton(
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null,
     upFocusRequester: FocusRequester? = null,
+    onDownKey: (() -> Unit)? = null,
     onFocused: (() -> Unit)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
@@ -1314,6 +1334,13 @@ private fun ControlButton(
                     keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_UP
                 ) {
                     try { upFocusRequester.requestFocus() } catch (_: Exception) {}
+                    true
+                } else if (
+                    onDownKey != null &&
+                    keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_DOWN
+                ) {
+                    onDownKey.invoke()
                     true
                 } else {
                     false
