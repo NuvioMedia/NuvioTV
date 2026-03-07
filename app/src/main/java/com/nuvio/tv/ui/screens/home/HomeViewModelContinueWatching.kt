@@ -11,10 +11,8 @@ import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
@@ -36,8 +34,6 @@ import java.util.Locale
 private const val CW_MAX_RECENT_PROGRESS_ITEMS = 300
 private const val CW_MAX_NEXT_UP_LOOKUPS = 24
 private const val CW_MAX_NEXT_UP_CONCURRENCY = 4
-private const val CW_INITIAL_IN_PROGRESS_DETAIL_LIMIT = 4
-private const val CW_DEFERRED_IN_PROGRESS_DETAILS_DELAY_MS = 1200L
 
 private data class ContinueWatchingSettingsSnapshot(
     val items: List<WatchProgress>,
@@ -72,9 +68,7 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 dismissedNextUp = dismissedNextUp,
                 showUnairedNextUp = showUnairedNextUp
             )
-        }
-            .distinctUntilChanged()
-            .collectLatest { snapshot ->
+        }.collectLatest { snapshot ->
             val items = snapshot.items
             val daysCap = snapshot.daysCap
             val dismissedNextUp = snapshot.dismissedNextUp
@@ -118,108 +112,14 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
             }
 
             // Then enrich Next Up and item details in background.
-            scheduleContinueWatchingEnrichmentPipeline(
+            enrichContinueWatchingProgressively(
                 allProgress = recentItems,
                 inProgressItems = inProgressOnly,
                 dismissedNextUp = dismissedNextUp,
                 showUnairedNextUp = showUnairedNextUp
             )
+            enrichInProgressEpisodeDetailsProgressively(inProgressOnly)
         }
-    }
-}
-
-private fun HomeViewModel.scheduleContinueWatchingEnrichmentPipeline(
-    allProgress: List<WatchProgress>,
-    inProgressItems: List<ContinueWatchingItem.InProgress>,
-    dismissedNextUp: Set<String>,
-    showUnairedNextUp: Boolean
-) {
-    val enrichmentSignature = buildContinueWatchingEnrichmentSignature(
-        allProgress = allProgress,
-        inProgressItems = inProgressItems,
-        dismissedNextUp = dismissedNextUp,
-        showUnairedNextUp = showUnairedNextUp
-    )
-    if (enrichmentSignature == lastContinueWatchingEnrichmentSignature ||
-        enrichmentSignature == activeContinueWatchingEnrichmentSignature
-    ) {
-        return
-    }
-    continueWatchingEnrichmentJob?.cancel()
-    activeContinueWatchingEnrichmentSignature = enrichmentSignature
-    continueWatchingEnrichmentJob = viewModelScope.launch {
-        if (startupGracePeriodActive) {
-            delay(HomeViewModel.STARTUP_GRACE_PERIOD_MS)
-        }
-        if (startupGracePeriodActive) {
-            activeContinueWatchingEnrichmentSignature = null
-            return@launch
-        }
-        try {
-            enrichContinueWatchingProgressively(
-                allProgress = allProgress,
-                inProgressItems = inProgressItems,
-                dismissedNextUp = dismissedNextUp,
-                showUnairedNextUp = showUnairedNextUp
-            )
-            val priorityInProgressItems = inProgressItems.take(CW_INITIAL_IN_PROGRESS_DETAIL_LIMIT)
-            val deferredInProgressItems = inProgressItems.drop(CW_INITIAL_IN_PROGRESS_DETAIL_LIMIT)
-            enrichInProgressEpisodeDetailsProgressively(priorityInProgressItems)
-            if (deferredInProgressItems.isNotEmpty()) {
-                delay(CW_DEFERRED_IN_PROGRESS_DETAILS_DELAY_MS)
-                enrichInProgressEpisodeDetailsProgressively(deferredInProgressItems)
-            }
-            lastContinueWatchingEnrichmentSignature = enrichmentSignature
-        } finally {
-            if (activeContinueWatchingEnrichmentSignature == enrichmentSignature) {
-                activeContinueWatchingEnrichmentSignature = null
-            }
-        }
-    }
-}
-
-private fun buildContinueWatchingEnrichmentSignature(
-    allProgress: List<WatchProgress>,
-    inProgressItems: List<ContinueWatchingItem.InProgress>,
-    dismissedNextUp: Set<String>,
-    showUnairedNextUp: Boolean
-): String {
-    val allProgressSignature = allProgress.joinToString(separator = "|") { progress ->
-        listOf(
-            progress.contentId,
-            progress.contentType,
-            progress.videoId,
-            progress.season,
-            progress.episode,
-            progress.position,
-            progress.duration,
-            progress.lastWatched,
-            progress.progressPercent,
-            progress.source
-        ).joinToString(separator = ":")
-    }
-    val inProgressSignature = inProgressItems.joinToString(separator = "|") { item ->
-        val progress = item.progress
-        listOf(
-            progress.contentId,
-            progress.contentType,
-            progress.videoId,
-            progress.season,
-            progress.episode,
-            progress.position,
-            progress.duration,
-            progress.lastWatched
-        ).joinToString(separator = ":")
-    }
-    val dismissedSignature = dismissedNextUp.toSortedSet().joinToString(separator = "|")
-    return buildString {
-        append(showUnairedNextUp)
-        append("::")
-        append(dismissedSignature)
-        append("::")
-        append(inProgressSignature)
-        append("::")
-        append(allProgressSignature)
     }
 }
 
@@ -729,11 +629,7 @@ private suspend fun HomeViewModel.resolveMetaForProgress(
         if (progress.contentId.startsWith("trakt:")) add(progress.contentId.substringAfter(':'))
     }.distinct()
 
-    val typeCandidates = when {
-        isSeriesTypeCW(progress.contentType) -> listOf(progress.contentType, "series", "tv").distinct()
-        progress.contentType.equals("movie", ignoreCase = true) -> listOf("movie")
-        else -> listOf(progress.contentType).filter { it.isNotBlank() }.distinct()
-    }
+    val typeCandidates = listOf(progress.contentType, "series", "tv").distinct()
     val resolved = run {
         var meta: Meta? = null
         for (type in typeCandidates) {

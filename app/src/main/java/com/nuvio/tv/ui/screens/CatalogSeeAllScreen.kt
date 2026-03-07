@@ -48,7 +48,6 @@ import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.screens.home.HomeEvent
 import com.nuvio.tv.ui.screens.home.HomeViewModel
-import com.nuvio.tv.ui.screens.home.homeItemStatusKey
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.roundToInt
@@ -193,7 +192,6 @@ fun CatalogSeeAllScreen(
                             item = item,
                             posterCardStyle = posterCardStyle,
                             showLabel = uiState.posterLabelsEnabled,
-                            isWatched = uiState.movieWatchedStatus[homeItemStatusKey(item.id, item.apiType)] == true,
                             focusRequester = if (index == focusedItemIndex) restoreFocusRequester else null,
                             onFocused = {
                                 focusedItemIndex = index

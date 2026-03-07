@@ -12,9 +12,6 @@ data class SavedLibraryItem(
     val imdbRating: Float?,
     val genres: List<String>,
     val addonBaseUrl: String?,
-    val imdbId: String? = null,
-    val tmdbId: Int? = null,
-    val traktId: Int? = null,
     val addedAt: Long = 0L
 ) {
     fun toMetaPreview(): MetaPreview {

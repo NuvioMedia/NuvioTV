@@ -241,6 +241,11 @@ fun EpisodesRow(
     LaunchedEffect(restoreFocusToken, restoreEpisodeId, restoreTargetRequester, episodes) {
         if (restoreFocusToken <= 0 || restoreEpisodeId.isNullOrBlank()) return@LaunchedEffect
         if (episodes.none { it.id == restoreEpisodeId }) return@LaunchedEffect
+        val index = episodes.indexOfFirst { it.id == restoreEpisodeId }
+        if (index >= 0) {
+            val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
+            lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
+        }
         restoreTargetRequester?.requestFocusAfterFrames()
     }
 

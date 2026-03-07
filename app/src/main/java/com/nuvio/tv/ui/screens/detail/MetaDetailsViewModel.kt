@@ -13,10 +13,7 @@ import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.data.repository.ImdbEpisodeRatingsRepository
 import com.nuvio.tv.data.repository.MDBListRepository
-import com.nuvio.tv.data.repository.ParsedContentIds
-import com.nuvio.tv.data.repository.normalizeContentId
 import com.nuvio.tv.data.repository.parseContentIds
-import com.nuvio.tv.data.repository.toTraktIds
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.LibrarySourceMode
@@ -36,18 +33,14 @@ import com.nuvio.tv.core.util.isUnreleased
 import java.time.LocalDate
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -58,13 +51,7 @@ import javax.inject.Inject
 
 private const val TAG = "MetaDetailsViewModel"
 
-private data class DetailContentIdentity(
-    val itemId: String,
-    val itemType: String
-)
-
 @HiltViewModel
-@OptIn(ExperimentalCoroutinesApi::class)
 class MetaDetailsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val metaRepository: MetaRepository,
@@ -104,9 +91,6 @@ class MetaDetailsViewModel @Inject constructor(
 
     private var isPlayButtonFocused = false
     private var hideUnreleasedContent = false
-    private val observedContentIdentities = MutableStateFlow(
-        listOf(DetailContentIdentity(itemId = itemId, itemType = itemType))
-    )
 
     init {
         observeMetaViewSettings()
@@ -266,12 +250,7 @@ class MetaDetailsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            observedContentIdentities
-                .flatMapLatest { identities ->
-                    observeMembershipAcrossIdentities(identities) { identity ->
-                        libraryRepository.isInLibrary(itemId = identity.itemId, itemType = identity.itemType)
-                    }
-                }
+            libraryRepository.isInLibrary(itemId = itemId, itemType = itemType)
                 .distinctUntilChanged()
                 .collectLatest { inLibrary ->
                     _uiState.update { state ->
@@ -281,12 +260,7 @@ class MetaDetailsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            observedContentIdentities
-                .flatMapLatest { identities ->
-                    observeMembershipAcrossIdentities(identities) { identity ->
-                        libraryRepository.isInWatchlist(itemId = identity.itemId, itemType = identity.itemType)
-                    }
-                }
+            libraryRepository.isInWatchlist(itemId = itemId, itemType = itemType)
                 .distinctUntilChanged()
                 .collectLatest { inWatchlist ->
                     _uiState.update { state ->
@@ -451,7 +425,6 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     private fun applyMeta(meta: Meta) {
-        syncObservedContentIdentities(meta)
         val seasons = meta.videos
             .mapNotNull { it.season }
             .distinct()
@@ -1416,16 +1389,9 @@ class MetaDetailsViewModel @Inject constructor(
             ?.groupValues
             ?.getOrNull(1)
             ?.toIntOrNull()
-        val routeIds = parseContentIds(itemId)
-        val metaIds = parseContentIds(id)
-        val parsedIds = ParsedContentIds(
-            trakt = metaIds.trakt ?: routeIds.trakt,
-            imdb = metaIds.imdb ?: routeIds.imdb,
-            tmdb = metaIds.tmdb ?: routeIds.tmdb
-        )
-        val canonicalItemId = normalizeContentId(toTraktIds(parsedIds), fallback = id)
+        val parsedIds = parseContentIds(id)
         return LibraryEntryInput(
-            itemId = canonicalItemId,
+            itemId = id,
             itemType = apiType,
             title = name,
             year = year,
@@ -1442,25 +1408,6 @@ class MetaDetailsViewModel @Inject constructor(
             genres = genres,
             addonBaseUrl = preferredAddonBaseUrl
         )
-    }
-
-    private fun syncObservedContentIdentities(meta: Meta) {
-        val updatedIdentities = buildList {
-            add(DetailContentIdentity(itemId = itemId, itemType = itemType))
-            add(DetailContentIdentity(itemId = meta.id, itemType = meta.apiType))
-        }.distinct()
-        if (observedContentIdentities.value != updatedIdentities) {
-            observedContentIdentities.value = updatedIdentities
-        }
-    }
-
-    private fun observeMembershipAcrossIdentities(
-        identities: List<DetailContentIdentity>,
-        flowFactory: (DetailContentIdentity) -> kotlinx.coroutines.flow.Flow<Boolean>
-    ) = when (identities.size) {
-        0 -> flowOf(false)
-        1 -> flowFactory(identities.first())
-        else -> combine(identities.map(flowFactory)) { values -> values.any { it } }
     }
 
     fun getNextEpisodeInfo(): String? {

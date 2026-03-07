@@ -336,7 +336,7 @@ private fun StreamBackdrop(
     )
     val leftGradientBitmap = remember(backgroundColor, widthPx, heightPx) {
         val transparent = backgroundColor.copy(alpha = 0f).toArgb()
-        val bmp = android.graphics.Bitmap.createBitmap(widthPx, heightPx, android.graphics.Bitmap.Config.ARGB_8888)
+        val bmp = android.graphics.Bitmap.createBitmap(widthPx, 2, android.graphics.Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bmp)
         val shader = android.graphics.LinearGradient(
             0f, 0f, widthPx * 0.65f, 0f,
@@ -353,16 +353,14 @@ private fun StreamBackdrop(
             floatArrayOf(0f, 0.12f, 0.26f, 0.44f, 0.62f, 0.78f, 0.90f, 1f),
             android.graphics.Shader.TileMode.CLAMP
         )
-        canvas.drawRect(0f, 0f, widthPx.toFloat(), heightPx.toFloat(), android.graphics.Paint().apply {
+        canvas.drawRect(0f, 0f, widthPx.toFloat(), 2f, android.graphics.Paint().apply {
             this.shader = shader
-            isDither = true
         })
-        applyDither(bmp)
         bmp.asImageBitmap()
     }
     val rightGradientBitmap = remember(backgroundColor, widthPx, heightPx) {
         val transparent = backgroundColor.copy(alpha = 0f).toArgb()
-        val bmp = android.graphics.Bitmap.createBitmap(widthPx, heightPx, android.graphics.Bitmap.Config.ARGB_8888)
+        val bmp = android.graphics.Bitmap.createBitmap(2, heightPx.coerceAtLeast(1), android.graphics.Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bmp)
         val startX = widthPx * 0.35f
         val shader = android.graphics.LinearGradient(
@@ -380,11 +378,9 @@ private fun StreamBackdrop(
             floatArrayOf(0f, 0.10f, 0.22f, 0.38f, 0.56f, 0.74f, 0.88f, 1f),
             android.graphics.Shader.TileMode.CLAMP
         )
-        canvas.drawRect(startX, 0f, widthPx.toFloat(), heightPx.toFloat(), android.graphics.Paint().apply {
+        canvas.drawRect(0f, 0f, 2f, heightPx.toFloat(), android.graphics.Paint().apply {
             this.shader = shader
-            isDither = true
         })
-        applyDither(bmp)
         bmp.asImageBitmap()
     }
 
