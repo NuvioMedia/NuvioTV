@@ -3,7 +3,6 @@ package com.nuvio.tv.data.repository
 import android.util.Log
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.network.safeApiCall
-import com.nuvio.tv.data.local.AddonPreferences
 import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.Subtitle
@@ -15,6 +14,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
+import java.net.URI
 import javax.inject.Inject
 
 class SubtitleRepositoryImpl @Inject constructor(
@@ -149,9 +149,16 @@ class SubtitleRepositoryImpl @Inject constructor(
             when (val result = safeApiCall { api.getSubtitles(subtitleUrl) }) {
                 is NetworkResult.Success -> {
                     val subtitles = result.data.subtitles?.mapNotNull { dto ->
+                        val resolvedUrl = resolveSubtitleUrl(dto.url, baseUrl) ?: run {
+                            Log.w(
+                                TAG,
+                                "Ignoring subtitle with invalid URL from addon=${addon.name}: ${dto.url}"
+                            )
+                            return@mapNotNull null
+                        }
                         Subtitle(
-                            id = dto.id ?: "${dto.lang}-${dto.url.hashCode()}",
-                            url = dto.url,
+                            id = dto.id ?: "${dto.lang}-${resolvedUrl.hashCode()}",
+                            url = resolvedUrl,
                             lang = dto.lang,
                             addonName = addon.displayName,
                             addonLogo = addon.logo
@@ -171,6 +178,32 @@ class SubtitleRepositoryImpl @Inject constructor(
             Log.e(TAG, "Exception fetching subtitles from ${addon.name}", e)
             emptyList()
         }
+    }
+
+    private fun resolveSubtitleUrl(rawUrl: String, addonBaseUrl: String): String? {
+        val trimmedUrl = rawUrl.trim()
+        if (trimmedUrl.isBlank()) return null
+
+        val normalizedUrl = trimmedUrl.replace(" ", "%20")
+
+        return runCatching {
+            when {
+                normalizedUrl.startsWith("http://", ignoreCase = true) ||
+                    normalizedUrl.startsWith("https://", ignoreCase = true) ||
+                    normalizedUrl.startsWith("file://", ignoreCase = true) ||
+                    normalizedUrl.startsWith("content://", ignoreCase = true) -> normalizedUrl
+
+                normalizedUrl.startsWith("//") -> {
+                    val scheme = URI(addonBaseUrl).scheme ?: "https"
+                    "$scheme:$normalizedUrl"
+                }
+
+                else -> {
+                    val base = URI("${addonBaseUrl.trimEnd('/')}/")
+                    base.resolve(normalizedUrl).toString()
+                }
+            }
+        }.getOrNull()
     }
     
     private fun buildExtraParams(

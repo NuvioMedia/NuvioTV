@@ -107,18 +107,28 @@ internal object PlayerSubtitleUtils {
             normalizedLanguage.startsWith("${normalizedTarget}_")
     }
 
-    fun mimeTypeFromUrl(url: String): String {
+    fun mimeTypeFromUrl(url: String): String? {
         val normalizedPath = url
             .substringBefore('#')
             .substringBefore('?')
             .lowercase()
+        val trimmedPath = normalizedPath.trimEnd('/')
 
         return when {
-            normalizedPath.endsWith(".srt") -> MimeTypes.APPLICATION_SUBRIP
-            normalizedPath.endsWith(".vtt") || normalizedPath.endsWith(".webvtt") -> MimeTypes.TEXT_VTT
-            normalizedPath.endsWith(".ass") || normalizedPath.endsWith(".ssa") -> MimeTypes.TEXT_SSA
-            normalizedPath.endsWith(".ttml") || normalizedPath.endsWith(".dfxp") -> MimeTypes.APPLICATION_TTML
-            else -> MimeTypes.APPLICATION_SUBRIP
+            trimmedPath.endsWith(".srt") || trimmedPath.contains(".srt/") -> MimeTypes.APPLICATION_SUBRIP
+            trimmedPath.endsWith(".vtt") ||
+                trimmedPath.endsWith(".webvtt") ||
+                trimmedPath.contains(".vtt/") ||
+                trimmedPath.contains(".webvtt/") -> MimeTypes.TEXT_VTT
+            trimmedPath.endsWith(".ass") ||
+                trimmedPath.endsWith(".ssa") ||
+                trimmedPath.contains(".ass/") ||
+                trimmedPath.contains(".ssa/") -> MimeTypes.TEXT_SSA
+            trimmedPath.endsWith(".ttml") ||
+                trimmedPath.endsWith(".dfxp") ||
+                trimmedPath.contains(".ttml/") ||
+                trimmedPath.contains(".dfxp/") -> MimeTypes.APPLICATION_TTML
+            else -> null
         }
     }
 }
