@@ -159,6 +159,7 @@
     <string name="cd_increase">Increase</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_none">None</string>
+    <string name="action_never">Never</string>
     <string name="action_close">Close</string>
 
     <!-- SupportersContributorsScreen -->

@@ -442,14 +442,14 @@ class PlayerSettingsDataStore @Inject constructor(
                     value = prefs[nextEpisodeThresholdPercentKey]
                         ?: prefs[nextEpisodeThresholdPercentLegacyKey]?.toFloat()
                         ?: 99f,
-                    min = 97f,
+                    min = 0f,
                     max = 99.5f
                 ),
                 nextEpisodeThresholdMinutesBeforeEnd = normalizeHalfStep(
                     value = prefs[nextEpisodeThresholdMinutesBeforeEndKey]
                         ?: prefs[nextEpisodeThresholdMinutesBeforeEndLegacyKey]?.toFloat()
                         ?: 2f,
-                    min = 1f,
+                    min = 0f,
                     max = 3.5f
                 ),
                 streamReuseLastLinkEnabled = prefs[streamReuseLastLinkEnabledKey] ?: false,
@@ -648,7 +648,7 @@ class PlayerSettingsDataStore @Inject constructor(
         store().edit { prefs ->
             prefs[nextEpisodeThresholdPercentKey] = normalizeHalfStep(
                 value = percent,
-                min = 97f,
+                min = 0f,
                 max = 99.5f
             )
         }
@@ -658,7 +658,7 @@ class PlayerSettingsDataStore @Inject constructor(
         store().edit { prefs ->
             prefs[nextEpisodeThresholdMinutesBeforeEndKey] = normalizeHalfStep(
                 value = minutes,
-                min = 1f,
+                min = 0f,
                 max = 3.5f
             )
         }
