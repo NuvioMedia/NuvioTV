@@ -21,8 +21,7 @@
     <string name="cw_almost_done">Skoraj pri koncu</string>														  												  
     <string name="cw_airs_date">Na sporedu %1$s</string>
     <string name="cw_action_go_to_details">Pojdi na podrobnosti</string>
-    <string name="cw_action_remove">Odstrani</string>
-	<string name="cw_action_remove">Odstrani</string>											   
+    <string name="cw_action_remove">Odstrani</string>											   
     <string name="cw_dialog_subtitle">Izberite, kaj želite storiti s tem elementom.</string>
 	<string name="home_poster_dialog_subtitle">Dejanja naslova</string>																 
 
@@ -492,8 +491,6 @@
     <string name="trakt_unaired_next_up_subtitle">Prikaži prihajajoče epizode, preden so na sporedu</string>
 	<string name="trakt_unaired_shown">Prikazano</string>
     <string name="trakt_unaired_hidden">Skrito</string>												 												   
-    <string name="trakt_unaired_shown">Prikazano</string>
-    <string name="trakt_unaired_hidden">Skrito</string>
     <string name="trakt_cached_label">V predpomnilniku</string>
     <string name="trakt_stat_movies">Filmi</string>
     <string name="trakt_stat_shows">Serije</string>
