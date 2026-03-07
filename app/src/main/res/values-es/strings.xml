@@ -2,7 +2,6 @@
     <string name="app_name">Nuvio</string>
     <string name="type_movie">Película</string>
     <string name="type_series">Series</string>
-    <string name="type_unknown">Desconocido</string>
 
     <!-- HomeScreen -->
     <string name="home_no_addons">No hay complementos instalados. Instala uno para empezar.</string>

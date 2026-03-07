@@ -8,7 +8,6 @@ import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.TmdbSettings
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
@@ -427,8 +426,6 @@ internal suspend fun HomeViewModel.enrichHeroItemsPipeline(
                     }
 
                     enriched
-                } catch (e: CancellationException) {
-                    throw e
                 } catch (e: Exception) {
                     Log.w(HomeViewModel.TAG, "Hero enrichment failed for ${item.id}: ${e.message}")
                     item

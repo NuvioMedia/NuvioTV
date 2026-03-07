@@ -2,7 +2,6 @@
     <string name="app_name">Nuvio</string>
     <string name="type_movie">Film</string>
     <string name="type_series">Dizi</string>
-    <string name="type_unknown">Bilinmeyen</string>
 
     <!-- HomeScreen -->
     <string name="home_no_addons">Yüklü eklenti yok. Başlamak için bir eklenti ekleyin.</string>

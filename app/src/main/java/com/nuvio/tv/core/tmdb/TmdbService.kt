@@ -3,7 +3,6 @@ package com.nuvio.tv.core.tmdb
 import android.util.Log
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.data.remote.api.TmdbApi
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -91,8 +90,6 @@ class TmdbService @Inject constructor(
             Log.w(TAG, "No TMDB result found for IMDB: $imdbId")
             null
             
-        } catch (e: CancellationException) {
-            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Error looking up TMDB ID for $imdbId: ${e.message}", e)
             null
@@ -145,8 +142,6 @@ class TmdbService @Inject constructor(
             Log.w(TAG, "No IMDB ID found for TMDB: $tmdbId")
             null
             
-        } catch (e: CancellationException) {
-            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Error looking up IMDB ID for $tmdbId: ${e.message}", e)
             null

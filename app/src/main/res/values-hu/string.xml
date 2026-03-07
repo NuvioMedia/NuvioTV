@@ -2,7 +2,6 @@
     <string name="app_name">Nuvio</string>
     <string name="type_movie">Film</string>
     <string name="type_series">Sorozat</string>
-    <string name="type_unknown">Ismeretlen</string>
 
     <!-- HomeScreen -->
     <string name="home_no_addons">Nincsenek telepített bővítmények. A kezdéshez adj hozzá egyet.</string>

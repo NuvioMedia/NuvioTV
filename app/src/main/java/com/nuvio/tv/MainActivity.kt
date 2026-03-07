@@ -3,6 +3,7 @@ package com.nuvio.tv
 import android.os.Bundle
 import android.content.Context
 import android.content.res.Configuration
+import androidx.core.os.ConfigurationCompat
 import android.util.Log
 import androidx.compose.ui.platform.LocalView
 import androidx.metrics.performance.JankStats
@@ -111,6 +112,7 @@ import com.nuvio.tv.domain.model.AppTheme
 import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.core.sync.ProfileSyncService
 import com.nuvio.tv.core.sync.StartupSyncService
+import com.nuvio.tv.data.remote.supabase.AvatarRepository
 import com.nuvio.tv.ui.navigation.NuvioNavHost
 import com.nuvio.tv.ui.navigation.Screen
 import com.nuvio.tv.ui.components.NuvioScrollDefaults
@@ -180,6 +182,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var appOnboardingDataStore: AppOnboardingDataStore
 
+    @Inject
+    lateinit var avatarRepository: AvatarRepository
+
     private lateinit var jankStats: JankStats
 
     @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -193,6 +198,9 @@ class MainActivity : ComponentActivity() {
             config.setLocale(locale)
             super.attachBaseContext(newBase.createConfigurationContext(config))
         } else {
+            val systemLocale = ConfigurationCompat.getLocales(newBase.resources.configuration)[0]
+                ?: Locale.getDefault(Locale.Category.DISPLAY)
+            Locale.setDefault(systemLocale)
             super.attachBaseContext(newBase)
         }
     }
@@ -222,6 +230,16 @@ class MainActivity : ComponentActivity() {
             val profiles by profileManager.profiles.collectAsState()
             val activeProfile = remember(activeProfileId, profiles) {
                 profiles.firstOrNull { it.id == activeProfileId }
+            }
+            var avatarCatalog by remember { mutableStateOf(emptyList<com.nuvio.tv.data.remote.supabase.AvatarCatalogItem>()) }
+
+            LaunchedEffect(Unit) {
+                avatarCatalog = runCatching { avatarRepository.getAvatarCatalog() }
+                    .getOrDefault(emptyList())
+            }
+
+            val activeProfileAvatarImageUrl = remember(activeProfile, avatarCatalog) {
+                activeProfile?.avatarId?.let { avatarRepository.getAvatarImageUrl(it, avatarCatalog) }
             }
 
             val mainUiPrefsFlow = remember(themeDataStore, layoutPreferenceDataStore) {
@@ -426,6 +444,7 @@ class MainActivity : ComponentActivity() {
                             hideBuiltInHeaders = hideBuiltInHeadersForFloatingPill,
                             activeProfileName = activeProfile?.name ?: "",
                             activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
+                            activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
                             showProfileSelector = profiles.size > 1,
                             onSwitchProfile = { hasSelectedProfileThisSession = false },
                             onExitApp = {
@@ -445,6 +464,7 @@ class MainActivity : ComponentActivity() {
                             hideBuiltInHeaders = false,
                             activeProfileName = activeProfile?.name ?: "",
                             activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
+                            activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
                             showProfileSelector = profiles.size > 1,
                             onSwitchProfile = { hasSelectedProfileThisSession = false },
                             onExitApp = {
@@ -509,6 +529,7 @@ private fun LegacySidebarScaffold(
     hideBuiltInHeaders: Boolean,
     activeProfileName: String,
     activeProfileColorHex: String,
+    activeProfileAvatarImageUrl: String?,
     showProfileSelector: Boolean,
     onSwitchProfile: () -> Unit,
     onExitApp: () -> Unit
@@ -661,7 +682,8 @@ private fun LegacySidebarScaffold(
                                 ProfileAvatarCircle(
                                     name = activeProfileName,
                                     colorHex = activeProfileColorHex,
-                                    size = 34.dp
+                                    size = 34.dp,
+                                    avatarImageUrl = activeProfileAvatarImageUrl
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
@@ -797,6 +819,7 @@ private fun ModernSidebarScaffold(
     hideBuiltInHeaders: Boolean,
     activeProfileName: String,
     activeProfileColorHex: String,
+    activeProfileAvatarImageUrl: String?,
     showProfileSelector: Boolean,
     onSwitchProfile: () -> Unit,
     onExitApp: () -> Unit
@@ -1128,6 +1151,7 @@ private fun ModernSidebarScaffold(
                         },
                         activeProfileName = activeProfileName,
                         activeProfileColorHex = activeProfileColorHex,
+                        activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
                         showProfileSelector = showProfileSelector,
                         onSwitchProfile = onSwitchProfile
                     )

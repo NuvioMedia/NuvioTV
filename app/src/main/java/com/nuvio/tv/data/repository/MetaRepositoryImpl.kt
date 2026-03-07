@@ -13,11 +13,6 @@ import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.R
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -28,7 +23,7 @@ import javax.inject.Singleton
 
 @Singleton
 class MetaRepositoryImpl @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+    @ApplicationContext private val context: Context,
     private val api: AddonApi,
     private val addonRepository: AddonRepository
 ) : MetaRepository {
@@ -40,8 +35,6 @@ class MetaRepositoryImpl @Inject constructor(
     private val metaCache = ConcurrentHashMap<String, Meta>()
     // Separate cache for full meta fetched from addons (bypasses catalog-level cache)
     private val addonMetaCache = ConcurrentHashMap<String, Meta>()
-    private val inFlightAddonMetaRequests = ConcurrentHashMap<String, Deferred<NetworkResult<Meta>>>()
-    private val requestScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun getMeta(
         addonBaseUrl: String,
@@ -87,37 +80,6 @@ class MetaRepositoryImpl @Inject constructor(
 
         emit(NetworkResult.Loading)
 
-        val result = awaitAddonMetaResult(cacheKey = cacheKey, type = type, id = id)
-        emit(result)
-    }
-
-    private suspend fun awaitAddonMetaResult(
-        cacheKey: String,
-        type: String,
-        id: String
-    ): NetworkResult<Meta> {
-        addonMetaCache[cacheKey]?.let { return NetworkResult.Success(it) }
-        val request = inFlightAddonMetaRequests[cacheKey] ?: requestScope.async {
-            fetchMetaFromAllAddonsResult(cacheKey = cacheKey, type = type, id = id)
-        }.also { created ->
-            val existing = inFlightAddonMetaRequests.putIfAbsent(cacheKey, created)
-            if (existing != null) {
-                created.cancel()
-            }
-        }
-        val activeRequest = inFlightAddonMetaRequests[cacheKey] ?: request
-        return try {
-            activeRequest.await()
-        } finally {
-            inFlightAddonMetaRequests.remove(cacheKey, activeRequest)
-        }
-    }
-
-    private suspend fun fetchMetaFromAllAddonsResult(
-        cacheKey: String,
-        type: String,
-        id: String
-    ): NetworkResult<Meta> {
         val addons = addonRepository.getInstalledAddons().first()
 
         val requestedType = type.trim()
@@ -168,14 +130,16 @@ class MetaRepositoryImpl @Inject constructor(
                     val meta = metaDto.toDomain(episodeLabel)
                             addonMetaCache[cacheKey] = meta
                             metaCache[cacheKey] = meta
-                            return NetworkResult.Success(meta)
+                            emit(NetworkResult.Success(meta))
+                            return@flow
                         }
                     }
                     else -> { /* Try next addon */ }
                 }
             }
 
-            return NetworkResult.Error("No addons support meta for type: $requestedType")
+            emit(NetworkResult.Error("No addons support meta for type: $requestedType"))
+            return@flow
         }
 
         // Try each candidate until we find meta.
@@ -197,7 +161,8 @@ class MetaRepositoryImpl @Inject constructor(
                             TAG,
                             "Meta fetch success addonId=${addon.id} type=$candidateType id=$id"
                         )
-                        return NetworkResult.Success(meta)
+                        emit(NetworkResult.Success(meta))
+                        return@flow
                     }
                     Log.d(
                         TAG,
@@ -205,23 +170,16 @@ class MetaRepositoryImpl @Inject constructor(
                     )
                 }
                 is NetworkResult.Error -> {
-                    if (isBenignMetaFetchFailure(result.message)) {
-                        Log.d(
-                            TAG,
-                            "Meta fetch cancelled/short-circuited addonId=${addon.id} type=$candidateType id=$id message=${result.message}"
-                        )
-                    } else {
-                        Log.w(
-                            TAG,
-                            "Meta fetch failed addonId=${addon.id} type=$candidateType id=$id code=${result.code} message=${result.message}"
-                        )
-                    }
+                    Log.w(
+                        TAG,
+                        "Meta fetch failed addonId=${addon.id} type=$candidateType id=$id code=${result.code} message=${result.message}"
+                    )
                 }
                 NetworkResult.Loading -> { /* no-op */ }
             }
         }
 
-        return NetworkResult.Error("Meta not found in any addon")
+        emit(NetworkResult.Error("Meta not found in any addon"))
     }
 
     private fun buildMetaUrl(baseUrl: String, type: String, id: String): String {
@@ -261,15 +219,6 @@ class MetaRepositoryImpl @Inject constructor(
 
     private fun encodePathSegment(value: String): String {
         return URLEncoder.encode(value, "UTF-8").replace("+", "%20")
-    }
-
-    private fun isBenignMetaFetchFailure(message: String?): Boolean {
-        val normalized = message?.lowercase().orEmpty()
-        return "flow was aborted" in normalized ||
-            "no more elements needed" in normalized ||
-            "child of the scoped flow was cancelled" in normalized ||
-            "standalonecoroutine was cancelled" in normalized ||
-            "job was cancelled" in normalized
     }
     
     override fun clearCache() {

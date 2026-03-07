@@ -14,7 +14,6 @@ import com.nuvio.tv.domain.model.MetaCompany
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PersonDetail
 import com.nuvio.tv.domain.model.PosterShape
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -294,8 +293,6 @@ class TmdbMetadataService @Inject constructor(
                 )
                 enrichmentCache[cacheKey] = enrichment
                 enrichment
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to fetch TMDB enrichment: ${e.message}", e)
                 null
@@ -322,8 +319,6 @@ class TmdbMetadataService @Inject constructor(
                     val epNum = ep.episodeNumber ?: return@forEach
                     result[season to epNum] = ep.toEnrichment()
                 }
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to fetch TMDB season $season: ${e.message}")
             }

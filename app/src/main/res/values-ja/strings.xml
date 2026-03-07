@@ -2,7 +2,6 @@
 <resources>
     <string name="type_movie">映画</string>
     <string name="type_series">シリーズ</string>
-    <string name="type_unknown">不明</string>
 
     <!-- HomeScreen -->
     <string name="home_no_addons">アドオンがインストールされていません。追加して始めましょう。</string>

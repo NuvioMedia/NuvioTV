@@ -112,7 +112,6 @@ body:
         - Playback (start/stop/buffering)
         - Streams / Sources (selection, loading, errors)
         - Next Episode / Auto-play
-        - Skip Intro / Skip intervals
         - Watch Progress (resume, watched state, history)
         - Subtitles (download, styling, sync)
         - Audio tracks

@@ -76,6 +76,7 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import com.nuvio.tv.ui.util.localizeEpisodeTitle
 
 private const val EPISODE_CARD_CONTENT_TYPE = "episode_card"
 private const val EPISODE_SCROLL_REPEAT_THROTTLE_MS = 80L
@@ -240,6 +241,11 @@ fun EpisodesRow(
     LaunchedEffect(restoreFocusToken, restoreEpisodeId, restoreTargetRequester, episodes) {
         if (restoreFocusToken <= 0 || restoreEpisodeId.isNullOrBlank()) return@LaunchedEffect
         if (episodes.none { it.id == restoreEpisodeId }) return@LaunchedEffect
+        val index = episodes.indexOfFirst { it.id == restoreEpisodeId }
+        if (index >= 0) {
+            val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
+            lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
+        }
         restoreTargetRequester?.requestFocusAfterFrames()
     }
 
@@ -561,7 +567,7 @@ private fun EpisodeCard(
         ) {
             AsyncImage(
                 model = thumbnailRequest,
-                contentDescription = episode.title,
+                contentDescription = episode.title.localizeEpisodeTitle(context),
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
@@ -607,7 +613,7 @@ private fun EpisodeCard(
                 }
 
                 Text(
-                    text = episode.title,
+                    text = episode.title.localizeEpisodeTitle(context),
                     style = titleStyle,
                     color = textPrimary,
                     maxLines = 2,
@@ -772,6 +778,7 @@ private fun EpisodeOptionsDialog(
     onMarkPreviousEpisodesWatched: () -> Unit = {}
 ) {
     val primaryFocusRequester = remember { FocusRequester() }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         primaryFocusRequester.requestFocus()
@@ -779,7 +786,7 @@ private fun EpisodeOptionsDialog(
 
     NuvioDialog(
         onDismiss = onDismiss,
-        title = episode.title,
+        title = episode.title.localizeEpisodeTitle(context),
         subtitle = stringResource(R.string.episodes_dialog_subtitle)
     ) {
         Button(

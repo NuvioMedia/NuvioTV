@@ -61,6 +61,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlin.math.roundToInt
 import java.util.concurrent.TimeUnit
+import com.nuvio.tv.ui.util.localizeEpisodeTitle
 
 private val CwCardShape = RoundedCornerShape(12.dp)
 private val CwClipShape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
@@ -270,12 +271,12 @@ fun ContinueWatchingCard(
         )
     }
     val titleText = progress?.name ?: nextUp?.name.orEmpty()
-    val episodeTitle = when {
-        progress != null -> progress.episodeTitle
-        nextUp != null && !nextUp.hasAired -> nextUp.episodeTitle ?: nextUp.airDateLabel?.let { stringResource(R.string.cw_airs_date, it) }
-        else -> nextUp?.episodeTitle
-    }
     val context = LocalContext.current
+    val episodeTitle = when {
+        progress != null -> progress.episodeTitle?.localizeEpisodeTitle(context)
+        nextUp != null && !nextUp.hasAired -> nextUp.episodeTitle?.localizeEpisodeTitle(context) ?: nextUp.airDateLabel?.let { stringResource(R.string.cw_airs_date, it) }
+        else -> nextUp?.episodeTitle?.localizeEpisodeTitle(context)
+    }
     val density = LocalDensity.current
     val requestWidthPx = remember(cardWidth, density) {
         with(density) { cardWidth.roundToPx() }

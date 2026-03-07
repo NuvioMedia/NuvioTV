@@ -342,45 +342,6 @@ class WatchProgressRepositoryImpl @Inject constructor(
             }
     }
 
-    override fun observeWatchedMovieIds(): Flow<Set<String>> {
-        return traktAuthDataStore.isEffectivelyAuthenticated
-            .distinctUntilChanged()
-            .flatMapLatest { isAuthenticated ->
-                if (isAuthenticated) {
-                    traktProgressService.observeWatchedMovieIds()
-                } else {
-                    combine(
-                        watchProgressPreferences.allRawProgress,
-                        watchedItemsPreferences.observeAllItems()
-                    ) { progressEntries, watchedItems ->
-                        val resolved = buildSet {
-                            progressEntries.asSequence()
-                                .filter { it.contentType.equals("movie", ignoreCase = true) && it.isCompleted() }
-                                .flatMap { movieLookupKeys(it.contentId).asSequence() }
-                                .forEach(::add)
-
-                            watchedItems.asSequence()
-                                .filter { it.contentType.equals("movie", ignoreCase = true) }
-                                .flatMap { movieLookupKeys(it.contentId).asSequence() }
-                                .forEach(::add)
-                        }.toMutableSet()
-
-                        progressEntries.asSequence()
-                            .filter { entry ->
-                                entry.contentType.equals("movie", ignoreCase = true) &&
-                                    !entry.isCompleted() &&
-                                    (entry.position > 0L || entry.progressPercent?.let { it > 0f } == true)
-                            }
-                            .forEach { entry ->
-                                resolved.removeAll(movieLookupKeys(entry.contentId))
-                            }
-
-                        resolved.toSet()
-                    }.distinctUntilChanged()
-                }
-            }
-    }
-
     override suspend fun saveProgress(progress: WatchProgress, syncRemote: Boolean) {
         if (traktAuthDataStore.isEffectivelyAuthenticated.first()) {
             traktProgressService.applyOptimisticProgress(progress)
