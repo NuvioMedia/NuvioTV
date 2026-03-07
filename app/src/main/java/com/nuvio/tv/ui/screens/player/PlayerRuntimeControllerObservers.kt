@@ -75,7 +75,7 @@ internal fun PlayerRuntimeController.fetchAddonSubtitles() {
         
         try {
             val subtitles = fetchAddonSubtitlesNow()
-            
+             
             _uiState.update { 
                 it.copy(
                     addonSubtitles = subtitles,

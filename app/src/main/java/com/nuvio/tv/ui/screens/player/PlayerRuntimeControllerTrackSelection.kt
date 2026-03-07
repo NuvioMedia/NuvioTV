@@ -231,14 +231,18 @@ internal fun PlayerRuntimeController.toSubtitleConfiguration(subtitle: Subtitle)
     val subtitleMimeType = PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url)
     val addonTrackId = buildAddonSubtitleTrackId(subtitle)
 
-    return MediaItem.SubtitleConfiguration.Builder(
+    val builder = MediaItem.SubtitleConfiguration.Builder(
         android.net.Uri.parse(subtitle.url)
     )
         .setId(addonTrackId)
         .setLanguage(normalizedLang)
-        .setMimeType(subtitleMimeType)
         .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
-        .build()
+
+    if (subtitleMimeType != null) {
+        builder.setMimeType(subtitleMimeType)
+    }
+
+    return builder.build()
 }
 
 internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
