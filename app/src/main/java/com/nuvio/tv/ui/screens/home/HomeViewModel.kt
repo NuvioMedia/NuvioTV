@@ -117,6 +117,8 @@ class HomeViewModel @Inject constructor(
     internal var pendingExternalMetaPrefetchItemId: String? = null
     internal val posterLibraryObserverJobs = mutableMapOf<String, Job>()
     internal val movieWatchedObserverJobs = mutableMapOf<String, Job>()
+    internal var movieWatchedBatchJob: Job? = null
+    internal var lastMovieWatchedItemKeys: Set<String> = emptySet()
     internal var activePosterListPickerInput: LibraryEntryInput? = null
     @Volatile
     internal var externalMetaPrefetchEnabled: Boolean = false
@@ -302,6 +304,7 @@ class HomeViewModel @Inject constructor(
 
     override fun onCleared() {
         posterStatusReconcileJob?.cancel()
+        movieWatchedBatchJob?.cancel()
         cancelInFlightCatalogLoads()
         posterLibraryObserverJobs.values.forEach { it.cancel() }
         movieWatchedObserverJobs.values.forEach { it.cancel() }

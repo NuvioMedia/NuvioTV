@@ -20,7 +20,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -301,6 +303,40 @@ class WatchProgressRepositoryImpl @Inject constructor(
                     watchProgressPreferences.getAllEpisodeProgress(contentId)
                 }
             }
+    }
+
+    @OptIn(FlowPreview::class)
+    override fun observeWatchedMovieIds(): Flow<Set<String>> {
+        return traktAuthDataStore.isEffectivelyAuthenticated
+            .distinctUntilChanged()
+            .flatMapLatest { isAuthenticated ->
+                if (isAuthenticated) {
+                    traktProgressService.observeAllWatchedMovieIds()
+                } else {
+                    combine(
+                        watchProgressPreferences.allProgress,
+                        watchedItemsPreferences.allItems
+                    ) { progressList, watchedItems ->
+                        val completedIds = mutableSetOf<String>()
+                        val replayingIds = mutableSetOf<String>()
+                        for (progress in progressList) {
+                            if (progress.isCompleted()) {
+                                completedIds.add(progress.contentId)
+                            } else if (progress.position > 0L ||
+                                progress.progressPercent?.let { it > 0f } == true
+                            ) {
+                                replayingIds.add(progress.contentId)
+                            }
+                        }
+                        val watchedItemIds = watchedItems
+                            .filter { it.season == null && it.episode == null }
+                            .map { it.contentId }
+                            .toSet()
+                        (completedIds + watchedItemIds) - replayingIds
+                    }.debounce(500)
+                }
+            }
+            .distinctUntilChanged()
     }
 
     override fun isWatched(contentId: String, season: Int?, episode: Int?): Flow<Boolean> {
