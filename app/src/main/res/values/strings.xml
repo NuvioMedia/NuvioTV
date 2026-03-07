@@ -11,6 +11,34 @@
 
     <!-- ErrorState -->
     <string name="action_retry">Retry</string>
+    <string name="error_state_generic_issue">Something went wrong.</string>
+    <string name="error_state_possible_fix">Possible fix: %1$s</string>
+    <string name="error_state_fix_retry_soon">retry in a moment.</string>
+    <string name="error_state_issue_no_metadata_any_addon">This id could not load details because none of the installed addons returned metadata.</string>
+    <string name="error_state_fix_no_metadata_any_addon">try another addon, disable \"Prefer external meta addon\" in Layout settings, or confirm an installed addon supports this id.</string>
+    <string name="error_state_prefix_no_supported_metadata">No installed addon supports metadata for </string>
+    <string name="error_state_prefix_no_addon_for_id">No installed addon could provide metadata for id=</string>
+    <string name="error_state_fix_no_supported_metadata">install or update an addon that supports this content type, then retry.</string>
+    <string name="error_state_prefix_tried_meta_addons">Tried meta addons:</string>
+    <string name="error_state_fix_tried_meta_addons">install an addon that supports this id, or reconfigure/update the addon and retry.</string>
+    <string name="error_state_issue_missing_metadata_for_id">does not have metadata for this id</string>
+    <string name="error_state_fix_missing_metadata_for_id">open this id from a different addon, disable \"Prefer external meta addon\", or check that the addon supports this id.</string>
+    <string name="error_state_issue_addon_unreachable">could not be reached</string>
+    <string name="error_state_fix_addon_unreachable">check your internet connection, verify the addon URL still works, then retry.</string>
+    <string name="error_state_issue_addon_connection_failed">rejected the connection</string>
+    <string name="error_state_fix_addon_connection_failed">make sure the addon server is online and reachable, then retry.</string>
+    <string name="error_state_issue_addon_timeout">took too long to respond</string>
+    <string name="error_state_fix_addon_timeout">retry in a moment, or try a different addon if this keeps happening.</string>
+    <string name="error_state_issue_addon_cleartext">uses an insecure HTTP connection that Android blocked</string>
+    <string name="error_state_fix_addon_cleartext">switch the addon URL to HTTPS or update the addon configuration.</string>
+    <string name="error_state_fix_addon_generic">retry, update or reinstall the addon, or try a different addon.</string>
+    <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
+    <string name="error_meta_not_found">Meta not found</string>
+    <string name="error_meta_no_supported_addon">No installed addon supports metadata for \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">No installed addon could provide metadata for id=%1$s (type=%2$s).</string>
+    <string name="error_meta_tried_none">Tried meta addons: %1$s. None of them provided metadata for id=%2$s (type=%3$s).</string>
+    <string name="error_meta_tried_generic">Tried meta addons: %1$s. Metadata could not be loaded for id=%2$s (type=%3$s).</string>
+    <string name="error_meta_tried_issues">Tried meta addons: %1$s. Metadata could not be loaded for id=%2$s (type=%3$s). Issues: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Continue Watching</string>

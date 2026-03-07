@@ -348,6 +348,19 @@ class TraktProgressService @Inject constructor(
             .distinctUntilChanged()
     }
 
+    fun observeAllWatchedMovieIds(): Flow<Set<String>> {
+        return combine(watchedMoviesState, optimisticProgress) { watchedMovies, optimistic ->
+            val result = watchedMovies.toMutableSet()
+            optimistic.forEach { (key, entry) ->
+                when {
+                    entry.progress.isCompleted() -> result.add(key)
+                    entry.progress.isInProgress() -> result.remove(key)
+                }
+            }
+            result as Set<String>
+        }.distinctUntilChanged()
+    }
+
     suspend fun markAsWatched(
         progress: WatchProgress,
         title: String?,

@@ -44,7 +44,6 @@ internal data class StartupSubtitlePreparation(
 )
 
 @androidx.annotation.OptIn(UnstableApi::class)
-@OptIn(UnstableApi::class)
 internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<String, String>) {
     if (url.isEmpty()) {
         _uiState.update { it.copy(error = "No stream URL provided", showLoadingOverlay = false) }
@@ -69,7 +68,15 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
             val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings)
             val useLibass = false // Temporarily disabled for maintenance
             val libassRenderType = playerSettings.libassRenderType.toAssRenderType()
-            val loadControl = DefaultLoadControl.Builder().build()
+            val loadControl = DefaultLoadControl.Builder()
+                .setTargetBufferBytes(100 * 1024 * 1024)
+                .setBufferDurationsMs(
+                    DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+                    70_000,
+                    DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+                    DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
+                )
+                .build()
 
             
             trackSelector = DefaultTrackSelector(context).apply {
@@ -87,6 +94,7 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                     val localeList = Resources.getSystem().configuration.locales
                     List(localeList.size()) { localeList[it].isO3Language }
                 } else {
+                    @Suppress("DEPRECATION")
                     listOf(Resources.getSystem().configuration.locale.isO3Language)
                 }
                 val preferredAudioLanguages = resolvePreferredAudioLanguages(

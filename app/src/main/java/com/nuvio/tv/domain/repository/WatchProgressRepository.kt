@@ -39,6 +39,8 @@ interface WatchProgressRepository {
      */
     fun isWatched(contentId: String, season: Int? = null, episode: Int? = null): Flow<Boolean>
     
+    fun observeWatchedMovieIds(): Flow<Set<String>>
+
     /**
      * Save or update watch progress
      */

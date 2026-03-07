@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import com.nuvio.tv.domain.model.MetaPreview
 
 internal val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
@@ -126,13 +127,14 @@ internal fun buildContinueWatchingItem(
     item: ContinueWatchingItem,
     useLandscapePosters: Boolean,
     airsDateTemplate: String,
-    upcomingLabel: String
+    upcomingLabel: String,
+    context: android.content.Context
 ): ModernCarouselItem {
     val heroPreview = when (item) {
         is ContinueWatchingItem.InProgress -> {
             val isSeries = isSeriesType(item.progress.contentType)
             val episodeCode = item.progress.episodeDisplayString
-            val episodeTitle = item.progress.episodeTitle?.takeIf { it.isNotBlank() }
+            val episodeTitle = item.progress.episodeTitle?.takeIf { it.isNotBlank() }?.localizeEpisodeTitle(context)
             val episodeLabel = when {
                 isSeries && episodeCode != null && episodeTitle != null -> "$episodeCode · $episodeTitle"
                 isSeries && episodeCode != null -> episodeCode
@@ -158,7 +160,7 @@ internal fun buildContinueWatchingItem(
         }
         is ContinueWatchingItem.NextUp -> {
             val episodeCode = "S${item.info.season}E${item.info.episode}"
-            val episodeTitle = item.info.episodeTitle?.takeIf { it.isNotBlank() }
+            val episodeTitle = item.info.episodeTitle?.takeIf { it.isNotBlank() }?.localizeEpisodeTitle(context)
             val episodeLabel = if (episodeTitle != null) "$episodeCode · $episodeTitle" else episodeCode
             HeroPreview(
                 title = item.info.name,
