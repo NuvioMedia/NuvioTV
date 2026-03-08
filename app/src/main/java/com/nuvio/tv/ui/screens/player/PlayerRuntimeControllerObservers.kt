@@ -82,6 +82,10 @@ internal fun PlayerRuntimeController.fetchAddonSubtitles() {
                     isLoadingAddonSubtitles = false
                 ) 
             }
+            restorePendingSameSeriesTrackSelection(
+                audioTracks = _uiState.value.audioTracks,
+                subtitleTracks = _uiState.value.subtitleTracks
+            )
             tryAutoSelectPreferredSubtitleFromAvailableTracks()
         } catch (e: Exception) {
             _uiState.update { 
@@ -182,6 +186,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             }
             streamReuseLastLinkEnabled = settings.streamReuseLastLinkEnabled
             streamAutoPlayModeSetting = settings.streamAutoPlayMode
+            _uiState.update { it.copy(streamAutoPlayMode = settings.streamAutoPlayMode) }
             streamAutoPlayNextEpisodeEnabledSetting = settings.streamAutoPlayNextEpisodeEnabled
             streamAutoPlayPreferBingeGroupForNextEpisodeSetting =
                 settings.streamAutoPlayPreferBingeGroupForNextEpisode

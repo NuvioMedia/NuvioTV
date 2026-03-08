@@ -38,6 +38,11 @@ interface WatchProgressRepository {
      * For series episodes pass both [season] and [episode].
      */
     fun isWatched(contentId: String, season: Int? = null, episode: Int? = null): Flow<Boolean>
+
+    /**
+     * Returns the current watched movie identity set for cheap bulk membership checks.
+     */
+    fun observeWatchedMovieIds(): Flow<Set<String>>
     
     /**
      * Save or update watch progress

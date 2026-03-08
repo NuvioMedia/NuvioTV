@@ -4,8 +4,6 @@ import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
-import java.net.HttpURLConnection
-import java.net.URL
 
 object StreamAutoPlaySelector {
     fun orderAddonStreams(
@@ -24,31 +22,6 @@ object StreamAutoPlaySelector {
 
         return url
     }
-
-
-
-    private fun urlWorks(url: String): Boolean {
-        val lower = url.lowercase()
-
-        // Skip probing for signed or tokened URLs
-        if (listOf("expires=", "signature=", "sig=", "auth=", "key=", "hash=", "x-amz-", "hdnts=", "cf_")
-                .any { lower.contains(it) }) {
-            return true
-        }
-
-        // Safe HEAD probe for everything else
-        return runCatching {
-            val connection = URL(url).openConnection() as HttpURLConnection
-            connection.requestMethod = "GET"
-            connection.setRequestProperty("Range", "bytes=0-1")
-            connection.connectTimeout = 3000
-            connection.readTimeout = 3000
-            connection.instanceFollowRedirects = true
-            connection.connect()
-            connection.responseCode in 200..399
-        }.getOrElse { false }
-    }
-
 
 
 
@@ -96,7 +69,8 @@ object StreamAutoPlaySelector {
                 val pattern = regexPattern.trim()
  
                 // Try to compile the user regex
-                val userRegex = runCatching { Regex(pattern, RegexOption.IGNORE_CASE) }.getOrNull() ?: return null
+                val userRegex = runCatching { Regex(pattern, RegexOption.IGNORE_CASE) }.getOrNull()
+                if (userRegex == null) return null
 
                 // Auto-extract exclusion patterns from negative lookaheads
                 val exclusionMatches = Regex("\\(\\?![^)]*?\\(([^)]+)\\)").findAll(pattern)
@@ -135,16 +109,7 @@ object StreamAutoPlaySelector {
                 }
 
                 if (matchingStreams.isEmpty()) return null
-
-                // 2. Try each matching stream until one works
-                for (stream in matchingStreams) {
-                    val resolved = resolvePlayableUrl(stream) ?: continue
-                    println("Trying resolved stream: $resolved")
-                    if (urlWorks(resolved)) return stream
-
-                }
-                // None worked
-                null
+                matchingStreams.firstOrNull { resolvePlayableUrl(it) != null }
             }
 
         }

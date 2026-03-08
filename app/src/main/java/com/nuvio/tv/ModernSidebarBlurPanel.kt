@@ -75,6 +75,7 @@ internal fun ModernSidebarBlurPanel(
     onDrawerItemClick: (String) -> Unit,
     activeProfileName: String,
     activeProfileColorHex: String,
+    activeProfileAvatarImageUrl: String?,
     showProfileSelector: Boolean,
     onSwitchProfile: () -> Unit
 ) {
@@ -189,6 +190,7 @@ internal fun ModernSidebarBlurPanel(
                 SidebarProfileItem(
                     profileName = activeProfileName,
                     profileColorHex = activeProfileColorHex,
+                    profileAvatarImageUrl = activeProfileAvatarImageUrl,
                     focusEnabled = keepSidebarFocusDuringCollapse,
                     labelAlpha = sidebarLabelAlpha,
                     onFocusChanged = { focused ->
@@ -306,6 +308,7 @@ private fun SidebarNavigationItem(
 private fun SidebarProfileItem(
     profileName: String,
     profileColorHex: String,
+    profileAvatarImageUrl: String?,
     focusEnabled: Boolean,
     labelAlpha: Float,
     onFocusChanged: (Boolean) -> Unit,
@@ -351,7 +354,8 @@ private fun SidebarProfileItem(
         ProfileAvatarCircle(
             name = profileName,
             colorHex = profileColorHex,
-            size = iconContainerSize
+            size = iconContainerSize,
+            avatarImageUrl = profileAvatarImageUrl
         )
         Spacer(modifier = Modifier.width(contentGap))
         Text(

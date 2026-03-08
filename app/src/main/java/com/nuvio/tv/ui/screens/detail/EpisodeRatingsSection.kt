@@ -129,7 +129,7 @@ fun EpisodeRatingsSection(
                     modifier = Modifier.padding(horizontal = 48.dp, vertical = 12.dp)
                 )
             }
-            !error.isNullOrBlank() -> {
+            error != null -> {
                 Text(
                     text = error,
                     style = MaterialTheme.typography.bodyMedium,

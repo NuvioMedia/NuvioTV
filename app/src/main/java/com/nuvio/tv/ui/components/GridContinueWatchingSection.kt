@@ -39,6 +39,8 @@ fun GridContinueWatchingSection(
     onDetailsClick: (ContinueWatchingItem) -> Unit = onItemClick,
     onRemoveItem: (ContinueWatchingItem) -> Unit,
     onStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
+    showManualPlayOption: Boolean = false,
+    onPlayManually: (ContinueWatchingItem) -> Unit = {},
     modifier: Modifier = Modifier,
     focusedItemIndex: Int = -1
 ) {
@@ -143,6 +145,11 @@ fun GridContinueWatchingSection(
             },
             onStartFromBeginning = {
                 onStartFromBeginning(menuItem)
+                optionsItem = null
+            },
+            showPlayManually = showManualPlayOption,
+            onPlayManually = {
+                onPlayManually(menuItem)
                 optionsItem = null
             }
         )

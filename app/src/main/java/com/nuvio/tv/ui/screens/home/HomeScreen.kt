@@ -72,9 +72,13 @@ fun HomeScreen(
         )
     },
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = onContinueWatchingClick,
+    onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit = onContinueWatchingClick,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit = { _, _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val effectiveAutoplayEnabled by viewModel.effectiveAutoplayEnabled.collectAsStateWithLifecycle(
+        initialValue = false
+    )
     val hasCatalogContent = uiState.catalogRows.any { it.items.isNotEmpty() }
     var hasEnteredCatalogContent by rememberSaveable { mutableStateOf(false) }
     var showHomeContentWithAnimation by rememberSaveable { mutableStateOf(false) }
@@ -187,6 +191,8 @@ fun HomeScreen(
                                 onNavigateToDetail = onNavigateToDetail,
                                 onContinueWatchingClick = onContinueWatchingClick,
                                 onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
+                                onContinueWatchingPlayManually = onContinueWatchingPlayManually,
+                                showContinueWatchingManualPlayOption = effectiveAutoplayEnabled,
                                 onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
                                 isCatalogItemWatched = { item ->
                                     uiState.movieWatchedStatus[homeItemStatusKey(item.id, item.apiType)] == true
@@ -203,6 +209,8 @@ fun HomeScreen(
                                 onNavigateToDetail = onNavigateToDetail,
                                 onContinueWatchingClick = onContinueWatchingClick,
                                 onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
+                                onContinueWatchingPlayManually = onContinueWatchingPlayManually,
+                                showContinueWatchingManualPlayOption = effectiveAutoplayEnabled,
                                 onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
                                 isCatalogItemWatched = { item ->
                                     uiState.movieWatchedStatus[homeItemStatusKey(item.id, item.apiType)] == true
@@ -218,6 +226,8 @@ fun HomeScreen(
                                 onNavigateToDetail = onNavigateToDetail,
                                 onContinueWatchingClick = onContinueWatchingClick,
                                 onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
+                                onContinueWatchingPlayManually = onContinueWatchingPlayManually,
+                                showContinueWatchingManualPlayOption = effectiveAutoplayEnabled,
                                 isCatalogItemWatched = { item ->
                                     uiState.movieWatchedStatus[homeItemStatusKey(item.id, item.apiType)] == true
                                 },
@@ -287,6 +297,8 @@ private fun ClassicHomeRoute(
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit,
+    onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit,
+    showContinueWatchingManualPlayOption: Boolean,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean,
     onCatalogItemLongPress: (MetaPreview, String) -> Unit
@@ -301,6 +313,8 @@ private fun ClassicHomeRoute(
         onNavigateToDetail = onNavigateToDetail,
         onContinueWatchingClick = onContinueWatchingClick,
         onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
+        onContinueWatchingPlayManually = onContinueWatchingPlayManually,
+        showContinueWatchingManualPlayOption = showContinueWatchingManualPlayOption,
         onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
         onRemoveContinueWatching = { contentId, season, episode, isNextUp ->
             viewModel.onEvent(HomeEvent.OnRemoveContinueWatching(contentId, season, episode, isNextUp))
@@ -327,6 +341,8 @@ private fun GridHomeRoute(
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit,
+    onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit,
+    showContinueWatchingManualPlayOption: Boolean,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean,
     onCatalogItemLongPress: (MetaPreview, String) -> Unit
@@ -339,6 +355,8 @@ private fun GridHomeRoute(
         onNavigateToDetail = onNavigateToDetail,
         onContinueWatchingClick = onContinueWatchingClick,
         onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
+        onContinueWatchingPlayManually = onContinueWatchingPlayManually,
+        showContinueWatchingManualPlayOption = showContinueWatchingManualPlayOption,
         onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
         onRemoveContinueWatching = { contentId, season, episode, isNextUp ->
             viewModel.onEvent(HomeEvent.OnRemoveContinueWatching(contentId, season, episode, isNextUp))
@@ -361,6 +379,8 @@ private fun ModernHomeRoute(
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit,
+    onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit,
+    showContinueWatchingManualPlayOption: Boolean,
     isCatalogItemWatched: (MetaPreview) -> Boolean,
     onCatalogItemLongPress: (MetaPreview, String) -> Unit
 ) {
@@ -393,6 +413,8 @@ private fun ModernHomeRoute(
         onNavigateToDetail = onNavigateToDetail,
         onContinueWatchingClick = onContinueWatchingClick,
         onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
+        onContinueWatchingPlayManually = onContinueWatchingPlayManually,
+        showContinueWatchingManualPlayOption = showContinueWatchingManualPlayOption,
         onRequestTrailerPreview = requestTrailerPreview,
         onLoadMoreCatalog = loadMoreCatalog,
         onRemoveContinueWatching = removeContinueWatching,

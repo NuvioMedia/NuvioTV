@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -38,6 +39,7 @@ import com.nuvio.tv.updater.UpdateViewModel
 
 @Composable
 fun AboutScreen(
+    onNavigateToSupportersContributors: () -> Unit = {},
     onBackPress: () -> Unit = {}
 ) {
     BackHandler { onBackPress() }
@@ -46,12 +48,15 @@ fun AboutScreen(
         title = stringResource(R.string.about_title),
         subtitle = stringResource(R.string.about_subtitle)
     ) {
-        AboutSettingsContent()
+        AboutSettingsContent(
+            onNavigateToSupportersContributors = onNavigateToSupportersContributors
+        )
     }
 }
 
 @Composable
 fun AboutSettingsContent(
+    onNavigateToSupportersContributors: () -> Unit = {},
     initialFocusRequester: FocusRequester? = null
 ) {
     val context = LocalContext.current
@@ -127,6 +132,13 @@ fun AboutSettingsContent(
                         )
                         context.startActivity(intent)
                     }
+                )
+
+                SettingsActionRow(
+                    title = stringResource(R.string.about_supporters_contributors),
+                    subtitle = stringResource(R.string.about_supporters_contributors_subtitle),
+                    trailingIcon = Icons.Default.ChevronRight,
+                    onClick = onNavigateToSupportersContributors
                 )
             }
         }

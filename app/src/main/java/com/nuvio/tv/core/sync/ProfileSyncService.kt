@@ -47,6 +47,7 @@ class ProfileSyncService @Inject constructor(
                             put("avatar_color_hex", profile.avatarColorHex)
                             put("uses_primary_addons", profile.usesPrimaryAddons)
                             put("uses_primary_plugins", profile.usesPrimaryPlugins)
+                            put("avatar_id", profile.avatarId)
                         }
                     }
                 })
@@ -78,7 +79,8 @@ class ProfileSyncService @Inject constructor(
                     name = entry.name,
                     avatarColorHex = entry.avatarColorHex,
                     usesPrimaryAddons = entry.usesPrimaryAddons,
-                    usesPrimaryPlugins = entry.usesPrimaryPlugins
+                    usesPrimaryPlugins = entry.usesPrimaryPlugins,
+                    avatarId = entry.avatarId
                 )
             }
 

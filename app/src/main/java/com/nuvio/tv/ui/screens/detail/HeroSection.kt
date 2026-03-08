@@ -79,6 +79,7 @@ fun HeroContentSection(
     nextEpisode: Video?,
     nextToWatch: NextToWatch?,
     onPlayClick: () -> Unit,
+    onPlayLongPress: (() -> Unit)? = null,
     isInLibrary: Boolean,
     onToggleLibrary: () -> Unit,
     onLibraryLongPress: () -> Unit,
@@ -226,6 +227,7 @@ fun HeroContentSection(
                                 else -> stringResource(R.string.hero_play)
                             },
                             onClick = onPlayClick,
+                            onLongPress = onPlayLongPress,
                             focusRequester = playButtonFocusRequester,
                             restoreFocusToken = restorePlayFocusToken,
                             onFocusRestored = {
@@ -323,10 +325,13 @@ fun HeroContentSection(
 private fun PlayButton(
     text: String,
     onClick: () -> Unit,
+    onLongPress: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
     restoreFocusToken: Int = 0,
     onFocusRestored: () -> Unit = {}
 ) {
+    var longPressTriggered by remember { mutableStateOf(false) }
+
     LaunchedEffect(restoreFocusToken) {
         if (restoreFocusToken > 0 && focusRequester != null) {
             focusRequester.requestFocusAfterFrames()
@@ -339,13 +344,50 @@ private fun PlayButton(
     )
 
     Button(
-        onClick = onClick,
+        onClick = {
+            if (longPressTriggered) {
+                longPressTriggered = false
+            } else {
+                onClick()
+            }
+        },
         modifier = Modifier
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged {
                 if (it.isFocused) {
                     onFocusRestored()
                 }
+            }
+            .onPreviewKeyEvent { event ->
+                val native = event.nativeKeyEvent
+                if (onLongPress != null && native.action == AndroidKeyEvent.ACTION_DOWN) {
+                    if (native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
+                        longPressTriggered = true
+                        onLongPress()
+                        return@onPreviewKeyEvent true
+                    }
+
+                    val isSelectKey = native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_CENTER ||
+                        native.keyCode == AndroidKeyEvent.KEYCODE_ENTER ||
+                        native.keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER
+                    if ((native.isLongPress || native.repeatCount > 0) && isSelectKey) {
+                        longPressTriggered = true
+                        onLongPress()
+                        return@onPreviewKeyEvent true
+                    }
+                }
+
+                if (native.action == AndroidKeyEvent.ACTION_UP && longPressTriggered) {
+                    val isSelectKey = native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_CENTER ||
+                        native.keyCode == AndroidKeyEvent.KEYCODE_ENTER ||
+                        native.keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER ||
+                        native.keyCode == AndroidKeyEvent.KEYCODE_MENU
+                    if (isSelectKey) {
+                        longPressTriggered = false
+                        return@onPreviewKeyEvent true
+                    }
+                }
+                false
             }
             .focusProperties { up = FocusRequester.Cancel },
         colors = ButtonDefaults.colors(

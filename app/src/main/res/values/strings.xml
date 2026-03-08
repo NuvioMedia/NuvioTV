@@ -57,6 +57,7 @@
     <string name="episodes_mark_season_unwatched">Mark season as unwatched</string>
     <string name="episodes_mark_previous_watched">Mark previous in this season as watched</string>
     <string name="episodes_play">Play</string>
+    <string name="play_manually">Play manually</string>
     <string name="episodes_season_actions">Season actions</string>
 
     <!-- MetaDetailsViewModel -->
@@ -119,6 +120,8 @@
     <string name="about_check_updates_subtitle">Download latest release</string>
     <string name="about_privacy_policy">Privacy Policy</string>
     <string name="about_privacy_policy_subtitle">View our privacy policy</string>
+    <string name="about_supporters_contributors">Supporters &amp; Contributors</string>
+    <string name="about_supporters_contributors_subtitle">Open recognition and project credits</string>
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Account</string>
@@ -156,6 +159,33 @@
     <string name="cd_increase">Increase</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_none">None</string>
+    <string name="action_close">Close</string>
+
+    <!-- SupportersContributorsScreen -->
+    <string name="supporters_contributors_title">Supporters &amp; Contributors</string>
+    <string name="supporters_contributors_subtitle">The people backing Nuvio and the contributors building it across TV and mobile.</string>
+    <string name="supporters_contributors_supporters_copy">Supporters and donators help keep the project moving, fund infrastructure, and make room for ambitious features.</string>
+    <string name="supporters_contributors_donate_copy">Nuvio will stay free and open source. If you want to support the project, you can help cover the time and infrastructure behind it.</string>
+    <string name="supporters_contributors_donate_button">Donate to Nuvio</string>
+    <string name="supporters_contributors_qr_title">Scan to donate</string>
+    <string name="supporters_contributors_qr_subtitle">Open the link on your phone and support Nuvio through Ko-fi.</string>
+    <string name="supporters_contributors_qr_hint">Point your camera at the QR code or use the button below.</string>
+    <string name="supporters_contributors_back_button">Back to details</string>
+    <string name="supporters_tab">Supporters</string>
+    <string name="contributors_tab">Contributors</string>
+    <string name="supporters_loading">Loading supporters…</string>
+    <string name="supporters_empty">No supporters found yet.</string>
+    <string name="supporters_error_title">Couldn’t load supporters</string>
+    <string name="supporters_no_message">No message shared.</string>
+    <string name="supporters_open_donations">Open donations page</string>
+    <string name="contributors_loading">Loading GitHub contributors…</string>
+    <string name="contributors_empty">No contributors found yet.</string>
+    <string name="contributors_error_title">Couldn’t load contributors</string>
+    <string name="contributors_total_contributions">%1$d total contributions</string>
+    <string name="contributors_open_github">Open GitHub Profile</string>
+    <string name="contributors_show_kofi_qr">Show Ko-fi QR</string>
+    <string name="contributors_hide_kofi_qr">Hide Ko-fi QR</string>
+    <string name="contributors_profile_unavailable">GitHub profile link unavailable.</string>
 
     <!-- PlaybackSettingsSections -->
     <string name="playback_section_general">General</string>
@@ -519,6 +549,10 @@
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profiles</string>
     <string name="profile_subtitle">Manage user profiles for this account.</string>
+    <string name="profile_manage_button">Manage Profiles</string>
+    <string name="profile_manage_title">Manage Profiles</string>
+    <string name="profile_manage_subtitle">Select a profile to edit, switch, or create a new one</string>
+    <string name="profile_manage_hint">Select a profile to manage</string>
     <string name="profile_primary_label">Primary</string>
     <string name="profile_shares_primary">Shares primary\'s %1$s</string>
     <string name="profile_edit_label">Edit</string>
@@ -535,6 +569,18 @@
     <string name="profile_delete">Delete</string>
     <string name="profile_addons">addons</string>
     <string name="profile_plugins">plugins</string>
+    <string name="profile_choose_avatar">Choose Avatar</string>
+    <string name="profile_avatar_none_selected">No avatar selected</string>
+    <string name="profile_avatar_focus_hint">Focus an avatar to view its name</string>
+    <string name="profile_avatar_category_all">All</string>
+    <string name="profile_avatar_category_anime">Anime</string>
+    <string name="profile_avatar_category_animation">Animation</string>
+    <string name="profile_avatar_category_movie">Movie</string>
+    <string name="profile_avatar_category_tv">TV</string>
+    <string name="profile_avatar_category_gaming">Gaming</string>
+    <string name="profile_add_new">Add Profile</string>
+    <string name="profile_cancel">Cancel</string>
+    <string name="profile_save">Save</string>
 
 
     <!-- AddonManagerScreen -->
@@ -708,6 +754,11 @@
     <string name="library_filter_list">List</string>
     <string name="library_filter_type">Type</string>
     <string name="library_filter_sort">Sort</string>
+    <string name="library_sort_trakt_order">Trakt Order</string>
+    <string name="library_sort_added_desc">Added ↓</string>
+    <string name="library_sort_added_asc">Added ↑</string>
+    <string name="library_sort_title_asc">Title A-Z</string>
+    <string name="library_sort_title_desc">Title Z-A</string>
     <string name="library_manage_lists">Manage Lists</string>
     <string name="library_manage_trakt_lists">Manage Trakt Lists</string>
     <string name="library_no_lists">No personal lists yet.</string>
@@ -811,9 +862,14 @@
     <!-- ProfileSelectionScreen -->
     <string name="profile_selection_title">Who\'s watching?</string>
     <string name="profile_selection_subtitle">Select a profile to continue</string>
-    <string name="profile_selection_hint">Use D-pad to choose a profile</string>
+    <string name="profile_selection_hint">Hold to manage profile</string>
     <string name="profile_selection_empty">No profiles found</string>
     <string name="profile_selection_primary_badge">PRIMARY</string>
+    <string name="profile_selection_options_title">Profile Options</string>
+    <string name="profile_delete_confirm_title">Delete Profile?</string>
+    <string name="profile_delete_confirm_subtitle">This will permanently delete this profile and all its data including library, watch history, and addon settings. This cannot be undone.</string>
+    <string name="profile_delete_btn">Delete Profile</string>
+    <string name="profile_saving">Saving\u2026</string>
 
     <!-- CastDetailScreen -->
     <string name="cast_detail_error">Something went wrong</string>
@@ -846,6 +902,7 @@
     <!-- EpisodeRatingsSection -->
     <string name="ratings_loading">Loading episode ratings...</string>
     <string name="ratings_unavailable">Episode ratings are unavailable.</string>
+    <string name="ratings_load_error">Unable to load episode ratings.</string>
     <string name="ratings_season_summary">Season %1$d - %2$d episodes</string>
 
     <!-- SearchDiscoverSection -->

@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
@@ -180,10 +181,10 @@ class StreamScreenViewModel @Inject constructor(
                 directAutoPlayModeInitializedForSession = true
             }
 
-            val rawRegex = playerSettings.streamAutoPlayRegex.orEmpty().trim()
-            val isEffectivelyEmptyRegex = rawRegex.isEmpty() || !rawRegex.any { it.isLetterOrDigit() }
-
-            if (playerSettings.streamAutoPlayMode == StreamAutoPlayMode.REGEX_MATCH && isEffectivelyEmptyRegex) {
+            if (
+                playerSettings.streamAutoPlayMode == StreamAutoPlayMode.REGEX_MATCH &&
+                !StreamAutoPlayPolicy.isRegexSelectionConfigured(playerSettings.streamAutoPlayRegex)
+            ) {
                 directAutoPlayFlowEnabledForSession = false
                 autoPlayHandledForSession = true
             }
