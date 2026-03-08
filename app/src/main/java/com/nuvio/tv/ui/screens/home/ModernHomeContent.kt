@@ -95,6 +95,7 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.ContinueWatchingCard
 import com.nuvio.tv.ui.components.ContinueWatchingOptionsDialog
 import com.nuvio.tv.ui.components.MonochromePosterPlaceholder
+import com.nuvio.tv.ui.components.SurpriseMeButton
 import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.LocalSidebarExpanded
 import com.nuvio.tv.ui.theme.NuvioColors
@@ -113,15 +114,15 @@ fun ModernHomeContent(
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
-    onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit = {},
-    showContinueWatchingManualPlayOption: Boolean = false,
     onRequestTrailerPreview: (String, String, String?, String) -> Unit,
     onLoadMoreCatalog: (String, String, String) -> Unit,
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean = { false },
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     onItemFocus: (MetaPreview) -> Unit = {},
-    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
+    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit,
+    onSurpriseMe: () -> Unit = {},
+    isSurpriseMeLoading: Boolean = false
 ) {
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val isSidebarExpanded = LocalSidebarExpanded.current
@@ -153,7 +154,6 @@ fun ModernHomeContent(
     val strTypeMovie = stringResource(R.string.type_movie)
     val strTypeSeries = stringResource(R.string.type_series)
     val rowBuildCache = remember { ModernCarouselRowBuildCache() }
-    val context = LocalContext.current
     val carouselRows = remember(
         uiState.continueWatchingItems,
         visibleCatalogRows,
@@ -184,8 +184,7 @@ fun ModernHomeContent(
                                 item = item,
                                 useLandscapePosters = useLandscapePosters,
                                 airsDateTemplate = strAirsDate,
-                                upcomingLabel = strUpcoming,
-                                context = context
+                                upcomingLabel = strUpcoming
                             )
                         }
                     )
@@ -707,6 +706,14 @@ fun ModernHomeContent(
                 contentPadding = PaddingValues(bottom = rowsViewportHeight),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
+                item(key = "surprise_me", contentType = "surprise_me") {
+                    SurpriseMeButton(
+                        onClick = onSurpriseMe,
+                        isLoading = isSurpriseMeLoading,
+                        modifier = Modifier.padding(horizontal = 48.dp)
+                    )
+                }
+
                 itemsIndexed(
                     items = carouselRows,
                     key = { _, row -> row.key },
@@ -814,11 +821,6 @@ fun ModernHomeContent(
             },
             onStartFromBeginning = {
                 onContinueWatchingStartFromBeginning(selectedOptionsItem)
-                optionsItem = null
-            },
-            showPlayManually = showContinueWatchingManualPlayOption,
-            onPlayManually = {
-                onContinueWatchingPlayManually(selectedOptionsItem)
                 optionsItem = null
             }
         )

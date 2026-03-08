@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +35,13 @@ fun DiscoverScreen(
     onNavigateToDetail: (String, String, String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.surpriseMeNavigation.collect { (itemId, itemType, addonBaseUrl) ->
+            onNavigateToDetail(itemId, itemType, addonBaseUrl)
+        }
+    }
+
     val lifecycleOwner = LocalLifecycleOwner.current
     val discoverFirstItemFocusRequester = remember { FocusRequester() }
     var discoverFocusedItemIndex by rememberSaveable { mutableStateOf(0) }
@@ -92,6 +100,8 @@ fun DiscoverScreen(
                 onSelectCatalog = { viewModel.onEvent(SearchEvent.SelectDiscoverCatalog(it)) },
                 onSelectGenre = { viewModel.onEvent(SearchEvent.SelectDiscoverGenre(it)) },
                 onLoadMore = { viewModel.onEvent(SearchEvent.LoadNextDiscoverResults) },
+                onSurpriseMe = { viewModel.onEvent(SearchEvent.SurpriseMe) },
+                isSurpriseMeLoading = uiState.isSurpriseMeLoading,
                 modifier = Modifier.padding(top = 16.dp)
             )
         }
