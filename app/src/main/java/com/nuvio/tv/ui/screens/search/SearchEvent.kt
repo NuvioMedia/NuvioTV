@@ -16,4 +16,5 @@ sealed interface SearchEvent {
     data object LoadNextDiscoverResults : SearchEvent
 
     data object Retry : SearchEvent
+    data object SurpriseMe : SearchEvent
 }

@@ -52,7 +52,8 @@ data class HomeUiState(
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true,
     val blurUnwatchedEpisodes: Boolean = false,
-    val startupAuthNotice: StartupAuthNotice? = null
+    val startupAuthNotice: StartupAuthNotice? = null,
+    val isSurpriseMeLoading: Boolean = false
 )
 
 @Immutable
@@ -137,6 +138,7 @@ sealed class HomeEvent {
         val isNextUp: Boolean = false
     ) : HomeEvent()
     data object OnRetry : HomeEvent()
+    data object OnSurpriseMe : HomeEvent()
 }
 
 fun homeItemStatusKey(itemId: String, itemType: String): String {
