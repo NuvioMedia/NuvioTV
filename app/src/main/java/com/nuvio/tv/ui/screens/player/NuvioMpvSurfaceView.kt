@@ -319,13 +319,24 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
 
     override fun initOptions() {
         mpv.setOptionString("profile", "fast")
-        setVo("gpu")
+        // Prefer modern renderer when available, fallback to legacy gpu.
+        setVo("gpu-next,gpu")
         mpv.setOptionString("gpu-context", "android")
         mpv.setOptionString("opengl-es", "yes")
         // Keep style controls consistent with Exo by overriding embedded ASS styling.
         mpv.setOptionString("sub-ass-override", "force")
-        mpv.setOptionString("hwdec", "mediacodec,mediacodec-copy")
-        mpv.setOptionString("hwdec-codecs", "h264,hevc,mpeg4,mpeg2video,vp8,vp9,av1")
+        // Newer mpv guidance is to start with auto hwdec and expand codec allowlist as needed.
+        mpv.setOptionString("hwdec", "auto")
+        mpv.setOptionString("hwdec-codecs", "all")
+
+        // HDR defaults: keep automatic behavior and only influence tone mapping when needed.
+        setOptionalOption("target-colorspace-hint", "yes")
+        setOptionalOption("target-trc", "auto")
+        setOptionalOption("target-prim", "auto")
+        setOptionalOption("target-peak", "auto")
+        setOptionalOption("tone-mapping", "auto")
+        setOptionalOption("gamut-mapping-mode", "auto")
+        setOptionalOption("hdr-compute-peak", "auto")
         mpv.setOptionString("ao", "audiotrack,opensles")
         mpv.setOptionString("audio-set-media-role", "yes")
         mpv.setOptionString("tls-verify", "yes")
@@ -362,6 +373,11 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
 
     private fun toMpvColor(color: Int): String {
         return String.format(Locale.US, "#%08X", color)
+    }
+
+    private fun setOptionalOption(key: String, value: String) {
+        runCatching { mpv.setOptionString(key, value) }
+            .onFailure { Log.d(TAG, "Skipping unsupported mpv option '$key': ${it.message}") }
     }
 
     companion object {
