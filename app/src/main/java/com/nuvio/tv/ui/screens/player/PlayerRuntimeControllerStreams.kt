@@ -10,11 +10,13 @@ import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.components.SourceChipItem
 import com.nuvio.tv.ui.components.SourceChipStatus
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 internal fun PlayerRuntimeController.showEpisodesPanel() {
     _uiState.update {
@@ -325,7 +327,10 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
                     frameRateMatchingMode = playerSettings.frameRateMatchingMode,
                     resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
                 )
-                player.setMediaSource(mediaSourceFactory.createMediaSource(url, newHeaders))
+                val mediaSource = withContext(Dispatchers.IO) {
+                    mediaSourceFactory.createMediaSource(url, newHeaders)
+                }
+                player.setMediaSource(mediaSource)
                 player.playWhenReady = true
                 player.prepare()
             } catch (e: Exception) {
@@ -649,7 +654,10 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
                     frameRateMatchingMode = playerSettings.frameRateMatchingMode,
                     resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
                 )
-                player.setMediaSource(mediaSourceFactory.createMediaSource(url, newHeaders))
+                val mediaSource = withContext(Dispatchers.IO) {
+                    mediaSourceFactory.createMediaSource(url, newHeaders)
+                }
+                player.setMediaSource(mediaSource)
                 player.playWhenReady = true
                 player.prepare()
             } catch (e: Exception) {
