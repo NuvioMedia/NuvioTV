@@ -325,18 +325,22 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         mpv.setOptionString("opengl-es", "yes")
         // Keep style controls consistent with Exo by overriding embedded ASS styling.
         mpv.setOptionString("sub-ass-override", "force")
-        // Newer mpv guidance is to start with auto hwdec and expand codec allowlist as needed.
-        mpv.setOptionString("hwdec", "auto")
+        // Keep default HW decode in compatibility-safe automatic mode.
+        mpv.setOptionString("hwdec", HWDEC_AUTO)
         mpv.setOptionString("hwdec-codecs", "all")
+        setOptionalOption("gpu-hwdec-interop", "auto")
+        setOptionalOption("hwdec-extra-frames", "16")
+        setOptionalOption("hwdec-software-fallback", "yes")
 
-        // HDR defaults: keep automatic behavior and only influence tone mapping when needed.
+        // HDR/DV defaults (best effort): keep automatic behavior when display/content metadata is available.
         setOptionalOption("target-colorspace-hint", "yes")
         setOptionalOption("target-trc", "auto")
         setOptionalOption("target-prim", "auto")
         setOptionalOption("target-peak", "auto")
         setOptionalOption("tone-mapping", "auto")
         setOptionalOption("gamut-mapping-mode", "auto")
-        setOptionalOption("hdr-compute-peak", "auto")
+        setOptionalOption("hdr-compute-peak", "yes")
+        setOptionalOption("dolbyvision", "auto")
         mpv.setOptionString("ao", "audiotrack,opensles")
         mpv.setOptionString("audio-set-media-role", "yes")
         mpv.setOptionString("tls-verify", "yes")
@@ -376,12 +380,19 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     }
 
     private fun setOptionalOption(key: String, value: String) {
-        runCatching { mpv.setOptionString(key, value) }
-            .onFailure { Log.d(TAG, "Skipping unsupported mpv option '$key': ${it.message}") }
+        runCatching {
+            val result = mpv.setOptionString(key, value)
+            if (result < 0) {
+                Log.d(TAG, "Skipping unsupported mpv option '$key=$value' (code=$result)")
+            }
+        }.onFailure {
+            Log.d(TAG, "Skipping unsupported mpv option '$key=$value': ${it.message}")
+        }
     }
 
     companion object {
         private const val TAG = "NuvioMpvSurfaceView"
+        private const val HWDEC_AUTO = "auto-safe"
         private const val MPV_SUBTITLE_VERTICAL_OFFSET_BASELINE_SHIFT = 24
     }
 }
