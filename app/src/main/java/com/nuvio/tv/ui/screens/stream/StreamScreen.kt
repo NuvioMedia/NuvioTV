@@ -65,6 +65,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
+import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -503,7 +504,7 @@ private fun LeftContentSection(
                 if (episodeName != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = episodeName,
+                        text = episodeName.localizeEpisodeTitle(LocalContext.current),
                         style = MaterialTheme.typography.bodyLarge,
                         color = NuvioColors.TextPrimary,
                         maxLines = 2,

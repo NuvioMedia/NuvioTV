@@ -116,32 +116,43 @@ internal fun ModernHeroMediaLayer(
                 .drawWithCache {
                     val leftBlendSolidWidth = size.width * 0.018f
                     val horizontalGradientStartX = leftBlendSolidWidth
-                    val horizontalFadeEndX = horizontalGradientStartX + (size.width * 0.36f)
+                    val horizontalFadeEndX = horizontalGradientStartX + (size.width * 0.42f)
                     val horizontalGradient = Brush.horizontalGradient(
                         colorStops = arrayOf(
                             0.0f to bgColor,
-                            0.18f to bgColor.copy(alpha = 0.82f),
-                            0.40f to bgColor.copy(alpha = 0.48f),
-                            0.70f to bgColor.copy(alpha = 0.14f),
+                            0.22f to bgColor.copy(alpha = 0.86f),
+                            0.46f to bgColor.copy(alpha = 0.56f),
+                            0.76f to bgColor.copy(alpha = 0.16f),
                             1.0f to Color.Transparent
                         ),
                         startX = horizontalGradientStartX,
                         endX = horizontalFadeEndX
                     )
-                    val radialGradient = Brush.radialGradient(
+                    val topContourGradient = Brush.linearGradient(
                         colorStops = arrayOf(
-                            0.0f to bgColor.copy(alpha = 0.78f),
-                            0.55f to bgColor.copy(alpha = 0.52f),
-                            0.80f to bgColor.copy(alpha = 0.16f),
+                            0.0f to bgColor.copy(alpha = 0.28f),
+                            0.38f to bgColor.copy(alpha = 0.14f),
+                            0.72f to bgColor.copy(alpha = 0.05f),
                             1.0f to Color.Transparent
                         ),
-                        center = Offset(0f, size.height / 2f),
-                        radius = size.height
+                        start = Offset(0f, 0f),
+                        end = Offset(size.width * 0.24f, size.height * 0.40f)
+                    )
+                    val bottomContourGradient = Brush.linearGradient(
+                        colorStops = arrayOf(
+                            0.0f to bgColor.copy(alpha = 0.24f),
+                            0.42f to bgColor.copy(alpha = 0.12f),
+                            0.74f to bgColor.copy(alpha = 0.05f),
+                            1.0f to Color.Transparent
+                        ),
+                        start = Offset(0f, size.height),
+                        end = Offset(size.width * 0.24f, size.height * 0.61f)
                     )
                     val verticalGradient = Brush.verticalGradient(
-                        0.78f to Color.Transparent,
-                        0.90f to bgColor.copy(alpha = 0.72f),
-                        0.96f to bgColor.copy(alpha = 0.98f),
+                        0.89f to Color.Transparent,
+                        0.93f to bgColor.copy(alpha = 0.14f),
+                        0.965f to bgColor.copy(alpha = 0.52f),
+                        0.99f to bgColor.copy(alpha = 0.92f),
                         1.0f to bgColor
                     )
                     onDrawBehind {
@@ -150,7 +161,8 @@ internal fun ModernHeroMediaLayer(
                             size = Size(leftBlendSolidWidth, size.height)
                         )
                         drawRect(brush = horizontalGradient, size = size)
-                        drawRect(brush = radialGradient, size = size)
+                        drawRect(brush = topContourGradient, size = size)
+                        drawRect(brush = bottomContourGradient, size = size)
                         drawRect(brush = verticalGradient, size = size)
                     }
                 }

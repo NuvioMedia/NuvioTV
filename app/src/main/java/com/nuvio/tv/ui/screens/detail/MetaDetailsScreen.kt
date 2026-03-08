@@ -149,14 +149,7 @@ private fun resolveDetailReturnEpisodeFocusTarget(
     }
     if (matchedIndex < 0) return null
 
-    val isCompleted = episodeProgressMap[requestedSeason to requestedEpisode]?.isCompleted() == true ||
-        watchedEpisodes.contains(requestedSeason to requestedEpisode)
-
-    return if (isCompleted) {
-        orderedEpisodes.getOrNull(matchedIndex + 1) ?: orderedEpisodes[matchedIndex]
-    } else {
-        orderedEpisodes[matchedIndex]
-    }
+    return orderedEpisodes[matchedIndex]
 }
 
 private const val USER_INTERACTION_DISPATCH_DEBOUNCE_MS = 120L

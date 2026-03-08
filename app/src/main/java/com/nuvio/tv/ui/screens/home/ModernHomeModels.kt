@@ -15,7 +15,7 @@ import com.nuvio.tv.ui.components.formatRemainingTime
 
 internal val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
 internal const val MODERN_HERO_TEXT_WIDTH_FRACTION = 0.42f
-internal const val MODERN_HERO_BACKDROP_HEIGHT_FRACTION = 0.62f
+internal const val MODERN_HERO_MEDIA_WIDTH_FRACTION = 0.72f
 internal const val MODERN_TRAILER_OVERSCAN_ZOOM = 1.35f
 internal const val MODERN_HERO_FOCUS_DEBOUNCE_MS = 90L
 internal val MODERN_ROW_HEADER_FOCUS_INSET = 40.dp
@@ -178,7 +178,7 @@ internal fun buildContinueWatchingItem(
             HeroPreview(
                 title = item.progress.name,
                 logo = item.progress.logo,
-                description = item.episodeDescription ?: item.progress.episodeTitle,
+                description = item.episodeDescription ?: item.progress.episodeTitle?.localizeEpisodeTitle(context),
                 contentTypeText = episodeLabel,
                 isSeries = isSeries,
                 yearText = extractYear(item.releaseInfo),
@@ -202,7 +202,7 @@ internal fun buildContinueWatchingItem(
                 title = item.info.name,
                 logo = item.info.logo,
                 description = item.info.episodeDescription
-                    ?: item.info.episodeTitle
+                    ?: item.info.episodeTitle?.localizeEpisodeTitle(context)
                     ?: item.info.airDateLabel?.let { airsDateTemplate.format(it) },
                 contentTypeText = episodeLabel,
                 isSeries = true,

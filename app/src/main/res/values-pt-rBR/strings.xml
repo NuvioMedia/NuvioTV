@@ -234,7 +234,7 @@
     <string name="sub_outline_color">Cor do contorno</string>
     <string name="sub_advanced_section">Renderização Avançada</string>
     <string name="sub_libass">Usar libass para ASS/SSA</string>
-    <string name="sub_libass_sub">Temporariamente desativado para manutenção</string>
+    <string name="sub_libass_sub">Experimental: renderizacao avancada ASS/SSA (estilos, posicionamento e animacoes)</string>
     <string name="sub_libass_mode">Modo de renderização Libass</string>
     <string name="sub_mode_overlay_gl">Sobreposição OpenGL (Recomendado)</string>
     <string name="sub_mode_overlay_gl_sub">Melhor com HDR. Renderiza legendas em processo separado.</string>

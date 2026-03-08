@@ -316,6 +316,13 @@ internal fun PlayerRuntimeController.adjustSubtitleDelay(deltaMs: Int) {
             showSubtitleDelayOverlay = true
         )
     }
+
+    _exoPlayer?.let { player ->
+        player.trackSelectionParameters = player.trackSelectionParameters
+            .buildUpon()
+            .build()
+    }
+    
     scheduleHideSubtitleDelayOverlay()
 }
 

@@ -10,6 +10,7 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ExtractorsFactory
+import androidx.media3.extractor.text.SubtitleParser
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.exoplayer.dash.DashMediaSource
@@ -31,6 +32,16 @@ internal class PlayerMediaSourceFactory(
     private val context: Context
 ) {
     private var okHttpClient: OkHttpClient? = null
+    private var customExtractorsFactory: ExtractorsFactory? = null
+    private var customSubtitleParserFactory: SubtitleParser.Factory? = null
+
+    fun configureSubtitleParsing(
+        extractorsFactory: ExtractorsFactory?,
+        subtitleParserFactory: SubtitleParser.Factory?
+    ) {
+        customExtractorsFactory = extractorsFactory
+        customSubtitleParserFactory = subtitleParserFactory
+    }
 
     private data class RemoteBlurayResolution(
         val playlistName: String,
@@ -57,10 +68,13 @@ internal class PlayerMediaSourceFactory(
             )
         }
         val baseDataSourceFactory = DefaultDataSource.Factory(context, okHttpFactory)
-        val defaultFactory = DefaultMediaSourceFactory(
-            baseDataSourceFactory,
-            createDefaultExtractorsFactory()
-        )
+        val extractorsFactory = customExtractorsFactory ?: createDefaultExtractorsFactory()
+        val defaultFactory = DefaultMediaSourceFactory(baseDataSourceFactory, extractorsFactory).apply {
+            customSubtitleParserFactory?.let { parserFactory ->
+                setSubtitleParserFactory(parserFactory)
+            }
+        }
+        val forceDefaultFactory = customExtractorsFactory != null || customSubtitleParserFactory != null
 
         val lowerPath = extractPath(url).lowercase(Locale.US)
 
@@ -127,10 +141,10 @@ internal class PlayerMediaSourceFactory(
         }
 
         return when {
-            isHls -> HlsMediaSource.Factory(okHttpFactory)
+            isHls && !forceDefaultFactory -> HlsMediaSource.Factory(okHttpFactory)
                 .setAllowChunklessPreparation(true)
                 .createMediaSource(mediaItem)
-            isDash -> DashMediaSource.Factory(okHttpFactory)
+            isDash && !forceDefaultFactory -> DashMediaSource.Factory(okHttpFactory)
                 .createMediaSource(mediaItem)
             else -> defaultFactory.createMediaSource(mediaItem)
         }

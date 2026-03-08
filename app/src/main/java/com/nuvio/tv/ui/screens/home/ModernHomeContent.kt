@@ -617,6 +617,13 @@ fun ModernHomeContent(
         val rowsViewportHeightFraction = if (useLandscapePosters) 0.49f else 0.52f
         val rowsViewportHeight = maxHeight * rowsViewportHeightFraction
         val localDensity = LocalDensity.current
+        val rowTitleLineHeight = MaterialTheme.typography.titleMedium.lineHeight
+        val rowTitleHeight = with(localDensity) {
+            runCatching { rowTitleLineHeight.toDp() }
+                .getOrDefault(24.dp)
+        }
+        val heroBackdropHeight = (maxHeight - rowsViewportHeight + rowTitleHeight + rowTitleBottom)
+            .coerceAtMost(maxHeight)
         val verticalRowBringIntoViewSpec = remember(localDensity, defaultBringIntoViewSpec) {
             val topInsetPx = with(localDensity) { MODERN_ROW_HEADER_FOCUS_INSET.toPx() }
             object : BringIntoViewSpec {
@@ -633,17 +640,17 @@ fun ModernHomeContent(
         }
         val bgColor = NuvioColors.Background
         val heroMediaWidthPx = remember(maxWidth, localDensity) {
-            with(localDensity) { (maxWidth * 0.75f).roundToPx() }
+            with(localDensity) { (maxWidth * MODERN_HERO_MEDIA_WIDTH_FRACTION).roundToPx() }
         }
-        val heroMediaHeightPx = remember(maxHeight, localDensity) {
-            with(localDensity) { (maxHeight * MODERN_HERO_BACKDROP_HEIGHT_FRACTION).roundToPx() }
+        val heroMediaHeightPx = remember(heroBackdropHeight, localDensity) {
+            with(localDensity) { heroBackdropHeight.roundToPx() }
         }
 
         val heroMediaModifier = Modifier
             .align(Alignment.TopEnd)
             .offset(x = 56.dp)
-            .fillMaxWidth(0.75f)
-            .fillMaxHeight(MODERN_HERO_BACKDROP_HEIGHT_FRACTION)
+            .fillMaxWidth(MODERN_HERO_MEDIA_WIDTH_FRACTION)
+            .height(heroBackdropHeight)
 
         ModernHeroMediaLayer(
             heroBackdrop = heroBackdrop,

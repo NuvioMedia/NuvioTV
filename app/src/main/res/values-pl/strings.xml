@@ -859,6 +859,8 @@
     <!-- UpdatePromptDialog -->
     <string name="update_title">Aktualizacja aplikacji</string>
     <string name="update_downloading">Pobieranie aktualizacji</string>
+    <string name="update_download">Pobierz</string>
+    <string name="update_downloading_ellipsis">Pobieranie…</string>
     <string name="update_unknown_sources">Zezwól na instalację z nieznanych źródeł, aby kontynuować.</string>
     <!-- AccountScreen -->
     <string name="account_title">Konto</string>
