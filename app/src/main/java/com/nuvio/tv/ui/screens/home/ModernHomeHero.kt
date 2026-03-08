@@ -1,7 +1,11 @@
 package com.nuvio.tv.ui.screens.home
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -196,7 +200,7 @@ internal fun HeroTitleBlock(
         preview.logo?.let {
             ImageRequest.Builder(context)
                 .data(it)
-                .crossfade(false)
+                .crossfade(true)
                 .size(width = logoMaxWidthPx, height = logoHeightPx)
                 .build()
         }
@@ -226,6 +230,11 @@ internal fun HeroTitleBlock(
     ) {
         var logoLoadFailed by remember(preview.logo) { mutableStateOf(false) }
         val showLogo = !preview.logo.isNullOrBlank() && !logoLoadFailed
+        AnimatedContent(
+            targetState = if (showLogo) preview.logo else preview.title,
+            transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(150)) },
+            label = "heroTitleOrLogo"
+        ) { _ ->
         if (showLogo) {
             AsyncImage(
                 model = logoModel,
@@ -246,6 +255,7 @@ internal fun HeroTitleBlock(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
+        }
         }
 
         val secondaryMeta = remember(
@@ -420,13 +430,19 @@ internal fun HeroTitleBlock(
         }
 
         preview.description?.takeIf { it.isNotBlank() }?.let { description ->
+            AnimatedContent(
+                targetState = description,
+                transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(150)) },
+                label = "heroDescription"
+            ) { desc ->
             Text(
-                text = description,
+                text = desc,
                 style = scaledDescriptionStyle,
                 color = NuvioColors.TextPrimary,
                 maxLines = descriptionMaxLines,
                 overflow = TextOverflow.Ellipsis
             )
+            }
         }
     }
 }

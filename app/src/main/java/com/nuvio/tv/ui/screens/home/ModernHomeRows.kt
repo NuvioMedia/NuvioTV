@@ -541,7 +541,7 @@ private fun ModernCarouselCard(
         item.heroPreview.logo?.let {
             ImageRequest.Builder(context)
                 .data(it)
-                .crossfade(false)
+                .crossfade(true)
                 .size(width = maxLogoWidthPx, height = logoHeightPx)
                 .build()
         }

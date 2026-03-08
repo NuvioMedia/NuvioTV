@@ -346,6 +346,11 @@ private fun HomeViewModel.updateCatalogItemWithTmdb(itemId: String, enrichment: 
                 description = enrichment.description ?: merged.description
             )
         }
+        if (currentTmdbSettings.useArtwork) {
+            merged = merged.copy(
+                logo = enrichment.logo ?: merged.logo
+            )
+        }
         return merged
     }
 
