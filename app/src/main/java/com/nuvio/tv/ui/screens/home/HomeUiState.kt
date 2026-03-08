@@ -46,7 +46,8 @@ data class HomeUiState(
     val posterListPickerPending: Boolean = false,
     val posterListPickerError: String? = null,
     val gridItems: List<GridItem> = emptyList(),
-    val hideUnreleasedContent: Boolean = false
+    val hideUnreleasedContent: Boolean = false,
+    val isSurpriseMeLoading: Boolean = false
 )
 
 @Immutable
@@ -125,6 +126,7 @@ sealed class HomeEvent {
         val isNextUp: Boolean = false
     ) : HomeEvent()
     data object OnRetry : HomeEvent()
+    data object OnSurpriseMe : HomeEvent()
 }
 
 fun homeItemStatusKey(itemId: String, itemType: String): String {

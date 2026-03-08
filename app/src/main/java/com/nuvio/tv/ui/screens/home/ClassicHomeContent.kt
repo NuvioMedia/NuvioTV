@@ -24,10 +24,12 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.nuvio.tv.domain.model.MetaPreview
+import androidx.compose.foundation.layout.padding
 import com.nuvio.tv.ui.components.CatalogRowSection
 import com.nuvio.tv.ui.components.ContinueWatchingSection
 import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.PosterCardStyle
+import com.nuvio.tv.ui.components.SurpriseMeButton
 
 /** Minimum interval between processed key repeat events to prevent HWUI overload. */
 private const val KEY_REPEAT_THROTTLE_MS = 80L
@@ -48,15 +50,15 @@ fun ClassicHomeContent(
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
-    onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit = {},
-    showContinueWatchingManualPlayOption: Boolean = false,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean = { false },
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     onRequestTrailerPreview: (MetaPreview) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {},
-    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
+    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit,
+    onSurpriseMe: () -> Unit = {},
+    isSurpriseMeLoading: Boolean = false
 ) {
 
     // Nested prefetch: when LazyColumn prefetches a row ahead of scrolling,
@@ -185,8 +187,6 @@ fun ClassicHomeContent(
                         onContinueWatchingClick(item)
                     },
                     onStartFromBeginning = onContinueWatchingStartFromBeginning,
-                    showManualPlayOption = showContinueWatchingManualPlayOption,
-                    onPlayManually = onContinueWatchingPlayManually,
                     onDetailsClick = { item ->
                         onNavigateToDetail(
                             when (item) {
@@ -227,6 +227,14 @@ fun ClassicHomeContent(
                     }
                 )
             }
+        }
+
+        item(key = "surprise_me", contentType = "surprise_me") {
+            SurpriseMeButton(
+                onClick = onSurpriseMe,
+                isLoading = isSurpriseMeLoading,
+                modifier = Modifier.padding(horizontal = 48.dp)
+            )
         }
 
         itemsIndexed(

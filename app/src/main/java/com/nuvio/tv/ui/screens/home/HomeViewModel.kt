@@ -3,11 +3,9 @@ package com.nuvio.tv.ui.screens.home
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
-import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchedItemsPreferences
@@ -22,15 +20,17 @@ import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.CatalogRepository
 import com.nuvio.tv.domain.repository.LibraryRepository
 import com.nuvio.tv.domain.repository.MetaRepository
+import com.nuvio.tv.domain.repository.RecommendationRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
@@ -46,13 +46,13 @@ class HomeViewModel @Inject constructor(
     internal val libraryRepository: LibraryRepository,
     internal val metaRepository: MetaRepository,
     internal val layoutPreferenceDataStore: LayoutPreferenceDataStore,
-    internal val playerSettingsDataStore: PlayerSettingsDataStore,
     internal val tmdbSettingsDataStore: TmdbSettingsDataStore,
     internal val traktSettingsDataStore: TraktSettingsDataStore,
     internal val tmdbService: TmdbService,
     internal val tmdbMetadataService: TmdbMetadataService,
     internal val trailerService: TrailerService,
-    internal val watchedItemsPreferences: WatchedItemsPreferences
+    internal val watchedItemsPreferences: WatchedItemsPreferences,
+    private val recommendationRepository: RecommendationRepository
 ) : ViewModel() {
     companion object {
         internal const val TAG = "HomeViewModel"
@@ -67,9 +67,6 @@ class HomeViewModel @Inject constructor(
 
     internal val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
-    val effectiveAutoplayEnabled = playerSettingsDataStore.playerSettings
-        .map(StreamAutoPlayPolicy::isEffectivelyEnabled)
-        .distinctUntilChanged()
     internal val _fullCatalogRows = MutableStateFlow<List<CatalogRow>>(emptyList())
     val fullCatalogRows: StateFlow<List<CatalogRow>> = _fullCatalogRows.asStateFlow()
 
@@ -81,6 +78,9 @@ class HomeViewModel @Inject constructor(
 
     internal val _loadingCatalogs = MutableStateFlow<Set<String>>(emptySet())
     val loadingCatalogs: StateFlow<Set<String>> = _loadingCatalogs.asStateFlow()
+
+    private val _surpriseMeNavigation = MutableSharedFlow<Triple<String, String, String>>()
+    val surpriseMeNavigation: SharedFlow<Triple<String, String, String>> = _surpriseMeNavigation.asSharedFlow()
 
     internal val catalogsMap = linkedMapOf<String, CatalogRow>()
     internal val catalogOrder = mutableListOf<String>()
@@ -117,8 +117,6 @@ class HomeViewModel @Inject constructor(
     internal var pendingExternalMetaPrefetchItemId: String? = null
     internal val posterLibraryObserverJobs = mutableMapOf<String, Job>()
     internal val movieWatchedObserverJobs = mutableMapOf<String, Job>()
-    internal var movieWatchedBatchJob: Job? = null
-    internal var lastMovieWatchedItemKeys: Set<String> = emptySet()
     internal var activePosterListPickerInput: LibraryEntryInput? = null
     @Volatile
     internal var externalMetaPrefetchEnabled: Boolean = false
@@ -181,6 +179,7 @@ class HomeViewModel @Inject constructor(
                 isNextUp = event.isNextUp
             )
             HomeEvent.OnRetry -> viewModelScope.launch { loadAllCatalogs(addonsCache, forceReload = true) }
+            HomeEvent.OnSurpriseMe -> surpriseMe()
         }
     }
 
@@ -302,9 +301,22 @@ class HomeViewModel @Inject constructor(
         )
     }
 
+    private fun surpriseMe() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSurpriseMeLoading = true) }
+            try {
+                val item = recommendationRepository.getSurpriseRecommendation()
+                if (item != null) {
+                    _surpriseMeNavigation.emit(Triple(item.id, item.apiType, ""))
+                }
+            } finally {
+                _uiState.update { it.copy(isSurpriseMeLoading = false) }
+            }
+        }
+    }
+
     override fun onCleared() {
         posterStatusReconcileJob?.cancel()
-        movieWatchedBatchJob?.cancel()
         cancelInFlightCatalogLoads()
         posterLibraryObserverJobs.values.forEach { it.cancel() }
         movieWatchedObserverJobs.values.forEach { it.cancel() }
