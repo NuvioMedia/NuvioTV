@@ -29,6 +29,7 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         firstFrameReady = pos > 0L || (playingNow && !cacheBuffering && playerDuration > 0L)
                         if (firstFrameReady) {
                             hasRenderedFirstFrame = true
+                            view.logHwdecDiagnostics(reason = "firstFrame", force = true)
                         }
                     }
                     if (playerDuration > lastKnownDuration) {
@@ -47,8 +48,21 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                             playbackEnded = ended
                         )
                     }
-                    updateMpvAvailableTracks()
-                    tryAutoSelectPreferredSubtitleFromAvailableTracks()
+                    val now = System.currentTimeMillis()
+                    if (now - lastMpvHwdecLogTimeMs >= 10_000L) {
+                        lastMpvHwdecLogTimeMs = now
+                        view.logHwdecDiagnostics(reason = "progress")
+                    }
+                    val shouldRefreshTracks =
+                        !hasScannedTextTracksOnce ||
+                            _uiState.value.showAudioDialog ||
+                            _uiState.value.showSubtitleDialog ||
+                            (now - lastMpvTrackRefreshTimeMs >= 3_000L)
+                    if (shouldRefreshTracks) {
+                        lastMpvTrackRefreshTimeMs = now
+                        updateMpvAvailableTracks()
+                        tryAutoSelectPreferredSubtitleFromAvailableTracks()
+                    }
                     updateActiveSkipInterval(pos)
                     evaluateNextEpisodeCardVisibility(
                         positionMs = pos,

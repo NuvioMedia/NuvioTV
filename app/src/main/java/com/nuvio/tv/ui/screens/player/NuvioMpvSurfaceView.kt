@@ -17,6 +17,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     private var initialized = false
     private var hasQueuedInitialMedia = false
     private var lastMediaRequestKey: String? = null
+    private var lastHwdecDiagnosticLine: String? = null
 
     fun ensureInitialized() {
         if (initialized) return
@@ -26,6 +27,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             cacheDir = context.cacheDir.path
         )
         initialized = true
+        logHwdecDiagnostics(reason = "init", force = true)
     }
 
     fun setMedia(url: String, headers: Map<String, String>) {
@@ -50,6 +52,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         }.onFailure {
             Log.w(TAG, "Failed to reset default A/V track selection: ${it.message}")
         }
+        logHwdecDiagnostics(reason = "setMedia", force = true)
     }
 
     fun setPaused(paused: Boolean) {
@@ -259,9 +262,6 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
                 ?.takeIf { it.isNotBlank() }
             val selectedByFlag = mpv.getPropertyBoolean("track-list/$i/selected") == true
             val external = mpv.getPropertyBoolean("track-list/$i/external") == true
-            val channelCount = mpv.getPropertyInt("track-list/$i/demux-channel-count")
-                ?: mpv.getPropertyInt("track-list/$i/audio-channels")
-                ?: mpv.getPropertyInt("track-list/$i/channels")
             val forced = (mpv.getPropertyBoolean("track-list/$i/forced") == true) || listOfNotNull(title, language).any {
                 it.contains("forced", ignoreCase = true)
             }
@@ -273,6 +273,9 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
 
             when (type) {
                 "audio" -> {
+                    val channelCount = mpv.getPropertyInt("track-list/$i/demux-channel-count")
+                        ?: mpv.getPropertyInt("track-list/$i/audio-channels")
+                        ?: mpv.getPropertyInt("track-list/$i/channels")
                     audioTracks += MpvTrack(
                         id = id,
                         type = type,
@@ -315,6 +318,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         initialized = false
         hasQueuedInitialMedia = false
         lastMediaRequestKey = null
+        lastHwdecDiagnosticLine = null
     }
 
     override fun initOptions() {
@@ -359,6 +363,33 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         // Progress is polled by PlayerRuntimeController.
     }
 
+    fun logHwdecDiagnostics(reason: String, force: Boolean = false) {
+        if (!initialized) return
+
+        val hwdec = getStringProperty("hwdec") ?: "?"
+        val hwdecCurrent = getStringProperty("hwdec-current") ?: "?"
+        val videoCodec = getStringProperty("video-codec")
+            ?: getStringProperty("current-tracks/video/codec")
+            ?: "?"
+        val pixFmt = getStringProperty("video-params/pixelformat") ?: "?"
+        val primaries = getStringProperty("video-params/primaries") ?: "?"
+        val trc = getStringProperty("video-params/gamma") ?: "?"
+        val toneMap = getStringProperty("tone-mapping") ?: "?"
+
+        val line =
+            "MPV_DEC[$reason] hwdec=$hwdec current=$hwdecCurrent codec=$videoCodec " +
+                "pixfmt=$pixFmt trc=$trc primaries=$primaries toneMap=$toneMap"
+
+        if (!force && line == lastHwdecDiagnosticLine) return
+        lastHwdecDiagnosticLine = line
+
+        if (hwdecCurrent.equals("no", ignoreCase = true)) {
+            Log.w(TAG, line)
+        } else {
+            Log.i(TAG, line)
+        }
+    }
+
     private fun applyHeaders(headers: Map<String, String>) {
         val raw = headers.entries
             .filter { it.key.isNotBlank() && it.value.isNotBlank() }
@@ -377,6 +408,13 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
 
     private fun toMpvColor(color: Int): String {
         return String.format(Locale.US, "#%08X", color)
+    }
+
+    private fun getStringProperty(name: String): String? {
+        return runCatching { mpv.getPropertyString(name) }
+            .getOrNull()
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
     }
 
     private fun setOptionalOption(key: String, value: String) {

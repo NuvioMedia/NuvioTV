@@ -188,6 +188,8 @@ class PlayerRuntimeController(
     internal var hasAppliedRememberedAudioSelection: Boolean = false
 
     internal var lastBufferLogTimeMs: Long = 0L
+    internal var lastMpvHwdecLogTimeMs: Long = 0L
+    internal var lastMpvTrackRefreshTimeMs: Long = 0L
     
     internal var loudnessEnhancer: LoudnessEnhancer? = null
     internal var trackSelector: DefaultTrackSelector? = null
