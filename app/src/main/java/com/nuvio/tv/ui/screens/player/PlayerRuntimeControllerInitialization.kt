@@ -27,9 +27,10 @@ import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.session.MediaSession
 import com.nuvio.tv.data.local.AddonSubtitleStartupMode
 import com.nuvio.tv.data.local.AudioLanguageOption
-import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.local.PlayerSettings
+import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
 import com.nuvio.tv.domain.model.Subtitle
 import io.github.peerless2012.ass.media.kt.buildWithAssSupport
 import kotlinx.coroutines.flow.first
@@ -48,7 +49,6 @@ internal data class StartupSubtitlePreparation(
 )
 
 @androidx.annotation.OptIn(UnstableApi::class)
-@OptIn(UnstableApi::class)
 internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<String, String>) {
     if (url.isEmpty()) {
         _uiState.update { it.copy(error = "No stream URL provided", showLoadingOverlay = false) }
@@ -57,8 +57,6 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
 
     scope.launch {
         try {
-            autoSubtitleSelected = false
-            hasScannedTextTracksOnce = false
             resetLoadingOverlayForNewStream()
             val playerSettings = playerSettingsDataStore.playerSettings.first()
             val preferredAudioLanguages = resolvePreferredAudioLanguages(
@@ -99,14 +97,18 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                 frameRateMatchingMode = playerSettings.frameRateMatchingMode,
                 resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
             )
-            val startupSubtitlePreparation = prepareStartupSubtitles(
-                mode = playerSettings.addonSubtitleStartupMode,
-                preferredLanguage = playerSettings.subtitleStyle.preferredLanguage,
-                secondaryLanguage = playerSettings.subtitleStyle.secondaryPreferredLanguage
-            )
+            val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings)
             val useLibass = false // Temporarily disabled for maintenance
             val libassRenderType = playerSettings.libassRenderType.toAssRenderType()
-            val loadControl = DefaultLoadControl.Builder().build()
+            val loadControl = DefaultLoadControl.Builder()
+                .setTargetBufferBytes(100 * 1024 * 1024)
+                .setBufferDurationsMs(
+                    DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+                    70_000,
+                    DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+                    DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
+                )
+                .build()
 
             
             trackSelector = DefaultTrackSelector(context).apply {
@@ -217,13 +219,8 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                 val preferred = playerSettings.subtitleStyle.preferredLanguage
                 val secondary = playerSettings.subtitleStyle.secondaryPreferredLanguage
                 applySubtitlePreferences(preferred, secondary)
-                attachedAddonSubtitleKeys = startupSubtitlePreparation.attachedSubtitles
-                    .distinctBy { addonSubtitleKey(it) }
-                    .map(::addonSubtitleKey)
-                    .toSet()
-                val startupSubtitleConfigurations = startupSubtitlePreparation.attachedSubtitles
-                    .distinctBy { "${it.id}|${it.url}" }
-                    .map { subtitle -> toSubtitleConfiguration(subtitle) }
+                applyStartupSubtitlePreparation(startupSubtitlePreparation)
+                val startupSubtitleConfigurations = buildStartupSubtitleConfigurations(startupSubtitlePreparation)
                 val initialMediaSource = withContext(Dispatchers.IO) {
                     mediaSourceFactory.createMediaSource(
                         url = url,
@@ -356,17 +353,8 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                     }
                 })
             }
-            when {
-                startupSubtitlePreparation.fetchCompleted -> {
-                    _uiState.update {
-                        it.copy(
-                            addonSubtitles = startupSubtitlePreparation.fetchedSubtitles,
-                            isLoadingAddonSubtitles = false,
-                            addonSubtitlesError = null
-                        )
-                    }
-                }
-                else -> fetchAddonSubtitles()
+            if (!startupSubtitlePreparation.fetchCompleted) {
+                fetchAddonSubtitles()
             }
         } catch (e: Exception) {
             _uiState.update {
@@ -501,6 +489,61 @@ internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(
         attachedSubtitles = attachedSubtitles,
         fetchCompleted = true
     )
+}
+
+internal fun PlayerRuntimeController.resetAddonSubtitleStateForNewStream() {
+    autoSubtitleSelected = false
+    hasScannedTextTracksOnce = false
+    pendingAddonSubtitleLanguage = null
+    pendingAddonSubtitleTrackId = null
+    pendingAudioSelectionAfterSubtitleRefresh = null
+    attachedAddonSubtitleKeys = emptySet()
+    _uiState.update {
+        it.copy(
+            addonSubtitles = emptyList(),
+            selectedAddonSubtitle = null,
+            selectedSubtitleTrackIndex = -1,
+            isLoadingAddonSubtitles = false,
+            addonSubtitlesError = null
+        )
+    }
+}
+
+internal suspend fun PlayerRuntimeController.prepareStreamStartSubtitles(
+    playerSettings: PlayerSettings
+): StartupSubtitlePreparation {
+    resetAddonSubtitleStateForNewStream()
+    return prepareStartupSubtitles(
+        mode = playerSettings.addonSubtitleStartupMode,
+        preferredLanguage = playerSettings.subtitleStyle.preferredLanguage,
+        secondaryLanguage = playerSettings.subtitleStyle.secondaryPreferredLanguage
+    )
+}
+
+internal fun PlayerRuntimeController.applyStartupSubtitlePreparation(
+    startupSubtitlePreparation: StartupSubtitlePreparation
+) {
+    attachedAddonSubtitleKeys = startupSubtitlePreparation.attachedSubtitles
+        .distinctBy { addonSubtitleKey(it) }
+        .map(::addonSubtitleKey)
+        .toSet()
+    if (!startupSubtitlePreparation.fetchCompleted) return
+
+    _uiState.update {
+        it.copy(
+            addonSubtitles = startupSubtitlePreparation.fetchedSubtitles,
+            isLoadingAddonSubtitles = false,
+            addonSubtitlesError = null
+        )
+    }
+}
+
+internal fun PlayerRuntimeController.buildStartupSubtitleConfigurations(
+    startupSubtitlePreparation: StartupSubtitlePreparation
+): List<androidx.media3.common.MediaItem.SubtitleConfiguration> {
+    return startupSubtitlePreparation.attachedSubtitles
+        .distinctBy { "${it.id}|${it.url}" }
+        .map(::toSubtitleConfiguration)
 }
 
 internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {

@@ -91,10 +91,7 @@ class LibraryRepositoryImpl @Inject constructor(
                             imdbRating = saved.imdbRating,
                             genres = saved.genres,
                             addonBaseUrl = saved.addonBaseUrl,
-                            listedAt = saved.addedAt,
-                            imdbId = saved.imdbId,
-                            tmdbId = saved.tmdbId,
-                            traktId = saved.traktId
+                            listedAt = saved.addedAt
                         )
                     }
                 }
@@ -215,14 +212,8 @@ class LibraryRepositoryImpl @Inject constructor(
     }
 
     private fun LibraryEntryInput.toSavedLibraryItem(): SavedLibraryItem {
-        val parsedIds = ParsedContentIds(
-            trakt = traktId,
-            imdb = imdbId,
-            tmdb = tmdbId
-        )
-        val canonicalItemId = normalizeContentId(toTraktIds(parsedIds), fallback = itemId)
         return SavedLibraryItem(
-            id = canonicalItemId,
+            id = itemId,
             type = itemType,
             name = title,
             poster = poster,
@@ -232,10 +223,7 @@ class LibraryRepositoryImpl @Inject constructor(
             releaseInfo = releaseInfo,
             imdbRating = imdbRating,
             genres = genres,
-            addonBaseUrl = addonBaseUrl,
-            imdbId = imdbId,
-            tmdbId = tmdbId,
-            traktId = traktId
+            addonBaseUrl = addonBaseUrl
         )
     }
 

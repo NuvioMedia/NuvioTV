@@ -14,7 +14,6 @@ import com.nuvio.tv.domain.model.MetaCompany
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PersonDetail
 import com.nuvio.tv.domain.model.PosterShape
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -108,6 +107,7 @@ class TmdbMetadataService @Inject constructor(
                 val description = details?.overview?.takeIf { it.isNotBlank() }
                 val releaseInfo = details?.releaseDate
                     ?: details?.firstAirDate
+                val status = details?.status?.trim()?.takeIf { it.isNotBlank() }
                 val rating = details?.voteAverage
                 val runtime = details?.runtime ?: details?.episodeRunTime?.firstOrNull()
                 val countries = details?.productionCountries
@@ -264,7 +264,7 @@ class TmdbMetadataService @Inject constructor(
                     genres.isEmpty() && description == null && backdrop == null && logo == null &&
                     poster == null && castMembers.isEmpty() && director.isEmpty() && writer.isEmpty() &&
                     releaseInfo == null && rating == null && runtime == null && countries.isNullOrEmpty() && language == null &&
-                    productionCompanies.isEmpty() && networks.isEmpty() && ageRating == null
+                    productionCompanies.isEmpty() && networks.isEmpty() && ageRating == null && status == null
                 ) {
                     return@withContext null
                 }
@@ -287,6 +287,7 @@ class TmdbMetadataService @Inject constructor(
                     productionCompanies = productionCompanies,
                     networks = networks,
                     ageRating = ageRating,
+                    status = status,
                     countries = countries,
                     language = language,
                     collectionId = collectionId,
@@ -294,8 +295,6 @@ class TmdbMetadataService @Inject constructor(
                 )
                 enrichmentCache[cacheKey] = enrichment
                 enrichment
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to fetch TMDB enrichment: ${e.message}", e)
                 null
@@ -322,8 +321,6 @@ class TmdbMetadataService @Inject constructor(
                     val epNum = ep.episodeNumber ?: return@forEach
                     result[season to epNum] = ep.toEnrichment()
                 }
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to fetch TMDB season $season: ${e.message}")
             }
@@ -798,6 +795,7 @@ data class TmdbEnrichment(
     val productionCompanies: List<MetaCompany>,
     val networks: List<MetaCompany>,
     val ageRating: String?,
+    val status: String?,
     val countries: List<String>?,
     val language: String?,
     val collectionId: Int?,

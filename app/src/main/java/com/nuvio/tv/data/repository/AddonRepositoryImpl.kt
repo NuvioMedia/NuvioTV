@@ -18,37 +18,31 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.sync.AddonSyncService
 import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-@OptIn(ExperimentalCoroutinesApi::class)
 class AddonRepositoryImpl @Inject constructor(
     private val api: AddonApi,
     private val preferences: AddonPreferences,
     private val addonSyncService: AddonSyncService,
     private val authManager: AuthManager,
-    @param:ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context
 ) : AddonRepository {
 
     companion object {
         private const val TAG = "AddonRepository"
         private const val MANIFEST_CACHE_PREFS = "addon_manifest_cache"
-        private const val MANIFEST_CACHE_KEY = "manifests"
+        private const val MANIFEST_CACHE_KEY = "manifests_v2"
+        private const val LEGACY_MANIFEST_CACHE_KEY = "manifests"
         private const val MANIFEST_SUFFIX = "/manifest.json"
     }
 
@@ -87,33 +81,6 @@ class AddonRepositoryImpl @Inject constructor(
 
     private val gson = Gson()
     private val manifestCache = mutableMapOf<String, Addon>()
-    private val installedAddonsFlow = preferences.installedAddonUrls
-        .flatMapLatest { urls ->
-            flow {
-                // Emit cached addons immediately so consumers can render before refresh completes.
-                val cached = urls.mapNotNull { manifestCache[canonicalizeUrl(it)] }
-                if (cached.isNotEmpty()) {
-                    emit(applyDisplayNames(cached))
-                }
-
-                val fresh = coroutineScope {
-                    urls.map { url ->
-                        async {
-                            when (val result = fetchAddon(url)) {
-                                is NetworkResult.Success -> result.data
-                                else -> manifestCache[canonicalizeUrl(url)]
-                            }
-                        }
-                    }.awaitAll().filterNotNull()
-                }
-
-                if (fresh != cached || cached.isEmpty()) {
-                    emit(applyDisplayNames(fresh))
-                }
-            }.flowOn(Dispatchers.IO)
-        }
-        .distinctUntilChanged()
-        .shareIn(syncScope, SharingStarted.Eagerly, replay = 1)
 
     init {
         loadManifestCacheFromDisk()
@@ -122,6 +89,9 @@ class AddonRepositoryImpl @Inject constructor(
     private fun loadManifestCacheFromDisk() {
         try {
             val prefs = context.getSharedPreferences(MANIFEST_CACHE_PREFS, Context.MODE_PRIVATE)
+            if (prefs.contains(LEGACY_MANIFEST_CACHE_KEY)) {
+                prefs.edit().remove(LEGACY_MANIFEST_CACHE_KEY).apply()
+            }
             val json = prefs.getString(MANIFEST_CACHE_KEY, null) ?: return
             val type = object : TypeToken<Map<String, Addon>>() {}.type
             val cached: Map<String, Addon> = gson.fromJson(json, type) ?: return
@@ -141,7 +111,32 @@ class AddonRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getInstalledAddons(): Flow<List<Addon>> = installedAddonsFlow
+    override fun getInstalledAddons(): Flow<List<Addon>> =
+        preferences.installedAddonUrls.flatMapLatest { urls ->
+            flow {
+                // Emit cached addons immediately (now includes disk-persisted cache)
+                val cached = urls.mapNotNull { manifestCache[canonicalizeUrl(it)] }
+                if (cached.isNotEmpty()) {
+                    emit(applyDisplayNames(cached))
+                }
+
+                val fresh = coroutineScope {
+                    urls.map { url ->
+                        async {
+                            when (val result = fetchAddon(url)) {
+                                is NetworkResult.Success -> result.data
+                                else -> manifestCache[canonicalizeUrl(url)]
+                            }
+                        }
+                    }.awaitAll().filterNotNull()
+                }
+
+               
+                if (fresh != cached || cached.isEmpty()) {
+                    emit(applyDisplayNames(fresh))
+                }
+            }.flowOn(Dispatchers.IO)
+        }
 
     override suspend fun fetchAddon(baseUrl: String): NetworkResult<Addon> {
         val cleanBaseUrl = canonicalizeUrl(baseUrl)
@@ -155,17 +150,7 @@ class AddonRepositoryImpl @Inject constructor(
                 NetworkResult.Success(addon)
             }
             is NetworkResult.Error -> {
-                if (isBenignManifestFetchFailure(result.message)) {
-                    Log.d(
-                        TAG,
-                        "Manifest fetch cancelled/short-circuited for url=$cleanBaseUrl message=${result.message}"
-                    )
-                } else {
-                    Log.w(
-                        TAG,
-                        "Failed to fetch addon manifest for url=$cleanBaseUrl code=${result.code} message=${result.message}"
-                    )
-                }
+                Log.w(TAG, "Failed to fetch addon manifest for url=$cleanBaseUrl code=${result.code} message=${result.message}")
                 result
             }
             NetworkResult.Loading -> NetworkResult.Loading
@@ -259,12 +244,5 @@ class AddonRepositoryImpl @Inject constructor(
                 }
             }
         }
-    }
-
-    private fun isBenignManifestFetchFailure(message: String?): Boolean {
-        val normalized = message?.lowercase().orEmpty()
-        return "flow was aborted" in normalized ||
-            "no more elements needed" in normalized ||
-            "child of the scoped flow was cancelled" in normalized
     }
 }

@@ -403,7 +403,7 @@ private fun LibrarySelectorsRow(
 ) {
     val selectedListLabel = listTabs.firstOrNull { it.key == selectedListKey }?.title ?: "Select"
     val selectedTypeLabel = selectedTypeTab?.let { localizedTypeLabel(it.key) } ?: stringResource(R.string.library_type_all)
-    val selectedSortLabel = selectedSortOption.label
+    val selectedSortLabel = stringResource(selectedSortOption.labelResId)
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -448,7 +448,7 @@ private fun LibrarySelectorsRow(
                 title = stringResource(R.string.library_filter_sort),
                 value = selectedSortLabel,
                 expanded = expandedPicker == "sort",
-                options = sortOptions.map { LibraryOption(it.label, it.key) },
+                options = sortOptions.map { LibraryOption(stringResource(it.labelResId), it.key) },
                 onExpandedChange = { onExpandedChange("sort", it) },
                 onSelect = { option ->
                     sortOptions.firstOrNull { it.key == option.value }?.let(onSelectSort)

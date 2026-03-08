@@ -22,6 +22,7 @@
     <string name="cw_action_go_to_details">Przejdź do szczegółów</string>
     <string name="cw_action_remove">Usuń</string>
     <string name="cw_dialog_subtitle">Wybierz co chcesz zrobić z tym elementem.</string>
+    <string name="home_poster_dialog_subtitle">Akcje tytułu</string>
 
     <!-- CatalogRowSection -->
     <string name="catalog_from_addon">z %1$s</string>
@@ -53,6 +54,7 @@
     <string name="episodes_mark_season_unwatched">Oznacz sezon jako nieobejrzany</string>
     <string name="episodes_mark_previous_watched">Oznacz poprzednie w tym sezonie jako obejrzane</string>
     <string name="episodes_play">Odtwórz</string>
+    <string name="play_manually">Odtwórz ręcznie</string>
     <string name="episodes_season_actions">Akcje sezonu</string>
 
     <!-- MetaDetailsViewModel -->
@@ -96,6 +98,11 @@
     <string name="appearance_language_dialog_title">Wybierz język</string>
     <string name="appearance_language_restart_hint">Uruchom ponownie aplikację, aby zastosować zmianę języka.</string>
 
+    <!-- Font -->
+    <string name="appearance_font">Czcionka aplikacji</string>
+    <string name="appearance_font_subtitle">Wybierz preferowaną czcionkę</string>
+    <string name="appearance_font_dialog_title">Wybierz czcionkę</string>
+
     <!-- ThemeSettingsScreen -->
     <string name="appearance_title">Wygląd</string>
     <string name="appearance_subtitle">Wybierz motyw kolorystyczny i język</string>
@@ -110,6 +117,8 @@
     <string name="about_check_updates_subtitle">Pobierz najnowsze wydanie</string>
     <string name="about_privacy_policy">Polityka prywatności</string>
     <string name="about_privacy_policy_subtitle">Wyświetl politykę prywatności</string>
+    <string name="about_supporters_contributors">Wspierający i współtwórcy</string>
+    <string name="about_supporters_contributors_subtitle">Podziękowania i autorzy projektu</string>
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Konto</string>
@@ -329,6 +338,8 @@
     <string name="layout_catalog_type_sub">Pokaż sufiks typu obok nazwy katalogu (Film/Serial).</string>
     <string name="layout_section_detail">Strona szczegółów</string>
     <string name="layout_section_detail_desc">Ustawienia dla ekranów szczegółów i odcinków.</string>
+    <string name="layout_hide_unreleased">Ukryj niewydane treści</string>
+    <string name="layout_hide_unreleased_sub">Ukryj filmy i seriale, które jeszcze nie zostały wydane.</string>
     <string name="layout_blur_unwatched">Rozmyj nieobejrzane odcinki</string>
     <string name="layout_blur_unwatched_sub">Rozmyj miniatury odcinków do czasu obejrzenia, aby uniknąć spoilerów.</string>
     <string name="layout_trailer_button">Pokaż przycisk zwiastuna</string>
@@ -437,6 +448,8 @@
     <string name="tmdb_episodes_subtitle">Tytuły, opisy, miniatury i czas trwania odcinków z TMDB</string>
     <string name="tmdb_more_like_this_title">Podobne</string>
     <string name="tmdb_more_like_this_subtitle">Tła rekomendacji TMDB na stronie szczegółów</string>
+    <string name="tmdb_collections_title">Kolekcje</string>
+    <string name="tmdb_collections_subtitle">Kolekcje filmów TMDB w kolejności wydania</string>
     <string name="tmdb_language_dialog_title">Język TMDB</string>
 
     <!-- TraktScreen -->
@@ -521,6 +534,27 @@
     <string name="profile_delete">Usuń</string>
     <string name="profile_addons">dodatki</string>
     <string name="profile_plugins">wtyczki</string>
+    <string name="profile_manage_button">Zarządzaj profilami</string>
+    <string name="profile_manage_title">Zarządzaj profilami</string>
+    <string name="profile_manage_subtitle">Wybierz profil do edycji, przełącz lub utwórz nowy</string>
+    <string name="profile_manage_hint">Wybierz profil do zarządzania</string>
+    <string name="profile_choose_avatar">Wybierz awatar</string>
+    <string name="profile_avatar_none_selected">Nie wybrano awatara</string>
+    <string name="profile_avatar_focus_hint">Skup się na awatarze, aby zobaczyć jego nazwę</string>
+    <string name="profile_avatar_category_all">Wszystkie</string>
+    <string name="profile_avatar_category_anime">Anime</string>
+    <string name="profile_avatar_category_animation">Animacja</string>
+    <string name="profile_avatar_category_movie">Film</string>
+    <string name="profile_avatar_category_tv">TV</string>
+    <string name="profile_avatar_category_gaming">Gry</string>
+    <string name="profile_add_new">Dodaj profil</string>
+    <string name="profile_cancel">Anuluj</string>
+    <string name="profile_save">Zapisz</string>
+    <string name="profile_saving">Zapisywanie…</string>
+    <string name="profile_selection_options_title">Opcje profilu</string>
+    <string name="profile_delete_confirm_title">Usunąć profil?</string>
+    <string name="profile_delete_confirm_subtitle">Spowoduje to trwałe usunięcie tego profilu i wszystkich jego danych, w tym biblioteki, historii oglądania i ustawień dodatków. Tej operacji nie można cofnąć.</string>
+    <string name="profile_delete_btn">Usuń profil</string>
 
 
     <!-- AddonManagerScreen -->
@@ -598,6 +632,7 @@
     <string name="sources_title">Źródła</string>
     <string name="sources_reload">Odśwież</string>
     <string name="sources_close">Zamknij</string>
+    <string name="sources_playing">Odtwarzane</string>
     <string name="sources_no_streams">Nie znaleziono źródeł</string>
 
     <!-- EpisodesSidePanel -->
@@ -693,6 +728,12 @@
     <string name="library_filter_list">Lista</string>
     <string name="library_filter_type">Typ</string>
     <string name="library_filter_sort">Sortuj</string>
+    <string name="library_sort_trakt_order">Kolejność Trakt</string>
+    <string name="library_sort_added_desc">Dodane ↓</string>
+    <string name="library_sort_added_asc">Dodane ↑</string>
+    <string name="library_sort_title_asc">Tytuł A-Z</string>
+    <string name="library_sort_title_desc">Tytuł Z-A</string>
+    <string name="cw_action_start_from_beginning">Zacznij od początku</string>
     <string name="library_manage_lists">Zarządzaj listami</string>
     <string name="library_manage_trakt_lists">Zarządzaj listami Trakt</string>
     <string name="library_no_lists">Brak osobistych list.</string>
@@ -831,6 +872,7 @@
     <!-- EpisodeRatingsSection -->
     <string name="ratings_loading">Ladowanie ocen odcinkow...</string>
     <string name="ratings_unavailable">Oceny odcinkow sa niedostepne.</string>
+    <string name="ratings_load_error">Nie udało się załadować ocen odcinków.</string>
     <string name="ratings_season_summary">Sezon %1$d - %2$d odcinkow</string>
 
     <!-- SearchDiscoverSection -->
@@ -876,6 +918,31 @@
     <string name="settings_rounded_ui">Zaokrąglony interfejs</string>
     <string name="cd_expand_sidebar">Rozwiń pasek boczny</string>
 
+    <string name="action_close">Zamknij</string>
+    <string name="supporters_contributors_title">Wspierający i współtwórcy</string>
+    <string name="supporters_contributors_subtitle">Osoby wspierające Nuvio i współtwórcy budujący je na TV i urządzeniach mobilnych.</string>
+    <string name="supporters_contributors_supporters_copy">Wspierający i donatorzy pomagają utrzymać projekt, finansują infrastrukturę i umożliwiają realizację ambitnych funkcji.</string>
+    <string name="supporters_contributors_donate_copy">Nuvio pozostanie darmowe i open source. Jeśli chcesz wesprzeć projekt, możesz pomóc pokryć czas i infrastrukturę za nim stojącą.</string>
+    <string name="supporters_contributors_donate_button">Wesprzyj Nuvio</string>
+    <string name="supporters_contributors_qr_title">Zeskanuj, aby wesprzeć</string>
+    <string name="supporters_contributors_qr_subtitle">Otwórz link na telefonie i wesprzyj Nuvio przez Ko-fi.</string>
+    <string name="supporters_contributors_qr_hint">Skieruj aparat na kod QR lub użyj przycisku poniżej.</string>
+    <string name="supporters_contributors_back_button">Wróć do szczegółów</string>
+    <string name="supporters_tab">Wspierający</string>
+    <string name="contributors_tab">Współtwórcy</string>
+    <string name="supporters_loading">Ładowanie wspierających…</string>
+    <string name="supporters_empty">Nie znaleziono jeszcze wspierających.</string>
+    <string name="supporters_error_title">Nie można załadować wspierających</string>
+    <string name="supporters_no_message">Brak udostępnionej wiadomości.</string>
+    <string name="supporters_open_donations">Otwórz stronę dotacji</string>
+    <string name="contributors_loading">Ładowanie współtwórców GitHub…</string>
+    <string name="contributors_empty">Nie znaleziono jeszcze współtwórców.</string>
+    <string name="contributors_error_title">Nie można załadować współtwórców</string>
+    <string name="contributors_total_contributions">%1$d łącznych wkładów</string>
+    <string name="contributors_open_github">Otwórz profil GitHub</string>
+    <string name="contributors_show_kofi_qr">Pokaż QR Ko-fi</string>
+    <string name="contributors_hide_kofi_qr">Ukryj QR Ko-fi</string>
+    <string name="contributors_profile_unavailable">Link do profilu GitHub niedostępny.</string>
     <string name="update_close">Zamknij</string>
     <string name="update_open_settings">Otwórz ustawienia</string>
     <string name="update_install">Zainstaluj</string>

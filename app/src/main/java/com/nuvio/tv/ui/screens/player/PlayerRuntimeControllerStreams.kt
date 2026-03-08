@@ -292,10 +292,6 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
     currentVideoHash = stream.behaviorHints?.videoHash
     currentVideoSize = stream.behaviorHints?.videoSize
     currentFilename = stream.behaviorHints?.filename ?: navigationArgs.filename
-    pendingAddonSubtitleLanguage = null
-    pendingAddonSubtitleTrackId = null
-    pendingAudioSelectionAfterSubtitleRefresh = null
-    attachedAddonSubtitleKeys = emptySet()
     hasRetriedCurrentStreamAfter416 = false
     lastSavedPosition = 0L
 
@@ -321,18 +317,27 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
         scope.launch {
             try {
                 val playerSettings = playerSettingsDataStore.playerSettings.first()
+                val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings)
                 runAfrPreflightIfEnabled(
                     url = url,
                     headers = newHeaders,
                     frameRateMatchingMode = playerSettings.frameRateMatchingMode,
                     resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
                 )
+                applyStartupSubtitlePreparation(startupSubtitlePreparation)
                 val mediaSource = withContext(Dispatchers.IO) {
-                    mediaSourceFactory.createMediaSource(url, newHeaders)
+                    mediaSourceFactory.createMediaSource(
+                        url = url,
+                        headers = newHeaders,
+                        subtitleConfigurations = buildStartupSubtitleConfigurations(startupSubtitlePreparation)
+                    )
                 }
                 player.setMediaSource(mediaSource)
                 player.playWhenReady = true
                 player.prepare()
+                if (!startupSubtitlePreparation.fetchCompleted) {
+                    fetchAddonSubtitles()
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message ?: "Failed to play selected stream") }
             }
@@ -586,10 +591,8 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
     currentVideoHash = stream.behaviorHints?.videoHash
     currentVideoSize = stream.behaviorHints?.videoSize
     currentFilename = stream.behaviorHints?.filename ?: navigationArgs.filename
-    pendingAddonSubtitleLanguage = null
-    pendingAddonSubtitleTrackId = null
-    pendingAudioSelectionAfterSubtitleRefresh = null
-    attachedAddonSubtitleKeys = emptySet()
+    pendingSameSeriesTrackSelectionRestore =
+        sameSeriesTrackSelectionPreference?.takeIf { contentType?.lowercase() in listOf("series", "tv") }
     hasRetriedCurrentStreamAfter416 = false
     currentVideoId = targetVideo?.id ?: _uiState.value.episodeStreamsForVideoId ?: currentVideoId
     currentSeason = targetVideo?.season ?: _uiState.value.episodeStreamsSeason ?: currentSeason
@@ -633,7 +636,6 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
     recomputeNextEpisode(resetVisibility = true)
 
     updateEpisodeDescription()
-    refreshSubtitlesForCurrentEpisode()
 
     playbackStartedForParentalGuide = false
     skipIntervals = emptyList()
@@ -648,18 +650,27 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
         scope.launch {
             try {
                 val playerSettings = playerSettingsDataStore.playerSettings.first()
+                val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings)
                 runAfrPreflightIfEnabled(
                     url = url,
                     headers = newHeaders,
                     frameRateMatchingMode = playerSettings.frameRateMatchingMode,
                     resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
                 )
+                applyStartupSubtitlePreparation(startupSubtitlePreparation)
                 val mediaSource = withContext(Dispatchers.IO) {
-                    mediaSourceFactory.createMediaSource(url, newHeaders)
+                    mediaSourceFactory.createMediaSource(
+                        url = url,
+                        headers = newHeaders,
+                        subtitleConfigurations = buildStartupSubtitleConfigurations(startupSubtitlePreparation)
+                    )
                 }
                 player.setMediaSource(mediaSource)
                 player.playWhenReady = true
                 player.prepare()
+                if (!startupSubtitlePreparation.fetchCompleted) {
+                    fetchAddonSubtitles()
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message ?: "Failed to play selected stream") }
             }

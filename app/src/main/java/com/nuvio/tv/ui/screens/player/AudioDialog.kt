@@ -42,6 +42,7 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.ui.theme.NuvioColors
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.util.languageCodeToName
 
 @Composable
 internal fun AudioSelectionDialog(
@@ -134,7 +135,7 @@ private fun AudioTrackItem(
                 )
                 if (track.language != null) {
                     Text(
-                        text = track.language.uppercase(),
+                        text = languageCodeToName(track.language),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White.copy(alpha = 0.5f)
                     )

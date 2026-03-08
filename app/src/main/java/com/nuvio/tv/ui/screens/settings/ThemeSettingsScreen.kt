@@ -62,6 +62,7 @@ import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.ThemeColors
 import com.nuvio.tv.ui.theme.getFontFamily
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 @Composable
 fun ThemeSettingsScreen(
@@ -91,26 +92,15 @@ fun ThemeSettingsContent(
 
     val strLanguageSystem = stringResource(R.string.appearance_language_system)
     val supportedLocales = remember(strLanguageSystem) {
-        listOf(
-            null to strLanguageSystem,
-            "en" to "English",
-            "es" to "Español",
-            "es-419" to "Español (Latinoamérica)",
-            "hu" to "Magyar",
-            "fr" to "Français",
-            "it" to "Italiano",
-            "pl" to "Polski",
-            "pt-PT" to "Português (Portugal)",
-            "pt-BR" to "Português (Brasil)",
-            "tr" to "Türkçe",
-            "se" to "Svenska",
-            "sk" to "Slovensky",
-            "sl" to "Slovenščina",
-            "ro" to "Română",
-            "ja" to "日本語",
-            "nl" to "Nederlands",
-            "vi" to "Tiếng Việt"
+        val tags = listOf(
+            "en", "es", "es-419", "hu", "fr", "it", "pl",
+            "pt-PT", "pt-BR", "tr", "se", "sk", "sl", "ro", "ja",
+            "nl", "vi"
         )
+        listOf(null to strLanguageSystem) + tags.map { tag ->
+            val locale = Locale.forLanguageTag(tag)
+            tag to locale.getDisplayName(locale).replaceFirstChar { it.uppercase() }
+        }.sortedBy { it.second }
     }
     var selectedTag by remember {
         mutableStateOf(

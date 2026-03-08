@@ -348,23 +348,17 @@ class TraktProgressService @Inject constructor(
             .distinctUntilChanged()
     }
 
-    fun observeWatchedMovieIds(): Flow<Set<String>> {
+    fun observeAllWatchedMovieIds(): Flow<Set<String>> {
         return combine(watchedMoviesState, optimisticProgress) { watchedMovies, optimistic ->
-            val resolved = watchedMovies.toMutableSet()
-            optimistic.values.forEach { entry ->
-                val progress = entry.progress
-                if (!progress.contentType.equals("movie", ignoreCase = true)) return@forEach
-                val keys = movieLookupKeys(progress.contentId)
-                if (keys.isEmpty()) return@forEach
+            val result = watchedMovies.toMutableSet()
+            optimistic.forEach { (key, entry) ->
                 when {
-                    progress.isCompleted() -> resolved.addAll(keys)
-                    progress.isInProgress() -> resolved.removeAll(keys)
+                    entry.progress.isCompleted() -> result.add(key)
+                    entry.progress.isInProgress() -> result.remove(key)
                 }
             }
-            resolved.toSet()
-        }
-            .onStart { getWatchedMoviesSnapshot(forceRefresh = false) }
-            .distinctUntilChanged()
+            result as Set<String>
+        }.distinctUntilChanged()
     }
 
     suspend fun markAsWatched(
@@ -726,7 +720,7 @@ class TraktProgressService @Inject constructor(
 
             val watchedMovies = response.body().orEmpty()
                 .flatMap { item ->
-                    movieLookupKeys(item.movie?.ids)
+                    watchedMovieLookupKeys(item.movie?.ids)
                 }
                 .toSet()
 
@@ -763,6 +757,16 @@ class TraktProgressService @Inject constructor(
         val parsed = parseContentIds(contentId)
         val canonical = normalizeContentId(toTraktIds(parsed))
         return if (canonical.isNotBlank()) canonical else contentId.trim()
+    }
+
+    private fun watchedMovieLookupKeys(ids: TraktIdsDto?): List<String> {
+        if (ids == null) return emptyList()
+        return buildList {
+            ids.imdb?.takeIf { it.isNotBlank() }?.let { add(it) }
+            ids.tmdb?.let { add("tmdb:$it") }
+            ids.trakt?.let { add("trakt:$it") }
+            ids.slug?.takeIf { it.isNotBlank() }?.let { add(it) }
+        }
     }
 
     private suspend fun fetchAllProgressSnapshot(force: Boolean = false): List<WatchProgress> {

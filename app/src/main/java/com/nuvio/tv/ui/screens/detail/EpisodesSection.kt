@@ -76,6 +76,7 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import com.nuvio.tv.ui.util.localizeEpisodeTitle
 
 private const val EPISODE_CARD_CONTENT_TYPE = "episode_card"
 private const val EPISODE_SCROLL_REPEAT_THROTTLE_MS = 80L
@@ -240,6 +241,11 @@ fun EpisodesRow(
     LaunchedEffect(restoreFocusToken, restoreEpisodeId, restoreTargetRequester, episodes) {
         if (restoreFocusToken <= 0 || restoreEpisodeId.isNullOrBlank()) return@LaunchedEffect
         if (episodes.none { it.id == restoreEpisodeId }) return@LaunchedEffect
+        val index = episodes.indexOfFirst { it.id == restoreEpisodeId }
+        if (index >= 0) {
+            val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
+            lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
+        }
         restoreTargetRequester?.requestFocusAfterFrames()
     }
 
@@ -399,6 +405,7 @@ private fun EpisodeCard(
     val showProgress = remember(progressPercent) { progressPercent >= 0.02f && progressPercent < 0.85f }
     val showCompletedBadge = isWatched
     val showNotStartedBadge = remember(showCompletedBadge, progressPercent) { !showCompletedBadge && progressPercent < 0.02f }
+    val isUnavailable = remember(episode.available) { episode.available == false }
     val cardBgColor = NuvioColors.BackgroundCard
     val isFocusedState = remember { mutableStateOf(false) }
     val cardCornerRadius = remember(cardMetrics.cornerRadius, density) {
@@ -472,6 +479,7 @@ private fun EpisodeCard(
     }
     val strCdWatched = stringResource(R.string.episodes_cd_watched)
     val strEpisode = stringResource(R.string.episodes_episode)
+    val strUnavailable = stringResource(R.string.episodes_unavailable)
     val episodeCode = remember(episode.episode, strEpisode) {
         val prefix = strEpisode.uppercase(Locale.getDefault())
         episode.episode?.let { number -> "$prefix $number" } ?: prefix
@@ -561,7 +569,7 @@ private fun EpisodeCard(
         ) {
             AsyncImage(
                 model = thumbnailRequest,
-                contentDescription = episode.title,
+                contentDescription = episode.title.localizeEpisodeTitle(context),
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
@@ -607,7 +615,7 @@ private fun EpisodeCard(
                 }
 
                 Text(
-                    text = episode.title,
+                    text = episode.title.localizeEpisodeTitle(context),
                     style = titleStyle,
                     color = textPrimary,
                     maxLines = 2,
@@ -623,12 +631,21 @@ private fun EpisodeCard(
                     )
                 }
 
-                if (runtimeLabel != null || ratingLabel != null || formattedDate.isNotBlank()) {
+                if (isUnavailable || runtimeLabel != null || ratingLabel != null || formattedDate.isNotBlank()) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        if (isUnavailable) {
+                            Text(
+                                text = strUnavailable,
+                                style = metaLabelStyle,
+                                color = Color(0xFFFFB74D),
+                                maxLines = 1
+                            )
+                        }
+
                         runtimeLabel?.let { runtime ->
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -730,6 +747,31 @@ private fun EpisodeCard(
                         modifier = Modifier.size(cardMetrics.statusIconSize)
                     )
                 }
+            }
+
+            if (isUnavailable) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(
+                            end = cardMetrics.statusBadgeInset,
+                            top = cardMetrics.statusBadgeInset
+                        )
+                        .background(
+                            color = Color(0xCC5D4037),
+                            shape = badgeShape
+                        )
+                        .padding(
+                            horizontal = cardMetrics.episodeBadgeHorizontalPadding,
+                            vertical = cardMetrics.episodeBadgeVerticalPadding
+                        )
+                ) {
+                    Text(
+                        text = strUnavailable.uppercase(Locale.getDefault()),
+                        style = episodeBadgeStyle,
+                        maxLines = 1
+                    )
+                }
             } else if (showNotStartedBadge) {
                 val dashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(7f, 5f), 0f) }
                 Canvas(
@@ -772,6 +814,7 @@ private fun EpisodeOptionsDialog(
     onMarkPreviousEpisodesWatched: () -> Unit = {}
 ) {
     val primaryFocusRequester = remember { FocusRequester() }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         primaryFocusRequester.requestFocus()
@@ -779,7 +822,7 @@ private fun EpisodeOptionsDialog(
 
     NuvioDialog(
         onDismiss = onDismiss,
-        title = episode.title,
+        title = episode.title.localizeEpisodeTitle(context),
         subtitle = stringResource(R.string.episodes_dialog_subtitle)
     ) {
         Button(

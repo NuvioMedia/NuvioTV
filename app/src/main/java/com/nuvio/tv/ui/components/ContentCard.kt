@@ -193,7 +193,7 @@ fun ContentCard(
             with(density) { baseCardHeight.roundToPx() }
         }
         val imageUrl = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
-            item.background ?: item.poster
+            item.backdropUrl ?: item.poster
         } else {
             item.poster
         }

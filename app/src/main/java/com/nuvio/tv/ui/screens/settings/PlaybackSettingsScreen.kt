@@ -89,6 +89,7 @@ import androidx.tv.material3.Switch
 import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
+import com.nuvio.tv.data.local.displayName
 import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.PlayerPreference
@@ -989,7 +990,7 @@ internal fun LanguageSelectionDialog(
                 ) { index ->
                     val language = AVAILABLE_SUBTITLE_LANGUAGES[index]
                     LanguageOptionItem(
-                        name = language.name,
+                        name = language.displayName,
                         code = language.code,
                         isSelected = selectedLanguage == language.code,
                         onClick = { onLanguageSelected(language.code) },

@@ -84,6 +84,10 @@ internal fun PlayerRuntimeController.fetchAddonSubtitles() {
                     isLoadingAddonSubtitles = false
                 ) 
             }
+            restorePendingSameSeriesTrackSelection(
+                audioTracks = _uiState.value.audioTracks,
+                subtitleTracks = _uiState.value.subtitleTracks
+            )
             tryAutoSelectPreferredSubtitleFromAvailableTracks()
         } catch (e: Exception) {
             _uiState.update { 
