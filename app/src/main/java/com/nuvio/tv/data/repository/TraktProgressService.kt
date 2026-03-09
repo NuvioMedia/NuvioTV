@@ -4,6 +4,7 @@ import android.util.Log
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.local.TraktSettingsDataStore
+import com.nuvio.tv.data.remote.api.ArmApi
 import com.nuvio.tv.data.remote.api.TraktApi
 import com.nuvio.tv.data.remote.dto.trakt.TraktEpisodeDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktHistoryEpisodeAddDto
@@ -56,6 +57,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.abs
 import javax.inject.Inject
@@ -67,7 +69,8 @@ class TraktProgressService @Inject constructor(
     private val traktApi: TraktApi,
     private val traktAuthService: TraktAuthService,
     private val metaRepository: MetaRepository,
-    private val traktSettingsDataStore: TraktSettingsDataStore
+    private val traktSettingsDataStore: TraktSettingsDataStore,
+    private val armApi: ArmApi
 ) {
     companion object {
         private const val TAG = "TraktProgressSvc"
@@ -159,6 +162,7 @@ class TraktProgressService @Inject constructor(
 
     private val showSeasonsCache = mutableMapOf<String, TimedCache<List<TraktSeasonSummaryDto>>>()
     private val episodeOrderingCache = mutableMapOf<String, TimedCache<Map<Pair<Int, Int>, Pair<Int, Int>>>>()
+    private val externalHistoryIdsCache = ConcurrentHashMap<String, TraktIdsDto>()
     private val showSeasonsCacheTtlMs = 30 * 60_000L
     @Volatile
     private var lastManualRefreshSignalMs: Long = 0L
@@ -1210,7 +1214,7 @@ class TraktProgressService @Inject constructor(
             !notFound.episodes.isNullOrEmpty()
     }
 
-    private fun buildHistoryAddRequest(
+    private suspend fun buildHistoryAddRequest(
         progress: WatchProgress,
         title: String?,
         year: Int?
@@ -1259,14 +1263,70 @@ class TraktProgressService @Inject constructor(
         }
     }
 
-    private fun resolveHistoryIds(progress: WatchProgress): TraktIdsDto {
+    private suspend fun resolveHistoryIds(progress: WatchProgress): TraktIdsDto {
         val contentIds = toTraktIds(parseContentIds(progress.contentId))
         if (contentIds.hasAnyId()) return contentIds
 
         val videoIds = toTraktIds(parseContentIds(progress.videoId))
         if (videoIds.hasAnyId()) return videoIds
 
+        val externalIds = resolveExternalHistoryIds(progress)
+        if (externalIds.hasAnyId()) return externalIds
+
         return contentIds
+    }
+
+    private suspend fun resolveExternalHistoryIds(progress: WatchProgress): TraktIdsDto {
+        val candidates = listOf(progress.contentId, progress.videoId)
+            .mapNotNull { raw ->
+                raw.trim().takeIf { it.isNotBlank() }
+            }
+            .distinct()
+
+        for (raw in candidates) {
+            val resolved = resolveExternalHistoryIds(raw)
+            if (resolved.hasAnyId()) {
+                Log.d(TAG, "resolveExternalHistoryIds: $raw -> $resolved")
+                return resolved
+            }
+        }
+
+        return TraktIdsDto()
+    }
+
+    private suspend fun resolveExternalHistoryIds(rawId: String): TraktIdsDto {
+        externalHistoryIdsCache[rawId]?.let { return it }
+
+        val prefix = rawId.substringBefore(':', missingDelimiterValue = "").lowercase(Locale.US)
+        val sourceId = rawId.substringAfter(':', missingDelimiterValue = "")
+            .substringBefore(':')
+            .trim()
+
+        val resolved = when {
+            sourceId.isBlank() -> TraktIdsDto()
+            prefix == "kitsu" -> {
+                val imdbId = runCatching {
+                    armApi.resolveKitsuToImdb(kitsuId = sourceId)
+                        .takeIf { it.isSuccessful }
+                        ?.body()
+                        ?.imdb
+                }.getOrNull()
+                TraktIdsDto(imdb = imdbId)
+            }
+            prefix == "mal" || prefix == "myanimelist" -> {
+                val imdbId = runCatching {
+                    armApi.resolveMalToImdb(malId = sourceId)
+                        .takeIf { it.isSuccessful }
+                        ?.body()
+                        ?.imdb
+                }.getOrNull()
+                TraktIdsDto(imdb = imdbId)
+            }
+            else -> TraktIdsDto()
+        }
+
+        externalHistoryIdsCache[rawId] = resolved
+        return resolved
     }
 
     private suspend fun fetchShowSeasons(contentId: String): List<TraktSeasonSummaryDto>? {
