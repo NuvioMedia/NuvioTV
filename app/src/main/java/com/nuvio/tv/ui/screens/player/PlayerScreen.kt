@@ -562,6 +562,7 @@ fun PlayerScreen(
             visible = uiState.showPauseOverlay && uiState.error == null && !uiState.showLoadingOverlay,
             onClose = { viewModel.onEvent(PlayerEvent.OnDismissPauseOverlay) },
             title = uiState.title,
+            logo = uiState.logo,
             episodeTitle = uiState.currentEpisodeTitle,
             season = uiState.currentSeason,
             episode = uiState.currentEpisode,

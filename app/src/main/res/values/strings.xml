@@ -11,6 +11,34 @@
 
     <!-- ErrorState -->
     <string name="action_retry">Retry</string>
+    <string name="error_state_generic_issue">Something went wrong.</string>
+    <string name="error_state_possible_fix">Possible fix: %1$s</string>
+    <string name="error_state_fix_retry_soon">retry in a moment.</string>
+    <string name="error_state_issue_no_metadata_any_addon">This id could not load details because none of the installed addons returned metadata.</string>
+    <string name="error_state_fix_no_metadata_any_addon">try another addon, disable \"Prefer external meta addon\" in Layout settings, or confirm an installed addon supports this id.</string>
+    <string name="error_state_prefix_no_supported_metadata">No installed addon supports metadata for </string>
+    <string name="error_state_prefix_no_addon_for_id">No installed addon could provide metadata for id=</string>
+    <string name="error_state_fix_no_supported_metadata">install or update an addon that supports this content type, then retry.</string>
+    <string name="error_state_prefix_tried_meta_addons">Tried meta addons:</string>
+    <string name="error_state_fix_tried_meta_addons">install an addon that supports this id, or reconfigure/update the addon and retry.</string>
+    <string name="error_state_issue_missing_metadata_for_id">does not have metadata for this id</string>
+    <string name="error_state_fix_missing_metadata_for_id">open this id from a different addon, disable \"Prefer external meta addon\", or check that the addon supports this id.</string>
+    <string name="error_state_issue_addon_unreachable">could not be reached</string>
+    <string name="error_state_fix_addon_unreachable">check your internet connection, verify the addon URL still works, then retry.</string>
+    <string name="error_state_issue_addon_connection_failed">rejected the connection</string>
+    <string name="error_state_fix_addon_connection_failed">make sure the addon server is online and reachable, then retry.</string>
+    <string name="error_state_issue_addon_timeout">took too long to respond</string>
+    <string name="error_state_fix_addon_timeout">retry in a moment, or try a different addon if this keeps happening.</string>
+    <string name="error_state_issue_addon_cleartext">uses an insecure HTTP connection that Android blocked</string>
+    <string name="error_state_fix_addon_cleartext">switch the addon URL to HTTPS or update the addon configuration.</string>
+    <string name="error_state_fix_addon_generic">retry, update or reinstall the addon, or try a different addon.</string>
+    <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
+    <string name="error_meta_not_found">Meta not found</string>
+    <string name="error_meta_no_supported_addon">No installed addon supports metadata for \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">No installed addon could provide metadata for id=%1$s (type=%2$s).</string>
+    <string name="error_meta_tried_none">Tried meta addons: %1$s. None of them provided metadata for id=%2$s (type=%3$s).</string>
+    <string name="error_meta_tried_generic">Tried meta addons: %1$s. Metadata could not be loaded for id=%2$s (type=%3$s).</string>
+    <string name="error_meta_tried_issues">Tried meta addons: %1$s. Metadata could not be loaded for id=%2$s (type=%3$s). Issues: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Continue Watching</string>
@@ -89,6 +117,7 @@
     <string name="detail_tab_more_like_this">More like this</string>
     <string name="detail_section_network">Network</string>
     <string name="detail_section_production">Production</string>
+    <string name="episodes_unavailable">Unavailable</string>
     <string name="detail_lists_fallback">Lists</string>
     <string name="detail_lists_subtitle">Select which lists should include this title.</string>
     <string name="action_save">Save</string>
@@ -265,7 +294,7 @@
     <string name="sub_outline_color">Outline Color</string>
     <string name="sub_advanced_section">Advanced Subtitle Rendering</string>
     <string name="sub_libass">Use libass for ASS/SSA subtitles</string>
-    <string name="sub_libass_sub">Temporarily disabled for maintenance</string>
+    <string name="sub_libass_sub">Experimental: advanced ASS/SSA rendering (styles, positioning, animations)</string>
     <string name="sub_libass_mode">Libass Render Mode</string>
     <string name="sub_mode_overlay_gl">Overlay OpenGL (Recommended)</string>
     <string name="sub_mode_overlay_gl_sub">Best quality with HDR support. Renders subtitles on a separate thread.</string>
@@ -785,6 +814,7 @@
     <!-- AccountSettingsContent -->
     <string name="account_loading">Loading\u2026</string>
     <string name="account_sync_description">Sync your library, watch progress, addons, and plugins across devices.</string>
+    <string name="account_sync_restart_note">Sync is not real-time across active devices. Restart this device after signing in or to pick up changes made elsewhere.</string>
     <string name="account_signin_qr_title">Sign In with QR</string>
     <string name="account_signin_qr_subtitle">Scan a QR code and complete email login on your phone</string>
     <string name="account_signed_in_label">Signed in</string>
@@ -889,6 +919,8 @@
     <!-- UpdatePromptDialog -->
     <string name="update_title">App Update</string>
     <string name="update_downloading">Downloading update</string>
+    <string name="update_download">Download</string>
+    <string name="update_downloading_ellipsis">Downloading…</string>
     <string name="update_unknown_sources">Allow installs from unknown sources to continue.</string>
     <!-- AccountScreen -->
     <string name="account_title">Account</string>

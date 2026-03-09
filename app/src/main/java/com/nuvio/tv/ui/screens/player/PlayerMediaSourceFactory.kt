@@ -8,6 +8,9 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.extractor.DefaultExtractorsFactory
+import androidx.media3.extractor.ExtractorsFactory
+import androidx.media3.extractor.text.SubtitleParser
 import com.nuvio.tv.data.local.PlayerSettings
 import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
@@ -17,6 +20,16 @@ import java.util.concurrent.TimeUnit
 @UnstableApi
 internal class PlayerMediaSourceFactory {
     private var okHttpClient: OkHttpClient? = null
+    private var customExtractorsFactory: ExtractorsFactory? = null
+    private var customSubtitleParserFactory: SubtitleParser.Factory? = null
+
+    fun configureSubtitleParsing(
+        extractorsFactory: ExtractorsFactory?,
+        subtitleParserFactory: SubtitleParser.Factory?
+    ) {
+        customExtractorsFactory = extractorsFactory
+        customSubtitleParserFactory = subtitleParserFactory
+    }
 
     var useParallelConnections: Boolean = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS
     var parallelConnectionCount: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
@@ -66,7 +79,13 @@ internal class PlayerMediaSourceFactory {
             okHttpFactory
         }
 
-        val defaultFactory = DefaultMediaSourceFactory(dataSourceFactory)
+        val extractorsFactory = customExtractorsFactory ?: DefaultExtractorsFactory()
+        val defaultFactory = DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory).apply {
+            customSubtitleParserFactory?.let { parserFactory ->
+                setSubtitleParserFactory(parserFactory)
+            }
+        }
+        val forceDefaultFactory = customExtractorsFactory != null || customSubtitleParserFactory != null
 
         // Sidecar subtitles are more reliable through DefaultMediaSourceFactory.
         if (subtitleConfigurations.isNotEmpty()) {
@@ -74,10 +93,10 @@ internal class PlayerMediaSourceFactory {
         }
 
         return when {
-            isHls -> HlsMediaSource.Factory(okHttpFactory)
+            isHls && !forceDefaultFactory -> HlsMediaSource.Factory(okHttpFactory)
                 .setAllowChunklessPreparation(true)
                 .createMediaSource(mediaItem)
-            isDash -> DashMediaSource.Factory(okHttpFactory)
+            isDash && !forceDefaultFactory -> DashMediaSource.Factory(okHttpFactory)
                 .createMediaSource(mediaItem)
             else -> {
                 defaultFactory.createMediaSource(mediaItem)

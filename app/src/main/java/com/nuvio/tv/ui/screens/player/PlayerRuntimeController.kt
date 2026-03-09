@@ -226,6 +226,11 @@ class PlayerRuntimeController(
     internal var hasRequestedScrobbleStartForCurrentItem: Boolean = false
     internal var scrobbleStartRequestGeneration: Long = 0L
     internal var hasSentCompletionScrobbleForCurrentItem: Boolean = false
+    internal var requestedUseLibassByUser: Boolean = false
+    internal var libassPipelineOverrideForCurrentStream: Boolean? = null
+    internal var activePlayerUsesLibass: Boolean = false
+    internal var libassPipelineSwitchInFlight: Boolean = false
+    internal var libassPipelineDecisionStreamUrl: String? = null
     internal var episodeStreamsJob: Job? = null
     internal var episodeStreamsCacheRequestKey: String? = null
     internal val streamCacheKey: String? by lazy {

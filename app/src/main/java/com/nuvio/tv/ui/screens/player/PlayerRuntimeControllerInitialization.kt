@@ -29,7 +29,7 @@ import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.domain.model.Subtitle
-import io.github.peerless2012.ass.media.kt.buildWithAssSupport
+import io.github.peerless2012.ass.media.type.AssRenderType
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -44,7 +44,6 @@ internal data class StartupSubtitlePreparation(
 )
 
 @androidx.annotation.OptIn(UnstableApi::class)
-@OptIn(UnstableApi::class)
 internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<String, String>) {
     if (url.isEmpty()) {
         _uiState.update { it.copy(error = "No stream URL provided", showLoadingOverlay = false) }
@@ -57,7 +56,8 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
             val playerSettings = playerSettingsDataStore.playerSettings.first()
             _uiState.update {
                 it.copy(
-                    frameRateMatchingMode = playerSettings.frameRateMatchingMode
+                    frameRateMatchingMode = playerSettings.frameRateMatchingMode,
+                    resizeMode = playerSettings.resizeMode
                 )
             }
             runAfrPreflightIfEnabled(
@@ -67,8 +67,19 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                 resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
             )
             val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings)
-            val useLibass = false // Temporarily disabled for maintenance
-            val libassRenderType = playerSettings.libassRenderType.toAssRenderType()
+            requestedUseLibassByUser = playerSettings.useLibass
+            val useLibass = when {
+                !requestedUseLibassByUser -> false
+                libassPipelineOverrideForCurrentStream != null -> libassPipelineOverrideForCurrentStream == true
+                else -> true
+            }
+            val requestedLibassRenderType = playerSettings.libassRenderType.toAssRenderType()
+            val libassRenderType = when {
+                !useLibass -> requestedLibassRenderType
+                requestedLibassRenderType == AssRenderType.OVERLAY_OPEN_GL -> AssRenderType.EFFECTS_OPEN_GL
+                requestedLibassRenderType == AssRenderType.OVERLAY_CANVAS -> AssRenderType.EFFECTS_CANVAS
+                else -> requestedLibassRenderType
+            }
             val bufferSettings = playerSettings.bufferSettings
             val loadControl = DefaultLoadControl.Builder()
                 .setBufferDurationsMs(
@@ -105,6 +116,7 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                     val localeList = Resources.getSystem().configuration.locales
                     List(localeList.size()) { localeList[it].isO3Language }
                 } else {
+                    @Suppress("DEPRECATION")
                     listOf(Resources.getSystem().configuration.locale.isO3Language)
                 }
                 val preferredAudioLanguages = resolvePreferredAudioLanguages(
@@ -145,23 +157,14 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
             val renderersFactory = SubtitleOffsetRenderersFactory(
                 context = context,
                 subtitleDelayUsProvider = subtitleDelayUs::get
-            )
-                .setExtensionRendererMode(playerSettings.decoderPriority)
+            ).setExtensionRendererMode(playerSettings.decoderPriority)
                 .setMapDV7ToHevc(playerSettings.mapDV7ToHevc)
 
-            _exoPlayer = if (useLibass) {
-                
-                ExoPlayer.Builder(context)
-                    .setLoadControl(loadControl)
-                    .setTrackSelector(trackSelector!!)
-                    .setMediaSourceFactory(DefaultMediaSourceFactory(context, extractorsFactory))
-                    .buildWithAssSupport(
-                        context = context,
-                        renderType = libassRenderType,
-                        renderersFactory = renderersFactory
-                    )
-            } else {
-                
+            val buildDefaultPlayer = {
+                mediaSourceFactory.configureSubtitleParsing(
+                    extractorsFactory = null,
+                    subtitleParserFactory = null
+                )
                 ExoPlayer.Builder(context)
                     .setTrackSelector(trackSelector!!)
                     .setMediaSourceFactory(DefaultMediaSourceFactory(context, extractorsFactory))
@@ -169,6 +172,24 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                     .setLoadControl(loadControl)
                     .build()
             }
+
+            _exoPlayer = if (useLibass) {
+                ExoPlayer.Builder(context)
+                    .setLoadControl(loadControl)
+                    .setTrackSelector(trackSelector!!)
+                    .setMediaSourceFactory(DefaultMediaSourceFactory(context, extractorsFactory))
+                    .buildWithAssSupportCompat(
+                        context = context,
+                        renderType = libassRenderType,
+                        playerMediaSourceFactory = mediaSourceFactory,
+                        extractorsFactory = extractorsFactory,
+                        renderersFactory = renderersFactory
+                    )
+            } else {
+                buildDefaultPlayer()
+            }
+            activePlayerUsesLibass = useLibass
+            libassPipelineSwitchInFlight = false
 
             _exoPlayer?.apply {
                 
@@ -264,6 +285,8 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                             }
                             // Re-evaluate subtitle auto-selection once player is ready.
                             tryAutoSelectPreferredSubtitleFromAvailableTracks()
+
+                            trackSelectionParameters = trackSelectionParameters.buildUpon().build()
                         }
                     
                         
@@ -474,6 +497,12 @@ internal fun PlayerRuntimeController.resetAddonSubtitleStateForNewStream() {
 internal suspend fun PlayerRuntimeController.prepareStreamStartSubtitles(
     playerSettings: PlayerSettings
 ): StartupSubtitlePreparation {
+    requestedUseLibassByUser = playerSettings.useLibass
+    if (libassPipelineDecisionStreamUrl != currentStreamUrl) {
+        libassPipelineDecisionStreamUrl = currentStreamUrl
+        libassPipelineOverrideForCurrentStream = null
+        libassPipelineSwitchInFlight = false
+    }
     resetAddonSubtitleStateForNewStream()
     return prepareStartupSubtitles(
         mode = playerSettings.addonSubtitleStartupMode,

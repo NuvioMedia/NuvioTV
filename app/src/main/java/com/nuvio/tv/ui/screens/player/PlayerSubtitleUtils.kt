@@ -76,6 +76,7 @@ internal object PlayerSubtitleUtils {
         val normalizedPath = url
             .substringBefore('#')
             .substringBefore('?')
+            .trimEnd('/')
             .lowercase()
 
         return when {

@@ -272,7 +272,7 @@ fun UpdatePromptDialog(
                             ),
                             shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                         ) {
-                            Text(if (state.isDownloading) "Downloading…" else "Download")
+                            Text(if (state.isDownloading) stringResource(R.string.update_downloading_ellipsis) else stringResource(R.string.update_download))
                         }
 
                         Button(

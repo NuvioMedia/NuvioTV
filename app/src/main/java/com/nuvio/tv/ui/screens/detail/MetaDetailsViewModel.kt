@@ -13,10 +13,7 @@ import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.data.repository.ImdbEpisodeRatingsRepository
 import com.nuvio.tv.data.repository.MDBListRepository
-import com.nuvio.tv.data.repository.ParsedContentIds
-import com.nuvio.tv.data.repository.normalizeContentId
 import com.nuvio.tv.data.repository.parseContentIds
-import com.nuvio.tv.data.repository.toTraktIds
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.LibrarySourceMode
@@ -36,18 +33,14 @@ import com.nuvio.tv.core.util.isUnreleased
 import java.time.LocalDate
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -58,13 +51,7 @@ import javax.inject.Inject
 
 private const val TAG = "MetaDetailsViewModel"
 
-private data class DetailContentIdentity(
-    val itemId: String,
-    val itemType: String
-)
-
 @HiltViewModel
-@OptIn(ExperimentalCoroutinesApi::class)
 class MetaDetailsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val metaRepository: MetaRepository,
@@ -104,9 +91,6 @@ class MetaDetailsViewModel @Inject constructor(
 
     private var isPlayButtonFocused = false
     private var hideUnreleasedContent = false
-    private val observedContentIdentities = MutableStateFlow(
-        listOf(DetailContentIdentity(itemId = itemId, itemType = itemType))
-    )
 
     init {
         observeMetaViewSettings()
@@ -266,12 +250,7 @@ class MetaDetailsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            observedContentIdentities
-                .flatMapLatest { identities ->
-                    observeMembershipAcrossIdentities(identities) { identity ->
-                        libraryRepository.isInLibrary(itemId = identity.itemId, itemType = identity.itemType)
-                    }
-                }
+            libraryRepository.isInLibrary(itemId = itemId, itemType = itemType)
                 .distinctUntilChanged()
                 .collectLatest { inLibrary ->
                     _uiState.update { state ->
@@ -281,12 +260,7 @@ class MetaDetailsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            observedContentIdentities
-                .flatMapLatest { identities ->
-                    observeMembershipAcrossIdentities(identities) { identity ->
-                        libraryRepository.isInWatchlist(itemId = identity.itemId, itemType = identity.itemType)
-                    }
-                }
+            libraryRepository.isInWatchlist(itemId = itemId, itemType = itemType)
                 .distinctUntilChanged()
                 .collectLatest { inWatchlist ->
                     _uiState.update { state ->
@@ -451,14 +425,18 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     private fun applyMeta(meta: Meta) {
-        syncObservedContentIdentities(meta)
         val seasons = meta.videos
             .mapNotNull { it.season }
             .distinct()
             .sorted()
 
-        // Prefer first regular season (> 0), fallback to season 0 (specials)
-        val selectedSeason = seasons.firstOrNull { it > 0 } ?: seasons.firstOrNull() ?: 1
+        val defaultEpisodeSeason = findPreferredDefaultEpisode(meta)?.season
+        // Prefer addon-specified default episode season, otherwise first regular season (> 0), fallback to season 0 (specials)
+        val selectedSeason = defaultEpisodeSeason
+            ?.takeIf { it in seasons }
+            ?: seasons.firstOrNull { it > 0 }
+            ?: seasons.firstOrNull()
+            ?: 1
         val episodesForSeason = getEpisodesForSeason(meta.videos, selectedSeason)
 
         _uiState.update {
@@ -722,6 +700,7 @@ class MetaDetailsViewModel @Inject constructor(
             updated = updated.copy(
                 runtime = enrichment.runtimeMinutes?.toString() ?: updated.runtime,
                 releaseInfo = enrichment.releaseInfo ?: updated.releaseInfo,
+                status = enrichment.status ?: updated.status,
                 ageRating = enrichment.ageRating ?: updated.ageRating,
                 country = enrichment.countries?.joinToString(", ") ?: updated.country,
                 language = enrichment.language ?: updated.language
@@ -869,6 +848,7 @@ class MetaDetailsViewModel @Inject constructor(
 
             val allEpisodes = meta.videos
                 .filter { it.season != null && it.episode != null }
+                .filter { it.available != false }
                 .sortedWith(compareBy({ it.season }, { it.episode }))
 
             if (allEpisodes.isEmpty()) {
@@ -888,12 +868,16 @@ class MetaDetailsViewModel @Inject constructor(
             val nonSpecialEpisodes = allEpisodes.filter { (it.season ?: 0) > 0 }
             val episodePool = if (nonSpecialEpisodes.isNotEmpty()) nonSpecialEpisodes else allEpisodes
             val latestSeriesProgress = progressMap.values.maxByOrNull { it.lastWatched }
+            val defaultEpisode = findPreferredDefaultEpisode(meta)?.takeIf { preferred ->
+                episodePool.any { it.id == preferred.id }
+            }
 
             val nextToWatch = buildNextToWatchFromLatestProgress(
                 latestProgress = latestSeriesProgress,
                 episodes = episodePool,
                 fallbackProgressMap = progressMap,
-                metaId = meta.id
+                metaId = meta.id,
+                defaultEpisode = defaultEpisode
             )
 
             updateNextToWatch(nextToWatch)
@@ -904,7 +888,8 @@ class MetaDetailsViewModel @Inject constructor(
         latestProgress: WatchProgress?,
         episodes: List<Video>,
         fallbackProgressMap: Map<Pair<Int, Int>, WatchProgress>,
-        metaId: String
+        metaId: String,
+        defaultEpisode: Video? = null
     ): NextToWatch {
         if (episodes.isEmpty()) {
             return NextToWatch(
@@ -989,12 +974,13 @@ class MetaDetailsViewModel @Inject constructor(
             }
             nextUnwatchedEpisode != null -> {
                 val hasWatchedSomething = fallbackProgressMap.isNotEmpty()
-                val s = nextUnwatchedEpisode.season
-                val e = nextUnwatchedEpisode.episode
+                val preferredEpisode = if (hasWatchedSomething) nextUnwatchedEpisode else (defaultEpisode ?: nextUnwatchedEpisode)
+                val s = preferredEpisode.season
+                val e = preferredEpisode.episode
                 NextToWatch(
                     watchProgress = null,
                     isResume = false,
-                    nextVideoId = nextUnwatchedEpisode.id,
+                    nextVideoId = preferredEpisode.id,
                     nextSeason = s,
                     nextEpisode = e,
                     displayText = if (hasWatchedSomething) {
@@ -1020,6 +1006,11 @@ class MetaDetailsViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    private fun findPreferredDefaultEpisode(meta: Meta): Video? {
+        val defaultVideoId = meta.behaviorHints?.defaultVideoId ?: return null
+        return meta.videos.firstOrNull { it.id == defaultVideoId && it.available != false }
     }
 
     private fun shouldResumeProgress(progress: WatchProgress): Boolean {
@@ -1341,7 +1332,7 @@ class MetaDetailsViewModel @Inject constructor(
             contentType = meta.apiType,
             name = meta.name,
             poster = meta.poster,
-            backdrop = meta.background,
+            backdrop = meta.backdropUrl,
             logo = meta.logo,
             videoId = meta.id,
             season = null,
@@ -1361,7 +1352,7 @@ class MetaDetailsViewModel @Inject constructor(
             contentType = meta.apiType,
             name = meta.name,
             poster = meta.poster,
-            backdrop = video.thumbnail ?: meta.background,
+            backdrop = video.thumbnail ?: meta.backdropUrl,
             logo = meta.logo,
             videoId = video.id,
             season = video.season,
@@ -1416,16 +1407,9 @@ class MetaDetailsViewModel @Inject constructor(
             ?.groupValues
             ?.getOrNull(1)
             ?.toIntOrNull()
-        val routeIds = parseContentIds(itemId)
-        val metaIds = parseContentIds(id)
-        val parsedIds = ParsedContentIds(
-            trakt = metaIds.trakt ?: routeIds.trakt,
-            imdb = metaIds.imdb ?: routeIds.imdb,
-            tmdb = metaIds.tmdb ?: routeIds.tmdb
-        )
-        val canonicalItemId = normalizeContentId(toTraktIds(parsedIds), fallback = id)
+        val parsedIds = parseContentIds(id)
         return LibraryEntryInput(
-            itemId = canonicalItemId,
+            itemId = id,
             itemType = apiType,
             title = name,
             year = year,
@@ -1442,25 +1426,6 @@ class MetaDetailsViewModel @Inject constructor(
             genres = genres,
             addonBaseUrl = preferredAddonBaseUrl
         )
-    }
-
-    private fun syncObservedContentIdentities(meta: Meta) {
-        val updatedIdentities = buildList {
-            add(DetailContentIdentity(itemId = itemId, itemType = itemType))
-            add(DetailContentIdentity(itemId = meta.id, itemType = meta.apiType))
-        }.distinct()
-        if (observedContentIdentities.value != updatedIdentities) {
-            observedContentIdentities.value = updatedIdentities
-        }
-    }
-
-    private fun observeMembershipAcrossIdentities(
-        identities: List<DetailContentIdentity>,
-        flowFactory: (DetailContentIdentity) -> kotlinx.coroutines.flow.Flow<Boolean>
-    ) = when (identities.size) {
-        0 -> flowOf(false)
-        1 -> flowFactory(identities.first())
-        else -> combine(identities.map(flowFactory)) { values -> values.any { it } }
     }
 
     fun getNextEpisodeInfo(): String? {

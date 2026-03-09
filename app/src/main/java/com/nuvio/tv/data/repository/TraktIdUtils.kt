@@ -46,27 +46,6 @@ internal fun normalizeContentId(ids: TraktIdsDto?, fallback: String? = null): St
     return fallback?.takeIf { it.isNotBlank() } ?: ""
 }
 
-internal fun movieLookupKeys(contentId: String?): Set<String> {
-    if (contentId.isNullOrBlank()) return emptySet()
-    val raw = contentId.trim()
-    if (raw.isBlank()) return emptySet()
-    val canonical = normalizeContentId(toTraktIds(parseContentIds(raw)))
-    return buildSet {
-        add(raw)
-        canonical.takeIf { it.isNotBlank() }?.let(::add)
-    }
-}
-
-internal fun movieLookupKeys(ids: TraktIdsDto?): Set<String> {
-    if (ids == null) return emptySet()
-    return buildSet {
-        ids.imdb?.takeIf { it.isNotBlank() }?.let(::add)
-        ids.tmdb?.let { add("tmdb:$it") }
-        ids.trakt?.let { add("trakt:$it") }
-        ids.slug?.takeIf { it.isNotBlank() }?.let(::add)
-    }
-}
-
 internal fun toTraktPathId(contentId: String): String {
     val parsed = parseContentIds(contentId)
     return when {

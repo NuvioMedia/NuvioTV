@@ -254,19 +254,19 @@ internal fun LazyListScope.subtitleSettingsItems(
         )
     }
 
-    item(key = "subtitle_libass_disabled") {
+    item(key = "subtitle_libass") {
         ToggleSettingsItem(
             icon = Icons.Default.Subtitles,
             title = stringResource(R.string.sub_libass),
             subtitle = stringResource(R.string.sub_libass_sub),
-            isChecked = false,
-            onCheckedChange = {},
+            isChecked = playerSettings.useLibass,
+            onCheckedChange = onSetUseLibass,
             onFocused = onItemFocused,
-            enabled = false
+            enabled = enabled
         )
     }
 
-    if (false) { // Libass temporarily disabled for maintenance
+    if (playerSettings.useLibass) {
         item(key = "subtitle_libass_render_header") {
             Text(
                 text = stringResource(R.string.sub_libass_mode),

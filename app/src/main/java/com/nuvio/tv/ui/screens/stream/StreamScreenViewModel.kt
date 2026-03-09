@@ -550,7 +550,7 @@ class StreamScreenViewModel @Inject constructor(
 
             _uiState.update { state ->
                 val posterValue = state.poster ?: meta.poster
-                val backdropValue = state.backdrop ?: meta.background
+                val backdropValue = state.backdrop ?: meta.backdropUrl
                 val logoValue = state.logo ?: meta.logo
                 val genresValue = state.genres?.takeIf { it.isNotBlank() } ?: metaGenres
                 val yearValue = state.year?.takeIf { it.isNotBlank() } ?: metaYear

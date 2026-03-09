@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
 import androidx.media3.common.C
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
@@ -166,6 +167,54 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         subtitleTracks = subtitleTracks
     )
     tryAutoSelectPreferredSubtitleFromAvailableTracks()
+    maybeAdjustLibassPipelineForTracks(tracks)
+}
+
+internal fun PlayerRuntimeController.maybeAdjustLibassPipelineForTracks(tracks: Tracks) {
+    if (libassPipelineSwitchInFlight) return
+
+    val desiredUseLibass = requestedUseLibassByUser && tracks.hasAssSsaTextTrack()
+    if (desiredUseLibass == activePlayerUsesLibass) return
+
+    val player = _exoPlayer ?: return
+    val resumePosition = player.currentPosition.takeIf { it > 0L }
+    libassPipelineOverrideForCurrentStream = desiredUseLibass
+    libassPipelineSwitchInFlight = true
+
+    _uiState.update { state ->
+        state.copy(
+            pendingSeekPosition = resumePosition ?: state.pendingSeekPosition,
+            showLoadingOverlay = state.loadingOverlayEnabled
+        )
+    }
+
+    scope.launch {
+        releasePlayer()
+        initializePlayer(currentStreamUrl, currentHeaders)
+    }
+}
+
+private fun Tracks.hasAssSsaTextTrack(): Boolean {
+    groups.forEach { trackGroup ->
+        if (trackGroup.type != C.TRACK_TYPE_TEXT) return@forEach
+        for (index in 0 until trackGroup.length) {
+            val format = trackGroup.getTrackFormat(index)
+            if (format.sampleMimeType == MimeTypes.TEXT_SSA) return true
+
+            val hasAssCodec = format.codecs
+                ?.split(',')
+                ?.asSequence()
+                ?.map { it.trim().lowercase(Locale.US) }
+                ?.any { codec ->
+                    codec == MimeTypes.TEXT_SSA ||
+                        codec == "s_text/ass" ||
+                        codec == "s_text/ssa" ||
+                        codec.endsWith("/x-ssa")
+                } == true
+            if (hasAssCodec) return true
+        }
+    }
+    return false
 }
 
 internal fun PlayerRuntimeController.maybeApplyRememberedAudioSelection(audioTracks: List<TrackInfo>) {
