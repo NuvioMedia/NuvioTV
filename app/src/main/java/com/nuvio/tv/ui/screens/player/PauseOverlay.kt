@@ -60,6 +60,7 @@ fun PauseOverlay(
     visible: Boolean,
     onClose: () -> Unit,
     title: String,
+    logo: String?,
     episodeTitle: String?,
     season: Int?,
     episode: Int?,
@@ -131,6 +132,7 @@ fun PauseOverlay(
                     } else {
                         PauseMetadataView(
                             title = title,
+                            logo = logo,
                             episodeTitle = episodeTitle,
                             season = season,
                             episode = episode,
@@ -174,6 +176,7 @@ private fun PauseOverlayClock(modifier: Modifier = Modifier) {
 @Composable
 private fun PauseMetadataView(
     title: String,
+    logo: String?,
     episodeTitle: String?,
     season: Int?,
     episode: Int?,
@@ -196,13 +199,39 @@ private fun PauseMetadataView(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineLarge,
-                color = Color.White,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            if (!logo.isNullOrBlank()) {
+                var logoFailed by remember(logo) { mutableStateOf(false) }
+                if (!logoFailed) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(logo)
+                            .memoryCacheKey(logo)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = title,
+                        contentScale = ContentScale.Fit,
+                        alignment = Alignment.BottomStart,
+                        modifier = Modifier.height(96.dp),
+                        onError = { logoFailed = true }
+                    )
+                } else {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            } else {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
 
             if (!year.isNullOrBlank()) {
                 val episodeLabel = if (type in listOf("series", "tv") && season != null && episode != null) {

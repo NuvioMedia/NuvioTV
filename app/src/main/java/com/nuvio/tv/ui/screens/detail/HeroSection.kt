@@ -9,8 +9,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -56,6 +59,7 @@ import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import android.util.Log
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MDBListRatings
@@ -579,16 +583,23 @@ private fun MetaInfoRow(
             .decoderFactory(SvgDecoder.Factory())
             .build()
     }
-    val secondaryItems = remember(meta.ageRating, meta.country, meta.language) {
+    val ageRatingBadge = remember(meta.ageRating) {
+        meta.ageRating?.trim()?.takeIf { it.isNotBlank() }
+    }
+    val statusBadge = remember(meta.status) {
+        meta.status?.trim()?.takeIf { it.isNotBlank() }?.uppercase()
+    }
+    Log.d("HeroBadge", "name=${meta.name} ageRating=${meta.ageRating} status=${meta.status} ageRatingBadge=$ageRatingBadge statusBadge=$statusBadge")
+    val secondaryItems = remember(runtimeText, meta.country, meta.language) {
         buildList<String> {
-            meta.ageRating?.trim()?.takeIf { it.isNotBlank() }?.let { add(it) }
-            meta.country?.trim()?.takeIf { it.isNotBlank() }?.let { add(it) }
+            runtimeText?.takeIf { it.isNotBlank() }?.let { add(it) }
+            meta.country?.trim()?.takeIf { it.isNotBlank() }?.let { add(normalizeCountryLabel(it)) }
             meta.language?.trim()?.takeIf { it.isNotBlank() }?.let { add(it.uppercase()) }
         }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Primary row: Genres, Runtime, Release, Ratings
+        // Primary row: Genres, Release, Ratings
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -600,17 +611,9 @@ private fun MetaInfoRow(
                     style = MaterialTheme.typography.labelLarge,
                     color = NuvioTheme.extendedColors.textSecondary
                 )
-                MetaInfoDivider()
-            }
-
-            // Runtime
-            runtimeText?.let { text ->
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = NuvioTheme.extendedColors.textSecondary
-                )
-                MetaInfoDivider()
+                if (yearText != null || shouldShowImdbRating) {
+                    MetaInfoDivider()
+                }
             }
 
             yearText?.let { year ->
@@ -645,17 +648,38 @@ private fun MetaInfoRow(
             }
         }
 
-        // Secondary row: Age Rating, Country, Language
-        if (secondaryItems.isNotEmpty()) {
+        // Secondary row: Runtime, Age Rating, Status, Country, Language
+        if (ageRatingBadge != null || statusBadge != null || secondaryItems.isNotEmpty()) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (ageRatingBadge != null && statusBadge != null) {
+                    CombinedMetaBadge(
+                        leftText = ageRatingBadge,
+                        leftColor = NuvioColors.TextSecondary,
+                        rightText = statusBadge,
+                        rightColor = NuvioColors.TextPrimary
+                    )
+                } else {
+                    ageRatingBadge?.let { badge ->
+                        HeroMetaBadge(text = badge)
+                    }
+                    statusBadge?.let { badge ->
+                        HeroMetaBadge(
+                            text = badge,
+                            contentColor = NuvioColors.TextPrimary
+                        )
+                    }
+                }
+                if ((ageRatingBadge != null || statusBadge != null) && secondaryItems.isNotEmpty()) {
+                    MetaInfoDivider()
+                }
                 secondaryItems.forEachIndexed { index, value ->
                     Text(
                         text = value,
                         style = MaterialTheme.typography.labelMedium,
-                        color = NuvioTheme.extendedColors.textTertiary
+                        color = NuvioColors.TextPrimary
                     )
                     if (index < secondaryItems.lastIndex) {
                         MetaInfoDivider()
@@ -664,6 +688,81 @@ private fun MetaInfoRow(
             }
         }
     }
+}
+
+@Composable
+private fun HeroMetaBadge(
+    text: String,
+    contentColor: Color = NuvioColors.TextSecondary
+) {
+    Box(
+        modifier = Modifier
+            .border(
+                border = BorderStroke(1.dp, contentColor.copy(alpha = 0.55f)),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = contentColor,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun CombinedMetaBadge(
+    leftText: String,
+    leftColor: Color = NuvioColors.TextSecondary,
+    rightText: String,
+    rightColor: Color = NuvioColors.TextPrimary
+) {
+    val dividerColor = leftColor.copy(alpha = 0.55f)
+    Row(
+        modifier = Modifier
+            .border(
+                border = BorderStroke(1.dp, dividerColor),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = leftText,
+            style = MaterialTheme.typography.labelMedium,
+            color = leftColor,
+            maxLines = 1
+        )
+        Box(
+            modifier = Modifier
+                .width(1.dp)
+                .height(12.dp)
+                .background(dividerColor)
+        )
+        Text(
+            text = rightText,
+            style = MaterialTheme.typography.labelMedium,
+            color = rightColor,
+            maxLines = 1
+        )
+    }
+}
+
+private fun normalizeCountryLabel(raw: String): String {
+    return raw
+        .split(",")
+        .joinToString(", ") { part ->
+            val trimmed = part.trim()
+            if (trimmed.matches(Regex("[A-Za-z]{2,3}"))) {
+                trimmed.uppercase()
+            } else {
+                trimmed
+            }
+        }
 }
 
 @Composable

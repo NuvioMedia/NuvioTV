@@ -389,7 +389,7 @@ fun ContinueWatchingCard(
                         Text(
                             text = episodeStr,
                             style = MaterialTheme.typography.labelMedium,
-                            color = NuvioColors.Primary
+                            color = NuvioColors.TextPrimary
                         )
                     }
 

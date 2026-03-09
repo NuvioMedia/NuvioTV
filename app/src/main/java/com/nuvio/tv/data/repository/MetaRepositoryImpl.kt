@@ -46,6 +46,7 @@ class MetaRepositoryImpl @Inject constructor(
     private val metaCache = ConcurrentHashMap<String, Meta>()
     // Separate cache for full meta fetched from addons (bypasses catalog-level cache)
     private val addonMetaCache = ConcurrentHashMap<String, Meta>()
+    private val primaryAddonMetaCache = ConcurrentHashMap<String, Meta>()
 
     override fun getMeta(
         addonBaseUrl: String,
@@ -223,6 +224,69 @@ class MetaRepositoryImpl @Inject constructor(
         )
     }
 
+    override fun getMetaFromPrimaryAddon(
+        type: String,
+        id: String
+    ): Flow<NetworkResult<Meta>> = flow {
+        val cacheKey = "$type:$id"
+        primaryAddonMetaCache[cacheKey]?.let { cached ->
+            emit(NetworkResult.Success(cached))
+            return@flow
+        }
+
+        emit(NetworkResult.Loading)
+
+        val addons = addonRepository.getInstalledAddons().first()
+        val requestedType = type.trim()
+        val inferredType = inferCanonicalType(requestedType, id)
+        val candidate = selectPrimaryMetaCandidate(
+            addons = addons,
+            requestedType = requestedType,
+            inferredType = inferredType
+        )
+
+        if (candidate == null) {
+            emit(NetworkResult.Error(context.getString(R.string.error_meta_no_supported_addon, requestedType)))
+            return@flow
+        }
+
+        val (addon, candidateType) = candidate
+        val url = buildMetaUrl(addon.baseUrl, candidateType, id)
+        Log.d(
+            TAG,
+            "Trying primary meta addonId=${addon.id} addonName=${addon.name} type=$candidateType id=$id url=$url"
+        )
+
+        when (val result = safeApiCall { api.getMeta(url) }) {
+            is NetworkResult.Success -> {
+                val metaDto = result.data.meta
+                if (metaDto != null) {
+                    val episodeLabel = context.getString(R.string.episodes_episode)
+                    val meta = metaDto.toDomain(episodeLabel)
+                    primaryAddonMetaCache[cacheKey] = meta
+                    metaCache[cacheKey] = meta
+                    emit(NetworkResult.Success(meta))
+                } else {
+                    emit(NetworkResult.Error(buildAggregateFailureMessage(
+                        type = requestedType,
+                        id = id,
+                        attemptedAddonNames = listOf(addon.displayName),
+                        failures = listOf(buildMissingMetaFailure(addon))
+                    )))
+                }
+            }
+            is NetworkResult.Error -> {
+                emit(NetworkResult.Error(buildAggregateFailureMessage(
+                    type = requestedType,
+                    id = id,
+                    attemptedAddonNames = listOf(addon.displayName),
+                    failures = listOf(buildAddonFailure(addon, result))
+                )))
+            }
+            NetworkResult.Loading -> Unit
+        }
+    }
+
     private fun buildMetaUrl(baseUrl: String, type: String, id: String): String {
         val cleanBaseUrl = baseUrl.trimEnd('/')
         val encodedType = encodePathSegment(type)
@@ -256,6 +320,34 @@ class MetaRepositoryImpl @Inject constructor(
             ":anime:" in normalizedId -> "anime"
             else -> normalizedType
         }
+    }
+
+    private fun selectPrimaryMetaCandidate(
+        addons: List<Addon>,
+        requestedType: String,
+        inferredType: String
+    ): Pair<Addon, String>? {
+        addons.forEach { addon ->
+            if (addon.supportsMetaType(requestedType)) {
+                return addon to requestedType
+            }
+        }
+        if (!inferredType.equals(requestedType, ignoreCase = true)) {
+            addons.forEach { addon ->
+                if (addon.supportsMetaType(inferredType)) {
+                    return addon to inferredType
+                }
+            }
+        }
+        val topMetaAddon = addons.firstOrNull { addon ->
+            addon.resources.any { it.name == "meta" }
+        } ?: return null
+        val fallbackType = when {
+            topMetaAddon.supportsMetaType(requestedType) -> requestedType
+            topMetaAddon.supportsMetaType(inferredType) -> inferredType
+            else -> inferredType.ifBlank { requestedType }
+        }
+        return topMetaAddon to fallbackType
     }
 
     private fun encodePathSegment(value: String): String {
@@ -329,5 +421,6 @@ class MetaRepositoryImpl @Inject constructor(
     override fun clearCache() {
         metaCache.clear()
         addonMetaCache.clear()
+        primaryAddonMetaCache.clear()
     }
 }

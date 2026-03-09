@@ -7,6 +7,9 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.extractor.DefaultExtractorsFactory
+import androidx.media3.extractor.ExtractorsFactory
+import androidx.media3.extractor.text.SubtitleParser
 import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import java.net.URLDecoder
@@ -14,6 +17,16 @@ import java.util.concurrent.TimeUnit
 
 internal class PlayerMediaSourceFactory {
     private var okHttpClient: OkHttpClient? = null
+    private var customExtractorsFactory: ExtractorsFactory? = null
+    private var customSubtitleParserFactory: SubtitleParser.Factory? = null
+
+    fun configureSubtitleParsing(
+        extractorsFactory: ExtractorsFactory?,
+        subtitleParserFactory: SubtitleParser.Factory?
+    ) {
+        customExtractorsFactory = extractorsFactory
+        customSubtitleParserFactory = subtitleParserFactory
+    }
 
     fun createMediaSource(
         url: String,
@@ -48,7 +61,13 @@ internal class PlayerMediaSourceFactory {
         }
 
         val mediaItem = mediaItemBuilder.build()
-        val defaultFactory = DefaultMediaSourceFactory(okHttpFactory)
+        val extractorsFactory = customExtractorsFactory ?: DefaultExtractorsFactory()
+        val defaultFactory = DefaultMediaSourceFactory(okHttpFactory, extractorsFactory).apply {
+            customSubtitleParserFactory?.let { parserFactory ->
+                setSubtitleParserFactory(parserFactory)
+            }
+        }
+        val forceDefaultFactory = customExtractorsFactory != null || customSubtitleParserFactory != null
 
         // Sidecar subtitles are more reliable through DefaultMediaSourceFactory.
         if (subtitleConfigurations.isNotEmpty()) {
@@ -56,10 +75,10 @@ internal class PlayerMediaSourceFactory {
         }
 
         return when {
-            isHls -> HlsMediaSource.Factory(okHttpFactory)
+            isHls && !forceDefaultFactory -> HlsMediaSource.Factory(okHttpFactory)
                 .setAllowChunklessPreparation(true)
                 .createMediaSource(mediaItem)
-            isDash -> DashMediaSource.Factory(okHttpFactory)
+            isDash && !forceDefaultFactory -> DashMediaSource.Factory(okHttpFactory)
                 .createMediaSource(mediaItem)
             else -> defaultFactory.createMediaSource(mediaItem)
         }

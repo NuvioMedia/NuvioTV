@@ -324,12 +324,17 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
     val incomingTrailerYtIds = meta.trailerYtIds
 
     fun mergeItem(currentItem: MetaPreview): MetaPreview = currentItem.copy(
-        background = meta.background ?: currentItem.background,
+        background = meta.backdropUrl ?: currentItem.backdropUrl,
         logo = meta.logo ?: currentItem.logo,
         description = meta.description ?: currentItem.description,
         releaseInfo = meta.releaseInfo ?: currentItem.releaseInfo,
         imdbRating = meta.imdbRating ?: currentItem.imdbRating,
         genres = if (meta.genres.isNotEmpty()) meta.genres else currentItem.genres,
+        runtime = meta.runtime ?: currentItem.runtime,
+        status = meta.status ?: currentItem.status,
+        ageRating = meta.ageRating ?: currentItem.ageRating,
+        language = meta.language ?: currentItem.language,
+        country = meta.country ?: currentItem.country,
         trailerYtIds = if (incomingTrailerYtIds.isNotEmpty()) incomingTrailerYtIds else currentItem.trailerYtIds
     )
 
@@ -421,7 +426,12 @@ internal suspend fun HomeViewModel.enrichHeroItemsPipeline(
 
                     if (settings.useDetails) {
                         enriched = enriched.copy(
-                            releaseInfo = enrichment.releaseInfo ?: enriched.releaseInfo
+                            runtime = enrichment.runtimeMinutes?.toString() ?: enriched.runtime,
+                            releaseInfo = enrichment.releaseInfo ?: enriched.releaseInfo,
+                            status = enrichment.status ?: enriched.status,
+                            ageRating = enrichment.ageRating ?: enriched.ageRating,
+                            country = enrichment.countries?.joinToString(", ") ?: enriched.country,
+                            language = enrichment.language ?: enriched.language
                         )
                     }
 
@@ -454,7 +464,7 @@ internal fun HomeViewModel.heroEnrichmentSignaturePipeline(
     settings: TmdbSettings
 ): String {
     val itemSignature = items.joinToString(separator = "|") { item ->
-        "${item.id}:${item.apiType}:${item.name}:${item.background}:${item.logo}:${item.poster}"
+        "${item.id}:${item.apiType}:${item.name}:${item.backdropUrl}:${item.logo}:${item.poster}"
     }
     return buildString {
         append(settings.enabled)

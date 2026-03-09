@@ -149,14 +149,7 @@ private fun resolveDetailReturnEpisodeFocusTarget(
     }
     if (matchedIndex < 0) return null
 
-    val isCompleted = episodeProgressMap[requestedSeason to requestedEpisode]?.isCompleted() == true ||
-        watchedEpisodes.contains(requestedSeason to requestedEpisode)
-
-    return if (isCompleted) {
-        orderedEpisodes.getOrNull(matchedIndex + 1) ?: orderedEpisodes[matchedIndex]
-    } else {
-        orderedEpisodes[matchedIndex]
-    }
+    return orderedEpisodes[matchedIndex]
 }
 
 private const val USER_INTERACTION_DISPATCH_DEBOUNCE_MS = 120L
@@ -388,7 +381,7 @@ fun MetaDetailsScreen(
                             meta.id,
                             meta.name,
                             video.thumbnail ?: meta.poster,
-                            meta.background,
+                            meta.backdropUrl,
                             meta.logo,
                             video.season,
                             video.episode,
@@ -405,7 +398,7 @@ fun MetaDetailsScreen(
                             meta.id,
                             meta.name,
                             video.thumbnail ?: meta.poster,
-                            meta.background,
+                            meta.backdropUrl,
                             meta.logo,
                             video.season,
                             video.episode,
@@ -422,7 +415,7 @@ fun MetaDetailsScreen(
                             meta.id,
                             meta.name,
                             meta.poster,
-                            meta.background,
+                            meta.backdropUrl,
                             meta.logo,
                             null,
                             null,
@@ -439,7 +432,7 @@ fun MetaDetailsScreen(
                             meta.id,
                             meta.name,
                             meta.poster,
-                            meta.background,
+                            meta.backdropUrl,
                             meta.logo,
                             null,
                             null,
@@ -647,8 +640,12 @@ private fun MetaDetailsContent(
     val isSeries = remember(meta.type, meta.videos) {
         meta.type == ContentType.SERIES || meta.videos.isNotEmpty()
     }
+    val defaultSeriesVideo = remember(meta.behaviorHints?.defaultVideoId, meta.videos) {
+        val defaultVideoId = meta.behaviorHints?.defaultVideoId
+        meta.videos.firstOrNull { it.id == defaultVideoId && it.available != false }
+    }
     val nextEpisode = remember(episodesForSeason) { episodesForSeason.firstOrNull() }
-    val heroVideo = remember(meta.videos, nextToWatch, nextEpisode, isSeries) {
+    val heroVideo = remember(meta.videos, nextToWatch, nextEpisode, defaultSeriesVideo, isSeries) {
         if (!isSeries) return@remember null
         val byId = nextToWatch?.nextVideoId?.let { id ->
             meta.videos.firstOrNull { it.id == id }
@@ -658,7 +655,7 @@ private fun MetaDetailsContent(
         } else {
             null
         }
-        byId ?: bySeasonEpisode ?: nextEpisode
+        byId ?: bySeasonEpisode ?: defaultSeriesVideo ?: nextEpisode
     }
     val nestedPrefetchStrategy = remember { LazyListPrefetchStrategy(nestedPrefetchItemCount = 2) }
     val listState = rememberLazyListState(prefetchStrategy = nestedPrefetchStrategy)
@@ -833,9 +830,9 @@ private fun MetaDetailsContent(
     }
 
     val directorWriterMembers = remember(castMembersToShow) {
-        val creators = castMembersToShow.filter { it.tmdbId != null && it.character.equals("Creator", ignoreCase = true) }
-        val directors = castMembersToShow.filter { it.tmdbId != null && it.character.equals("Director", ignoreCase = true) }
-        val writers = castMembersToShow.filter { it.tmdbId != null && it.character.equals("Writer", ignoreCase = true) }
+        val creators = castMembersToShow.filter { it.character.equals("Creator", ignoreCase = true) }
+        val directors = castMembersToShow.filter { it.character.equals("Director", ignoreCase = true) }
+        val writers = castMembersToShow.filter { it.character.equals("Writer", ignoreCase = true) }
         when {
             creators.isNotEmpty() -> creators
             directors.isNotEmpty() -> directors
@@ -844,10 +841,19 @@ private fun MetaDetailsContent(
     }
 
     val normalCastMembers = remember(castMembersToShow, directorWriterMembers) {
-        val leadingIds = directorWriterMembers.mapNotNull { it.tmdbId }.toSet()
+        val leadingKeys = directorWriterMembers.map {
+            listOf(
+                it.tmdbId?.toString().orEmpty(),
+                it.name.trim().lowercase(),
+                it.character.orEmpty().trim().lowercase()
+            ).joinToString("|")
+        }.toSet()
         castMembersToShow.filterNot {
-            val id = it.tmdbId
-            id != null && id in leadingIds && isLeadCreditRole(it.character)
+            isLeadCreditRole(it.character) && listOf(
+                it.tmdbId?.toString().orEmpty(),
+                it.name.trim().lowercase(),
+                it.character.orEmpty().trim().lowercase()
+            ).joinToString("|") in leadingKeys
         }
     }
     val isTvShow = remember(meta.type, meta.apiType) {
@@ -934,12 +940,13 @@ private fun MetaDetailsContent(
         byEpisodeId.keys.retainAll(episodesForSeason.map { it.id }.toSet())
         byEpisodeId
     }
-    val seasonDownFocusRequester = remember(selectedSeason, episodesForSeason, seasonEpisodeFocusRequesters, lastFocusedEpisodeIdBySeason[selectedSeason], nextToWatch, pendingRestoreType, pendingRestoreEpisodeId) {
+    val seasonDownFocusRequester = remember(selectedSeason, episodesForSeason, seasonEpisodeFocusRequesters, lastFocusedEpisodeIdBySeason[selectedSeason], nextToWatch, defaultSeriesVideo, pendingRestoreType, pendingRestoreEpisodeId) {
         val nextEpisodeId = if (pendingRestoreType == RestoreTarget.EPISODE) {
             null
         } else {
             nextToWatch?.nextVideoId
                 ?: nextToWatch?.let { ntw -> episodesForSeason.firstOrNull { it.season == ntw.nextSeason && it.episode == ntw.nextEpisode }?.id }
+                ?: defaultSeriesVideo?.id?.takeIf { defaultId -> episodesForSeason.any { it.id == defaultId } }
         }
         val preferredEpisodeId = lastFocusedEpisodeIdBySeason[selectedSeason]
             ?: nextEpisodeId?.takeIf { episodesForSeason.any { ep -> ep.id == it } }
@@ -1041,13 +1048,13 @@ private fun MetaDetailsContent(
     }
     val backdropRequest = remember(
         localContext,
-        meta.background,
+        meta.backdropUrl,
         meta.poster,
         backdropWidthPx,
         backdropHeightPx
     ) {
         ImageRequest.Builder(localContext)
-            .data(meta.background ?: meta.poster)
+            .data(meta.backdropUrl ?: meta.poster)
             .crossfade(true)
             .size(width = backdropWidthPx, height = backdropHeightPx)
             .build()
@@ -1232,6 +1239,7 @@ private fun MetaDetailsContent(
                             scrollToEpisodeId = if (lastFocusedEpisodeIdBySeason[selectedSeason] == null && pendingRestoreType != RestoreTarget.EPISODE) {
                                 nextToWatch?.nextVideoId
                                     ?: nextToWatch?.let { ntw -> episodesForSeason.firstOrNull { it.season == ntw.nextSeason && it.episode == ntw.nextEpisode }?.id }
+                                    ?: defaultSeriesVideo?.id?.takeIf { defaultId -> episodesForSeason.any { it.id == defaultId } }
                             } else null
                         )
                     }

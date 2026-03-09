@@ -181,9 +181,10 @@ private fun HeroCarouselSlide(
     }
     val requestHeightPx = remember(density) { with(density) { 400.dp.roundToPx() } }
     val logoRequestHeightPx = remember(density) { with(density) { 80.dp.roundToPx() } }
-    val backgroundModel = remember(context, item.background, requestWidthPx, requestHeightPx) {
+    val backdropUrl = item.backdropUrl
+    val backgroundModel = remember(context, backdropUrl, requestWidthPx, requestHeightPx) {
         ImageRequest.Builder(context)
-            .data(item.background)
+            .data(backdropUrl)
             .crossfade(false)
             .size(width = requestWidthPx, height = requestHeightPx)
             .build()

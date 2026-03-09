@@ -414,7 +414,7 @@ private suspend fun HomeViewModel.buildNextUpItem(
     val nextEpisodeNumber = requireNotNull(video.episode)
 
     val existingPoster = meta.poster.normalizeImageUrl()
-    val existingBackdrop = meta.background.normalizeImageUrl()
+    val existingBackdrop = meta.backdropUrl.normalizeImageUrl()
     val existingLogo = meta.logo.normalizeImageUrl()
     val existingThumbnail = video.thumbnail.normalizeImageUrl()
     val artworkFallback = if (
@@ -635,7 +635,7 @@ private suspend fun HomeViewModel.resolveMetaForProgress(
         for (type in typeCandidates) {
             for (candidateId in idCandidates) {
                 val result = withTimeoutOrNull(2500) {
-                    metaRepository.getMetaFromAllAddons(
+                    metaRepository.getMetaFromPrimaryAddon(
                         type = type,
                         id = candidateId
                     ).first { it !is NetworkResult.Loading }
