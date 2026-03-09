@@ -11,6 +11,34 @@
 
     <!-- ErrorState -->
     <string name="action_retry">Tekrar Dene</string>
+    <string name="error_state_generic_issue">Bir sorun oluştu.</string>
+    <string name="error_state_possible_fix">Olası çözüm: %1$s</string>
+    <string name="error_state_fix_retry_soon">biraz bekleyip tekrar deneyin.</string>
+    <string name="error_state_issue_no_metadata_any_addon">Yüklü eklentilerin hiçbiri bilgi döndürmediği için bu içeriğin detaylarını yükleyemedik.</string>
+    <string name="error_state_fix_no_metadata_any_addon">başka eklenti deneyin, Düzen menüsünden \"Harici meta eklentisini tercih et\" ayarını kapatın veya yüklü eklentinizden birinin bu içeriği desteklediğinden emin olun.</string>
+    <string name="error_state_prefix_no_supported_metadata">Bunun için detayları destekleyen kurulu bir eklenti yok: </string>
+    <string name="error_state_prefix_no_addon_for_id">Şu kimlik için bilgi sağlayabilen bir eklenti bulunamadı: id=</string>
+    <string name="error_state_fix_no_supported_metadata">bu içerik türünü destekleyen bir eklenti yükleyin veya güncelleyip tekrar deneyin.</string>
+    <string name="error_state_prefix_tried_meta_addons">Denenen bilgi eklentileri:</string>
+    <string name="error_state_fix_tried_meta_addons">bu içeriği destekleyen bir eklenti yükleyin ya da eklentinizi yeniden ayarlayıp/güncelleyip tekrar deneyin.</string>
+    <string name="error_state_issue_missing_metadata_for_id">bu içerikle ilgili bilgi bulamadı</string>
+    <string name="error_state_fix_missing_metadata_for_id">bunu başka bir eklentiden açmayı deneyin, \"Harici meta eklentisini tercih et\" seçeneğini kapatın veya eklentinin bu içeriği destekleyip desteklemediğini kontrol edin.</string>
+    <string name="error_state_issue_addon_unreachable">sunucusuna ulaşılamadı</string>
+    <string name="error_state_fix_addon_unreachable">internet bağlantınızı kontrol edin, eklenti linkinin hala çalıştığından emin olup tekrar deneyin.</string>
+    <string name="error_state_issue_addon_connection_failed">bağlantıyı reddetti</string>
+    <string name="error_state_fix_addon_connection_failed">eklenti sunucusunun açık ve ulaşılabilir olduğundan emin olun, sonra tekrar deneyin.</string>
+    <string name="error_state_issue_addon_timeout">yanıt vermesi çok uzun sürdü</string>
+    <string name="error_state_fix_addon_timeout">biraz bekleyip tekrar deneyin veya bu durum sürekli yaşanıyorsa farklı bir eklenti kullanın.</string>
+    <string name="error_state_issue_addon_cleartext">Android\'in engellediği güvenli olmayan bir HTTP bağlantısı kullanıyor</string>
+    <string name="error_state_fix_addon_cleartext">eklentinin linkini HTTPS olarak değiştirin veya eklenti ayarlarını güncelleyin.</string>
+    <string name="error_state_fix_addon_generic">tekrar deneyin, eklentiyi güncelleyin/yeniden yükleyin veya başka bir eklenti kullanın.</string>
+    <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
+    <string name="error_meta_not_found">İçerik bilgisi bulunamadı</string>
+    <string name="error_meta_no_supported_addon">\"%1$s\" hakkında bilgi verecek yüklü bir eklenti yok.</string>
+    <string name="error_meta_no_addon_for_id">Şu içerik için detayları sağlayabilen bir eklenti bulunamadı: id=%1$s (tür=%2$s).</string>
+    <string name="error_meta_tried_none">Şu eklentiler denendi: %1$s. Hiçbiri bu içerik için bilgi sağlamadı: id=%2$s (tür=%3$s).</string>
+    <string name="error_meta_tried_generic">Şu eklentiler denendi: %1$s. Bu içerik için gerekli bilgiler yüklenemedi: id=%2$s (tür=%3$s).</string>
+    <string name="error_meta_tried_issues">Şu eklentiler denendi: %1$s. Bu içerik için gerekli bilgiler yüklenemedi: id=%2$s (tür=%3$s). Karşılaşılan sorunlar: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">İzlemeye Devam Et</string>
@@ -89,6 +117,7 @@
     <string name="detail_tab_more_like_this">Benzer İçerikler</string>
     <string name="detail_section_network">Kanal</string>
     <string name="detail_section_production">Yapım</string>
+    <string name="episodes_unavailable">Mevcut Değil</string>
     <string name="detail_lists_fallback">Listeler</string>
     <string name="detail_lists_subtitle">Bu içeriğin hangi listelerde yer alacağını seçin.</string>
     <string name="action_save">Kaydet</string>
@@ -785,6 +814,7 @@
     <!-- AccountSettingsContent -->
     <string name="account_loading">Yükleniyor\u2026</string>
     <string name="account_sync_description">Kütüphanenizi, görüntüleme ilerlemenizi, eklentilerinizi ve uzantılarınızı cihazlar arasında eşitleyin.</string>
+    <string name="account_sync_restart_note">Eşitleme tüm cihazlarda anında gerçekleşmez. Hesabınıza girdikten veya başka bir yerde yaptığınız değişiklikleri görebilmek için cihazı yeniden başlatın.</string>
     <string name="account_signin_qr_title">QR ile Oturum Aç</string>
     <string name="account_signin_qr_subtitle">QR kodunu taratıp e-posta ile girişinizi telefondan tamamlayın</string>
     <string name="account_signed_in_label">Oturum açıldı</string>
@@ -889,6 +919,8 @@
     <!-- UpdatePromptDialog -->
     <string name="update_title">Uygulama Güncellemesi</string>
     <string name="update_downloading">Güncelleme İndiriliyor</string>
+    <string name="update_download">İndir</string>
+    <string name="update_downloading_ellipsis">İndiriliyor…</string>
     <string name="update_unknown_sources">Nuvio\'nun indirdiği eklentileri yüklayabilmek adına `Bilinmeyen kaynaklar` veya `Dışarıdan yükleme` iznine ihtiyaç var.</string>
     <!-- AccountScreen -->
     <string name="account_title">Ana Bilgi Modülleri</string>
