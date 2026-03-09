@@ -1,7 +1,7 @@
   <resources>
     <string name="app_name">Nuvio</string>
-    <string name="type_movie">Filme</string>
-    <string name="type_series">Série</string>
+    <string name="type_movie">Filmes</string>
+    <string name="type_series">Séries</string>
 
     <!-- HomeScreen -->
     <string name="home_no_addons">Nenhum addon instalado. Adicione um para começar.</string>
