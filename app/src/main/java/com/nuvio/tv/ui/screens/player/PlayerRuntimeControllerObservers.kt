@@ -6,10 +6,12 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.domain.model.Subtitle
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 internal data class SubtitleFetchRequest(
     val type: String,
@@ -334,20 +336,25 @@ internal fun PlayerRuntimeController.retryCurrentStreamFromStartAfter416() {
         )
     }
     _exoPlayer?.let { player ->
-        runCatching {
-            player.stop()
-            player.clearMediaItems()
-            player.setMediaSource(mediaSourceFactory.createMediaSource(currentStreamUrl, currentHeaders))
-            player.seekTo(0L)
-            player.playWhenReady = true
-            player.prepare()
-        }.onFailure { e ->
-            _uiState.update {
-                it.copy(
-                    error = e.message ?: "Playback error",
-                    showLoadingOverlay = false,
-                    showPauseOverlay = false
-                )
+        scope.launch {
+            runCatching {
+                val mediaSource = withContext(Dispatchers.IO) {
+                    mediaSourceFactory.createMediaSource(currentStreamUrl, currentHeaders)
+                }
+                player.stop()
+                player.clearMediaItems()
+                player.setMediaSource(mediaSource)
+                player.seekTo(0L)
+                player.playWhenReady = true
+                player.prepare()
+            }.onFailure { e ->
+                _uiState.update {
+                    it.copy(
+                        error = e.message ?: "Playback error",
+                        showLoadingOverlay = false,
+                        showPauseOverlay = false
+                    )
+                }
             }
         }
     }

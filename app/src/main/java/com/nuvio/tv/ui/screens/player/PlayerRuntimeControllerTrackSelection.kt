@@ -6,9 +6,11 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import com.nuvio.tv.domain.model.Subtitle
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 internal fun PlayerRuntimeController.filterEpisodeStreamsByAddon(addonName: String?) {
     val allStreams = _uiState.value.episodeAllStreams
@@ -288,30 +290,32 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         val currentPosition = player.currentPosition
         val playWhenReady = player.playWhenReady
 
-        player.setMediaSource(
-            mediaSourceFactory.createMediaSource(
-                url = currentStreamUrl,
-                headers = currentHeaders,
-                subtitleConfigurations = subtitleConfigurations
-            ),
-            currentPosition
-        )
-        player.prepare()
-        player.playWhenReady = playWhenReady
+        scope.launch {
+            val refreshedMediaSource = withContext(Dispatchers.IO) {
+                mediaSourceFactory.createMediaSource(
+                    url = currentStreamUrl,
+                    headers = currentHeaders,
+                    subtitleConfigurations = subtitleConfigurations
+                )
+            }
 
-        
-        player.trackSelectionParameters = player.trackSelectionParameters
-            .buildUpon()
-            .clearOverridesOfType(C.TRACK_TYPE_TEXT)
-            .setPreferredTextLanguage(normalizedLang)
-            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-            .build()
-        
-        _uiState.update { 
-            it.copy(
-                selectedAddonSubtitle = subtitle,
-                selectedSubtitleTrackIndex = -1 
-            )
+            player.setMediaSource(refreshedMediaSource, currentPosition)
+            player.prepare()
+            player.playWhenReady = playWhenReady
+
+            player.trackSelectionParameters = player.trackSelectionParameters
+                .buildUpon()
+                .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                .setPreferredTextLanguage(normalizedLang)
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                .build()
+
+            _uiState.update {
+                it.copy(
+                    selectedAddonSubtitle = subtitle,
+                    selectedSubtitleTrackIndex = -1
+                )
+            }
         }
     }
 }

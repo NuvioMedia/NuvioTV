@@ -109,7 +109,7 @@ class PlayerRuntimeController(
     internal val initialEpisodeTitle: String? = navigationArgs.initialEpisodeTitle
     internal val rememberedAudioLanguage: String? = navigationArgs.rememberedAudioLanguage
     internal val rememberedAudioName: String? = navigationArgs.rememberedAudioName
-    internal val mediaSourceFactory = PlayerMediaSourceFactory()
+    internal val mediaSourceFactory = PlayerMediaSourceFactory(context)
 
     internal var currentVideoHash: String? = navigationArgs.videoHash
     internal var currentVideoSize: Long? = navigationArgs.videoSize
