@@ -72,4 +72,3 @@ jobs:
             } else {
               core.info("PR template check passed.");
             }
-
