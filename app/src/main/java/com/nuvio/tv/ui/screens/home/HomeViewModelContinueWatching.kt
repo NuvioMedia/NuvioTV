@@ -1,6 +1,5 @@
 package com.nuvio.tv.ui.screens.home
 
-import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.local.TraktSettingsDataStore
@@ -10,9 +9,11 @@ import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
@@ -54,6 +55,15 @@ private data class NextUpResolution(
     val lastWatched: Long
 )
 
+private fun ContinueWatchingSettingsSnapshot.isEquivalentForContinueWatching(
+    other: ContinueWatchingSettingsSnapshot
+): Boolean {
+    return daysCap == other.daysCap &&
+        dismissedNextUp == other.dismissedNextUp &&
+        showUnairedNextUp == other.showUnairedNextUp &&
+        items.toContinueWatchingStructuralIdentityList() == other.items.toContinueWatchingStructuralIdentityList()
+}
+
 internal fun HomeViewModel.loadContinueWatchingPipeline() {
     viewModelScope.launch {
         combine(
@@ -68,7 +78,11 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 dismissedNextUp = dismissedNextUp,
                 showUnairedNextUp = showUnairedNextUp
             )
-        }.collectLatest { snapshot ->
+        }
+            .distinctUntilChanged { old, new ->
+                old.isEquivalentForContinueWatching(new)
+            }
+            .collectLatest { snapshot ->
             val items = snapshot.items
             val daysCap = snapshot.daysCap
             val dismissedNextUp = snapshot.dismissedNextUp
@@ -86,8 +100,6 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 .take(CW_MAX_RECENT_PROGRESS_ITEMS)
                 .toList()
 
-            Log.d("HomeViewModel", "allProgress emitted=${items.size} recentWindow=${recentItems.size}")
-
             val inProgressOnly = buildList {
                 deduplicateInProgress(
                     recentItems.filter { shouldTreatAsInProgressForContinueWatching(it) }
@@ -100,11 +112,17 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 }
             }
 
-            Log.d("HomeViewModel", "inProgressOnly: ${inProgressOnly.size} items after filter+dedup")
-
             // Optimistic immediate render: show in-progress entries instantly.
             _uiState.update { state ->
-                if (state.continueWatchingItems == inProgressOnly) {
+                val currentBaseSignature = state.continueWatchingItems.inProgressBaseSignature()
+                val nextBaseSignature = inProgressOnly.inProgressBaseSignature()
+                val shouldPreserveResolvedState =
+                    currentBaseSignature == nextBaseSignature &&
+                        state.continueWatchingItems.hasAdditionalContinueWatchingData()
+
+                if (shouldPreserveResolvedState) {
+                    state
+                } else if (state.continueWatchingItems == inProgressOnly) {
                     state
                 } else {
                     state.copy(continueWatchingItems = inProgressOnly)
@@ -191,6 +209,33 @@ private suspend fun HomeViewModel.resolveCurrentReleaseInfo(
     return meta.releaseInfo?.takeIf { it.isNotBlank() }
 }
 
+private suspend fun HomeViewModel.resolveDisplayProgressMetadata(
+    progress: WatchProgress,
+    metaCache: MutableMap<String, Meta?>
+): WatchProgress {
+    val needsMeta =
+        progress.name.isBlank() ||
+            progress.name == progress.contentId ||
+            progress.poster.isNullOrBlank() ||
+            progress.backdrop.isNullOrBlank() ||
+            progress.logo.isNullOrBlank() ||
+            (isSeriesTypeCW(progress.contentType) && progress.episodeTitle.isNullOrBlank())
+    if (!needsMeta) return progress
+
+    val meta = resolveMetaForProgress(progress, metaCache) ?: return progress
+    val video = resolveVideoForProgress(progress, meta)
+    val shouldOverrideName = progress.name.isBlank() || progress.name == progress.contentId
+    val backdrop = progress.backdrop ?: meta.backdropUrl ?: video?.thumbnail
+
+    return progress.copy(
+        name = if (shouldOverrideName) meta.name else progress.name,
+        poster = progress.poster ?: meta.poster,
+        backdrop = backdrop,
+        logo = progress.logo ?: meta.logo,
+        episodeTitle = progress.episodeTitle ?: video?.title
+    )
+}
+
 private fun resolveVideoForProgress(progress: WatchProgress, meta: Meta): Video? {
     if (!isSeriesTypeCW(progress.contentType)) return null
     val videos = meta.videos.filter { it.season != null && it.episode != null && it.season != 0 }
@@ -264,14 +309,18 @@ private suspend fun HomeViewModel.enrichContinueWatchingProgressively(
                 ) ?: return@withPermit
                 mergeMutex.withLock {
                     nextUpByContent[progress.contentId] = nextUp
-                    if (nextUpByContent.size - lastEmittedNextUpCount >= 2) {
+                    if (!startupGracePeriodActive && nextUpByContent.size - lastEmittedNextUpCount >= 2) {
                         val nextUpItems = nextUpByContent.values.toList()
                         _uiState.update {
                             val mergedItems = mergeContinueWatchingItems(
                                 inProgressItems = inProgressItems,
                                 nextUpItems = nextUpItems
                             )
-                            if (it.continueWatchingItems == mergedItems) {
+                            val shouldPreserveCurrent =
+                                it.continueWatchingItems.shouldPreserveMergedContinueWatchingItems(mergedItems)
+                            if (shouldPreserveCurrent) {
+                                it
+                            } else if (it.continueWatchingItems == mergedItems) {
                                 it
                             } else {
                                 it.copy(continueWatchingItems = mergedItems)
@@ -293,7 +342,11 @@ private suspend fun HomeViewModel.enrichContinueWatchingProgressively(
                     inProgressItems = inProgressItems,
                     nextUpItems = nextUpItems
                 )
-                if (it.continueWatchingItems == mergedItems) {
+                val shouldPreserveCurrent =
+                    it.continueWatchingItems.shouldPreserveMergedContinueWatchingItems(mergedItems)
+                if (shouldPreserveCurrent) {
+                    it
+                } else if (it.continueWatchingItems == mergedItems) {
                     it
                 } else {
                     it.copy(continueWatchingItems = mergedItems)
@@ -318,7 +371,9 @@ private suspend fun HomeViewModel.enrichInProgressEpisodeDetailsProgressively(
         val imdbRating = resolveCurrentEpisodeImdbRating(item.progress, metaCache)
         val genres = resolveCurrentGenres(item.progress, metaCache)
         val releaseInfo = resolveCurrentReleaseInfo(item.progress, metaCache)
+        val enrichedProgress = resolveDisplayProgressMetadata(item.progress, metaCache)
         val enrichedItem = item.copy(
+            progress = enrichedProgress,
             episodeDescription = description,
             episodeThumbnail = thumbnail,
             episodeImdbRating = imdbRating,
@@ -328,7 +383,7 @@ private suspend fun HomeViewModel.enrichInProgressEpisodeDetailsProgressively(
 
         if (enrichedItem != item) {
             enrichedByProgress[item.progress] = enrichedItem
-            if (enrichedByProgress.size - lastAppliedCount >= 2) {
+            if (!startupGracePeriodActive && enrichedByProgress.size - lastAppliedCount >= 2) {
                 applyInProgressEpisodeDetailEnrichment(enrichedByProgress)
                 lastAppliedCount = enrichedByProgress.size
             }
@@ -390,7 +445,10 @@ private fun mergeContinueWatchingItems(
     filteredNextUpItems.forEach { combined.add(it.info.lastWatched to it) }
 
     return combined
-        .sortedByDescending { it.first }
+        .sortedWith(
+            compareByDescending<Pair<Long, ContinueWatchingItem>> { it.first }
+                .thenBy { it.second.stableContinueWatchingSortKey() }
+        )
         .map { it.second }
 }
 
@@ -480,7 +538,6 @@ private suspend fun HomeViewModel.findNextUpEpisodeFromProgressMap(
                 .first { it.isNotEmpty() }
         } ?: watchProgressRepository.getAllEpisodeProgress(contentId).firstOrNull().orEmpty()
     }.getOrElse {
-        Log.w(HomeViewModel.TAG, "findNextUpEpisodeFromProgressMap failed for $contentId: ${it.message}")
         emptyMap()
     }
     if (progressMap.isEmpty()) return null
@@ -616,11 +673,48 @@ private suspend fun HomeViewModel.resolveMetaForProgress(
     progress: WatchProgress,
     metaCache: MutableMap<String, Meta?>
 ): Meta? {
-    val cacheKey = "${progress.contentType}:${progress.contentId}"
+    val cacheKey = progress.continueWatchingMetaCacheKey()
     synchronized(metaCache) {
         if (metaCache.containsKey(cacheKey)) {
             return metaCache[cacheKey]
         }
+    }
+
+    continueWatchingMetaMutex.withLock {
+        continueWatchingMetaCache[cacheKey]?.let { cached ->
+            synchronized(metaCache) {
+                metaCache[cacheKey] = cached
+            }
+            return cached
+        }
+    }
+
+    var inFlight: CompletableDeferred<Meta?>? = null
+    var shouldFetch = false
+    continueWatchingMetaMutex.withLock {
+        continueWatchingMetaCache[cacheKey]?.let { cached ->
+            synchronized(metaCache) {
+                metaCache[cacheKey] = cached
+            }
+            return cached
+        }
+        val existing = continueWatchingMetaInFlight[cacheKey]
+        if (existing != null) {
+            inFlight = existing
+        } else {
+            val deferred = CompletableDeferred<Meta?>()
+            continueWatchingMetaInFlight[cacheKey] = deferred
+            inFlight = deferred
+            shouldFetch = true
+        }
+    }
+
+    if (!shouldFetch) {
+        val awaited = inFlight?.await()
+        synchronized(metaCache) {
+            metaCache[cacheKey] = awaited
+        }
+        return awaited
     }
 
     val idCandidates = buildList {
@@ -629,7 +723,7 @@ private suspend fun HomeViewModel.resolveMetaForProgress(
         if (progress.contentId.startsWith("trakt:")) add(progress.contentId.substringAfter(':'))
     }.distinct()
 
-    val typeCandidates = listOf(progress.contentType, "series", "tv").distinct()
+    val typeCandidates = progress.continueWatchingMetaTypeCandidates()
     val resolved = run {
         var meta: Meta? = null
         for (type in typeCandidates) {
@@ -648,6 +742,12 @@ private suspend fun HomeViewModel.resolveMetaForProgress(
         meta
     }
 
+    continueWatchingMetaMutex.withLock {
+        if (resolved != null) {
+            continueWatchingMetaCache[cacheKey] = resolved
+        }
+        continueWatchingMetaInFlight.remove(cacheKey)?.complete(resolved)
+    }
     synchronized(metaCache) {
         metaCache[cacheKey] = resolved
     }
@@ -773,6 +873,94 @@ private fun nextUpDismissKey(contentId: String): String {
     return contentId.trim()
 }
 
+private fun WatchProgress.continueWatchingMetaCacheKey(): String {
+    val normalizedType = if (isSeriesTypeCW(contentType)) {
+        "series"
+    } else {
+        contentType.trim().lowercase().ifBlank { "movie" }
+    }
+    return "$normalizedType:${contentId.trim()}"
+}
+
+private fun WatchProgress.continueWatchingMetaTypeCandidates(): List<String> {
+    val normalized = contentType.trim().lowercase()
+    return buildList {
+        if (normalized.isNotBlank()) add(normalized)
+        if (normalized in listOf("series", "tv")) {
+            add("series")
+            add("tv")
+        } else if (normalized.isBlank()) {
+            add("movie")
+        }
+    }.distinct()
+}
+
+private fun List<ContinueWatchingItem>.inProgressBaseSignature(): List<String> {
+    return filterIsInstance<ContinueWatchingItem.InProgress>()
+        .map { item ->
+            item.progress.toContinueWatchingStructuralIdentity()
+        }
+}
+
+private fun List<ContinueWatchingItem>.nextUpCount(): Int {
+    return count { it is ContinueWatchingItem.NextUp }
+}
+
+private fun List<ContinueWatchingItem>.hasAdditionalContinueWatchingData(): Boolean {
+    return any { item ->
+        when (item) {
+            is ContinueWatchingItem.NextUp -> true
+            is ContinueWatchingItem.InProgress ->
+                item.episodeDescription != null ||
+                    item.episodeThumbnail != null ||
+                    item.episodeImdbRating != null ||
+                    item.genres.isNotEmpty() ||
+                    item.releaseInfo != null
+        }
+    }
+}
+
+private fun List<ContinueWatchingItem>.shouldPreserveMergedContinueWatchingItems(
+    candidate: List<ContinueWatchingItem>
+): Boolean {
+    val sameInProgressBase = inProgressBaseSignature() == candidate.inProgressBaseSignature()
+    return sameInProgressBase && nextUpCount() > candidate.nextUpCount()
+}
+
+private fun WatchProgress.toContinueWatchingStructuralIdentity(): String {
+    return listOf(
+        contentId,
+        contentType,
+        videoId,
+        season?.toString() ?: "-",
+        episode?.toString() ?: "-",
+        lastWatched.toString(),
+        position.toString(),
+        duration.toString(),
+        source,
+        progressPercent?.toString() ?: "-"
+    ).joinToString(separator = "|")
+}
+
+private fun List<WatchProgress>.toContinueWatchingStructuralIdentityList(): List<String> {
+    return map { progress ->
+        progress.toContinueWatchingStructuralIdentity()
+    }
+}
+
+private fun ContinueWatchingItem.stableContinueWatchingSortKey(): String {
+    return when (this) {
+        is ContinueWatchingItem.InProgress -> {
+            val seasonKey = progress.season ?: -1
+            val episodeKey = progress.episode ?: -1
+            "resume|${progress.contentId}|$seasonKey|$episodeKey|${progress.videoId}"
+        }
+        is ContinueWatchingItem.NextUp -> {
+            "next|${info.contentId}|${info.season}|${info.episode}|${info.videoId}"
+        }
+    }
+}
+
 internal fun HomeViewModel.removeContinueWatchingPipeline(
     contentId: String,
     season: Int? = null,
@@ -798,16 +986,10 @@ internal fun HomeViewModel.removeContinueWatchingPipeline(
         return
     }
     viewModelScope.launch {
-        val targetSeason = if (isNextUp) season else null
-        val targetEpisode = if (isNextUp) episode else null
-        Log.d(
-            HomeViewModel.TAG,
-            "removeContinueWatching requested contentId=$contentId season=$season episode=$episode isNextUp=$isNextUp targetSeason=$targetSeason targetEpisode=$targetEpisode"
-        )
         watchProgressRepository.removeProgress(
             contentId = contentId,
-            season = targetSeason,
-            episode = targetEpisode
+            season = null,
+            episode = null
         )
     }
 }
