@@ -752,14 +752,14 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             val newMode = PlayerDisplayModeUtils.nextResizeMode(currentMode)
             val modeText = PlayerDisplayModeUtils.resizeModeLabel(newMode, context)
             Log.d("PlayerViewModel", "Aspect ratio toggled: $currentMode -> $newMode")
-            _uiState.update { 
+            _uiState.update {
                 it.copy(
                     resizeMode = newMode,
                     showAspectRatioIndicator = true,
                     aspectRatioIndicatorText = modeText
-                ) 
+                )
             }
-            // Auto-hide indicator after 1.5 seconds
+            scope.launch { playerSettingsDataStore.setResizeMode(newMode) }
             hideAspectRatioIndicatorJob?.cancel()
             hideAspectRatioIndicatorJob = scope.launch {
                 delay(1500)

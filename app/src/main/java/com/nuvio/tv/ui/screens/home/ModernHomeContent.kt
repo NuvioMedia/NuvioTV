@@ -109,6 +109,8 @@ import android.view.KeyEvent as AndroidKeyEvent
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 private const val KEY_REPEAT_THROTTLE_MS = 80L
+private const val MODERN_HERO_RAPID_NAV_THRESHOLD_MS = 130L
+private const val MODERN_HERO_RAPID_NAV_SETTLE_MS = 170L
 
 @Composable
 fun ModernHomeContent(
@@ -327,6 +329,8 @@ fun ModernHomeContent(
     var optionsItem by remember { mutableStateOf<ContinueWatchingItem?>(null) }
     var lastFocusedContinueWatchingIndex by remember { mutableStateOf(-1) }
     var lastKeyRepeatTime by remember { mutableStateOf(0L) }
+    var lastHeroNavigationAtMs by remember { mutableStateOf(0L) }
+    var heroFocusSettleDelayMs by remember { mutableStateOf(MODERN_HERO_FOCUS_DEBOUNCE_MS) }
     var focusedCatalogSelection by remember { mutableStateOf<FocusedCatalogSelection?>(null) }
     var lastRequestedTrailerFocusKey by remember { mutableStateOf<String?>(null) }
     var expandedCatalogFocusKey by remember { mutableStateOf<String?>(null) }
@@ -495,8 +499,10 @@ fun ModernHomeContent(
     LaunchedEffect(activeHeroItemKey, isVerticalRowsScrolling) {
         if (isVerticalRowsScrolling) return@LaunchedEffect
         val targetHeroKey = activeHeroItemKey ?: return@LaunchedEffect
-        delay(MODERN_HERO_FOCUS_DEBOUNCE_MS)
+        val settleDelayMs = heroFocusSettleDelayMs
+        delay(settleDelayMs)
         if (isVerticalRowsScrolling) return@LaunchedEffect
+        if (System.currentTimeMillis() - lastHeroNavigationAtMs < settleDelayMs) return@LaunchedEffect
         val row = latestHeroRow ?: return@LaunchedEffect
         val latestKey = row.items.getOrNull(latestHeroIndex)?.key ?: row.items.firstOrNull()?.key
         if (latestKey != targetHeroKey) return@LaunchedEffect
@@ -830,13 +836,27 @@ fun ModernHomeContent(
                         },
                         onRowItemFocused = { rowKey, index, isContinueWatchingRow ->
                             val rowBecameActive = activeRowKey != rowKey
+                            val itemChanged = activeItemIndex != index
+                            if (rowBecameActive || itemChanged) {
+                                val now = System.currentTimeMillis()
+                                val timeSinceLastHeroNav = now - lastHeroNavigationAtMs
+                                heroFocusSettleDelayMs = if (
+                                    lastHeroNavigationAtMs != 0L &&
+                                    timeSinceLastHeroNav in 1 until MODERN_HERO_RAPID_NAV_THRESHOLD_MS
+                                ) {
+                                    MODERN_HERO_RAPID_NAV_SETTLE_MS
+                                } else {
+                                    MODERN_HERO_FOCUS_DEBOUNCE_MS
+                                }
+                                lastHeroNavigationAtMs = now
+                            }
                             if (focusedItemByRow[rowKey] != index) {
                                 focusedItemByRow[rowKey] = index
                             }
                             if (rowBecameActive) {
                                 activeRowKey = rowKey
                             }
-                            if (rowBecameActive || activeItemIndex != index) {
+                            if (rowBecameActive || itemChanged) {
                                 activeItemIndex = index
                             }
                             if (isContinueWatchingRow) {
