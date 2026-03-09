@@ -217,8 +217,7 @@
     <string name="contributors_profile_unavailable">رابط ملف GitHub الشخصي غير متوفر.</string>
 
     <!-- PlaybackSettingsSections -->
-    <string name="playback_se
-ction_general">عام</string>
+    <string name="playback_section_general">عام</string>
     <string name="playback_section_general_desc">سلوك التشغيل الأساسي.</string>
     <string name="playback_loading_overlay">تراكب التحميل</string>
     <string name="playback_loading_overlay_sub">إظهار شاشة التحميل حتى يظهر إطار الفيديو الأول.</string>
@@ -405,8 +404,7 @@ ction_general">عام</string>
     <string name="layout_blur_unwatched_sub">تمويه الصور المصغرة للحلقات حتى تتم مشاهدتها لتجنب حرق الأحداث.</string>
     <string name="layout_trailer_button">إظهار زر المقطع الدعائي</string>
     <string name="layout_trailer_button_sub">إظهار زر المقطع الدعائي في صفحة التفاصيل (فقط عند توفر المقطع الدعائي).</string>
-    <string name="layout_prefer_
-external_meta">تفضيل البيانات الوصفية من إضافة خارجية</string>
+    <string name="layout_prefer_external_meta">تفضيل البيانات الوصفية من إضافة خارجية</string>
     <string name="layout_prefer_external_meta_sub">استخدام البيانات الوصفية من إضافة خارجية بدلاً من إضافة الكتالوج.</string>
     <string name="layout_section_focused">الملصق المحدد</string>
     <string name="layout_section_focused_desc">سلوك متقدم لبطاقات الملصقات المحددة.</string>
@@ -549,7 +547,7 @@ external_meta">تفضيل البيانات الوصفية من إضافة خار
     <string name="trakt_cw_window_title">نافذة متابعة المشاهدة</string>
     <string name="trakt_cw_window_subtitle">اختر مقدار نشاط Trakt الذي يجب أن يظهر في متابعة المشاهدة.</string>
     <string name="trakt_unaired_dialog_title">الحلقات القادمة غير المعروضة</string>
-    <string name="trakt_unaired_dialog_subtitle">اختر ما إذا كان يجب أن تتضمن "متابعة المشاهدة" الحلقات القادمة قبل إصدارها.</string>
+    <string name="trakt_unaired_dialog_subtitle">اختر ما إذا كان يجب أن تتضمن \"متابعة المشاهدة\" الحلقات القادمة قبل إصدارها.</string>
     <string name="trakt_show_unaired">عرض الحلقات غير المعروضة</string>
     <string name="trakt_hide_unaired">إخفاء الحلقات غير المعروضة</string>
     <string name="trakt_all_history">كل السجل</string>
@@ -622,8 +620,7 @@ external_meta">تفضيل البيانات الوصفية من إضافة خار
     <string name="addon_installing">جارٍ التثبيت</string>
     <string name="addon_install_btn">تثبيت</string>
     <string name="addon_installed_section">مثبتة</string>
-    <string
-name="addon_empty">لا توجد إضافات مثبتة. أضف واحدة للبدء.</string>
+    <string name="addon_empty">لا توجد إضافات مثبتة. أضف واحدة للبدء.</string>
     <string name="addon_remove">إزالة</string>
     <string name="addon_manage_from_phone_title">الإدارة من الهاتف</string>
     <string name="addon_manage_from_phone_subtitle">امسح رمز الاستجابة السريعة (QR) لإدارة الإضافات وقوائم الصفحة الرئيسية من هاتفك</string>
@@ -770,7 +767,7 @@ name="addon_empty">لا توجد إضافات مثبتة. أضف واحدة لل
 
 
     <!-- SearchScreen -->
-    <string name="search_keyboard_hint">اضغط على "تم" في لوحة المفاتيح للبحث</string>
+    <string name="search_keyboard_hint">اضغط على \"تم\" في لوحة المفاتيح للبحث</string>
     <string name="search_placeholder">البحث عن الأفلام والمسلسلات</string>
     <string name="search_start_title">ابدأ البحث</string>
     <string name="search_start_subtitle">أدخل حرفين على الأقل</string>
@@ -873,8 +870,7 @@ name="addon_empty">لا توجد إضافات مثبتة. أضف واحدة لل
     <string name="plugin_repositories_section">المستودعات (%1$d)</string>
     <string name="plugin_providers_section">المزودون (%1$d)</string>
     <string name="plugin_title">المكونات الإضافية</string>
-    <string name="plugin_subtitle"
->إدارة أدوات الجلب والمزودين المحليين</string>
+    <string name="plugin_subtitle">إدارة أدوات الجلب والمزودين المحليين</string>
     <string name="plugin_add_repository">إضافة مستودع</string>
     <string name="plugin_add_btn">إضافة</string>
     <string name="plugin_manage_from_phone_title">الإدارة من الهاتف</string>
