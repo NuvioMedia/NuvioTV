@@ -1,6 +1,9 @@
 package com.nuvio.tv.ui.screens.home
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.BorderStroke
@@ -180,16 +183,28 @@ internal fun ModernHeroGradientLayer(
 @Composable
 internal fun HeroTitleBlock(
     preview: HeroPreview?,
-    enriching: Boolean = false,
+    enrichmentActive: Boolean = false,
     portraitMode: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val fadeDuration = 220
+    AnimatedContent(
+        targetState = preview,
+        transitionSpec = { fadeIn(tween(fadeDuration)) togetherWith fadeOut(tween(fadeDuration)) using null },
+        contentAlignment = Alignment.BottomStart,
+        label = "heroTitleCrossfade",
+        modifier = modifier
+    ) { animatedPreview ->
+        HeroTitleContent(preview = animatedPreview, portraitMode = portraitMode)
+    }
+}
+
+@Composable
+private fun HeroTitleContent(
+    preview: HeroPreview?,
+    portraitMode: Boolean
+) {
     if (preview == null) return
-    val alpha by animateFloatAsState(
-        targetValue = if (enriching) 0f else 1f,
-        animationSpec = tween(if (enriching) 120 else 220),
-        label = "heroTitleAlpha"
-    )
     val descriptionMaxLines = if (portraitMode) 4 else 5
     val descriptionScale = if (portraitMode) 0.90f else 1f
     val titleScale = if (portraitMode) 0.92f else 1f
@@ -233,7 +248,7 @@ internal fun HeroTitleBlock(
     }
 
     Column(
-        modifier = modifier.graphicsLayer { this.alpha = alpha },
+        modifier = Modifier,
         verticalArrangement = Arrangement.spacedBy(titleSpacing)
     ) {
         var logoLoadFailed by remember(preview.logo) { mutableStateOf(false) }

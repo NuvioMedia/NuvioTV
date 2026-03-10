@@ -340,6 +340,7 @@ fun ModernHomeContent(
     var pendingRowFocusIndex by remember { mutableStateOf<Int?>(null) }
     var pendingRowFocusNonce by remember { mutableIntStateOf(0) }
     var heroItem by remember { mutableStateOf<HeroPreview?>(null) }
+    var heroTransitioning by remember { mutableStateOf(false) }
     var restoredFromSavedState by remember { mutableStateOf(false) }
     var optionsItem by remember { mutableStateOf<ContinueWatchingItem?>(null) }
     var lastFocusedContinueWatchingIndex by remember { mutableStateOf(-1) }
@@ -514,18 +515,29 @@ fun ModernHomeContent(
     LaunchedEffect(activeHeroItemKey, isVerticalRowsScrolling) {
         if (isVerticalRowsScrolling) return@LaunchedEffect
         val targetHeroKey = activeHeroItemKey ?: return@LaunchedEffect
+        heroTransitioning = true
         val settleDelayMs = heroFocusSettleDelayMs
         delay(settleDelayMs)
-        if (isVerticalRowsScrolling) return@LaunchedEffect
-        if (System.currentTimeMillis() - lastHeroNavigationAtMs < settleDelayMs) return@LaunchedEffect
-        val row = latestHeroRow ?: return@LaunchedEffect
+        if (isVerticalRowsScrolling) {
+            heroTransitioning = false
+            return@LaunchedEffect
+        }
+        if (System.currentTimeMillis() - lastHeroNavigationAtMs < settleDelayMs) {
+            heroTransitioning = false
+            return@LaunchedEffect
+        }
+        val row = latestHeroRow ?: run { heroTransitioning = false; return@LaunchedEffect }
         val latestKey = row.items.getOrNull(latestHeroIndex)?.key ?: row.items.firstOrNull()?.key
-        if (latestKey != targetHeroKey) return@LaunchedEffect
+        if (latestKey != targetHeroKey) {
+            heroTransitioning = false
+            return@LaunchedEffect
+        }
         val latestHero =
             row.items.getOrNull(latestHeroIndex)?.heroPreview ?: row.items.firstOrNull()?.heroPreview
         if (latestHero != null && heroItem != latestHero) {
             heroItem = latestHero
         }
+        heroTransitioning = false
     }
     val latestActiveRow by rememberUpdatedState(activeRow)
     val latestActiveItemIndex by rememberUpdatedState(clampedActiveItemIndex)
@@ -576,12 +588,10 @@ fun ModernHomeContent(
             activeRow?.items?.getOrNull(clampedActiveItemIndex)
         }
         val activeItemId = activeCarouselItem?.metaPreview?.id
-        val heroMatchesActiveItem = heroItem == null || heroItem == activeCarouselItem?.heroPreview
-        val resolvedHero = remember(heroItem, activeRow, clampedActiveItemIndex) {
-            heroItem
-                ?: activeRow?.items?.getOrNull(clampedActiveItemIndex)?.heroPreview
-                ?: activeRow?.items?.firstOrNull()?.heroPreview
-        }
+        val enrichmentActive = enrichingItemId != null
+        val resolvedHero = activeCarouselItem?.heroPreview
+            ?: heroItem
+            ?: activeRow?.items?.firstOrNull()?.heroPreview
         val activeRowFallbackBackdrop = remember(activeRow?.key, activeRow?.items) {
             activeRow?.items?.firstNotNullOfOrNull { item ->
                 item.heroPreview.backdrop?.takeIf { it.isNotBlank() }
@@ -694,8 +704,8 @@ fun ModernHomeContent(
             modifier = heroMediaModifier
         )
         HeroTitleBlock(
-            preview = resolvedHero,
-            enriching = !heroMatchesActiveItem || (enrichingItemId != null && enrichingItemId == activeItemId),
+            preview = if (enrichmentActive) null else resolvedHero,
+            enrichmentActive = enrichmentActive,
             portraitMode = !useLandscapePosters,
             modifier = Modifier
                 .align(Alignment.BottomStart)
