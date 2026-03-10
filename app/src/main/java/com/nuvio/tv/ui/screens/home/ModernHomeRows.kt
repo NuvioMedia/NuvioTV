@@ -244,8 +244,9 @@ internal fun ModernRowSection(
     val loadMoreRequestedTotals = uiCaches.loadMoreRequestedTotals
 
     Column {
-        val rowTitleStyle = remember(MaterialTheme.typography.titleMedium) {
-            MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+        val titleMediumStyle = MaterialTheme.typography.titleMedium
+        val rowTitleStyle = remember(titleMediumStyle) {
+            titleMediumStyle.copy(fontWeight = FontWeight.SemiBold)
         }
         Text(
             text = row.title,
@@ -435,11 +436,12 @@ internal fun ModernRowSection(
                             val isWatched = remember(item.metaPreview) {
                                 item.metaPreview?.let(isCatalogItemWatched) == true
                             }
-                            val onLongPress = remember(item.metaPreview, payload.addonBaseUrl) {
+                            val onLongPress: () -> Unit = remember(item.metaPreview, payload.addonBaseUrl) {
                                 {
                                     item.metaPreview?.let { preview ->
                                         onCatalogItemLongPress(preview, payload.addonBaseUrl)
                                     }
+                                    Unit
                                 }
                             }
                             ModernCatalogRowItem(
