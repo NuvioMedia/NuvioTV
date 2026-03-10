@@ -47,6 +47,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -60,6 +61,7 @@ import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 
@@ -139,11 +141,13 @@ internal fun SubtitleSelectionDialog(
 
                 // Tab row
                 Row(
-                    horizontalArrangement = Arrangement.Center,
                     modifier = Modifier
+                        .wrapContentWidth()
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                ) {
+                        .padding(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                )  {
                     tabs.forEachIndexed { index, _ ->
                         val onTabClick = when (index) {
                             2 -> {
@@ -219,7 +223,8 @@ private fun SubtitleTab(
         onClick = onClick,
         modifier = Modifier
             .focusRequester(focusRequester)
-            .onFocusChanged { isFocused = it.isFocused },
+            .onFocusChanged { isFocused = it.isFocused }
+            .wrapContentWidth(),
         colors = CardDefaults.colors(
             containerColor = when {
                 isSelected -> Color.White.copy(alpha = 0.18f)
@@ -231,16 +236,20 @@ private fun SubtitleTab(
         shape = CardDefaults.shape(RoundedCornerShape(12.dp))
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier
+                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .width(IntrinsicSize.Max), 
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.Start
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                softWrap = false,
+                overflow = TextOverflow.Visible,
+                modifier = Modifier.wrapContentWidth(unbounded = true)
             )
 
             if (badgeCount != null && badgeCount > 0) {
@@ -251,9 +260,12 @@ private fun SubtitleTab(
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = badgeCount.toString(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isSelected) Color.White else NuvioColors.OnSecondary
+                        text = badgeCount.toString(), 
+                        style = MaterialTheme.typography.labelSmall, 
+                        color = if (isSelected) Color.White else NuvioColors.OnSecondary,
+                        softWrap = false,
+                        modifier = Modifier.wrapContentWidth(),
+                        overflow = TextOverflow.Visible
                     )
                 }
             }
