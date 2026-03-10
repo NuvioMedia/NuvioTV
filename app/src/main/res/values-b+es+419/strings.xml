@@ -45,8 +45,9 @@
     <string name="cw_upcoming">Próximamente</string>
     <string name="cw_next_up">A continuación</string>
     <string name="cw_resume">Reanudar</string>
-    <string name="cw_hours_min_left">Faltan %1$dh %2$dm</string>
-    <string name="cw_min_left">Faltan %1$dm</string>
+    <string name="cw_percent_watched">Visto %1$d%%</string>
+    <string name="cw_hours_min_left">Restan %1$dh %2$dm</string>
+    <string name="cw_min_left">Restan %1$dm</string>
     <string name="cw_almost_done">Casi terminado</string>
     <string name="cw_airs_date">Se emite el %1$s</string>
     <string name="cw_action_go_to_details">Ir a detalles</string>
@@ -87,6 +88,8 @@
     <string name="episodes_play">Reproducir</string>
     <string name="play_manually">Reproducir manualmente</string>
     <string name="episodes_season_actions">Acciones de la temporada</string>
+    <string name="episodes_mismatch_title">Numeración de episodios incorrecta</string>
+    <string name="episodes_mismatch_cancel">Cancelar</string>
 
     <!-- MetaDetailsViewModel -->
     <string name="detail_added_to_library">Agregado a la biblioteca</string>
@@ -118,6 +121,15 @@
     <string name="detail_section_network">Cadena</string>
     <string name="detail_section_production">Producción</string>
     <string name="episodes_unavailable">No disponible</string>
+    <string name="series_status_ended">Finalizada</string>
+    <string name="series_status_continuing">En emisión</string>
+    <string name="series_status_current">Actual</string>
+    <string name="series_status_cancelled">Cancelada</string>
+    <string name="series_status_released">Estrenada</string>
+    <string name="series_status_planned">Planificada</string>
+    <string name="series_status_rumored">Rumoreada</string>
+    <string name="series_status_in_production">En producción</string>
+    <string name="series_status_post_production">En postproducción</string>
     <string name="detail_lists_fallback">Listas</string>
     <string name="detail_lists_subtitle">Selecciona en qué listas incluir este título.</string>
     <string name="action_save">Guardar</string>
@@ -342,6 +354,10 @@
     <string name="autoplay_scope_addons">Solo addons instalados</string>
     <string name="autoplay_scope_plugins">Solo plugins habilitados</string>
     <string name="autoplay_scope">Alcance de Fuentes para Auto-reproducción</string>
+    <string name="autoplay_timeout_title">Tiempo de espera de transmisión</string>
+    <string name="autoplay_timeout_sub">Tiempo de espera para los Addons antes de seleccionar.</string>
+    <string name="autoplay_timeout_instant">Instantáneo</string>
+    <string name="autoplay_timeout_unlimited">Ilimitado</string>
     <string name="autoplay_allowed_addons">Addons Permitidos</string>
     <string name="autoplay_all_addons">Todos los addons instalados</string>
     <string name="autoplay_allowed_plugins">Plugins Permitidos</string>
@@ -899,7 +915,7 @@
     <string name="profile_delete_confirm_title">¿Eliminar perfil?</string>
     <string name="profile_delete_confirm_subtitle">Esto eliminará permanentemente este perfil y todos sus datos, incluyendo biblioteca, historial de reproducción y configuraciones de addons. Esta acción no se puede deshacer.</string>
     <string name="profile_delete_btn">Eliminar perfil</string>
-    <string name="profile_saving">Guardando…</string>
+    <string name="profile_saving">Guardando\u2026</string>
 
     <!-- CastDetailScreen -->
     <string name="cast_detail_error">Algo salió mal</string>
