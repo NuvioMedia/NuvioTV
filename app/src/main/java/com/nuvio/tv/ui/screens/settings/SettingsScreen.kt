@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -147,6 +148,7 @@ private fun rememberSettingsSectionSpecs() = listOf(
         subtitle = stringResource(R.string.settings_playback_subtitle),
         destination = SettingsSectionDestination.Inline
     ),
+
     SettingsSectionSpec(
         category = SettingsCategory.TRAKT,
         title = "Trakt",

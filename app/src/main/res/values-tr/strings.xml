@@ -984,4 +984,12 @@
     <string name="update_open_settings">Ayarları Aç</string>
     <string name="update_install">Yükle</string>
     <string name="update_ignore">Atla</string>
+
+    <!-- Network Settings -->
+    <string name="settings_network">Ağ</string>
+    <string name="settings_network_subtitle">DNS ve Güvenli Bağlantı (DoH)</string>
+    <string name="settings_dns_provider">DNS Sağlayıcısı</string>
+    <string name="settings_network_system_default">Sistem Varsayılanı</string>
+    <string name="settings_network_system_default_desc">Yerel cihaz DNS\'i kullanılır</string>
+    <string name="settings_network_doh_desc">%1$s DoH sunucuları</string>
 </resources>

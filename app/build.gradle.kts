@@ -206,6 +206,7 @@ dependencies {
     implementation(libs.retrofit.moshi)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
+    implementation(libs.okhttp.dnsoverhttps)
     implementation(libs.moshi)
     ksp(libs.moshi.codegen)
 

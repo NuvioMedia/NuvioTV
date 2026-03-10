@@ -65,7 +65,8 @@ private enum class PlaybackSection {
     GENERAL,
     STREAM_SELECTION,
     AUDIO_TRAILER,
-    SUBTITLES
+    SUBTITLES,
+    NETWORK
 }
 
 private data class PlaybackGeneralUi(
@@ -130,19 +131,23 @@ internal fun PlaybackSettingsSections(
     onSetSubtitleBold: (Boolean) -> Unit,
     onSetSubtitleOutlineEnabled: (Boolean) -> Unit,
     onSetUseLibass: (Boolean) -> Unit,
-    onSetLibassRenderType: (com.nuvio.tv.data.local.LibassRenderType) -> Unit
+    onSetLibassRenderType: (com.nuvio.tv.data.local.LibassRenderType) -> Unit,
+    dnsProvider: Int,
+    onSetDnsProvider: (Int) -> Unit
 ) {
     var generalExpanded by rememberSaveable { mutableStateOf(false) }
     var afrExpanded by rememberSaveable { mutableStateOf(false) }
     var streamExpanded by rememberSaveable { mutableStateOf(false) }
     var audioTrailerExpanded by rememberSaveable { mutableStateOf(false) }
     var subtitlesExpanded by rememberSaveable { mutableStateOf(false) }
+    var networkExpanded by rememberSaveable { mutableStateOf(false) }
 
     val defaultGeneralHeaderFocus = remember { FocusRequester() }
     val afrHeaderFocus = remember { FocusRequester() }
     val streamHeaderFocus = remember { FocusRequester() }
     val audioTrailerHeaderFocus = remember { FocusRequester() }
     val subtitlesHeaderFocus = remember { FocusRequester() }
+    val networkHeaderFocus = remember { FocusRequester() }
     val generalHeaderFocus = initialFocusRequester ?: defaultGeneralHeaderFocus
 
     var focusedSection by remember { mutableStateOf<PlaybackSection?>(null) }
@@ -158,6 +163,8 @@ internal fun PlaybackSettingsSections(
     val strSectionAudioDesc = stringResource(R.string.playback_section_audio_desc)
     val strSectionSubtitles = stringResource(R.string.playback_section_subtitles)
     val strSectionSubtitlesDesc = stringResource(R.string.playback_section_subtitles_desc)
+    val strSectionNetwork = stringResource(R.string.settings_network)
+    val strSectionNetworkDesc = stringResource(R.string.settings_network_subtitle)
     val generalUi = PlaybackGeneralUi(
         isExternalPlayer = playerSettings.playerPreference == PlayerPreference.EXTERNAL,
         frameRateMatchingLabel = frameRateMatchingModeLabel(
@@ -193,6 +200,11 @@ internal fun PlaybackSettingsSections(
     LaunchedEffect(subtitlesExpanded, focusedSection) {
         if (!subtitlesExpanded && focusedSection == PlaybackSection.SUBTITLES) {
             subtitlesHeaderFocus.requestFocus()
+        }
+    }
+    LaunchedEffect(networkExpanded, focusedSection) {
+        if (!networkExpanded && focusedSection == PlaybackSection.NETWORK) {
+            networkHeaderFocus.requestFocus()
         }
     }
 
@@ -375,6 +387,25 @@ internal fun PlaybackSettingsSections(
                 enabled = !generalUi.isExternalPlayer
             )
         }
+
+        playbackCollapsibleSection(
+            keyPrefix = "network",
+            title = strSectionNetwork,
+            description = strSectionNetworkDesc,
+            expanded = networkExpanded,
+            onToggle = { networkExpanded = !networkExpanded },
+            focusRequester = networkHeaderFocus,
+            onHeaderFocused = { focusedSection = PlaybackSection.NETWORK }
+        ) {
+            item(key = "network_options") {
+                NetworkDnsOptions(
+                    selectedDns = dnsProvider,
+                    onSelect = onSetDnsProvider,
+                    onFocused = { focusedSection = PlaybackSection.NETWORK },
+                    enabled = true
+                )
+            }
+        }
     }
 }
 
@@ -489,6 +520,44 @@ private fun FrameRateMatchingModeOptions(
             onFocused = onFocused,
             enabled = enabled
         )
+    }
+}
+
+@Composable
+private fun NetworkDnsOptions(
+    selectedDns: Int,
+    onSelect: (Int) -> Unit,
+    onFocused: () -> Unit,
+    enabled: Boolean
+) {
+    val options = listOf(
+        0 to stringResource(R.string.settings_network_system_default),
+        1 to "Google DNS",
+        2 to "Cloudflare",
+        4 to "AdGuard DNS",
+        5 to "DNS.Watch",
+        6 to "Quad9",
+        7 to "DNS.SB",
+        8 to "Canadian Shield"
+    )
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        options.forEachIndexed { index, pair ->
+            val value = pair.first
+            val name = pair.second
+            RenderTypeSettingsItem(
+                title = name,
+                subtitle = if (value == 0) stringResource(R.string.settings_network_system_default_desc) else stringResource(R.string.settings_network_doh_desc, name),
+                isSelected = selectedDns == value,
+                onClick = { onSelect(value) },
+                onFocused = onFocused,
+                enabled = enabled
+            )
+            
+            if (index < options.lastIndex) {
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
     }
 }
 

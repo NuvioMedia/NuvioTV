@@ -1000,4 +1000,11 @@
     <string name="update_open_settings">Open Settings</string>
     <string name="update_install">Install</string>
     <string name="update_ignore">Ignore</string>
+    <!-- Network Settings -->
+    <string name="settings_network">Network</string>
+    <string name="settings_network_subtitle">DNS and Secure Connection (DoH)</string>
+    <string name="settings_dns_provider">DNS Provider</string>
+    <string name="settings_network_system_default">System Default</string>
+    <string name="settings_network_system_default_desc">Uses local device DNS</string>
+    <string name="settings_network_doh_desc">%1$s DoH servers</string>
 </resources>

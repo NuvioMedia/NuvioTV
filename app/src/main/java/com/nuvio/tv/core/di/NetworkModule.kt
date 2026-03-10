@@ -17,6 +17,14 @@ import com.nuvio.tv.data.remote.api.MDBListApi
 import com.nuvio.tv.data.remote.api.ParentalGuideApi
 import com.nuvio.tv.data.remote.api.SeriesGraphApi
 import com.nuvio.tv.data.remote.api.TmdbApi
+import com.nuvio.tv.core.network.addAdGuardDns
+import com.nuvio.tv.core.network.addCanadianShieldDns
+import com.nuvio.tv.core.network.addCloudFlareDns
+import com.nuvio.tv.core.network.addDNSWatchDns
+import com.nuvio.tv.core.network.addDnsSbDns
+import com.nuvio.tv.core.network.addGoogleDns
+import com.nuvio.tv.core.network.addQuad9Dns
+import kotlinx.coroutines.flow.first
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Module
@@ -52,15 +60,45 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(@ApplicationContext context: Context): OkHttpClient = OkHttpClient.Builder()
-        .cache(Cache(File(context.cacheDir, "http_cache"), 50L * 1024 * 1024)) // 50 MB disk cache
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .addInterceptor(HttpLoggingInterceptor().apply {
-            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC
-                    else HttpLoggingInterceptor.Level.NONE
-        })
-        .build()
+    fun provideOkHttpClient(
+        @ApplicationContext context: Context,
+        networkSettingsDataStore: com.nuvio.tv.data.local.NetworkSettingsDataStore
+    ): OkHttpClient {
+        val dns = kotlinx.coroutines.runBlocking { networkSettingsDataStore.dnsProvider.first() }
+        var builder = OkHttpClient.Builder()
+            .cache(Cache(File(context.cacheDir, "http_cache"), 50L * 1024 * 1024)) // 50 MB disk cache
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .addInterceptor(HttpLoggingInterceptor().apply {
+                level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC
+                        else HttpLoggingInterceptor.Level.NONE
+            })
+            .eventListenerFactory(object : okhttp3.EventListener.Factory {
+                override fun create(call: okhttp3.Call): okhttp3.EventListener {
+                    return object : okhttp3.EventListener() {
+                        override fun dnsStart(call: okhttp3.Call, domainName: String) {
+                            Log.d("NuvioDNS", "DNS Resolving: $domainName")
+                        }
+                        override fun dnsEnd(call: okhttp3.Call, domainName: String, inetAddressList: List<java.net.InetAddress>) {
+                            Log.d("NuvioDNS", "DNS Resolved: $domainName -> ${inetAddressList.joinToString { it.hostAddress ?: "" }}")
+                        }
+                    }
+                }
+            })
+            
+        builder = when (dns) {
+            1 -> builder.addGoogleDns()
+            2 -> builder.addCloudFlareDns()
+            4 -> builder.addAdGuardDns()
+            5 -> builder.addDNSWatchDns()
+            6 -> builder.addQuad9Dns()
+            7 -> builder.addDnsSbDns()
+            8 -> builder.addCanadianShieldDns()
+            else -> builder
+        }
+            
+        return builder.build()
+    }
 
     @Provides
     @Singleton

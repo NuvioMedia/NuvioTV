@@ -133,6 +133,10 @@ fun PlaybackSettingsContent(
     val trailerSettings by viewModel.trailerSettings.collectAsStateWithLifecycle(initialValue = TrailerSettings())
     val installedAddonNames by viewModel.installedAddonNames.collectAsStateWithLifecycle(initialValue = emptyList())
     val enabledPluginNames by viewModel.enabledPluginNames.collectAsStateWithLifecycle(initialValue = emptyList())
+    
+    val networkViewModel: com.nuvio.tv.ui.screens.settings.NetworkSettingsViewModel = hiltViewModel()
+    val dnsProvider by networkViewModel.dnsProvider.collectAsStateWithLifecycle()
+    
     val coroutineScope = rememberCoroutineScope()
 
     // Dialog states
@@ -253,7 +257,9 @@ fun PlaybackSettingsContent(
                 onSetSubtitleBold = { bold -> coroutineScope.launch { viewModel.setSubtitleBold(bold) } },
                 onSetSubtitleOutlineEnabled = { enabled -> coroutineScope.launch { viewModel.setSubtitleOutlineEnabled(enabled) } },
                 onSetUseLibass = { enabled -> coroutineScope.launch { viewModel.setUseLibass(enabled) } },
-                onSetLibassRenderType = { renderType -> coroutineScope.launch { viewModel.setLibassRenderType(renderType) } }
+                onSetLibassRenderType = { renderType -> coroutineScope.launch { viewModel.setLibassRenderType(renderType) } },
+                dnsProvider = dnsProvider,
+                onSetDnsProvider = { provider -> coroutineScope.launch { networkViewModel.setDnsProvider(provider) } }
             )
         }
     }
