@@ -191,11 +191,6 @@ internal fun SubtitleStyleSidePanel(
                                 isEnabled = subtitleStyle.outlineEnabled,
                                 onClick = { onEvent(PlayerEvent.OnSetSubtitleOutlineEnabled(!subtitleStyle.outlineEnabled)) }
                             )
-                            Text(
-                                text = stringResource(R.string.subtitle_style_color),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.7f)
-                            )
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             PANEL_OUTLINE_COLORS.forEach { color ->
