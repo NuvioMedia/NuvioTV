@@ -395,7 +395,7 @@ internal fun ModernRowSection(
                     val itemKey = row.items.getOrNull(safeIndex)?.key ?: row.items.first().key
                     itemFocusRequesters[row.key]?.get(itemKey) ?: FocusRequester.Default
                 },
-                contentPadding = PaddingValues(horizontal = rowStartPadding),
+                contentPadding = PaddingValues(start = 48.dp,end = 200.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 itemsIndexed(
