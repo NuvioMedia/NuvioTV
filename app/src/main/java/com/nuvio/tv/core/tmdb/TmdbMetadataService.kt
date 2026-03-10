@@ -14,6 +14,7 @@ import com.nuvio.tv.domain.model.MetaCastMember
 import com.nuvio.tv.domain.model.MetaCompany
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.MetaReview
+import com.nuvio.tv.domain.model.MetaReviewSource
 import com.nuvio.tv.domain.model.PersonDetail
 import com.nuvio.tv.domain.model.PosterShape
 import kotlinx.coroutines.Dispatchers
@@ -781,7 +782,8 @@ private fun TmdbReviewResult.toMetaReview(): MetaReview? {
         rating = authorDetails?.rating,
         createdAt = createdAt?.takeIf { it.isNotBlank() },
         updatedAt = updatedAt?.takeIf { it.isNotBlank() },
-        url = url?.takeIf { it.isNotBlank() }
+        url = url?.takeIf { it.isNotBlank() },
+        source = MetaReviewSource.TMDB
     )
 }
 

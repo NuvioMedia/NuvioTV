@@ -1,11 +1,13 @@
 package com.nuvio.tv.ui.screens.detail
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -33,6 +35,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -44,6 +47,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.MetaReview
+import com.nuvio.tv.domain.model.MetaReviewSource
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -162,22 +166,27 @@ fun ReviewsSection(
                                     .fillMaxWidth()
                                     .padding(horizontal = 14.dp, vertical = 12.dp)
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
                                     Text(
                                         text = review.author,
                                         style = MaterialTheme.typography.labelLarge,
                                         color = NuvioColors.TextPrimary,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f, fill = false)
+                                        modifier = Modifier.weight(1f)
                                     )
 
                                     review.rating?.let { rating ->
-                                        Text(
-                                            text = String.format("%.1f/10", rating),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = NuvioColors.TextTertiary
-                                        )
+                                        Box(modifier = Modifier.padding(start = 8.dp)) {
+                                            ReviewRatingBadge(rating = rating)
+                                        }
+                                    }
+
+                                    Box(modifier = Modifier.padding(start = 8.dp)) {
+                                        ReviewSourceBadge(source = review.source)
                                     }
                                 }
 
@@ -202,6 +211,61 @@ fun ReviewsSection(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ReviewSourceBadge(source: MetaReviewSource) {
+    val (label, contentColor, backgroundColor) = when (source) {
+        MetaReviewSource.TMDB -> Triple(
+            "TMDB",
+            Color(0xFF01D277),
+            Color(0xFF0A2B20)
+        )
+        MetaReviewSource.TRAKT -> Triple(
+            "TRAKT",
+            Color(0xFFF35A5A),
+            Color(0xFF351518)
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .background(
+                color = backgroundColor,
+                shape = RoundedCornerShape(999.dp)
+            )
+            .padding(horizontal = 10.dp, vertical = 3.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor
+        )
+    }
+}
+
+@Composable
+private fun ReviewRatingBadge(rating: Double) {
+    val contentColor: Color = when {
+        rating >= 8.0 -> NuvioColors.Success
+        rating >= 6.0 -> NuvioColors.Rating
+        else -> NuvioColors.Error
+    }
+
+    Box(
+        modifier = Modifier
+            .background(
+                color = contentColor.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(999.dp)
+            )
+            .padding(horizontal = 10.dp, vertical = 3.dp)
+    ) {
+        Text(
+            text = String.format("%.1f/10", rating),
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor
+        )
     }
 }
 
@@ -236,7 +300,7 @@ private fun AutoScrollingReviewText(
         val distancePx = (scrollState.maxValue - scrollState.value).coerceAtLeast(0)
         if (distancePx <= 0) return@LaunchedEffect
 
-        val pixelsPerSecond = 20f
+        val pixelsPerSecond = 24f
         val durationMs = ((distancePx / pixelsPerSecond) * 1_000f)
             .roundToInt()
             .coerceAtLeast(800)
