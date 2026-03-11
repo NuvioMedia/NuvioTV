@@ -7,7 +7,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.TransferListener
-import androidx.media3.datasource.okhttp.OkHttpDataSource
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
@@ -30,7 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 @UnstableApi
 class ParallelRangeDataSource(
-    private val upstreamFactory: OkHttpDataSource.Factory,
+    private val upstreamFactory: DataSource.Factory,
     private val parallelConnections: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT,
     private val chunkSize: Long = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB.toLong() * 1024 * 1024
 ) : DataSource {
@@ -72,7 +71,7 @@ class ParallelRangeDataSource(
     private val transferListeners = mutableListOf<TransferListener>()
 
     // Fallback: if parallel mode fails, use a single upstream DataSource
-    private var fallbackSource: OkHttpDataSource? = null
+    private var fallbackSource: DataSource? = null
 
     override fun open(dataSpec: DataSpec): Long {
         closed.set(false)
@@ -88,7 +87,7 @@ class ParallelRangeDataSource(
         }
 
         // Open first connection to determine total length and capture the resolved (redirected) URL
-        val probeSource: OkHttpDataSource = upstreamFactory.createDataSource()
+        val probeSource = upstreamFactory.createDataSource()
         transferListeners.forEach { probeSource.addTransferListener(it) }
 
         val openLength: Long
@@ -101,7 +100,7 @@ class ParallelRangeDataSource(
         }
 
         // Check if we can do parallel range requests
-        val responseHeaders = probeSource.responseHeaders
+        val responseHeaders = probeSource.responseHeaders ?: emptyMap()
         val acceptsRanges = responseHeaders["Accept-Ranges"]?.any { it.contains("bytes") } == true ||
                 responseHeaders["Content-Range"]?.isNotEmpty() == true
 
@@ -329,7 +328,7 @@ class ParallelRangeDataSource(
      * Factory for creating ParallelRangeDataSource instances.
      */
     class Factory(
-        private val upstreamFactory: OkHttpDataSource.Factory,
+        private val upstreamFactory: DataSource.Factory,
         private val parallelConnections: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT,
         private val chunkSize: Long = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB.toLong() * 1024 * 1024
     ) : DataSource.Factory {

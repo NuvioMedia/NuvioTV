@@ -12,8 +12,6 @@ import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.text.SubtitleParser
 import com.nuvio.tv.data.local.PlayerSettings
-import okhttp3.ConnectionPool
-import okhttp3.OkHttpClient
 import java.net.URLDecoder
 
 @UnstableApi
