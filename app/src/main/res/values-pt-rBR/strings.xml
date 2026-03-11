@@ -84,13 +84,11 @@
     <string name="episodes_mark_unwatched">Marcar como não assistido</string>
     <string name="episodes_mark_season_watched">Marcar temporada como assistida</string>
     <string name="episodes_mark_season_unwatched">Marcar temporada como não assistida</string>
-    <string name="episodes_mark_previous_watched">Marcar anteriores como assistidos</string>
+    <string name="episodes_mark_previous_watched">Marcar temporadas anteriores como assistidas</string>
     <string name="episodes_play">Assistir</string>
     <string name="play_manually">Assistir manualmente</string>
     <string name="episodes_season_actions">Opções da temporada</string>
-    <string name="episodes_mismatch_title">Divergência na numeração</string>
-    <string name="episodes_mismatch_cancel">Cancelar</string>
-
+    
     <!-- MetaDetailsViewModel -->
     <string name="detail_added_to_library">Adicionado à Biblioteca</string>
     <string name="detail_removed_from_library">Removido da Biblioteca</string>
@@ -200,10 +198,10 @@
     <string name="cd_increase">Aumentar</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_none">Nenhum</string>
-     <string name="action_close">Fechar</string>
+    <string name="action_close">Fechar</string>
 
     <!-- SupportersContributorsScreen -->
-     <string name="supporters_contributors_title">Apoiadores e Colaboradores</string>
+    <string name="supporters_contributors_title">Apoiadores e Colaboradores</string>
     <string name="supporters_contributors_subtitle">As pessoas que apoiam o Nuvio e os colaboradores que o constroem para TV e celular.</string>
     <string name="supporters_contributors_supporters_copy">Apoiadores e doadores ajudam a manter o projeto ativo, financiam a infraestrutura e abrem espaço para recursos ambiciosos.</string>
     <string name="supporters_contributors_donate_copy">O Nuvio continuará sendo gratuito e de código aberto. Se você quiser apoiar o projeto, pode ajudar com os custos de tempo e infraestrutura.</string>
@@ -358,7 +356,7 @@
     <string name="autoplay_timeout_sub">Tempo de espera pelos addons antes de selecionar a fonte.</string>
     <string name="autoplay_timeout_instant">Instantâneo</string>
     <string name="autoplay_timeout_unlimited">Ilimitado</string>
-    <string name="autoplay_allowed_addons">addons permitidos</string>
+    <string name="autoplay_allowed_addons">Addons permitidos</string>
     <string name="autoplay_all_addons">Todos os addons instalados</string>
     <string name="autoplay_allowed_plugins">Plugins permitidos</string>
     <string name="autoplay_all_plugins">Todos os plugins ativos</string>
@@ -520,7 +518,7 @@
     <string name="tmdb_networks_title">Canais/Streaming</string>
     <string name="tmdb_networks_subtitle">Logos dos Canais de Tv/Streamings do TMDB</string>
     <string name="tmdb_episodes_title">Episódios</string>
-    <string name="tmdb_episodes_subtitle">Resumos e imagens dos episódios do TMDB</string>
+    <string name="tmdb_episodes_subtitle">Títulos, sinopse, imagens e duração do TMDB</string>
     <string name="tmdb_more_like_this_title">Mais como este</string>
     <string name="tmdb_more_like_this_subtitle">Sugestões e recomendações baseadas no TMDB</string>
     <string name="tmdb_collections_title">Coleções</string>
@@ -528,8 +526,8 @@
    
     <string name="tmdb_language_dialog_title">Idioma do TMDB</string>
 
-   <!-- TraktScreen -->
-    <string name="trakt_description">Sincronize sua Watchlist, progresso, histórico (scrobbles) e listas pessoais com o Trakt.</string>
+    <!-- TraktScreen -->
+    <string name="trakt_description">Sincronize sua Biblioteca, progresso, histórico (scrobbles) e listas pessoais com o Trakt.</string>
     <string name="trakt_connected_as">Conectado como %1$s</string>
     <string name="trakt_account_login">Login da Conta</string>
     <string name="trakt_awaiting_instruction">Acesse trakt.tv/activate e insira este código:</string>
@@ -541,6 +539,14 @@
     <string name="trakt_token_refreshes">O token de acesso renova em %1$s</string>
     <string name="trakt_login_instruction">Clique em Login para iniciar a autenticação. Um QR Code aparecerá.</string>
     <string name="trakt_missing_credentials">TRAKT_CLIENT_ID/SECRET ausentes no local.properties.</string>
+    <string name="trakt_watch_progress_title">Progresso de Reprodução</string>
+    <string name="trakt_watch_progress_subtitle">Escolha qual fonte controla o progresso e o continuar assistindo</string>
+    <string name="trakt_watch_progress_dialog_title">Progresso de Reprodução</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Escolha se o progresso deve usar o Trakt ou o Nuvio Sync (o scrobble do Trakt continuará ativo).</string>
+    <string name="trakt_watch_progress_source_trakt">Trakt</string>
+    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_trakt_selected">Fonte de progresso definida para Trakt</string>
+    <string name="trakt_watch_progress_nuvio_selected">Fonte de progresso definida para Nuvio Sync</string>
     <string name="trakt_continue_watching_window">Continuar Assistindo</string>
     <string name="trakt_continue_watching_subtitle">Período considerado para exibir.</string>
     <string name="trakt_unaired_next_up">Próximos episódios não exibidos</string>
@@ -588,7 +594,7 @@
     <string name="debug_signing_in">Entrando\u2026</string>
     <string name="debug_sign_in">Entrar</string>
     <string name="debug_error_dialog_title">Erro de Reprodução</string>
-    <string name="debug_error_dialog_subtitle">Ocorreu um erro ao carregar o vídeo.\n\nSimulação de erro: O servidor retornou HTTP 503 (Serviço Indisponível).</string>
+    <string name="debug_error_dialog_subtitle">Ocorreu um erro durante a reprodução.\n\nErro: Erro de teste simulado - esta não é uma falha real. A fonte retornou HTTP 503 (Serviço Indisponível).</string>
     <string name="debug_dismiss">Fechar</string>
 
     <!-- ProfileSettingsContent -->
@@ -620,7 +626,7 @@
     <string name="profile_avatar_category_all">Todos</string>
     <string name="profile_avatar_category_anime">Anime</string>
     <string name="profile_avatar_category_animation">Animação</string>
-    <string name="profile_avatar_category_movie">Filmes</string>
+    <string name="profile_avatar_category_movie">Filme</string>
     <string name="profile_avatar_category_tv">TV</string>
     <string name="profile_avatar_category_gaming">Game</string>
     <string name="profile_add_new">Adicionar Perfil</string>
@@ -697,7 +703,7 @@
     <string name="player_more_actions_title">Mais opções</string>
     <string name="player_more_speed">Velocidade de reprodução</string>
     <string name="player_more_aspect_ratio">Proporção</string>
-    <string name="player_more_open_external">Player Externo</string>    
+    <string name="player_more_open_external">Abrir em Player Externo</string>    
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Fontes</string>
@@ -748,6 +754,7 @@
     <string name="subtitle_on">Ligado</string>
     <string name="subtitle_off">Desligado</string>
     <string name="subtitle_style_title">Estilo da Legenda</string>
+    <string name="subtitle_style_customize">Personalizar</string>
     <string name="subtitle_style_color">Cor</string>
     <string name="subtitle_style_reset">Redefinir</string>
     <string name="subtitle_style_font_size">Tamanho da fonte</string>
@@ -787,7 +794,7 @@
     <string name="search_placeholder">Buscar filmes e séries</string>
     <string name="search_start_title">Comece a pesquisar</string>
     <string name="search_start_subtitle">Digite ao menos 2 caracteres</string>
-    <string name="search_start_subtitle_no_discover">A descoberta está desativada. Digite 2 caracteres.</string>
+    <string name="search_start_subtitle_no_discover">A descoberta está desativada. Digite ao menos 2 caracteres.</string>
     <string name="search_voice_no_speech">Nenhuma voz detectada. Tente novamente.</string>
     <string name="search_voice_mic_permission">A permissão do microfone é necessária para a busca por voz.</string>
     <string name="search_voice_failed">Falha no reconhecimento de voz. Tente novamente.</string>
@@ -825,7 +832,7 @@
     <string name="library_empty_local_title">Nenhum %1$s ainda</string>
     <string name="library_empty_trakt_title">Nenhum %1$s nesta lista</string>
     <string name="library_empty_local_subtitle">Comece a salvar seus favoritos para vê-los aqui</string>
-    <string name="library_empty_trakt_subtitle">Use o "+" nos detalhes para adicionar itens à lista de desejos ou outras listas</string>
+    <string name="library_empty_trakt_subtitle">Use o "+" nos detalhes para adicionar itens à biblioteca ou outras listas</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Carregando\u2026</string>
@@ -1000,4 +1007,6 @@
     <string name="update_open_settings">Abrir Ajustes</string>
     <string name="update_install">Instalar</string>
     <string name="update_ignore">Ignorar</string>
+    <string name="watchlist_added">Adicionado à Watchlist</string>
+    <string name="watchlist_removed">Removido da Watchlist</string>
 </resources>
