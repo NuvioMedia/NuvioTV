@@ -11,6 +11,7 @@ import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.data.local.AddonSubtitleStartupMode
+import com.nuvio.tv.data.local.StreamCacheDataStore
 import com.nuvio.tv.data.local.SubtitleOrganizationMode
 import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.data.local.TrailerSettingsDataStore
@@ -25,6 +26,7 @@ import javax.inject.Inject
 class PlaybackSettingsViewModel @Inject constructor(
     private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
+    private val streamCacheDataStore: StreamCacheDataStore,
     private val addonRepository: AddonRepository,
     private val pluginManager: PluginManager
 ) : ViewModel() {
@@ -259,5 +261,18 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setStreamReuseLastLinkCacheHours(hours: Int) {
         playerSettingsDataStore.setStreamReuseLastLinkCacheHours(hours)
+    }
+
+    suspend fun setStreamCacheEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setStreamCacheEnabled(enabled)
+
+        // toggling cache on/off should clear existing cache to prevent stale data when re-enabling
+        if (!enabled) {
+            streamCacheDataStore.clearAll()
+        }
+    }
+
+    suspend fun setStreamCacheHours(hours: Int) {
+        playerSettingsDataStore.setStreamCacheHours(hours)
     }
 }

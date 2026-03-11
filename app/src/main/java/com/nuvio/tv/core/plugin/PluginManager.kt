@@ -2,6 +2,7 @@ package com.nuvio.tv.core.plugin
 
 import android.util.Log
 import com.nuvio.tv.data.local.PluginDataStore
+import com.nuvio.tv.data.local.StreamCacheDataStore
 import com.nuvio.tv.domain.model.LocalScraperResult
 import com.nuvio.tv.domain.model.PluginManifest
 import com.nuvio.tv.domain.model.PluginRepository
@@ -14,7 +15,6 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
@@ -41,6 +41,7 @@ private const val MANIFEST_SUFFIX = "/manifest.json"
 @Singleton
 class PluginManager @Inject constructor(
     private val dataStore: PluginDataStore,
+    private val streamCacheDataStore: StreamCacheDataStore,
     private val runtime: PluginRuntime,
     private val pluginSyncService: com.nuvio.tv.core.sync.PluginSyncService,
     private val authManager: com.nuvio.tv.core.auth.AuthManager
@@ -320,7 +321,8 @@ class PluginManager @Inject constructor(
         tmdbId: String,
         mediaType: String,
         season: Int? = null,
-        episode: Int? = null
+        episode: Int? = null,
+        forceRefresh: Boolean = false
     ): Flow<Pair<String, List<LocalScraperResult>>> = channelFlow {
         val enabledList = enabledScrapers.first()
             .filter { it.supportsType(mediaType) }
@@ -335,7 +337,7 @@ class PluginManager @Inject constructor(
         enabledList.forEach { scraper ->
             launch {
                 try {
-                    val results = executeScraperWithSingleFlight(scraper, tmdbId, mediaType, season, episode)
+                    val results = executeScraperWithSingleFlight(scraper, tmdbId, mediaType, season, episode, forceRefresh)
                     if (results.isNotEmpty()) {
                         send(scraper.name to results)
                     }
@@ -354,10 +356,16 @@ class PluginManager @Inject constructor(
         tmdbId: String,
         mediaType: String,
         season: Int?,
-        episode: Int?
+        episode: Int?,
+        forceRefresh: Boolean = false
     ): List<LocalScraperResult> {
         val cacheKey = "${scraper.id}:$tmdbId:$mediaType:$season:$episode"
-        
+
+        val stored = streamCacheDataStore.getValidIfEnabled(cacheKey)
+        if (!forceRefresh && stored != null) {
+            return stored
+        }
+
         // Check if already in flight
         val existing = inFlightScrapers[cacheKey]
         if (existing != null) {
@@ -370,9 +378,19 @@ class PluginManager @Inject constructor(
         
         // Create new deferred
         return coroutineScope {
-            val deferred = async {
+            val deferred = async(Dispatchers.IO)  {
                 scraperSemaphore.withPermit {
-                    executeScraper(scraper, tmdbId, mediaType, season, episode)
+                    val results = executeScraper(scraper, tmdbId, mediaType, season, episode)
+
+                    // Save cache even if the coroutine is canceled, to preserve results for future calls
+                    withContext(NonCancellable) {
+                        streamCacheDataStore.trySave(
+                            cacheKey = cacheKey,
+                            results = results
+                        )
+                    }
+
+                    results
                 }
             }
             

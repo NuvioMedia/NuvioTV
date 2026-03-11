@@ -190,6 +190,8 @@ data class PlayerSettings(
     val nextEpisodeThresholdMinutesBeforeEnd: Float = 2f,
     val streamReuseLastLinkEnabled: Boolean = false,
     val streamReuseLastLinkCacheHours: Int = 24,
+    val streamCacheEnabled: Boolean = true,
+    val streamCacheHours: Int = 1,
     val subtitleOrganizationMode: SubtitleOrganizationMode = SubtitleOrganizationMode.NONE,
     val addonSubtitleStartupMode: AddonSubtitleStartupMode = AddonSubtitleStartupMode.ALL_SUBTITLES,
     val resizeMode: Int = 0 
@@ -298,6 +300,8 @@ class PlayerSettingsDataStore @Inject constructor(
     private val nextEpisodeThresholdMinutesBeforeEndKey = floatPreferencesKey("next_episode_threshold_minutes_before_end_v2")
     private val streamReuseLastLinkEnabledKey = booleanPreferencesKey("stream_reuse_last_link_enabled")
     private val streamReuseLastLinkCacheHoursKey = intPreferencesKey("stream_reuse_last_link_cache_hours")
+    private val streamCacheEnabledKey = booleanPreferencesKey("stream_cache_enabled")
+    private val streamCacheHoursKey = intPreferencesKey("stream_cache_hours")
     private val subtitleOrganizationModeKey = stringPreferencesKey("subtitle_organization_mode")
     private val addonSubtitleStartupModeKey = stringPreferencesKey("addon_subtitle_startup_mode")
     private val resizeModeKey = intPreferencesKey("resize_mode")
@@ -459,6 +463,8 @@ class PlayerSettingsDataStore @Inject constructor(
                 ),
                 streamReuseLastLinkEnabled = prefs[streamReuseLastLinkEnabledKey] ?: false,
                 streamReuseLastLinkCacheHours = (prefs[streamReuseLastLinkCacheHoursKey] ?: 24).coerceIn(1, 168),
+                streamCacheEnabled = prefs[streamCacheEnabledKey] ?: true,
+                streamCacheHours = (prefs[streamCacheHoursKey] ?: 1).coerceIn(1, 24),
                 subtitleOrganizationMode = parseSubtitleOrganizationMode(prefs[subtitleOrganizationModeKey]),
                 addonSubtitleStartupMode = parseAddonSubtitleStartupMode(prefs[addonSubtitleStartupModeKey]),
                 resizeMode = (prefs[resizeModeKey] ?: 0).coerceIn(0, 4),
@@ -690,6 +696,18 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setStreamReuseLastLinkCacheHours(hours: Int) {
         store().edit { prefs ->
             prefs[streamReuseLastLinkCacheHoursKey] = hours.coerceIn(1, 168)
+        }
+    }
+
+    suspend fun setStreamCacheEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[streamCacheEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setStreamCacheHours(hours: Int) {
+        store().edit { prefs ->
+            prefs[streamCacheHoursKey] = hours.coerceIn(1, 24)
         }
     }
 
