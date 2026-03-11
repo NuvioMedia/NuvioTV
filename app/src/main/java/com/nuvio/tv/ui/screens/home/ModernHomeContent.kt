@@ -101,6 +101,8 @@ import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
 import android.view.KeyEvent as AndroidKeyEvent
 import kotlinx.coroutines.flow.distinctUntilChanged
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 
 private const val KEY_REPEAT_THROTTLE_MS = 80L
 private const val MODERN_HERO_RAPID_NAV_THRESHOLD_MS = 130L
@@ -648,6 +650,7 @@ fun ModernHomeContent(
         val rowsViewportHeightFraction = if (useLandscapePosters) 0.49f else 0.52f
         val rowsViewportHeight = maxHeight * rowsViewportHeightFraction
         val localDensity = LocalDensity.current
+        val layoutDirection = LocalLayoutDirection.current
         val rowTitleLineHeight = MaterialTheme.typography.titleMedium.lineHeight
         val rowTitleHeight = with(localDensity) {
             runCatching { rowTitleLineHeight.toDp() }
@@ -677,10 +680,10 @@ fun ModernHomeContent(
             with(localDensity) { heroBackdropHeight.roundToPx() }
         }
 
-        val heroMediaModifier = remember(heroBackdropHeight) {
+        val heroMediaModifier = remember(heroBackdropHeight, layoutDirection) {
             Modifier
                 .align(Alignment.TopEnd)
-                .offset(x = 56.dp)
+                .offset(x = if (layoutDirection == LayoutDirection.Rtl) (-56).dp else 56.dp)
                 .fillMaxWidth(MODERN_HERO_MEDIA_WIDTH_FRACTION)
                 .height(heroBackdropHeight)
         }
