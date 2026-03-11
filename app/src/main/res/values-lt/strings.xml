@@ -792,7 +792,7 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
 
 
     <!-- SearchScreen -->
-    <string name="search_keyboard_hint">Paieškai paspauskite „Atlikta“ (Done) klaviatūroje</string>
+    <string name="search_keyboard_hint">Naudokite klaviatūrą paieškai</string>
     <string name="search_placeholder">Ieškoti filmų ir serialų</string>
     <string name="search_start_title">Pradėti paiešką</string>
     <string name="search_start_subtitle">Įveskite bent 2 simbolius</string>
@@ -831,8 +831,8 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="library_source_local">VIETINĖ</string>
     <string name="library_type_all">Visi</string>
     <string name="library_type_items">elementai</string>
-    <string name="library_empty_local_title">Kol kas čia nėra %1$s</string>
-    <string name="library_empty_trakt_title">Šiame sąraše nėra %1$s</string>
+    <string name="library_empty_local_title">Kol kas čia nieko nėra</string>
+    <string name="library_empty_trakt_title">Šiame sąraše nieko nėra</string>
     <string name="library_empty_local_subtitle">Išsaugokite mėgstamiausius, kad pamatytumėte juos čia</string>
     <string name="library_empty_trakt_subtitle">Naudokite „+“ informacijos lange turiniui pridėti į žiūrėjimo ar kitus sąrašus</string>
 
@@ -996,7 +996,7 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="audio_dv_title">„Dolby Vision“ apdorojimas</string>
 
     <!-- SidebarNavigation / MainActivity -->
-    <string name="nav_home">Pradžia</string>
+    <string name="nav_home">Pagrindinis</string>
     <string name="nav_discover">Atrasti</string>
     <string name="nav_search">Paieška</string>
     <string name="nav_library">Biblioteka</string>
