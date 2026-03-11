@@ -203,9 +203,9 @@ fun UpdatePromptDialog(
 
                         val subtitle = when {
                             state.errorMessage != null -> state.errorMessage
-                            state.isChecking -> "Checking for updates…"
-                            state.downloadedApkPath != null -> "Download complete. Ready to install."
-                            state.update != null && !state.isUpdateAvailable -> "You're up to date."
+                            state.isChecking -> stringResource(R.string.update_checking)
+                            state.downloadedApkPath != null -> stringResource(R.string.update_download_complete)
+                            state.update != null && !state.isUpdateAvailable -> stringResource(R.string.update_up_to_date)
                             else -> ""
                         }
 
@@ -230,7 +230,7 @@ fun UpdatePromptDialog(
                     }
                 }
 
-                if (!showDownloadMode && displayNotes != null && state.isUpdateAvailable) {
+                if (!showDownloadMode && displayNotes != null) {
                     val scrollState = rememberScrollState()
                     val isTextContainerFocused = remember { mutableStateOf(false) }
                     val coroutineScope = rememberCoroutineScope()
@@ -501,7 +501,7 @@ fun UpdatePromptDialog(
 
         runCatching {
             val hasNotes = !state.update?.notes.isNullOrBlank()
-            if (!state.isDownloading && hasNotes && state.isUpdateAvailable) {
+            if (!state.isDownloading && hasNotes) {
                 textFocusRequester.requestFocus()
             } else if (hasPrimaryAction) {
                 primaryFocusRequester.requestFocus()

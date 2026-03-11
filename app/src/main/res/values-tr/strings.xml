@@ -980,6 +980,9 @@
     <string name="settings_rounded_ui">Yuvarlak Arayüz</string>
     <string name="cd_expand_sidebar">Panel Sekmesini Büyüt</string>
 
+    <string name="update_checking">Güncellemeler kontrol ediliyor…</string>
+    <string name="update_download_complete">İndirme tamamlandı. Kurulum için hazır.</string>
+    <string name="update_up_to_date">Sistem güncel. En son değişiklikler:</string>
     <string name="update_close">Kapat</string>
     <string name="update_open_settings">Ayarları Aç</string>
     <string name="update_install">Yükle</string>
