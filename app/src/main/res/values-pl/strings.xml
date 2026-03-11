@@ -15,6 +15,7 @@
     <string name="cw_upcoming">Nadchodzące</string>
     <string name="cw_next_up">Następny odcinek</string>
     <string name="cw_resume">Wznów</string>
+    <string name="cw_percent_watched">%1$d%% obejrzane</string>
     <string name="cw_hours_min_left">Zostało %1$dg %2$dm</string>
     <string name="cw_min_left">Zostało %1$dm</string>
     <string name="cw_almost_done">Prawie koniec</string>
@@ -282,6 +283,10 @@
     <string name="autoplay_scope_addons">Tylko zainstalowane dodatki</string>
     <string name="autoplay_scope_plugins">Tylko włączone wtyczki</string>
     <string name="autoplay_scope">Zakres źródeł auto-play</string>
+    <string name="autoplay_timeout_title">Limit czasu wyboru strumienia</string>
+    <string name="autoplay_timeout_sub">Czas oczekiwania na dodatki przed wyborem.</string>
+    <string name="autoplay_timeout_instant">Natychmiast</string>
+    <string name="autoplay_timeout_unlimited">Bez limitu</string>
     <string name="autoplay_allowed_addons">Dozwolone dodatki</string>
     <string name="autoplay_all_addons">Wszystkie zainstalowane dodatki</string>
     <string name="autoplay_allowed_plugins">Dozwolone wtyczki</string>
@@ -949,4 +954,17 @@
     <string name="update_open_settings">Otwórz ustawienia</string>
     <string name="update_install">Zainstaluj</string>
     <string name="update_ignore">Ignoruj</string>
+    <string name="episodes_unavailable">Niedostępny</string>
+    <string name="series_status_ended">Zakończony</string>
+    <string name="series_status_continuing">W trakcie</string>
+    <string name="series_status_current">Na żywo</string>
+    <string name="series_status_cancelled">Anulowany</string>
+    <string name="series_status_released">Wydany</string>
+    <string name="series_status_planned">Planowany</string>
+    <string name="series_status_rumored">Plotki</string>
+    <string name="series_status_in_production">W produkcji</string>
+    <string name="series_status_post_production">Postprodukcja</string>
+    <string name="watchlist_added">Dodano do listy</string>
+    <string name="watchlist_removed">Usunięto z listy</string>
+    <string name="account_sync_restart_note">Synchronizacja nie jest natychmiastowa na aktywnych urządzeniach. Uruchom ponownie to urządzenie po zalogowaniu lub aby pobrać zmiany wprowadzone gdzie indziej.</string>
 </resources>

@@ -143,7 +143,6 @@ fun PlaybackSettingsContent(
     // Dialog states
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showSecondaryLanguageDialog by remember { mutableStateOf(false) }
-    var showSubtitleOrganizationDialog by remember { mutableStateOf(false) }
     var showSubtitleStartupModeDialog by remember { mutableStateOf(false) }
     var showTextColorDialog by remember { mutableStateOf(false) }
     var showBackgroundColorDialog by remember { mutableStateOf(false) }
@@ -175,7 +174,6 @@ fun PlaybackSettingsContent(
     fun dismissAllDialogs() {
         showLanguageDialog = false
         showSecondaryLanguageDialog = false
-        showSubtitleOrganizationDialog = false
         showSubtitleStartupModeDialog = false
         showTextColorDialog = false
         showBackgroundColorDialog = false
@@ -225,7 +223,6 @@ fun PlaybackSettingsContent(
                 onShowDecoderPriorityDialog = { openDialog { showDecoderPriorityDialog = true } },
                 onShowLanguageDialog = { openDialog { showLanguageDialog = true } },
                 onShowSecondaryLanguageDialog = { openDialog { showSecondaryLanguageDialog = true } },
-                onShowSubtitleOrganizationDialog = { openDialog { showSubtitleOrganizationDialog = true } },
                 onShowSubtitleStartupModeDialog = { openDialog { showSubtitleStartupModeDialog = true } },
                 onShowTextColorDialog = { openDialog { showTextColorDialog = true } },
                 onShowBackgroundColorDialog = { openDialog { showBackgroundColorDialog = true } },
@@ -250,6 +247,9 @@ fun PlaybackSettingsContent(
                 },
                 onSetNextEpisodeThresholdMinutesBeforeEnd = { minutes ->
                     coroutineScope.launch { viewModel.setNextEpisodeThresholdMinutesBeforeEnd(minutes) }
+                },
+                onSetStreamAutoPlayTimeoutSeconds = { seconds ->
+                    coroutineScope.launch { viewModel.setStreamAutoPlayTimeoutSeconds(seconds) }
                 },
                 onSetReuseLastLinkEnabled = { enabled -> coroutineScope.launch { viewModel.setStreamReuseLastLinkEnabled(enabled) } },
                 onSetLoadingOverlayEnabled = { enabled -> coroutineScope.launch { viewModel.setLoadingOverlayEnabled(enabled) } },
@@ -331,7 +331,6 @@ fun PlaybackSettingsContent(
         showPlayerPreferenceDialog = showPlayerPreferenceDialog,
         showLanguageDialog = showLanguageDialog,
         showSecondaryLanguageDialog = showSecondaryLanguageDialog,
-        showSubtitleOrganizationDialog = showSubtitleOrganizationDialog,
         showSubtitleStartupModeDialog = showSubtitleStartupModeDialog,
         showTextColorDialog = showTextColorDialog,
         showBackgroundColorDialog = showBackgroundColorDialog,
@@ -355,9 +354,6 @@ fun PlaybackSettingsContent(
         },
         onSetSubtitleSecondaryLanguage = { language ->
             coroutineScope.launch { viewModel.setSubtitleSecondaryLanguage(language) }
-        },
-        onSetSubtitleOrganizationMode = { mode ->
-            coroutineScope.launch { viewModel.setSubtitleOrganizationMode(mode) }
         },
         onSetAddonSubtitleStartupMode = { mode ->
             coroutineScope.launch { viewModel.setAddonSubtitleStartupMode(mode) }
@@ -403,7 +399,6 @@ fun PlaybackSettingsContent(
         },
         onDismissLanguageDialog = ::dismissAllDialogs,
         onDismissSecondaryLanguageDialog = ::dismissAllDialogs,
-        onDismissSubtitleOrganizationDialog = ::dismissAllDialogs,
         onDismissSubtitleStartupModeDialog = ::dismissAllDialogs,
         onDismissTextColorDialog = ::dismissAllDialogs,
         onDismissBackgroundColorDialog = ::dismissAllDialogs,
@@ -997,6 +992,7 @@ internal fun LanguageSelectionDialog(
     onDismiss: () -> Unit
 ) {
     val focusRequester = remember { FocusRequester() }
+    val sortedLanguages = remember { AVAILABLE_SUBTITLE_LANGUAGES.sortedBy { it.displayName.lowercase() } }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -1048,10 +1044,10 @@ internal fun LanguageSelectionDialog(
                 }
 
                 items(
-                    count = AVAILABLE_SUBTITLE_LANGUAGES.size,
-                    key = { index -> AVAILABLE_SUBTITLE_LANGUAGES[index].code }
+                    count = sortedLanguages.size,
+                    key = { index -> sortedLanguages[index].code }
                 ) { index ->
-                    val language = AVAILABLE_SUBTITLE_LANGUAGES[index]
+                    val language = sortedLanguages[index]
                     LanguageOptionItem(
                         name = language.displayName,
                         code = language.code,

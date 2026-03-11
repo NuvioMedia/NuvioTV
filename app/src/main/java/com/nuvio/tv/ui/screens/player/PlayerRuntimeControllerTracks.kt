@@ -29,7 +29,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         
         when (trackType) {
             C.TRACK_TYPE_VIDEO -> {
-                
+
                 for (i in 0 until trackGroup.length) {
                     if (trackGroup.isTrackSelected(i)) {
                         val format = trackGroup.getTrackFormat(i)
@@ -48,6 +48,12 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                                 )
                             }
                         }
+                        // Extract video codec, resolution, and bitrate for stream info
+                        currentVideoCodec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType)
+                            ?: CustomDefaultTrackNameProvider.formatNameFromMime(format.codecs)
+                        currentVideoWidth = format.width.takeIf { it > 0 }
+                        currentVideoHeight = format.height.takeIf { it > 0 }
+                        currentVideoBitrate = format.bitrate.takeIf { it > 0 }
                         break
                     }
                 }
@@ -74,7 +80,8 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                             language = format.language,
                             codec = codecName,
                             channelCount = format.channelCount.takeIf { it > 0 },
-                            isSelected = isSelected
+                            isSelected = isSelected,
+                            sampleRate = format.sampleRate.takeIf { it > 0 }
                         )
                     )
                 }
@@ -100,6 +107,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                             name = format.label ?: format.language ?: "Subtitle ${subtitleTracks.size + 1}",
                             language = format.language,
                             trackId = format.id,
+                            codec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType),
                             isForced = hasForcedFlag || nameHintForced || isSongsAndSigns,
                             isSelected = isSelected
                         )
@@ -173,7 +181,14 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
 internal fun PlayerRuntimeController.maybeAdjustLibassPipelineForTracks(tracks: Tracks) {
     if (libassPipelineSwitchInFlight) return
 
-    val desiredUseLibass = requestedUseLibassByUser && tracks.hasAssSsaTextTrack()
+    val hasAssSsaTrack = tracks.hasAssSsaTextTrack()
+    if (hasAssSsaTrack) {
+        hasDetectedAssSsaTrackForCurrentStream = true
+    }
+    // Keep libass sticky only after we have actually detected ASS/SSA for this stream.
+    // This avoids startup ping-pong but does not keep libass on for streams that never
+    // expose ASS/SSA tracks.
+    val desiredUseLibass = requestedUseLibassByUser && hasDetectedAssSsaTrackForCurrentStream
     if (desiredUseLibass == activePlayerUsesLibass) return
 
     val player = _exoPlayer ?: return

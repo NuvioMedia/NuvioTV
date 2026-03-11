@@ -11,7 +11,11 @@ internal fun PlayerRuntimeController.startInitialPlaybackIfNeeded() {
     if (initialPlaybackStarted) return
 
     initialPlaybackStarted = true
-    initializePlayer(currentStreamUrl, currentHeaders)
+    preparePlaybackBeforeStart(
+        url = currentStreamUrl,
+        headers = currentHeaders,
+        loadSavedProgress = false
+    )
 }
 
 internal fun PlayerRuntimeController.currentHostActivity(): Activity? {

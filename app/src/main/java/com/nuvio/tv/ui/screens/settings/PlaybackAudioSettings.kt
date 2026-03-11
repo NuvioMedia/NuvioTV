@@ -298,7 +298,7 @@ private fun AudioLanguageSelectionDialog(
         AudioLanguageOption.DEFAULT to stringResource(R.string.audio_lang_default),
         AudioLanguageOption.DEVICE to stringResource(R.string.audio_lang_device)
     )
-    val allOptions = specialOptions + AVAILABLE_SUBTITLE_LANGUAGES.map { it.code to it.displayName }
+    val allOptions = specialOptions + AVAILABLE_SUBTITLE_LANGUAGES.sortedBy { it.displayName.lowercase() }.map { it.code to it.displayName }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()

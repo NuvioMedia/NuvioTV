@@ -255,14 +255,14 @@ class StreamScreenViewModel @Inject constructor(
             val installedAddons = addonRepository.getInstalledAddons().first()
             val installedAddonOrder = installedAddons.map { it.displayName }
 
-            fun applySuccess(addonStreamGroups: List<AddonStreams>) {
+            fun applySuccess(addonStreamGroups: List<AddonStreams>, isAllLoaded: Boolean) {
                 val orderedAddonStreams = StreamAutoPlaySelector.orderAddonStreams(
                     addonStreamGroups,
                     installedAddonOrder
                 )
                 val allStreams = orderedAddonStreams.flatMap { it.streams }
                 val availableAddons = orderedAddonStreams.map { it.addonName }
-                val selectedAutoPlayStream = if (autoPlayHandledForSession) {
+                val selectedAutoPlayStream = if (autoPlayHandledForSession || !isAllLoaded) {
                     null
                 } else {
                     StreamAutoPlaySelector.selectAutoPlayStream(
@@ -314,7 +314,7 @@ class StreamScreenViewModel @Inject constructor(
                         TAG,
                         "Using embedded video streams for videoId=$videoId count=${embeddedAddonStreams.streams.size}"
                     )
-                    applySuccess(listOf(embeddedAddonStreams))
+                    applySuccess(listOf(embeddedAddonStreams), isAllLoaded = true)
                     updateSourceChipsForEmbedded(embeddedAddonStreams.addonName)
                     if (directAutoPlayFlowEnabledForSession && !resolvedAutoPlayTarget) {
                         directAutoPlayFlowEnabledForSession = false
@@ -332,56 +332,82 @@ class StreamScreenViewModel @Inject constructor(
 
             updateSourceChipsForFetchStart(installedAddons)
 
-            streamRepository.getStreamsFromAllAddons(
-                type = contentType,
-                videoId = videoId,
-                season = season,
-                episode = episode
-            ).collectLatest { result ->
-                when (result) {
-                    is NetworkResult.Success -> {
-                        applySuccess(result.data)
+            var lastSuccessData: List<AddonStreams>? = null
+            var autoSelectTriggered = false
+            var timeoutElapsed = false
+
+            val streamLoadInner = viewModelScope.launch {
+                streamRepository.getStreamsFromAllAddons(
+                    type = contentType,
+                    videoId = videoId,
+                    season = season,
+                    episode = episode
+                ).collect { result ->
+                    when (result) {
+                        is NetworkResult.Success -> {
+                            lastSuccessData = result.data
+                            applySuccess(result.data, isAllLoaded = false)
+                            // After timeout, auto-select on first result that arrives
+                            if (timeoutElapsed && !autoSelectTriggered) {
+                                autoSelectTriggered = true
+                                applySuccess(result.data, isAllLoaded = true)
+                            }
+                        }
+                        is NetworkResult.Error -> {
+                            if (directAutoPlayFlowEnabledForSession) {
+                                directAutoPlayFlowEnabledForSession = false
+                            }
+                            updateUiStateIfChanged {
+                                it.copy(
+                                    isLoading = false,
+                                    error = result.message,
+                                    isDirectAutoPlayFlow = false,
+                                    showDirectAutoPlayOverlay = false,
+                                    directAutoPlayMessage = null
+                                )
+                            }
+                        }
+                        NetworkResult.Loading -> {
+                            updateUiStateIfChanged {
+                                it.copy(
+                                    isLoading = true,
+                                    showDirectAutoPlayOverlay = if (directAutoPlayFlowEnabledForSession) {
+                                        true
+                                    } else {
+                                        it.showDirectAutoPlayOverlay
+                                    }
+                                )
+                            }
+                        }
                     }
-                    is NetworkResult.Error -> {
-                        if (directAutoPlayFlowEnabledForSession) {
-                            directAutoPlayFlowEnabledForSession = false
-                        }
-                        updateUiStateIfChanged {
-                            it.copy(
-                                isLoading = false,
-                                error = result.message,
-                                isDirectAutoPlayFlow = false,
-                                showDirectAutoPlayOverlay = false,
-                                directAutoPlayMessage = null
-                            )
-                        }
-                    }
-                    NetworkResult.Loading -> {
-                        updateUiStateIfChanged {
-                            it.copy(
-                                isLoading = true,
-                                showDirectAutoPlayOverlay = if (directAutoPlayFlowEnabledForSession) {
-                                    true
-                                } else {
-                                    it.showDirectAutoPlayOverlay
-                                }
-                            )
-                        }
+                }
+                // All addons finished — run auto-select if not yet triggered
+                if (!autoSelectTriggered) {
+                    autoSelectTriggered = true
+                    lastSuccessData?.let { applySuccess(it, isAllLoaded = true) }
+                }
+                markRemainingSourceChipsAsError()
+                if (directAutoPlayFlowEnabledForSession && !resolvedAutoPlayTarget) {
+                    directAutoPlayFlowEnabledForSession = false
+                    updateUiStateIfChanged {
+                        it.copy(
+                            isDirectAutoPlayFlow = false,
+                            showDirectAutoPlayOverlay = false,
+                            directAutoPlayMessage = null
+                        )
                     }
                 }
             }
 
-            markRemainingSourceChipsAsError()
-
-            if (directAutoPlayFlowEnabledForSession && !resolvedAutoPlayTarget) {
-                directAutoPlayFlowEnabledForSession = false
-                updateUiStateIfChanged {
-                    it.copy(
-                        isDirectAutoPlayFlow = false,
-                        showDirectAutoPlayOverlay = false,
-                        directAutoPlayMessage = null
-                    )
-                }
+            // After timeout: if streams arrived, auto-select now; if not, wait for first result from inner job
+            val timeoutMs = playerSettings.streamAutoPlayTimeoutSeconds * 1_000L
+            if (timeoutMs > 0L && playerSettings.streamAutoPlayTimeoutSeconds < 11) {
+                delay(timeoutMs)
+            }
+            timeoutElapsed = true
+            if (!autoSelectTriggered && lastSuccessData != null) {
+                autoSelectTriggered = true
+                applySuccess(lastSuccessData!!, isAllLoaded = true)
             }
         }
     }
@@ -633,7 +659,10 @@ class StreamScreenViewModel @Inject constructor(
             rememberedAudioName = null,
             filename = stream.behaviorHints?.filename,
             videoHash = stream.behaviorHints?.videoHash,
-            videoSize = stream.behaviorHints?.videoSize
+            videoSize = stream.behaviorHints?.videoSize,
+            addonName = stream.addonName,
+            addonLogo = stream.addonLogo,
+            streamDescription = stream.description
         )
 
         val url = playbackInfo.url
@@ -688,5 +717,8 @@ data class StreamPlaybackInfo(
     val rememberedAudioName: String?,
     val filename: String? = null,
     val videoHash: String? = null,
-    val videoSize: Long? = null
+    val videoSize: Long? = null,
+    val addonName: String? = null,
+    val addonLogo: String? = null,
+    val streamDescription: String? = null
 )

@@ -1,7 +1,11 @@
 package com.nuvio.tv.ui.screens.home
 
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,8 +46,10 @@ import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
+import com.nuvio.tv.R
 import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.ui.theme.NuvioColors
+import androidx.compose.ui.res.stringResource
 
 private data class ModernHeroSecondaryMeta(
     val highlightText: String?,
@@ -61,7 +67,6 @@ internal fun ModernHeroMediaLayer(
     heroTrailerAudioUrl: String?,
     heroTrailerAlpha: Float,
     muted: Boolean,
-    bgColor: Color,
     onTrailerEnded: () -> Unit,
     onFirstFrameRendered: () -> Unit,
     modifier: Modifier,
@@ -109,75 +114,97 @@ internal fun ModernHeroMediaLayer(
                     .graphicsLayer { alpha = heroTrailerAlpha }
             )
         }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawWithCache {
-                    val leftBlendSolidWidth = size.width * 0.018f
-                    val horizontalGradientStartX = leftBlendSolidWidth
-                    val horizontalFadeEndX = horizontalGradientStartX + (size.width * 0.42f)
-                    val horizontalGradient = Brush.horizontalGradient(
-                        colorStops = arrayOf(
-                            0.0f to bgColor,
-                            0.22f to bgColor.copy(alpha = 0.86f),
-                            0.46f to bgColor.copy(alpha = 0.56f),
-                            0.76f to bgColor.copy(alpha = 0.16f),
-                            1.0f to Color.Transparent
-                        ),
-                        startX = horizontalGradientStartX,
-                        endX = horizontalFadeEndX
-                    )
-                    val topContourGradient = Brush.linearGradient(
-                        colorStops = arrayOf(
-                            0.0f to bgColor.copy(alpha = 0.28f),
-                            0.38f to bgColor.copy(alpha = 0.14f),
-                            0.72f to bgColor.copy(alpha = 0.05f),
-                            1.0f to Color.Transparent
-                        ),
-                        start = Offset(0f, 0f),
-                        end = Offset(size.width * 0.24f, size.height * 0.40f)
-                    )
-                    val bottomContourGradient = Brush.linearGradient(
-                        colorStops = arrayOf(
-                            0.0f to bgColor.copy(alpha = 0.24f),
-                            0.42f to bgColor.copy(alpha = 0.12f),
-                            0.74f to bgColor.copy(alpha = 0.05f),
-                            1.0f to Color.Transparent
-                        ),
-                        start = Offset(0f, size.height),
-                        end = Offset(size.width * 0.24f, size.height * 0.61f)
-                    )
-                    val verticalGradient = Brush.verticalGradient(
-                        0.89f to Color.Transparent,
-                        0.93f to bgColor.copy(alpha = 0.14f),
-                        0.965f to bgColor.copy(alpha = 0.52f),
-                        0.99f to bgColor.copy(alpha = 0.92f),
-                        1.0f to bgColor
-                    )
-                    onDrawBehind {
-                        drawRect(
-                            color = bgColor,
-                            size = Size(leftBlendSolidWidth, size.height)
-                        )
-                        drawRect(brush = horizontalGradient, size = size)
-                        drawRect(brush = topContourGradient, size = size)
-                        drawRect(brush = bottomContourGradient, size = size)
-                        drawRect(brush = verticalGradient, size = size)
-                    }
-                }
-        )
     }
+}
+
+@Composable
+internal fun ModernHeroGradientLayer(
+    bgColor: Color,
+    modifier: Modifier
+) {
+    Box(
+        modifier = modifier
+            .drawWithCache {
+                val leftBlendSolidWidth = size.width * 0.018f
+                val horizontalGradientStartX = leftBlendSolidWidth
+                val horizontalFadeEndX = horizontalGradientStartX + (size.width * 0.42f)
+                val horizontalGradient = Brush.horizontalGradient(
+                    colorStops = arrayOf(
+                        0.0f to bgColor,
+                        0.22f to bgColor.copy(alpha = 0.86f),
+                        0.46f to bgColor.copy(alpha = 0.56f),
+                        0.76f to bgColor.copy(alpha = 0.16f),
+                        1.0f to Color.Transparent
+                    ),
+                    startX = horizontalGradientStartX,
+                    endX = horizontalFadeEndX
+                )
+                val topContourGradient = Brush.linearGradient(
+                    colorStops = arrayOf(
+                        0.0f to bgColor.copy(alpha = 0.28f),
+                        0.38f to bgColor.copy(alpha = 0.14f),
+                        0.72f to bgColor.copy(alpha = 0.05f),
+                        1.0f to Color.Transparent
+                    ),
+                    start = Offset(0f, 0f),
+                    end = Offset(size.width * 0.24f, size.height * 0.40f)
+                )
+                val bottomContourGradient = Brush.linearGradient(
+                    colorStops = arrayOf(
+                        0.0f to bgColor.copy(alpha = 0.24f),
+                        0.42f to bgColor.copy(alpha = 0.12f),
+                        0.74f to bgColor.copy(alpha = 0.05f),
+                        1.0f to Color.Transparent
+                    ),
+                    start = Offset(0f, size.height),
+                    end = Offset(size.width * 0.24f, size.height * 0.61f)
+                )
+                val verticalGradient = Brush.verticalGradient(
+                    0.89f to Color.Transparent,
+                    0.93f to bgColor.copy(alpha = 0.14f),
+                    0.965f to bgColor.copy(alpha = 0.52f),
+                    0.99f to bgColor.copy(alpha = 0.92f),
+                    1.0f to bgColor
+                )
+                onDrawBehind {
+                    drawRect(
+                        color = bgColor,
+                        size = Size(leftBlendSolidWidth, size.height)
+                    )
+                    drawRect(brush = horizontalGradient, size = size)
+                    drawRect(brush = topContourGradient, size = size)
+                    drawRect(brush = bottomContourGradient, size = size)
+                    drawRect(brush = verticalGradient, size = size)
+                }
+            }
+    )
 }
 
 @Composable
 internal fun HeroTitleBlock(
     preview: HeroPreview?,
+    enrichmentActive: Boolean = false,
     portraitMode: Boolean,
     modifier: Modifier = Modifier
 ) {
-    if (preview == null) return
+    val fadeDuration = 220
+    AnimatedContent(
+        targetState = preview,
+        transitionSpec = { fadeIn(tween(fadeDuration)) togetherWith fadeOut(tween(fadeDuration)) using null },
+        contentAlignment = Alignment.BottomStart,
+        label = "heroTitleCrossfade",
+        modifier = modifier
+    ) { animatedPreview ->
+        HeroTitleContent(preview = animatedPreview, portraitMode = portraitMode)
+    }
+}
 
+@Composable
+private fun HeroTitleContent(
+    preview: HeroPreview?,
+    portraitMode: Boolean
+) {
+    if (preview == null) return
     val descriptionMaxLines = if (portraitMode) 4 else 5
     val descriptionScale = if (portraitMode) 0.90f else 1f
     val titleScale = if (portraitMode) 0.92f else 1f
@@ -221,7 +248,7 @@ internal fun HeroTitleBlock(
     }
 
     Column(
-        modifier = modifier,
+        modifier = Modifier,
         verticalArrangement = Arrangement.spacedBy(titleSpacing)
     ) {
         var logoLoadFailed by remember(preview.logo) { mutableStateOf(false) }
@@ -248,6 +275,15 @@ internal fun HeroTitleBlock(
             )
         }
 
+        val strStatusEnded = stringResource(R.string.series_status_ended)
+        val strStatusContinuing = stringResource(R.string.series_status_continuing)
+        val strStatusCurrent = stringResource(R.string.series_status_current)
+        val strStatusCancelled = stringResource(R.string.series_status_cancelled)
+        val strStatusReleased = stringResource(R.string.series_status_released)
+        val strStatusPlanned = stringResource(R.string.series_status_planned)
+        val strStatusRumored = stringResource(R.string.series_status_rumored)
+        val strStatusInProduction = stringResource(R.string.series_status_in_production)
+        val strStatusPostProduction = stringResource(R.string.series_status_post_production)
         val secondaryMeta = remember(
             preview.secondaryHighlightText,
             preview.ageRatingText,
@@ -257,7 +293,18 @@ internal fun HeroTitleBlock(
             ModernHeroSecondaryMeta(
                 highlightText = preview.secondaryHighlightText?.trim()?.takeIf { it.isNotBlank() },
                 ageRating = preview.ageRatingText?.trim()?.takeIf { it.isNotBlank() },
-                status = preview.statusText?.trim()?.takeIf { it.isNotBlank() }?.uppercase(),
+                status = when (preview.statusText?.trim()?.lowercase()) {
+                    "ended" -> strStatusEnded.uppercase()
+                    "continuing", "returning series" -> strStatusContinuing.uppercase()
+                    "current" -> strStatusCurrent.uppercase()
+                    "cancelled", "canceled" -> strStatusCancelled.uppercase()
+                    "released" -> strStatusReleased.uppercase()
+                    "planned" -> strStatusPlanned.uppercase()
+                    "rumored" -> strStatusRumored.uppercase()
+                    "in production" -> strStatusInProduction.uppercase()
+                    "post production" -> strStatusPostProduction.uppercase()
+                    else -> preview.statusText?.trim()?.takeIf { it.isNotBlank() }?.uppercase()
+                },
                 details = buildList {
                     preview.languageText?.trim()?.takeIf { it.isNotBlank() }?.let(::add)
                 }
@@ -353,10 +400,11 @@ internal fun HeroTitleBlock(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(metaSpacing)
             ) {
-                secondaryHighlightText?.let { text ->
+                val semiBoldLabelMedium = remember(labelMedium) { labelMedium.copy(fontWeight = FontWeight.SemiBold) }
+        secondaryHighlightText?.let { text ->
                     Text(
                         text = text,
-                        style = labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        style = semiBoldLabelMedium,
                         color = NuvioColors.TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -479,9 +527,10 @@ private fun HeroCombinedMetaBadge(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        val semiBoldStyle = remember(textStyle) { textStyle.copy(fontWeight = FontWeight.SemiBold) }
         Text(
             text = leftText,
-            style = textStyle.copy(fontWeight = FontWeight.SemiBold),
+            style = semiBoldStyle,
             color = contentColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -494,7 +543,7 @@ private fun HeroCombinedMetaBadge(
         )
         Text(
             text = rightText,
-            style = textStyle.copy(fontWeight = FontWeight.SemiBold),
+            style = semiBoldStyle,
             color = contentColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -520,7 +569,7 @@ private fun HeroMetaBadge(
     ) {
         Text(
             text = text,
-            style = textStyle.copy(fontWeight = FontWeight.SemiBold),
+            style = remember(textStyle) { textStyle.copy(fontWeight = FontWeight.SemiBold) },
             color = contentColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis

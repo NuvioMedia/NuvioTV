@@ -7,6 +7,7 @@ import com.nuvio.tv.data.remote.api.AniSkipApi
 import com.nuvio.tv.data.remote.api.AnimeSkipApi
 import com.nuvio.tv.data.remote.api.AnimeSkipRequest
 import com.nuvio.tv.data.remote.api.ArmApi
+import com.nuvio.tv.data.remote.api.ArmEntry
 import com.nuvio.tv.data.remote.api.IntroDbApi
 import com.nuvio.tv.data.remote.api.IntroDbSegment
 import java.util.concurrent.ConcurrentHashMap
@@ -30,7 +31,7 @@ class SkipIntroRepository @Inject constructor(
     private val animeSkipSettingsDataStore: AnimeSkipSettingsDataStore
 ) {
     private val cache = ConcurrentHashMap<String, List<SkipInterval>>()
-    private val malIdCache = ConcurrentHashMap<String, String>()
+    private val imdbEntriesCache = ConcurrentHashMap<String, List<ArmEntry>>()
     private val animeSkipShowIdCache = ConcurrentHashMap<String, String>()
     private val introDbConfigured = BuildConfig.INTRODB_API_URL.isNotEmpty()
 
@@ -44,20 +45,22 @@ class SkipIntroRepository @Inject constructor(
             if (result.isNotEmpty()) return result.also { cache[cacheKey] = it }
         }
 
-        val malId = resolveMalId(imdbId)
+        val entries = resolveImdbEntries(imdbId)
+        val malId = entries.getOrNull(season - 1)?.myanimelist?.toString()
+            ?: entries.firstOrNull()?.myanimelist?.toString()
         if (malId != null) {
             val result = fetchFromAniSkip(malId, episode)
             if (result.isNotEmpty()) return result.also { cache[cacheKey] = it }
         }
 
-        // AnimeSkip: try season-specific AniList ID first, then season-1 as fallback
-        val anilistIds = resolveAllAnilistIdsFromImdb(imdbId)
-        val toTry = listOfNotNull(
-            anilistIds.getOrNull(season - 1),
-            anilistIds.firstOrNull()
-        ).distinct()
-        for (anilistId in toTry) {
-            val result = fetchFromAnimeSkip(anilistId, episode, season = null)
+        // AnimeSkip: try season-specific AniList ID first, then season-1 as fallback with season filter
+        val seasonAnilistId = entries.getOrNull(season - 1)?.anilist?.toString()
+        val fallbackAnilistId = entries.firstOrNull()?.anilist?.toString()
+        for ((anilistId, seasonFilter) in listOfNotNull(
+            seasonAnilistId?.let { it to null },
+            if (fallbackAnilistId != null && fallbackAnilistId != seasonAnilistId) fallbackAnilistId to season else null
+        )) {
+            val result = fetchFromAnimeSkip(anilistId, episode, season = seasonFilter)
             if (result.isNotEmpty()) return result.also { cache[cacheKey] = it }
         }
 
@@ -71,25 +74,33 @@ class SkipIntroRepository @Inject constructor(
         val aniSkipResult = fetchFromAniSkip(malId, episode)
         if (aniSkipResult.isNotEmpty()) return aniSkipResult.also { cache[cacheKey] = it }
 
-        val directAnilistId = try {
-            armApi.resolveMalToAnilist(malId = malId)
-                .takeIf { it.isSuccessful }?.body()?.anilist?.toString()
-        } catch (e: Exception) { null }
-
-        if (directAnilistId != null) {
-            val result = fetchFromAnimeSkip(directAnilistId, episode, season = null)
-            if (result.isNotEmpty()) return result.also { cache[cacheKey] = it }
-        }
-
         val imdbId = try {
-            armApi.resolveMalToImdb(malId = malId)
-                .takeIf { it.isSuccessful }?.body()?.imdb
+            armApi.resolveMalToImdb(malId = malId).takeIf { it.isSuccessful }?.body()?.imdb
         } catch (e: Exception) { null }
 
         if (imdbId != null) {
-            val firstAnilistId = resolveAllAnilistIdsFromImdb(imdbId).firstOrNull()
-            if (firstAnilistId != null) {
-                val result = fetchFromAnimeSkip(firstAnilistId, episode, season = null)
+            val entries = resolveImdbEntries(imdbId)
+            val season = entries.indexOfFirst { it.myanimelist == malId.toIntOrNull() } + 1
+
+            if (introDbConfigured) {
+                val result = fetchFromIntroDb(imdbId, season, episode)
+                if (result.isNotEmpty()) return result.also { cache[cacheKey] = it }
+            }
+            val seasonAnilistId = entries.getOrNull(season - 1)?.anilist?.toString()
+            val fallbackAnilistId = entries.firstOrNull()?.anilist?.toString()
+            for ((anilistId, seasonFilter) in listOfNotNull(
+                seasonAnilistId?.let { it to null },
+                if (fallbackAnilistId != null && fallbackAnilistId != seasonAnilistId) fallbackAnilistId to season else null
+            )) {
+                val result = fetchFromAnimeSkip(anilistId, episode, season = seasonFilter)
+                if (result.isNotEmpty()) return result.also { cache[cacheKey] = it }
+            }
+        } else {
+            val anilistId = try {
+                armApi.resolveMalToAnilist(malId = malId).takeIf { it.isSuccessful }?.body()?.anilist?.toString()
+            } catch (e: Exception) { null }
+            if (anilistId != null) {
+                val result = fetchFromAnimeSkip(anilistId, episode, season = null)
                 if (result.isNotEmpty()) return result.also { cache[cacheKey] = it }
             }
         }
@@ -111,27 +122,33 @@ class SkipIntroRepository @Inject constructor(
             if (result.isNotEmpty()) return result.also { cache[cacheKey] = it }
         }
 
-        // AnimeSkip: try direct AniList ID first (season-specific, no season filter needed)
-        val directAnilistId = try {
-            armApi.resolveKitsuToAnilist(kitsuId = kitsuId)
-                .takeIf { it.isSuccessful }?.body()?.anilist?.toString()
-        } catch (e: Exception) { null }
-
-        if (directAnilistId != null) {
-            val result = fetchFromAnimeSkip(directAnilistId, episode, season = null)
-            if (result.isNotEmpty()) return result.also { cache[cacheKey] = it }
-        }
-
-        // Fallback: Kitsu -> IMDB -> first AniList ID (season 1 show)
         val imdbId = try {
-            armApi.resolveKitsuToImdb(kitsuId = kitsuId)
-                .takeIf { it.isSuccessful }?.body()?.imdb
+            armApi.resolveKitsuToImdb(kitsuId = kitsuId).takeIf { it.isSuccessful }?.body()?.imdb
         } catch (e: Exception) { null }
 
         if (imdbId != null) {
-            val firstAnilistId = resolveAllAnilistIdsFromImdb(imdbId).firstOrNull()
-            if (firstAnilistId != null) {
-                val result = fetchFromAnimeSkip(firstAnilistId, episode, season = null)
+            val entries = resolveImdbEntries(imdbId)
+            val season = entries.indexOfFirst { it.kitsu == kitsuId.toIntOrNull() } + 1
+
+            if (introDbConfigured) {
+                val result = fetchFromIntroDb(imdbId, season, episode)
+                if (result.isNotEmpty()) return result.also { cache[cacheKey] = it }
+            }
+            val seasonAnilistId = entries.getOrNull(season - 1)?.anilist?.toString()
+            val fallbackAnilistId = entries.firstOrNull()?.anilist?.toString()
+            for ((anilistId, seasonFilter) in listOfNotNull(
+                seasonAnilistId?.let { it to null },
+                if (fallbackAnilistId != null && fallbackAnilistId != seasonAnilistId) fallbackAnilistId to season else null
+            )) {
+                val result = fetchFromAnimeSkip(anilistId, episode, season = seasonFilter)
+                if (result.isNotEmpty()) return result.also { cache[cacheKey] = it }
+            }
+        } else {
+            val anilistId = try {
+                armApi.resolveKitsuToAnilist(kitsuId = kitsuId).takeIf { it.isSuccessful }?.body()?.anilist?.toString()
+            } catch (e: Exception) { null }
+            if (anilistId != null) {
+                val result = fetchFromAnimeSkip(anilistId, episode, season = null)
                 if (result.isNotEmpty()) return result.also { cache[cacheKey] = it }
             }
         }
@@ -184,7 +201,7 @@ class SkipIntroRepository @Inject constructor(
         }
     }
 
-    // season: null when anilistId is season-specific; pass season when using season-1 show ID
+    // season: null when anilistId is season-specific; pass season number when using season-1 fallback ID
     private suspend fun fetchFromAnimeSkip(anilistId: String, episode: Int, season: Int?): List<SkipInterval> {
         val clientId = animeSkipSettingsDataStore.clientId.firstOrNull()?.trim()
         if (clientId.isNullOrBlank()) return emptyList()
@@ -241,29 +258,16 @@ class SkipIntroRepository @Inject constructor(
                 )
             ).body()?.data?.findShowsByExternalId?.map { it.id } ?: emptyList()
         } catch (e: Exception) { emptyList() }
-        // cache only if single result; multi-show case skip cache to avoid complexity
         if (showIds.size == 1) animeSkipShowIdCache[anilistId] = showIds[0]
         else if (showIds.isEmpty()) animeSkipShowIdCache[anilistId] = NO_ID
         return showIds
     }
 
-    private suspend fun resolveMalId(imdbId: String): String? {
-        val cached = malIdCache[imdbId]
-        if (cached != null) return cached.takeIf { it != NO_ID }
-        val malId = try {
-            armApi.resolveImdbToMal(imdbId)
-                .takeIf { it.isSuccessful }?.body()?.firstOrNull()?.myanimelist?.toString()
-        } catch (e: Exception) { null }
-        malIdCache[imdbId] = malId ?: NO_ID
-        return malId
-    }
-
-    private suspend fun resolveAllAnilistIdsFromImdb(imdbId: String): List<String> {
+    private suspend fun resolveImdbEntries(imdbId: String): List<ArmEntry> {
+        imdbEntriesCache[imdbId]?.let { return it }
         return try {
-            armApi.resolveImdbToAnilist(imdbId)
-                .takeIf { it.isSuccessful }
-                ?.body()?.mapNotNull { it.anilist?.toString() } ?: emptyList()
-        } catch (e: Exception) { emptyList() }
+            armApi.resolveImdbToAll(imdbId).takeIf { it.isSuccessful }?.body() ?: emptyList()
+        } catch (e: Exception) { emptyList() }.also { imdbEntriesCache[imdbId] = it }
     }
 
     companion object {

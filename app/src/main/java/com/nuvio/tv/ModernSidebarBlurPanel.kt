@@ -2,6 +2,7 @@ package com.nuvio.tv
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -42,6 +43,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -151,6 +153,22 @@ internal fun ModernSidebarBlurPanel(
                     },
                     onClick = onSwitchProfile,
                     modifier = Modifier.fillMaxWidth(0.92f)
+                )
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.app_logo_wordmark),
+                    contentDescription = "NuvioTV",
+                    modifier = Modifier
+                        .fillMaxWidth(0.72f)
+                        .height(36.dp),
+                    alpha = sidebarLabelAlpha
                 )
             }
         }

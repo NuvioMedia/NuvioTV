@@ -3,7 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.dash.DashMediaSource
@@ -15,11 +15,9 @@ import com.nuvio.tv.data.local.PlayerSettings
 import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import java.net.URLDecoder
-import java.util.concurrent.TimeUnit
 
 @UnstableApi
 internal class PlayerMediaSourceFactory {
-    private var okHttpClient: OkHttpClient? = null
     private var customExtractorsFactory: ExtractorsFactory? = null
     private var customSubtitleParserFactory: SubtitleParser.Factory? = null
 
@@ -41,7 +39,10 @@ internal class PlayerMediaSourceFactory {
         subtitleConfigurations: List<MediaItem.SubtitleConfiguration> = emptyList()
     ): MediaSource {
         val sanitizedHeaders = sanitizeHeaders(headers)
-        val okHttpFactory = OkHttpDataSource.Factory(getOrCreateOkHttpClient()).apply {
+        val httpDataSourceFactory = DefaultHttpDataSource.Factory().apply {
+            setConnectTimeoutMs(8000)
+            setReadTimeoutMs(8000)
+            setAllowCrossProtocolRedirects(true)
             setDefaultRequestProperties(sanitizedHeaders)
             setUserAgent(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
@@ -71,12 +72,12 @@ internal class PlayerMediaSourceFactory {
 
         val dataSourceFactory = if (useParallelConnections) {
             ParallelRangeDataSource.Factory(
-                okHttpFactory,
+                httpDataSourceFactory,
                 parallelConnectionCount,
                 parallelChunkSizeMb.toLong() * 1024 * 1024
             )
         } else {
-            okHttpFactory
+            httpDataSourceFactory
         }
 
         val extractorsFactory = customExtractorsFactory ?: DefaultExtractorsFactory()
@@ -93,10 +94,10 @@ internal class PlayerMediaSourceFactory {
         }
 
         return when {
-            isHls && !forceDefaultFactory -> HlsMediaSource.Factory(okHttpFactory)
+            isHls && !forceDefaultFactory -> HlsMediaSource.Factory(httpDataSourceFactory)
                 .setAllowChunklessPreparation(true)
                 .createMediaSource(mediaItem)
-            isDash && !forceDefaultFactory -> DashMediaSource.Factory(okHttpFactory)
+            isDash && !forceDefaultFactory -> DashMediaSource.Factory(httpDataSourceFactory)
                 .createMediaSource(mediaItem)
             else -> {
                 defaultFactory.createMediaSource(mediaItem)
@@ -104,27 +105,7 @@ internal class PlayerMediaSourceFactory {
         }
     }
 
-    fun shutdown() {
-        okHttpClient?.let { client ->
-            Thread {
-                client.connectionPool.evictAll()
-                client.dispatcher.executorService.shutdown()
-            }.start()
-            okHttpClient = null
-        }
-    }
-
-    private fun getOrCreateOkHttpClient(): OkHttpClient {
-        return okHttpClient ?: OkHttpClient.Builder()
-            .connectTimeout(8000, TimeUnit.MILLISECONDS)
-            .readTimeout(8000, TimeUnit.MILLISECONDS)
-            .connectionPool(ConnectionPool(5, 5, TimeUnit.MINUTES))
-            .retryOnConnectionFailure(true)
-            .followRedirects(true)
-            .followSslRedirects(true)
-            .build()
-            .also { okHttpClient = it }
-    }
+    fun shutdown() = Unit
 
     companion object {
         fun sanitizeHeaders(headers: Map<String, String>?): Map<String, String> {

@@ -502,6 +502,7 @@ internal suspend fun PlayerRuntimeController.prepareStreamStartSubtitles(
         libassPipelineDecisionStreamUrl = currentStreamUrl
         libassPipelineOverrideForCurrentStream = null
         libassPipelineSwitchInFlight = false
+        hasDetectedAssSsaTrackForCurrentStream = false
     }
     resetAddonSubtitleStateForNewStream()
     return prepareStartupSubtitles(

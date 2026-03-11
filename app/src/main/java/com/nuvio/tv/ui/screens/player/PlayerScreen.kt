@@ -47,6 +47,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ClosedCaption
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
@@ -142,6 +143,10 @@ fun PlayerScreen(
     val handleBackPress = {
         if (uiState.error != null) {
             exitPlayerFromError()
+        } else if (uiState.showAudioOverlay || uiState.showSubtitleOverlay) {
+            viewModel.onEvent(PlayerEvent.OnDismissTransientOverlay)
+        } else if (uiState.showStreamInfoOverlay) {
+            viewModel.onEvent(PlayerEvent.OnDismissStreamInfo)
         } else if (uiState.showPauseOverlay) {
             viewModel.onEvent(PlayerEvent.OnDismissPauseOverlay)
         } else if (uiState.showMoreDialog) {
@@ -248,12 +253,12 @@ fun PlayerScreen(
         uiState.showSourcesPanel,
         uiState.showSubtitleStylePanel,
         uiState.showSubtitleDelayOverlay,
-        uiState.showAudioDialog,
-        uiState.showSubtitleDialog,
+        uiState.showAudioOverlay,
+        uiState.showSubtitleOverlay,
         uiState.showSpeedDialog,
     ) {
         if (uiState.showControls && !uiState.showEpisodesPanel && !uiState.showSourcesPanel &&
-            !uiState.showAudioDialog && !uiState.showSubtitleDialog &&
+            !uiState.showAudioOverlay && !uiState.showSubtitleOverlay &&
             !uiState.showSubtitleStylePanel && !uiState.showSubtitleDelayOverlay &&
             !uiState.showSpeedDialog
         ) {
@@ -318,12 +323,12 @@ fun PlayerScreen(
                 } else if (
                     !uiState.showEpisodesPanel &&
                     !uiState.showSourcesPanel &&
-                    !uiState.showAudioDialog &&
-                    !uiState.showSubtitleDialog &&
+                    !uiState.showAudioOverlay &&
+                    !uiState.showSubtitleOverlay &&
                     !uiState.showSubtitleStylePanel &&
                     !uiState.showSpeedDialog
                 ) {
-                    viewModel.onEvent(PlayerEvent.OnShowSubtitleDialog)
+                    viewModel.onEvent(PlayerEvent.OnShowSubtitleOverlay)
                 }
                 true
             }
@@ -358,7 +363,7 @@ fun PlayerScreen(
 
                 // When a side panel or dialog is open, let it handle all keys
                 val panelOrDialogOpen = uiState.showEpisodesPanel || uiState.showSourcesPanel ||
-                        uiState.showAudioDialog || uiState.showSubtitleDialog ||
+                        uiState.showAudioOverlay || uiState.showSubtitleOverlay ||
                         uiState.showSubtitleStylePanel || uiState.showSpeedDialog ||
                         uiState.showSubtitleDelayOverlay || uiState.showMoreDialog
                 if (panelOrDialogOpen) return@onKeyEvent false
@@ -575,6 +580,15 @@ fun PlayerScreen(
                 .zIndex(2.5f)
         )
 
+        StreamInfoOverlay(
+            visible = uiState.showStreamInfoOverlay && uiState.error == null && !uiState.showLoadingOverlay,
+            onClose = { viewModel.onEvent(PlayerEvent.OnDismissStreamInfo) },
+            data = uiState.streamInfoData,
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(2.6f)
+        )
+
         // Buffering indicator
         if (uiState.isBuffering && !uiState.showLoadingOverlay) {
             Box(
@@ -621,10 +635,11 @@ fun PlayerScreen(
                 uiState.error == null &&
                 !uiState.showLoadingOverlay &&
                 !uiState.showPauseOverlay &&
+                !uiState.showStreamInfoOverlay &&
                 !uiState.showEpisodesPanel &&
                 !uiState.showSourcesPanel &&
-                !uiState.showAudioDialog &&
-                !uiState.showSubtitleDialog &&
+                !uiState.showAudioOverlay &&
+                !uiState.showSubtitleOverlay &&
                 !uiState.showSubtitleStylePanel &&
                 !uiState.showSubtitleDelayOverlay &&
                 !uiState.showSpeedDialog &&
@@ -672,8 +687,8 @@ fun PlayerScreen(
             !uiState.showPauseOverlay &&
             !uiState.showEpisodesPanel &&
             !uiState.showSourcesPanel &&
-            !uiState.showAudioDialog &&
-            !uiState.showSubtitleDialog &&
+            !uiState.showAudioOverlay &&
+            !uiState.showSubtitleOverlay &&
             !uiState.showSubtitleStylePanel &&
             !uiState.showSpeedDialog &&
             !uiState.showMoreDialog &&
@@ -698,12 +713,13 @@ fun PlayerScreen(
         AnimatedVisibility(
             visible = uiState.showControls && uiState.error == null &&
                 !uiState.showLoadingOverlay && !uiState.showPauseOverlay &&
+                !uiState.showStreamInfoOverlay &&
                 !uiState.showSubtitleStylePanel &&
                 !uiState.showSubtitleDelayOverlay &&
                 !uiState.showEpisodesPanel &&
                 !uiState.showSourcesPanel &&
-                !uiState.showAudioDialog &&
-                !uiState.showSubtitleDialog &&
+                !uiState.showAudioOverlay &&
+                !uiState.showSubtitleOverlay &&
                 !uiState.showSpeedDialog,
             enter = fadeIn(animationSpec = tween(200)),
             exit = fadeOut(animationSpec = tween(200))
@@ -726,8 +742,8 @@ fun PlayerScreen(
                 onSeekTo = { viewModel.onEvent(PlayerEvent.OnSeekTo(it)) },
                 onShowEpisodesPanel = { viewModel.onEvent(PlayerEvent.OnShowEpisodesPanel) },
                 onShowSourcesPanel = { viewModel.onEvent(PlayerEvent.OnShowSourcesPanel) },
-                onShowAudioDialog = { viewModel.onEvent(PlayerEvent.OnShowAudioDialog) },
-                onShowSubtitleDialog = { viewModel.onEvent(PlayerEvent.OnShowSubtitleDialog) },
+                onShowAudioDialog = { viewModel.onEvent(PlayerEvent.OnShowAudioOverlay) },
+                onShowSubtitleDialog = { viewModel.onEvent(PlayerEvent.OnShowSubtitleOverlay) },
                 onShowSpeedDialog = { viewModel.onEvent(PlayerEvent.OnShowSpeedDialog) },
                 onToggleAspectRatio = {
                     Log.d("PlayerScreen", "onToggleAspectRatio called - dispatching event")
@@ -753,6 +769,7 @@ fun PlayerScreen(
                         headers = headers
                     )
                 },
+                onShowStreamInfo = { viewModel.onEvent(PlayerEvent.OnShowStreamInfo) },
                 onResetHideTimer = { viewModel.scheduleHideControls(); viewModel.onUserInteraction() },
                 onHideControls = { viewModel.hideControls() },
                 onBack = { exitPlayer() },
@@ -793,8 +810,8 @@ fun PlayerScreen(
                 !uiState.showSubtitleStylePanel &&
                 !uiState.showEpisodesPanel &&
                 !uiState.showSourcesPanel &&
-                !uiState.showAudioDialog &&
-                !uiState.showSubtitleDialog &&
+                !uiState.showAudioOverlay &&
+                !uiState.showSubtitleOverlay &&
                 !uiState.showSpeedDialog,
             enter = fadeIn(animationSpec = tween(120)),
             exit = fadeOut(animationSpec = tween(120)),
@@ -938,41 +955,42 @@ fun PlayerScreen(
         }
 
         // Audio track dialog
-        if (uiState.showAudioDialog) {
-            AudioSelectionDialog(
-                tracks = uiState.audioTracks,
-                selectedIndex = uiState.selectedAudioTrackIndex,
-                onTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectAudioTrack(it)) },
-                onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissDialog) }
-            )
-        }
+        AudioSelectionOverlay(
+            visible = uiState.showAudioOverlay,
+            tracks = uiState.audioTracks,
+            selectedIndex = uiState.selectedAudioTrackIndex,
+            onTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectAudioTrack(it)) },
+            onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissTransientOverlay) },
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(2.6f)
+        )
 
-        // Subtitle track dialog
-        if (uiState.showSubtitleDialog) {
-            SubtitleSelectionDialog(
-                internalTracks = uiState.subtitleTracks,
-                selectedInternalIndex = uiState.selectedSubtitleTrackIndex,
-                addonSubtitles = uiState.addonSubtitles,
-                selectedAddonSubtitle = uiState.selectedAddonSubtitle,
-                preferredLanguage = uiState.subtitleStyle.preferredLanguage,
-                secondaryPreferredLanguage = uiState.subtitleStyle.secondaryPreferredLanguage,
-                subtitleOrganizationMode = uiState.subtitleOrganizationMode,
-                isLoadingAddons = uiState.isLoadingAddonSubtitles,
-                onInternalTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectSubtitleTrack(it)) },
-                onAddonSubtitleSelected = { viewModel.onEvent(PlayerEvent.OnSelectAddonSubtitle(it)) },
-                onDisableSubtitles = { viewModel.onEvent(PlayerEvent.OnDisableSubtitles) },
-                onOpenStylePanel = { viewModel.onEvent(PlayerEvent.OnOpenSubtitleStylePanel) },
-                onOpenDelayOverlay = { viewModel.onEvent(PlayerEvent.OnShowSubtitleDelayOverlay) },
-                onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissDialog) }
-            )
-        }
+        SubtitleSelectionOverlay(
+            visible = uiState.showSubtitleOverlay,
+            internalTracks = uiState.subtitleTracks,
+            selectedInternalIndex = uiState.selectedSubtitleTrackIndex,
+            addonSubtitles = uiState.addonSubtitles,
+            selectedAddonSubtitle = uiState.selectedAddonSubtitle,
+            subtitleStyle = uiState.subtitleStyle,
+            subtitleDelayMs = uiState.subtitleDelayMs,
+            installedSubtitleAddonOrder = uiState.installedSubtitleAddonOrder,
+            isLoadingAddons = uiState.isLoadingAddonSubtitles,
+            onInternalTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectSubtitleTrack(it)) },
+            onAddonSubtitleSelected = { viewModel.onEvent(PlayerEvent.OnSelectAddonSubtitle(it)) },
+            onDisableSubtitles = { viewModel.onEvent(PlayerEvent.OnDisableSubtitles) },
+            onEvent = { viewModel.onEvent(it) },
+            onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissTransientOverlay) },
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(2.6f)
+        )
 
-        // Speed dialog
         if (uiState.showSpeedDialog) {
             SpeedSelectionDialog(
                 currentSpeed = uiState.playbackSpeed,
                 onSpeedSelected = { viewModel.onEvent(PlayerEvent.OnSetPlaybackSpeed(it)) },
-                onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissDialog) }
+                onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissTransientOverlay) }
             )
         }
 
@@ -999,6 +1017,7 @@ private fun PlayerControlsOverlay(
     onToggleAspectRatio: () -> Unit,
     onToggleMoreActions: () -> Unit,
     onOpenInExternalPlayer: () -> Unit,
+    onShowStreamInfo: () -> Unit,
     onResetHideTimer: () -> Unit,
     onHideControls: () -> Unit,
     onBack: () -> Unit,
@@ -1267,6 +1286,16 @@ private fun PlayerControlsOverlay(
                                 contentDescription = "Open in external player",
                                 onClick = {
                                     onOpenInExternalPlayer()
+                                },
+                                upFocusRequester = progressBarFocusRequester,
+                                onDownKey = onHideControls,
+                                onFocused = onResetHideTimer
+                            )
+                            ControlButton(
+                                icon = Icons.Default.Info,
+                                contentDescription = "Stream info",
+                                onClick = {
+                                    onShowStreamInfo()
                                 },
                                 upFocusRequester = progressBarFocusRequester,
                                 onDownKey = onHideControls,

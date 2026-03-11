@@ -1,12 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,7 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -72,78 +66,44 @@ fun PauseOverlay(
 ) {
     var selectedCastMember by remember { mutableStateOf<MetaCastMember?>(null) }
 
-    AnimatedVisibility(
+    PlayerOverlayScaffold(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(250)),
-        exit = fadeOut(animationSpec = tween(200)),
-        modifier = modifier
+        onDismiss = onClose,
+        modifier = modifier,
+        captureKeys = false,
+        dismissOnBackgroundClick = true,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            start = 56.dp,
+            end = 56.dp,
+            top = 40.dp,
+            bottom = 120.dp
+        ),
+        topEndContent = {
+            PauseOverlayClock()
+        }
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(onClick = onClose)
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Bottom
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(
-                                Color.Black.copy(alpha = 0.88f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0f to Color.Black.copy(alpha = 0.6f),
-                                0.3f to Color.Black.copy(alpha = 0.4f),
-                                0.6f to Color.Black.copy(alpha = 0.2f),
-                                1f to Color.Transparent
-                            )
-                        )
-                    )
-            )
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(start = 56.dp, end = 56.dp, top = 40.dp, bottom = 120.dp)
-            ) {
-                PauseOverlayClock(
-                    modifier = Modifier.align(Alignment.TopEnd)
+            if (selectedCastMember != null) {
+                CastDetailView(
+                    member = selectedCastMember!!,
+                    onBack = { selectedCastMember = null }
                 )
-
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Bottom
-                ) {
-                    if (selectedCastMember != null) {
-                        CastDetailView(
-                            member = selectedCastMember!!,
-                            onBack = { selectedCastMember = null }
-                        )
-                    } else {
-                        PauseMetadataView(
-                            title = title,
-                            logo = logo,
-                            episodeTitle = episodeTitle,
-                            season = season,
-                            episode = episode,
-                            year = year,
-                            type = type,
-                            description = description,
-                            cast = cast,
-                            onCastSelected = { selectedCastMember = it }
-                        )
-                    }
-                }
+            } else {
+                PauseMetadataView(
+                    title = title,
+                    logo = logo,
+                    episodeTitle = episodeTitle,
+                    season = season,
+                    episode = episode,
+                    year = year,
+                    type = type,
+                    description = description,
+                    cast = cast,
+                    onCastSelected = { selectedCastMember = it }
+                )
             }
         }
     }

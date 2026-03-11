@@ -35,7 +35,6 @@ import com.nuvio.tv.data.local.displayName
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.AddonSubtitleStartupMode
-import com.nuvio.tv.data.local.SubtitleOrganizationMode
 import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
@@ -71,7 +70,6 @@ internal fun LazyListScope.subtitleSettingsItems(
     playerSettings: PlayerSettings,
     onShowLanguageDialog: () -> Unit,
     onShowSecondaryLanguageDialog: () -> Unit,
-    onShowSubtitleOrganizationDialog: () -> Unit,
     onShowSubtitleStartupModeDialog: () -> Unit,
     onShowTextColorDialog: () -> Unit,
     onShowBackgroundColorDialog: () -> Unit,
@@ -127,17 +125,6 @@ internal fun LazyListScope.subtitleSettingsItems(
             title = stringResource(R.string.sub_secondary_lang),
             subtitle = secondaryLanguageName,
             onClick = onShowSecondaryLanguageDialog,
-            onFocused = onItemFocused,
-            enabled = enabled
-        )
-    }
-
-    item(key = "subtitle_organization") {
-        NavigationSettingsItem(
-            icon = Icons.Default.Subtitles,
-            title = stringResource(R.string.sub_organization),
-            subtitle = subtitleOrganizationModeLabel(playerSettings.subtitleOrganizationMode),
-            onClick = onShowSubtitleOrganizationDialog,
             onFocused = onItemFocused,
             enabled = enabled
         )
@@ -332,7 +319,6 @@ internal fun LazyListScope.subtitleSettingsItems(
 internal fun SubtitleSettingsDialogs(
     showLanguageDialog: Boolean,
     showSecondaryLanguageDialog: Boolean,
-    showSubtitleOrganizationDialog: Boolean,
     showSubtitleStartupModeDialog: Boolean,
     showTextColorDialog: Boolean,
     showBackgroundColorDialog: Boolean,
@@ -340,14 +326,12 @@ internal fun SubtitleSettingsDialogs(
     playerSettings: PlayerSettings,
     onSetPreferredLanguage: (String?) -> Unit,
     onSetSecondaryLanguage: (String?) -> Unit,
-    onSetSubtitleOrganizationMode: (SubtitleOrganizationMode) -> Unit,
     onSetAddonSubtitleStartupMode: (AddonSubtitleStartupMode) -> Unit,
     onSetTextColor: (Color) -> Unit,
     onSetBackgroundColor: (Color) -> Unit,
     onSetOutlineColor: (Color) -> Unit,
     onDismissLanguageDialog: () -> Unit,
     onDismissSecondaryLanguageDialog: () -> Unit,
-    onDismissSubtitleOrganizationDialog: () -> Unit,
     onDismissSubtitleStartupModeDialog: () -> Unit,
     onDismissTextColorDialog: () -> Unit,
     onDismissBackgroundColorDialog: () -> Unit,
@@ -378,17 +362,6 @@ internal fun SubtitleSettingsDialogs(
                 onDismissSecondaryLanguageDialog()
             },
             onDismiss = onDismissSecondaryLanguageDialog
-        )
-    }
-
-    if (showSubtitleOrganizationDialog) {
-        SubtitleOrganizationModeDialog(
-            selectedMode = playerSettings.subtitleOrganizationMode,
-            onModeSelected = {
-                onSetSubtitleOrganizationMode(it)
-                onDismissSubtitleOrganizationDialog()
-            },
-            onDismiss = onDismissSubtitleOrganizationDialog
         )
     }
 
@@ -445,101 +418,11 @@ internal fun SubtitleSettingsDialogs(
 }
 
 @Composable
-private fun subtitleOrganizationModeLabel(mode: SubtitleOrganizationMode): String {
-    return when (mode) {
-        SubtitleOrganizationMode.NONE -> stringResource(R.string.sub_org_none)
-        SubtitleOrganizationMode.BY_LANGUAGE -> stringResource(R.string.sub_org_by_lang)
-        SubtitleOrganizationMode.BY_ADDON -> stringResource(R.string.sub_org_by_addon)
-    }
-}
-
-@Composable
 private fun subtitleStartupModeLabel(mode: AddonSubtitleStartupMode): String {
     return when (mode) {
         AddonSubtitleStartupMode.FAST_STARTUP -> stringResource(R.string.sub_startup_mode_fast)
         AddonSubtitleStartupMode.PREFERRED_ONLY -> stringResource(R.string.sub_startup_mode_preferred)
         AddonSubtitleStartupMode.ALL_SUBTITLES -> stringResource(R.string.sub_startup_mode_all)
-    }
-}
-
-@Composable
-private fun SubtitleOrganizationModeDialog(
-    selectedMode: SubtitleOrganizationMode,
-    onModeSelected: (SubtitleOrganizationMode) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val options = listOf(
-        Triple(SubtitleOrganizationMode.NONE, stringResource(R.string.sub_org_none), stringResource(R.string.sub_org_none_desc)),
-        Triple(SubtitleOrganizationMode.BY_LANGUAGE, stringResource(R.string.sub_org_by_lang), stringResource(R.string.sub_org_by_lang_desc)),
-        Triple(SubtitleOrganizationMode.BY_ADDON, stringResource(R.string.sub_org_by_addon), stringResource(R.string.sub_org_by_addon_desc))
-    )
-
-    NuvioDialog(
-        onDismiss = onDismiss,
-        title = stringResource(R.string.sub_organization),
-        width = 460.dp,
-        suppressFirstKeyUp = false
-    ) {
-        androidx.compose.foundation.layout.Box(
-            modifier = androidx.compose.ui.Modifier
-                .fillMaxWidth()
-                .heightIn(max = 320.dp)
-        ) {
-            androidx.compose.foundation.lazy.LazyColumn(
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)
-            ) {
-                items(
-                    items = options,
-                    key = { it.first.name }
-                ) { (mode, title, description) ->
-                    val isSelected = mode == selectedMode
-
-                    androidx.tv.material3.Card(
-                        onClick = { onModeSelected(mode) },
-                        modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
-                        colors = androidx.tv.material3.CardDefaults.colors(
-                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
-                            focusedContainerColor = NuvioColors.FocusBackground
-                        ),
-                        shape = androidx.tv.material3.CardDefaults.shape(
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
-                        ),
-                        scale = androidx.tv.material3.CardDefaults.scale(focusedScale = 1f)
-                    ) {
-                        androidx.compose.foundation.layout.Row(
-                            modifier = androidx.compose.ui.Modifier
-                                .fillMaxWidth()
-                                .padding(14.dp),
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                        ) {
-                            androidx.compose.foundation.layout.Column(
-                                modifier = androidx.compose.ui.Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = title,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary
-                                )
-                                Spacer(modifier = androidx.compose.ui.Modifier.height(4.dp))
-                                Text(
-                                    text = description,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = NuvioColors.TextSecondary
-                                )
-                            }
-                            if (isSelected) {
-                                androidx.tv.material3.Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = stringResource(R.string.cd_selected),
-                                    tint = NuvioColors.Primary
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 

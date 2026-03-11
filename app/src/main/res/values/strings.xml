@@ -45,6 +45,7 @@
     <string name="cw_upcoming">Upcoming</string>
     <string name="cw_next_up">Next Up</string>
     <string name="cw_resume">Resume</string>
+    <string name="cw_percent_watched">%1$d%% watched</string>
     <string name="cw_hours_min_left">%1$dh %2$dm left</string>
     <string name="cw_min_left">%1$dm left</string>
     <string name="cw_almost_done">Almost done</string>
@@ -118,6 +119,15 @@
     <string name="detail_section_network">Network</string>
     <string name="detail_section_production">Production</string>
     <string name="episodes_unavailable">Unavailable</string>
+    <string name="series_status_ended">Ended</string>
+    <string name="series_status_continuing">Ongoing</string>
+    <string name="series_status_current">Current</string>
+    <string name="series_status_cancelled">Cancelled</string>
+    <string name="series_status_released">Released</string>
+    <string name="series_status_planned">Planned</string>
+    <string name="series_status_rumored">Rumored</string>
+    <string name="series_status_in_production">In Production</string>
+    <string name="series_status_post_production">Post Production</string>
     <string name="detail_lists_fallback">Lists</string>
     <string name="detail_lists_subtitle">Select which lists should include this title.</string>
     <string name="action_save">Save</string>
@@ -342,6 +352,10 @@
     <string name="autoplay_scope_addons">Installed addons only</string>
     <string name="autoplay_scope_plugins">Enabled plugins only</string>
     <string name="autoplay_scope">Auto-play Source Scope</string>
+    <string name="autoplay_timeout_title">Stream Selection Timeout</string>
+    <string name="autoplay_timeout_sub">Wait time for addons before selecting.</string>
+    <string name="autoplay_timeout_instant">Instant</string>
+    <string name="autoplay_timeout_unlimited">Unlimited</string>
     <string name="autoplay_allowed_addons">Allowed Addons</string>
     <string name="autoplay_all_addons">All installed addons</string>
     <string name="autoplay_allowed_plugins">Allowed Plugins</string>
@@ -984,4 +998,6 @@
     <string name="update_open_settings">Open Settings</string>
     <string name="update_install">Install</string>
     <string name="update_ignore">Ignore</string>
+    <string name="watchlist_added">Added to watchlist</string>
+    <string name="watchlist_removed">Removed from watchlist</string>
 </resources>
