@@ -340,7 +340,13 @@ internal fun PlayerRuntimeController.retryCurrentStreamFromStartAfter416() {
         runCatching {
             player.stop()
             player.clearMediaItems()
-            player.setMediaSource(mediaSourceFactory.createMediaSource(currentStreamUrl, currentHeaders))
+            player.setMediaSource(
+                mediaSourceFactory.createMediaSource(
+                    url = currentStreamUrl,
+                    headers = currentHeaders,
+                    mimeTypeOverride = currentStreamMimeType
+                )
+            )
             player.seekTo(0L)
             player.playWhenReady = true
             player.prepare()

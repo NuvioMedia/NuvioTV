@@ -7,12 +7,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -54,6 +55,7 @@ internal fun AudioSelectionOverlay(
 ) {
     val initialFocusRequester = remember { FocusRequester() }
     var lastFocusedAudioIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    val listState = rememberLazyListState()
 
     PlayerOverlayScaffold(
         visible = visible,
@@ -63,7 +65,14 @@ internal fun AudioSelectionOverlay(
         contentPadding = PaddingValues(start = 52.dp, end = 52.dp, top = 36.dp, bottom = 88.dp)
     ) {
         LaunchedEffect(visible, tracks, selectedIndex) {
-            if (visible) {
+            if (visible && tracks.isNotEmpty()) {
+                val targetIndex = lastFocusedAudioIndex
+                    ?.let { idx -> tracks.indexOfFirst { it.index == idx } }
+                    ?.takeIf { it >= 0 }
+                    ?: tracks.indexOfFirst { it.index == selectedIndex }
+                        .takeIf { it >= 0 }
+                    ?: 0
+                listState.scrollToItem(targetIndex)
                 delay(120)
                 runCatching { initialFocusRequester.requestFocus() }
             }
@@ -72,7 +81,8 @@ internal fun AudioSelectionOverlay(
         Column(
             modifier = Modifier
                 .width(440.dp)
-                .align(Alignment.BottomStart),
+                .align(Alignment.BottomStart)
+                .fillMaxHeight(),
             verticalArrangement = Arrangement.Bottom
         ) {
             Text(
@@ -90,9 +100,10 @@ internal fun AudioSelectionOverlay(
                 )
             } else {
                 LazyColumn(
+                    state = listState,
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                     contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
-                    modifier = Modifier.heightIn(max = 720.dp)
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
                     items(items = tracks, key = { track -> track.index }) { track ->
                         AudioTrackCard(

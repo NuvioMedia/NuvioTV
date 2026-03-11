@@ -78,7 +78,10 @@ import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.LocalSidebarExpanded
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlin.math.abs
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+
+private const val MODERN_HORIZONTAL_FOCUS_DEBOUNCE_MS = 140L
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -136,6 +139,30 @@ private fun ModernCatalogRowItem(
     onExpandedCatalogFocusKeyChange: (String?) -> Unit
 ) {
     val focusKey = payload.focusKey
+    var focusEventId by remember(focusKey) { mutableStateOf(0) }
+    var isCardFocused by remember(focusKey) { mutableStateOf(false) }
+    val latestOnFocused by rememberUpdatedState(onFocused)
+    val latestOnItemFocus by rememberUpdatedState(onItemFocus)
+    val latestOnPreloadAdjacentItem by rememberUpdatedState(onPreloadAdjacentItem)
+    val latestOnCatalogSelectionFocused by rememberUpdatedState(onCatalogSelectionFocused)
+
+    LaunchedEffect(focusEventId, isCardFocused, focusKey, payload) {
+        if (focusEventId == 0 || !isCardFocused) return@LaunchedEffect
+        val targetEventId = focusEventId
+        delay(MODERN_HORIZONTAL_FOCUS_DEBOUNCE_MS)
+        if (!isCardFocused || focusEventId != targetEventId) return@LaunchedEffect
+
+        latestOnFocused()
+        item.metaPreview?.let { latestOnItemFocus(it) }
+        latestOnPreloadAdjacentItem()
+        latestOnCatalogSelectionFocused(
+            FocusedCatalogSelection(
+                focusKey = focusKey,
+                payload = payload
+            )
+        )
+    }
+
     val suppressCardExpansionForHeroTrailer =
         effectiveAutoplayEnabled &&
             trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA
@@ -176,15 +203,10 @@ private fun ModernCatalogRowItem(
         isWatched = isWatched,
         focusRequester = requester,
         onFocused = {
-            onFocused()
-            item.metaPreview?.let { onItemFocus(it) }
-            onPreloadAdjacentItem()
-            onCatalogSelectionFocused(
-                FocusedCatalogSelection(
-                    focusKey = focusKey,
-                    payload = payload
-                )
-            )
+            focusEventId += 1
+        },
+        onFocusStateChanged = { focused ->
+            isCardFocused = focused
         },
         onClick = {
             onNavigateToDetail(
@@ -501,6 +523,7 @@ private fun ModernCarouselCard(
     isWatched: Boolean,
     focusRequester: FocusRequester,
     onFocused: () -> Unit,
+    onFocusStateChanged: (Boolean) -> Unit = {},
     onClick: () -> Unit,
     onLongPress: () -> Unit,
     onBackdropInteraction: () -> Unit,
@@ -611,6 +634,7 @@ private fun ModernCarouselCard(
                 .focusRequester(focusRequester)
                 .onFocusChanged {
                     isFocused = it.isFocused
+                    onFocusStateChanged(it.isFocused)
                     if (it.isFocused) {
                         onFocused()
                     }

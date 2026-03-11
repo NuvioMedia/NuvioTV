@@ -265,6 +265,30 @@ private fun com.nuvio.tv.domain.model.Addon.supportsStreamResourceForChip(type: 
     }
 }
 
+private fun PlayerRuntimeController.applySelectedStreamState(
+    stream: Stream,
+    url: String,
+    headers: Map<String, String>
+) {
+    currentStreamUrl = url
+    currentHeaders = headers
+    currentFilename = stream.behaviorHints?.filename ?: navigationArgs.filename
+    currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
+        url = url,
+        filename = currentFilename
+    )
+    currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
+    currentVideoHash = stream.behaviorHints?.videoHash
+    currentVideoSize = stream.behaviorHints?.videoSize
+    currentAddonName = stream.addonName
+    currentAddonLogo = stream.addonLogo
+    currentStreamDescription = stream.description
+    currentVideoCodec = null
+    currentVideoWidth = null
+    currentVideoHeight = null
+    currentVideoBitrate = null
+}
+
 @androidx.annotation.OptIn(UnstableApi::class)
 internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
     val url = stream.getStreamUrl()
@@ -284,19 +308,11 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
     resetLoadingOverlayForNewStream()
     releasePlayer(flushPlaybackState = false)
 
-    currentStreamUrl = url
-    currentHeaders = newHeaders
-    currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
-    currentVideoHash = stream.behaviorHints?.videoHash
-    currentVideoSize = stream.behaviorHints?.videoSize
-    currentFilename = stream.behaviorHints?.filename ?: navigationArgs.filename
-    currentAddonName = stream.addonName
-    currentAddonLogo = stream.addonLogo
-    currentStreamDescription = stream.description
-    currentVideoCodec = null
-    currentVideoWidth = null
-    currentVideoHeight = null
-    currentVideoBitrate = null
+    applySelectedStreamState(
+        stream = stream,
+        url = url,
+        headers = newHeaders
+    )
     hasRetriedCurrentStreamAfter416 = false
     lastSavedPosition = 0L
 
@@ -559,19 +575,11 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
     resetLoadingOverlayForNewStream()
     releasePlayer(flushPlaybackState = false)
 
-    currentStreamUrl = url
-    currentHeaders = newHeaders
-    currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
-    currentVideoHash = stream.behaviorHints?.videoHash
-    currentVideoSize = stream.behaviorHints?.videoSize
-    currentFilename = stream.behaviorHints?.filename ?: navigationArgs.filename
-    currentAddonName = stream.addonName
-    currentAddonLogo = stream.addonLogo
-    currentStreamDescription = stream.description
-    currentVideoCodec = null
-    currentVideoWidth = null
-    currentVideoHeight = null
-    currentVideoBitrate = null
+    applySelectedStreamState(
+        stream = stream,
+        url = url,
+        headers = newHeaders
+    )
     pendingSameSeriesTrackSelectionRestore =
         sameSeriesTrackSelectionPreference?.takeIf { contentType?.lowercase() in listOf("series", "tv") }
     hasRetriedCurrentStreamAfter416 = false

@@ -127,6 +127,11 @@ class PlayerRuntimeController(
     internal var currentVideoHeight: Int? = null
     internal var currentVideoBitrate: Int? = null
     internal var currentStreamUrl: String = initialStreamUrl
+    internal var currentStreamMimeType: String? =
+        PlayerMediaSourceFactory.inferMimeType(
+            url = initialStreamUrl,
+            filename = currentFilename
+        )
     internal var currentHeaders: Map<String, String> =
         PlayerMediaSourceFactory.sanitizeHeaders(PlayerMediaSourceFactory.parseHeaders(headersJson))
 

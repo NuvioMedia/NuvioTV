@@ -1669,15 +1669,7 @@ private fun SubtitleDelayOverlay(subtitleDelayMs: Int) {
         modifier = Modifier
             .fillMaxWidth(0.6f)
             .clip(RoundedCornerShape(26.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        Color(0xCC1F3246),
-                        Color(0xCC283655),
-                        Color(0xCC2F2B55)
-                    )
-                )
-            )
+            .background(Color(0xCC0F0F0F))
             .padding(horizontal = 26.dp, vertical = 20.dp)
     ) {
         Row(

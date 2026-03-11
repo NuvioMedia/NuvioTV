@@ -22,6 +22,13 @@ private val Context.traktAuthDataStore: DataStore<Preferences> by preferencesDat
     name = "trakt_auth_store"
 )
 
+private const val TRAKT_ACCESS_TOKEN_MAX_LIFETIME_SECONDS = 86_400
+
+internal fun normalizeTraktTokenLifetimeSeconds(expiresIn: Int): Int {
+    if (expiresIn <= 0) return TRAKT_ACCESS_TOKEN_MAX_LIFETIME_SECONDS
+    return expiresIn.coerceAtMost(TRAKT_ACCESS_TOKEN_MAX_LIFETIME_SECONDS)
+}
+
 data class TraktAuthState(
     val accessToken: String? = null,
     val refreshToken: String? = null,
@@ -66,7 +73,7 @@ class TraktAuthDataStore @Inject constructor(
             refreshToken = preferences[refreshTokenKey],
             tokenType = preferences[tokenTypeKey],
             createdAt = preferences[createdAtKey],
-            expiresIn = preferences[expiresInKey],
+            expiresIn = preferences[expiresInKey]?.let(::normalizeTraktTokenLifetimeSeconds),
             username = preferences[usernameKey],
             userSlug = preferences[userSlugKey],
             deviceCode = preferences[deviceCodeKey],
@@ -92,7 +99,7 @@ class TraktAuthDataStore @Inject constructor(
             preferences[refreshTokenKey] = token.refreshToken
             preferences[tokenTypeKey] = token.tokenType
             preferences[createdAtKey] = token.createdAt
-            preferences[expiresInKey] = token.expiresIn
+            preferences[expiresInKey] = normalizeTraktTokenLifetimeSeconds(token.expiresIn)
         }
     }
 
@@ -155,4 +162,3 @@ class TraktAuthDataStore @Inject constructor(
         }
     }
 }
-

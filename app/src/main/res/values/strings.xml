@@ -539,6 +539,14 @@
     <string name="trakt_token_refreshes">Trakt access token refreshes in %1$s</string>
     <string name="trakt_login_instruction">Press Login to start Trakt device authentication. A QR code will appear here.</string>
     <string name="trakt_missing_credentials">Missing TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET in local.properties.</string>
+    <string name="trakt_watch_progress_title">Watch Progress</string>
+    <string name="trakt_watch_progress_subtitle">Choose which progress source powers resume and continue watching</string>
+    <string name="trakt_watch_progress_dialog_title">Watch Progress</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Choose whether resume and continue watching should use Trakt or Nuvio Sync while Trakt scrobbling stays active.</string>
+    <string name="trakt_watch_progress_source_trakt">Trakt</string>
+    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_trakt_selected">Watch progress source set to Trakt</string>
+    <string name="trakt_watch_progress_nuvio_selected">Watch progress source set to Nuvio Sync</string>
     <string name="trakt_continue_watching_window">Continue Watching Window</string>
     <string name="trakt_continue_watching_subtitle">Trakt history considered for continue watching</string>
     <string name="trakt_unaired_next_up">Unaired Next Up Episodes</string>
@@ -746,6 +754,7 @@
     <string name="subtitle_on">On</string>
     <string name="subtitle_off">Off</string>
     <string name="subtitle_style_title">Subtitle Style</string>
+    <string name="subtitle_style_customize">Customize</string>
     <string name="subtitle_style_color">Color</string>
     <string name="subtitle_style_reset">Reset</string>
     <string name="subtitle_style_font_size">Font Size</string>
@@ -938,7 +947,7 @@
     <string name="update_unknown_sources">Allow installs from unknown sources to continue.</string>
     <!-- AccountScreen -->
     <string name="account_title">Account</string>
-    <string name="account_sign_in_description">Sign in to sync your library, watch progress, addons, and plugins across devices. Library and watch progress sync only when Trakt is not connected.</string>
+    <string name="account_sign_in_description">Sign in to sync your library, watch progress, addons, and plugins across devices. Library sync uses Nuvio Sync when Trakt is not connected, and watch progress can use either Trakt or Nuvio Sync.</string>
     <string name="account_sync_code_title">Sync Code</string>
     <string name="account_sync_code_description">Sync across devices without creating an account.</string>
     <string name="account_linked_devices">Linked Devices (%1$d)</string>
