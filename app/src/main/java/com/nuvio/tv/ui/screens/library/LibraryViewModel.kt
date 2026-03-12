@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.nuvio.tv.R
 import java.util.Locale
 import javax.inject.Inject
 
@@ -34,13 +35,13 @@ data class LibraryTypeTab(
 
 enum class LibrarySortOption(
     val key: String,
-    val label: String
+    val labelResId: Int
 ) {
-    DEFAULT("default", "Trakt Order"),
-    ADDED_DESC("added_desc", "Added \u2193"),
-    ADDED_ASC("added_asc", "Added \u2191"),
-    TITLE_ASC("title_asc", "Title A-Z"),
-    TITLE_DESC("title_desc", "Title Z-A");
+    DEFAULT("default", R.string.library_sort_trakt_order),
+    ADDED_DESC("added_desc", R.string.library_sort_added_desc),
+    ADDED_ASC("added_asc", R.string.library_sort_added_asc),
+    TITLE_ASC("title_asc", R.string.library_sort_title_asc),
+    TITLE_DESC("title_desc", R.string.library_sort_title_desc);
 
     companion object {
         val TraktOptions = listOf(DEFAULT, ADDED_DESC, ADDED_ASC, TITLE_ASC, TITLE_DESC)

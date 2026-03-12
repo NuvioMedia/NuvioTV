@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.search
 
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -120,6 +122,7 @@ internal fun DiscoverSection(
                 modifier = Modifier.weight(1f),
                 title = stringResource(R.string.discover_filter_type),
                 value = selectedTypeLabel,
+                selectedValue = uiState.selectedDiscoverType,
                 expanded = expandedPicker == "type",
                 options = availableTypes.map { type ->
                     val label = localizedTypeLabel(type)
@@ -138,6 +141,7 @@ internal fun DiscoverSection(
                 modifier = Modifier.weight(1f),
                 title = stringResource(R.string.discover_filter_catalog),
                 value = selectedCatalogLabel,
+                selectedValue = uiState.selectedDiscoverCatalogKey,
                 expanded = expandedPicker == "catalog",
                 options = filteredCatalogs.map { DiscoverOption(it.catalogName, it.key) },
                 onExpandedChange = { shouldExpand ->
@@ -153,6 +157,7 @@ internal fun DiscoverSection(
                 modifier = Modifier.weight(1f),
                 title = stringResource(R.string.discover_filter_genre),
                 value = selectedGenreLabel,
+                selectedValue = uiState.selectedDiscoverGenre ?: "__default__",
                 expanded = expandedPicker == "genre",
                 options = buildList {
                     add(DiscoverOption(stringResource(R.string.discover_genre_default), "__default__"))
@@ -247,6 +252,7 @@ private fun DiscoverDropdownPicker(
     modifier: Modifier = Modifier,
     title: String,
     value: String,
+    selectedValue: String?,
     expanded: Boolean,
     options: List<DiscoverOption>,
     onExpandedChange: (Boolean) -> Unit,
@@ -254,6 +260,7 @@ private fun DiscoverDropdownPicker(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     var anchorSize by remember { mutableStateOf(IntSize.Zero) }
+    var focusedOptionValue by remember(expanded) { mutableStateOf<String?>(null) }
 
     Box(modifier = modifier) {
         Card(
@@ -319,7 +326,10 @@ private fun DiscoverDropdownPicker(
 
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { onExpandedChange(false) },
+            onDismissRequest = {
+                focusedOptionValue = null
+                onExpandedChange(false)
+            },
             modifier = Modifier
                 .width(with(LocalDensity.current) { anchorSize.width.toDp() })
                 .heightIn(max = 320.dp),
@@ -330,18 +340,45 @@ private fun DiscoverDropdownPicker(
             border = BorderStroke(1.dp, NuvioColors.Border)
         ) {
             options.forEach { option ->
+                val isSelected = option.value == selectedValue
+                val isOptionFocused = option.value == focusedOptionValue
+                val itemTextColor = when {
+                    isOptionFocused -> NuvioColors.OnSecondary
+                    isSelected -> NuvioColors.TextPrimary
+                    else -> NuvioColors.TextPrimary
+                }
+                val itemBackgroundColor = when {
+                    isOptionFocused -> NuvioColors.Secondary
+                    isSelected -> NuvioColors.FocusBackground
+                    else -> Color.Transparent
+                }
+
                 DropdownMenuItem(
+                    modifier = Modifier
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .background(
+                            color = itemBackgroundColor,
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        .onFocusChanged { state ->
+                            val hasFocus = state.isFocused || state.hasFocus
+                            focusedOptionValue = when {
+                                hasFocus -> option.value
+                                focusedOptionValue == option.value -> null
+                                else -> focusedOptionValue
+                            }
+                        },
                     text = {
                         Text(
                             text = option.label,
-                            color = NuvioColors.TextPrimary,
+                            color = itemTextColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     },
                     onClick = { onSelect(option) },
                     colors = MenuDefaults.itemColors(
-                        textColor = NuvioColors.TextPrimary,
+                        textColor = itemTextColor,
                         disabledTextColor = NuvioColors.TextDisabled
                     )
                 )

@@ -50,6 +50,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
+import com.nuvio.tv.data.local.displayName
 import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.TrailerSettings
@@ -133,7 +134,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             AudioLanguageOption.DEVICE -> stringResource(R.string.audio_lang_device)
             else -> AVAILABLE_SUBTITLE_LANGUAGES.find {
                 it.code == playerSettings.preferredAudioLanguage
-            }?.name ?: playerSettings.preferredAudioLanguage
+            }?.displayName ?: playerSettings.preferredAudioLanguage
         }
 
         NavigationSettingsItem(
@@ -148,7 +149,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
 
     item(key = "audio_secondary_preferred_language") {
         val secondaryAudioLangName = playerSettings.secondaryPreferredAudioLanguage?.let { code ->
-            AVAILABLE_SUBTITLE_LANGUAGES.find { it.code == code }?.name ?: code
+            AVAILABLE_SUBTITLE_LANGUAGES.find { it.code == code }?.displayName ?: code
         } ?: stringResource(R.string.sub_not_set)
 
         NavigationSettingsItem(
@@ -297,7 +298,7 @@ private fun AudioLanguageSelectionDialog(
         AudioLanguageOption.DEFAULT to stringResource(R.string.audio_lang_default),
         AudioLanguageOption.DEVICE to stringResource(R.string.audio_lang_device)
     )
-    val allOptions = specialOptions + AVAILABLE_SUBTITLE_LANGUAGES.map { it.code to it.name }
+    val allOptions = specialOptions + AVAILABLE_SUBTITLE_LANGUAGES.sortedBy { it.displayName.lowercase() }.map { it.code to it.displayName }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()

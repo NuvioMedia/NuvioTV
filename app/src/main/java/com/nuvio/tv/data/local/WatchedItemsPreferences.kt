@@ -29,7 +29,7 @@ class WatchedItemsPreferences @Inject constructor(
     private val gson = Gson()
     private val watchedItemsKey = stringSetPreferencesKey("watched_items")
 
-    private val allItems: Flow<List<WatchedItem>> = profileManager.activeProfileId.flatMapLatest { pid ->
+    internal val allItems: Flow<List<WatchedItem>> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { preferences ->
             val raw = preferences[watchedItemsKey] ?: emptySet()
             raw.mapNotNull { json ->
@@ -53,6 +53,13 @@ class WatchedItemsPreferences @Inject constructor(
             items.filter { it.contentId == contentId && it.season != null && it.episode != null }
                 .map { it.season!! to it.episode!! }
                 .toSet()
+        }
+    }
+
+    fun getWatchedEpisodesWithTimestamps(contentId: String): Flow<Map<Pair<Int, Int>, Long>> {
+        return allItems.map { items ->
+            items.filter { it.contentId == contentId && it.season != null && it.episode != null }
+                .associate { (it.season!! to it.episode!!) to it.watchedAt }
         }
     }
 

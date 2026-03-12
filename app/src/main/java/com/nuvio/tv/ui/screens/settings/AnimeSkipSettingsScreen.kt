@@ -3,6 +3,7 @@
 package com.nuvio.tv.ui.screens.settings
 
 import android.view.KeyEvent
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,6 +28,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -95,8 +98,9 @@ fun AnimeSkipSettingsContent(
     if (showDialog) {
         AnimeSkipClientIdDialog(
             currentValue = clientId,
-            onSave = { viewModel.setClientId(it); showDialog = false },
-            onClear = { viewModel.setClientId(""); showDialog = false },
+            viewModel = viewModel,
+            onSaved = { showDialog = false },
+            onClear = { viewModel.validateAndSave("") {}; showDialog = false },
             onDismiss = { showDialog = false }
         )
     }
@@ -105,7 +109,8 @@ fun AnimeSkipSettingsContent(
 @Composable
 private fun AnimeSkipClientIdDialog(
     currentValue: String,
-    onSave: (String) -> Unit,
+    viewModel: AnimeSkipSettingsViewModel,
+    onSaved: () -> Unit,
     onClear: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -113,6 +118,15 @@ private fun AnimeSkipClientIdDialog(
     var isInputFocused by remember { mutableStateOf(false) }
     val inputFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val validating by viewModel.validating.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val invalidClientIdMsg = stringResource(R.string.animeskip_invalid_client_id)
+
+    LaunchedEffect(Unit) {
+        viewModel.validationError.collect {
+            Toast.makeText(context, invalidClientIdMsg, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     NuvioDialog(
         onDismiss = onDismiss,
@@ -190,12 +204,14 @@ private fun AnimeSkipClientIdDialog(
             ) { Text(stringResource(R.string.action_clear)) }
             Spacer(modifier = Modifier.width(8.dp))
             Button(
-                onClick = { onSave(value.trim()) },
+                onClick = { if (!validating) viewModel.validateAndSave(value, onSaved) },
                 colors = ButtonDefaults.colors(
                     containerColor = NuvioColors.BackgroundCard,
                     contentColor = NuvioColors.TextPrimary
                 )
-            ) { Text(stringResource(R.string.action_save)) }
+            ) {
+                Text(if (validating) stringResource(R.string.action_saving) else stringResource(R.string.action_save))
+            }
         }
     }
 }

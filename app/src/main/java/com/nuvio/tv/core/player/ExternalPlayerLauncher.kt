@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import com.nuvio.tv.R
 
 object ExternalPlayerLauncher {
 
@@ -37,7 +38,7 @@ object ExternalPlayerLauncher {
         } catch (e: Exception) {
             Toast.makeText(
                 context,
-                "No external player found",
+                context.getString(R.string.player_no_external_player),
                 Toast.LENGTH_LONG
             ).show()
             false

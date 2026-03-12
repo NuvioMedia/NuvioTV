@@ -11,12 +11,41 @@
 
     <!-- ErrorState -->
     <string name="action_retry">Retry</string>
+    <string name="error_state_generic_issue">Something went wrong.</string>
+    <string name="error_state_possible_fix">Possible fix: %1$s</string>
+    <string name="error_state_fix_retry_soon">retry in a moment.</string>
+    <string name="error_state_issue_no_metadata_any_addon">This id could not load details because none of the installed addons returned metadata.</string>
+    <string name="error_state_fix_no_metadata_any_addon">try another addon, disable \"Prefer external meta addon\" in Layout settings, or confirm an installed addon supports this id.</string>
+    <string name="error_state_prefix_no_supported_metadata">No installed addon supports metadata for </string>
+    <string name="error_state_prefix_no_addon_for_id">No installed addon could provide metadata for id=</string>
+    <string name="error_state_fix_no_supported_metadata">install or update an addon that supports this content type, then retry.</string>
+    <string name="error_state_prefix_tried_meta_addons">Tried meta addons:</string>
+    <string name="error_state_fix_tried_meta_addons">install an addon that supports this id, or reconfigure/update the addon and retry.</string>
+    <string name="error_state_issue_missing_metadata_for_id">does not have metadata for this id</string>
+    <string name="error_state_fix_missing_metadata_for_id">open this id from a different addon, disable \"Prefer external meta addon\", or check that the addon supports this id.</string>
+    <string name="error_state_issue_addon_unreachable">could not be reached</string>
+    <string name="error_state_fix_addon_unreachable">check your internet connection, verify the addon URL still works, then retry.</string>
+    <string name="error_state_issue_addon_connection_failed">rejected the connection</string>
+    <string name="error_state_fix_addon_connection_failed">make sure the addon server is online and reachable, then retry.</string>
+    <string name="error_state_issue_addon_timeout">took too long to respond</string>
+    <string name="error_state_fix_addon_timeout">retry in a moment, or try a different addon if this keeps happening.</string>
+    <string name="error_state_issue_addon_cleartext">uses an insecure HTTP connection that Android blocked</string>
+    <string name="error_state_fix_addon_cleartext">switch the addon URL to HTTPS or update the addon configuration.</string>
+    <string name="error_state_fix_addon_generic">retry, update or reinstall the addon, or try a different addon.</string>
+    <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
+    <string name="error_meta_not_found">Meta not found</string>
+    <string name="error_meta_no_supported_addon">No installed addon supports metadata for \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">No installed addon could provide metadata for id=%1$s (type=%2$s).</string>
+    <string name="error_meta_tried_none">Tried meta addons: %1$s. None of them provided metadata for id=%2$s (type=%3$s).</string>
+    <string name="error_meta_tried_generic">Tried meta addons: %1$s. Metadata could not be loaded for id=%2$s (type=%3$s).</string>
+    <string name="error_meta_tried_issues">Tried meta addons: %1$s. Metadata could not be loaded for id=%2$s (type=%3$s). Issues: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Continue Watching</string>
     <string name="cw_upcoming">Upcoming</string>
     <string name="cw_next_up">Next Up</string>
     <string name="cw_resume">Resume</string>
+    <string name="cw_percent_watched">%1$d%% watched</string>
     <string name="cw_hours_min_left">%1$dh %2$dm left</string>
     <string name="cw_min_left">%1$dm left</string>
     <string name="cw_almost_done">Almost done</string>
@@ -57,6 +86,7 @@
     <string name="episodes_mark_season_unwatched">Mark season as unwatched</string>
     <string name="episodes_mark_previous_watched">Mark previous in this season as watched</string>
     <string name="episodes_play">Play</string>
+    <string name="play_manually">Play manually</string>
     <string name="episodes_season_actions">Season actions</string>
 
     <!-- MetaDetailsViewModel -->
@@ -88,6 +118,16 @@
     <string name="detail_tab_more_like_this">More like this</string>
     <string name="detail_section_network">Network</string>
     <string name="detail_section_production">Production</string>
+    <string name="episodes_unavailable">Unavailable</string>
+    <string name="series_status_ended">Ended</string>
+    <string name="series_status_continuing">Ongoing</string>
+    <string name="series_status_current">Current</string>
+    <string name="series_status_cancelled">Cancelled</string>
+    <string name="series_status_released">Released</string>
+    <string name="series_status_planned">Planned</string>
+    <string name="series_status_rumored">Rumored</string>
+    <string name="series_status_in_production">In Production</string>
+    <string name="series_status_post_production">Post Production</string>
     <string name="detail_lists_fallback">Lists</string>
     <string name="detail_lists_subtitle">Select which lists should include this title.</string>
     <string name="action_save">Save</string>
@@ -119,6 +159,8 @@
     <string name="about_check_updates_subtitle">Download latest release</string>
     <string name="about_privacy_policy">Privacy Policy</string>
     <string name="about_privacy_policy_subtitle">View our privacy policy</string>
+    <string name="about_supporters_contributors">Supporters &amp; Contributors</string>
+    <string name="about_supporters_contributors_subtitle">Open recognition and project credits</string>
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Account</string>
@@ -156,6 +198,33 @@
     <string name="cd_increase">Increase</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_none">None</string>
+    <string name="action_close">Close</string>
+
+    <!-- SupportersContributorsScreen -->
+    <string name="supporters_contributors_title">Supporters &amp; Contributors</string>
+    <string name="supporters_contributors_subtitle">The people backing Nuvio and the contributors building it across TV and mobile.</string>
+    <string name="supporters_contributors_supporters_copy">Supporters and donators help keep the project moving, fund infrastructure, and make room for ambitious features.</string>
+    <string name="supporters_contributors_donate_copy">Nuvio will stay free and open source. If you want to support the project, you can help cover the time and infrastructure behind it.</string>
+    <string name="supporters_contributors_donate_button">Donate to Nuvio</string>
+    <string name="supporters_contributors_qr_title">Scan to donate</string>
+    <string name="supporters_contributors_qr_subtitle">Open the link on your phone and support Nuvio through Ko-fi.</string>
+    <string name="supporters_contributors_qr_hint">Point your camera at the QR code or use the button below.</string>
+    <string name="supporters_contributors_back_button">Back to details</string>
+    <string name="supporters_tab">Supporters</string>
+    <string name="contributors_tab">Contributors</string>
+    <string name="supporters_loading">Loading supporters…</string>
+    <string name="supporters_empty">No supporters found yet.</string>
+    <string name="supporters_error_title">Couldn’t load supporters</string>
+    <string name="supporters_no_message">No message shared.</string>
+    <string name="supporters_open_donations">Open donations page</string>
+    <string name="contributors_loading">Loading GitHub contributors…</string>
+    <string name="contributors_empty">No contributors found yet.</string>
+    <string name="contributors_error_title">Couldn’t load contributors</string>
+    <string name="contributors_total_contributions">%1$d total contributions</string>
+    <string name="contributors_open_github">Open GitHub Profile</string>
+    <string name="contributors_show_kofi_qr">Show Ko-fi QR</string>
+    <string name="contributors_hide_kofi_qr">Hide Ko-fi QR</string>
+    <string name="contributors_profile_unavailable">GitHub profile link unavailable.</string>
 
     <!-- PlaybackSettingsSections -->
     <string name="playback_section_general">General</string>
@@ -235,7 +304,7 @@
     <string name="sub_outline_color">Outline Color</string>
     <string name="sub_advanced_section">Advanced Subtitle Rendering</string>
     <string name="sub_libass">Use libass for ASS/SSA subtitles</string>
-    <string name="sub_libass_sub">Temporarily disabled for maintenance</string>
+    <string name="sub_libass_sub">Experimental: advanced ASS/SSA rendering (styles, positioning, animations)</string>
     <string name="sub_libass_mode">Libass Render Mode</string>
     <string name="sub_mode_overlay_gl">Overlay OpenGL (Recommended)</string>
     <string name="sub_mode_overlay_gl_sub">Best quality with HDR support. Renders subtitles on a separate thread.</string>
@@ -270,6 +339,8 @@
     <string name="autoplay_stream_selection">Auto Stream Selection</string>
     <string name="autoplay_next_episode">Auto-play Next Episode</string>
     <string name="autoplay_next_episode_sub">Start next episode automatically when prompt appears.</string>
+    <string name="autoplay_prefer_binge_group">Prefer Binge Group (Next Episode)</string>
+    <string name="autoplay_prefer_binge_group_sub">Try the same source profile first (same addon/quality group) before normal auto-play rules.</string>
     <string name="autoplay_threshold_pct">Percentage</string>
     <string name="autoplay_threshold_min">Minutes before end</string>
     <string name="autoplay_threshold_mode">Next Episode Threshold Mode</string>
@@ -281,6 +352,10 @@
     <string name="autoplay_scope_addons">Installed addons only</string>
     <string name="autoplay_scope_plugins">Enabled plugins only</string>
     <string name="autoplay_scope">Auto-play Source Scope</string>
+    <string name="autoplay_timeout_title">Stream Selection Timeout</string>
+    <string name="autoplay_timeout_sub">Wait time for addons before selecting.</string>
+    <string name="autoplay_timeout_instant">Instant</string>
+    <string name="autoplay_timeout_unlimited">Unlimited</string>
     <string name="autoplay_allowed_addons">Allowed Addons</string>
     <string name="autoplay_all_addons">All installed addons</string>
     <string name="autoplay_allowed_plugins">Allowed Plugins</string>
@@ -408,6 +483,7 @@
     <string name="mdblist_dialog_subtitle">Enter your API key to fetch external ratings</string>
     <string name="mdblist_dialog_placeholder">Enter MDBList API key</string>
     <string name="mdblist_not_set">Not set</string>
+    <string name="mdblist_invalid_api_key">Invalid MDBList API key</string>
 
     <!-- Anime-Skip -->
     <string name="animeskip_title">Anime Skip</string>
@@ -419,6 +495,7 @@
     <string name="animeskip_dialog_title">Anime Skip Client ID</string>
     <string name="animeskip_dialog_subtitle">Create your own Client ID at anime-skip.com/account/settings</string>
     <string name="animeskip_dialog_placeholder">Enter Client ID</string>
+    <string name="animeskip_invalid_client_id">Invalid Client ID</string>
     <string name="action_clear">Clear</string>
 
     <!-- TmdbSettingsScreen -->
@@ -462,12 +539,22 @@
     <string name="trakt_token_refreshes">Trakt access token refreshes in %1$s</string>
     <string name="trakt_login_instruction">Press Login to start Trakt device authentication. A QR code will appear here.</string>
     <string name="trakt_missing_credentials">Missing TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET in local.properties.</string>
+    <string name="trakt_watch_progress_title">Watch Progress</string>
+    <string name="trakt_watch_progress_subtitle">Choose which progress source powers resume and continue watching</string>
+    <string name="trakt_watch_progress_dialog_title">Watch Progress</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Choose whether resume and continue watching should use Trakt or Nuvio Sync while Trakt scrobbling stays active.</string>
+    <string name="trakt_watch_progress_source_trakt">Trakt</string>
+    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_trakt_selected">Watch progress source set to Trakt</string>
+    <string name="trakt_watch_progress_nuvio_selected">Watch progress source set to Nuvio Sync</string>
     <string name="trakt_continue_watching_window">Continue Watching Window</string>
     <string name="trakt_continue_watching_subtitle">Trakt history considered for continue watching</string>
     <string name="trakt_unaired_next_up">Unaired Next Up Episodes</string>
     <string name="trakt_unaired_next_up_subtitle">Show upcoming episodes before they air</string>
     <string name="trakt_unaired_shown">Shown</string>
     <string name="trakt_unaired_hidden">Hidden</string>
+    <string name="trakt_unaired_now_shown">Unaired Next Up episodes are now shown</string>
+    <string name="trakt_unaired_now_hidden">Unaired Next Up episodes are now hidden</string>
     <string name="trakt_cached_label">Cached</string>
     <string name="trakt_stat_movies">Movies</string>
     <string name="trakt_stat_shows">Shows</string>
@@ -513,6 +600,10 @@
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profiles</string>
     <string name="profile_subtitle">Manage user profiles for this account.</string>
+    <string name="profile_manage_button">Manage Profiles</string>
+    <string name="profile_manage_title">Manage Profiles</string>
+    <string name="profile_manage_subtitle">Select a profile to edit, switch, or create a new one</string>
+    <string name="profile_manage_hint">Select a profile to manage</string>
     <string name="profile_primary_label">Primary</string>
     <string name="profile_shares_primary">Shares primary\'s %1$s</string>
     <string name="profile_edit_label">Edit</string>
@@ -529,6 +620,18 @@
     <string name="profile_delete">Delete</string>
     <string name="profile_addons">addons</string>
     <string name="profile_plugins">plugins</string>
+    <string name="profile_choose_avatar">Choose Avatar</string>
+    <string name="profile_avatar_none_selected">No avatar selected</string>
+    <string name="profile_avatar_focus_hint">Focus an avatar to view its name</string>
+    <string name="profile_avatar_category_all">All</string>
+    <string name="profile_avatar_category_anime">Anime</string>
+    <string name="profile_avatar_category_animation">Animation</string>
+    <string name="profile_avatar_category_movie">Movie</string>
+    <string name="profile_avatar_category_tv">TV</string>
+    <string name="profile_avatar_category_gaming">Gaming</string>
+    <string name="profile_add_new">Add Profile</string>
+    <string name="profile_cancel">Cancel</string>
+    <string name="profile_save">Save</string>
 
 
     <!-- AddonManagerScreen -->
@@ -580,6 +683,17 @@
     <string name="stream_player_external">External</string>
 
     <!-- PlayerScreen -->
+    <string name="player_no_external_player">No external player found</string>
+
+    <!-- ParentalGuideOverlay -->
+    <string name="parental_nudity">Nudity</string>
+    <string name="parental_violence">Violence</string>
+    <string name="parental_profanity">Profanity</string>
+    <string name="parental_alcohol">Alcohol/Drugs</string>
+    <string name="parental_frightening">Frightening</string>
+    <string name="parental_severity_severe">Severe</string>
+    <string name="parental_severity_moderate">Moderate</string>
+    <string name="parental_severity_mild">Mild</string>
     <string name="player_ends_at">Ends at %1$s</string>
     <string name="player_via">via %1$s</string>
     <string name="player_subtitle_delay">Subtitles Delay</string>
@@ -640,6 +754,7 @@
     <string name="subtitle_on">On</string>
     <string name="subtitle_off">Off</string>
     <string name="subtitle_style_title">Subtitle Style</string>
+    <string name="subtitle_style_customize">Customize</string>
     <string name="subtitle_style_color">Color</string>
     <string name="subtitle_style_reset">Reset</string>
     <string name="subtitle_style_font_size">Font Size</string>
@@ -665,6 +780,7 @@
     <string name="next_episode_playing_via">Playing via %1$s in %2$ds</string>
     <string name="next_episode_play">Play</string>
     <string name="next_episode_unaired">Unaired</string>
+    <string name="next_episode_not_aired_yet">Next episode hasn\'t aired yet</string>
     <string name="skip_intro">Skip Intro</string>
     <string name="skip_ending">Skip Ending</string>
     <string name="skip_recap">Skip Recap</string>
@@ -679,6 +795,10 @@
     <string name="search_start_title">Start Searching</string>
     <string name="search_start_subtitle">Enter at least 2 characters</string>
     <string name="search_start_subtitle_no_discover">Discover is disabled. Enter at least 2 characters</string>
+    <string name="search_voice_no_speech">No speech detected. Try again.</string>
+    <string name="search_voice_mic_permission">Microphone permission is required for voice search.</string>
+    <string name="search_voice_failed">Voice recognition failed. Try again.</string>
+    <string name="search_voice_unavailable">Voice search is unavailable on this device.</string>
 
     <!-- LibraryScreen -->
     <string name="library_syncing">Syncing Trakt library\u2026</string>
@@ -686,6 +806,11 @@
     <string name="library_filter_list">List</string>
     <string name="library_filter_type">Type</string>
     <string name="library_filter_sort">Sort</string>
+    <string name="library_sort_trakt_order">Trakt Order</string>
+    <string name="library_sort_added_desc">Added ↓</string>
+    <string name="library_sort_added_asc">Added ↑</string>
+    <string name="library_sort_title_asc">Title A-Z</string>
+    <string name="library_sort_title_desc">Title Z-A</string>
     <string name="library_manage_lists">Manage Lists</string>
     <string name="library_manage_trakt_lists">Manage Trakt Lists</string>
     <string name="library_no_lists">No personal lists yet.</string>
@@ -712,6 +837,7 @@
     <!-- AccountSettingsContent -->
     <string name="account_loading">Loading\u2026</string>
     <string name="account_sync_description">Sync your library, watch progress, addons, and plugins across devices.</string>
+    <string name="account_sync_restart_note">Sync is not real-time across active devices. Restart this device after signing in or to pick up changes made elsewhere.</string>
     <string name="account_signin_qr_title">Sign In with QR</string>
     <string name="account_signin_qr_subtitle">Scan a QR code and complete email login on your phone</string>
     <string name="account_signed_in_label">Signed in</string>
@@ -789,9 +915,14 @@
     <!-- ProfileSelectionScreen -->
     <string name="profile_selection_title">Who\'s watching?</string>
     <string name="profile_selection_subtitle">Select a profile to continue</string>
-    <string name="profile_selection_hint">Use D-pad to choose a profile</string>
+    <string name="profile_selection_hint">Hold to manage profile</string>
     <string name="profile_selection_empty">No profiles found</string>
     <string name="profile_selection_primary_badge">PRIMARY</string>
+    <string name="profile_selection_options_title">Profile Options</string>
+    <string name="profile_delete_confirm_title">Delete Profile?</string>
+    <string name="profile_delete_confirm_subtitle">This will permanently delete this profile and all its data including library, watch history, and addon settings. This cannot be undone.</string>
+    <string name="profile_delete_btn">Delete Profile</string>
+    <string name="profile_saving">Saving\u2026</string>
 
     <!-- CastDetailScreen -->
     <string name="cast_detail_error">Something went wrong</string>
@@ -811,10 +942,12 @@
     <!-- UpdatePromptDialog -->
     <string name="update_title">App Update</string>
     <string name="update_downloading">Downloading update</string>
+    <string name="update_download">Download</string>
+    <string name="update_downloading_ellipsis">Downloading…</string>
     <string name="update_unknown_sources">Allow installs from unknown sources to continue.</string>
     <!-- AccountScreen -->
     <string name="account_title">Account</string>
-    <string name="account_sign_in_description">Sign in to sync your library, watch progress, addons, and plugins across devices. Library and watch progress sync only when Trakt is not connected.</string>
+    <string name="account_sign_in_description">Sign in to sync your library, watch progress, addons, and plugins across devices. Library sync uses Nuvio Sync when Trakt is not connected, and watch progress can use either Trakt or Nuvio Sync.</string>
     <string name="account_sync_code_title">Sync Code</string>
     <string name="account_sync_code_description">Sync across devices without creating an account.</string>
     <string name="account_linked_devices">Linked Devices (%1$d)</string>
@@ -824,6 +957,7 @@
     <!-- EpisodeRatingsSection -->
     <string name="ratings_loading">Loading episode ratings...</string>
     <string name="ratings_unavailable">Episode ratings are unavailable.</string>
+    <string name="ratings_load_error">Unable to load episode ratings.</string>
     <string name="ratings_season_summary">Season %1$d - %2$d episodes</string>
 
     <!-- SearchDiscoverSection -->
@@ -873,4 +1007,6 @@
     <string name="update_open_settings">Open Settings</string>
     <string name="update_install">Install</string>
     <string name="update_ignore">Ignore</string>
+    <string name="watchlist_added">Added to watchlist</string>
+    <string name="watchlist_removed">Removed from watchlist</string>
 </resources>

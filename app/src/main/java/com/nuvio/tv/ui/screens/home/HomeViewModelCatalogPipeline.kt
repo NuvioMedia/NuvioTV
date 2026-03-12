@@ -111,6 +111,9 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
     externalMetaPrefetchInFlightIds.clear()
     externalMetaPrefetchJob?.cancel()
     pendingExternalMetaPrefetchItemId = null
+    prefetchedTmdbIds.clear()
+    tmdbEnrichFocusJob?.cancel()
+    pendingTmdbEnrichItemId = null
     lastHeroEnrichmentSignature = null
     lastHeroEnrichedItems = emptyList()
 
@@ -467,33 +470,37 @@ internal fun HomeViewModel.schedulePosterStatusReconcilePipeline(rows: List<Cata
 }
 
 internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<CatalogRow>) {
-    val desiredItemsByKey = linkedMapOf<String, Pair<String, String>>()
+    val desiredLibraryItemsByKey = linkedMapOf<String, Pair<String, String>>()
     rows.asSequence()
         .flatMap { row -> row.items.asSequence() }
         .take(HomeViewModel.MAX_POSTER_STATUS_OBSERVERS)
         .forEach { item ->
             val key = homeItemStatusKey(item.id, item.apiType)
-            if (key !in desiredItemsByKey) {
-                desiredItemsByKey[key] = item.id to item.apiType
+            if (key !in desiredLibraryItemsByKey) {
+                desiredLibraryItemsByKey[key] = item.id to item.apiType
             }
         }
-    val desiredKeys = desiredItemsByKey.keys
-    val desiredMovieKeys = desiredItemsByKey
-        .filterValues { (_, itemType) -> itemType.equals("movie", ignoreCase = true) }
-        .keys
+    val desiredLibraryKeys = desiredLibraryItemsByKey.keys
+
+    val allMovieItemsByKey = linkedMapOf<String, String>()
+    rows.asSequence()
+        .flatMap { row -> row.items.asSequence() }
+        .filter { it.apiType.equals("movie", ignoreCase = true) }
+        .forEach { item ->
+            val key = homeItemStatusKey(item.id, item.apiType)
+            if (key !in allMovieItemsByKey) {
+                allMovieItemsByKey[key] = item.id
+            }
+        }
+    val desiredMovieKeys = allMovieItemsByKey.keys
 
     posterLibraryObserverJobs.keys
-        .filterNot { it in desiredKeys }
+        .filterNot { it in desiredLibraryKeys }
         .forEach { staleKey ->
             posterLibraryObserverJobs.remove(staleKey)?.cancel()
         }
-    movieWatchedObserverJobs.keys
-        .filterNot { it in desiredMovieKeys }
-        .forEach { staleKey ->
-            movieWatchedObserverJobs.remove(staleKey)?.cancel()
-        }
 
-    desiredItemsByKey.forEach { (statusKey, itemRef) ->
+    desiredLibraryItemsByKey.forEach { (statusKey, itemRef) ->
         val itemId = itemRef.first
         val itemType = itemRef.second
 
@@ -514,35 +521,42 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
                     }
             }
         }
+    }
 
-        if (itemType.equals("movie", ignoreCase = true)) {
-            if (statusKey !in movieWatchedObserverJobs) {
-                movieWatchedObserverJobs[statusKey] = viewModelScope.launch {
-                    watchProgressRepository.isWatched(contentId = itemId)
-                        .distinctUntilChanged()
-                        .collectLatest { watched ->
-                            _uiState.update { state ->
-                                if (state.movieWatchedStatus[statusKey] == watched) {
-                                    state
-                                } else {
-                                    state.copy(
-                                        movieWatchedStatus = state.movieWatchedStatus + (statusKey to watched)
-                                    )
+    if (desiredMovieKeys != lastMovieWatchedItemKeys) {
+        lastMovieWatchedItemKeys = desiredMovieKeys
+        movieWatchedObserverJobs.values.forEach { it.cancel() }
+        movieWatchedObserverJobs.clear()
+        movieWatchedBatchJob?.cancel()
+
+        if (desiredMovieKeys.isNotEmpty()) {
+            movieWatchedBatchJob = viewModelScope.launch {
+                watchProgressRepository.observeWatchedMovieIds()
+                    .collectLatest { watchedIds ->
+                        _uiState.update { state ->
+                            val newStatus = buildMap {
+                                allMovieItemsByKey.forEach { (statusKey, contentId) ->
+                                    put(statusKey, contentId in watchedIds)
                                 }
                             }
+                            if (state.movieWatchedStatus == newStatus) {
+                                state
+                            } else {
+                                state.copy(movieWatchedStatus = newStatus)
+                            }
                         }
-                }
+                    }
             }
         }
     }
 
     _uiState.update { state ->
         val trimmedLibraryMembership =
-            state.posterLibraryMembership.filterKeys { it in desiredKeys }
+            state.posterLibraryMembership.filterKeys { it in desiredLibraryKeys }
         val trimmedMovieWatchedStatus =
             state.movieWatchedStatus.filterKeys { it in desiredMovieKeys }
         val trimmedLibraryPending =
-            state.posterLibraryPending.filterTo(linkedSetOf()) { it in desiredKeys }
+            state.posterLibraryPending.filterTo(linkedSetOf()) { it in desiredLibraryKeys }
         val trimmedMovieWatchedPending =
             state.movieWatchedPending.filterTo(linkedSetOf()) { it in desiredMovieKeys }
 

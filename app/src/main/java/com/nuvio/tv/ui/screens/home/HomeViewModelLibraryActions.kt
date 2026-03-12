@@ -233,7 +233,7 @@ private fun buildCompletedMovieProgress(item: MetaPreview): WatchProgress {
         contentType = item.apiType,
         name = item.name,
         poster = item.poster,
-        backdrop = item.background,
+        backdrop = item.backdropUrl,
         logo = item.logo,
         videoId = item.id,
         season = null,

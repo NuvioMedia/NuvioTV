@@ -4,7 +4,7 @@ import androidx.media3.common.C
 import androidx.media3.common.TrackGroup
 import androidx.media3.ui.AspectRatioFrameLayout
 import com.nuvio.tv.data.local.FrameRateMatchingMode
-import com.nuvio.tv.data.local.SubtitleOrganizationMode
+import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.domain.model.MetaCastMember
@@ -32,6 +32,7 @@ data class PlayerUiState(
     val castMembers: List<MetaCastMember> = emptyList(),
     val showControls: Boolean = true,
     val showSeekOverlay: Boolean = false,
+    val pendingPreviewSeekPosition: Long? = null,
     val playbackSpeed: Float = 1f,
     val loadingOverlayEnabled: Boolean = true,
     val showLoadingOverlay: Boolean = true,
@@ -42,8 +43,8 @@ data class PlayerUiState(
     val subtitleTracks: List<TrackInfo> = emptyList(),
     val selectedAudioTrackIndex: Int = -1,
     val selectedSubtitleTrackIndex: Int = -1,
-    val showAudioDialog: Boolean = false,
-    val showSubtitleDialog: Boolean = false,
+    val showAudioOverlay: Boolean = false,
+    val showSubtitleOverlay: Boolean = false,
     val showSubtitleStylePanel: Boolean = false,
     val showSubtitleDelayOverlay: Boolean = false,
     val subtitleDelayMs: Int = 0,
@@ -51,12 +52,12 @@ data class PlayerUiState(
     val showMoreDialog: Boolean = false,
     // Subtitle style settings
     val subtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(),
-    val subtitleOrganizationMode: SubtitleOrganizationMode = SubtitleOrganizationMode.NONE,
     // Addon subtitles
     val addonSubtitles: List<Subtitle> = emptyList(),
     val isLoadingAddonSubtitles: Boolean = false,
     val selectedAddonSubtitle: Subtitle? = null,
     val addonSubtitlesError: String? = null,
+    val installedSubtitleAddonOrder: List<String> = emptyList(),
     // Episodes/streams side panel (for series)
     val showEpisodesPanel: Boolean = false,
     val isLoadingEpisodes: Boolean = false,
@@ -107,6 +108,7 @@ data class PlayerUiState(
     val nextEpisodeAutoPlaySearching: Boolean = false,
     val nextEpisodeAutoPlaySourceName: String? = null,
     val nextEpisodeAutoPlayCountdownSec: Int? = null,
+    val streamAutoPlayMode: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL,
     // Stream source badge
     val showStreamSourceIndicator: Boolean = false,
     val streamSourceIndicatorText: String = "",
@@ -121,7 +123,10 @@ data class PlayerUiState(
     // Aspect ratio / resize mode
     val resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
     val showAspectRatioIndicator: Boolean = false,
-    val aspectRatioIndicatorText: String = ""
+    val aspectRatioIndicatorText: String = "",
+    // Stream info overlay
+    val showStreamInfoOverlay: Boolean = false,
+    val streamInfoData: StreamInfoData? = null
 )
 
 data class TrackInfo(
@@ -132,7 +137,8 @@ data class TrackInfo(
     val codec: String? = null,
     val channelCount: Int? = null,
     val isForced: Boolean = false,
-    val isSelected: Boolean = false
+    val isSelected: Boolean = false,
+    val sampleRate: Int? = null
 )
 
 data class NextEpisodeInfo(
@@ -161,8 +167,8 @@ sealed class PlayerEvent {
     data class OnSelectAddonSubtitle(val subtitle: Subtitle) : PlayerEvent()
     data class OnSetPlaybackSpeed(val speed: Float) : PlayerEvent()
     data object OnToggleControls : PlayerEvent()
-    data object OnShowAudioDialog : PlayerEvent()
-    data object OnShowSubtitleDialog : PlayerEvent()
+    data object OnShowAudioOverlay : PlayerEvent()
+    data object OnShowSubtitleOverlay : PlayerEvent()
     data object OnOpenSubtitleStylePanel : PlayerEvent()
     data object OnDismissSubtitleStylePanel : PlayerEvent()
     data object OnShowSubtitleDelayOverlay : PlayerEvent()
@@ -184,7 +190,7 @@ sealed class PlayerEvent {
     data object OnReloadSourceStreams : PlayerEvent()
     data class OnSourceAddonFilterSelected(val addonName: String?) : PlayerEvent()
     data class OnSourceStreamSelected(val stream: Stream) : PlayerEvent()
-    data object OnDismissDialog : PlayerEvent()
+    data object OnDismissTransientOverlay : PlayerEvent()
     data object OnRetry : PlayerEvent()
     data object OnParentalGuideHide : PlayerEvent()
     data class OnShowDisplayModeInfo(val info: DisplayModeInfo) : PlayerEvent()
@@ -203,6 +209,8 @@ sealed class PlayerEvent {
     data class OnSetSubtitleVerticalOffset(val offset: Int) : PlayerEvent()
     data object OnResetSubtitleDefaults : PlayerEvent()
     data object OnToggleAspectRatio : PlayerEvent()
+    data object OnShowStreamInfo : PlayerEvent()
+    data object OnDismissStreamInfo : PlayerEvent()
 }
 
 data class ParentalWarning(
@@ -223,3 +231,30 @@ enum class FrameRateSource {
 }
 
 val PLAYBACK_SPEEDS = listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f)
+
+data class StreamInfoData(
+    // Stream source
+    val addonName: String? = null,
+    val addonLogo: String? = null,
+    val streamName: String? = null,
+    val streamDescription: String? = null,
+    // File info
+    val filename: String? = null,
+    val fileSize: Long? = null,
+    // Video
+    val videoCodec: String? = null,
+    val videoWidth: Int? = null,
+    val videoHeight: Int? = null,
+    val videoFrameRate: Float? = null,
+    val videoBitrate: Int? = null,
+    // Audio
+    val audioCodec: String? = null,
+    val audioChannels: String? = null,
+    val audioSampleRate: Int? = null,
+    val audioLanguage: String? = null,
+    // Subtitle
+    val subtitleName: String? = null,
+    val subtitleCodec: String? = null,
+    val subtitleLanguage: String? = null,
+    val subtitleSource: String? = null
+)

@@ -2,7 +2,6 @@
     <string name="app_name">Nuvio</string>
     <string name="type_movie">Film</string>
     <string name="type_series">Serial</string>
-    <string name="type_unknown">Necunoscut</string>
 
     <!-- HomeScreen -->
     <string name="home_no_addons">Nu sunt instalate extensii. Adaugă una pentru a începe.</string>

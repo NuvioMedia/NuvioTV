@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.tmdb
 
 import android.util.Log
+import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.data.remote.api.TmdbEpisode
 import com.nuvio.tv.data.remote.api.TmdbImage
@@ -24,7 +25,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "TmdbMetadataService"
-private const val TMDB_API_KEY = "439c478a771f35c05022f9feabcca01c"
+private val TMDB_API_KEY = BuildConfig.TMDB_API_KEY
 
 @Singleton
 class TmdbMetadataService @Inject constructor(
@@ -106,6 +107,7 @@ class TmdbMetadataService @Inject constructor(
                 val description = details?.overview?.takeIf { it.isNotBlank() }
                 val releaseInfo = details?.releaseDate
                     ?: details?.firstAirDate
+                val status = details?.status?.trim()?.takeIf { it.isNotBlank() }
                 val rating = details?.voteAverage
                 val runtime = details?.runtime ?: details?.episodeRunTime?.firstOrNull()
                 val countries = details?.productionCountries
@@ -262,7 +264,7 @@ class TmdbMetadataService @Inject constructor(
                     genres.isEmpty() && description == null && backdrop == null && logo == null &&
                     poster == null && castMembers.isEmpty() && director.isEmpty() && writer.isEmpty() &&
                     releaseInfo == null && rating == null && runtime == null && countries.isNullOrEmpty() && language == null &&
-                    productionCompanies.isEmpty() && networks.isEmpty() && ageRating == null
+                    productionCompanies.isEmpty() && networks.isEmpty() && ageRating == null && status == null
                 ) {
                     return@withContext null
                 }
@@ -285,6 +287,7 @@ class TmdbMetadataService @Inject constructor(
                     productionCompanies = productionCompanies,
                     networks = networks,
                     ageRating = ageRating,
+                    status = status,
                     countries = countries,
                     language = language,
                     collectionId = collectionId,
@@ -792,6 +795,7 @@ data class TmdbEnrichment(
     val productionCompanies: List<MetaCompany>,
     val networks: List<MetaCompany>,
     val ageRating: String?,
+    val status: String?,
     val countries: List<String>?,
     val language: String?,
     val collectionId: Int?,

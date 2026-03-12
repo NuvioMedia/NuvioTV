@@ -14,6 +14,8 @@ import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.repository.ParentalGuideRepository
 import com.nuvio.tv.data.repository.SkipIntroRepository
 import com.nuvio.tv.data.repository.SkipInterval
+import com.nuvio.tv.data.repository.EpisodeMappingEntry
+import com.nuvio.tv.data.repository.TraktEpisodeMappingService
 import com.nuvio.tv.data.repository.TraktScrobbleItem
 import com.nuvio.tv.data.repository.TraktScrobbleService
 import com.nuvio.tv.domain.model.Video
@@ -41,6 +43,7 @@ class PlayerRuntimeController(
     internal val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     internal val parentalGuideRepository: ParentalGuideRepository,
     internal val traktScrobbleService: TraktScrobbleService,
+    internal val traktEpisodeMappingService: TraktEpisodeMappingService,
     internal val skipIntroRepository: SkipIntroRepository,
     internal val playerSettingsDataStore: PlayerSettingsDataStore,
     internal val streamLinkCacheDataStore: StreamLinkCacheDataStore,
@@ -68,6 +71,29 @@ class PlayerRuntimeController(
         val streamUrl: String
     )
 
+    internal data class RememberedTrackSelection(
+        val language: String?,
+        val name: String?,
+        val trackId: String? = null
+    )
+
+    internal sealed class RememberedSubtitleSelection {
+        data object Disabled : RememberedSubtitleSelection()
+        data class Internal(
+            val track: RememberedTrackSelection
+        ) : RememberedSubtitleSelection()
+        data class Addon(
+            val id: String,
+            val url: String,
+            val language: String
+        ) : RememberedSubtitleSelection()
+    }
+
+    internal data class EpisodeTrackSelectionPreference(
+        val audio: RememberedTrackSelection? = null,
+        val subtitle: RememberedSubtitleSelection? = null
+    )
+
     internal val navigationArgs = PlayerNavigationArgs.from(savedStateHandle)
     internal val initialStreamUrl: String = navigationArgs.streamUrl
     internal val title: String = navigationArgs.title
@@ -93,7 +119,19 @@ class PlayerRuntimeController(
     internal var currentFilename: String? = navigationArgs.filename
         ?: initialStreamUrl.substringBefore('?').substringAfterLast('/', "")
             .takeIf { it.isNotBlank() && it.contains('.') }
+    internal var currentAddonName: String? = navigationArgs.addonName
+    internal var currentAddonLogo: String? = navigationArgs.addonLogo
+    internal var currentStreamDescription: String? = navigationArgs.streamDescription
+    internal var currentVideoCodec: String? = null
+    internal var currentVideoWidth: Int? = null
+    internal var currentVideoHeight: Int? = null
+    internal var currentVideoBitrate: Int? = null
     internal var currentStreamUrl: String = initialStreamUrl
+    internal var currentStreamMimeType: String? =
+        PlayerMediaSourceFactory.inferMimeType(
+            url = initialStreamUrl,
+            filename = currentFilename
+        )
     internal var currentHeaders: Map<String, String> =
         PlayerMediaSourceFactory.sanitizeHeaders(PlayerMediaSourceFactory.parseHeaders(headersJson))
 
@@ -172,6 +210,8 @@ class PlayerRuntimeController(
     internal var pendingAddonSubtitleLanguage: String? = null
     internal var pendingAddonSubtitleTrackId: String? = null
     internal var pendingAudioSelectionAfterSubtitleRefresh: PendingAudioSelection? = null
+    internal var sameSeriesTrackSelectionPreference: EpisodeTrackSelectionPreference? = null
+    internal var pendingSameSeriesTrackSelectionRestore: EpisodeTrackSelectionPreference? = null
     internal var attachedAddonSubtitleKeys: Set<String> = emptySet()
     internal var hasScannedTextTracksOnce: Boolean = false
     internal var streamReuseLastLinkEnabled: Boolean = false
@@ -197,8 +237,19 @@ class PlayerRuntimeController(
     internal var pendingResumeProgress: WatchProgress? = null
     internal var hasRetriedCurrentStreamAfter416: Boolean = false
     internal var currentScrobbleItem: TraktScrobbleItem? = null
+    internal var currentTraktEpisodeMapping: EpisodeMappingEntry? = null
+    internal var currentTraktEpisodeMappingKey: String? = null
     internal var hasSentScrobbleStartForCurrentItem: Boolean = false
+    internal var hasRequestedScrobbleStartForCurrentItem: Boolean = false
+    internal var scrobbleStartRequestGeneration: Long = 0L
+    internal var playbackPreparationJob: Job? = null
     internal var hasSentCompletionScrobbleForCurrentItem: Boolean = false
+    internal var requestedUseLibassByUser: Boolean = false
+    internal var libassPipelineOverrideForCurrentStream: Boolean? = null
+    internal var activePlayerUsesLibass: Boolean = false
+    internal var libassPipelineSwitchInFlight: Boolean = false
+    internal var hasDetectedAssSsaTrackForCurrentStream: Boolean = false
+    internal var libassPipelineDecisionStreamUrl: String? = null
     internal var episodeStreamsJob: Job? = null
     internal var episodeStreamsCacheRequestKey: String? = null
     internal val streamCacheKey: String? by lazy {
@@ -208,7 +259,6 @@ class PlayerRuntimeController(
     }
 
     init {
-        refreshScrobbleItem()
         if (!navigationArgs.startFromBeginning) {
             loadSavedProgressFor(currentSeason, currentEpisode)
         }

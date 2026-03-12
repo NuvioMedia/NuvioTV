@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
 import androidx.media3.common.C
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
@@ -15,6 +16,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import com.nuvio.tv.ui.util.languageCodeToName
 
 internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
     val audioTracks = mutableListOf<TrackInfo>()
@@ -27,7 +29,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         
         when (trackType) {
             C.TRACK_TYPE_VIDEO -> {
-                
+
                 for (i in 0 until trackGroup.length) {
                     if (trackGroup.isTrackSelected(i)) {
                         val format = trackGroup.getTrackFormat(i)
@@ -46,6 +48,12 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                                 )
                             }
                         }
+                        // Extract video codec, resolution, and bitrate for stream info
+                        currentVideoCodec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType)
+                            ?: CustomDefaultTrackNameProvider.formatNameFromMime(format.codecs)
+                        currentVideoWidth = format.width.takeIf { it > 0 }
+                        currentVideoHeight = format.height.takeIf { it > 0 }
+                        currentVideoBitrate = format.bitrate.takeIf { it > 0 }
                         break
                     }
                 }
@@ -72,7 +80,8 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                             language = format.language,
                             codec = codecName,
                             channelCount = format.channelCount.takeIf { it > 0 },
-                            isSelected = isSelected
+                            isSelected = isSelected,
+                            sampleRate = format.sampleRate.takeIf { it > 0 }
                         )
                     )
                 }
@@ -98,6 +107,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                             name = format.label ?: format.language ?: "Subtitle ${subtitleTracks.size + 1}",
                             language = format.language,
                             trackId = format.id,
+                            codec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType),
                             isForced = hasForcedFlag || nameHintForced || isSongsAndSigns,
                             isSelected = isSelected
                         )
@@ -160,7 +170,66 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
             selectedSubtitleTrackIndex = selectedSubtitleIndex
         )
     }
+    restorePendingSameSeriesTrackSelection(
+        audioTracks = audioTracks,
+        subtitleTracks = subtitleTracks
+    )
     tryAutoSelectPreferredSubtitleFromAvailableTracks()
+    maybeAdjustLibassPipelineForTracks(tracks)
+}
+
+internal fun PlayerRuntimeController.maybeAdjustLibassPipelineForTracks(tracks: Tracks) {
+    if (libassPipelineSwitchInFlight) return
+
+    val hasAssSsaTrack = tracks.hasAssSsaTextTrack()
+    if (hasAssSsaTrack) {
+        hasDetectedAssSsaTrackForCurrentStream = true
+    }
+    // Keep libass sticky only after we have actually detected ASS/SSA for this stream.
+    // This avoids startup ping-pong but does not keep libass on for streams that never
+    // expose ASS/SSA tracks.
+    val desiredUseLibass = requestedUseLibassByUser && hasDetectedAssSsaTrackForCurrentStream
+    if (desiredUseLibass == activePlayerUsesLibass) return
+
+    val player = _exoPlayer ?: return
+    val resumePosition = player.currentPosition.takeIf { it > 0L }
+    libassPipelineOverrideForCurrentStream = desiredUseLibass
+    libassPipelineSwitchInFlight = true
+
+    _uiState.update { state ->
+        state.copy(
+            pendingSeekPosition = resumePosition ?: state.pendingSeekPosition,
+            showLoadingOverlay = state.loadingOverlayEnabled
+        )
+    }
+
+    scope.launch {
+        releasePlayer()
+        initializePlayer(currentStreamUrl, currentHeaders)
+    }
+}
+
+private fun Tracks.hasAssSsaTextTrack(): Boolean {
+    groups.forEach { trackGroup ->
+        if (trackGroup.type != C.TRACK_TYPE_TEXT) return@forEach
+        for (index in 0 until trackGroup.length) {
+            val format = trackGroup.getTrackFormat(index)
+            if (format.sampleMimeType == MimeTypes.TEXT_SSA) return true
+
+            val hasAssCodec = format.codecs
+                ?.split(',')
+                ?.asSequence()
+                ?.map { it.trim().lowercase(Locale.US) }
+                ?.any { codec ->
+                    codec == MimeTypes.TEXT_SSA ||
+                        codec == "s_text/ass" ||
+                        codec == "s_text/ssa" ||
+                        codec.endsWith("/x-ssa")
+                } == true
+            if (hasAssCodec) return true
+        }
+    }
+    return false
 }
 
 internal fun PlayerRuntimeController.maybeApplyRememberedAudioSelection(audioTracks: List<TrackInfo>) {
@@ -264,6 +333,122 @@ internal fun PlayerRuntimeController.maybeRestorePendingAudioSelectionAfterSubti
     )
     selectAudioTrack(index)
     return index
+}
+
+internal fun PlayerRuntimeController.findMatchingTrackIndex(
+    tracks: List<TrackInfo>,
+    target: PlayerRuntimeController.RememberedTrackSelection
+): Int {
+    val targetTrackId = normalizeTrackMatchValue(target.trackId)
+    val targetName = normalizeTrackMatchValue(target.name)
+    val targetLang = normalizeTrackMatchValue(target.language)
+
+    val exactTrackIdIndex = if (!targetTrackId.isNullOrBlank()) {
+        tracks.indexOfFirst { track ->
+            normalizeTrackMatchValue(track.trackId) == targetTrackId
+        }
+    } else {
+        -1
+    }
+    if (exactTrackIdIndex >= 0) return exactTrackIdIndex
+
+    val exactNameIndex = if (!targetName.isNullOrBlank()) {
+        tracks.indexOfFirst { track ->
+            normalizeTrackMatchValue(track.name) == targetName
+        }
+    } else {
+        -1
+    }
+    if (exactNameIndex >= 0) return exactNameIndex
+
+    val nameContainsIndex = if (!targetName.isNullOrBlank()) {
+        tracks.indexOfFirst { track ->
+            normalizeTrackMatchValue(track.name)?.contains(targetName) == true
+        }
+    } else {
+        -1
+    }
+    if (nameContainsIndex >= 0) return nameContainsIndex
+
+    return if (!targetLang.isNullOrBlank()) {
+        tracks.indexOfFirst { track ->
+            val trackLang = normalizeTrackMatchValue(track.language)
+            !trackLang.isNullOrBlank() &&
+                (trackLang == targetLang ||
+                    trackLang.startsWith("$targetLang-") ||
+                    trackLang.startsWith("${targetLang}_"))
+        }
+    } else {
+        -1
+    }
+}
+
+internal fun PlayerRuntimeController.restorePendingSameSeriesTrackSelection(
+    audioTracks: List<TrackInfo>,
+    subtitleTracks: List<TrackInfo>
+) {
+    val pending = pendingSameSeriesTrackSelectionRestore ?: return
+    var updatedPending = pending
+    var updatedSubtitleIndex: Int? = null
+    var updatedAddonSubtitle: com.nuvio.tv.domain.model.Subtitle? = null
+
+    pending.audio?.let { audioSelection ->
+        val index = findMatchingTrackIndex(audioTracks, audioSelection)
+        updatedPending = updatedPending.copy(audio = null)
+        if (index >= 0) {
+            Log.d(PlayerRuntimeController.TAG, "Restoring same-series audio selection index=$index")
+            selectAudioTrack(index)
+            _uiState.update { it.copy(selectedAudioTrackIndex = index) }
+        }
+    }
+
+    when (val subtitleSelection = pending.subtitle) {
+        null -> Unit
+        PlayerRuntimeController.RememberedSubtitleSelection.Disabled -> {
+            Log.d(PlayerRuntimeController.TAG, "Restoring same-series subtitle state: disabled")
+            autoSubtitleSelected = true
+            disableSubtitles()
+            updatedSubtitleIndex = -1
+            updatedPending = updatedPending.copy(subtitle = null)
+        }
+        is PlayerRuntimeController.RememberedSubtitleSelection.Internal -> {
+            val index = findMatchingTrackIndex(subtitleTracks, subtitleSelection.track)
+            updatedPending = updatedPending.copy(subtitle = null)
+            if (index >= 0) {
+                Log.d(PlayerRuntimeController.TAG, "Restoring same-series internal subtitle index=$index")
+                autoSubtitleSelected = true
+                selectSubtitleTrack(index)
+                updatedSubtitleIndex = index
+            }
+        }
+        is PlayerRuntimeController.RememberedSubtitleSelection.Addon -> {
+            val state = _uiState.value
+            val addonMatch = state.addonSubtitles.firstOrNull { subtitle ->
+                subtitle.id == subtitleSelection.id && subtitle.url == subtitleSelection.url
+            } ?: state.addonSubtitles.firstOrNull { subtitle ->
+                PlayerSubtitleUtils.matchesLanguageCode(subtitle.lang, subtitleSelection.language)
+            }
+            if (addonMatch != null) {
+                Log.d(
+                    PlayerRuntimeController.TAG,
+                    "Restoring same-series addon subtitle lang=${addonMatch.lang} id=${addonMatch.id}"
+                )
+                autoSubtitleSelected = true
+                selectAddonSubtitle(addonMatch)
+                updatedAddonSubtitle = addonMatch
+                updatedPending = updatedPending.copy(subtitle = null)
+            }
+        }
+    }
+
+    _uiState.update { state ->
+        state.copy(
+            selectedSubtitleTrackIndex = updatedSubtitleIndex ?: state.selectedSubtitleTrackIndex,
+            selectedAddonSubtitle = updatedAddonSubtitle ?: if (updatedSubtitleIndex != null) null else state.selectedAddonSubtitle
+        )
+    }
+    pendingSameSeriesTrackSelectionRestore =
+        updatedPending.takeUnless { it.audio == null && it.subtitle == null }
 }
 
 internal fun PlayerRuntimeController.subtitleLanguageTargets(): List<String> {

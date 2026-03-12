@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.nuvio.tv.ui.util.languageCodeToName
 
 /**
  * Available subtitle languages
@@ -28,52 +29,90 @@ data class SubtitleLanguage(
     val name: String
 )
 
+val SubtitleLanguage.displayName: String
+    get() = languageCodeToName(code)
+
 const val SUBTITLE_LANGUAGE_FORCED = "forced"
 
 val AVAILABLE_SUBTITLE_LANGUAGES = listOf(
+    SubtitleLanguage("af", "Afrikaans"),
+    SubtitleLanguage("sq", "Albanian"),
+    SubtitleLanguage("am", "Amharic"),
+    SubtitleLanguage("ar", "Arabic"),
+    SubtitleLanguage("hy", "Armenian"),
+    SubtitleLanguage("az", "Azerbaijani"),
+    SubtitleLanguage("eu", "Basque"),
+    SubtitleLanguage("be", "Belarusian"),
+    SubtitleLanguage("bn", "Bengali"),
+    SubtitleLanguage("bs", "Bosnian"),
+    SubtitleLanguage("bg", "Bulgarian"),
+    SubtitleLanguage("my", "Burmese"),
+    SubtitleLanguage("ca", "Catalan"),
+    SubtitleLanguage("zh", "Chinese"),
+    SubtitleLanguage("zh-CN", "Chinese (Simplified)"),
+    SubtitleLanguage("zh-TW", "Chinese (Traditional)"),
+    SubtitleLanguage("hr", "Croatian"),
+    SubtitleLanguage("cs", "Czech"),
+    SubtitleLanguage("da", "Danish"),
+    SubtitleLanguage("nl", "Dutch"),
     SubtitleLanguage("en", "English"),
-    SubtitleLanguage("es", "Spanish"),
+    SubtitleLanguage("et", "Estonian"),
+    SubtitleLanguage("tl", "Filipino"),
+    SubtitleLanguage("fi", "Finnish"),
     SubtitleLanguage("fr", "French"),
+    SubtitleLanguage("gl", "Galician"),
+    SubtitleLanguage("ka", "Georgian"),
     SubtitleLanguage("de", "German"),
+    SubtitleLanguage("el", "Greek"),
+    SubtitleLanguage("gu", "Gujarati"),
+    SubtitleLanguage("he", "Hebrew"),
+    SubtitleLanguage("hi", "Hindi"),
+    SubtitleLanguage("hu", "Hungarian"),
+    SubtitleLanguage("is", "Icelandic"),
+    SubtitleLanguage("id", "Indonesian"),
+    SubtitleLanguage("ga", "Irish"),
     SubtitleLanguage("it", "Italian"),
+    SubtitleLanguage("ja", "Japanese"),
+    SubtitleLanguage("kn", "Kannada"),
+    SubtitleLanguage("kk", "Kazakh"),
+    SubtitleLanguage("km", "Khmer"),
+    SubtitleLanguage("ko", "Korean"),
+    SubtitleLanguage("lo", "Lao"),
+    SubtitleLanguage("lv", "Latvian"),
+    SubtitleLanguage("lt", "Lithuanian"),
+    SubtitleLanguage("mk", "Macedonian"),
+    SubtitleLanguage("ms", "Malay"),
+    SubtitleLanguage("ml", "Malayalam"),
+    SubtitleLanguage("mt", "Maltese"),
+    SubtitleLanguage("mr", "Marathi"),
+    SubtitleLanguage("mn", "Mongolian"),
+    SubtitleLanguage("ne", "Nepali"),
+    SubtitleLanguage("no", "Norwegian"),
+    SubtitleLanguage("pa", "Punjabi"),
+    SubtitleLanguage("fa", "Persian"),
+    SubtitleLanguage("pl", "Polish"),
     SubtitleLanguage("pt", "Portuguese (Portugal)"),
     SubtitleLanguage("pt-br", "Portuguese (Brazil)"),
-    SubtitleLanguage("ru", "Russian"),
-    SubtitleLanguage("ja", "Japanese"),
-    SubtitleLanguage("ko", "Korean"),
-    SubtitleLanguage("zh", "Chinese"),
-    SubtitleLanguage("ar", "Arabic"),
-    SubtitleLanguage("hi", "Hindi"),
-    SubtitleLanguage("tr", "Turkish"),
-    SubtitleLanguage("pl", "Polish"),
-    SubtitleLanguage("nl", "Dutch"),
-    SubtitleLanguage("sv", "Swedish"),
-    SubtitleLanguage("da", "Danish"),
-    SubtitleLanguage("no", "Norwegian"),
-    SubtitleLanguage("fi", "Finnish"),
-    SubtitleLanguage("th", "Thai"),
-    SubtitleLanguage("vi", "Vietnamese"),
-    SubtitleLanguage("id", "Indonesian"),
-    SubtitleLanguage("ms", "Malay"),
-    SubtitleLanguage("he", "Hebrew"),
-    SubtitleLanguage("el", "Greek"),
-    SubtitleLanguage("cs", "Czech"),
-    SubtitleLanguage("hu", "Hungarian"),
     SubtitleLanguage("ro", "Romanian"),
-    SubtitleLanguage("uk", "Ukrainian"),
-    SubtitleLanguage("bg", "Bulgarian"),
-    SubtitleLanguage("hr", "Croatian"),
+    SubtitleLanguage("ru", "Russian"),
+    SubtitleLanguage("sr", "Serbian"),
+    SubtitleLanguage("si", "Sinhala"),
     SubtitleLanguage("sk", "Slovak"),
     SubtitleLanguage("sl", "Slovenian"),
-    SubtitleLanguage("sr", "Serbian"),
+    SubtitleLanguage("es", "Spanish"),
+    SubtitleLanguage("es-419", "Spanish (Latin America)"),
+    SubtitleLanguage("sw", "Swahili"),
+    SubtitleLanguage("sv", "Swedish"),
     SubtitleLanguage("ta", "Tamil"),
     SubtitleLanguage("te", "Telugu"),
-    SubtitleLanguage("ml", "Malayalam"),
-    SubtitleLanguage("bn", "Bengali"),
-    SubtitleLanguage("mr", "Marathi"),
-    SubtitleLanguage("gu", "Gujarati"),
-    SubtitleLanguage("kn", "Kannada"),
-    SubtitleLanguage("pa", "Punjabi")
+    SubtitleLanguage("th", "Thai"),
+    SubtitleLanguage("tr", "Turkish"),
+    SubtitleLanguage("uk", "Ukrainian"),
+    SubtitleLanguage("ur", "Urdu"),
+    SubtitleLanguage("uz", "Uzbek"),
+    SubtitleLanguage("vi", "Vietnamese"),
+    SubtitleLanguage("cy", "Welsh"),
+    SubtitleLanguage("zu", "Zulu")
 )
 
 /**
@@ -145,13 +184,15 @@ data class PlayerSettings(
     val streamAutoPlayRegex: String = "",
     val streamAutoPlayNextEpisodeEnabled: Boolean = false,
     val streamAutoPlayPreferBingeGroupForNextEpisode: Boolean = true,
+    val streamAutoPlayTimeoutSeconds: Int = 3,
     val nextEpisodeThresholdMode: NextEpisodeThresholdMode = NextEpisodeThresholdMode.PERCENTAGE,
     val nextEpisodeThresholdPercent: Float = 99f,
     val nextEpisodeThresholdMinutesBeforeEnd: Float = 2f,
     val streamReuseLastLinkEnabled: Boolean = false,
     val streamReuseLastLinkCacheHours: Int = 24,
     val subtitleOrganizationMode: SubtitleOrganizationMode = SubtitleOrganizationMode.NONE,
-    val addonSubtitleStartupMode: AddonSubtitleStartupMode = AddonSubtitleStartupMode.ALL_SUBTITLES
+    val addonSubtitleStartupMode: AddonSubtitleStartupMode = AddonSubtitleStartupMode.ALL_SUBTITLES,
+    val resizeMode: Int = 0 
 )
 
 enum class StreamAutoPlayMode {
@@ -249,6 +290,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val streamAutoPlayRegexKey = stringPreferencesKey("stream_auto_play_regex")
     private val streamAutoPlayNextEpisodeEnabledKey = booleanPreferencesKey("stream_auto_play_next_episode_enabled")
     private val streamAutoPlayPreferBingeGroupForNextEpisodeKey = booleanPreferencesKey("stream_auto_play_prefer_bingegroup_next_episode")
+    private val streamAutoPlayTimeoutSecondsKey = intPreferencesKey("stream_auto_play_timeout_seconds")
     private val nextEpisodeThresholdModeKey = stringPreferencesKey("next_episode_threshold_mode")
     private val nextEpisodeThresholdPercentLegacyKey = intPreferencesKey("next_episode_threshold_percent")
     private val nextEpisodeThresholdMinutesBeforeEndLegacyKey = intPreferencesKey("next_episode_threshold_minutes_before_end")
@@ -258,6 +300,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val streamReuseLastLinkCacheHoursKey = intPreferencesKey("stream_reuse_last_link_cache_hours")
     private val subtitleOrganizationModeKey = stringPreferencesKey("subtitle_organization_mode")
     private val addonSubtitleStartupModeKey = stringPreferencesKey("addon_subtitle_startup_mode")
+    private val resizeModeKey = intPreferencesKey("resize_mode")
 
     // Subtitle style settings keys
     private val subtitlePreferredLanguageKey = stringPreferencesKey("subtitle_preferred_language")
@@ -396,6 +439,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 streamAutoPlayNextEpisodeEnabled = prefs[streamAutoPlayNextEpisodeEnabledKey] ?: false,
                 streamAutoPlayPreferBingeGroupForNextEpisode =
                     prefs[streamAutoPlayPreferBingeGroupForNextEpisodeKey] ?: true,
+                streamAutoPlayTimeoutSeconds = (prefs[streamAutoPlayTimeoutSecondsKey] ?: 3).coerceIn(0, 11),
                 nextEpisodeThresholdMode = prefs[nextEpisodeThresholdModeKey]?.let {
                     runCatching { NextEpisodeThresholdMode.valueOf(it) }.getOrDefault(NextEpisodeThresholdMode.PERCENTAGE)
                 } ?: NextEpisodeThresholdMode.PERCENTAGE,
@@ -417,6 +461,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 streamReuseLastLinkCacheHours = (prefs[streamReuseLastLinkCacheHoursKey] ?: 24).coerceIn(1, 168),
                 subtitleOrganizationMode = parseSubtitleOrganizationMode(prefs[subtitleOrganizationModeKey]),
                 addonSubtitleStartupMode = parseAddonSubtitleStartupMode(prefs[addonSubtitleStartupModeKey]),
+                resizeMode = (prefs[resizeModeKey] ?: 0).coerceIn(0, 4),
                 subtitleStyle = SubtitleStyleSettings(
                     preferredLanguage = normalizeSelectableLanguageCode(
                         prefs[subtitlePreferredLanguageKey] ?: "en"
@@ -599,6 +644,12 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setStreamAutoPlayTimeoutSeconds(seconds: Int) {
+        store().edit { prefs ->
+            prefs[streamAutoPlayTimeoutSecondsKey] = seconds.coerceIn(0, 11)
+        }
+    }
+
     suspend fun setNextEpisodeThresholdMode(mode: NextEpisodeThresholdMode) {
         store().edit { prefs ->
             prefs[nextEpisodeThresholdModeKey] = mode.name
@@ -651,6 +702,12 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setAddonSubtitleStartupMode(mode: AddonSubtitleStartupMode) {
         store().edit { prefs ->
             prefs[addonSubtitleStartupModeKey] = mode.name
+        }
+    }
+
+    suspend fun setResizeMode(mode: Int) {
+        store().edit { prefs ->
+            prefs[resizeModeKey] = mode.coerceIn(0, 4)
         }
     }
 

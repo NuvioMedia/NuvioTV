@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.runtime.Composable
@@ -81,6 +82,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
     onSetStreamAutoPlayPreferBingeGroupForNextEpisode: (Boolean) -> Unit,
     onSetNextEpisodeThresholdPercent: (Float) -> Unit,
     onSetNextEpisodeThresholdMinutesBeforeEnd: (Float) -> Unit,
+    onSetStreamAutoPlayTimeoutSeconds: (Int) -> Unit,
     onSetReuseLastLinkEnabled: (Boolean) -> Unit,
     onItemFocused: () -> Unit = {}
 ) {
@@ -122,6 +124,27 @@ internal fun LazyListScope.autoPlaySettingsItems(
         )
     }
 
+    item(key = "autoplay_stream_timeout") {
+        val timeoutSec = playerSettings.streamAutoPlayTimeoutSeconds
+        val valueText = when (timeoutSec) {
+            0 -> stringResource(R.string.autoplay_timeout_instant)
+            11 -> stringResource(R.string.autoplay_timeout_unlimited)
+            else -> "${timeoutSec}s"
+        }
+        SliderSettingsItem(
+            icon = Icons.Default.Timer,
+            title = stringResource(R.string.autoplay_timeout_title),
+            subtitle = stringResource(R.string.autoplay_timeout_sub),
+            value = timeoutSec,
+            valueText = valueText,
+            minValue = 0,
+            maxValue = 11,
+            step = 1,
+            onValueChange = { onSetStreamAutoPlayTimeoutSeconds(it) },
+            onFocused = onItemFocused
+        )
+    }
+
     item(key = "autoplay_next_episode") {
         ToggleSettingsItem(
             icon = Icons.Default.SkipNext,
@@ -136,8 +159,8 @@ internal fun LazyListScope.autoPlaySettingsItems(
     item(key = "autoplay_next_episode_prefer_binge_group") {
         ToggleSettingsItem(
             icon = Icons.Default.Tune,
-            title = "Prefer Binge Group (Next Episode)",
-            subtitle = "Try the same source profile first (same addon/quality group) before normal auto-play rules.",
+            title = stringResource(R.string.autoplay_prefer_binge_group),
+            subtitle = stringResource(R.string.autoplay_prefer_binge_group_sub),
             isChecked = playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode,
             onCheckedChange = onSetStreamAutoPlayPreferBingeGroupForNextEpisode,
             onFocused = onItemFocused

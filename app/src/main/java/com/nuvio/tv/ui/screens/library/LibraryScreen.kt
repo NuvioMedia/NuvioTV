@@ -403,7 +403,7 @@ private fun LibrarySelectorsRow(
 ) {
     val selectedListLabel = listTabs.firstOrNull { it.key == selectedListKey }?.title ?: "Select"
     val selectedTypeLabel = selectedTypeTab?.let { localizedTypeLabel(it.key) } ?: stringResource(R.string.library_type_all)
-    val selectedSortLabel = selectedSortOption.label
+    val selectedSortLabel = stringResource(selectedSortOption.labelResId)
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -416,6 +416,7 @@ private fun LibrarySelectorsRow(
                     .focusRequester(primaryFocusRequester),
                 title = stringResource(R.string.library_filter_list),
                 value = selectedListLabel,
+                selectedValue = selectedListKey,
                 expanded = expandedPicker == "list",
                 options = listTabs.map { LibraryOption(it.title, it.key) },
                 onExpandedChange = { onExpandedChange("list", it) },
@@ -433,6 +434,7 @@ private fun LibrarySelectorsRow(
             },
             title = stringResource(R.string.library_filter_type),
             value = selectedTypeLabel,
+            selectedValue = selectedTypeTab?.key,
             expanded = expandedPicker == "type",
             options = typeTabs.map { LibraryOption(localizedTypeLabel(it.key), it.key) },
             onExpandedChange = { onExpandedChange("type", it) },
@@ -447,8 +449,9 @@ private fun LibrarySelectorsRow(
                     .weight(1f),
                 title = stringResource(R.string.library_filter_sort),
                 value = selectedSortLabel,
+                selectedValue = selectedSortOption.key,
                 expanded = expandedPicker == "sort",
-                options = sortOptions.map { LibraryOption(it.label, it.key) },
+                options = sortOptions.map { LibraryOption(stringResource(it.labelResId), it.key) },
                 onExpandedChange = { onExpandedChange("sort", it) },
                 onSelect = { option ->
                     sortOptions.firstOrNull { it.key == option.value }?.let(onSelectSort)
@@ -464,6 +467,7 @@ private fun LibraryDropdownPicker(
     modifier: Modifier = Modifier,
     title: String,
     value: String,
+    selectedValue: String?,
     expanded: Boolean,
     options: List<LibraryOption>,
     onExpandedChange: (Boolean) -> Unit,
@@ -471,6 +475,7 @@ private fun LibraryDropdownPicker(
 ) {
     var isFocused by remember { mutableStateOf(false) }
     var anchorSize by remember { mutableStateOf(IntSize.Zero) }
+    var focusedOptionValue by remember(expanded) { mutableStateOf<String?>(null) }
 
     Box(modifier = modifier) {
         Card(
@@ -533,7 +538,10 @@ private fun LibraryDropdownPicker(
 
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { onExpandedChange(false) },
+            onDismissRequest = {
+                focusedOptionValue = null
+                onExpandedChange(false)
+            },
             modifier = Modifier
                 .width(with(LocalDensity.current) { anchorSize.width.toDp() })
                 .heightIn(max = 320.dp),
@@ -544,18 +552,45 @@ private fun LibraryDropdownPicker(
             border = BorderStroke(1.dp, NuvioColors.Border)
         ) {
             options.forEach { option ->
+                val isSelected = option.value == selectedValue
+                val isOptionFocused = option.value == focusedOptionValue
+                val itemTextColor = when {
+                    isOptionFocused -> NuvioColors.OnSecondary
+                    isSelected -> NuvioColors.TextPrimary
+                    else -> NuvioColors.TextPrimary
+                }
+                val itemBackgroundColor = when {
+                    isOptionFocused -> NuvioColors.Secondary
+                    isSelected -> NuvioColors.FocusBackground
+                    else -> Color.Transparent
+                }
+
                 DropdownMenuItem(
+                    modifier = Modifier
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .background(
+                            color = itemBackgroundColor,
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        .onFocusChanged { state ->
+                            val hasFocus = state.isFocused || state.hasFocus
+                            focusedOptionValue = when {
+                                hasFocus -> option.value
+                                focusedOptionValue == option.value -> null
+                                else -> focusedOptionValue
+                            }
+                        },
                     text = {
                         Text(
                             text = option.label,
-                            color = NuvioColors.TextPrimary,
+                            color = itemTextColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     },
                     onClick = { onSelect(option) },
                     colors = MenuDefaults.itemColors(
-                        textColor = NuvioColors.TextPrimary,
+                        textColor = itemTextColor,
                         disabledTextColor = NuvioColors.TextDisabled
                     )
                 )

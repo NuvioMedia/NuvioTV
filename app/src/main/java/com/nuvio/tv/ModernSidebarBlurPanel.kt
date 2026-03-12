@@ -41,10 +41,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
@@ -56,6 +56,10 @@ import com.nuvio.tv.ui.theme.NuvioColors
 import coil.compose.rememberAsyncImagePainter
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
+
+private val SidebarLeadingVisualSize = 34.dp
+private val SidebarContentGap = 14.dp
+private val SidebarProfileContentGap = 18.dp
 
 @Composable
 internal fun ModernSidebarBlurPanel(
@@ -75,6 +79,7 @@ internal fun ModernSidebarBlurPanel(
     onDrawerItemClick: (String) -> Unit,
     activeProfileName: String,
     activeProfileColorHex: String,
+    activeProfileAvatarImageUrl: String?,
     showProfileSelector: Boolean,
     onSwitchProfile: () -> Unit
 ) {
@@ -130,19 +135,43 @@ internal fun ModernSidebarBlurPanel(
             .border(width = 1.dp, color = panelBorderColor, shape = panelShape)
             .padding(horizontal = 12.dp, vertical = 14.dp)
     ) {
-        val headerLogoRes = if (isSidebarExpanded) R.drawable.app_logo_wordmark else R.drawable.app_logo_mark
-        val headerLogoHeight = if (isSidebarExpanded) 42.dp else 34.dp
-        val headerLogoContentDescription = if (isSidebarExpanded) "NuvioTV" else "Nuvio"
-
-        Image(
-            painter = painterResource(id = headerLogoRes),
-            contentDescription = headerLogoContentDescription,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(headerLogoHeight)
-                .offset(y = 12.dp),
-            contentScale = ContentScale.Fit
-        )
+        if (showProfileSelector && activeProfileName.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                SidebarProfileItem(
+                    profileName = activeProfileName,
+                    profileColorHex = activeProfileColorHex,
+                    profileAvatarImageUrl = activeProfileAvatarImageUrl,
+                    focusEnabled = keepSidebarFocusDuringCollapse,
+                    labelAlpha = sidebarLabelAlpha,
+                    onFocusChanged = { focused ->
+                        if (focused) onDrawerItemFocused(drawerItems.size)
+                    },
+                    onClick = onSwitchProfile,
+                    modifier = Modifier.fillMaxWidth(0.92f)
+                )
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.app_logo_wordmark),
+                    contentDescription = "NuvioTV",
+                    modifier = Modifier
+                        .fillMaxWidth(0.72f)
+                        .height(36.dp),
+                    alpha = sidebarLabelAlpha
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -180,25 +209,6 @@ internal fun ModernSidebarBlurPanel(
             }
         }
 
-        if (showProfileSelector && activeProfileName.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                SidebarProfileItem(
-                    profileName = activeProfileName,
-                    profileColorHex = activeProfileColorHex,
-                    focusEnabled = keepSidebarFocusDuringCollapse,
-                    labelAlpha = sidebarLabelAlpha,
-                    onFocusChanged = { focused ->
-                        if (focused) onDrawerItemFocused(drawerItems.size)
-                    },
-                    onClick = onSwitchProfile,
-                    modifier = Modifier.fillMaxWidth(0.92f)
-                )
-            }
-        }
     }
 }
 
@@ -234,9 +244,6 @@ private fun SidebarNavigationItem(
 
     val contentColor = if (selected) Color(0xFF10151F) else Color.White
     val iconCircleColor = if (selected) Color(0xFFE7E2EF) else Color(0xFF6A6A74)
-    val iconContainerSize = 34.dp
-    val contentGap = 14.dp
-
     Row(
         modifier = modifier
             .clip(shape)
@@ -260,7 +267,7 @@ private fun SidebarNavigationItem(
     ) {
         Box(
             modifier = Modifier
-                .size(iconContainerSize)
+                .size(SidebarLeadingVisualSize)
                 .clip(CircleShape)
                 .background(iconCircleColor)
                 .padding(6.dp)
@@ -286,7 +293,7 @@ private fun SidebarNavigationItem(
                 )
             }
         }
-        Spacer(modifier = Modifier.width(contentGap))
+        Spacer(modifier = Modifier.width(SidebarContentGap))
 
         Text(
             text = label,
@@ -298,7 +305,6 @@ private fun SidebarNavigationItem(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        Spacer(modifier = Modifier.width(iconContainerSize + contentGap))
     }
 }
 
@@ -306,6 +312,7 @@ private fun SidebarNavigationItem(
 private fun SidebarProfileItem(
     profileName: String,
     profileColorHex: String,
+    profileAvatarImageUrl: String?,
     focusEnabled: Boolean,
     labelAlpha: Float,
     onFocusChanged: (Boolean) -> Unit,
@@ -324,9 +331,6 @@ private fun SidebarProfileItem(
         animationSpec = tween(durationMillis = 180),
         label = "profileItemBorder"
     )
-    val contentGap = 14.dp
-    val iconContainerSize = 34.dp
-
     Row(
         modifier = modifier
             .clip(shape)
@@ -348,19 +352,29 @@ private fun SidebarProfileItem(
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        ProfileAvatarCircle(
-            name = profileName,
-            colorHex = profileColorHex,
-            size = iconContainerSize
-        )
-        Spacer(modifier = Modifier.width(contentGap))
+        Box(
+            modifier = Modifier.size(SidebarLeadingVisualSize),
+            contentAlignment = Alignment.Center
+        ) {
+            ProfileAvatarCircle(
+                name = profileName,
+                colorHex = profileColorHex,
+                size = SidebarLeadingVisualSize,
+                avatarImageUrl = profileAvatarImageUrl
+            )
+        }
+        Spacer(modifier = Modifier.width(SidebarProfileContentGap))
         Text(
             text = profileName,
             color = Color.White,
             modifier = Modifier
+                .weight(1f)
                 .graphicsLayer { alpha = labelAlpha },
-            style = androidx.tv.material3.MaterialTheme.typography.titleLarge,
-            maxLines = 1
+            style = androidx.tv.material3.MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.SemiBold
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

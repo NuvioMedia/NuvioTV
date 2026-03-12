@@ -20,26 +20,19 @@ internal data class SubtitleFetchRequest(
 internal fun PlayerRuntimeController.buildSubtitleFetchRequest(): SubtitleFetchRequest? {
     val id = contentId ?: return null
     val type = contentType ?: return null
-    val baseId = id.split(":").firstOrNull() ?: id
-    val normalizedType = type.lowercase()
-    val videoId = if (
-        (normalizedType == "series" || normalizedType == "tv") &&
-        currentSeason != null &&
-        currentEpisode != null
-    ) {
-        "$baseId:$currentSeason:$currentEpisode"
-    } else {
-        null
-    }
     return SubtitleFetchRequest(
         type = type.lowercase(),
-        id = baseId,
-        videoId = videoId
+        id = id,
+        videoId = currentVideoId
     )
 }
 
 internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(): List<Subtitle> {
     val request = buildSubtitleFetchRequest() ?: return emptyList()
+    val installedAddonOrder = addonRepository.getInstalledAddons().firstOrNull()
+        ?.map { it.displayName }
+        .orEmpty()
+    _uiState.update { it.copy(installedSubtitleAddonOrder = installedAddonOrder) }
 
     // Compute hash lazily for providers that support OpenSubtitles-style matching.
     if (currentVideoHash == null && currentStreamUrl.isNotBlank()) {
@@ -47,6 +40,24 @@ internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(): List<Subt
         if (result != null) {
             currentVideoHash = result.hash
             if (currentVideoSize == null) currentVideoSize = result.fileSize
+            // Update cache now that we have the computed hash
+            val key = streamCacheKey
+            val url = currentStreamUrl.takeIf { it.isNotBlank() }
+            if (key != null && url != null) {
+                val state = _uiState.value
+                val selectedAudio = state.audioTracks.getOrNull(state.selectedAudioTrackIndex)
+                streamLinkCacheDataStore.save(
+                    contentKey = key,
+                    url = url,
+                    streamName = state.currentStreamName ?: title,
+                    headers = currentHeaders,
+                    rememberedAudioLanguage = selectedAudio?.language ?: rememberedAudioLanguage,
+                    rememberedAudioName = selectedAudio?.name ?: rememberedAudioName,
+                    filename = currentFilename,
+                    videoHash = currentVideoHash,
+                    videoSize = currentVideoSize
+                )
+            }
         }
     }
 
@@ -75,6 +86,10 @@ internal fun PlayerRuntimeController.fetchAddonSubtitles() {
                     isLoadingAddonSubtitles = false
                 ) 
             }
+            restorePendingSameSeriesTrackSelection(
+                audioTracks = _uiState.value.audioTracks,
+                subtitleTracks = _uiState.value.subtitleTracks
+            )
             tryAutoSelectPreferredSubtitleFromAvailableTracks()
         } catch (e: Exception) {
             _uiState.update { 
@@ -145,7 +160,6 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
 
                 state.copy(
                     subtitleStyle = settings.subtitleStyle,
-                    subtitleOrganizationMode = settings.subtitleOrganizationMode,
                     loadingOverlayEnabled = settings.loadingOverlayEnabled,
                     showLoadingOverlay = shouldShowOverlay,
                     pauseOverlayEnabled = settings.pauseOverlayEnabled,
@@ -175,6 +189,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             }
             streamReuseLastLinkEnabled = settings.streamReuseLastLinkEnabled
             streamAutoPlayModeSetting = settings.streamAutoPlayMode
+            _uiState.update { it.copy(streamAutoPlayMode = settings.streamAutoPlayMode) }
             streamAutoPlayNextEpisodeEnabledSetting = settings.streamAutoPlayNextEpisodeEnabled
             streamAutoPlayPreferBingeGroupForNextEpisodeSetting =
                 settings.streamAutoPlayPreferBingeGroupForNextEpisode
@@ -325,7 +340,13 @@ internal fun PlayerRuntimeController.retryCurrentStreamFromStartAfter416() {
         runCatching {
             player.stop()
             player.clearMediaItems()
-            player.setMediaSource(mediaSourceFactory.createMediaSource(currentStreamUrl, currentHeaders))
+            player.setMediaSource(
+                mediaSourceFactory.createMediaSource(
+                    url = currentStreamUrl,
+                    headers = currentHeaders,
+                    mimeTypeOverride = currentStreamMimeType
+                )
+            )
             player.seekTo(0L)
             player.playWhenReady = true
             player.prepare()
