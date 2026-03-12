@@ -69,6 +69,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import coil.imageLoader
+import coil.memory.MemoryCache
 import coil.request.ImageRequest
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
@@ -83,6 +85,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 private const val MODERN_HORIZONTAL_FOCUS_DEBOUNCE_MS = 140L
+private const val POSTER_PREFETCH_DISTANCE = 8
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -126,7 +129,7 @@ private fun ModernCatalogRowItem(
     effectiveExpandEnabled: Boolean,
     effectiveAutoplayEnabled: Boolean,
     trailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget,
-    expandedCatalogFocusKey: String?,
+    isBackdropExpanded: Boolean,
     expandedTrailerPreviewUrl: String?,
     expandedTrailerPreviewAudioUrl: String?,
     isWatched: Boolean,
@@ -167,16 +170,13 @@ private fun ModernCatalogRowItem(
     val suppressCardExpansionForHeroTrailer =
         effectiveAutoplayEnabled &&
             trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA
-    val isBackdropExpanded =
-        effectiveExpandEnabled &&
-            expandedCatalogFocusKey == focusKey &&
-            !suppressCardExpansionForHeroTrailer
+    val effectiveBackdropExpanded = isBackdropExpanded && !suppressCardExpansionForHeroTrailer
     val isSidebarExpanded = LocalSidebarExpanded.current
     val playTrailerInExpandedCard =
         effectiveAutoplayEnabled &&
             !isSidebarExpanded &&
             trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD &&
-            isBackdropExpanded
+            effectiveBackdropExpanded
     val trailerPreviewUrl = if (playTrailerInExpandedCard) {
         expandedTrailerPreviewUrl
     } else {
@@ -196,7 +196,7 @@ private fun ModernCatalogRowItem(
         cardWidth = modernCatalogCardWidth,
         cardHeight = modernCatalogCardHeight,
         focusedPosterBackdropExpandEnabled = effectiveExpandEnabled,
-        isBackdropExpanded = isBackdropExpanded,
+        isBackdropExpanded = effectiveBackdropExpanded,
         playTrailerInExpandedCard = playTrailerInExpandedCard,
         focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
         trailerPreviewUrl = trailerPreviewUrl,
@@ -373,6 +373,49 @@ internal fun ModernRowSection(
 
         val density = LocalDensity.current
         val rowStartPadding = 52.dp
+        val context = LocalContext.current
+        val imageLoader = context.imageLoader
+
+        LaunchedEffect(row.key, row.items, modernCatalogCardWidth, modernCatalogCardHeight) {
+            val widthPx = with(density) { modernCatalogCardWidth.roundToPx() }
+            val heightPx = with(density) { modernCatalogCardHeight.roundToPx() }
+            // Prefetch initial visible + ahead items immediately when row appears
+            for (i in 0 until minOf(POSTER_PREFETCH_DISTANCE, row.items.size)) {
+                val imageUrl = row.items.getOrNull(i)
+                    ?.takeIf { it.payload is ModernPayload.Catalog }
+                    ?.imageUrl ?: continue
+                val cacheKey = "${imageUrl}_${widthPx}x${heightPx}"
+                if (imageLoader.memoryCache?.get(MemoryCache.Key(cacheKey)) != null) continue
+                imageLoader.enqueue(
+                    ImageRequest.Builder(context)
+                        .data(imageUrl)
+                        .memoryCacheKey(cacheKey)
+                        .size(width = widthPx, height = heightPx)
+                        .build()
+                )
+            }
+            snapshotFlow {
+                rowListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            }
+                .distinctUntilChanged()
+                .collect { lastVisibleIndex ->
+                    for (i in (lastVisibleIndex + 1)..(lastVisibleIndex + POSTER_PREFETCH_DISTANCE)) {
+                        val imageUrl = row.items.getOrNull(i)
+                            ?.takeIf { it.payload is ModernPayload.Catalog }
+                            ?.imageUrl ?: continue
+                        val cacheKey = "${imageUrl}_${widthPx}x${heightPx}"
+                        if (imageLoader.memoryCache?.get(MemoryCache.Key(cacheKey)) != null) continue
+                        imageLoader.enqueue(
+                            ImageRequest.Builder(context)
+                                .data(imageUrl)
+                                .memoryCacheKey(cacheKey)
+                                .size(width = widthPx, height = heightPx)
+                                .build()
+                        )
+                    }
+                }
+        }
+
         val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec) {
             val parentStartOffsetPx = with(density) { rowStartPadding.roundToPx() }
             @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
@@ -458,12 +501,11 @@ internal fun ModernRowSection(
 
                         is ModernPayload.Catalog -> {
                             val nextCatalogItem = row.items.getOrNull(index + 1)?.metaPreview
-                            val isWatched = isCatalogItemWatched(item.metaPreview ?: return@itemsIndexed)
-                            val onLongPress: () -> Unit = remember(item.metaPreview, payload.addonBaseUrl) {
+                            val metaPreview = item.metaPreview ?: return@itemsIndexed
+                            val isWatched = isCatalogItemWatched(metaPreview)
+                            val onLongPress: () -> Unit = remember(metaPreview, payload.addonBaseUrl) {
                                 {
-                                    item.metaPreview?.let { preview ->
-                                        onCatalogItemLongPress(preview, payload.addonBaseUrl)
-                                    }
+                                    onCatalogItemLongPress(metaPreview, payload.addonBaseUrl)
                                     Unit
                                 }
                             }
@@ -477,10 +519,11 @@ internal fun ModernRowSection(
                                 modernCatalogCardWidth = modernCatalogCardWidth,
                                 modernCatalogCardHeight = modernCatalogCardHeight,
                                 focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
-                                effectiveExpandEnabled = effectiveExpandEnabled && !isRowScrolling,
-                                effectiveAutoplayEnabled = effectiveAutoplayEnabled && !isRowScrolling,
+                                effectiveExpandEnabled = effectiveExpandEnabled,
+                                effectiveAutoplayEnabled = effectiveAutoplayEnabled,
                                 trailerPlaybackTarget = trailerPlaybackTarget,
-                                expandedCatalogFocusKey = expandedCatalogFocusKey,
+                                isBackdropExpanded = effectiveExpandEnabled && !isRowScrolling &&
+                                    expandedCatalogFocusKey == payload.focusKey,
                                 expandedTrailerPreviewUrl = expandedTrailerPreviewUrl,
                                 expandedTrailerPreviewAudioUrl = expandedTrailerPreviewAudioUrl,
                                 isWatched = isWatched,
@@ -568,6 +611,7 @@ private fun ModernCarouselCard(
             ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(false)
+                .memoryCacheKey("${it}_${requestWidthPx}x${requestHeightPx}")
                 .size(width = requestWidthPx, height = requestHeightPx)
                 .build()
         }
@@ -584,6 +628,7 @@ private fun ModernCarouselCard(
             ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(true)
+                .memoryCacheKey("${it}_${maxLogoWidthPx}x${logoHeightPx}")
                 .size(width = maxLogoWidthPx, height = logoHeightPx)
                 .build()
         }
