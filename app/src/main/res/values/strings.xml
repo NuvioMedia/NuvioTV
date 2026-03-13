@@ -729,6 +729,15 @@
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
+    <string name="audio_dialog_tab_tracks">Audio</string>
+    <string name="audio_dialog_tab_mix">Mix</string>
+    <string name="audio_mix_label">Amplification (PCM)</string>
+    <string name="audio_mix_value_db">%1$d dB</string>
+    <string name="audio_mix_persist_on">Persist between sessions: ON</string>
+    <string name="audio_mix_persist_off">Persist between sessions: OFF</string>
+    <string name="audio_mix_range">Range: %1$d dB to %2$d dB</string>
+    <string name="audio_mix_range_saved">Range: %1$d dB to %2$d dB (saved)</string>
+    <string name="audio_mix_unavailable">Amplification is not available on this device</string>
 
     <!-- SubtitleDialog / SubtitleStyleSidePanel -->
     <string name="subtitle_dialog_title">Subtitles</string>
