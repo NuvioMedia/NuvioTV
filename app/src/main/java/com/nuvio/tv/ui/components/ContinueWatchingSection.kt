@@ -246,7 +246,7 @@ fun ContinueWatchingCard(
         }
     }
     val remainingText = progress?.let {
-        remember(it.position, it.duration, it.progressPercent, strResume, strPercentWatched) {
+        remember(it.position, it.duration, it.progressPercent) {
             formatContinueWatchingProgressLabel(
                 progress = it,
                 hoursMinLeftLabel = strHoursMinLeft,
