@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Divider
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -45,6 +47,7 @@ import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import com.nuvio.tv.data.local.StartupAuthNotice
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlin.math.roundToInt
 
@@ -238,6 +241,29 @@ fun HomeScreen(
                         }
                     }
                 }
+            }
+        }
+
+        val startupAuthNotice = uiState.startupAuthNotice
+        if (startupAuthNotice != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 24.dp)
+                    .background(
+                        color = Color(0xFF5A1C1C),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    .padding(horizontal = 18.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    text = when (startupAuthNotice) {
+                        StartupAuthNotice.NUVIO -> stringResource(R.string.auth_notice_nuvio_logged_out)
+                        StartupAuthNotice.TRAKT -> stringResource(R.string.auth_notice_trakt_logged_out)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NuvioColors.TextPrimary
+                )
             }
         }
     }

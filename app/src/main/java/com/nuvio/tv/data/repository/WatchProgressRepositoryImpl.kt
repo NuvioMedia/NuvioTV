@@ -232,22 +232,31 @@ class WatchProgressRepositoryImpl @Inject constructor(
     private suspend fun hasEffectiveTraktConnection(): Boolean =
         traktAuthDataStore.isEffectivelyAuthenticated.first()
 
+    private fun traktAllProgressFlow(): Flow<List<WatchProgress>> {
+        return combine(
+            traktProgressService.observeAllProgress()
+                .onStart {
+                    emit(emptyList())
+                },
+            watchProgressPreferences.allProgress,
+            metadataState,
+            traktProgressService.observeRemoteProgressLoaded()
+        ) { remoteItems, localItems, metadataMap, remoteLoaded ->
+            val visibleItems = if (remoteLoaded || remoteItems.isNotEmpty()) {
+                remoteItems
+            } else {
+                localItems
+            }
+            hydrateMetadata(visibleItems)
+            visibleItems.map { enrichWithMetadata(it, metadataMap) }
+        }.distinctUntilChanged()
+    }
+
     override val allProgress: Flow<List<WatchProgress>>
         get() = useTraktProgressFlow()
             .flatMapLatest { useTraktProgress ->
                 if (useTraktProgress) {
-                    combine(
-                        traktProgressService.observeAllProgress()
-                            .onStart {
-                                // Emit an empty Trakt-backed state immediately while the first
-                                // Trakt snapshot is still loading.
-                                emit(emptyList())
-                            },
-                        metadataState
-                    ) { remoteItems, metadataMap ->
-                        hydrateMetadata(remoteItems)
-                        remoteItems.map { enrichWithMetadata(it, metadataMap) }
-                    }
+                    traktAllProgressFlow()
                 } else {
                     combine(
                         watchProgressPreferences.allProgress,
@@ -266,7 +275,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
         return useTraktProgressFlow()
             .flatMapLatest { useTraktProgress ->
                 if (useTraktProgress) {
-                    traktProgressService.observeAllProgress().map { items ->
+                    traktAllProgressFlow().map { items ->
                         items
                             .filter { it.contentId == contentId }
                             .maxByOrNull { it.lastWatched }
@@ -281,11 +290,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
         return useTraktProgressFlow()
             .flatMapLatest { useTraktProgress ->
                 if (useTraktProgress) {
-                    traktProgressService.observeAllProgress().map { items ->
-                        items.firstOrNull {
-                            it.contentId == contentId && it.season == season && it.episode == episode
-                        }
-                    }
+                    getAllEpisodeProgress(contentId).map { progressMap -> progressMap[season to episode] }
                 } else {
                     watchProgressPreferences.getEpisodeProgress(contentId, season, episode)
                 }
@@ -297,18 +302,18 @@ class WatchProgressRepositoryImpl @Inject constructor(
             .flatMapLatest { useTraktProgress ->
                 if (useTraktProgress) {
                     combine(
-                        traktProgressService.observeEpisodeProgress(contentId),
-                        allProgress.map { items ->
-                            items.filter { it.contentId == contentId && it.season != null && it.episode != null }
+                        traktProgressService.observeEpisodeProgress(contentId)
+                            .onStart {
+                                emit(emptyMap())
+                            },
+                        watchProgressPreferences.getAllEpisodeProgress(contentId),
+                        traktProgressService.observeEpisodeProgressLoaded(contentId)
+                    ) { remoteMap, localMap, remoteLoaded ->
+                        if (remoteLoaded || remoteMap.isNotEmpty()) {
+                            remoteMap
+                        } else {
+                            localMap
                         }
-                    ) { remoteMap, liveEpisodes ->
-                        val merged = remoteMap.toMutableMap()
-                        liveEpisodes.forEach { episodeProgress ->
-                            val season = episodeProgress.season ?: return@forEach
-                            val episode = episodeProgress.episode ?: return@forEach
-                            merged[season to episode] = episodeProgress
-                        }
-                        merged
                     }.distinctUntilChanged()
                 } else {
                     watchProgressPreferences.getAllEpisodeProgress(contentId)

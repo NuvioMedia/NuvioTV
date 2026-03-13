@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
+import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
+import com.nuvio.tv.data.local.StartupAuthNotice
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchedItemsPreferences
@@ -49,6 +51,7 @@ class HomeViewModel @Inject constructor(
     internal val playerSettingsDataStore: PlayerSettingsDataStore,
     internal val tmdbSettingsDataStore: TmdbSettingsDataStore,
     internal val traktSettingsDataStore: TraktSettingsDataStore,
+    internal val authSessionNoticeDataStore: AuthSessionNoticeDataStore,
     internal val tmdbService: TmdbService,
     internal val tmdbMetadataService: TmdbMetadataService,
     internal val trailerService: TrailerService,
@@ -134,6 +137,7 @@ class HomeViewModel @Inject constructor(
     internal var externalMetaPrefetchEnabled: Boolean = false
     @Volatile
     internal var startupGracePeriodActive: Boolean = true
+    internal var startupAuthNoticeJob: Job? = null
     val trailerPreviewUrls: Map<String, String>
         get() = trailerPreviewUrlsState
     val trailerPreviewAudioUrls: Map<String, String>
@@ -146,6 +150,7 @@ class HomeViewModel @Inject constructor(
         loadDisabledHomeCatalogPreference()
         observeLibraryState()
         observeTmdbSettings()
+        observeStartupAuthNotice()
         loadContinueWatching()
         observeInstalledAddons()
         viewModelScope.launch {
@@ -181,6 +186,33 @@ class HomeViewModel @Inject constructor(
     private fun loadDisabledHomeCatalogPreference() = loadDisabledHomeCatalogPreferencePipeline()
 
     private fun observeTmdbSettings() = observeTmdbSettingsPipeline()
+
+    private fun observeStartupAuthNotice() {
+        viewModelScope.launch {
+            authSessionNoticeDataStore.pendingNotice.collect { notice ->
+                if (notice == null) return@collect
+                _uiState.update { state ->
+                    if (state.startupAuthNotice == notice) state else state.copy(startupAuthNotice = notice)
+                }
+                startupAuthNoticeJob?.cancel()
+                startupAuthNoticeJob = viewModelScope.launch {
+                    delay(3200)
+                    clearStartupAuthNotice(notice)
+                }
+                authSessionNoticeDataStore.consumeNotice(notice)
+            }
+        }
+    }
+
+    private fun clearStartupAuthNotice(notice: StartupAuthNotice) {
+        _uiState.update { state ->
+            if (state.startupAuthNotice == notice) {
+                state.copy(startupAuthNotice = null)
+            } else {
+                state
+            }
+        }
+    }
 
     fun onEvent(event: HomeEvent) {
         when (event) {
@@ -315,6 +347,7 @@ class HomeViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        startupAuthNoticeJob?.cancel()
         posterStatusReconcileJob?.cancel()
         movieWatchedBatchJob?.cancel()
         cancelInFlightCatalogLoads()
