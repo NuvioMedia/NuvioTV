@@ -467,9 +467,14 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
     val preferred = _uiState.value.subtitleStyle.preferredLanguage.lowercase()
     if (preferred == SUBTITLE_LANGUAGE_FORCED) {
 
-        // Wait until internal tracks are fully scanned
-        if (!hasScannedTextTracksOnce) { Log.d(PlayerRuntimeController.TAG, "AUTO_SUB forced mode: waiting for text track scan")
-            return }
+    // Defer forced selection until internal AND addon tracks are loaded
+    if (!hasScannedTextTracksOnce ||
+        _uiState.value.subtitleTracks.isEmpty() ||
+        _uiState.value.addonSubtitles.isEmpty()
+    ) {
+        return
+    }
+
 
         val languageTargets = subtitleLanguageTargets()
         val forcedIndex = findBestForcedSubtitleTrackIndex(
