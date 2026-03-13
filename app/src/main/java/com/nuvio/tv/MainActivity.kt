@@ -708,7 +708,11 @@ private fun LegacySidebarScaffold(
             }
         }
     ) {
-        val contentStartPadding = if (showSidebar) closedDrawerWidth else 0.dp
+        val contentStartPadding by animateDpAsState(
+            targetValue = if (showSidebar) closedDrawerWidth else 0.dp,
+            animationSpec = tween(350),
+            label = "contentStartPadding"
+        )
         Box(
             modifier = Modifier
                 .fillMaxSize()

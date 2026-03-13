@@ -15,12 +15,6 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     notifyAudioSessionUpdate(false)
 
     try {
-        loudnessEnhancer?.release()
-        loudnessEnhancer = null
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-    try {
         currentMediaSession?.release()
         currentMediaSession = null
     } catch (e: Exception) {
@@ -33,6 +27,8 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     frameRateProbeJob?.cancel()
     hideStreamSourceIndicatorJob?.cancel()
     hideSubtitleDelayOverlayJob?.cancel()
+    playbackPreparationJob?.cancel()
+    playbackPreparationJob = null
     nextEpisodeAutoPlayJob?.cancel()
     nextEpisodeAutoPlayJob = null
     _exoPlayer?.release()

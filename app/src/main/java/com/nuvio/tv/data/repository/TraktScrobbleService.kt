@@ -18,26 +18,22 @@ sealed interface TraktScrobbleItem {
     data class Movie(
         val title: String?,
         val year: Int?,
-        val ids: TraktIdsDto,
-        val rawContentId: String? = null,
-        val rawVideoId: String? = null
+        val ids: TraktIdsDto
     ) : TraktScrobbleItem {
         override val itemKey: String =
-            "movie:${ids.imdb ?: ids.tmdb ?: ids.trakt ?: rawContentId ?: title.orEmpty()}:${year ?: 0}"
+            "movie:${ids.imdb ?: ids.tmdb ?: ids.trakt ?: title.orEmpty()}:${year ?: 0}"
     }
 
     data class Episode(
         val showTitle: String?,
         val showYear: Int?,
         val showIds: TraktIdsDto,
-        val rawContentId: String? = null,
-        val rawVideoId: String? = null,
         val season: Int,
         val number: Int,
         val episodeTitle: String?
     ) : TraktScrobbleItem {
         override val itemKey: String =
-            "episode:${showIds.imdb ?: showIds.tmdb ?: showIds.trakt ?: rawContentId ?: showTitle.orEmpty()}:$season:$number"
+            "episode:${showIds.imdb ?: showIds.tmdb ?: showIds.trakt ?: showTitle.orEmpty()}:$season:$number"
     }
 }
 
@@ -83,8 +79,7 @@ class TraktScrobbleService @Inject constructor(
         val clampedProgress = progressPercent.coerceIn(0f, 100f)
         if (shouldSkip(action, item.itemKey, clampedProgress)) return
 
-        val resolvedItem = resolveItemForRequest(item)
-        val requestBody = buildRequestBody(resolvedItem, clampedProgress)
+        val requestBody = buildRequestBody(item, clampedProgress)
 
         val response = traktAuthService.executeAuthorizedWriteRequest { authHeader ->
             when (action) {
@@ -135,41 +130,6 @@ class TraktScrobbleService @Inject constructor(
                 progress = clampedProgress,
                 appVersion = BuildConfig.VERSION_NAME
             )
-        }
-    }
-
-    private suspend fun resolveItemForRequest(item: TraktScrobbleItem): TraktScrobbleItem {
-        return when (item) {
-            is TraktScrobbleItem.Movie -> {
-                val resolvedIds = traktProgressService.resolveExternalTraktIds(
-                    primaryId = item.rawContentId,
-                    secondaryId = item.rawVideoId,
-                    initialIds = item.ids
-                )
-                item.copy(ids = resolvedIds)
-            }
-
-            is TraktScrobbleItem.Episode -> {
-                val resolvedIds = traktProgressService.resolveExternalTraktIds(
-                    primaryId = item.rawContentId,
-                    secondaryId = item.rawVideoId,
-                    initialIds = item.showIds
-                )
-                val lookupContentId = normalizeContentId(resolvedIds, item.rawContentId)
-                val resolvedEpisode = traktProgressService.resolveEpisodeNumbersForTrakt(
-                    contentId = lookupContentId,
-                    videoId = item.rawVideoId,
-                    season = item.season,
-                    episode = item.number,
-                    episodeTitle = item.episodeTitle
-                )
-
-                item.copy(
-                    showIds = resolvedIds,
-                    season = resolvedEpisode?.first ?: item.season,
-                    number = resolvedEpisode?.second ?: item.number
-                )
-            }
         }
     }
 

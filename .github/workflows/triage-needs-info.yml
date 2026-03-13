@@ -20,6 +20,7 @@ jobs:
             const issue_number = context.payload.issue.number;
 
             const issue = context.payload.issue;
+            const title = (issue.title || "").trim();
             const body = issue.body || "";
             const labels = (issue.labels || []).map(l => (typeof l === "string" ? l : l.name).toLowerCase());
 
@@ -43,9 +44,31 @@ jobs:
               return section.trim();
             }
 
+            function extractFirstSection(titles) {
+              for (const sectionTitle of titles) {
+                const value = extractSection(sectionTitle);
+                if (value) return value;
+              }
+              return "";
+            }
+
+            function normalizeText(value) {
+              return (value || "").replace(/\s+/g, " ").trim();
+            }
+
+            function stripIssuePrefix(value) {
+              return normalizeText(value).replace(/^\[[^\]]+\]:\s*/i, "").trim();
+            }
+
             const steps = extractSection("Steps to reproduce");
             const expected = extractSection("Expected behavior");
             const actual = extractSection("Actual behavior");
+            const logs = extractFirstSection([
+              "Logs (required for crash reports)",
+              "Logs (optional but helpful)",
+            ]);
+            const extra = extractSection("Anything else? (optional)");
+            const summaryTitle = stripIssuePrefix(title);
 
             // Only triage bug-style issues.
             // Skip feature/enhancement issues so they don't get "missing repro" comments.
@@ -62,9 +85,23 @@ jobs:
 
             // Keep checks simple and forgiving: required fields can still be low-effort (e.g. "doesn't work").
             const problems = [];
+            const genericTitle = /^(bug|issue|problem|help|question|crash|broken|error|bug report|short summary here|title here)$/i;
+            const numericOnlyTitle = /^#?\d+$/;
+            const crashPattern = /\b(crash|crashes|crashed|crashing|force close|force closes|force closed|fatal exception|app closes|app closed unexpectedly)\b/i;
+            const crashContext = [summaryTitle, steps, actual, extra].map(normalizeText).join("\n");
+            const isCrashIssue = crashPattern.test(crashContext);
+            const normalizedLogs = normalizeText(logs);
+            const hasLogs = normalizedLogs.length >= 20 && !/^(n\/a|na|none|no|not available)$/i.test(normalizedLogs);
+
+            if (!summaryTitle || summaryTitle.length < 8 || genericTitle.test(summaryTitle) || numericOnlyTitle.test(summaryTitle)) {
+              problems.push("Issue title (replace the default `[Bug]:` prefix with a short summary of the actual problem)");
+            }
             if (!steps || steps.length < 30) problems.push("Steps to reproduce (please list exact steps)");
             if (!expected || expected.length < 10) problems.push("Expected behavior");
             if (!actual || actual.length < 10) problems.push("Actual behavior (include any on-screen error text)");
+            if (isCrashIssue && !hasLogs) {
+              problems.push("Logs (required for crash reports; include a short logcat snippet or stack trace)");
+            }
 
             async function ensureLabel(name, color, description) {
               try {
@@ -99,7 +136,8 @@ jobs:
                 `Missing / too short:\n` +
                 problems.map(p => `- ${p}`).join("\n") +
                 `\n\n` +
-                `Logcat is optional, but if this is playback/crash related it helps a lot.\n` +
+                `Use a specific title, for example: \`[Bug]: Continue Watching shows percent instead of time left\`.\n` +
+                `${isCrashIssue ? `Crash reports must include logs.\n` : `Logcat is optional for most issues, but it helps a lot.\n`}` +
                 `Example: \`adb logcat -d | tail -n 300\``;
 
               // Avoid spamming duplicate bot comments on every edit.

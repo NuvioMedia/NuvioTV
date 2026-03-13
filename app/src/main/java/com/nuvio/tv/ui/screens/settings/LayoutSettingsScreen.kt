@@ -302,17 +302,19 @@ fun LayoutSettingsContent(
                             onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                         )
                     }
-                    CompactToggleRow(
-                        title = stringResource(R.string.layout_show_hero),
-                        subtitle = stringResource(R.string.layout_show_hero_sub),
-                        checked = uiState.heroSectionEnabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                LayoutSettingsEvent.SetHeroSectionEnabled(!uiState.heroSectionEnabled)
-                            )
-                        },
-                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                    )
+                    if (uiState.selectedLayout != HomeLayout.MODERN) {
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_show_hero),
+                            subtitle = stringResource(R.string.layout_show_hero_sub),
+                            checked = uiState.heroSectionEnabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetHeroSectionEnabled(!uiState.heroSectionEnabled)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                        )
+                    }
                     CompactToggleRow(
                         title = stringResource(R.string.layout_show_discover),
                         subtitle = stringResource(R.string.layout_show_discover_sub),

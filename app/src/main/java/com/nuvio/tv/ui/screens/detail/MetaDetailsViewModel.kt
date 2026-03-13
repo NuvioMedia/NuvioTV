@@ -11,7 +11,6 @@ import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
-import com.nuvio.tv.data.repository.TraktEpisodeMismatchException
 import com.nuvio.tv.data.repository.ImdbEpisodeRatingsRepository
 import com.nuvio.tv.data.repository.MDBListRepository
 import com.nuvio.tv.data.repository.parseContentIds
@@ -207,8 +206,6 @@ class MetaDetailsViewModel @Inject constructor(
             MetaDetailsEvent.OnPickerSave -> savePickerMembership()
             MetaDetailsEvent.OnPickerDismiss -> dismissListPicker()
             MetaDetailsEvent.OnClearMessage -> clearMessage()
-            MetaDetailsEvent.OnConfirmEpisodeMismatch -> confirmEpisodeMismatch()
-            MetaDetailsEvent.OnDismissEpisodeMismatch -> dismissEpisodeMismatch()
         }
     }
 
@@ -276,27 +273,19 @@ class MetaDetailsViewModel @Inject constructor(
     private fun observeWatchProgress() {
         if (itemType.lowercase() == "movie") return
         viewModelScope.launch {
-            _uiState
-                .map { state -> state.meta?.videos.orEmpty() }
+            watchProgressRepository.getAllEpisodeProgress(itemId)
                 .distinctUntilChanged()
-                .collectLatest { addonVideos ->
-                    watchProgressRepository.getAllEpisodeProgress(
-                        contentId = itemId,
-                        addonVideos = addonVideos
-                    )
-                        .distinctUntilChanged()
-                        .collectLatest { progressMap ->
-                            _uiState.update { state ->
-                                if (state.episodeProgressMap == progressMap) {
-                                    state
-                                } else {
-                                    state.copy(episodeProgressMap = progressMap)
-                                }
-                            }
-                            // Recalculate next to watch when progress changes
-                            calculateNextToWatch()
-                        }
+                .collectLatest { progressMap ->
+                _uiState.update { state ->
+                    if (state.episodeProgressMap == progressMap) {
+                        state
+                    } else {
+                        state.copy(episodeProgressMap = progressMap)
+                    }
                 }
+                // Recalculate next to watch when progress changes
+                calculateNextToWatch()
+            }
         }
     }
 
@@ -1044,7 +1033,7 @@ class MetaDetailsViewModel @Inject constructor(
             runCatching {
                 libraryRepository.toggleDefault(input)
                 val message = if (_uiState.value.librarySourceMode == LibrarySourceMode.TRAKT) {
-                    if (wasInWatchlist) "Removed from watchlist" else "Added to watchlist"
+                    if (wasInWatchlist) context.getString(R.string.watchlist_removed) else context.getString(R.string.watchlist_added)
                 } else {
                     if (wasInLibrary) context.getString(R.string.detail_removed_from_library) else context.getString(R.string.detail_added_to_library)
                 }
@@ -1191,55 +1180,16 @@ class MetaDetailsViewModel @Inject constructor(
                     showMessage(context.getString(R.string.detail_episode_marked_watched))
                 }
             }.onFailure { error ->
-                if (error is TraktEpisodeMismatchException) {
-                    _uiState.update { it.copy(
-                        episodeMismatchInfo = EpisodeMismatchInfo(
-                            addonSeason = error.originalSeason,
-                            addonEpisode = error.originalEpisode,
-                            traktSeason = error.suggestedSeason,
-                            traktEpisode = error.suggestedEpisode,
-                            traktEpisodeTitle = error.suggestedTitle,
-                            matchMethod = error.matchMethod,
-                            originalProgress = error.originalProgress
-                        )
-                    )}
-                } else {
-                    showMessage(
-                        message = error.message ?: "Failed to update episode watched status",
-                        isError = true
-                    )
-                }
+                showMessage(
+                    message = error.message ?: "Failed to update episode watched status",
+                    isError = true
+                )
             }
 
             _uiState.update {
                 it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys - pendingKey)
             }
         }
-    }
-
-    private fun confirmEpisodeMismatch() {
-        val info = _uiState.value.episodeMismatchInfo ?: return
-        _uiState.update { it.copy(episodeMismatchInfo = null) }
-        viewModelScope.launch {
-            runCatching {
-                watchProgressRepository.markAsCompletedWithCorrectedEpisode(
-                    progress = info.originalProgress,
-                    correctedSeason = info.traktSeason,
-                    correctedEpisode = info.traktEpisode
-                )
-            }.onSuccess {
-                showMessage("Marked S${info.traktSeason}E${info.traktEpisode} as watched on Trakt")
-            }.onFailure { error ->
-                showMessage(
-                    message = error.message ?: "Failed to mark corrected episode",
-                    isError = true
-                )
-            }
-        }
-    }
-
-    private fun dismissEpisodeMismatch() {
-        _uiState.update { it.copy(episodeMismatchInfo = null) }
     }
 
     fun isSeasonFullyWatched(season: Int): Boolean {

@@ -964,4 +964,7 @@
     <string name="series_status_rumored">Plotki</string>
     <string name="series_status_in_production">W produkcji</string>
     <string name="series_status_post_production">Postprodukcja</string>
+    <string name="watchlist_added">Dodano do listy</string>
+    <string name="watchlist_removed">Usunięto z listy</string>
+    <string name="account_sync_restart_note">Synchronizacja nie jest natychmiastowa na aktywnych urządzeniach. Uruchom ponownie to urządzenie po zalogowaniu lub aby pobrać zmiany wprowadzone gdzie indziej.</string>
 </resources>

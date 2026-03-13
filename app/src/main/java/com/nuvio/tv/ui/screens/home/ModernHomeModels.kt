@@ -93,6 +93,7 @@ internal data class HeroCarouselRow(
     val isLoading: Boolean = false
 )
 
+@Immutable
 internal data class CarouselRowLookups(
     val rowIndexByKey: Map<String, Int>,
     val rowByKey: Map<String, HeroCarouselRow>,
@@ -121,6 +122,7 @@ internal class ModernHomeUiCaches {
     }
 }
 
+@Stable
 internal class ModernCarouselRowBuildCache {
     var continueWatchingItems: List<ContinueWatchingItem> = emptyList()
     var continueWatchingTitle: String = ""
@@ -129,7 +131,15 @@ internal class ModernCarouselRowBuildCache {
     var continueWatchingUseLandscapePosters: Boolean = false
     var continueWatchingRow: HeroCarouselRow? = null
     val catalogRows = mutableMapOf<String, ModernCatalogRowBuildCacheEntry>()
+    // per-item cache: rowKey -> (itemId -> cached carousel item + source MetaPreview)
+    val catalogItemCache = mutableMapOf<String, MutableMap<String, CachedCarouselItem>>()
 }
+
+internal data class CachedCarouselItem(
+    val source: MetaPreview,
+    val useLandscapePosters: Boolean,
+    val carouselItem: ModernCarouselItem
+)
 
 
 internal fun buildContinueWatchingItem(

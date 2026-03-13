@@ -416,7 +416,10 @@ fun NuvioNavHost(
                                 filename = playbackInfo.filename,
                                 videoHash = playbackInfo.videoHash,
                                 videoSize = playbackInfo.videoSize,
-                                startFromBeginning = startFromBeginning
+                                startFromBeginning = startFromBeginning,
+                                addonName = playbackInfo.addonName,
+                                addonLogo = playbackInfo.addonLogo,
+                                streamDescription = playbackInfo.streamDescription
                             )
                         )
                     }
@@ -448,7 +451,10 @@ fun NuvioNavHost(
                                 filename = playbackInfo.filename,
                                 videoHash = playbackInfo.videoHash,
                                 videoSize = playbackInfo.videoSize,
-                                startFromBeginning = startFromBeginning
+                                startFromBeginning = startFromBeginning,
+                                addonName = playbackInfo.addonName,
+                                addonLogo = playbackInfo.addonLogo,
+                                streamDescription = playbackInfo.streamDescription
                             )
                         ) {
                             popUpTo(Screen.Stream.route) { inclusive = true }
@@ -572,6 +578,21 @@ fun NuvioNavHost(
                     type = NavType.StringType
                     nullable = true
                     defaultValue = "false"
+                },
+                navArgument("addonName") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("addonLogo") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("streamDescription") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
                 }
             )
         ) { backStackEntry ->

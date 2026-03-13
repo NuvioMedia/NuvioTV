@@ -925,57 +925,6 @@ fun SeasonOptionsDialog(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun EpisodeMismatchDialog(
-    info: EpisodeMismatchInfo,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    val primaryFocusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        primaryFocusRequester.requestFocus()
-    }
-
-    val subtitle = buildString {
-        append("This addon has this episode as S${info.addonSeason}E${info.addonEpisode}")
-        append(", but on Trakt it's S${info.traktSeason}E${info.traktEpisode}")
-        info.traktEpisodeTitle?.let { append(" — \"$it\"") }
-        append(".")
-    }
-
-    NuvioDialog(
-        onDismiss = onDismiss,
-        title = stringResource(R.string.episodes_mismatch_title),
-        subtitle = subtitle
-    ) {
-        Button(
-            onClick = onConfirm,
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(primaryFocusRequester),
-            colors = ButtonDefaults.colors(
-                containerColor = NuvioColors.Primary,
-                contentColor = Color.White
-            )
-        ) {
-            Text("Mark S${info.traktSeason}E${info.traktEpisode} as Watched")
-        }
-
-        Button(
-            onClick = onDismiss,
-            colors = ButtonDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                contentColor = NuvioColors.TextPrimary
-            ),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(stringResource(R.string.episodes_mismatch_cancel))
-        }
-    }
-}
-
 private data class EpisodeCardMetrics(
     val rowHorizontalPadding: Dp,
     val rowVerticalPadding: Dp,
