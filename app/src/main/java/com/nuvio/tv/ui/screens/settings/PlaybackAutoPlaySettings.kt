@@ -7,6 +7,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -30,6 +32,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -78,14 +81,39 @@ internal fun LazyListScope.autoPlaySettingsItems(
     onShowRegexDialog: () -> Unit,
     onShowNextEpisodeThresholdModeDialog: () -> Unit,
     onShowReuseLastLinkCacheDialog: () -> Unit,
+    onShowStreamCacheHoursDialog: () -> Unit,
     onSetStreamAutoPlayNextEpisodeEnabled: (Boolean) -> Unit,
     onSetStreamAutoPlayPreferBingeGroupForNextEpisode: (Boolean) -> Unit,
     onSetNextEpisodeThresholdPercent: (Float) -> Unit,
     onSetNextEpisodeThresholdMinutesBeforeEnd: (Float) -> Unit,
     onSetStreamAutoPlayTimeoutSeconds: (Int) -> Unit,
     onSetReuseLastLinkEnabled: (Boolean) -> Unit,
+    onSetStreamCacheEnabled: (Boolean) -> Unit,
     onItemFocused: () -> Unit = {}
 ) {
+    item(key = "stream_cache_toggle") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Storage,
+            title = stringResource(R.string.autoplay_stream_cache),
+            subtitle = stringResource(R.string.autoplay_stream_cache_sub),
+            isChecked = playerSettings.streamCacheEnabled,
+            onCheckedChange = onSetStreamCacheEnabled,
+            onFocused = onItemFocused
+        )
+    }
+
+    if (playerSettings.streamCacheEnabled) {
+        item(key = "stream_cache_duration") {
+            NavigationSettingsItem(
+                icon = Icons.Default.History,
+                title = stringResource(R.string.autoplay_stream_cache_duration),
+                subtitle = "${playerSettings.streamCacheHours} hour(s)",
+                onClick = onShowStreamCacheHoursDialog,
+                onFocused = onItemFocused
+            )
+        }
+    }
+
     item(key = "autoplay_reuse_last_link") {
         ToggleSettingsItem(
             icon = Icons.Default.History,
@@ -300,6 +328,7 @@ internal fun AutoPlaySettingsDialogs(
     showPluginSelectionDialog: Boolean,
     showNextEpisodeThresholdModeDialog: Boolean,
     showReuseLastLinkCacheDialog: Boolean,
+    showStreamCacheHoursDialog: Boolean,
     playerSettings: PlayerSettings,
     installedAddonNames: List<String>,
     enabledPluginNames: List<String>,
@@ -310,13 +339,15 @@ internal fun AutoPlaySettingsDialogs(
     onSetSelectedAddons: (Set<String>) -> Unit,
     onSetSelectedPlugins: (Set<String>) -> Unit,
     onSetReuseLastLinkCacheHours: (Int) -> Unit,
+    onSetStreamCacheHours: (Int) -> Unit,
     onDismissModeDialog: () -> Unit,
     onDismissSourceDialog: () -> Unit,
     onDismissRegexDialog: () -> Unit,
     onDismissAddonSelectionDialog: () -> Unit,
     onDismissPluginSelectionDialog: () -> Unit,
     onDismissNextEpisodeThresholdModeDialog: () -> Unit,
-    onDismissReuseLastLinkCacheDialog: () -> Unit
+    onDismissReuseLastLinkCacheDialog: () -> Unit,
+    onDismissStreamCacheHoursDialog: () -> Unit
 ) {
     if (showModeDialog) {
         StreamAutoPlayModeDialog(
@@ -385,13 +416,28 @@ internal fun AutoPlaySettingsDialogs(
     }
 
     if (showReuseLastLinkCacheDialog) {
-        StreamReuseLastLinkCacheDurationDialog(
-            selectedHours = playerSettings.streamReuseLastLinkCacheHours,
-            onDurationSelected = {
+        DurationSelectionDialog(
+            title = stringResource(R.string.autoplay_last_link_cache),
+            selectedValue = playerSettings.streamReuseLastLinkCacheHours,
+            options = listOf(1, 6, 12, 24, 48, 72, 168),
+            onValueSelected = {
                 onSetReuseLastLinkCacheHours(it)
                 onDismissReuseLastLinkCacheDialog()
             },
             onDismiss = onDismissReuseLastLinkCacheDialog
+        )
+    }
+
+    if (showStreamCacheHoursDialog) {
+        DurationSelectionDialog(
+            title = stringResource(R.string.autoplay_stream_cache_duration),
+            selectedValue = playerSettings.streamCacheHours,
+            options = listOf(1, 3, 6, 12, 24),
+            onValueSelected = {
+                onSetStreamCacheHours(it)
+                onDismissStreamCacheHoursDialog()
+            },
+            onDismiss = onDismissStreamCacheHoursDialog
         )
     }
 }
@@ -433,7 +479,7 @@ private fun NextEpisodeThresholdModeDialog(
         ) {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)
+                contentPadding = PaddingValues(vertical = 4.dp)
             ) {
                 items(
                     count = options.size,
@@ -535,7 +581,7 @@ private fun StreamAutoPlayModeDialog(
         ) {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)
+                contentPadding = PaddingValues(vertical = 4.dp)
             ) {
                 items(
                     count = options.size,
@@ -594,21 +640,14 @@ private fun StreamAutoPlayModeDialog(
 }
 
 @Composable
-private fun StreamReuseLastLinkCacheDurationDialog(
-    selectedHours: Int,
-    onDurationSelected: (Int) -> Unit,
+fun DurationSelectionDialog(
+    title: String,
+    selectedValue: Int,
+    options: List<Int>,
+    onValueSelected: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
     val focusRequester = remember { FocusRequester() }
-    val options = listOf(
-        1,
-        6,
-        12,
-        24,
-        48,
-        72,
-        168
-    )
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -616,7 +655,7 @@ private fun StreamReuseLastLinkCacheDurationDialog(
 
     NuvioDialog(
         onDismiss = onDismiss,
-        title = stringResource(R.string.autoplay_last_link_cache),
+        title = title,
         width = 420.dp,
         suppressFirstKeyUp = false
     ) {
@@ -627,15 +666,17 @@ private fun StreamReuseLastLinkCacheDurationDialog(
         ) {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)
+                contentPadding = PaddingValues(vertical = 4.dp)
             ) {
                 itemsIndexed(
                     items = options,
-                    key = { _, hours -> hours }
-                ) { index, hours ->
-                    val isSelected = hours == selectedHours
+                    key = { _, value -> value }
+                ) { index, value ->
+
+                    val isSelected = value == selectedValue
+
                     Card(
-                        onClick = { onDurationSelected(hours) },
+                        onClick = { onValueSelected(value) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
@@ -643,7 +684,7 @@ private fun StreamReuseLastLinkCacheDurationDialog(
                             containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
                             focusedContainerColor = NuvioColors.FocusBackground
                         ),
-                        shape = CardDefaults.shape(shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)),
+                        shape = CardDefaults.shape(RoundedCornerShape(10.dp)),
                         scale = CardDefaults.scale(focusedScale = 1f)
                     ) {
                         Row(
@@ -653,7 +694,7 @@ private fun StreamReuseLastLinkCacheDurationDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = formatReuseCacheDuration(hours),
+                                text = formatReuseCacheDuration(value),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary,
                                 modifier = Modifier.weight(1f)
@@ -717,7 +758,7 @@ private fun StreamAutoPlaySourceDialog(
         ) {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)
+                contentPadding = PaddingValues(vertical = 4.dp)
             ) {
                 items(
                     count = options.size,
@@ -852,7 +893,7 @@ private fun StreamAutoPlayProviderSelectionDialog(
                 LazyColumn(
                     modifier = Modifier.heightIn(max = 300.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 4.dp)
+                    contentPadding = PaddingValues(vertical = 4.dp)
                 ) {
                     items(
                         items = items,

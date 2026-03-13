@@ -15,7 +15,6 @@ import com.nuvio.tv.domain.model.StreamBehaviorHints
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.StreamRepository
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -38,7 +37,8 @@ class StreamRepositoryImpl @Inject constructor(
         type: String,
         videoId: String,
         season: Int?,
-        episode: Int?
+        episode: Int?,
+        forceRefresh: Boolean
     ): Flow<NetworkResult<List<AddonStreams>>> = flow {
         emit(NetworkResult.Loading)
 
@@ -104,7 +104,7 @@ class StreamRepositoryImpl @Inject constructor(
                     launch {
                         try {
                             // Stream plugins individually
-                            streamLocalPlugins(tmdbId, type, season, episode, resultChannel) {
+                            streamLocalPlugins(tmdbId, type, season, episode, resultChannel, forceRefresh) {
                                 completedJobs++
                                 if (completedJobs >= totalJobs) {
                                     resultChannel.close()
@@ -154,6 +154,7 @@ class StreamRepositoryImpl @Inject constructor(
         season: Int?,
         episode: Int?,
         resultChannel: Channel<AddonStreams>,
+        forceRefresh: Boolean,
         onComplete: () -> Unit
     ) {
         // Check if plugins are enabled
@@ -177,7 +178,8 @@ class StreamRepositoryImpl @Inject constructor(
                 tmdbId = tmdbId,
                 mediaType = mediaType,
                 season = season,
-                episode = episode
+                episode = episode,
+                forceRefresh = forceRefresh
             ).collect { (scraperName, results) ->
                 if (results.isNotEmpty()) {
                     val addonStreams = AddonStreams(

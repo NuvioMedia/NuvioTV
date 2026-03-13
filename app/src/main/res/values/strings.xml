@@ -330,6 +330,9 @@
     <string name="sub_startup_mode_all_desc">Prefetch and attach all addon subtitles before playback. Slowest startup.</string>
 
     <!-- PlaybackAutoPlaySettings -->
+    <string name="autoplay_stream_cache">Stream Cache</string>
+    <string name="autoplay_stream_cache_sub">Store scraped streams to speed up playback</string>
+    <string name="autoplay_stream_cache_duration">Stream cache duration</string>
     <string name="autoplay_reuse_last_link">Reuse Last Link</string>
     <string name="autoplay_reuse_last_link_sub">Auto-play your last working stream for this same movie/episode when cache is still valid</string>
     <string name="autoplay_last_link_cache">Last Link Cache Duration</string>
