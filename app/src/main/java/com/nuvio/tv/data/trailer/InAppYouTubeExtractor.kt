@@ -142,6 +142,7 @@ class InAppYouTubeExtractor @Inject constructor() {
     private val gson = Gson()
 
     private val httpClient = OkHttpClient.Builder()
+        .dns(com.nuvio.tv.core.network.IPv4FirstDns())
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
         .writeTimeout(20, TimeUnit.SECONDS)
@@ -636,6 +637,7 @@ class InAppYouTubeExtractor @Inject constructor() {
     }
 
     private val probeClient = OkHttpClient.Builder()
+        .dns(com.nuvio.tv.core.network.IPv4FirstDns())
         .connectTimeout(2, TimeUnit.SECONDS)
         .readTimeout(2, TimeUnit.SECONDS)
         .followRedirects(true)
