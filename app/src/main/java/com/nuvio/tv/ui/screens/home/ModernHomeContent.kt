@@ -66,6 +66,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -129,6 +131,7 @@ fun ModernHomeContent(
 ) {
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val isSidebarExpanded = LocalSidebarExpanded.current
+    val layoutDirection = LocalLayoutDirection.current
     val useLandscapePosters = uiState.modernLandscapePostersEnabled
     val showCatalogTypeSuffixInModern = uiState.catalogTypeSuffixEnabled
     val isLandscapeModern = useLandscapePosters
@@ -677,10 +680,11 @@ fun ModernHomeContent(
             with(localDensity) { heroBackdropHeight.roundToPx() }
         }
 
-        val heroMediaModifier = remember(heroBackdropHeight) {
+        val heroMediaModifier = remember(heroBackdropHeight, layoutDirection) {
+            val heroMediaOffset = if (layoutDirection == LayoutDirection.Rtl) (-56).dp else 56.dp
             Modifier
                 .align(Alignment.TopEnd)
-                .offset(x = 56.dp)
+                .offset(x = heroMediaOffset)
                 .fillMaxWidth(MODERN_HERO_MEDIA_WIDTH_FRACTION)
                 .height(heroBackdropHeight)
         }

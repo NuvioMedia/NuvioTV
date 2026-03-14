@@ -98,12 +98,15 @@ fun UpdatePromptDialog(
                     color = NuvioColors.TextPrimary
                 )
 
+                val strChecking = stringResource(R.string.update_checking)
+                val strDownloadComplete = stringResource(R.string.update_download_complete)
+                val strUpToDate = stringResource(R.string.update_up_to_date)
                 val subtitle = when {
                     state.errorMessage != null -> state.errorMessage
-                    state.isChecking -> "Checking for updates…"
-                    state.downloadedApkPath != null -> "Download complete. Ready to install."
-                    state.update != null && state.isUpdateAvailable -> "New version: ${state.update.tag}"
-                    state.update != null && !state.isUpdateAvailable -> "You're up to date."
+                    state.isChecking -> strChecking
+                    state.downloadedApkPath != null -> strDownloadComplete
+                    state.update != null && state.isUpdateAvailable -> stringResource(R.string.update_new_version, state.update.tag)
+                    state.update != null && !state.isUpdateAvailable -> strUpToDate
                     else -> ""
                 }
 
