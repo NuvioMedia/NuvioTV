@@ -1,0 +1,165 @@
+<resources>
+    <string name="app_name">Nuvio</string>
+    <string name="type_movie">סרט</string>
+    <string name="type_series">סדרה</string>
+    <string name="type_unknown">לא ידוע</string>
+
+    <!-- HomeScreen -->
+    <string name="home_no_addons">לא הותקנו תוספים. הוסף אחד כדי להתחיל.</string>
+    <string name="home_no_catalog_addons">לא הותקנו תוספי קטלוג. התקן תוסף קטלוג כדי לראות תוכן.</string>
+
+    <!-- Auth notices -->
+    <string name="auth_notice_nuvio_logged_out">יצאת מ-Nuvio. אנא התחבר שוב.</string>
+    <string name="auth_notice_trakt_logged_out">יצאת מ-Trakt. אנא התחבר מחדש.</string>
+    <string name="error_generic">אירעה שגיאה</string>
+
+    <!-- ErrorState -->
+    <string name="action_retry">נסה שוב</string>
+    <string name="error_state_generic_issue">משהו השתבש.</string>
+    <string name="error_state_fix_suggestion">פתרון אפשרי: %1$s</string>
+    <string name="error_state_fix_retry_soon">נסה שוב בעוד רגע.</string>
+
+    <!-- Continue Watching -->
+    <string name="continue_watching">המשך צפייה</string>
+    <string name="cw_upcoming">עומד לצאת</string>
+    <string name="cw_next_up">הבא בתור</string>
+    <string name="cw_resume">המשך</string>
+    <string name="cw_percent_watched">%1$d%% נצפה</string>
+    <string name="cw_hours_min_left">%1$dש %2$dד נותרו</string>
+    <string name="cw_min_left">%1$dד נותרו</string>
+    <string name="cw_almost_done">כמעט נגמר</string>
+    <string name="cw_airs_time">משודר %1$s</string>
+
+    <!-- Detail actions -->
+    <string name="action_go_to_details">עבור לפרטים</string>
+    <string name="action_start_from_beginning">התחל מההתחלה</string>
+    <string name="action_remove">הסר</string>
+
+    <!-- Poster Dialog -->
+    <string name="home_poster_dialog_subtitle">בחר מה לעשות עם פריט זה.</string>
+    <string name="home_poster_dialog_title_actions">פעולות כותרת</string>
+
+    <!-- Catalog -->
+    <string name="catalog_from_addon">מ-%1$s</string>
+    <string name="action_see_all">הצג הכל</string>
+
+    <!-- Hero -->
+    <string name="hero_creator">יוצר: %1$s</string>
+    <string name="hero_director">במאי: %1$s</string>
+    <string name="hero_writer">תסריטאי: %1$s</string>
+
+    <!-- Detail -->
+    <string name="detail_action_play">נגן</string>
+    <string name="detail_action_play_se">נגן ע%1$d, פ%2$d</string>
+    <string name="detail_action_add_library">הוסף לספרייה</string>
+    <string name="detail_action_remove_library">הסר מהספרייה</string>
+    <string name="detail_action_mark_watched">סמן כנצפה</string>
+    <string name="detail_action_mark_unwatched">סמן כלא נצפה</string>
+    <string name="detail_action_play_trailer">נגן טריילר</string>
+    <string name="detail_trailer_exit_hint">לחץ חזור ליציאה מהטריילר</string>
+
+    <!-- Rating -->
+    <string name="detail_rating">דירוג</string>
+
+    <!-- Season -->
+    <string name="season_number">עונה %1$d</string>
+    <string name="season_specials">ספיישלים</string>
+
+    <!-- Episode -->
+    <string name="episode">פרק</string>
+    <string name="episode_watched">נצפה</string>
+
+    <!-- Settings -->
+    <string name="appearance_title">מראה</string>
+    <string name="appearance_subtitle">בחר את ערכת הצבעים, הגופן והשפה שלך</string>
+    <string name="cd_selected">נבחר</string>
+
+    <!-- About -->
+    <string name="about_title">אודות</string>
+    <string name="about_subtitle">מידע על האפליקציה, עדכונים וקישורים משפטיים</string>
+    <string name="about_made_with_love">נוצר באהבה ❤️ על ידי Tapframe וחברים</string>
+    <string name="about_version">גרסה %1$s</string>
+    <string name="about_check_updates">בדוק עדכונים</string>
+    <string name="about_download_latest">הורד גרסה עדכנית</string>
+    <string name="about_privacy_policy">מדיניות פרטיות</string>
+    <string name="about_view_privacy">הצג את מדיניות הפרטיות שלנו</string>
+    <string name="about_supporters">תומכים ותורמים</string>
+    <string name="about_credits">קרדיטים והוקרה לפרויקט</string>
+
+    <!-- Account -->
+    <string name="account_title">חשבון</string>
+    <string name="account_subtitle">חשבון וסטטוס סנכרון.</string>
+
+    <!-- Layout -->
+    <string name="layout_title">פריסה</string>
+    <string name="layout_subtitle">מבנה מסך הבית וסגנונות פוסטר.</string>
+
+    <!-- Plugins -->
+    <string name="plugins_title">פלאגינים</string>
+    <string name="plugins_subtitle">מאגרים וספקים.</string>
+
+    <!-- Integration -->
+    <string name="integration_title">אינטגרציה</string>
+
+    <!-- Playback -->
+    <string name="playback_title">הפעלה</string>
+    <string name="playback_subtitle">נגן, כתוביות והפעלה אוטומטית.</string>
+
+    <!-- Trakt -->
+    <string name="trakt_open_screen">פתח מסך חיבור Trakt.</string>
+
+    <!-- Version -->
+    <string name="version_policies">גרסה ומדיניות.</string>
+
+    <!-- Debug -->
+    <string name="debug_title">דיבאג</string>
+    <string name="debug_subtitle">כלי מפתחים ודגלי תכונה.</string>
+
+    <!-- General settings -->
+    <string name="settings_manage_repos">נהל מאגרים, ספקים ומצבי פלאגין.</string>
+    <string name="settings_account_sync">חשבון וסטטוס סנכרון.</string>
+    <string name="settings_addon_legacy">תוספים</string>
+    <string name="settings_plugins_legacy">פלאגינים</string>
+    <string name="settings_library">ספרייה</string>
+    <string name="settings_progress">התקדמות</string>
+    <string name="settings_watched">נצפה</string>
+
+    <!-- Language -->
+    <string name="appearance_language">שפת האפליקציה</string>
+    <string name="appearance_language_subtitle">עקוף שפת מערכת</string>
+    <string name="appearance_language_system">ברירת מחדל</string>
+    <string name="appearance_language_dialog_title">בחר שפה</string>
+    <string name="appearance_language_restart_hint">הפעל מחדש את האפליקציה להחלת שינוי השפה.</string>
+
+    <!-- Font -->
+    <string name="appearance_font">גופן האפליקציה</string>
+    <string name="appearance_font_subtitle">בחר את הגופן המועדף שלך</string>
+    <string name="appearance_font_dialog_title">בחר גופן</string>
+
+    <!-- Search -->
+    <string name="search_title">חיפוש סרטים וסדרות</string>
+    <string name="search_start">התחל לחפש</string>
+    <string name="search_min_chars">הזן לפחות 2 תווים</string>
+
+    <!-- Library -->
+    <string name="library_title">ספרייה</string>
+
+    <!-- Addons -->
+    <string name="addons_title">תוספים</string>
+    <string name="settings_title">הגדרות</string>
+
+    <!-- Playback strings -->
+    <string name="player_subtitles">כתוביות</string>
+    <string name="player_audio">אודיו</string>
+    <string name="player_speed">מהירות הפעלה</string>
+    <string name="player_normal">רגיל</string>
+
+    <!-- Sync -->
+    <string name="sync_connected_as">מחובר בשם %1$s</string>
+
+    <!-- Common -->
+    <string name="action_cancel">ביטול</string>
+    <string name="action_close">סגור</string>
+    <string name="action_save">שמור</string>
+    <string name="loading">טוען…</string>
+</resources>
