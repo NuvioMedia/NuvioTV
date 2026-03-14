@@ -1,0 +1,77 @@
+name: Beta Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Target versionName, for example 0.4.19-beta"
+        required: true
+        type: string
+      dry_run:
+        description: "Preview release notes only without building or publishing"
+        required: true
+        default: true
+        type: boolean
+      downloader_code:
+        description: "Optional downloader code footer"
+        required: false
+        type: string
+      extra_notes:
+        description: "Optional extra bullet lines, one per line"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: beta-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  beta-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Preview beta release
+        if: ${{ inputs.dry_run }}
+        run: |
+          python3 scripts/release_beta.py "${{ inputs.version }}" \
+            --dry-run \
+            --downloader-code "${{ inputs.downloader_code }}" \
+            --extra-notes "${{ inputs.extra_notes }}"
+
+      - name: Upload preview notes
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-release-preview-${{ inputs.version }}
+          path: build/release/release-notes-${{ inputs.version }}.md
+
+      - name: Publish beta release
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/release_beta.py "${{ inputs.version }}" \
+            --publish \
+            --downloader-code "${{ inputs.downloader_code }}" \
+            --extra-notes "${{ inputs.extra_notes }}"
