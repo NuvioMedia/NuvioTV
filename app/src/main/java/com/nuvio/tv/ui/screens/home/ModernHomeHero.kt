@@ -1,11 +1,7 @@
 package com.nuvio.tv.ui.screens.home
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,12 +30,16 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -61,11 +61,11 @@ private data class ModernHeroSecondaryMeta(
 @Composable
 internal fun ModernHeroMediaLayer(
     heroBackdrop: String?,
-    heroBackdropAlpha: Float,
+    enrichmentActive: Boolean,
     shouldPlayHeroTrailer: Boolean,
+    heroTrailerFirstFrameRendered: Boolean,
     heroTrailerUrl: String?,
     heroTrailerAudioUrl: String?,
-    heroTrailerAlpha: Float,
     muted: Boolean,
     onTrailerEnded: () -> Unit,
     onFirstFrameRendered: () -> Unit,
@@ -73,31 +73,39 @@ internal fun ModernHeroMediaLayer(
     requestWidthPx: Int,
     requestHeightPx: Int
 ) {
+    val transitionProgressState = animateFloatAsState(
+        targetValue = if (shouldPlayHeroTrailer && heroTrailerFirstFrameRendered) 1f else 0f,
+        animationSpec = tween(durationMillis = 480),
+        label = "heroBackdropTrailerCrossfadeProgress"
+    )
     val localContext = LocalContext.current
+
+    // Freeze the backdrop URL while enrichment is active — only update when enrichment ends
+    // so Coil crossfade starts with the final URL, not an intermediate one.
+    var stableBackdrop by remember { mutableStateOf(heroBackdrop) }
+    if (!enrichmentActive) stableBackdrop = heroBackdrop
+
+    val imageModel = remember(localContext, stableBackdrop, requestWidthPx, requestHeightPx) {
+        ImageRequest.Builder(localContext)
+            .data(stableBackdrop)
+            .crossfade(400)
+            .size(width = requestWidthPx, height = requestHeightPx)
+            .build()
+    }
+
     Box(modifier = modifier) {
-        Crossfade(
-            targetState = heroBackdrop,
+        AsyncImage(
+            model = imageModel,
+            contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer { alpha = heroBackdropAlpha },
-            animationSpec = tween(durationMillis = 350),
-            label = "modernHeroBackground"
-        ) { imageUrl ->
-            val imageModel = remember(localContext, imageUrl, requestWidthPx, requestHeightPx) {
-                ImageRequest.Builder(localContext)
-                    .data(imageUrl)
-                    .crossfade(false)
-                    .size(width = requestWidthPx, height = requestHeightPx)
-                    .build()
-            }
-            AsyncImage(
-                model = imageModel,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                alignment = Alignment.TopEnd
-            )
-        }
+                .graphicsLayer {
+                    alpha = 1f - transitionProgressState.value
+                    compositingStrategy = CompositingStrategy.Offscreen
+                },
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.TopEnd
+        )
 
         if (shouldPlayHeroTrailer) {
             TrailerPlayer(
@@ -111,7 +119,10 @@ internal fun ModernHeroMediaLayer(
                 overscanZoom = MODERN_TRAILER_OVERSCAN_ZOOM,
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer { alpha = heroTrailerAlpha }
+                    .graphicsLayer {
+                    alpha = transitionProgressState.value
+                    compositingStrategy = CompositingStrategy.Offscreen
+                }
             )
         }
     }
@@ -122,23 +133,43 @@ internal fun ModernHeroGradientLayer(
     bgColor: Color,
     modifier: Modifier
 ) {
+    val layoutDirection = LocalLayoutDirection.current
     Box(
         modifier = modifier
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithCache {
+                val isRtl = layoutDirection == LayoutDirection.Rtl
+
                 val leftBlendSolidWidth = size.width * 0.018f
                 val horizontalGradientStartX = leftBlendSolidWidth
                 val horizontalFadeEndX = horizontalGradientStartX + (size.width * 0.42f)
-                val horizontalGradient = Brush.horizontalGradient(
-                    colorStops = arrayOf(
-                        0.0f to bgColor,
-                        0.22f to bgColor.copy(alpha = 0.86f),
-                        0.46f to bgColor.copy(alpha = 0.56f),
-                        0.76f to bgColor.copy(alpha = 0.16f),
-                        1.0f to Color.Transparent
-                    ),
-                    startX = horizontalGradientStartX,
-                    endX = horizontalFadeEndX
-                )
+
+                val horizontalGradient = if (isRtl) {
+                    Brush.horizontalGradient(
+                        colorStops = arrayOf(
+                            0.0f to Color.Transparent,
+                            1.0f - 0.76f to bgColor.copy(alpha = 0.16f),
+                            1.0f - 0.46f to bgColor.copy(alpha = 0.56f),
+                            1.0f - 0.22f to bgColor.copy(alpha = 0.86f),
+                            1.0f to bgColor
+                        ),
+                        startX = size.width - horizontalFadeEndX,
+                        endX = size.width - horizontalGradientStartX
+                    )
+                } else {
+                    Brush.horizontalGradient(
+                        colorStops = arrayOf(
+                            0.0f to bgColor,
+                            0.22f to bgColor.copy(alpha = 0.86f),
+                            0.46f to bgColor.copy(alpha = 0.56f),
+                            0.76f to bgColor.copy(alpha = 0.16f),
+                            1.0f to Color.Transparent
+                        ),
+                        startX = horizontalGradientStartX,
+                        endX = horizontalFadeEndX
+                    )
+                }
+
                 val topContourGradient = Brush.linearGradient(
                     colorStops = arrayOf(
                         0.0f to bgColor.copy(alpha = 0.28f),
@@ -146,8 +177,8 @@ internal fun ModernHeroGradientLayer(
                         0.72f to bgColor.copy(alpha = 0.05f),
                         1.0f to Color.Transparent
                     ),
-                    start = Offset(0f, 0f),
-                    end = Offset(size.width * 0.24f, size.height * 0.40f)
+                    start = if (isRtl) Offset(size.width, 0f) else Offset(0f, 0f),
+                    end = if (isRtl) Offset(size.width * (1f - 0.24f), size.height * 0.40f) else Offset(size.width * 0.24f, size.height * 0.40f)
                 )
                 val bottomContourGradient = Brush.linearGradient(
                     colorStops = arrayOf(
@@ -156,8 +187,8 @@ internal fun ModernHeroGradientLayer(
                         0.74f to bgColor.copy(alpha = 0.05f),
                         1.0f to Color.Transparent
                     ),
-                    start = Offset(0f, size.height),
-                    end = Offset(size.width * 0.24f, size.height * 0.61f)
+                    start = if (isRtl) Offset(size.width, size.height) else Offset(0f, size.height),
+                    end = if (isRtl) Offset(size.width * (1f - 0.24f), size.height * 0.61f) else Offset(size.width * 0.24f, size.height * 0.61f)
                 )
                 val verticalGradient = Brush.verticalGradient(
                     0.89f to Color.Transparent,
@@ -169,6 +200,7 @@ internal fun ModernHeroGradientLayer(
                 onDrawBehind {
                     drawRect(
                         color = bgColor,
+                        topLeft = if (isRtl) Offset(size.width - leftBlendSolidWidth, 0f) else Offset.Zero,
                         size = Size(leftBlendSolidWidth, size.height)
                     )
                     drawRect(brush = horizontalGradient, size = size)
@@ -187,15 +219,17 @@ internal fun HeroTitleBlock(
     portraitMode: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val fadeDuration = 220
-    AnimatedContent(
-        targetState = preview,
-        transitionSpec = { fadeIn(tween(fadeDuration)) togetherWith fadeOut(tween(fadeDuration)) using null },
-        contentAlignment = Alignment.BottomStart,
-        label = "heroTitleCrossfade",
-        modifier = modifier
-    ) { animatedPreview ->
-        HeroTitleContent(preview = animatedPreview, portraitMode = portraitMode)
+    var stablePreview by remember { mutableStateOf<HeroPreview?>(null) }
+
+    if (!enrichmentActive && preview != null) stablePreview = preview
+    if (enrichmentActive) stablePreview = null
+
+    if (stablePreview == null) return
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.BottomStart
+    ) {
+        HeroTitleContent(preview = stablePreview!!, portraitMode = portraitMode)
     }
 }
 
@@ -485,8 +519,8 @@ private fun HeroImdbMeta(
     imdbLogoModel: Any,
     textStyle: androidx.compose.ui.text.TextStyle,
     textColor: Color,
-    logoSize: androidx.compose.ui.unit.Dp,
-    spacing: androidx.compose.ui.unit.Dp
+    logoSize: Dp,
+    spacing: Dp
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
