@@ -503,6 +503,10 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         if (::jankStats.isInitialized) jankStats.isTrackingEnabled = true
+        startupSyncService.requestSyncNow()
+        lifecycleScope.launch {
+            traktProgressService.refreshNow()
+        }
     }
 
     override fun onPause() {
@@ -512,10 +516,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        startupSyncService.requestSyncNow()
-        lifecycleScope.launch {
-            traktProgressService.refreshNow()
-        }
     }
 }
 
