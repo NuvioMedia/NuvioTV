@@ -16,16 +16,16 @@
     <string name="cw_next_up">A seguir</string>
     <string name="cw_resume">Retomar</string>
     <string name="cw_airs_date">Estreia a %1$s</string>
-    <string name="cw_action_go_to_details">Ir para detalhes</string>
+    <string name="cw_action_go_to_details">Ver detalhes</string>
     <string name="cw_action_remove">Remover</string>
-    <string name="cw_dialog_subtitle">Escolha o que pretende fazer com este item.</string>
+    <string name="cw_dialog_subtitle">Escolha uma ação para este item.</string>
 
     <!-- CatalogRowSection -->
     <string name="catalog_from_addon">de %1$s</string>
     <string name="action_see_all">Ver tudo</string>
 
     <!-- HeroSection -->
-    <string name="hero_creator">Autor: %1$s</string>
+    <string name="hero_creator">Criador: %1$s</string>
     <string name="hero_director">Realizador: %1$s</string>
     <string name="hero_writer">Argumentista: %1$s</string>
     <string name="hero_play">Reproduzir</string>
@@ -53,10 +53,10 @@
     <string name="episodes_season_actions">Ações da temporada</string>
 
     <!-- MetaDetailsScreen -->
-    <string name="detail_tab_cast">Autor e elenco</string>
+    <string name="detail_tab_cast">Equipa e elenco</string>
     <string name="detail_tab_ratings">Classificações</string>
     <string name="detail_tab_more_like_this">Mais como este</string>
-    <string name="detail_section_network">Canal</string>
+    <string name="detail_section_network">Emissora</string>
     <string name="detail_section_production">Produção</string>
     <string name="detail_lists_fallback">Listas</string>
     <string name="detail_lists_subtitle">Selecione as listas que devem incluir este título.</string>
@@ -126,7 +126,7 @@
     <string name="playback_show_clock_sub">Mostrar hora atual e hora de fim enquanto os controlos estão visíveis.</string>
     <string name="playback_skip_intro">Saltar intro</string>
     <string name="playback_skip_intro_sub">Usar introdb.app para detetar intros e recaps.</string>
-    <string name="playback_auto_frame_rate">Taxa de frames automática</string>
+    <string name="playback_auto_frame_rate">Taxa de fotogramas automática</string>
     <string name="playback_section_player">Leitor e seleção de transmissão</string>
     <string name="playback_section_player_desc">Preferência de leitor, reprodução automática e filtragem de fontes.</string>
     <string name="playback_player">Leitor</string>
@@ -180,9 +180,9 @@
     <string name="sub_secondary_lang">Segundo idioma preferido</string>
     <string name="sub_organization">Organização das legendas</string>
     <string name="sub_size">Tamanho</string>
-    <string name="sub_vertical_offset">Deslocamento vertical</string>
+    <string name="sub_vertical_offset">Posição vertical</string>
     <string name="sub_bold">Negrito</string>
-    <string name="sub_bold_sub">Usar peso de letra a negrito para as legendas</string>
+    <string name="sub_bold_sub">Mostrar as legendas a negrito</string>
     <string name="sub_text_color">Cor do texto</string>
     <string name="sub_bg_color">Cor de fundo</string>
     <string name="sub_outline">Contorno</string>
