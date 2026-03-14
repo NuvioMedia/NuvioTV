@@ -116,6 +116,27 @@ fun DebugSettingsContent(
                 )
             }
 
+            // ── Library Testing ──
+            item(key = "debug_library_header") {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.debug_section_library),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = NuvioColors.TextTertiary,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+
+            item(key = "debug_generate_library") {
+                DebugGenerateLibraryCard(
+                    isLoading = uiState.generateLibraryLoading,
+                    result = uiState.generateLibraryResult,
+                    onGenerate = { count ->
+                        viewModel.onEvent(DebugSettingsEvent.GenerateLibraryItems(count))
+                    }
+                )
+            }
+
             // ── Manual Sign In ──
             item(key = "debug_account_header") {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -287,6 +308,58 @@ private fun DebugDialogButton(
                 .fillMaxWidth()
                 .padding(vertical = 12.dp, horizontal = 16.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun DebugGenerateLibraryCard(
+    isLoading: Boolean,
+    result: String?,
+    onGenerate: (count: Int) -> Unit
+) {
+    var countText by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(4.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.debug_generate_library_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = NuvioColors.TextPrimary
+        )
+        Text(
+            text = stringResource(R.string.debug_generate_library_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = NuvioColors.TextSecondary
+        )
+
+        InputField(
+            value = countText,
+            onValueChange = { countText = it.filter { c -> c.isDigit() } },
+            placeholder = stringResource(R.string.debug_generate_library_placeholder),
+            keyboardType = KeyboardType.Number
+        )
+
+        if (result != null) {
+            Text(
+                text = result,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (result.startsWith("Failed")) NuvioColors.Error else NuvioColors.Secondary
+            )
+        }
+
+        DebugDialogButton(
+            text = if (isLoading) stringResource(R.string.debug_generating_library) else stringResource(R.string.debug_generate_library_button),
+            onClick = {
+                val count = countText.replace(Regex("[^0-9]"), "").toIntOrNull()
+                if (!isLoading && count != null && count > 0) {
+                    onGenerate(count)
+                }
+            }
         )
     }
 }

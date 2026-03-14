@@ -45,6 +45,7 @@ fun CatalogDescriptorDto.toDomain(): CatalogDescriptor {
         extra = parseCatalogExtras(extra),
         pageSize = pageSize,
         showInHome = showInHome == true,
+        hasExplicitShowInHome = showInHome != null,
         extraSupported = extraSupported.orEmpty(),
         extraRequired = extraRequired.orEmpty()
     )

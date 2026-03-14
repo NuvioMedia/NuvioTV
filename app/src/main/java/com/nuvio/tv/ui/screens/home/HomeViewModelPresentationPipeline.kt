@@ -301,6 +301,7 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
     }
 
     val willEnrich = currentTmdbSettings.enabled || externalMetaPrefetchEnabled
+
     if (willEnrich) setEnrichingItemId(item.id)
 
     pendingTmdbEnrichItemId = item.id
