@@ -236,6 +236,8 @@ fun ContinueWatchingCard(
     val strAirsDate = stringResource(R.string.cw_airs_date, nextUp?.airDateLabel ?: "")
     val strUpcoming = stringResource(R.string.cw_upcoming)
     val strNextUp = stringResource(R.string.cw_next_up)
+    val strResume = stringResource(R.string.cw_resume)
+    val strPercentWatched = stringResource(R.string.cw_percent_watched)
     val strHoursMinLeft = stringResource(R.string.cw_hours_min_left)
     val strMinLeft = stringResource(R.string.cw_min_left)
     val nextUpBadgeText = nextUp?.let { info ->
@@ -249,6 +251,8 @@ fun ContinueWatchingCard(
         remember(it.position, it.duration, it.progressPercent) {
             formatContinueWatchingProgressLabel(
                 progress = it,
+                resumeLabel = strResume,
+                percentWatchedLabel = strPercentWatched,
                 hoursMinLeftLabel = strHoursMinLeft,
                 minLeftLabel = strMinLeft
             )
