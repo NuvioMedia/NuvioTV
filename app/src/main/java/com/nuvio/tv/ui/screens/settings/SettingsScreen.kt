@@ -48,6 +48,8 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -179,6 +181,7 @@ fun SettingsScreen(
     onNavigateToSupportersContributors: () -> Unit = {},
     profileViewModel: ProfileSettingsViewModel = hiltViewModel()
 ) {
+    val layoutDirection = LocalLayoutDirection.current
     val isPrimaryProfileActive by profileViewModel.isPrimaryProfileActive.collectAsStateWithLifecycle()
 
     val allSectionSpecs = rememberSettingsSectionSpecs()
@@ -290,7 +293,8 @@ fun SettingsScreen(
                             }
                         }
                         .onPreviewKeyEvent { event ->
-                            if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionRight) {
+                            val forwardKey = if (layoutDirection == LayoutDirection.Ltr) Key.DirectionRight else Key.DirectionLeft
+                            if (event.type == KeyEventType.KeyDown && event.key == forwardKey) {
                                 allowDetailAutofocus = true
                                 false
                             } else {
@@ -335,9 +339,14 @@ fun SettingsScreen(
                         .weight(1f)
                         .fillMaxHeight()
                         .onKeyEvent { event ->
-                            if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft) {
-                                val movedLeft = focusManager.moveFocus(FocusDirection.Left)
-                                if (!movedLeft) {
+                            val (backKey, backDirection) = if (layoutDirection == LayoutDirection.Ltr) {
+                                Pair(Key.DirectionLeft, FocusDirection.Left)
+                            } else {
+                                Pair(Key.DirectionRight, FocusDirection.Right)
+                            }
+                            if (event.type == KeyEventType.KeyDown && event.key == backKey) {
+                                val movedBack = focusManager.moveFocus(backDirection)
+                                if (!movedBack) {
                                     allowDetailAutofocus = false
                                     val requested = railFocusRequesters[selectedCategory]?.let { requester ->
                                         runCatching { requester.requestFocus() }.isSuccess
