@@ -9,6 +9,8 @@ data class AddonManagerUiState(
     val installUrl: String = "",
     val installedAddons: List<Addon> = emptyList(),
     val error: String? = null,
+    val transientMessage: String? = null,
+    val transientMessageIsError: Boolean = false,
     // QR mode
     val isQrModeActive: Boolean = false,
     val qrCodeBitmap: Bitmap? = null,

@@ -290,6 +290,30 @@ private fun PlayerRuntimeController.applySelectedStreamState(
     currentVideoBitrate = null
 }
 
+private fun PlayerRuntimeController.persistSelectedStreamForReuse(
+    stream: Stream,
+    url: String,
+    headers: Map<String, String>
+) {
+    if (!streamReuseLastLinkEnabled) return
+
+    val key = streamCacheKey ?: return
+    val streamName = (stream.name?.takeIf { it.isNotBlank() } ?: stream.addonName)?.takeIf { it.isNotBlank() }
+        ?: title
+
+    scope.launch {
+        streamLinkCacheDataStore.save(
+            contentKey = key,
+            url = url,
+            streamName = streamName,
+            headers = headers,
+            filename = currentFilename,
+            videoHash = currentVideoHash,
+            videoSize = currentVideoSize
+        )
+    }
+}
+
 @androidx.annotation.OptIn(UnstableApi::class)
 internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
     val url = stream.getStreamUrl()
@@ -314,6 +338,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
         url = url,
         headers = newHeaders
     )
+    persistSelectedStreamForReuse(stream = stream, url = url, headers = newHeaders)
     hasRetriedCurrentStreamAfter416 = false
     lastSavedPosition = 0L
 
@@ -581,6 +606,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
         url = url,
         headers = newHeaders
     )
+    persistSelectedStreamForReuse(stream = stream, url = url, headers = newHeaders)
     pendingSameSeriesTrackSelectionRestore =
         sameSeriesTrackSelectionPreference?.takeIf { contentType?.lowercase() in listOf("series", "tv") }
     hasRetriedCurrentStreamAfter416 = false

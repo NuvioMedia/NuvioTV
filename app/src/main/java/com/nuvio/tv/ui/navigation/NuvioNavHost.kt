@@ -722,8 +722,7 @@ fun NuvioNavHost(
                             returnToDetailOnBack = returnToDetailOnBack
                         )
                         navController.navigate(route) {
-                            popUpTo(Screen.Detail.route) { inclusive = false }
-                            launchSingleTop = true
+                            popUpTo(Screen.Player.route) { inclusive = true }
                         }
                     } else {
                         // No next episode — pop back to detail (or home if detail not on stack)

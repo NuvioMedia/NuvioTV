@@ -135,7 +135,7 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
         val catalogsToLoad = addons.flatMap { addon ->
             addon.catalogs
                 .filterNot {
-                    it.isSearchOnlyCatalog() || isCatalogDisabled(
+                    !it.shouldShowOnHome() || isCatalogDisabled(
                         addonBaseUrl = addon.baseUrl,
                         addonId = addon.id,
                         type = it.apiType,

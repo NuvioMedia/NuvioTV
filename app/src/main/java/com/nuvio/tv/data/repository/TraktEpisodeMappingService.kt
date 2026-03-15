@@ -36,6 +36,67 @@ class TraktEpisodeMappingService @Inject constructor(
         return resolveEpisodeMapping(contentId, contentType, videoId, season, episode)
     }
 
+    internal suspend fun resolveAddonEpisodeMapping(
+        contentId: String?,
+        contentType: String?,
+        season: Int?,
+        episode: Int?,
+        episodeTitle: String? = null
+    ): EpisodeMappingEntry? {
+        val requestedSeason = season ?: return null
+        val requestedEpisode = episode ?: return null
+        val resolvedContentId = contentId?.takeIf { it.isNotBlank() } ?: return null
+        val resolvedContentType = contentType?.takeIf { it.isNotBlank() } ?: return null
+
+        val meta = fetchSeriesMeta(resolvedContentId, resolvedContentType) ?: return null
+        val addonEpisodes = meta.videos.toEpisodeMappingEntries()
+        if (addonEpisodes.isEmpty()) return null
+
+        val showLookupId = resolveShowLookupId(contentId = resolvedContentId, videoId = null) ?: return null
+        val seasonsResponse = traktAuthService.executeAuthorizedRequest { authHeader ->
+            traktApi.getShowSeasons(
+                authorization = authHeader,
+                id = showLookupId,
+                extended = "episodes"
+            )
+        } ?: return null
+        if (!seasonsResponse.isSuccessful) {
+            Log.w(
+                TAG,
+                "resolveAddonEpisodeMapping: seasons request failed code=${seasonsResponse.code()} id=$showLookupId"
+            )
+            return null
+        }
+
+        val traktEpisodes = seasonsResponse.body()
+            .orEmpty()
+            .asSequence()
+            .filter { (it.number ?: 0) > 0 }
+            .sortedBy { it.number }
+            .flatMap { seasonDto ->
+                seasonDto.episodes.orEmpty().asSequence()
+                    .mapNotNull { episodeDto ->
+                        val seasonNumber = episodeDto.season ?: seasonDto.number ?: return@mapNotNull null
+                        val episodeNumber = episodeDto.number ?: return@mapNotNull null
+                        EpisodeMappingEntry(
+                            season = seasonNumber,
+                            episode = episodeNumber,
+                            title = episodeDto.title
+                        )
+                    }
+            }
+            .toList()
+        if (traktEpisodes.isEmpty()) return null
+
+        return reverseRemapEpisodeByTitleOrIndex(
+            requestedSeason = requestedSeason,
+            requestedEpisode = requestedEpisode,
+            requestedTitle = episodeTitle,
+            addonEpisodes = addonEpisodes,
+            traktEpisodes = traktEpisodes
+        )
+    }
+
     internal suspend fun getCachedEpisodeMapping(
         contentId: String?,
         contentType: String?,
@@ -105,6 +166,7 @@ class TraktEpisodeMappingService @Inject constructor(
             requestedSeason = requestedSeason,
             requestedEpisode = requestedEpisode,
             requestedVideoId = videoId,
+            requestedTitle = null,
             addonEpisodes = addonEpisodes,
             traktEpisodes = traktEpisodes
         ) ?: return null

@@ -186,7 +186,7 @@ fun PlayerScreen(
             uiState.nextEpisodeAutoPlayCountdownSec == null
         ) {
             viewModel.stopAndRelease()
-            val next = uiState.nextEpisode
+            val next = uiState.nextEpisode?.takeIf { it.hasAired }
             if (onPlaybackEnded != null) {
                 onPlaybackEnded(next?.videoId, next?.season, next?.episode)
             } else {

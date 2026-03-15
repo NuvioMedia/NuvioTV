@@ -359,7 +359,13 @@ private fun AudioMixContent(
                 focusRequester = minusFocusRequester,
                 leftFocusRequester = leftFocusRequester,
                 rightFocusRequester = if (canIncrease) plusFocusRequester else persistFocusRequester,
-                onClick = { onAmplificationChange(currentDb - 1) }
+                onClick = {
+                    val nextDb = currentDb - 1
+                    onAmplificationChange(nextDb)
+                    if (nextDb <= AUDIO_AMPLIFICATION_MIN_DB && canIncrease) {
+                        runCatching { plusFocusRequester.requestFocus() }
+                    }
+                }
             )
             MixStepCard(
                 icon = Icons.Default.Add,
@@ -367,7 +373,13 @@ private fun AudioMixContent(
                 focusRequester = plusFocusRequester,
                 leftFocusRequester = plusLeftFocusRequester,
                 rightFocusRequester = persistFocusRequester,
-                onClick = { onAmplificationChange(currentDb + 1) }
+                onClick = {
+                    val nextDb = currentDb + 1
+                    onAmplificationChange(nextDb)
+                    if (nextDb >= AUDIO_AMPLIFICATION_MAX_DB && canDecrease) {
+                        runCatching { minusFocusRequester.requestFocus() }
+                    }
+                }
             )
         }
 

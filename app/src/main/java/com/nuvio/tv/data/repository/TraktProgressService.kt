@@ -327,8 +327,25 @@ class TraktProgressService @Inject constructor(
 
     fun observeEpisodeProgress(contentId: String): Flow<Map<Pair<Int, Int>, WatchProgress>> {
         val cacheKey = canonicalLookupKey(contentId)
-        return episodeProgressState
-            .map { state -> state[cacheKey]?.progress ?: emptyMap() }
+        return combine(episodeProgressState, optimisticProgress) { state, optimistic ->
+            val now = System.currentTimeMillis()
+            val merged = (state[cacheKey]?.progress ?: emptyMap()).toMutableMap()
+            optimistic.values
+                .asSequence()
+                .filter { it.expiresAtMs > now }
+                .map { it.progress }
+                .filter { progress ->
+                    progress.season != null &&
+                        progress.episode != null &&
+                        canonicalLookupKey(progress.contentId) == cacheKey
+                }
+                .forEach { progress ->
+                    val season = progress.season ?: return@forEach
+                    val episode = progress.episode ?: return@forEach
+                    merged[season to episode] = progress
+                }
+            merged as Map<Pair<Int, Int>, WatchProgress>
+        }
             .onStart {
                 scope.launch {
                     ensureEpisodeProgressSnapshot(contentId = cacheKey, forceRefresh = false)
@@ -353,19 +370,25 @@ class TraktProgressService @Inject constructor(
         )
     }
 
-    fun observeMovieWatched(contentId: String): Flow<Boolean> {
+    fun observeMovieWatched(contentId: String, videoId: String? = null): Flow<Boolean> {
         val rawKey = contentId.trim()
         val canonicalKey = canonicalLookupKey(rawKey)
+        val videoCanonicalKey = videoId?.takeIf { it.isNotBlank() && it != contentId }
+            ?.let { canonicalLookupKey(it) }
+
         return combine(watchedMoviesState, optimisticProgress) { watchedMovies, optimistic ->
             val optimisticEntry = optimistic[rawKey]?.progress
                 ?: optimistic[canonicalKey]?.progress
+                ?: videoCanonicalKey?.let { optimistic[it]?.progress }
             when {
                 optimisticEntry?.isCompleted() == true -> true
                 optimisticEntry?.isInProgress() == true -> false
-                else -> watchedMovies.contains(rawKey) || watchedMovies.contains(canonicalKey)
+                else -> watchedMovies.contains(rawKey)
+                    || watchedMovies.contains(canonicalKey)
+                    || (videoCanonicalKey != null && watchedMovies.contains(videoCanonicalKey))
             }
         }
-            .onStart { isMovieWatched(rawKey) }
+            .onStart { isMovieWatched(rawKey, videoId) }
             .distinctUntilChanged()
     }
 
@@ -455,16 +478,22 @@ class TraktProgressService @Inject constructor(
         refreshNow()
     }
 
-    suspend fun isMovieWatched(contentId: String): Boolean {
+    suspend fun isMovieWatched(contentId: String, videoId: String? = null): Boolean {
         val rawKey = contentId.trim()
         if (rawKey.isBlank()) return false
         val canonicalKey = canonicalLookupKey(rawKey)
+        val videoCanonicalKey = videoId?.takeIf { it.isNotBlank() && it != contentId }
+            ?.let { canonicalLookupKey(it) }
+
         val optimistic = optimisticProgress.value[rawKey]?.progress
             ?: optimisticProgress.value[canonicalKey]?.progress
+            ?: videoCanonicalKey?.let { optimisticProgress.value[it]?.progress }
         if (optimistic?.isCompleted() == true) return true
 
         val watchedMovies = getWatchedMoviesSnapshot(forceRefresh = false)
-        return watchedMovies.contains(rawKey) || watchedMovies.contains(canonicalKey)
+        return watchedMovies.contains(rawKey)
+            || watchedMovies.contains(canonicalKey)
+            || (videoCanonicalKey != null && watchedMovies.contains(videoCanonicalKey))
     }
 
     suspend fun removeProgress(contentId: String, season: Int?, episode: Int?) {
@@ -514,12 +543,14 @@ class TraktProgressService @Inject constructor(
         refreshNow()
     }
 
-    suspend fun removeFromHistory(contentId: String, season: Int?, episode: Int?) {
-        Log.d(TAG, "removeFromHistory: contentId=$contentId season=$season episode=$episode")
+    suspend fun removeFromHistory(contentId: String, videoId: String? = null, season: Int?, episode: Int?) {
+        Log.d(TAG, "removeFromHistory: contentId=$contentId videoId=$videoId season=$season episode=$episode")
         applyOptimisticRemoval(contentId, season, episode)
 
-        val parsed = parseContentIds(contentId)
-        val ids = toTraktIds(parsed)
+        var ids = toTraktIds(parseContentIds(contentId))
+        if (!ids.hasAnyId() && !videoId.isNullOrBlank() && videoId != contentId) {
+            ids = toTraktIds(parseContentIds(videoId))
+        }
         Log.d(TAG, "removeFromHistory: parsed ids=$ids")
         if (!ids.hasAnyId()) {
             Log.d(TAG, "removeFromHistory: no valid Trakt IDs, skipping")
@@ -889,16 +920,16 @@ class TraktProgressService @Inject constructor(
             if (items.isEmpty()) break
 
             var shouldStop = false
-            items.forEach { item ->
-                val mapped = mapEpisodeHistoryItem(item) ?: return@forEach
+            for (item in items) {
+                val mapped = mapEpisodeHistoryItem(item) ?: continue
                 if (cutoffMs != null && mapped.lastWatched < cutoffMs) {
                     shouldStop = true
-                    return@forEach
+                    continue
                 }
                 results.putIfAbsent(mapped.contentId, mapped)
                 if (results.size >= maxRecentEpisodeHistoryEntries) {
                     shouldStop = true
-                    return@forEach
+                    continue
                 }
             }
 
@@ -910,7 +941,7 @@ class TraktProgressService @Inject constructor(
         return results.values.toList()
     }
 
-    private fun mapEpisodeHistoryItem(item: TraktUserEpisodeHistoryItemDto): WatchProgress? {
+    private suspend fun mapEpisodeHistoryItem(item: TraktUserEpisodeHistoryItemDto): WatchProgress? {
         val show = item.show ?: return null
         val episode = item.episode ?: return null
         val season = episode.season ?: return null
@@ -920,8 +951,15 @@ class TraktProgressService @Inject constructor(
         if (contentId.isBlank()) return null
 
         val lastWatched = parseIsoToMillis(item.watchedAt)
-        // Avoid expensive metadata lookups for each history row.
-        val videoId = "$contentId:$season:$number"
+        val resolvedEpisode = resolveAddonEpisodeProgress(
+            contentId = contentId,
+            season = season,
+            episode = number,
+            episodeTitle = episode.title
+        )
+        val resolvedSeason = resolvedEpisode?.season ?: season
+        val resolvedNumber = resolvedEpisode?.episode ?: number
+        val videoId = resolveEpisodeVideoId(contentId, resolvedSeason, resolvedNumber)
 
         return WatchProgress(
             contentId = contentId,
@@ -931,9 +969,9 @@ class TraktProgressService @Inject constructor(
             backdrop = null,
             logo = null,
             videoId = videoId,
-            season = season,
-            episode = number,
-            episodeTitle = episode.title,
+            season = resolvedSeason,
+            episode = resolvedNumber,
+            episodeTitle = resolvedEpisode?.title ?: episode.title,
             position = 1L,
             duration = 1L,
             lastWatched = lastWatched,
@@ -961,12 +999,12 @@ class TraktProgressService @Inject constructor(
         if (response?.isSuccessful == true) {
             hasCompletedSnapshot = true
             val seasons = response.body()?.seasons.orEmpty()
-            seasons.forEach { season ->
+            for (season in seasons) {
                 mapSeasonProgress(contentId, season).forEach { progress ->
                     val seasonNum = progress.season ?: return@forEach
                     val episodeNum = progress.episode ?: return@forEach
                     completed[seasonNum to episodeNum] = progress
-                }
+                } 
             }
         }
 
@@ -1064,7 +1102,15 @@ class TraktProgressService @Inject constructor(
 
         val contentId = normalizeContentId(show.ids)
         if (contentId.isBlank()) return null
-        val videoId = resolveEpisodeVideoId(contentId, season, number)
+        val resolvedEpisode = resolveAddonEpisodeProgress(
+            contentId = contentId,
+            season = season,
+            episode = number,
+            episodeTitle = episode.title
+        )
+        val resolvedSeason = resolvedEpisode?.season ?: season
+        val resolvedNumber = resolvedEpisode?.episode ?: number
+        val videoId = resolveEpisodeVideoId(contentId, resolvedSeason, resolvedNumber)
 
         return WatchProgress(
             contentId = contentId,
@@ -1074,9 +1120,9 @@ class TraktProgressService @Inject constructor(
             backdrop = null,
             logo = null,
             videoId = videoId,
-            season = season,
-            episode = number,
-            episodeTitle = episode.title,
+            season = resolvedSeason,
+            episode = resolvedNumber,
+            episodeTitle = resolvedEpisode?.title ?: episode.title,
             position = 0L,
             duration = 0L,
             lastWatched = parseIsoToMillis(item.pausedAt),
@@ -1088,7 +1134,7 @@ class TraktProgressService @Inject constructor(
         )
     }
 
-    private fun mapSeasonProgress(
+    private suspend fun mapSeasonProgress(
         contentId: String,
         season: TraktShowSeasonProgressDto
     ): List<WatchProgress> {
@@ -1097,6 +1143,14 @@ class TraktProgressService @Inject constructor(
             .filter { it.completed == true }
             .mapNotNull { episode ->
                 val episodeNumber = episode.number ?: return@mapNotNull null
+                val resolvedEpisode = resolveAddonEpisodeProgress(
+                    contentId = contentId,
+                    season = seasonNumber,
+                    episode = episodeNumber,
+                    episodeTitle = null
+                )
+                val resolvedSeason = resolvedEpisode?.season ?: seasonNumber
+                val resolvedNumber = resolvedEpisode?.episode ?: episodeNumber
                 WatchProgress(
                     contentId = contentId,
                     contentType = "series",
@@ -1104,10 +1158,10 @@ class TraktProgressService @Inject constructor(
                     poster = null,
                     backdrop = null,
                     logo = null,
-                    videoId = "$contentId:$seasonNumber:$episodeNumber",
-                    season = seasonNumber,
-                    episode = episodeNumber,
-                    episodeTitle = null,
+                    videoId = resolveEpisodeVideoId(contentId, resolvedSeason, resolvedNumber),
+                    season = resolvedSeason,
+                    episode = resolvedNumber,
+                    episodeTitle = resolvedEpisode?.title,
                     position = 1L,
                     duration = 1L,
                     lastWatched = parseIsoToMillis(episode.lastWatchedAt),
@@ -1115,6 +1169,30 @@ class TraktProgressService @Inject constructor(
                     source = WatchProgress.SOURCE_TRAKT_SHOW_PROGRESS
                 )
             }
+    }
+
+    private suspend fun resolveAddonEpisodeProgress(
+        contentId: String,
+        season: Int,
+        episode: Int,
+        episodeTitle: String?
+    ): EpisodeMappingEntry? {
+        return runCatching {
+            traktEpisodeMappingService.resolveAddonEpisodeMapping(
+                contentId = contentId,
+                contentType = "series",
+                season = season,
+                episode = episode,
+                episodeTitle = episodeTitle
+            )
+        }.getOrElse { error ->
+            Log.w(
+                TAG,
+                "resolveAddonEpisodeProgress failed for $contentId s=$season e=$episode",
+                error
+            )
+            null
+        }
     }
 
     private suspend fun resolveEpisodeVideoId(
