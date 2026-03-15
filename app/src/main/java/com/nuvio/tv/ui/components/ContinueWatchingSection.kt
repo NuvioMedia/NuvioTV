@@ -223,9 +223,11 @@ fun ContinueWatchingCard(
     var longPressTriggered by remember { mutableStateOf(false) }
 
     val themeShape = NuvioTheme.extendedColors.posterShape
-    val progress = (item as? ContinueWatchingItem.InProgress)?.progress
-    val nextUp = (item as? ContinueWatchingItem.NextUp)?.info
-    val episodeStr = progress?.episodeDisplayString ?: nextUp?.let { "S${it.season}E${it.episode}" }
+    val progress = remember(item) { (item as? ContinueWatchingItem.InProgress)?.progress }
+    val nextUp = remember(item) { (item as? ContinueWatchingItem.NextUp)?.info }
+    val episodeStr = remember(progress, nextUp) {
+        progress?.episodeDisplayString ?: nextUp?.let { "S${it.season}E${it.episode}" }
+    }
     val strAirsDate = stringResource(R.string.cw_airs_date, nextUp?.airDateLabel ?: "")
     val strUpcoming = stringResource(R.string.cw_upcoming)
     val strNextUp = stringResource(R.string.cw_next_up)
