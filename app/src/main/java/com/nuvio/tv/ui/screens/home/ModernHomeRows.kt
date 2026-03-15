@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListPrefetchStrategy
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -39,7 +40,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
@@ -50,6 +53,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalDensity
@@ -68,6 +72,8 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import coil.imageLoader
+import coil.memory.MemoryCache
 import coil.request.ImageRequest
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
@@ -82,6 +88,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 private const val MODERN_HORIZONTAL_FOCUS_DEBOUNCE_MS = 140L
+private const val POSTER_PREFETCH_DISTANCE = 8
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -92,19 +99,36 @@ private fun ModernContinueWatchingRowItem(
     imageHeight: Dp,
     onFocused: () -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
-    onShowOptions: (ContinueWatchingItem) -> Unit
+    onShowOptions: (ContinueWatchingItem) -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    val item = payload.item
+    val onClick = remember(item) { { onContinueWatchingClick(item) } }
+    val onLongPress = remember(item) { { onShowOptions(item) } }
+    var focusEventId by remember { mutableStateOf(0) }
+    var isCardFocused by remember { mutableStateOf(false) }
+    val latestOnFocused by rememberUpdatedState(onFocused)
+
+    LaunchedEffect(focusEventId, isCardFocused) {
+        if (focusEventId == 0 || !isCardFocused) return@LaunchedEffect
+        val targetEventId = focusEventId
+        delay(MODERN_HORIZONTAL_FOCUS_DEBOUNCE_MS)
+        if (!isCardFocused || focusEventId != targetEventId) return@LaunchedEffect
+        latestOnFocused()
+    }
+
     ContinueWatchingCard(
-        item = payload.item,
-        onClick = { onContinueWatchingClick(payload.item) },
-        onLongPress = { onShowOptions(payload.item) },
+        item = item,
+        onClick = onClick,
+        onLongPress = onLongPress,
         cardWidth = cardWidth,
         imageHeight = imageHeight,
-        modifier = Modifier
+        modifier = modifier
             .focusRequester(requester)
             .onFocusChanged {
+                isCardFocused = it.isFocused
                 if (it.isFocused) {
-                    onFocused()
+                    focusEventId += 1
                 }
             }
     )
@@ -125,7 +149,7 @@ private fun ModernCatalogRowItem(
     effectiveExpandEnabled: Boolean,
     effectiveAutoplayEnabled: Boolean,
     trailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget,
-    expandedCatalogFocusKey: String?,
+    isBackdropExpanded: Boolean,
     expandedTrailerPreviewUrl: String?,
     expandedTrailerPreviewAudioUrl: String?,
     isWatched: Boolean,
@@ -136,7 +160,8 @@ private fun ModernCatalogRowItem(
     onNavigateToDetail: (String, String, String) -> Unit,
     onLongPress: () -> Unit,
     onBackdropInteraction: () -> Unit,
-    onExpandedCatalogFocusKeyChange: (String?) -> Unit
+    onExpandedCatalogFocusKeyChange: (String?) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val focusKey = payload.focusKey
     var focusEventId by remember(focusKey) { mutableStateOf(0) }
@@ -146,7 +171,7 @@ private fun ModernCatalogRowItem(
     val latestOnPreloadAdjacentItem by rememberUpdatedState(onPreloadAdjacentItem)
     val latestOnCatalogSelectionFocused by rememberUpdatedState(onCatalogSelectionFocused)
 
-    LaunchedEffect(focusEventId, isCardFocused, focusKey, payload) {
+    LaunchedEffect(focusEventId, isCardFocused, focusKey) {
         if (focusEventId == 0 || !isCardFocused) return@LaunchedEffect
         val targetEventId = focusEventId
         delay(MODERN_HORIZONTAL_FOCUS_DEBOUNCE_MS)
@@ -166,16 +191,13 @@ private fun ModernCatalogRowItem(
     val suppressCardExpansionForHeroTrailer =
         effectiveAutoplayEnabled &&
             trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA
-    val isBackdropExpanded =
-        effectiveExpandEnabled &&
-            expandedCatalogFocusKey == focusKey &&
-            !suppressCardExpansionForHeroTrailer
+    val effectiveBackdropExpanded = isBackdropExpanded && !suppressCardExpansionForHeroTrailer
     val isSidebarExpanded = LocalSidebarExpanded.current
     val playTrailerInExpandedCard =
         effectiveAutoplayEnabled &&
             !isSidebarExpanded &&
             trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD &&
-            isBackdropExpanded
+            effectiveBackdropExpanded
     val trailerPreviewUrl = if (playTrailerInExpandedCard) {
         expandedTrailerPreviewUrl
     } else {
@@ -194,8 +216,9 @@ private fun ModernCatalogRowItem(
         cardCornerRadius = posterCardCornerRadius,
         cardWidth = modernCatalogCardWidth,
         cardHeight = modernCatalogCardHeight,
+        modifier = modifier,
         focusedPosterBackdropExpandEnabled = effectiveExpandEnabled,
-        isBackdropExpanded = isBackdropExpanded,
+        isBackdropExpanded = effectiveBackdropExpanded,
         playTrailerInExpandedCard = playTrailerInExpandedCard,
         focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
         trailerPreviewUrl = trailerPreviewUrl,
@@ -227,7 +250,7 @@ internal fun ModernRowSection(
     row: HeroCarouselRow,
     rowTitleBottom: Dp,
     defaultBringIntoViewSpec: BringIntoViewSpec,
-    focusStateCatalogRowScrollStates: Map<String, Int>,
+    focusStateCatalogRowScrollIndex: Int,
     uiCaches: ModernHomeUiCaches,
     pendingRowFocusKey: String?,
     pendingRowFocusIndex: Int?,
@@ -265,26 +288,34 @@ internal fun ModernRowSection(
     val rowListStates = uiCaches.rowListStates
     val loadMoreRequestedTotals = uiCaches.loadMoreRequestedTotals
 
+    val rowKey = row.key
     Column {
         val titleMediumStyle = MaterialTheme.typography.titleMedium
         val rowTitleStyle = remember(titleMediumStyle) {
             titleMediumStyle.copy(fontWeight = FontWeight.SemiBold)
         }
+        val rowTitle = remember(row.title) { row.title }
+        val textColor = remember { NuvioColors.TextPrimary }
+        val textModifier = remember(rowTitleBottom) {
+            Modifier.padding(start = 52.dp, bottom = rowTitleBottom)
+        }
         Text(
-            text = row.title,
+            text = rowTitle,
             style = rowTitleStyle,
-            color = NuvioColors.TextPrimary,
-            modifier = Modifier.padding(start = 52.dp, bottom = rowTitleBottom)
+            color = textColor,
+            modifier = textModifier
         )
 
         val rowListState = rowListStates.getOrPut(row.key) {
             LazyListState(
-                firstVisibleItemIndex = focusStateCatalogRowScrollStates[row.key] ?: 0
+                firstVisibleItemIndex = focusStateCatalogRowScrollIndex,
+                prefetchStrategy = LazyListPrefetchStrategy(nestedPrefetchItemCount = 2)
             )
         }
-        val isRowScrolling by remember(rowListState) {
+        val isRowScrollingState = remember(rowListState) {
             derivedStateOf { rowListState.isScrollInProgress }
         }
+        val isRowScrolling by isRowScrollingState
         val currentRowState = rememberUpdatedState(row)
         val loadMoreCatalogId = row.catalogId
         val loadMoreAddonId = row.addonId
@@ -372,7 +403,61 @@ internal fun ModernRowSection(
 
         val density = LocalDensity.current
         val rowStartPadding = 52.dp
-        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec) {
+        val context = LocalContext.current
+        val imageLoader = context.imageLoader
+
+        val rowItemCount = row.items.size
+        LaunchedEffect(row.key, rowItemCount, modernCatalogCardWidth, modernCatalogCardHeight, continueWatchingCardWidth, continueWatchingCardHeight) {
+            val catalogWidthPx = with(density) { modernCatalogCardWidth.roundToPx() }
+            val catalogHeightPx = with(density) { modernCatalogCardHeight.roundToPx() }
+            val cwWidthPx = with(density) { continueWatchingCardWidth.roundToPx() }
+            val cwHeightPx = with(density) { continueWatchingCardHeight.roundToPx() }
+            fun imageUrlAndKey(item: ModernCarouselItem): Pair<String, String>? {
+                val url = item.imageUrl ?: return null
+                return when (item.payload) {
+                    is ModernPayload.Catalog -> url to "${url}_${catalogWidthPx}x${catalogHeightPx}"
+                    is ModernPayload.ContinueWatching -> url to "${url}_${cwWidthPx}x${cwHeightPx}"
+                }
+            }
+            fun enqueueIfNeeded(item: ModernCarouselItem, widthPx: Int, heightPx: Int) {
+                val (url, cacheKey) = imageUrlAndKey(item) ?: return
+                if (imageLoader.memoryCache?.get(MemoryCache.Key(cacheKey)) != null) return
+                imageLoader.enqueue(
+                    ImageRequest.Builder(context)
+                        .data(url)
+                        .memoryCacheKey(cacheKey)
+                        .size(width = widthPx, height = heightPx)
+                        .build()
+                )
+            }
+            // Prefetch initial visible + ahead items immediately when row appears
+            val items = currentRowState.value.items
+            for (i in 0 until minOf(POSTER_PREFETCH_DISTANCE, items.size)) {
+                val item = items.getOrNull(i) ?: continue
+                val (wPx, hPx) = when (item.payload) {
+                    is ModernPayload.Catalog -> catalogWidthPx to catalogHeightPx
+                    is ModernPayload.ContinueWatching -> cwWidthPx to cwHeightPx
+                }
+                enqueueIfNeeded(item, wPx, hPx)
+            }
+            snapshotFlow {
+                rowListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            }
+                .distinctUntilChanged()
+                .collect { lastVisibleIndex ->
+                    val currentItems = currentRowState.value.items
+                    for (i in (lastVisibleIndex + 1)..(lastVisibleIndex + POSTER_PREFETCH_DISTANCE)) {
+                        val item = currentItems.getOrNull(i) ?: continue
+                        val (wPx, hPx) = when (item.payload) {
+                            is ModernPayload.Catalog -> catalogWidthPx to catalogHeightPx
+                            is ModernPayload.ContinueWatching -> cwWidthPx to cwHeightPx
+                        }
+                        enqueueIfNeeded(item, wPx, hPx)
+                    }
+                }
+        }
+
+        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec, rowStartPadding) {
             val parentStartOffsetPx = with(density) { rowStartPadding.roundToPx() }
             @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
             object : BringIntoViewSpec {
@@ -404,25 +489,7 @@ internal fun ModernRowSection(
         CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalBringIntoViewSpec) {
             LazyRow(
                 state = rowListState,
-                modifier = Modifier
-                    .focusRestorer(
-                        run {
-                            val rememberedIndex = (focusedItemByRow[row.key] ?: 0)
-                                .coerceIn(0, (row.items.size - 1).coerceAtLeast(0))
-                            val fallbackIndex = rowListState.firstVisibleItemIndex
-                                .coerceIn(0, (row.items.size - 1).coerceAtLeast(0))
-                            val restoreIndex = if (rememberedIndex in row.items.indices) {
-                                rememberedIndex
-                            } else {
-                                fallbackIndex
-                            }
-                            val visibleIndices = rowListState.layoutInfo.visibleItemsInfo.map { it.index }.toSet()
-                            val safeIndex = if (restoreIndex in visibleIndices) restoreIndex else
-                                visibleIndices.minByOrNull { kotlin.math.abs(it - restoreIndex) } ?: fallbackIndex
-                            val itemKey = row.items.getOrNull(safeIndex)?.key ?: row.items.first().key
-                            itemFocusRequesters[row.key]?.get(itemKey) ?: FocusRequester.Default
-                        }
-                    ),
+                modifier = Modifier.focusRestorer().focusGroup(),
                 contentPadding = PaddingValues(horizontal = rowStartPadding),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -457,14 +524,11 @@ internal fun ModernRowSection(
 
                         is ModernPayload.Catalog -> {
                             val nextCatalogItem = row.items.getOrNull(index + 1)?.metaPreview
-                            val isWatched = remember(item.metaPreview?.id) {
-                                item.metaPreview?.let(isCatalogItemWatched) == true
-                            }
-                            val onLongPress: () -> Unit = remember(item.metaPreview, payload.addonBaseUrl) {
+                            val metaPreview = item.metaPreview ?: return@itemsIndexed
+                            val isWatched = remember(metaPreview) { isCatalogItemWatched(metaPreview) }
+                            val onLongPress: () -> Unit = remember(metaPreview, payload.addonBaseUrl) {
                                 {
-                                    item.metaPreview?.let { preview ->
-                                        onCatalogItemLongPress(preview, payload.addonBaseUrl)
-                                    }
+                                    onCatalogItemLongPress(metaPreview, payload.addonBaseUrl)
                                     Unit
                                 }
                             }
@@ -478,17 +542,18 @@ internal fun ModernRowSection(
                                 modernCatalogCardWidth = modernCatalogCardWidth,
                                 modernCatalogCardHeight = modernCatalogCardHeight,
                                 focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
-                                effectiveExpandEnabled = effectiveExpandEnabled && !isRowScrolling,
-                                effectiveAutoplayEnabled = effectiveAutoplayEnabled && !isRowScrolling,
+                                effectiveExpandEnabled = effectiveExpandEnabled,
+                                effectiveAutoplayEnabled = effectiveAutoplayEnabled,
                                 trailerPlaybackTarget = trailerPlaybackTarget,
-                                expandedCatalogFocusKey = expandedCatalogFocusKey,
+                                isBackdropExpanded = effectiveExpandEnabled && !isRowScrolling &&
+                                    expandedCatalogFocusKey == payload.focusKey,
                                 expandedTrailerPreviewUrl = expandedTrailerPreviewUrl,
                                 expandedTrailerPreviewAudioUrl = expandedTrailerPreviewAudioUrl,
                                 isWatched = isWatched,
                                 onFocused = onFocused,
                                 onItemFocus = onItemFocus,
-                                onPreloadAdjacentItem = {
-                                    nextCatalogItem?.let(onPreloadAdjacentItem)
+                                onPreloadAdjacentItem = remember(nextCatalogItem, onPreloadAdjacentItem) {
+                                     { nextCatalogItem?.let(onPreloadAdjacentItem) }
                                 },
                                 onCatalogSelectionFocused = onCatalogSelectionFocused,
                                 onNavigateToDetail = onNavigateToDetail,
@@ -527,7 +592,8 @@ private fun ModernCarouselCard(
     onClick: () -> Unit,
     onLongPress: () -> Unit,
     onBackdropInteraction: () -> Unit,
-    onTrailerEnded: () -> Unit
+    onTrailerEnded: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val cardShape = remember(cardCornerRadius) { RoundedCornerShape(cardCornerRadius) }
     val context = LocalContext.current
@@ -538,7 +604,7 @@ private fun ModernCarouselCard(
     } else {
         cardWidth
     }
-    val animatedCardWidth by if (focusedPosterBackdropExpandEnabled) {
+    val animatedCardWidthState = if (focusedPosterBackdropExpandEnabled) {
         animateDpAsState(
             targetValue = targetCardWidth,
             label = "modernCardWidth"
@@ -546,6 +612,7 @@ private fun ModernCarouselCard(
     } else {
         rememberUpdatedState(cardWidth)
     }
+    val animatedCardWidth by animatedCardWidthState
     val imageUrl = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
         item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
     } else {
@@ -569,6 +636,7 @@ private fun ModernCarouselCard(
             ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(false)
+                .memoryCacheKey("${it}_${requestWidthPx}x${requestHeightPx}")
                 .size(width = requestWidthPx, height = requestHeightPx)
                 .build()
         }
@@ -585,6 +653,7 @@ private fun ModernCarouselCard(
             ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(true)
+                .memoryCacheKey("${it}_${maxLogoWidthPx}x${logoHeightPx}")
                 .size(width = maxLogoWidthPx, height = logoHeightPx)
                 .build()
         }
@@ -598,11 +667,6 @@ private fun ModernCarouselCard(
             !landscapeLogoLoadFailed
     var isFocused by remember { mutableStateOf(false) }
     var longPressTriggered by remember { mutableStateOf(false) }
-    val watchedIconEndPadding by animateDpAsState(
-        targetValue = if (isFocused) 16.dp else 8.dp,
-        animationSpec = tween(durationMillis = 180),
-        label = "modernCardWatchedIconEndPadding"
-    )
     val backgroundCardColor = NuvioColors.BackgroundCard
     val focusRingColor = NuvioColors.FocusRing
     val titleMedium = MaterialTheme.typography.titleMedium
@@ -617,7 +681,7 @@ private fun ModernCarouselCard(
     }
 
     Column(
-        modifier = Modifier.width(animatedCardWidth),
+        modifier = modifier.width(animatedCardWidth),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Card(
@@ -746,26 +810,22 @@ private fun ModernCarouselCard(
                 }
 
                 if (isWatched) {
-                    Box(
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = stringResource(R.string.episodes_cd_watched),
+                        tint = Color.White,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(end = watchedIconEndPadding, top = 8.dp)
-                            .zIndex(2f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = Color.Black,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = stringResource(R.string.episodes_cd_watched),
-                            tint = Color.White,
-                            modifier = Modifier.size(21.dp)
-                        )
-                    }
+                            .padding(end = 8.dp, top = 8.dp)
+                            .zIndex(2f)
+                            .size(21.dp)
+                            .drawBehind {
+                                drawCircle(
+                                    color = androidx.compose.ui.graphics.Color.Black,
+                                    radius = size.minDimension / 2f + 1.5f
+                                )
+                            }
+                    )
                 }
             }
         }

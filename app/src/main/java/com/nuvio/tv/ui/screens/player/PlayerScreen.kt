@@ -186,7 +186,7 @@ fun PlayerScreen(
             uiState.nextEpisodeAutoPlayCountdownSec == null
         ) {
             viewModel.stopAndRelease()
-            val next = uiState.nextEpisode
+            val next = uiState.nextEpisode?.takeIf { it.hasAired }
             if (onPlaybackEnded != null) {
                 onPlaybackEnded(next?.videoId, next?.season, next?.episode)
             } else {
@@ -959,7 +959,14 @@ fun PlayerScreen(
             visible = uiState.showAudioOverlay,
             tracks = uiState.audioTracks,
             selectedIndex = uiState.selectedAudioTrackIndex,
+            audioAmplificationDb = uiState.audioAmplificationDb,
+            isAmplificationAvailable = uiState.isAudioAmplificationAvailable,
+            persistAmplification = uiState.persistAudioAmplification,
             onTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectAudioTrack(it)) },
+            onAmplificationChange = { viewModel.onEvent(PlayerEvent.OnSetAudioAmplificationDb(it)) },
+            onPersistAmplificationChange = {
+                viewModel.onEvent(PlayerEvent.OnSetPersistAudioAmplification(it))
+            },
             onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissTransientOverlay) },
             modifier = Modifier
                 .fillMaxSize()

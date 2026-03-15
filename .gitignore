@@ -37,7 +37,8 @@ benchmark
 db/
 backups/
 .supabase_db.env
-scripts
+scripts/*
+!scripts/release_beta.py
 /supabase
 tv-samples
 HOME_UI_OPTIMIZATION_NOTES.local.md

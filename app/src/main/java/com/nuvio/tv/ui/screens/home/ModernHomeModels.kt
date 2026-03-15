@@ -155,7 +155,9 @@ internal fun buildContinueWatchingItem(
             formatContinueWatchingProgressLabel(
                 progress = progress,
                 resumeLabel = context.getString(R.string.cw_resume),
-                percentWatchedLabel = context.getString(R.string.cw_percent_watched)
+                percentWatchedLabel = context.getString(R.string.cw_percent_watched),
+                hoursMinLeftLabel = context.getString(R.string.cw_hours_min_left),
+                minLeftLabel = context.getString(R.string.cw_min_left)
             )
         }
         is ContinueWatchingItem.NextUp -> {

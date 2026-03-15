@@ -32,6 +32,7 @@ Translation PRs are allowed, as long as they stay focused on translation/localiz
 
 To keep issues fixable, bug reports should include:
 
+- A short, specific issue title that describes the bug
 - App version (release version or commit hash)
 - Platform + device model + Android version
 - Install method (release APK / CI / built from source)
@@ -39,7 +40,9 @@ To keep issues fixable, bug reports should include:
 - Expected vs actual behavior
 - Frequency (always/sometimes/once)
 
-Logcat is **optional**, but it helps a lot for playback/crash issues.
+Do not leave the title as just `[Bug]:` or another generic placeholder.
+
+Logcat is optional for most issues, but it is **required** for crash / force-close reports.
 
 ### How to capture logs (optional)
 
@@ -49,7 +52,7 @@ If you can, reproduce the issue once, then attach a short log snippet from aroun
 adb logcat -d | tail -n 300
 ```
 
-If the issue is a crash, also include any stack trace shown by Android Studio or `adb logcat`.
+If the issue is a crash, include a stack trace or log snippet from Android Studio or `adb logcat`.
 
 ## Feature requests (rules)
 

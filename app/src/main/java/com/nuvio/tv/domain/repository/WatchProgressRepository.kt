@@ -38,7 +38,7 @@ interface WatchProgressRepository {
      * Returns whether the item is marked as watched/completed.
      * For series episodes pass both [season] and [episode].
      */
-    fun isWatched(contentId: String, season: Int? = null, episode: Int? = null): Flow<Boolean>
+    fun isWatched(contentId: String, videoId: String? = null, season: Int? = null, episode: Int? = null): Flow<Boolean>
     
     fun observeWatchedMovieIds(): Flow<Set<String>>
 
@@ -55,7 +55,7 @@ interface WatchProgressRepository {
     /**
      * Remove from watch history (marks as unwatched on Trakt)
      */
-    suspend fun removeFromHistory(contentId: String, season: Int? = null, episode: Int? = null)
+    suspend fun removeFromHistory(contentId: String, videoId: String? = null, season: Int? = null, episode: Int? = null)
 
     /**
      * Mark content as completed

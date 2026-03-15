@@ -321,6 +321,10 @@ class TraktProgressService @Inject constructor(
             .distinctUntilChanged()
     }
 
+    fun observeRemoteProgressLoaded(): Flow<Boolean> {
+        return hasLoadedRemoteProgress
+    }
+
     fun observeEpisodeProgress(contentId: String): Flow<Map<Pair<Int, Int>, WatchProgress>> {
         val cacheKey = canonicalLookupKey(contentId)
         return episodeProgressState
@@ -333,6 +337,13 @@ class TraktProgressService @Inject constructor(
             .distinctUntilChanged()
     }
 
+    fun observeEpisodeProgressLoaded(contentId: String): Flow<Boolean> {
+        val cacheKey = canonicalLookupKey(contentId)
+        return episodeProgressState
+            .map { state -> state[cacheKey]?.hasCompletedSnapshot == true }
+            .distinctUntilChanged()
+    }
+
     suspend fun getEpisodeProgressSnapshot(
         contentId: String
     ): Map<Pair<Int, Int>, WatchProgress> {
@@ -342,19 +353,25 @@ class TraktProgressService @Inject constructor(
         )
     }
 
-    fun observeMovieWatched(contentId: String): Flow<Boolean> {
+    fun observeMovieWatched(contentId: String, videoId: String? = null): Flow<Boolean> {
         val rawKey = contentId.trim()
         val canonicalKey = canonicalLookupKey(rawKey)
+        val videoCanonicalKey = videoId?.takeIf { it.isNotBlank() && it != contentId }
+            ?.let { canonicalLookupKey(it) }
+
         return combine(watchedMoviesState, optimisticProgress) { watchedMovies, optimistic ->
             val optimisticEntry = optimistic[rawKey]?.progress
                 ?: optimistic[canonicalKey]?.progress
+                ?: videoCanonicalKey?.let { optimistic[it]?.progress }
             when {
                 optimisticEntry?.isCompleted() == true -> true
                 optimisticEntry?.isInProgress() == true -> false
-                else -> watchedMovies.contains(rawKey) || watchedMovies.contains(canonicalKey)
+                else -> watchedMovies.contains(rawKey)
+                    || watchedMovies.contains(canonicalKey)
+                    || (videoCanonicalKey != null && watchedMovies.contains(videoCanonicalKey))
             }
         }
-            .onStart { isMovieWatched(rawKey) }
+            .onStart { isMovieWatched(rawKey, videoId) }
             .distinctUntilChanged()
     }
 
@@ -444,16 +461,22 @@ class TraktProgressService @Inject constructor(
         refreshNow()
     }
 
-    suspend fun isMovieWatched(contentId: String): Boolean {
+    suspend fun isMovieWatched(contentId: String, videoId: String? = null): Boolean {
         val rawKey = contentId.trim()
         if (rawKey.isBlank()) return false
         val canonicalKey = canonicalLookupKey(rawKey)
+        val videoCanonicalKey = videoId?.takeIf { it.isNotBlank() && it != contentId }
+            ?.let { canonicalLookupKey(it) }
+
         val optimistic = optimisticProgress.value[rawKey]?.progress
             ?: optimisticProgress.value[canonicalKey]?.progress
+            ?: videoCanonicalKey?.let { optimisticProgress.value[it]?.progress }
         if (optimistic?.isCompleted() == true) return true
 
         val watchedMovies = getWatchedMoviesSnapshot(forceRefresh = false)
-        return watchedMovies.contains(rawKey) || watchedMovies.contains(canonicalKey)
+        return watchedMovies.contains(rawKey)
+            || watchedMovies.contains(canonicalKey)
+            || (videoCanonicalKey != null && watchedMovies.contains(videoCanonicalKey))
     }
 
     suspend fun removeProgress(contentId: String, season: Int?, episode: Int?) {
@@ -503,12 +526,14 @@ class TraktProgressService @Inject constructor(
         refreshNow()
     }
 
-    suspend fun removeFromHistory(contentId: String, season: Int?, episode: Int?) {
-        Log.d(TAG, "removeFromHistory: contentId=$contentId season=$season episode=$episode")
+    suspend fun removeFromHistory(contentId: String, videoId: String? = null, season: Int?, episode: Int?) {
+        Log.d(TAG, "removeFromHistory: contentId=$contentId videoId=$videoId season=$season episode=$episode")
         applyOptimisticRemoval(contentId, season, episode)
 
-        val parsed = parseContentIds(contentId)
-        val ids = toTraktIds(parsed)
+        var ids = toTraktIds(parseContentIds(contentId))
+        if (!ids.hasAnyId() && !videoId.isNullOrBlank() && videoId != contentId) {
+            ids = toTraktIds(parseContentIds(videoId))
+        }
         Log.d(TAG, "removeFromHistory: parsed ids=$ids")
         if (!ids.hasAnyId()) {
             Log.d(TAG, "removeFromHistory: no valid Trakt IDs, skipping")

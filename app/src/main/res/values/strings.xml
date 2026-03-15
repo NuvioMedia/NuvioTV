@@ -7,6 +7,8 @@
     <!-- HomeScreen -->
     <string name="home_no_addons">No addons installed. Add one to get started.</string>
     <string name="home_no_catalog_addons">No catalog addons installed. Install a catalog addon to see content.</string>
+    <string name="auth_notice_nuvio_logged_out">You have been signed out of Nuvio. Please sign in again.</string>
+    <string name="auth_notice_trakt_logged_out">You have been signed out of Trakt. Please reconnect.</string>
     <string name="error_generic">An error occurred</string>
 
     <!-- ErrorState -->
@@ -596,6 +598,12 @@
     <string name="debug_error_dialog_title">Playback Error</string>
     <string name="debug_error_dialog_subtitle">An error occurred during playback.\n\nError: Test simulated error - this is not a real failure. Source returned HTTP 503 (Service Unavailable).</string>
     <string name="debug_dismiss">Dismiss</string>
+    <string name="debug_section_library">Library</string>
+    <string name="debug_generate_library_title">Generate Library Items</string>
+    <string name="debug_generate_library_subtitle">Add random movies/shows to the library for testing</string>
+    <string name="debug_generate_library_placeholder">Number of items</string>
+    <string name="debug_generate_library_button">Generate</string>
+    <string name="debug_generating_library">Generating\u2026</string>
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profiles</string>
@@ -641,6 +649,9 @@
     <string name="addon_install_placeholder">https://example.com</string>
     <string name="addon_installing">Installing</string>
     <string name="addon_install_btn">Install</string>
+    <string name="addon_install_success">Installed %1$s</string>
+    <string name="addon_error_invalid_url">Enter a valid addon URL</string>
+    <string name="addon_error_invalid_scheme">Addon URL must start with http or https</string>
     <string name="addon_installed_section">Installed</string>
     <string name="addon_empty">No addons installed. Add one to get started.</string>
     <string name="addon_remove">Remove</string>
@@ -729,6 +740,15 @@
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
+    <string name="audio_dialog_tab_tracks">Audio</string>
+    <string name="audio_dialog_tab_mix">Mix</string>
+    <string name="audio_mix_label">Amplification (PCM)</string>
+    <string name="audio_mix_value_db">%1$d dB</string>
+    <string name="audio_mix_persist_on">Persist between sessions: ON</string>
+    <string name="audio_mix_persist_off">Persist between sessions: OFF</string>
+    <string name="audio_mix_range">Range: %1$d dB to %2$d dB</string>
+    <string name="audio_mix_range_saved">Range: %1$d dB to %2$d dB (saved)</string>
+    <string name="audio_mix_unavailable">Amplification is not available on this device</string>
 
     <!-- SubtitleDialog / SubtitleStyleSidePanel -->
     <string name="subtitle_dialog_title">Subtitles</string>

@@ -2,7 +2,6 @@ package com.nuvio.tv.ui.screens.player
 
 import android.content.Context
 import android.content.res.Resources
-import android.media.audiofx.LoudnessEnhancer
 import android.os.Build
 import android.util.Log
 import android.view.accessibility.CaptioningManager
@@ -17,6 +16,8 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.ForwardingRenderer
 import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.text.TextOutput
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
@@ -176,7 +177,8 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
             subtitleDelayUs.set(_uiState.value.subtitleDelayMs.toLong() * 1000L)
             val renderersFactory = SubtitleOffsetRenderersFactory(
                 context = context,
-                subtitleDelayUsProvider = subtitleDelayUs::get
+                subtitleDelayUsProvider = subtitleDelayUs::get,
+                gainAudioProcessor = gainAudioProcessor
             ).setExtensionRendererMode(playerSettings.decoderPriority)
                 .setMapDV7ToHevc(playerSettings.mapDV7ToHevc)
 
@@ -237,12 +239,7 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                     e.printStackTrace()
                 }
 
-                try {
-                    loudnessEnhancer?.release()
-                    loudnessEnhancer = LoudnessEnhancer(audioSessionId)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+                applyAudioAmplification(_uiState.value.audioAmplificationDb)
 
                 
                 notifyAudioSessionUpdate(true)
@@ -574,8 +571,21 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
 
 private class SubtitleOffsetRenderersFactory(
     context: Context,
-    private val subtitleDelayUsProvider: () -> Long
+    private val subtitleDelayUsProvider: () -> Long,
+    private val gainAudioProcessor: GainAudioProcessor
 ) : DefaultRenderersFactory(context) {
+
+    override fun buildAudioSink(
+        context: Context,
+        enableFloatOutput: Boolean,
+        enableAudioTrackPlaybackParams: Boolean
+    ): AudioSink {
+        return DefaultAudioSink.Builder(context)
+            .setEnableFloatOutput(enableFloatOutput)
+            .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+            .setAudioProcessors(arrayOf(gainAudioProcessor))
+            .build()
+    }
 
     override fun buildTextRenderers(
         context: Context,
