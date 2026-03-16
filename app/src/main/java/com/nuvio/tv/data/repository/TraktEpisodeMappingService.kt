@@ -25,6 +25,9 @@ class TraktEpisodeMappingService @Inject constructor(
 
     private val cacheMutex = Mutex()
     private val mappingCache = mutableMapOf<String, EpisodeMappingEntry>()
+    private val addonEpisodesCache = mutableMapOf<String, List<EpisodeMappingEntry>>()
+    private val traktEpisodesCache = mutableMapOf<String, List<EpisodeMappingEntry>>()
+    private val reverseMappingCache = mutableMapOf<String, EpisodeMappingEntry>()
 
     internal suspend fun prefetchEpisodeMapping(
         contentId: String?,
@@ -34,6 +37,49 @@ class TraktEpisodeMappingService @Inject constructor(
         episode: Int?
     ): EpisodeMappingEntry? {
         return resolveEpisodeMapping(contentId, contentType, videoId, season, episode)
+    }
+
+    internal suspend fun resolveAddonEpisodeMapping(
+        contentId: String?,
+        contentType: String?,
+        season: Int?,
+        episode: Int?,
+        episodeTitle: String? = null
+    ): EpisodeMappingEntry? {
+        val requestedSeason = season ?: return null
+        val requestedEpisode = episode ?: return null
+        val resolvedContentId = contentId?.takeIf { it.isNotBlank() } ?: return null
+        val resolvedContentType = contentType?.takeIf { it.isNotBlank() } ?: return null
+        val reverseKey = reverseCacheKey(
+            contentId = resolvedContentId,
+            contentType = resolvedContentType,
+            season = requestedSeason,
+            episode = requestedEpisode,
+            title = episodeTitle
+        )
+        cacheMutex.withLock {
+            reverseMappingCache[reverseKey]?.let { return it }
+        }
+
+        val addonEpisodes = getAddonEpisodes(resolvedContentId, resolvedContentType)
+        if (addonEpisodes.isEmpty()) return null
+
+        val showLookupId = resolveShowLookupId(contentId = resolvedContentId, videoId = null) ?: return null
+        val traktEpisodes = getTraktEpisodes(showLookupId)
+        if (traktEpisodes.isEmpty()) return null
+
+        val mapped = reverseRemapEpisodeByTitleOrIndex(
+            requestedSeason = requestedSeason,
+            requestedEpisode = requestedEpisode,
+            requestedTitle = episodeTitle,
+            addonEpisodes = addonEpisodes,
+            traktEpisodes = traktEpisodes
+        ) ?: return null
+
+        cacheMutex.withLock {
+            reverseMappingCache[reverseKey] = mapped
+        }
+        return mapped
     }
 
     internal suspend fun getCachedEpisodeMapping(
@@ -64,21 +110,65 @@ class TraktEpisodeMappingService @Inject constructor(
         val resolvedContentId = contentId?.takeIf { it.isNotBlank() } ?: return null
         val resolvedContentType = contentType?.takeIf { it.isNotBlank() } ?: return null
 
-        val meta = fetchSeriesMeta(resolvedContentId, resolvedContentType) ?: return null
-        val addonEpisodes = meta.videos.toEpisodeMappingEntries()
+        val addonEpisodes = getAddonEpisodes(resolvedContentId, resolvedContentType)
         if (addonEpisodes.isEmpty()) return null
 
         val showLookupId = resolveShowLookupId(contentId = resolvedContentId, videoId = videoId) ?: return null
+        val traktEpisodes = getTraktEpisodes(showLookupId)
+        if (traktEpisodes.isEmpty()) return null
+
+        val mapped = remapEpisodeByTitleOrIndex(
+            requestedSeason = requestedSeason,
+            requestedEpisode = requestedEpisode,
+            requestedVideoId = videoId,
+            requestedTitle = null,
+            addonEpisodes = addonEpisodes,
+            traktEpisodes = traktEpisodes
+        ) ?: return null
+
+        cacheMutex.withLock {
+            mappingCache[key] = mapped
+        }
+        return mapped
+    }
+
+    private suspend fun getAddonEpisodes(
+        contentId: String,
+        contentType: String
+    ): List<EpisodeMappingEntry> {
+        val cacheKey = addonEpisodesCacheKey(contentId, contentType)
+        cacheMutex.withLock {
+            addonEpisodesCache[cacheKey]?.let { return it }
+        }
+
+        val meta = fetchSeriesMeta(contentId, contentType) ?: return emptyList()
+        val addonEpisodes = meta.videos.toEpisodeMappingEntries()
+        if (addonEpisodes.isEmpty()) return emptyList()
+
+        cacheMutex.withLock {
+            addonEpisodesCache[cacheKey] = addonEpisodes
+        }
+        return addonEpisodes
+    }
+
+    private suspend fun getTraktEpisodes(showLookupId: String): List<EpisodeMappingEntry> {
+        cacheMutex.withLock {
+            traktEpisodesCache[showLookupId]?.let { return it }
+        }
+
         val seasonsResponse = traktAuthService.executeAuthorizedRequest { authHeader ->
             traktApi.getShowSeasons(
                 authorization = authHeader,
                 id = showLookupId,
                 extended = "episodes"
             )
-        } ?: return null
+        } ?: return emptyList()
         if (!seasonsResponse.isSuccessful) {
-            Log.w(TAG, "resolveEpisodeMapping: seasons request failed code=${seasonsResponse.code()} id=$showLookupId")
-            return null
+            Log.w(
+                TAG,
+                "getTraktEpisodes: seasons request failed code=${seasonsResponse.code()} id=$showLookupId"
+            )
+            return emptyList()
         }
 
         val traktEpisodes = seasonsResponse.body()
@@ -99,20 +189,13 @@ class TraktEpisodeMappingService @Inject constructor(
                     }
             }
             .toList()
-        if (traktEpisodes.isEmpty()) return null
 
-        val mapped = remapEpisodeByTitleOrIndex(
-            requestedSeason = requestedSeason,
-            requestedEpisode = requestedEpisode,
-            requestedVideoId = videoId,
-            addonEpisodes = addonEpisodes,
-            traktEpisodes = traktEpisodes
-        ) ?: return null
-
-        cacheMutex.withLock {
-            mappingCache[key] = mapped
+        if (traktEpisodes.isNotEmpty()) {
+            cacheMutex.withLock {
+                traktEpisodesCache[showLookupId] = traktEpisodes
+            }
         }
-        return mapped
+        return traktEpisodes
     }
 
     private fun cacheKey(
@@ -128,6 +211,21 @@ class TraktEpisodeMappingService @Inject constructor(
         val resolvedEpisode = episode ?: return null
         val resolvedVideoId = videoId?.trim().orEmpty()
         return "$resolvedContentType|$resolvedContentId|$resolvedVideoId|$resolvedSeason|$resolvedEpisode"
+    }
+
+    private fun reverseCacheKey(
+        contentId: String,
+        contentType: String,
+        season: Int,
+        episode: Int,
+        title: String?
+    ): String {
+        val normalizedTitle = title?.trim()?.lowercase().orEmpty()
+        return "reverse|${contentType.trim().lowercase()}|${contentId.trim()}|$season|$episode|$normalizedTitle"
+    }
+
+    private fun addonEpisodesCacheKey(contentId: String, contentType: String): String {
+        return "${contentType.trim().lowercase()}|${contentId.trim()}"
     }
 
     private fun resolveShowLookupId(contentId: String?, videoId: String?): String? {

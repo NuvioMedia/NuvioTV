@@ -3,7 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.dash.DashMediaSource
@@ -12,18 +12,30 @@ import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.text.SubtitleParser
 import com.nuvio.tv.data.local.PlayerSettings
+import com.nuvio.tv.core.network.IPv4FirstDns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLDecoder
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 @UnstableApi
 internal class PlayerMediaSourceFactory {
     private var customExtractorsFactory: ExtractorsFactory? = null
     private var customSubtitleParserFactory: SubtitleParser.Factory? = null
+    private val playbackHttpClient by lazy {
+        OkHttpClient.Builder()
+            .dns(IPv4FirstDns())
+            .connectTimeout(8, TimeUnit.SECONDS)
+            .readTimeout(8, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build()
+    }
 
     fun configureSubtitleParsing(
         extractorsFactory: ExtractorsFactory?,
@@ -44,10 +56,7 @@ internal class PlayerMediaSourceFactory {
         mimeTypeOverride: String? = null
     ): MediaSource {
         val sanitizedHeaders = sanitizeHeaders(headers)
-        val httpDataSourceFactory = DefaultHttpDataSource.Factory().apply {
-            setConnectTimeoutMs(8000)
-            setReadTimeoutMs(8000)
-            setAllowCrossProtocolRedirects(true)
+        val httpDataSourceFactory = OkHttpDataSource.Factory(playbackHttpClient).apply {
             setDefaultRequestProperties(sanitizedHeaders)
             setUserAgent(DEFAULT_USER_AGENT)
         }

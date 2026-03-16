@@ -268,7 +268,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
         return useTraktProgressFlow()
             .flatMapLatest { useTraktProgress ->
                 if (useTraktProgress) {
-                    traktAllProgressFlow().map { items ->
+                    traktProgressService.observeAllProgress().map { items ->
                         items
                             .filter { it.contentId == contentId }
                             .maxByOrNull { it.lastWatched }
@@ -425,10 +425,11 @@ class WatchProgressRepositoryImpl @Inject constructor(
     override suspend fun removeProgress(contentId: String, season: Int?, episode: Int?) {
         val useTraktProgress = shouldUseTraktProgress()
         val hasEffectiveTraktConnection = hasEffectiveTraktConnection()
-        Log.d(
-            TAG,
-            "removeProgress called contentId=$contentId season=$season episode=$episode useTraktProgress=$useTraktProgress hasEffectiveTraktConnection=$hasEffectiveTraktConnection"
-        )
+        val remoteDeleteKeys = if (!useTraktProgress) {
+            resolveRemoteDeleteKeys(contentId, season, episode)
+        } else {
+            emptyList()
+        }
         if (hasEffectiveTraktConnection) {
             traktProgressService.applyOptimisticRemoval(contentId, season, episode)
             traktProgressService.removeProgress(contentId, season, episode)
@@ -437,7 +438,6 @@ class WatchProgressRepositoryImpl @Inject constructor(
         if (useTraktProgress) {
             return
         }
-        val remoteDeleteKeys = resolveRemoteDeleteKeys(contentId, season, episode)
         if (authManager.isAuthenticated && remoteDeleteKeys.isNotEmpty()) {
             watchProgressSyncService.deleteFromRemote(remoteDeleteKeys)
                 .onFailure { error ->
@@ -449,6 +449,11 @@ class WatchProgressRepositoryImpl @Inject constructor(
 
     override suspend fun removeFromHistory(contentId: String, videoId: String?, season: Int?, episode: Int?) {
         val useTraktProgress = shouldUseTraktProgress()
+        val remoteDeleteKeys = if (!useTraktProgress) {
+            resolveRemoteDeleteKeys(contentId, season, episode)
+        } else {
+            emptyList()
+        }
         if (hasEffectiveTraktConnection()) {
             traktProgressService.removeFromHistory(contentId, videoId, season, episode)
         }
@@ -457,7 +462,6 @@ class WatchProgressRepositoryImpl @Inject constructor(
         if (useTraktProgress) {
             return
         }
-        val remoteDeleteKeys = resolveRemoteDeleteKeys(contentId, season, episode)
         if (authManager.isAuthenticated && remoteDeleteKeys.isNotEmpty()) {
             watchProgressSyncService.deleteFromRemote(remoteDeleteKeys)
                 .onFailure { error ->
@@ -564,21 +568,22 @@ class WatchProgressRepositoryImpl @Inject constructor(
         season: Int?,
         episode: Int?
     ): List<String> {
+        val rawEntries = watchProgressPreferences.getAllRawEntries()
         val keys = if (season != null && episode != null) {
             listOf("${contentId}_s${season}e${episode}", contentId)
         } else {
-            val matchingLocalKeys = watchProgressPreferences
-                .getAllRawEntries()
+            val matchingLocalKeys = rawEntries
                 .keys
                 .filter { key ->
                     key == contentId || key.startsWith("${contentId}_")
                 }
             matchingLocalKeys + contentId
         }
-        return keys
+        val resolvedKeys = keys
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .distinct()
+        return resolvedKeys
     }
 
 }

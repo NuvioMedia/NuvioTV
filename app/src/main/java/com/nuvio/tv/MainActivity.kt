@@ -1203,7 +1203,7 @@ private fun ModernSidebarScaffold(
                         .align(Alignment.TopStart)
                         .offset {
                             IntOffset(
-                                (40.dp + sidebarSlideX + sidebarDeflateOffsetX).roundToPx(),
+                                14.dp.roundToPx(),
                                 (16.dp + sidebarDeflateOffsetY).roundToPx()
                             )
                         }

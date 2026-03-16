@@ -41,6 +41,10 @@
     <string name="error_meta_tried_none">Tried meta addons: %1$s. None of them provided metadata for id=%2$s (type=%3$s).</string>
     <string name="error_meta_tried_generic">Tried meta addons: %1$s. Metadata could not be loaded for id=%2$s (type=%3$s).</string>
     <string name="error_meta_tried_issues">Tried meta addons: %1$s. Metadata could not be loaded for id=%2$s (type=%3$s). Issues: %4$s.</string>
+    <string name="error_stream_no_supported_addon">No installed addon supports streams for \"%1$s\".</string>
+    <string name="error_stream_tried_none">Tried stream addons: %1$s. None of them returned streams for id=%2$s (type=%3$s).</string>
+    <string name="error_stream_tried_generic">Tried stream addons: %1$s. Streams could not be loaded for id=%2$s (type=%3$s).</string>
+    <string name="error_stream_tried_issues">Tried stream addons: %1$s. Streams could not be loaded for id=%2$s (type=%3$s). Issues: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Continue Watching</string>
@@ -178,6 +182,23 @@
     <string name="settings_playback_subtitle">Player, subtitles, and auto-play.</string>
     <string name="settings_trakt_subtitle">Open Trakt connection screen.</string>
     <string name="settings_about_subtitle">Version and policies.</string>
+    <string name="settings_network">Network speed</string>
+    <string name="settings_network_subtitle">Latency and download diagnostics</string>
+    <string name="settings_advanced">Advanced</string>
+    <string name="settings_advanced_subtitle">Run network speed diagnostics</string>
+    <string name="network_speed_test_run">Run Speed Test</string>
+    <string name="network_speed_test_running">Running Speed Test</string>
+    <string name="network_speed_test_subtitle">Measure download speed and latency</string>
+    <string name="network_testing_latency">Measuring latency</string>
+    <string name="network_testing_download">Measuring download speed</string>
+    <string name="network_results_title">Results</string>
+    <string name="network_latency_label">Latency</string>
+    <string name="network_download_label">Download</string>
+    <string name="network_error_prefix">Error: %1$s</string>
+    <string name="network_powered_by_fast">Powered by fast.com</string>
+    <string name="network_connection_wifi">Wi-Fi</string>
+    <string name="network_connection_ethernet">Ethernet</string>
+    <string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Debug</string>
     <string name="settings_debug_subtitle">Developer tools and feature flags.</string>
     <string name="settings_plugins_section_subtitle">Manage repositories, providers, and plugin states.</string>
@@ -1023,6 +1044,9 @@
     <string name="settings_rounded_ui">Rounded UI</string>
     <string name="cd_expand_sidebar">Expand sidebar</string>
 
+    <string name="update_checking">Checking for updates…</string>
+    <string name="update_download_complete">Download complete. Ready to install.</string>
+    <string name="update_up_to_date">System is up to date. Latest changes:</string>
     <string name="update_close">Close</string>
     <string name="update_open_settings">Open Settings</string>
     <string name="update_install">Install</string>
