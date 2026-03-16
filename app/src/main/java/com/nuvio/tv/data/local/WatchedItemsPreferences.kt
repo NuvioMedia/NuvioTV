@@ -6,7 +6,6 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import com.google.gson.Gson
 import com.nuvio.tv.domain.model.WatchedItem
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -15,7 +14,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-@OptIn(ExperimentalCoroutinesApi::class)
 class WatchedItemsPreferences @Inject constructor(
     private val factory: ProfileDataStoreFactory,
     private val profileManager: ProfileManager
@@ -31,7 +29,7 @@ class WatchedItemsPreferences @Inject constructor(
     private val gson = Gson()
     private val watchedItemsKey = stringSetPreferencesKey("watched_items")
 
-    private val allItems: Flow<List<WatchedItem>> = profileManager.activeProfileId.flatMapLatest { pid ->
+    internal val allItems: Flow<List<WatchedItem>> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { preferences ->
             val raw = preferences[watchedItemsKey] ?: emptySet()
             raw.mapNotNull { json ->
@@ -39,8 +37,6 @@ class WatchedItemsPreferences @Inject constructor(
             }
         }
     }
-
-    fun observeAllItems(): Flow<List<WatchedItem>> = allItems
 
     fun isWatched(contentId: String, season: Int? = null, episode: Int? = null): Flow<Boolean> {
         return allItems.map { items ->

@@ -72,11 +72,10 @@ class TraktLibraryService @Inject constructor(
     private val refreshMutex = Mutex()
     private val metadataMutex = Mutex()
     private val inFlightMetadataKeys = mutableSetOf<String>()
-    private val failedMetadataKeys = mutableMapOf<String, Long>()
     private var lastRefreshMs: Long = 0L
 
     private val cacheTtlMs = 60_000L
-    private val metadataFailedCooldownMs = 5 * 60_000L
+    private val metadataHydrationLimit = 500
     private val listFetchConcurrency = 3
     private val metadataFetchSemaphore = Semaphore(5)
 
@@ -856,9 +855,7 @@ class TraktLibraryService @Inject constructor(
     }
 
     private fun hydrateMetadata(entries: List<LibraryEntry>) {
-        val now = System.currentTimeMillis()
-        // No hard cap — hydrate all entries. The semaphore (permit=5) throttles concurrency.
-        entries.forEach { entry ->
+        entries.take(metadataHydrationLimit).forEach { entry ->
             val key = contentKey(entry.id, entry.type)
             if (metadataState.value.containsKey(key)) return@forEach
 
@@ -866,9 +863,6 @@ class TraktLibraryService @Inject constructor(
                 val shouldFetch = metadataMutex.withLock {
                     if (metadataState.value.containsKey(key)) return@withLock false
                     if (inFlightMetadataKeys.contains(key)) return@withLock false
-                   
-                    val lastFailed = failedMetadataKeys[key]
-                    if (lastFailed != null && now - lastFailed < metadataFailedCooldownMs) return@withLock false
                     inFlightMetadataKeys.add(key)
                     true
                 }
@@ -876,11 +870,9 @@ class TraktLibraryService @Inject constructor(
 
                 try {
                     metadataFetchSemaphore.withPermit {
-                        val metadata = fetchMetadata(entry)
-                        if (metadata != null) {
-                            metadataState.update { current -> current + (key to metadata) }
-                        } else {
-                            metadataMutex.withLock { failedMetadataKeys[key] = System.currentTimeMillis() }
+                        val metadata = fetchMetadata(entry) ?: return@launch
+                        metadataState.update { current ->
+                            current + (key to metadata)
                         }
                     }
                 } finally {

@@ -109,11 +109,23 @@ fun SeasonTabs(
     val typography = MaterialTheme.typography
     val tabTextStyle = remember(typography) { typography.titleMedium }
     val textSecondary = NuvioTheme.extendedColors.textSecondary
+    val lazyListState = rememberLazyListState()
+
+    LaunchedEffect(sortedSeasons, selectedSeason) {
+        val selectedIndex = sortedSeasons.indexOf(selectedSeason)
+        if (selectedIndex < 0) return@LaunchedEffect
+
+        val visibleIndices = lazyListState.layoutInfo.visibleItemsInfo.map { it.index }
+        if (selectedIndex in visibleIndices) return@LaunchedEffect
+
+        lazyListState.scrollToItem(selectedIndex)
+    }
 
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
             .focusRestorer(selectedTabFocusRequester),
+        state = lazyListState,
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -218,6 +230,7 @@ fun EpisodesRow(
     onEpisodeFocused: (episodeId: String) -> Unit = {},
     scrollToEpisodeId: String? = null
 ) {
+    val dedupedEpisodes = remember(episodes) { episodes.distinctBy { it.id } }
     val restoreTargetRequester = restoreEpisodeId?.let { episodeFocusRequesters[it] }
     var optionsEpisode by remember { mutableStateOf<Video?>(null) }
     val cardMetrics = rememberEpisodeCardMetrics()
@@ -225,7 +238,7 @@ fun EpisodesRow(
     val rowPrefetchStrategy = remember { LazyListPrefetchStrategy(nestedPrefetchItemCount = 2) }
     val lazyListState = rememberLazyListState(prefetchStrategy = rowPrefetchStrategy)
     var lastHorizontalKeyRepeatTime by remember { mutableStateOf(0L) }
-    val episodeIds = remember(episodes) { episodes.mapTo(mutableSetOf()) { it.id } }
+    val episodeIds = remember(dedupedEpisodes) { dedupedEpisodes.mapTo(mutableSetOf()) { it.id } }
     val context = LocalContext.current
     val imdbLogoRequest = remember(context) {
         ImageRequest.Builder(context)
@@ -238,15 +251,20 @@ fun EpisodesRow(
         episodeFocusRequesters.keys.retainAll(episodeIds)
     }
 
-    LaunchedEffect(restoreFocusToken, restoreEpisodeId, restoreTargetRequester, episodes) {
+    LaunchedEffect(restoreFocusToken, restoreEpisodeId, restoreTargetRequester, dedupedEpisodes) {
         if (restoreFocusToken <= 0 || restoreEpisodeId.isNullOrBlank()) return@LaunchedEffect
-        if (episodes.none { it.id == restoreEpisodeId }) return@LaunchedEffect
+        if (dedupedEpisodes.none { it.id == restoreEpisodeId }) return@LaunchedEffect
+        val index = dedupedEpisodes.indexOfFirst { it.id == restoreEpisodeId }
+        if (index >= 0) {
+            val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
+            lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
+        }
         restoreTargetRequester?.requestFocusAfterFrames()
     }
 
-    LaunchedEffect(scrollToEpisodeId, episodes) {
+    LaunchedEffect(scrollToEpisodeId, dedupedEpisodes) {
         if (scrollToEpisodeId.isNullOrBlank()) return@LaunchedEffect
-        val index = episodes.indexOfFirst { it.id == scrollToEpisodeId }
+        val index = dedupedEpisodes.indexOfFirst { it.id == scrollToEpisodeId }
         if (index < 0) return@LaunchedEffect
         val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
         lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
@@ -280,7 +298,7 @@ fun EpisodesRow(
         horizontalArrangement = Arrangement.spacedBy(cardMetrics.itemSpacing)
     ) {
         items(
-            items = episodes,
+            items = dedupedEpisodes,
             key = { it.id },
             contentType = { EPISODE_CARD_CONTENT_TYPE }
         ) { episode ->
@@ -323,7 +341,7 @@ fun EpisodesRow(
             }
         } ?: false
         val isPending = episodeWatchedPendingKeys.contains(episodePendingKey(selectedEpisode))
-        val firstEpisodeInSeason = episodes.minByOrNull { it.episode ?: Int.MAX_VALUE }
+        val firstEpisodeInSeason = dedupedEpisodes.minByOrNull { it.episode ?: Int.MAX_VALUE }
         val hasPreviousEpisodes = selectedEpisode.episode != null &&
             firstEpisodeInSeason?.episode != null &&
             selectedEpisode.episode > firstEpisodeInSeason.episode
@@ -401,6 +419,7 @@ private fun EpisodeCard(
     val showProgress = remember(progressPercent) { progressPercent >= 0.02f && progressPercent < 0.85f }
     val showCompletedBadge = isWatched
     val showNotStartedBadge = remember(showCompletedBadge, progressPercent) { !showCompletedBadge && progressPercent < 0.02f }
+    val isUnavailable = remember(episode.available) { episode.available == false }
     val cardBgColor = NuvioColors.BackgroundCard
     val isFocusedState = remember { mutableStateOf(false) }
     val cardCornerRadius = remember(cardMetrics.cornerRadius, density) {
@@ -473,6 +492,7 @@ private fun EpisodeCard(
     }
     val strCdWatched = stringResource(R.string.episodes_cd_watched)
     val strEpisode = stringResource(R.string.episodes_episode)
+    val strUnavailable = stringResource(R.string.episodes_unavailable)
     val episodeCode = remember(episode.episode, strEpisode) {
         val prefix = strEpisode.uppercase(Locale.getDefault())
         episode.episode?.let { number -> "$prefix $number" } ?: prefix
@@ -624,12 +644,21 @@ private fun EpisodeCard(
                     )
                 }
 
-                if (runtimeLabel != null || ratingLabel != null || formattedDate.isNotBlank()) {
+                if (isUnavailable || runtimeLabel != null || ratingLabel != null || formattedDate.isNotBlank()) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        if (isUnavailable) {
+                            Text(
+                                text = strUnavailable,
+                                style = metaLabelStyle,
+                                color = Color(0xFFFFB74D),
+                                maxLines = 1
+                            )
+                        }
+
                         runtimeLabel?.let { runtime ->
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -729,6 +758,31 @@ private fun EpisodeCard(
                         contentDescription = strCdWatched,
                         tint = Color.White,
                         modifier = Modifier.size(cardMetrics.statusIconSize)
+                    )
+                }
+            }
+
+            if (isUnavailable) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(
+                            end = cardMetrics.statusBadgeInset,
+                            top = cardMetrics.statusBadgeInset
+                        )
+                        .background(
+                            color = Color(0xCC5D4037),
+                            shape = badgeShape
+                        )
+                        .padding(
+                            horizontal = cardMetrics.episodeBadgeHorizontalPadding,
+                            vertical = cardMetrics.episodeBadgeVerticalPadding
+                        )
+                ) {
+                    Text(
+                        text = strUnavailable.uppercase(Locale.getDefault()),
+                        style = episodeBadgeStyle,
+                        maxLines = 1
                     )
                 }
             } else if (showNotStartedBadge) {

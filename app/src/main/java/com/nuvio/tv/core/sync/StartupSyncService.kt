@@ -169,7 +169,11 @@ class StartupSyncService @Inject constructor(
 
             val isPrimaryProfile = profileManager.activeProfileId.value == 1
             val isTraktConnected = isPrimaryProfile && traktAuthDataStore.isAuthenticated.first()
-            Log.d(TAG, "Watch progress sync: isTraktConnected=$isTraktConnected isPrimaryProfile=$isPrimaryProfile")
+            val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync()
+            Log.d(
+                TAG,
+                "Watch progress sync: isTraktConnected=$isTraktConnected isPrimaryProfile=$isPrimaryProfile shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
+            )
             if (!isTraktConnected) {
                 // Pull library and watched items first — these are lightweight and critical.
                 // Watch progress is pulled last because the table is large and may time out;
@@ -207,6 +211,29 @@ class StartupSyncService @Inject constructor(
                     Log.d(TAG, "Merged local watch progress with ${remoteEntries.size} remote entries")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to pull watch progress, continuing", e)
+                } finally {
+                    watchProgressRepository.isSyncingFromRemote = false
+                }
+            } else if (shouldUseSupabaseWatchProgressSync) {
+                try {
+                    val remoteWatchedItems = watchedItemsSyncService.pullFromRemote().getOrElse { throw it }
+                    Log.d(TAG, "Pulled ${remoteWatchedItems.size} watched items from remote")
+                    watchedItemsPreferences.replaceWithRemoteItems(remoteWatchedItems)
+                    watchProgressRepository.hasCompletedInitialWatchedItemsPull = true
+                    Log.d(TAG, "Reconciled local watched items with ${remoteWatchedItems.size} remote items")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to pull watched items, continuing with Trakt library mode", e)
+                }
+
+                watchProgressRepository.isSyncingFromRemote = true
+                try {
+                    val remoteEntries = watchProgressSyncService.pullFromRemote().getOrElse { throw it }
+                    Log.d(TAG, "Pulled ${remoteEntries.size} watch progress entries from remote")
+                    watchProgressPreferences.mergeRemoteEntries(remoteEntries.toMap())
+                    watchProgressRepository.hasCompletedInitialPull = true
+                    Log.d(TAG, "Merged local watch progress with ${remoteEntries.size} remote entries")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to pull watch progress while Trakt is connected, continuing", e)
                 } finally {
                     watchProgressRepository.isSyncingFromRemote = false
                 }

@@ -237,6 +237,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setStreamAutoPlayPreferBingeGroupForNextEpisode(enabled)
     }
 
+    suspend fun setStreamAutoPlayTimeoutSeconds(seconds: Int) {
+        playerSettingsDataStore.setStreamAutoPlayTimeoutSeconds(seconds)
+    }
+
     suspend fun setNextEpisodeThresholdMode(mode: NextEpisodeThresholdMode) {
         playerSettingsDataStore.setNextEpisodeThresholdMode(mode)
     }

@@ -32,6 +32,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.QrCode2
@@ -89,6 +90,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -130,6 +132,13 @@ fun AddonManagerScreen(
     LaunchedEffect(uiState.isQrModeActive, uiState.pendingChange, isEditing) {
         if (!uiState.isQrModeActive && uiState.pendingChange == null && !isEditing) {
             requestInputBarFocus()
+        }
+    }
+
+    LaunchedEffect(uiState.transientMessage) {
+        if (uiState.transientMessage != null) {
+            delay(3200)
+            viewModel.clearTransientMessage()
         }
     }
 
@@ -384,6 +393,61 @@ fun AddonManagerScreen(
                         pendingChange = pending,
                         onConfirm = viewModel::confirmPendingChange,
                         onReject = viewModel::rejectPendingChange
+                    )
+                }
+            }
+        }
+
+        AddonMessageOverlay(
+            message = uiState.transientMessage,
+            isError = uiState.transientMessageIsError
+        )
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun AddonMessageOverlay(
+    message: String?,
+    isError: Boolean
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        AnimatedVisibility(
+            visible = message != null,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            val visibleMessage = message ?: return@AnimatedVisibility
+            Surface(
+                onClick = { },
+                colors = ClickableSurfaceDefaults.colors(
+                    containerColor = if (isError) {
+                        Color(0xFFC62828).copy(alpha = 0.92f)
+                    } else {
+                        Color(0xFF2E7D32).copy(alpha = 0.92f)
+                    }
+                ),
+                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isError) Icons.Default.Close else Icons.Default.Check,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+                    Text(
+                        text = visibleMessage,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White
                     )
                 }
             }

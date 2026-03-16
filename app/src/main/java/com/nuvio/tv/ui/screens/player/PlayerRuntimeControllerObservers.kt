@@ -29,6 +29,10 @@ internal fun PlayerRuntimeController.buildSubtitleFetchRequest(): SubtitleFetchR
 
 internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(): List<Subtitle> {
     val request = buildSubtitleFetchRequest() ?: return emptyList()
+    val installedAddonOrder = addonRepository.getInstalledAddons().firstOrNull()
+        ?.map { it.displayName }
+        .orEmpty()
+    _uiState.update { it.copy(installedSubtitleAddonOrder = installedAddonOrder) }
 
     // Compute hash lazily for providers that support OpenSubtitles-style matching.
     if (currentVideoHash == null && currentStreamUrl.isNotBlank()) {
@@ -145,6 +149,20 @@ internal fun PlayerRuntimeController.observeEpisodeWatchProgress() {
 internal fun PlayerRuntimeController.observeSubtitleSettings() {
     scope.launch {
         playerSettingsDataStore.playerSettings.collect { settings ->
+            val currentState = _uiState.value
+            val resolvedAudioAmplificationDb = when {
+                !hasInitializedAudioAmplificationForSession -> {
+                    hasInitializedAudioAmplificationForSession = true
+                    if (settings.persistAudioAmplification) {
+                        settings.audioAmplificationDb
+                    } else {
+                        AUDIO_AMPLIFICATION_MIN_DB
+                    }
+                }
+                settings.persistAudioAmplification -> settings.audioAmplificationDb
+                else -> currentState.audioAmplificationDb
+            }
+
             _uiState.update { state ->
                 val shouldShowOverlay = if (settings.loadingOverlayEnabled && !hasRenderedFirstFrame) {
                     true
@@ -156,14 +174,20 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
 
                 state.copy(
                     subtitleStyle = settings.subtitleStyle,
-                    subtitleOrganizationMode = settings.subtitleOrganizationMode,
                     loadingOverlayEnabled = settings.loadingOverlayEnabled,
                     showLoadingOverlay = shouldShowOverlay,
                     pauseOverlayEnabled = settings.pauseOverlayEnabled,
                     osdClockEnabled = settings.osdClockEnabled,
-                    frameRateMatchingMode = settings.frameRateMatchingMode
+                    frameRateMatchingMode = settings.frameRateMatchingMode,
+                    persistAudioAmplification = settings.persistAudioAmplification,
+                    audioAmplificationDb = resolvedAudioAmplificationDb
                 )
             }
+
+            if (resolvedAudioAmplificationDb != currentState.audioAmplificationDb) {
+                applyAudioAmplification(resolvedAudioAmplificationDb)
+            }
+
             if (settings.frameRateMatchingMode == FrameRateMatchingMode.OFF) {
                 frameRateProbeJob?.cancel()
                 _uiState.update {
@@ -337,7 +361,13 @@ internal fun PlayerRuntimeController.retryCurrentStreamFromStartAfter416() {
         runCatching {
             player.stop()
             player.clearMediaItems()
-            player.setMediaSource(mediaSourceFactory.createMediaSource(currentStreamUrl, currentHeaders))
+            player.setMediaSource(
+                mediaSourceFactory.createMediaSource(
+                    url = currentStreamUrl,
+                    headers = currentHeaders,
+                    mimeTypeOverride = currentStreamMimeType
+                )
+            )
             player.seekTo(0L)
             player.playWhenReady = true
             player.prepare()

@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.repository
 
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.TraktAuthState
 import com.nuvio.tv.data.remote.api.TraktApi
@@ -33,7 +34,8 @@ sealed interface TraktTokenPollResult {
 @Singleton
 class TraktAuthService @Inject constructor(
     private val traktApi: TraktApi,
-    private val traktAuthDataStore: TraktAuthDataStore
+    private val traktAuthDataStore: TraktAuthDataStore,
+    private val authSessionNoticeDataStore: AuthSessionNoticeDataStore
 ) {
     private val refreshLeewaySeconds = 60L
     private val writeRequestMutex = Mutex()
@@ -175,6 +177,7 @@ class TraktAuthService @Inject constructor(
         val tokenBody = response.body()
         if (response.isSuccessful && tokenBody != null) {
             traktAuthDataStore.saveToken(tokenBody)
+            authSessionNoticeDataStore.markTraktAuthenticated()
             traktAuthDataStore.clearDeviceFlow()
             val user = fetchUserSettings()
             return TraktTokenPollResult.Approved(user)
@@ -237,6 +240,7 @@ class TraktAuthService @Inject constructor(
             if (!response.isSuccessful || tokenBody == null) {
                 trace("refreshTokenIfNeeded: failed code=${response.code()}")
                 if (response.code() == 401 || response.code() == 403) {
+                    authSessionNoticeDataStore.markUnexpectedTraktLogoutIfNeeded()
                     traktAuthDataStore.clearAuth()
                     tripCircuit("Token refresh returned ${response.code()}")
                 }
@@ -244,6 +248,7 @@ class TraktAuthService @Inject constructor(
             }
 
             traktAuthDataStore.saveToken(tokenBody)
+            authSessionNoticeDataStore.markTraktAuthenticated()
             trace("refreshTokenIfNeeded: success")
             true
         }
@@ -264,6 +269,7 @@ class TraktAuthService @Inject constructor(
                 }
             }
         }
+        authSessionNoticeDataStore.markTraktExplicitLogout()
         traktAuthDataStore.clearAuth()
     }
 

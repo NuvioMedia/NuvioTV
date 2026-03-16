@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
 import androidx.media3.common.C
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
@@ -28,7 +29,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         
         when (trackType) {
             C.TRACK_TYPE_VIDEO -> {
-                
+
                 for (i in 0 until trackGroup.length) {
                     if (trackGroup.isTrackSelected(i)) {
                         val format = trackGroup.getTrackFormat(i)
@@ -47,6 +48,12 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                                 )
                             }
                         }
+                        // Extract video codec, resolution, and bitrate for stream info
+                        currentVideoCodec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType)
+                            ?: CustomDefaultTrackNameProvider.formatNameFromMime(format.codecs)
+                        currentVideoWidth = format.width.takeIf { it > 0 }
+                        currentVideoHeight = format.height.takeIf { it > 0 }
+                        currentVideoBitrate = format.bitrate.takeIf { it > 0 }
                         break
                     }
                 }
@@ -73,7 +80,8 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                             language = format.language,
                             codec = codecName,
                             channelCount = format.channelCount.takeIf { it > 0 },
-                            isSelected = isSelected
+                            isSelected = isSelected,
+                            sampleRate = format.sampleRate.takeIf { it > 0 }
                         )
                     )
                 }
@@ -99,6 +107,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                             name = format.label ?: format.language ?: "Subtitle ${subtitleTracks.size + 1}",
                             language = format.language,
                             trackId = format.id,
+                            codec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType),
                             isForced = hasForcedFlag || nameHintForced || isSongsAndSigns,
                             isSelected = isSelected
                         )
@@ -166,6 +175,61 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         subtitleTracks = subtitleTracks
     )
     tryAutoSelectPreferredSubtitleFromAvailableTracks()
+    maybeAdjustLibassPipelineForTracks(tracks)
+}
+
+internal fun PlayerRuntimeController.maybeAdjustLibassPipelineForTracks(tracks: Tracks) {
+    if (libassPipelineSwitchInFlight) return
+
+    val hasAssSsaTrack = tracks.hasAssSsaTextTrack()
+    if (hasAssSsaTrack) {
+        hasDetectedAssSsaTrackForCurrentStream = true
+    }
+    // Keep libass sticky only after we have actually detected ASS/SSA for this stream.
+    // This avoids startup ping-pong but does not keep libass on for streams that never
+    // expose ASS/SSA tracks.
+    val desiredUseLibass = requestedUseLibassByUser && hasDetectedAssSsaTrackForCurrentStream
+    if (desiredUseLibass == activePlayerUsesLibass) return
+
+    val player = _exoPlayer ?: return
+    val resumePosition = player.currentPosition.takeIf { it > 0L }
+    libassPipelineOverrideForCurrentStream = desiredUseLibass
+    libassPipelineSwitchInFlight = true
+
+    _uiState.update { state ->
+        state.copy(
+            pendingSeekPosition = resumePosition ?: state.pendingSeekPosition,
+            showLoadingOverlay = state.loadingOverlayEnabled
+        )
+    }
+
+    scope.launch {
+        releasePlayer()
+        initializePlayer(currentStreamUrl, currentHeaders)
+    }
+}
+
+private fun Tracks.hasAssSsaTextTrack(): Boolean {
+    groups.forEach { trackGroup ->
+        if (trackGroup.type != C.TRACK_TYPE_TEXT) return@forEach
+        for (index in 0 until trackGroup.length) {
+            val format = trackGroup.getTrackFormat(index)
+            if (format.sampleMimeType == MimeTypes.TEXT_SSA) return true
+
+            val hasAssCodec = format.codecs
+                ?.split(',')
+                ?.asSequence()
+                ?.map { it.trim().lowercase(Locale.US) }
+                ?.any { codec ->
+                    codec == MimeTypes.TEXT_SSA ||
+                        codec == "s_text/ass" ||
+                        codec == "s_text/ssa" ||
+                        codec.endsWith("/x-ssa")
+                } == true
+            if (hasAssCodec) return true
+        }
+    }
+    return false
 }
 
 internal fun PlayerRuntimeController.maybeApplyRememberedAudioSelection(audioTracks: List<TrackInfo>) {
