@@ -102,12 +102,21 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
 
             Log.d("HomeViewModel", "inProgressOnly: ${inProgressOnly.size} items after filter+dedup")
 
-            // Optimistic immediate render: show in-progress entries instantly.
             _uiState.update { state ->
-                if (state.continueWatchingItems == inProgressOnly) {
+                val immediateItems = if (inProgressOnly.isNotEmpty()) {
+                    inProgressOnly
+                } else {
+                    val existingNextUp = state.continueWatchingItems
+                        .filterIsInstance<ContinueWatchingItem.NextUp>()
+                    mergeContinueWatchingItems(
+                        inProgressItems = inProgressOnly,
+                        nextUpItems = existingNextUp
+                    )
+                }
+                if (state.continueWatchingItems == immediateItems) {
                     state
                 } else {
-                    state.copy(continueWatchingItems = inProgressOnly)
+                    state.copy(continueWatchingItems = immediateItems)
                 }
             }
 
@@ -141,6 +150,22 @@ private fun shouldTreatAsInProgressForContinueWatching(progress: WatchProgress):
     return hasStartedPlayback &&
         progress.source != WatchProgress.SOURCE_TRAKT_HISTORY &&
         progress.source != WatchProgress.SOURCE_TRAKT_SHOW_PROGRESS
+}
+
+private fun shouldUseAsCompletedSeed(progress: WatchProgress): Boolean {
+    if (!progress.isCompleted()) return false
+    if (progress.source != WatchProgress.SOURCE_TRAKT_PLAYBACK) return true
+    val explicitPercent = progress.progressPercent ?: return false
+    return explicitPercent >= 95f
+}
+
+private fun shouldTreatAsActiveInProgressForNextUpSuppression(
+    progress: WatchProgress,
+    latestCompletedAt: Long?
+): Boolean {
+    if (!shouldTreatAsInProgressForContinueWatching(progress)) return false
+    if (latestCompletedAt == null || latestCompletedAt == Long.MIN_VALUE) return true
+    return progress.lastWatched >= latestCompletedAt
 }
 
 private suspend fun HomeViewModel.resolveCurrentEpisodeDescription(
@@ -215,9 +240,25 @@ private suspend fun HomeViewModel.enrichContinueWatchingProgressively(
     dismissedNextUp: Set<String>,
     showUnairedNextUp: Boolean
 ) = coroutineScope {
+    val latestCompletedByContent = allProgress
+        .asSequence()
+        .filter { isSeriesTypeCW(it.contentType) }
+        .filter { it.contentId.isNotBlank() }
+        .filter { shouldUseAsCompletedSeed(it) }
+        .groupBy { it.contentId }
+        .mapValues { (_, items) ->
+            items.maxOfOrNull { it.lastWatched } ?: Long.MIN_VALUE
+        }
+
     val inProgressIds = inProgressItems
-        .map { it.progress.contentId }
-        .filter { it.isNotBlank() }
+        .map { it.progress }
+        .filter { progress ->
+            shouldTreatAsActiveInProgressForNextUpSuppression(
+                progress = progress,
+                latestCompletedAt = latestCompletedByContent[progress.contentId]
+            )
+        }
+        .map { it.contentId }
         .toSet()
 
     val latestCompletedBySeries = allProgress
@@ -226,8 +267,7 @@ private suspend fun HomeViewModel.enrichContinueWatchingProgressively(
                 progress.season != null &&
                 progress.episode != null &&
                 progress.season != 0 &&
-                progress.isCompleted() &&
-                progress.source != WatchProgress.SOURCE_TRAKT_PLAYBACK
+                shouldUseAsCompletedSeed(progress)
         }
         .groupBy { it.contentId }
         .mapNotNull { (_, items) ->
@@ -245,6 +285,17 @@ private suspend fun HomeViewModel.enrichContinueWatchingProgressively(
         .take(CW_MAX_NEXT_UP_LOOKUPS)
 
     if (latestCompletedBySeries.isEmpty()) {
+        _uiState.update { state ->
+            val mergedItems = mergeContinueWatchingItems(
+                inProgressItems = inProgressItems,
+                nextUpItems = emptyList()
+            )
+            if (state.continueWatchingItems == mergedItems) {
+                state
+            } else {
+                state.copy(continueWatchingItems = mergedItems)
+            }
+        }
         return@coroutineScope
     }
 
