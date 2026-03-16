@@ -140,6 +140,7 @@ import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 
 val LocalSidebarExpanded = compositionLocalOf { false }
+val LocalContentFocusRequester = compositionLocalOf { FocusRequester.Default }
 
 data class DrawerItem(
     val route: String,
@@ -502,6 +503,10 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         if (::jankStats.isInitialized) jankStats.isTrackingEnabled = true
+        startupSyncService.requestSyncNow()
+        lifecycleScope.launch {
+            traktProgressService.refreshNow()
+        }
     }
 
     override fun onPause() {
@@ -511,10 +516,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        startupSyncService.requestSyncNow()
-        lifecycleScope.launch {
-            traktProgressService.refreshNow()
-        }
     }
 }
 
@@ -550,6 +551,7 @@ private fun LegacySidebarScaffold(
     val openDrawerWidth = 196.dp
 
     val focusManager = LocalFocusManager.current
+    val contentFocusRequester = remember { FocusRequester() }
     var pendingContentFocusTransfer by remember { mutableStateOf(false) }
     var pendingSidebarFocusRequest by remember { mutableStateOf(false) }
 
@@ -567,7 +569,7 @@ private fun LegacySidebarScaffold(
             return@LaunchedEffect
         }
         repeat(2) { withFrameNanos { } }
-        focusManager.moveFocus(FocusDirection.Right)
+        runCatching { contentFocusRequester.requestFocus() }
         pendingContentFocusTransfer = false
     }
 
@@ -737,7 +739,8 @@ private fun LegacySidebarScaffold(
                 }
         ) {
             CompositionLocalProvider(
-                LocalSidebarExpanded provides (drawerState.currentValue == DrawerValue.Open)
+                LocalSidebarExpanded provides (drawerState.currentValue == DrawerValue.Open),
+                LocalContentFocusRequester provides contentFocusRequester
             ) {
                 NuvioNavHost(
                     navController = navController,
@@ -852,6 +855,7 @@ private fun ModernSidebarScaffold(
     val openSidebarWidth = 262.dp
 
     val focusManager = LocalFocusManager.current
+    val contentFocusRequester = remember { FocusRequester() }
     val drawerItemFocusRequesters = remember(drawerItems) {
         drawerItems.associate { item -> item.route to FocusRequester() }
     }
@@ -1021,7 +1025,7 @@ private fun ModernSidebarScaffold(
             return@LaunchedEffect
         }
         repeat(2) { withFrameNanos { } }
-        focusManager.moveFocus(FocusDirection.Right)
+        runCatching { contentFocusRequester.requestFocus() }
         pendingContentFocusTransfer = false
     }
 
@@ -1093,7 +1097,8 @@ private fun ModernSidebarScaffold(
                 }
         ) {
             CompositionLocalProvider(
-                LocalSidebarExpanded provides isSidebarExpanded
+                LocalSidebarExpanded provides isSidebarExpanded,
+                LocalContentFocusRequester provides contentFocusRequester
             ) {
                 NuvioNavHost(
                     navController = navController,
@@ -1198,7 +1203,7 @@ private fun ModernSidebarScaffold(
                         .align(Alignment.TopStart)
                         .offset {
                             IntOffset(
-                                (40.dp + sidebarSlideX + sidebarDeflateOffsetX).roundToPx(),
+                                14.dp.roundToPx(),
                                 (16.dp + sidebarDeflateOffsetY).roundToPx()
                             )
                         }

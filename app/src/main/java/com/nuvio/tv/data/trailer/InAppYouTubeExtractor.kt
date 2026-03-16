@@ -4,8 +4,13 @@ import android.net.Uri
 import android.util.Log
 import com.google.gson.Gson
 import com.nuvio.tv.BuildConfig
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withTimeout
 import okhttp3.Headers
 import okhttp3.OkHttpClient
@@ -137,6 +142,7 @@ class InAppYouTubeExtractor @Inject constructor() {
     private val gson = Gson()
 
     private val httpClient = OkHttpClient.Builder()
+        .dns(com.nuvio.tv.core.network.IPv4FirstDns())
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
         .writeTimeout(20, TimeUnit.SECONDS)
@@ -170,7 +176,7 @@ class InAppYouTubeExtractor @Inject constructor() {
         source
     }
 
-    private fun extractPlaybackSourceInternal(youtubeUrl: String): TrailerPlaybackSource? {
+    private suspend fun extractPlaybackSourceInternal(youtubeUrl: String): TrailerPlaybackSource? {
         val videoId = extractVideoId(youtubeUrl) ?: return null
 
         val watchUrl = "https://www.youtube.com/watch?v=$videoId&hl=en"
@@ -329,8 +335,8 @@ class InAppYouTubeExtractor @Inject constructor() {
             bestProgressive?.url
         }
 
-        val videoUrl = bestVideo?.url ?: combinedUrl ?: return null
-        val audioUrl = bestAudio?.url
+        val videoUrl = resolveReachableUrl(bestVideo?.url ?: combinedUrl ?: return null)
+        val audioUrl = bestAudio?.url?.let { resolveReachableUrl(it) }
 
         if (BuildConfig.DEBUG) {
             Log.d(
@@ -590,6 +596,64 @@ class InAppYouTubeExtractor @Inject constructor() {
             return sortCandidates(sameClient).firstOrNull()
         }
         return sortCandidates(items).firstOrNull()
+    }
+
+    private suspend fun resolveReachableUrl(url: String): String {
+        if (!url.contains("googlevideo.com")) return url
+        val uri = Uri.parse(url)
+        val mnParam = uri.getQueryParameter("mn") ?: return url
+        val servers = mnParam.split(",").map { it.trim() }.filter { it.isNotBlank() }
+        if (servers.size < 2) return url
+
+        val candidates = mutableListOf(url)
+        for (server in servers) {
+            val mviIndex = servers.indexOf(server)
+            val altHost = uri.host?.replaceFirst(
+                Regex("^rr\\d+---"),
+                "rr${mviIndex + 1}---"
+            )?.replaceFirst(
+                Regex("sn-[a-z0-9]+-[a-z0-9]+"),
+                server
+            ) ?: continue
+            if (altHost == uri.host) continue
+            candidates += url.replace(uri.host!!, altHost)
+        }
+
+        if (candidates.size == 1) return candidates[0]
+        val result = CompletableDeferred<String>()
+        val probeScope = CoroutineScope(Dispatchers.IO)
+        candidates.forEach { candidate ->
+            probeScope.launch {
+                val reachable = isUrlReachable(candidate)
+                Log.d(TAG, "CDN probe: ${Uri.parse(candidate).host} -> $reachable")
+                if (reachable) result.complete(candidate)
+            }
+        }
+        return try {
+            withTimeoutOrNull(2_000L) { result.await() } ?: url
+        } finally {
+            probeScope.cancel()
+        }
+    }
+
+    private val probeClient = OkHttpClient.Builder()
+        .dns(com.nuvio.tv.core.network.IPv4FirstDns())
+        .connectTimeout(2, TimeUnit.SECONDS)
+        .readTimeout(2, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .build()
+
+    private fun isUrlReachable(url: String): Boolean {
+        return runCatching {
+            val request = Request.Builder()
+                .url(url)
+                .get()
+                .header("Range", "bytes=0-0")
+                .headers(buildHeaders(DEFAULT_HEADERS))
+                .build()
+            probeClient.newCall(request).execute().use { val code = it.code; Log.d(TAG, "CDN probe code: ${Uri.parse(url).host} -> $code"); code == 200 }
+        }.getOrDefault(false)
     }
 
     private fun absolutizeUrl(baseUrl: String, maybeRelative: String): String {

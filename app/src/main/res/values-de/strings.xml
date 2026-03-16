@@ -5,7 +5,7 @@
     <string name="type_unknown">Unbekannt</string>
 
     <!-- HomeScreen -->
-    <string name="home_no_addons">Keine Add-ons installiert. Fügen Sie eines hinzu, um zu beginnen.
+    <string name="home_no_addons">Keine Add-ons installiert. Fügen Sie eines hinzu, um zu beginnen.</string>
     <string name="home_no_catalog_addons">Keine Katalog-Add-ons installiert. Installieren Sie ein Katalog-Add-on, um Inhalte anzuzeigen.</string>
     <string name="error_generic">Ein Fehler ist aufgetreten</string>
 
@@ -17,7 +17,7 @@
     <string name="error_state_issue_no_metadata_any_addon">Die Details zu dieser ID konnten nicht geladen werden, da keines der installierten Add-ons Metadaten zurückgegeben hat.</string>
     <string name="error_state_fix_no_metadata_any_addon">Versuchen Sie es mit einem anderen Add-on, deaktivieren Sie „Externes Meta-Add-on bevorzugen” in den Layout-Einstellungen oder überprüfen Sie, ob ein installiertes Add-on diese ID unterstützt.</string>
     <string name="error_state_prefix_no_supported_metadata">Kein installiertes Add-on unterstützt Metadaten für </string>
-    <string name="error_state_prefix_no_addon_for_id">Kein installiertes Add-on konnte Metadaten für id= bereitstellen.
+    <string name="error_state_prefix_no_addon_for_id">Kein installiertes Add-on konnte Metadaten für id= bereitstellen.</string>
     <string name="error_state_fix_no_supported_metadata">Installieren oder aktualisieren Sie ein Add-on, das diesen Inhaltstyp unterstützt, und versuchen Sie es erneut. </string>
     <string name="error_state_prefix_tried_meta_addons">Versuchte Meta-Add-ons:</string>
     <string name="error_state_fix_tried_meta_addons">Installieren Sie ein Add-on, das diese ID unterstützt, oder konfigurieren Sie das Add-on neu/aktualisieren Sie es und versuchen Sie es erneut. </string>
@@ -27,15 +27,15 @@
     <string name="error_state_fix_addon_unreachable">Überprüfen Sie Ihre Internetverbindung, vergewissern Sie sich, dass die Add-on-URL noch funktioniert, und versuchen Sie es erneut.</string>
     <string name="error_state_issue_addon_connection_failed">Verbindung abgelehnt</string>
     <string name="error_state_fix_addon_connection_failed">Stellen Sie sicher, dass der Add-on-Server online und erreichbar ist, und versuchen Sie es erneut.</string>
-    <string name="error_state_issue_addon_timeout">Die Antwort hat zu lange gedauert.
-    <string name="error_state_fix_addon_timeout">Versuchen Sie es in Kürze erneut oder verwenden Sie ein anderes Add-on, wenn dieses Problem weiterhin auftritt.
+    <string name="error_state_issue_addon_timeout">Die Antwort hat zu lange gedauert.</string>
+    <string name="error_state_fix_addon_timeout">Versuchen Sie es in Kürze erneut oder verwenden Sie ein anderes Add-on, wenn dieses Problem weiterhin auftritt.</string>
     <string name="error_state_issue_addon_cleartext">Verwendet eine unsichere HTTP-Verbindung, die von Android blockiert wurde</string>
     <string name="error_state_fix_addon_cleartext">Wechseln Sie die Add-on-URL zu HTTPS oder aktualisieren Sie die Add-on-Konfiguration.</string>
-    <string name="error_state_fix_addon_generic">Versuchen Sie es erneut, aktualisieren oder installieren Sie das Add-on neu oder probieren Sie ein anderes Add-on aus.
+    <string name="error_state_fix_addon_generic">Versuchen Sie es erneut, aktualisieren oder installieren Sie das Add-on neu oder probieren Sie ein anderes Add-on aus.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
     <string name="error_meta_not_found">Meta nicht gefunden</string>
     <string name="error_meta_no_supported_addon">Kein installiertes Add-on unterstützt Metadaten für „%1$s“.</string>
-    <string name="error_meta_no_addon_for_id">Kein installiertes Add-on konnte Metadaten für id=%1$s (Typ=%2$s) bereitstellen.
+    <string name="error_meta_no_addon_for_id">Kein installiertes Add-on konnte Metadaten für id=%1$s (Typ=%2$s) bereitstellen.</string>
     <string name="error_meta_tried_none">Versuchte Meta-Add-ons: %1$s. Keines davon lieferte Metadaten für id=%2$s (Typ=%3$s).</string>
     <string name="error_meta_tried_generic">Ausprobierte Meta-Add-ons: %1$s. Metadaten konnten für id=%2$s (Typ=%3$s) nicht geladen werden. </string>
     <string name="error_meta_tried_issues">Versuchte Meta-Add-ons: %1$s. Metadaten konnten für id=%2$s (Typ=%3$s) nicht geladen werden. Probleme: %4$s.</string>
@@ -202,13 +202,13 @@
 
     <!-- SupportersContributorsScreen -->
     <string name="supporters_contributors_title">Unterstützer und Mitwirkende</string>
-    <string name="supporters_contributors_subtitle">Die Menschen, die Nuvio unterstützen, und die Mitwirkenden, die es für Fernsehen und Mobilgeräte entwickeln.
-    <string name="supporters_contributors_supporters_copy">Unterstützer und Spender tragen dazu bei, das Projekt am Laufen zu halten, die Infrastruktur zu finanzieren und Raum für ambitionierte Funktionen zu schaffen.
-    <string name="supporters_contributors_donate_copy">Nuvio bleibt kostenlos und Open Source. Wenn Sie das Projekt unterstützen möchten, können Sie dazu beitragen, die damit verbundenen Zeit- und Infrastrukturkosten zu decken.
+    <string name="supporters_contributors_subtitle">Die Menschen, die Nuvio unterstützen, und die Mitwirkenden, die es für Fernsehen und Mobilgeräte entwickeln.</string>
+    <string name="supporters_contributors_supporters_copy">Unterstützer und Spender tragen dazu bei, das Projekt am Laufen zu halten, die Infrastruktur zu finanzieren und Raum für ambitionierte Funktionen zu schaffen.</string>
+    <string name="supporters_contributors_donate_copy">Nuvio bleibt kostenlos und Open Source. Wenn Sie das Projekt unterstützen möchten, können Sie dazu beitragen, die damit verbundenen Zeit- und Infrastrukturkosten zu decken.</string>
     <string name="supporters_contributors_donate_button">Spenden Sie an Nuvio</string>
     <string name="supporters_contributors_qr_title">Zum Spenden scannen</string>
-    <string name="supporters_contributors_qr_subtitle">Öffnen Sie den Link auf Ihrem Smartphone und unterstützen Sie Nuvio über Ko-fi.
-    <string name="supporters_contributors_qr_hint">Richten Sie Ihre Kamera auf den QR-Code oder verwenden Sie die Schaltfläche unten.
+    <string name="supporters_contributors_qr_subtitle">Öffnen Sie den Link auf Ihrem Smartphone und unterstützen Sie Nuvio über Ko-fi.</string>
+    <string name="supporters_contributors_qr_hint">Richten Sie Ihre Kamera auf den QR-Code oder verwenden Sie die Schaltfläche unten.</string>
     <string name="supporters_contributors_back_button">Zurück zu den Details</string>
     <string name="supporters_tab">Unterstützer</string>
     <string name="contributors_tab">Mitwirkende</string>
@@ -230,7 +230,7 @@
     <string name="playback_section_general">Allgemein</string>
     <string name="playback_section_general_desc">Grundlegendes Wiedergabeverhalten.</string>
     <string name="playback_loading_overlay">Lade-Overlay</string>
-    <string name="playback_loading_overlay_sub">Lade-Bildschirm anzeigen, bis das erste Videobild erscheint.
+    <string name="playback_loading_overlay_sub">Lade-Bildschirm anzeigen, bis das erste Videobild erscheint.</string>
     <string name="playback_pause_overlay">Pause-Overlay</string>
     <string name="playback_pause_overlay_sub">Details-Overlay nach 5 Sekunden während der Pause anzeigen.</string>
     <string name="playback_show_clock_sub">Aktuelle Zeit und Endzeit anzeigen, während die Steuerelemente sichtbar sind.</string>
@@ -273,7 +273,7 @@
     <string name="audio_skip_silence">Stille überspringen</string>
     <string name="audio_skip_silence_sub">Stille Passagen während der Wiedergabe überspringen</string>
     <string name="audio_advanced_section">Erweiterte Audioeinstellungen</string>
-    <string name="audio_advanced_warning">Diese Einstellungen können auf einigen Geräten zu Problemen führen. Ändern Sie sie nur, wenn Sie wissen, was Sie tun.
+    <string name="audio_advanced_warning">Diese Einstellungen können auf einigen Geräten zu Problemen führen. Ändern Sie sie nur, wenn Sie wissen, was Sie tun.</string>
     <string name="audio_decoder_device_only">Nur Gerätedecoder</string>
     <string name="audio_decoder_prefer_device">Gerätedecoder bevorzugen</string>
     <string name="audio_decoder_prefer_app">App-Decoder bevorzugen (FFmpeg)</string>
@@ -284,7 +284,7 @@
     <string name="audio_decoder_device_only_desc">Nur integrierte Hardware-Decoder verwenden. Am kompatibelsten, unterstützt jedoch möglicherweise nicht alle Formate.</string>
     <string name="audio_decoder_prefer_device_desc">Verwenden Sie Hardware-Decoder, sofern verfügbar, und greifen Sie sonst auf FFmpeg zurück. Für die meisten Geräte empfohlen. </string>
     <string name="audio_decoder_prefer_app_desc">Verwenden Sie FFmpeg-Decoder, sofern verfügbar. Bessere Formatunterstützung, aber höhere CPU-Auslastung.</string>
-    <string name="audio_decoder_controls">Steuert, ob Hardware- oder Software-Decoder (FFmpeg) für Audio und Video verwendet werden.
+    <string name="audio_decoder_controls">Steuert, ob Hardware- oder Software-Decoder (FFmpeg) für Audio und Video verwendet werden.</string>
 
     <!-- PlaybackSubtitleSettings -->
     <string name="sub_section">Untertitel</string>
@@ -325,9 +325,9 @@
     <string name="sub_startup_mode_fast">Schneller Start</string>
     <string name="sub_startup_mode_preferred">Bevorzugte Sprachen</string>
     <string name="sub_startup_mode_all">Alle Addon-Untertitel</string>
-    <string name="sub_startup_mode_fast_desc">Wiedergabe sofort starten. Durch die Auswahl von Addon-Untertiteln wird der Player möglicherweise einmal neu geladen.
-    <string name="sub_startup_mode_preferred_desc">Add-on-Untertitel vor der Wiedergabe vorab laden und bevorzugte/sekundäre Sprachspuren anhängen.
-    <string name="sub_startup_mode_all_desc">Alle Add-on-Untertitel vor der Wiedergabe vorab laden und anhängen. Langsamster Start.
+    <string name="sub_startup_mode_fast_desc">Wiedergabe sofort starten. Durch die Auswahl von Addon-Untertiteln wird der Player möglicherweise einmal neu geladen.</string>
+    <string name="sub_startup_mode_preferred_desc">Add-on-Untertitel vor der Wiedergabe vorab laden und bevorzugte/sekundäre Sprachspuren anhängen.</string>
+    <string name="sub_startup_mode_all_desc">Alle Add-on-Untertitel vor der Wiedergabe vorab laden und anhängen. Langsamster Start.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Letzten Link wiederverwenden</string>
@@ -340,7 +340,7 @@
     <string name="autoplay_next_episode">Nächste Folge automatisch abspielen</string>
     <string name="autoplay_next_episode_sub">Nächste Folge automatisch starten, wenn die Aufforderung erscheint.</string>
     <string name="autoplay_prefer_binge_group">Binge-Gruppe bevorzugen (nächste Folge)</string>
-    <string name="autoplay_prefer_binge_group_sub">Versuchen Sie zuerst dasselbe Quellenprofil (dasselbe Add-on/dieselbe Qualitätsgruppe) vor den normalen Regeln für die automatische Wiedergabe.
+    <string name="autoplay_prefer_binge_group_sub">Versuchen Sie zuerst dasselbe Quellenprofil (dasselbe Add-on/dieselbe Qualitätsgruppe) vor den normalen Regeln für die automatische Wiedergabe.</string>
     <string name="autoplay_threshold_pct">Prozent</string>
     <string name="autoplay_threshold_min">Minuten vor Ende</string>
     <string name="autoplay_threshold_mode">Schwellenwertmodus für nächste Folge</string>
@@ -367,8 +367,8 @@
     <string name="autoplay_mode_first_desc">Die erste verfügbare Quelle automatisch abspielen.</string>
     <string name="autoplay_mode_regex_desc">Die erste Quelle abspielen, deren Text mit Ihrem Regex-Muster übereinstimmt.</string>
     <string name="autoplay_scope_all_desc">Die automatische Wiedergabe kann sowohl installierte Add-ons als auch aktivierte Plugins verwenden.</string>
-    <string name="autoplay_scope_addons_desc">Die automatische Wiedergabe berücksichtigt nur Streams, die von Ihren installierten Add-ons stammen.
-    <string name="autoplay_scope_plugins_desc">Die automatische Wiedergabe berücksichtigt nur Streams, die von aktivierten Plugins stammen.
+    <string name="autoplay_scope_addons_desc">Die automatische Wiedergabe berücksichtigt nur Streams, die von Ihren installierten Add-ons stammen.</string>
+    <string name="autoplay_scope_plugins_desc">Die automatische Wiedergabe berücksichtigt nur Streams, die von aktivierten Plugins stammen.</string>
     <string name="autoplay_threshold_pct_desc">Anzeige nach Wiedergabeanteil, wenn kein Outro-Zeitstempel verfügbar ist.</string>
     <string name="autoplay_threshold_min_desc">Zeige diese Anzahl Minuten vor Ende der Episode an, wenn kein Outro-Zeitstempel verfügbar ist.</string>
     <string name="autoplay_regex_matches">Übereinstimmungen mit Stream-Name/Titel/Beschreibung/Add-on/URL. Beispiel: 4K|2160p|Remux</string>
@@ -393,13 +393,13 @@
     <string name="layout_hero_catalogs">Hero-Kataloge</string>
     <string name="layout_hero_catalogs_sub">Wählen Sie einen oder mehrere Kataloge für Hero-Inhalte aus.</string>
     <string name="layout_section_content">Startseite-Inhalt</string>
-    <string name="layout_section_content_desc">Steuern Sie, was auf der Startseite und in der Suche angezeigt wird.
+    <string name="layout_section_content_desc">Steuern Sie, was auf der Startseite und in der Suche angezeigt wird.</string>
     <string name="layout_collapse_sidebar">Seitenleiste ausblenden</string>
     <string name="layout_collapse_sidebar_sub">Seitenleiste standardmäßig ausblenden; bei Fokus anzeigen.</string>
     <string name="layout_modern_sidebar">Moderne Seitenleiste</string>
     <string name="layout_modern_sidebar_sub">Floating Sidebar-Navigation aktivieren.</string>
     <string name="layout_modern_sidebar_blur">Moderne Seitenleiste unscharf</string>
-    <string name="layout_modern_sidebar_blur_sub">Wechseln Sie den Unschärfeeffekt für moderne Seitenleistenoberflächen.
+    <string name="layout_modern_sidebar_blur_sub">Wechseln Sie den Unschärfeeffekt für moderne Seitenleistenoberflächen.</string>
     <string name="layout_show_hero">Hero-Bereich anzeigen</string>
     <string name="layout_show_hero_sub">Hero-Karussell oben auf der Startseite anzeigen.</string>
     <string name="layout_show_discover">Entdecken in der Suche anzeigen</string>
@@ -438,7 +438,7 @@
     <string name="layout_open">Öffnen</string>
     <string name="layout_closed">Geschlossen</string>
     <string name="layout_trailer_location">Wiedergabestandort für moderne Trailer</string>
-    <string name="layout_trailer_location_sub">Wählen Sie aus, wo die Trailer-Vorschau in Modern Home abgespielt werden soll.
+    <string name="layout_trailer_location_sub">Wählen Sie aus, wo die Trailer-Vorschau in Modern Home abgespielt werden soll.</string>
     <string name="layout_trailer_expanded_card">Erweiterte Karte</string>
     <string name="layout_trailer_hero_media">Hero Media</string>
     <string name="layout_preset_compact">Kompakt</string>
@@ -567,9 +567,9 @@
     <string name="trakt_retry">Wiederholen</string>
     <string name="trakt_back">Zurück</string>
     <string name="trakt_cw_window_title">Fenster „Weiter ansehen”</string>
-    <string name="trakt_cw_window_subtitle">Wählen Sie aus, wie viele Trakt-Aktivitäten in „Weiter ansehen” angezeigt werden sollen.
+    <string name="trakt_cw_window_subtitle">Wählen Sie aus, wie viele Trakt-Aktivitäten in „Weiter ansehen” angezeigt werden sollen.</string>
     <string name="trakt_unaired_dialog_title">Noch nicht ausgestrahlte nächste Episoden</string>
-    <string name="trakt_unaired_dialog_subtitle">Wählen Sie aus, ob „Weiter ansehen” kommende Episoden vor ihrer Veröffentlichung enthalten soll.
+    <string name="trakt_unaired_dialog_subtitle">Wählen Sie aus, ob „Weiter ansehen” kommende Episoden vor ihrer Veröffentlichung enthalten soll.</string>
     <string name="trakt_show_unaired">Nicht ausgestrahlte Episoden anzeigen</string>
     <string name="trakt_hide_unaired">Nicht ausgestrahlte Episoden ausblenden</string>
     <string name="trakt_all_history">Gesamter Verlauf</string>
@@ -594,7 +594,7 @@
     <string name="debug_signing_in">Anmelden\u2026</string>
     <string name="debug_sign_in">Anmelden</string>
     <string name="debug_error_dialog_title">Wiedergabefehler</string>
-    <string name="debug_error_dialog_subtitle">Während der Wiedergabe ist ein Fehler aufgetreten.\n\nFehler: Simulierter Testfehler – dies ist kein echter Fehler. Quelle hat HTTP 503 (Dienst nicht verfügbar) zurückgegeben.
+    <string name="debug_error_dialog_subtitle">Während der Wiedergabe ist ein Fehler aufgetreten.\n\nFehler: Simulierter Testfehler – dies ist kein echter Fehler. Quelle hat HTTP 503 (Dienst nicht verfügbar) zurückgegeben.</string>
     <string name="debug_dismiss">Schließen</string>
 
     <!-- ProfileSettingsContent -->
@@ -836,7 +836,7 @@
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Wird geladen\u2026</string>
-    <string name="account_sync_description">Synchronisieren Sie Ihre Bibliothek, den Fortschritt, Add-ons und Plugins auf allen Geräten.
+    <string name="account_sync_description">Synchronisieren Sie Ihre Bibliothek, den Fortschritt, Add-ons und Plugins auf allen Geräten.</string>
     <string name="account_sync_restart_note">Die Synchronisierung erfolgt nicht in Echtzeit auf allen aktiven Geräten. Starten Sie dieses Gerät nach der Anmeldung neu, um Änderungen zu übernehmen, die an anderer Stelle vorgenommen wurden. </string>
     <string name="account_signin_qr_title">Mit QR anmelden</string>
     <string name="account_signin_qr_subtitle">Scannen Sie einen QR-Code und schließen Sie die E-Mail-Anmeldung auf Ihrem Smartphone ab</string>
@@ -856,8 +856,8 @@
     <string name="auth_qr_finishing">Anmeldung wird abgeschlossen\u2026</string>
     <string name="auth_qr_code_label">Code: %1$s</string>
     <string name="auth_qr_expires">Läuft in %1$s ab</string>
-    <string name="auth_qr_phone_hint">Verwenden Sie Ihr Smartphone, um sich mit E-Mail-Adresse/Passwort anzumelden. Der Fernseher bleibt für eine schnellere Anmeldung auf QR beschränkt.
-    <string name="auth_qr_scan_instruction">QR-Code scannen, im Browser bestätigen und dann hierher zurückkehren.
+    <string name="auth_qr_phone_hint">Verwenden Sie Ihr Smartphone, um sich mit E-Mail-Adresse/Passwort anzumelden. Der Fernseher bleibt für eine schnellere Anmeldung auf QR beschränkt.</string>
+    <string name="auth_qr_scan_instruction">QR-Code scannen, im Browser bestätigen und dann hierher zurückkehren.</string>
     <string name="auth_qr_code_display">Code: %1$s</string>
     <string name="auth_qr_refresh">QR-Code aktualisieren</string>
     <string name="auth_qr_continue_without_account">Ohne Konto fortfahren</string>
@@ -873,14 +873,14 @@
     <string name="sync_generate_title">Synchronisierungscode generieren</string>
     <string name="sync_generate_subtitle">Erstellen Sie eine PIN, um Ihren Sync-Code zu schützen. Geben Sie den Code an Ihre anderen Geräte weiter.</string>
     <string name="sync_generate_code_label">Ihr Synchronisierungscode</string>
-    <string name="sync_generate_instruction">Geben Sie diesen Code und Ihre PIN auf Ihrem anderen Gerät ein, um die Geräte zu verbinden.
+    <string name="sync_generate_instruction">Geben Sie diesen Code und Ihre PIN auf Ihrem anderen Gerät ein, um die Geräte zu verbinden.</string>
     <string name="sync_generate_done">Fertig</string>
     <string name="sync_generate_pin_label">Wählen Sie eine PIN (4–8 Zeichen)</string>
     <string name="sync_generate_pin_placeholder">PIN eingeben</string>
 
     <!-- SyncCodeClaimScreen -->
     <string name="sync_claim_title">Gerät verbinden</string>
-    <string name="sync_claim_subtitle">Geben Sie den Synchronisierungscode und die PIN Ihres anderen Geräts ein, um dieses Gerät zu verbinden.
+    <string name="sync_claim_subtitle">Geben Sie den Synchronisierungscode und die PIN Ihres anderen Geräts ein, um dieses Gerät zu verbinden.</string>
     <string name="sync_claim_success">Gerät erfolgreich verbunden! Ihre Add-ons und Plugins werden nun synchronisiert.</string>
     <string name="sync_claim_done">Fertig</string>
     <string name="sync_claim_code_label">Synchronisierungscode</string>
@@ -947,7 +947,7 @@
     <string name="update_unknown_sources">Installationen aus unbekannten Quellen zulassen, um fortzufahren.</string>
     <!-- AccountScreen -->
     <string name="account_title">Konto</string>
-    <string name="account_sign_in_description">Melden Sie sich an, um Ihre Bibliothek, Ihren Fortschritt, Add-ons und Plugins auf allen Geräten zu synchronisieren. Die Bibliothekssynchronisierung verwendet Nuvio Sync, wenn Trakt nicht verbunden ist, und der Fortschritt kann entweder mit Trakt oder Nuvio Sync angezeigt werden.
+    <string name="account_sign_in_description">Melden Sie sich an, um Ihre Bibliothek, Ihren Fortschritt, Add-ons und Plugins auf allen Geräten zu synchronisieren. Die Bibliothekssynchronisierung verwendet Nuvio Sync, wenn Trakt nicht verbunden ist, und der Fortschritt kann entweder mit Trakt oder Nuvio Sync angezeigt werden.</string>
     <string name="account_sync_code_title">Synchronisierungscode</string>
     <string name="account_sync_code_description">Synchronisieren Sie Geräte, ohne ein Konto zu erstellen.</string>
     <string name="account_linked_devices">Verbundene Geräte (%1$d)</string>
@@ -990,7 +990,7 @@
     <string name="profile_edit_title_id">Profil bearbeiten %1$d</string>
 
     <!-- PlaybackAudioSettings -->
-    <string name="audio_passthrough_info">Audio-Passthrough (TrueHD, DTS, AC-3 usw.) erfolgt automatisch. Bei Anschluss an einen kompatiblen AV-Receiver oder eine Soundbar über HDMI wird verlustfreies Audio ohne Dekodierung unverändert übertragen.
+    <string name="audio_passthrough_info">Audio-Passthrough (TrueHD, DTS, AC-3 usw.) erfolgt automatisch. Bei Anschluss an einen kompatiblen AV-Receiver oder eine Soundbar über HDMI wird verlustfreies Audio ohne Dekodierung unverändert übertragen.</string>
     <string name="audio_dv_title">DV7 – HEVC-Fallback</string>
 
     <!-- SidebarNavigation / MainActivity -->

@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.home
 
 import android.view.KeyEvent as AndroidKeyEvent
+import com.nuvio.tv.LocalContentFocusRequester
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -31,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -161,11 +163,14 @@ fun GridHomeContent(
     val lastKeyRepeatTime = remember { longArrayOf(0L) }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        val contentFocusRequester = LocalContentFocusRequester.current
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Adaptive(minSize = posterCardStyle.width),
             modifier = Modifier
                 .fillMaxSize()
+                .focusRequester(contentFocusRequester)
+                .focusRestorer()
                 .onPreviewKeyEvent { event ->
                     val native = event.nativeKeyEvent
                     if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {

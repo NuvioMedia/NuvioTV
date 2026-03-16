@@ -519,9 +519,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             selectSubtitleTrack(event.index)
             _uiState.update { 
                 it.copy(
-                    showSubtitleOverlay = false,
+                    showSubtitleOverlay = true,
                     showSubtitleStylePanel = false,
                     showSubtitleDelayOverlay = false,
+                    showControls = true,
                     selectedAddonSubtitle = null 
                 ) 
             }
@@ -535,9 +536,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             disableSubtitles()
             _uiState.update { 
                 it.copy(
-                    showSubtitleOverlay = false,
+                    showSubtitleOverlay = true,
                     showSubtitleStylePanel = false,
                     showSubtitleDelayOverlay = false,
+                    showControls = true,
                     selectedAddonSubtitle = null,
                     selectedSubtitleTrackIndex = -1
                 ) 
@@ -549,9 +551,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             selectAddonSubtitle(event.subtitle)
             _uiState.update {
                 it.copy(
-                    showSubtitleOverlay = false,
+                    showSubtitleOverlay = true,
                     showSubtitleStylePanel = false,
-                    showSubtitleDelayOverlay = false
+                    showSubtitleDelayOverlay = false,
+                    showControls = true
                 )
             }
         }

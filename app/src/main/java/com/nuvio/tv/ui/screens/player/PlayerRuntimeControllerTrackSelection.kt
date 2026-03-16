@@ -228,7 +228,7 @@ internal fun PlayerRuntimeController.addonSubtitleKey(subtitle: Subtitle): Strin
 
 internal fun PlayerRuntimeController.toSubtitleConfiguration(subtitle: Subtitle): MediaItem.SubtitleConfiguration {
     val normalizedLang = PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)
-    val subtitleMimeType = PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url)
+    val subtitleMimeType = PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url, subtitle.format)
     val addonTrackId = buildAddonSubtitleTrackId(subtitle)
 
     return MediaItem.SubtitleConfiguration.Builder(

@@ -67,6 +67,9 @@ internal fun AudioSelectionOverlay(
     val plusFocusRequester = remember { FocusRequester() }
     val persistFocusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
+    val currentDb = audioAmplificationDb.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
+    val canDecrease = isAmplificationAvailable && currentDb > AUDIO_AMPLIFICATION_MIN_DB
+    val canIncrease = isAmplificationAvailable && currentDb < AUDIO_AMPLIFICATION_MAX_DB
 
     var lastFocusedAudioIndex by rememberSaveable { mutableStateOf<Int?>(null) }
 
@@ -85,7 +88,12 @@ internal fun AudioSelectionOverlay(
             runCatching { tracksFocusRequester.requestFocus() }
         } else {
             delay(120)
-            runCatching { minusFocusRequester.requestFocus() }
+            val initialMixFocusRequester = when {
+                canDecrease -> minusFocusRequester
+                canIncrease -> plusFocusRequester
+                else -> persistFocusRequester
+            }
+            runCatching { initialMixFocusRequester.requestFocus() }
         }
     }
 
@@ -121,7 +129,11 @@ internal fun AudioSelectionOverlay(
                         selectedIndex = selectedIndex,
                         listState = listState,
                         initialFocusRequester = tracksFocusRequester,
-                        rightFocusRequester = minusFocusRequester,
+                        rightFocusRequester = when {
+                            canDecrease -> minusFocusRequester
+                            canIncrease -> plusFocusRequester
+                            else -> persistFocusRequester
+                        },
                         onTrackFocused = { lastFocusedAudioIndex = it },
                         onTrackSelected = onTrackSelected
                     )
@@ -300,6 +312,12 @@ private fun AudioMixContent(
     val currentDb = audioAmplificationDb.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
     val canDecrease = isAmplificationAvailable && currentDb > AUDIO_AMPLIFICATION_MIN_DB
     val canIncrease = isAmplificationAvailable && currentDb < AUDIO_AMPLIFICATION_MAX_DB
+    val plusLeftFocusRequester = if (canDecrease) minusFocusRequester else leftFocusRequester
+    val persistLeftFocusRequester = when {
+        canIncrease -> plusFocusRequester
+        canDecrease -> minusFocusRequester
+        else -> leftFocusRequester
+    }
     val helperText = when {
         !isAmplificationAvailable -> stringResource(R.string.audio_mix_unavailable)
         persistAmplification -> stringResource(
@@ -340,16 +358,28 @@ private fun AudioMixContent(
                 enabled = canDecrease,
                 focusRequester = minusFocusRequester,
                 leftFocusRequester = leftFocusRequester,
-                rightFocusRequester = plusFocusRequester,
-                onClick = { onAmplificationChange(currentDb - 1) }
+                rightFocusRequester = if (canIncrease) plusFocusRequester else persistFocusRequester,
+                onClick = {
+                    val nextDb = currentDb - 1
+                    onAmplificationChange(nextDb)
+                    if (nextDb <= AUDIO_AMPLIFICATION_MIN_DB && canIncrease) {
+                        runCatching { plusFocusRequester.requestFocus() }
+                    }
+                }
             )
             MixStepCard(
                 icon = Icons.Default.Add,
                 enabled = canIncrease,
                 focusRequester = plusFocusRequester,
-                leftFocusRequester = minusFocusRequester,
+                leftFocusRequester = plusLeftFocusRequester,
                 rightFocusRequester = persistFocusRequester,
-                onClick = { onAmplificationChange(currentDb + 1) }
+                onClick = {
+                    val nextDb = currentDb + 1
+                    onAmplificationChange(nextDb)
+                    if (nextDb >= AUDIO_AMPLIFICATION_MAX_DB && canDecrease) {
+                        runCatching { minusFocusRequester.requestFocus() }
+                    }
+                }
             )
         }
 
@@ -358,7 +388,7 @@ private fun AudioMixContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(persistFocusRequester)
-                .focusProperties { left = plusFocusRequester },
+                .focusProperties { left = persistLeftFocusRequester },
             colors = CardDefaults.colors(
                 containerColor = if (persistAmplification) NuvioColors.Secondary else Color.Transparent,
                 focusedContainerColor = if (persistAmplification) NuvioColors.Secondary else Color.Transparent
@@ -415,6 +445,7 @@ private fun MixStepCard(
             .width(78.dp)
             .focusRequester(focusRequester)
             .focusProperties {
+                canFocus = enabled
                 left = leftFocusRequester
                 right = rightFocusRequester
             },
