@@ -109,11 +109,23 @@ fun SeasonTabs(
     val typography = MaterialTheme.typography
     val tabTextStyle = remember(typography) { typography.titleMedium }
     val textSecondary = NuvioTheme.extendedColors.textSecondary
+    val lazyListState = rememberLazyListState()
+
+    LaunchedEffect(sortedSeasons, selectedSeason) {
+        val selectedIndex = sortedSeasons.indexOf(selectedSeason)
+        if (selectedIndex < 0) return@LaunchedEffect
+
+        val visibleIndices = lazyListState.layoutInfo.visibleItemsInfo.map { it.index }
+        if (selectedIndex in visibleIndices) return@LaunchedEffect
+
+        lazyListState.scrollToItem(selectedIndex)
+    }
 
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
             .focusRestorer(selectedTabFocusRequester),
+        state = lazyListState,
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {

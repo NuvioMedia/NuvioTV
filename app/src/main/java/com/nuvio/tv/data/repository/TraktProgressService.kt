@@ -921,11 +921,17 @@ class TraktProgressService @Inject constructor(
 
             var shouldStop = false
             for (item in items) {
-                val mapped = mapEpisodeHistoryItem(item) ?: continue
-                if (cutoffMs != null && mapped.lastWatched < cutoffMs) {
+                val contentId = normalizeContentId(item.show?.ids)
+                if (contentId.isBlank()) continue
+                if (results.containsKey(contentId)) continue
+
+                val itemLastWatched = parseIsoToMillis(item.watchedAt)
+                if (cutoffMs != null && itemLastWatched < cutoffMs) {
                     shouldStop = true
                     continue
                 }
+
+                val mapped = mapEpisodeHistoryItem(item) ?: continue
                 results.putIfAbsent(mapped.contentId, mapped)
                 if (results.size >= maxRecentEpisodeHistoryEntries) {
                     shouldStop = true

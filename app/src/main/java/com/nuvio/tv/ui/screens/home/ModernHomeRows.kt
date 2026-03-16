@@ -662,7 +662,7 @@ private fun ModernCarouselCard(
     val shouldPlayTrailerInCard = playTrailerInExpandedCard && !trailerPreviewUrl.isNullOrBlank()
     val hasImage = !imageUrl.isNullOrBlank()
     val hasLandscapeLogo =
-        useLandscapePosters &&
+        (useLandscapePosters || isBackdropExpanded) &&
             !item.heroPreview.logo.isNullOrBlank() &&
             !landscapeLogoLoadFailed
     var isFocused by remember { mutableStateOf(false) }
@@ -795,7 +795,7 @@ private fun ModernCarouselCard(
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart
                     )
-                } else if (useLandscapePosters) {
+                } else if (useLandscapePosters || isBackdropExpanded) {
                     Text(
                         text = item.title,
                         style = titleStyle,

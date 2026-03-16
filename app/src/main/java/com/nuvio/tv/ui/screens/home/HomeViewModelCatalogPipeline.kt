@@ -307,11 +307,13 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             .asSequence()
             .flatMap { row -> row.items.asSequence() }
             .filter { item -> item.hasHeroArtwork() }
+            .shuffled()
             .take(7)
             .toList()
         val fallbackHeroItemsFromSelectedCatalogs = selectedHeroRows
             .asSequence()
             .flatMap { row -> row.items.asSequence() }
+            .shuffled()
             .take(7)
             .toList()
 
@@ -319,6 +321,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             .asSequence()
             .flatMap { it.items.asSequence() }
             .filter { it.hasHeroArtwork() }
+            .shuffled()
             .take(7)
             .toList()
 

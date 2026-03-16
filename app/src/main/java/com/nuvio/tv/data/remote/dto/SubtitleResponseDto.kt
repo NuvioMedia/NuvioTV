@@ -12,5 +12,6 @@ data class SubtitleResponseDto(
 data class SubtitleItemDto(
     @Json(name = "id") val id: String? = null,
     @Json(name = "url") val url: String,
-    @Json(name = "lang") val lang: String
+    @Json(name = "lang") val lang: String,
+    @Json(name = "format") val format: String? = null
 )

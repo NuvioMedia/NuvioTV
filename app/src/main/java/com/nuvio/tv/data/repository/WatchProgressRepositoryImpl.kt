@@ -268,7 +268,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
         return useTraktProgressFlow()
             .flatMapLatest { useTraktProgress ->
                 if (useTraktProgress) {
-                    traktAllProgressFlow().map { items ->
+                    traktProgressService.observeAllProgress().map { items ->
                         items
                             .filter { it.contentId == contentId }
                             .maxByOrNull { it.lastWatched }
