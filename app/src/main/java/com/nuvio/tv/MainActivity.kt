@@ -83,11 +83,13 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -537,6 +539,8 @@ private fun LegacySidebarScaffold(
     onSwitchProfile: () -> Unit,
     onExitApp: () -> Unit
 ) {
+    val layoutDirection = LocalLayoutDirection.current
+    val isRtl = layoutDirection == LayoutDirection.Rtl
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val drawerItemFocusRequesters = remember(drawerItems) {
         drawerItems.associate { item -> item.route to FocusRequester() }
@@ -603,9 +607,10 @@ private fun LegacySidebarScaffold(
                         .padding(12.dp)
                         .selectableGroup()
                         .onPreviewKeyEvent { keyEvent ->
-                            if (keyEvent.key == Key.DirectionRight && keyEvent.type == KeyEventType.KeyDown) {
+                            val closeSidebarKey = if (isRtl) Key.DirectionLeft else Key.DirectionRight
+                            if (keyEvent.key == closeSidebarKey && keyEvent.type == KeyEventType.KeyDown) {
                                 drawerState.setValue(DrawerValue.Closed)
-                                pendingContentFocusTransfer = false
+                                pendingContentFocusTransfer = true
                                 true
                             } else {
                                 false
@@ -720,13 +725,15 @@ private fun LegacySidebarScaffold(
                 .fillMaxSize()
                 .padding(start = contentStartPadding)
                 .onKeyEvent { keyEvent ->
+                    val openSidebarKey = if (isRtl) Key.DirectionRight else Key.DirectionLeft
                     if (
                         showSidebar &&
                         drawerState.currentValue == DrawerValue.Closed &&
                         keyEvent.type == KeyEventType.KeyDown &&
-                        keyEvent.key == Key.DirectionLeft
+                        keyEvent.key == openSidebarKey
                     ) {
-                        if (focusManager.moveFocus(FocusDirection.Left)) {
+                        val focusDirection = if (isRtl) FocusDirection.Right else FocusDirection.Left
+                        if (focusManager.moveFocus(focusDirection)) {
                             true
                         } else {
                             pendingSidebarFocusRequest = true
@@ -850,6 +857,8 @@ private fun ModernSidebarScaffold(
     onSwitchProfile: () -> Unit,
     onExitApp: () -> Unit
 ) {
+    val layoutDirection = LocalLayoutDirection.current
+    val isRtl = layoutDirection == LayoutDirection.Rtl
     val showSidebar = currentRoute in rootRoutes
     val collapsedSidebarWidth = if (sidebarCollapsed) 0.dp else 184.dp
     val openSidebarWidth = 262.dp
@@ -1079,8 +1088,10 @@ private fun ModernSidebarScaffold(
                                 else -> Unit
                             }
                         }
-                        if (keyEvent.key == Key.DirectionLeft) {
-                            if (focusManager.moveFocus(FocusDirection.Left)) {
+                        val openSidebarKey = if (isRtl) Key.DirectionRight else Key.DirectionLeft
+                        if (keyEvent.key == openSidebarKey) {
+                            val focusDirection = if (isRtl) FocusDirection.Right else FocusDirection.Left
+                            if (focusManager.moveFocus(focusDirection)) {
                                 true
                             } else {
                                 isSidebarExpanded = true
@@ -1143,8 +1154,8 @@ private fun ModernSidebarScaffold(
                                 focusedDrawerIndex == drawerItems.lastIndex
                             }
 
-                            Key.DirectionRight -> {
-                                pendingContentFocusTransfer = false
+                            (if (isRtl) Key.DirectionLeft else Key.DirectionRight) -> {
+                                pendingContentFocusTransfer = true
                                 sidebarCollapsePending = true
                                 true
                             }

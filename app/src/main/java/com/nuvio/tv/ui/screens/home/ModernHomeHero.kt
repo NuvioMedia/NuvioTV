@@ -35,8 +35,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -130,24 +133,43 @@ internal fun ModernHeroGradientLayer(
     bgColor: Color,
     modifier: Modifier
 ) {
+    val layoutDirection = LocalLayoutDirection.current
     Box(
         modifier = modifier
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithCache {
+                val isRtl = layoutDirection == LayoutDirection.Rtl
+
                 val leftBlendSolidWidth = size.width * 0.018f
                 val horizontalGradientStartX = leftBlendSolidWidth
                 val horizontalFadeEndX = horizontalGradientStartX + (size.width * 0.42f)
-                val horizontalGradient = Brush.horizontalGradient(
-                    colorStops = arrayOf(
-                        0.0f to bgColor,
-                        0.22f to bgColor.copy(alpha = 0.86f),
-                        0.46f to bgColor.copy(alpha = 0.56f),
-                        0.76f to bgColor.copy(alpha = 0.16f),
-                        1.0f to Color.Transparent
-                    ),
-                    startX = horizontalGradientStartX,
-                    endX = horizontalFadeEndX
-                )
+
+                val horizontalGradient = if (isRtl) {
+                    Brush.horizontalGradient(
+                        colorStops = arrayOf(
+                            0.0f to Color.Transparent,
+                            1.0f - 0.76f to bgColor.copy(alpha = 0.16f),
+                            1.0f - 0.46f to bgColor.copy(alpha = 0.56f),
+                            1.0f - 0.22f to bgColor.copy(alpha = 0.86f),
+                            1.0f to bgColor
+                        ),
+                        startX = size.width - horizontalFadeEndX,
+                        endX = size.width - horizontalGradientStartX
+                    )
+                } else {
+                    Brush.horizontalGradient(
+                        colorStops = arrayOf(
+                            0.0f to bgColor,
+                            0.22f to bgColor.copy(alpha = 0.86f),
+                            0.46f to bgColor.copy(alpha = 0.56f),
+                            0.76f to bgColor.copy(alpha = 0.16f),
+                            1.0f to Color.Transparent
+                        ),
+                        startX = horizontalGradientStartX,
+                        endX = horizontalFadeEndX
+                    )
+                }
+
                 val topContourGradient = Brush.linearGradient(
                     colorStops = arrayOf(
                         0.0f to bgColor.copy(alpha = 0.28f),
@@ -155,8 +177,8 @@ internal fun ModernHeroGradientLayer(
                         0.72f to bgColor.copy(alpha = 0.05f),
                         1.0f to Color.Transparent
                     ),
-                    start = Offset(0f, 0f),
-                    end = Offset(size.width * 0.24f, size.height * 0.40f)
+                    start = if (isRtl) Offset(size.width, 0f) else Offset(0f, 0f),
+                    end = if (isRtl) Offset(size.width * (1f - 0.24f), size.height * 0.40f) else Offset(size.width * 0.24f, size.height * 0.40f)
                 )
                 val bottomContourGradient = Brush.linearGradient(
                     colorStops = arrayOf(
@@ -165,8 +187,8 @@ internal fun ModernHeroGradientLayer(
                         0.74f to bgColor.copy(alpha = 0.05f),
                         1.0f to Color.Transparent
                     ),
-                    start = Offset(0f, size.height),
-                    end = Offset(size.width * 0.24f, size.height * 0.61f)
+                    start = if (isRtl) Offset(size.width, size.height) else Offset(0f, size.height),
+                    end = if (isRtl) Offset(size.width * (1f - 0.24f), size.height * 0.61f) else Offset(size.width * 0.24f, size.height * 0.61f)
                 )
                 val verticalGradient = Brush.verticalGradient(
                     0.89f to Color.Transparent,
@@ -178,6 +200,7 @@ internal fun ModernHeroGradientLayer(
                 onDrawBehind {
                     drawRect(
                         color = bgColor,
+                        topLeft = if (isRtl) Offset(size.width - leftBlendSolidWidth, 0f) else Offset.Zero,
                         size = Size(leftBlendSolidWidth, size.height)
                     )
                     drawRect(brush = horizontalGradient, size = size)
@@ -496,8 +519,8 @@ private fun HeroImdbMeta(
     imdbLogoModel: Any,
     textStyle: androidx.compose.ui.text.TextStyle,
     textColor: Color,
-    logoSize: androidx.compose.ui.unit.Dp,
-    spacing: androidx.compose.ui.unit.Dp
+    logoSize: Dp,
+    spacing: Dp
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,

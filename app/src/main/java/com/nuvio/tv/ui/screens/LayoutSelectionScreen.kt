@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.tv.material3.Border
@@ -220,7 +221,9 @@ private fun LayoutOptionCard(
                         HomeLayout.MODERN -> stringResource(R.string.layout_modern)
                     },
                     style = MaterialTheme.typography.titleLarge,
-                    color = if (isSelected || isFocused) NuvioColors.TextPrimary else NuvioColors.TextSecondary
+                    color = if (isSelected || isFocused) NuvioColors.TextPrimary else NuvioColors.TextSecondary,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2
                 )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -232,7 +235,8 @@ private fun LayoutOptionCard(
                     HomeLayout.MODERN -> stringResource(R.string.layout_modern_desc)
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = NuvioColors.TextTertiary
+                color = NuvioColors.TextTertiary,
+                textAlign = TextAlign.Center
             )
             }
 

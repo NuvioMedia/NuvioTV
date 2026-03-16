@@ -76,11 +76,13 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
@@ -122,6 +124,7 @@ fun PlayerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val layoutDirection = LocalLayoutDirection.current
     val containerFocusRequester = remember { FocusRequester() }
     val playPauseFocusRequester = remember { FocusRequester() }
     val progressBarFocusRequester = remember { FocusRequester() }
@@ -337,11 +340,13 @@ fun PlayerScreen(
                     if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
                         when (keyEvent.nativeKeyEvent.keyCode) {
                             KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(-SUBTITLE_DELAY_STEP_MS))
+                                val delta = if (layoutDirection == LayoutDirection.Rtl) SUBTITLE_DELAY_STEP_MS else -SUBTITLE_DELAY_STEP_MS
+                                viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(delta))
                                 return@onKeyEvent true
                             }
                             KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(SUBTITLE_DELAY_STEP_MS))
+                                val delta = if (layoutDirection == LayoutDirection.Rtl) -SUBTITLE_DELAY_STEP_MS else SUBTITLE_DELAY_STEP_MS
+                                viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(delta))
                                 return@onKeyEvent true
                             }
                             KeyEvent.KEYCODE_DPAD_CENTER,
@@ -417,12 +422,13 @@ fun PlayerScreen(
                                     repeatCount >= 3 -> 20_000L
                                     else -> 10_000L
                                 }
-                                val deltaMs = if (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-                                    -stepMs
+                                val isLeft = keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                                val delta = if (layoutDirection == LayoutDirection.Rtl) {
+                                    if (isLeft) stepMs else -stepMs
                                 } else {
-                                    stepMs
+                                    if (isLeft) -stepMs else stepMs
                                 }
-                                viewModel.onEvent(PlayerEvent.OnPreviewSeekBy(deltaMs))
+                                viewModel.onEvent(PlayerEvent.OnPreviewSeekBy(delta))
                                 true
                             } else {
                                 // Let focus system handle navigation when controls are visible
@@ -855,11 +861,11 @@ fun PlayerScreen(
             visible = uiState.showEpisodesPanel && uiState.error == null,
             enter = slideInHorizontally(
                 animationSpec = tween(220),
-                initialOffsetX = { it }
+                initialOffsetX = { if (layoutDirection == LayoutDirection.Ltr) it else -it }
             ),
             exit = slideOutHorizontally(
                 animationSpec = tween(220),
-                targetOffsetX = { it }
+                targetOffsetX = { if (layoutDirection == LayoutDirection.Ltr) it else -it }
             )
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -897,11 +903,11 @@ fun PlayerScreen(
             visible = uiState.showSourcesPanel && uiState.error == null,
             enter = slideInHorizontally(
                 animationSpec = tween(220),
-                initialOffsetX = { it }
+                initialOffsetX = { if (layoutDirection == LayoutDirection.Ltr) it else -it }
             ),
             exit = slideOutHorizontally(
                 animationSpec = tween(220),
-                targetOffsetX = { it }
+                targetOffsetX = { if (layoutDirection == LayoutDirection.Ltr) it else -it }
             )
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -1037,6 +1043,7 @@ private fun PlayerControlsOverlay(
     val customSourcePainter = rememberRawSvgPainter(R.raw.ic_player_source)
     val customAspectPainter = rememberRawSvgPainter(R.raw.ic_player_aspect_ratio)
     val customEpisodesPainter = rememberRawSvgPainter(R.raw.ic_player_episodes)
+    val layoutDirection = LocalLayoutDirection.current
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Top gradient
@@ -1256,11 +1263,17 @@ private fun PlayerControlsOverlay(
                         visible = uiState.showMoreDialog,
                         enter = slideInHorizontally(
                             animationSpec = tween(180),
-                            initialOffsetX = { it / 2 }
+                            initialOffsetX = { 
+                                val offset = it / 2
+                                if (layoutDirection == LayoutDirection.Rtl) -offset else offset
+                             }
                         ) + fadeIn(animationSpec = tween(180)),
                         exit = slideOutHorizontally(
                             animationSpec = tween(160),
-                            targetOffsetX = { it / 2 }
+                            targetOffsetX = { 
+                                val offset = it / 2
+                                if (layoutDirection == LayoutDirection.Rtl) -offset else offset
+                             }
                         ) + fadeOut(animationSpec = tween(160))
                     ) {
                         Row(
@@ -1432,6 +1445,7 @@ private fun ProgressBar(
         label = "progress"
     )
     var isFocused by remember { mutableStateOf(false) }
+    val layoutDirection = LocalLayoutDirection.current
 
     Box(
         modifier = Modifier
@@ -1468,7 +1482,6 @@ private fun ProgressBar(
                     return@onPreviewKeyEvent false
                 }
 
-                // testing additional key handling for DPAD_LEFT and DPAD_RIGHT to allow seek in focus (check)
                 if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
                     when (keyEvent.nativeKeyEvent.keyCode) {
                         KeyEvent.KEYCODE_DPAD_DOWN -> {
@@ -1494,11 +1507,13 @@ private fun ProgressBar(
                             }
                         }
                         KeyEvent.KEYCODE_DPAD_LEFT -> {
-                            onSeekPreview(-10_000L)
+                            val delta = if (layoutDirection == LayoutDirection.Rtl) 10_000L else -10_000L
+                            onSeekPreview(delta)
                             true
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                            onSeekPreview(10_000L)
+                            val delta = if (layoutDirection == LayoutDirection.Rtl) -10_000L else 10_000L
+                            onSeekPreview(delta)
                             true
                         }
                         else -> false
