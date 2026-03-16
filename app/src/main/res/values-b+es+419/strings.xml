@@ -7,6 +7,8 @@
     <!-- HomeScreen -->
     <string name="home_no_addons">No hay addons instalados. Agrega uno para empezar.</string>
     <string name="home_no_catalog_addons">No hay addons de catálogo instalados. Instala un addon de catálogo para ver contenido.</string>
+    <string name="auth_notice_nuvio_logged_out">Se cerró tu sesión de Nuvio. Por favor, vuelve a iniciar sesión.</string>
+    <string name="auth_notice_trakt_logged_out">Se cerró tu sesión de Trakt. Por favor, vuelve a conectarla.</string>
     <string name="error_generic">Ocurrió un error</string>
 
     <!-- ErrorState -->
@@ -39,6 +41,10 @@
     <string name="error_meta_tried_none">Addons de metadatos probados: %1$s. Ninguno proporcionó metadatos para id=%2$s (tipo=%3$s).</string>
     <string name="error_meta_tried_generic">Addons de metadatos probados: %1$s. No se pudieron cargar los metadatos para id=%2$s (tipo=%3$s).</string>
     <string name="error_meta_tried_issues">Addons de metadatos probados: %1$s. No se pudieron cargar los metadatos para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Ningún addon instalado admite streams para \"%1$s\".</string>
+    <string name="error_stream_tried_none">Addons de streams probados: %1$s. Ninguno devolvió streams para id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_generic">Addons de streams probados: %1$s. No se pudieron cargar los streams para id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_issues">Addons de streams probados: %1$s. No se pudieron cargar los streams para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Continuar viendo</string>
@@ -88,8 +94,6 @@
     <string name="episodes_play">Reproducir</string>
     <string name="play_manually">Reproducir manualmente</string>
     <string name="episodes_season_actions">Acciones de la temporada</string>
-    <string name="episodes_mismatch_title">Numeración de episodios incorrecta</string>
-    <string name="episodes_mismatch_cancel">Cancelar</string>
 
     <!-- MetaDetailsViewModel -->
     <string name="detail_added_to_library">Agregado a la biblioteca</string>
@@ -178,6 +182,23 @@
     <string name="settings_playback_subtitle">Reproductor, subtítulos y auto-reproducción.</string>
     <string name="settings_trakt_subtitle">Abrir pantalla de conexión con Trakt.</string>
     <string name="settings_about_subtitle">Versión y políticas.</string>
+    <string name="settings_network">Velocidad de red</string>
+    <string name="settings_network_subtitle">Diagnóstico de latencia y descarga</string>
+    <string name="settings_advanced">Avanzado</string>
+    <string name="settings_advanced_subtitle">Ejecutar diagnóstico de velocidad de red</string>
+    <string name="network_speed_test_run">Ejecutar prueba de velocidad</string>
+    <string name="network_speed_test_running">Ejecutando prueba de velocidad</string>
+    <string name="network_speed_test_subtitle">Medir velocidad de descarga y latencia</string>
+    <string name="network_testing_latency">Midiendo latencia</string>
+    <string name="network_testing_download">Midiendo velocidad de descarga</string>
+    <string name="network_results_title">Resultados</string>
+    <string name="network_latency_label">Latencia</string>
+    <string name="network_download_label">Descarga</string>
+    <string name="network_error_prefix">Error: %1$s</string>
+    <string name="network_powered_by_fast">Con tecnología de fast.com</string>
+    <string name="network_connection_wifi">Wi-Fi</string>
+    <string name="network_connection_ethernet">Ethernet</string>
+    <string name="network_connection_offline">Sin conexión</string>
     <string name="settings_debug">Depuración</string>
     <string name="settings_debug_subtitle">Herramientas de desarrollador y funciones experimentales.</string>
     <string name="settings_plugins_section_subtitle">Administrar repositorios, proveedores y estado de los plugins.</string>
@@ -541,9 +562,17 @@
     <string name="trakt_token_refreshes">El token de acceso de Trakt se actualiza en %1$s</string>
     <string name="trakt_login_instruction">Presiona Iniciar Sesión para comenzar la autenticación del dispositivo con Trakt. Aquí aparecerá un código QR.</string>
     <string name="trakt_missing_credentials">Faltan TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET en local.properties.</string>
-    <string name="trakt_continue_watching_window">Ventana de Continuar Viendo</string>
+    <string name="trakt_watch_progress_title">Progreso de reproducción</string>
+    <string name="trakt_watch_progress_subtitle">Elige qué fuente de progreso se usa para reanudar y continuar viendo</string>
+    <string name="trakt_watch_progress_dialog_title">Progreso de reproducción</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Elige si reanudar y continuar viendo deben usar Trakt o Nuvio Sync mientras el scrobbling de Trakt sigue activo.</string>
+    <string name="trakt_watch_progress_source_trakt">Trakt</string>
+    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_trakt_selected">Fuente de progreso de reproducción establecida en Trakt</string>
+    <string name="trakt_watch_progress_nuvio_selected">Fuente de progreso de reproducción establecida en Nuvio Sync</string>
+    <string name="trakt_continue_watching_window">Ventana de continuar viendo</string>
     <string name="trakt_continue_watching_subtitle">Historial de Trakt considerado para continuar viendo</string>
-    <string name="trakt_unaired_next_up">Próximos Episodios Sin Emitir</string>
+    <string name="trakt_unaired_next_up">Incluir próximos episodios no emitidos</string>
     <string name="trakt_unaired_next_up_subtitle">Mostrar los próximos episodios antes de su emisión</string>
     <string name="trakt_unaired_shown">Mostrados</string>
     <string name="trakt_unaired_hidden">Ocultos</string>
@@ -589,7 +618,13 @@
     <string name="debug_sign_in">Iniciar Sesión</string>
     <string name="debug_error_dialog_title">Error de Reproducción</string>
     <string name="debug_error_dialog_subtitle">Ocurrió un error durante la reproducción.\n\nError: Error simulado de prueba - esto no es un fallo real. La fuente devolvió HTTP 503 (Servicio no disponible).</string>
-    <string name="debug_dismiss">Descartar</string>
+    <string name="debug_dismiss">Cerrar</string>
+    <string name="debug_section_library">Biblioteca</string>
+    <string name="debug_generate_library_title">Generar elementos de la biblioteca</string>
+    <string name="debug_generate_library_subtitle">Agregar películas/series aleatorias a la biblioteca para pruebas</string>
+    <string name="debug_generate_library_placeholder">Número de elementos</string>
+    <string name="debug_generate_library_button">Generar</string>
+    <string name="debug_generating_library">Generando\u2026</string>
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Perfiles</string>
@@ -635,6 +670,9 @@
     <string name="addon_install_placeholder">https://ejemplo.com</string>
     <string name="addon_installing">Instalando</string>
     <string name="addon_install_btn">Instalar</string>
+    <string name="addon_install_success">Se instaló %1$s</string>
+    <string name="addon_error_invalid_url">Ingresa una URL de addon válida</string>
+    <string name="addon_error_invalid_scheme">La URL del addon debe comenzar con http o https</string>
     <string name="addon_installed_section">Instalados</string>
     <string name="addon_empty">No hay addons instalados. Agrega uno para empezar.</string>
     <string name="addon_remove">Eliminar</string>
@@ -723,6 +761,15 @@
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
+    <string name="audio_dialog_tab_tracks">Audio</string>
+    <string name="audio_dialog_tab_mix">Mezcla</string>
+    <string name="audio_mix_label">Amplificación (PCM)</string>
+    <string name="audio_mix_value_db">%1$d dB</string>
+    <string name="audio_mix_persist_on">Persistir entre sesiones: ACTIVADO</string>
+    <string name="audio_mix_persist_off">Persistir entre sesiones: DESACTIVADO</string>
+    <string name="audio_mix_range">Rango: %1$d dB a %2$d dB</string>
+    <string name="audio_mix_range_saved">Rango: %1$d dB a %2$d dB (guardado)</string>
+    <string name="audio_mix_unavailable">La amplificación no está disponible en este dispositivo</string>
 
     <!-- SubtitleDialog / SubtitleStyleSidePanel -->
     <string name="subtitle_dialog_title">Subtítulos</string>
@@ -748,6 +795,7 @@
     <string name="subtitle_on">Activado</string>
     <string name="subtitle_off">Desactivado</string>
     <string name="subtitle_style_title">Estilo de Subtítulos</string>
+    <string name="subtitle_style_customize">Personalizar</string>
     <string name="subtitle_style_color">Color</string>
     <string name="subtitle_style_reset">Restablecer</string>
     <string name="subtitle_style_font_size">Tamaño de Fuente</string>
@@ -996,8 +1044,13 @@
     <string name="settings_rounded_ui">Interfaz Redondeada</string>
     <string name="cd_expand_sidebar">Expandir barra lateral</string>
 
+    <string name="update_checking">Buscando actualizaciones…</string>
+    <string name="update_download_complete">Descarga completada. Listo para instalar.</string>
+    <string name="update_up_to_date">El sistema está actualizado. Últimos cambios:</string>
     <string name="update_close">Cerrar</string>
     <string name="update_open_settings">Abrir Ajustes</string>
     <string name="update_install">Instalar</string>
     <string name="update_ignore">Ignorar</string>
+    <string name="watchlist_added">Añadido a la lista para ver</string>
+    <string name="watchlist_removed">Eliminado de la lista para ver</string>
 </resources>
