@@ -327,6 +327,12 @@ fun NetworkSettingsContent(
                             color = NuvioColors.Error
                         )
                     }
+
+                    Text(
+                        text = stringResource(R.string.network_powered_by_fast),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NuvioColors.TextSecondary.copy(alpha = 0.45f)
+                    )
                 }
             }
         }
