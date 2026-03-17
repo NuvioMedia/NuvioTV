@@ -402,7 +402,7 @@ fun PlayerRuntimeController.onUserInteraction() {
 
 fun PlayerRuntimeController.hideControls() {
     hideControlsJob?.cancel()
-    _uiState.update { it.copy(showControls = false, showSeekOverlay = false) }
+    _uiState.update { it.copy(showControls = false, showSeekOverlay = false, showMoreDialog = false) }
 }
 
 fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
@@ -572,8 +572,15 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             if (_uiState.value.showSubtitleDelayOverlay) {
                 hideSubtitleDelayOverlay()
             }
-            _uiState.update { it.copy(showControls = !it.showControls) }
-            if (_uiState.value.showControls) {
+            val shouldShowControls = !_uiState.value.showControls
+            _uiState.update {
+                it.copy(
+                    showControls = shouldShowControls,
+                    showSeekOverlay = false,
+                    showMoreDialog = if (shouldShowControls) it.showMoreDialog else false
+                )
+            }
+            if (shouldShowControls) {
                 scheduleHideControls()
             }
         }
