@@ -116,6 +116,7 @@ import com.nuvio.tv.core.sync.ProfileSyncService
 import com.nuvio.tv.core.sync.StartupSyncService
 import com.nuvio.tv.data.remote.supabase.AvatarRepository
 import com.nuvio.tv.ui.navigation.NuvioNavHost
+import com.nuvio.tv.ui.components.StartupSplashHost
 import com.nuvio.tv.ui.navigation.Screen
 import com.nuvio.tv.ui.components.NuvioScrollDefaults
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
@@ -265,26 +266,35 @@ class MainActivity : ComponentActivity() {
                 }
             }
             val mainUiPrefs by mainUiPrefsFlow.collectAsState(initial = MainUiPrefs(hasChosenLayout = null))
+            var showStartupSplash by remember { mutableStateOf(true) }
 
             NuvioTheme(appTheme = mainUiPrefs.theme, appFont = mainUiPrefs.font) {
                 CompositionLocalProvider(
                     LocalBringIntoViewSpec provides NuvioScrollDefaults.smoothScrollSpec
                 ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    shape = RectangleShape,
-                    colors = SurfaceDefaults.colors(
-                        containerColor = NuvioColors.Background
-                    )
-                ) {
-                    if (hasSeenAuthQrOnFirstLaunch == null) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(NuvioColors.Background)
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        shape = RectangleShape,
+                        colors = SurfaceDefaults.colors(
+                            containerColor = NuvioColors.Background
                         )
-                        return@Surface
-                    }
+                    ) {
+                        val startupSplashReady =
+                            hasSeenAuthQrOnFirstLaunch != null && mainUiPrefs.hasChosenLayout != null
+
+                        StartupSplashHost(
+                            visible = showStartupSplash,
+                            readyToDismiss = startupSplashReady,
+                            onFinished = { showStartupSplash = false }
+                        ) {
+                            if (hasSeenAuthQrOnFirstLaunch == null) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(NuvioColors.Background)
+                                )
+                                return@StartupSplashHost
+                            }
 
                     if (
                         hasSeenAuthQrOnFirstLaunch == false &&
@@ -329,7 +339,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         )
-                        return@Surface
+                        return@StartupSplashHost
                     }
 
                     val shouldShowProfileSelection =
@@ -344,7 +354,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         )
-                        return@Surface
+                        return@StartupSplashHost
                     }
 
                     val layoutChosen = mainUiPrefs.hasChosenLayout
@@ -354,7 +364,7 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .background(NuvioColors.Background)
                         )
-                        return@Surface
+                        return@StartupSplashHost
                     }
                     val sidebarCollapsed = mainUiPrefs.sidebarCollapsed
                     val modernSidebarEnabled = mainUiPrefs.modernSidebarEnabled
@@ -477,16 +487,17 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    UpdatePromptDialog(
-                        state = updateState,
-                        onDismiss = { updateViewModel.dismissDialog() },
-                        onDownload = { updateViewModel.downloadUpdate() },
-                        onInstall = { updateViewModel.installUpdateOrRequestPermission() },
-                        onIgnore = { updateViewModel.ignoreThisVersion() },
-                        onOpenUnknownSources = { updateViewModel.openUnknownSourcesSettings() }
-                    )
+                            UpdatePromptDialog(
+                                state = updateState,
+                                onDismiss = { updateViewModel.dismissDialog() },
+                                onDownload = { updateViewModel.downloadUpdate() },
+                                onInstall = { updateViewModel.installUpdateOrRequestPermission() },
+                                onIgnore = { updateViewModel.ignoreThisVersion() },
+                                onOpenUnknownSources = { updateViewModel.openUnknownSourcesSettings() }
+                            )
+                        }
+                    }
                 }
-            }
             }
         }
 
