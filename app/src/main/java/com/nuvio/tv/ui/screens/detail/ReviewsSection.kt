@@ -41,7 +41,6 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -196,43 +195,33 @@ fun ReviewsSection(
                                 canExpandAfterFocusSettle = false
                             }
                         }
-                        val shouldExpandCard = canExpandCard &&
+                        val shouldRenderPopupForCard = canExpandCard &&
                             isCardFocused &&
-                            canExpandAfterFocusSettle
-                        val showPopupForCard = shouldExpandCard &&
                             activePopupReviewKey == reviewKey &&
                             !reviewsListState.isScrollInProgress
+                        val shouldExpandCard = shouldRenderPopupForCard && canExpandAfterFocusSettle
+                        val expandedTextTargetHeight = measuredTextHeight.coerceAtMost(maxTextHeight)
                         val animatedTextHeight by animateDpAsState(
                             targetValue = if (shouldExpandCard) {
-                                measuredTextHeight.coerceAtMost(maxTextHeight)
+                                expandedTextTargetHeight
                             } else {
                                 baseTextHeight
                             },
                             animationSpec = tween(
-                                durationMillis = 560,
+                                durationMillis = 680,
                                 easing = FastOutSlowInEasing
                             ),
                             label = "reviewTextHeight"
                         )
                         val cardExtraHeight = (animatedTextHeight - baseTextHeight).coerceAtLeast(0.dp)
-                        val animatedCardHeight = baseCardHeight + cardExtraHeight
+                        val expandedCardHeight = baseCardHeight + cardExtraHeight
                         val cardExtraHeightPx = with(density) { cardExtraHeight.roundToPx() }
-                        var popupReady by remember(reviewKey) { mutableStateOf(false) }
-                        LaunchedEffect(showPopupForCard) {
-                            if (!showPopupForCard) {
-                                popupReady = false
-                            }
-                        }
-                        val baseCardAlpha by animateFloatAsState(
-                            targetValue = if (showPopupForCard && popupReady) 0f else 1f,
-                            animationSpec = tween(durationMillis = 80, easing = FastOutSlowInEasing),
-                            label = "reviewBaseCardAlpha"
+                        val popupTransitionAlpha by animateFloatAsState(
+                            targetValue = if (shouldRenderPopupForCard) 1f else 0f,
+                            animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+                            label = "reviewPopupTransitionAlpha"
                         )
-                        val popupCardAlpha by animateFloatAsState(
-                            targetValue = if (popupReady) 1f else 0f,
-                            animationSpec = tween(durationMillis = 80, easing = FastOutSlowInEasing),
-                            label = "reviewPopupCardAlpha"
-                        )
+                        val baseCardAlpha = 1f - popupTransitionAlpha
                         val cardModifier = Modifier
                             .width(cardWidth)
                             .height(baseCardHeight)
@@ -259,7 +248,6 @@ fun ReviewsSection(
                                     onReviewFocused?.invoke(index)
                                 } else if (activePopupReviewKey == reviewKey) {
                                     activePopupReviewKey = null
-                                    popupReady = false
                                 }
                             }
 
@@ -296,13 +284,13 @@ fun ReviewsSection(
                                 ReviewCardContent(
                                     review = review,
                                     isSpoilerRevealed = isSpoilerRevealed,
-                                    viewportHeight = if (showPopupForCard) baseTextHeight else animatedTextHeight,
-                                    isFocused = isCardFocused && !showPopupForCard,
+                                    viewportHeight = animatedTextHeight,
+                                    isFocused = isCardFocused && !shouldRenderPopupForCard,
                                     isPaused = isScrollPaused
                                 )
                             }
 
-                            if (showPopupForCard) {
+                            if (shouldRenderPopupForCard) {
                                 Popup(
                                     alignment = Alignment.TopStart,
                                     offset = IntOffset(
@@ -320,10 +308,8 @@ fun ReviewsSection(
                                         onClick = {},
                                         modifier = Modifier
                                             .width(cardWidth)
-                                            .height(animatedCardHeight)
-                                            .onGloballyPositioned {
-                                                if (!popupReady) popupReady = true
-                                            },
+                                            .height(expandedCardHeight)
+                                            .graphicsLayer { alpha = popupTransitionAlpha },
                                         shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
                                         colors = CardDefaults.colors(
                                             containerColor = NuvioColors.BackgroundCard,
@@ -341,15 +327,13 @@ fun ReviewsSection(
                                         ),
                                         scale = CardDefaults.scale(focusedScale = 1f)
                                     ) {
-                                        Box(modifier = Modifier.graphicsLayer { alpha = popupCardAlpha }) {
-                                            ReviewCardContent(
-                                                review = review,
-                                                isSpoilerRevealed = isSpoilerRevealed,
-                                                viewportHeight = animatedTextHeight,
-                                                isFocused = true,
-                                                isPaused = isScrollPaused
-                                            )
-                                        }
+                                        ReviewCardContent(
+                                            review = review,
+                                            isSpoilerRevealed = isSpoilerRevealed,
+                                            viewportHeight = animatedTextHeight,
+                                            isFocused = true,
+                                            isPaused = isScrollPaused
+                                        )
                                     }
                                 }
                             }
