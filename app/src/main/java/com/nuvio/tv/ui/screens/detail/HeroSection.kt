@@ -112,6 +112,7 @@ fun HeroContentSection(
             ImageRequest.Builder(context)
                 .data(logo)
                 .crossfade(true)
+                .decoderFactory(SvgDecoder.Factory())
                 .build()
         }
     }

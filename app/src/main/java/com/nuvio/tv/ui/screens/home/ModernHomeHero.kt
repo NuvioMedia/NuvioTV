@@ -235,6 +235,7 @@ private fun HeroTitleContent(
             ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(false)
+                .decoderFactory(SvgDecoder.Factory())
                 .size(width = logoMaxWidthPx, height = logoHeightPx)
                 .build()
         }
