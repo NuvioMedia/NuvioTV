@@ -963,6 +963,7 @@ private fun MetaDetailsContent(
     }
     var activePeopleTab by rememberSaveable(meta.id) { mutableStateOf(initialPeopleTab) }
     var seasonOptionsDialogSeason by remember { mutableStateOf<Int?>(null) }
+    var reviewOverlayState by remember { mutableStateOf<ReviewOverlayState?>(null) }
     val lastFocusedEpisodeIdBySeason = remember(meta.id) { mutableStateMapOf<Int, String>() }
     val episodeFocusRequestersBySeason = remember(meta.id) { mutableMapOf<Int, MutableMap<String, FocusRequester>>() }
     val seasonEpisodeFocusRequesters = remember(selectedSeason, episodesForSeason) {
@@ -1370,9 +1371,12 @@ private fun MetaDetailsContent(
                                     upFocusRequester = if (hasPeopleTabs) {
                                         reviewsTabFocusRequester
                                     } else {
-                                            seasonDownFocusRequester ?: selectedSeasonFocusRequester
+                                        seasonDownFocusRequester ?: selectedSeasonFocusRequester
                                         },
-                                        onReviewFocused = onReviewFocused
+                                        onReviewFocused = onReviewFocused,
+                                        onExpandedReviewOverlayChanged = { overlayState ->
+                                            reviewOverlayState = overlayState
+                                        }
                                     )
                                 }
 
@@ -1459,6 +1463,15 @@ private fun MetaDetailsContent(
                     }
                 }
             }
+        }
+
+        reviewOverlayState?.let { overlayState ->
+            ExpandedReviewOverlay(
+                overlayState = overlayState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(200f)
+            )
         }
 
         seasonOptionsDialogSeason?.let { season ->
