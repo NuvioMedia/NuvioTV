@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import kotlinx.coroutines.launch
+import com.nuvio.tv.data.local.toEpisodeTrackSelectionPreference
 
 internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
     url: String,
@@ -11,6 +12,12 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
     playbackPreparationJob = scope.launch {
         warmTraktEpisodeMappingForCurrentPlayback()
         refreshScrobbleItem()
+        if (pendingSameSeriesTrackSelectionRestore == null) {
+            contentId?.let { id ->
+                pendingSameSeriesTrackSelectionRestore =
+                    trackPreferenceDataStore.load(id)?.toEpisodeTrackSelectionPreference()
+            }
+        }
         initializePlayer(url, headers)
         if (loadSavedProgress) {
             loadSavedProgressFor(currentSeason, currentEpisode)

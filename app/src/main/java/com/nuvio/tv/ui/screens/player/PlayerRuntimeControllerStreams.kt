@@ -5,6 +5,7 @@ import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
+import com.nuvio.tv.data.local.toEpisodeTrackSelectionPreference
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Video
@@ -606,8 +607,13 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
         headers = newHeaders
     )
     persistSelectedStreamForReuse(stream = stream, url = url, headers = newHeaders)
-    pendingSameSeriesTrackSelectionRestore =
-        sameSeriesTrackSelectionPreference?.takeIf { contentType?.lowercase() in listOf("series", "tv") }
+    pendingSameSeriesTrackSelectionRestore = sameSeriesTrackSelectionPreference
+    contentId?.let { id ->
+        scope.launch {
+            trackPreferenceDataStore.load(id)?.toEpisodeTrackSelectionPreference()
+                ?.let { pendingSameSeriesTrackSelectionRestore = it }
+        }
+    }
     hasRetriedCurrentStreamAfter416 = false
     currentVideoId = targetVideo?.id ?: _uiState.value.episodeStreamsForVideoId ?: currentVideoId
     currentSeason = targetVideo?.season ?: _uiState.value.episodeStreamsSeason ?: currentSeason

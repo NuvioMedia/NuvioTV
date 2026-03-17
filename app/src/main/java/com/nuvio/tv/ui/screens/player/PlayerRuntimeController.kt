@@ -48,6 +48,7 @@ class PlayerRuntimeController(
     internal val streamLinkCacheDataStore: StreamLinkCacheDataStore,
     internal val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     internal val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
+    internal val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
     savedStateHandle: SavedStateHandle,
     internal val scope: CoroutineScope
 ) {

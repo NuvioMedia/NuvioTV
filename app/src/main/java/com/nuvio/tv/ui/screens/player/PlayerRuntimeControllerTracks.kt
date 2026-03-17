@@ -78,6 +78,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                             index = audioTracks.size,
                             name = displayName,
                             language = format.language,
+                            trackId = format.id,
                             codec = codecName,
                             channelCount = format.channelCount.takeIf { it > 0 },
                             isSelected = isSelected,
