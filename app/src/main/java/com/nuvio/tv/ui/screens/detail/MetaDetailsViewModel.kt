@@ -584,6 +584,13 @@ class MetaDetailsViewModel @Inject constructor(
             resetReviewsPaginationState()
 
             val settings = tmdbSettingsDataStore.settings.first()
+            _uiState.update { state ->
+                if (state.expandReviewCards == settings.expandReviewCards) {
+                    state
+                } else {
+                    state.copy(expandReviewCards = settings.expandReviewCards)
+                }
+            }
             if (!shouldLoadReviews(settings)) {
                 _uiState.update {
                     it.copy(

@@ -51,6 +51,7 @@ class TmdbSettingsViewModel @Inject constructor(
             is TmdbSettingsEvent.ToggleEpisodes -> update { dataStore.setUseEpisodes(event.enabled) }
             is TmdbSettingsEvent.ToggleMoreLikeThis -> update { dataStore.setUseMoreLikeThis(event.enabled) }
             is TmdbSettingsEvent.ToggleReviews -> update { dataStore.setUseReviews(event.enabled) }
+            is TmdbSettingsEvent.ToggleExpandReviewCards -> update { dataStore.setExpandReviewCards(event.enabled) }
             is TmdbSettingsEvent.ToggleCollections -> update { dataStore.setUseCollections(event.enabled) }
         }
     }
@@ -72,6 +73,7 @@ data class TmdbSettingsUiState(
     val useEpisodes: Boolean = true,
     val useMoreLikeThis: Boolean = true,
     val useReviews: Boolean = true,
+    val expandReviewCards: Boolean = false,
     val useCollections: Boolean = true
 ) {
     fun fromSettings(settings: TmdbSettings): TmdbSettingsUiState = copy(
@@ -86,6 +88,7 @@ data class TmdbSettingsUiState(
         useEpisodes = settings.useEpisodes,
         useMoreLikeThis = settings.useMoreLikeThis,
         useReviews = settings.useReviews,
+        expandReviewCards = settings.expandReviewCards,
         useCollections = settings.useCollections
     )
 }
@@ -102,5 +105,6 @@ sealed class TmdbSettingsEvent {
     data class ToggleEpisodes(val enabled: Boolean) : TmdbSettingsEvent()
     data class ToggleMoreLikeThis(val enabled: Boolean) : TmdbSettingsEvent()
     data class ToggleReviews(val enabled: Boolean) : TmdbSettingsEvent()
+    data class ToggleExpandReviewCards(val enabled: Boolean) : TmdbSettingsEvent()
     data class ToggleCollections(val enabled: Boolean) : TmdbSettingsEvent()
 }

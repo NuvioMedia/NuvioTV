@@ -9,10 +9,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -48,6 +52,7 @@ fun TmdbSettingsContent(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showLanguageDialog by remember { mutableStateOf(false) }
+    var reviewsExpanded by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -179,18 +184,39 @@ fun TmdbSettingsContent(
                     )
                 }
 
-                item(key = "tmdb_reviews") {
-                    SettingsToggleRow(
-                        title = stringResource(R.string.tmdb_reviews_title),
-                        subtitle = stringResource(R.string.tmdb_reviews_subtitle),
-                        checked = uiState.useReviews,
+                item(key = "tmdb_reviews_header") {
+                    SettingsActionRow(
+                        title = stringResource(R.string.tmdb_reviews_enable_title),
+                        subtitle = stringResource(R.string.tmdb_reviews_enable_subtitle),
+                        value = if (reviewsExpanded) {
+                            stringResource(R.string.tmdb_reviews_section_open)
+                        } else {
+                            stringResource(R.string.tmdb_reviews_section_closed)
+                        },
                         enabled = uiState.enabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                TmdbSettingsEvent.ToggleReviews(!uiState.useReviews)
-                            )
+                        onClick = { reviewsExpanded = !reviewsExpanded },
+                        trailingIcon = if (reviewsExpanded) {
+                            Icons.Default.ExpandMore
+                        } else {
+                            Icons.Default.ChevronRight
                         }
                     )
+                }
+
+                if (reviewsExpanded) {
+                    item(key = "tmdb_reviews_expand_cards") {
+                        SettingsToggleRow(
+                            title = stringResource(R.string.tmdb_reviews_expand_cards_title),
+                            subtitle = stringResource(R.string.tmdb_reviews_expand_cards_subtitle),
+                            checked = uiState.expandReviewCards,
+                            enabled = uiState.enabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    TmdbSettingsEvent.ToggleExpandReviewCards(!uiState.expandReviewCards)
+                                )
+                            }
+                        )
+                    }
                 }
 
                 item(key = "tmdb_collections") {

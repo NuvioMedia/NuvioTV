@@ -22,6 +22,8 @@ data class TmdbSettings(
     val useMoreLikeThis: Boolean = true,
     // Group: Reviews
     val useReviews: Boolean = true,
+    // Group: Reviews presentation
+    val expandReviewCards: Boolean = false,
     // Group: Collections
     val useCollections: Boolean = true
 )

@@ -547,6 +547,14 @@
     <string name="tmdb_more_like_this_subtitle">TMDB recommendation backdrops on detail page</string>
     <string name="tmdb_reviews_title">Reviews</string>
     <string name="tmdb_reviews_subtitle">TMDB reviews on the detail page</string>
+    <string name="tmdb_expand_reviews_title">Expand Reviews</string>
+    <string name="tmdb_expand_reviews_subtitle">Review card expansion options</string>
+    <string name="tmdb_reviews_enable_title">Enable Reviews</string>
+    <string name="tmdb_reviews_enable_subtitle">Enable TMDB/Trakt reviews.</string>
+    <string name="tmdb_reviews_section_open">Open</string>
+    <string name="tmdb_reviews_section_closed">Closed</string>
+    <string name="tmdb_reviews_expand_cards_title">Expand cards</string>
+    <string name="tmdb_reviews_expand_cards_subtitle">Expand review cards vertically when text overflows.</string>
     <string name="tmdb_collections_title">Collections</string>
     <string name="tmdb_collections_subtitle">TMDB movie collections in release order</string>
 
