@@ -10,6 +10,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -165,6 +166,8 @@ fun GridHomeContent(
 
     Box(modifier = Modifier.fillMaxSize()) {
         val contentFocusRequester = LocalContentFocusRequester.current
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val gridWidth = maxWidth
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Adaptive(minSize = posterCardStyle.width),
@@ -214,6 +217,7 @@ fun GridHomeContent(
                                         ""
                                     )
                                 },
+                                fullWidth = gridWidth,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -229,6 +233,8 @@ fun GridHomeContent(
                                 contentType = "continue_watching"
                             ) {
                                 GridContinueWatchingSection(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    fullWidth = gridWidth,
                                     items = continueWatchingItems,
                                     focusedItemIndex = if (shouldRequestInitialFocus && !hasHero) 0 else -1,
                                     onItemClick = { item ->
@@ -374,6 +380,8 @@ fun GridHomeContent(
                     contentType = "continue_watching"
                 ) {
                     GridContinueWatchingSection(
+                        modifier = Modifier.fillMaxWidth(),
+                        fullWidth = gridWidth,
                         items = continueWatchingItems,
                         focusedItemIndex = if (shouldRequestInitialFocus && !hasHero) 0 else -1,
                         onItemClick = { item ->
@@ -414,7 +422,8 @@ fun GridHomeContent(
                     )
                 }
             }
-        }
+        } // end LazyVerticalGrid
+        } // end BoxWithConstraints
 
         // Sticky header overlay
         AnimatedVisibility(
