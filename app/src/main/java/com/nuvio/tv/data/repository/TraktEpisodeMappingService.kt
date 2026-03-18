@@ -64,6 +64,11 @@ class TraktEpisodeMappingService @Inject constructor(
         val addonEpisodes = getAddonEpisodes(resolvedContentId, resolvedContentType)
         if (addonEpisodes.isEmpty()) return null
 
+        matchEpisodeByUniqueTitle(
+            requestedTitle = episodeTitle,
+            episodes = addonEpisodes
+        )?.let { return it }
+
         val showLookupId = resolveShowLookupId(contentId = resolvedContentId, videoId = null) ?: return null
         val traktEpisodes = getTraktEpisodes(showLookupId)
         if (traktEpisodes.isEmpty()) return null

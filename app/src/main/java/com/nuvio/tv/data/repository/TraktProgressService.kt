@@ -965,7 +965,8 @@ class TraktProgressService @Inject constructor(
         )
         val resolvedSeason = resolvedEpisode?.season ?: season
         val resolvedNumber = resolvedEpisode?.episode ?: number
-        val videoId = resolveEpisodeVideoId(contentId, resolvedSeason, resolvedNumber)
+        val videoId = resolvedEpisode?.videoId
+            ?: resolveEpisodeVideoId(contentId, resolvedSeason, resolvedNumber)
 
         return WatchProgress(
             contentId = contentId,
@@ -1116,7 +1117,8 @@ class TraktProgressService @Inject constructor(
         )
         val resolvedSeason = resolvedEpisode?.season ?: season
         val resolvedNumber = resolvedEpisode?.episode ?: number
-        val videoId = resolveEpisodeVideoId(contentId, resolvedSeason, resolvedNumber)
+        val videoId = resolvedEpisode?.videoId
+            ?: resolveEpisodeVideoId(contentId, resolvedSeason, resolvedNumber)
 
         return WatchProgress(
             contentId = contentId,
@@ -1157,6 +1159,8 @@ class TraktProgressService @Inject constructor(
                 )
                 val resolvedSeason = resolvedEpisode?.season ?: seasonNumber
                 val resolvedNumber = resolvedEpisode?.episode ?: episodeNumber
+                val videoId = resolvedEpisode?.videoId
+                    ?: resolveEpisodeVideoId(contentId, resolvedSeason, resolvedNumber)
                 WatchProgress(
                     contentId = contentId,
                     contentType = "series",
@@ -1164,7 +1168,7 @@ class TraktProgressService @Inject constructor(
                     poster = null,
                     backdrop = null,
                     logo = null,
-                    videoId = resolveEpisodeVideoId(contentId, resolvedSeason, resolvedNumber),
+                    videoId = videoId,
                     season = resolvedSeason,
                     episode = resolvedNumber,
                     episodeTitle = resolvedEpisode?.title,
