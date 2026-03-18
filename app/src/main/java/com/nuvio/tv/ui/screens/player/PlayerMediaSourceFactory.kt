@@ -46,7 +46,8 @@ internal class PlayerMediaSourceFactory {
         url: String,
         headers: Map<String, String>,
         subtitleConfigurations: List<MediaItem.SubtitleConfiguration> = emptyList(),
-        mimeTypeOverride: String? = null
+        mimeTypeOverride: String? = null,
+        audioDelayUsProvider: (() -> Long)? = null
     ): MediaSource {
         val sanitizedHeaders = sanitizeHeaders(headers)
         val httpDataSourceFactory = OkHttpDataSource.Factory(playbackHttpClient).apply {
@@ -76,10 +77,13 @@ internal class PlayerMediaSourceFactory {
 
         // Sidecar subtitles are more reliable through DefaultMediaSourceFactory.
         if (subtitleConfigurations.isNotEmpty()) {
-            return defaultFactory.createMediaSource(mediaItem)
+            return wrapAudioDelay(
+                mediaSource = defaultFactory.createMediaSource(mediaItem),
+                audioDelayUsProvider = audioDelayUsProvider
+            )
         }
 
-        return when {
+        val mediaSource = when {
             isHls && !forceDefaultFactory -> HlsMediaSource.Factory(httpDataSourceFactory)
                 .setAllowChunklessPreparation(true)
                 .createMediaSource(mediaItem)
@@ -87,6 +91,7 @@ internal class PlayerMediaSourceFactory {
                 .createMediaSource(mediaItem)
             else -> defaultFactory.createMediaSource(mediaItem)
         }
+        return wrapAudioDelay(mediaSource = mediaSource, audioDelayUsProvider = audioDelayUsProvider)
     }
 
     fun shutdown() = Unit
@@ -263,6 +268,20 @@ internal class PlayerMediaSourceFactory {
             val read = inputStream.read(buffer)
             if (read <= 0) return null
             return String(buffer, 0, read, Charsets.UTF_8)
+        }
+
+        private fun wrapAudioDelay(
+            mediaSource: MediaSource,
+            audioDelayUsProvider: (() -> Long)?
+        ): MediaSource {
+            return if (audioDelayUsProvider == null) {
+                mediaSource
+            } else {
+                AudioDelayMediaSource(
+                    mediaSource = mediaSource,
+                    audioDelayUsProvider = audioDelayUsProvider
+                )
+            }
         }
     }
 }

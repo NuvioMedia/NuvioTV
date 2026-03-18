@@ -164,10 +164,12 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                 .setTsExtractorTimestampSearchBytes(1500 * TsExtractor.TS_PACKET_SIZE)
 
             
+            audioDelayUs.set(_uiState.value.audioDelayMs.toLong() * 1000L)
             subtitleDelayUs.set(_uiState.value.subtitleDelayMs.toLong() * 1000L)
             val renderersFactory = SubtitleOffsetRenderersFactory(
                 context = context,
                 subtitleDelayUsProvider = subtitleDelayUs::get,
+                audioDelayUsProvider = audioDelayUs::get,
                 gainAudioProcessor = gainAudioProcessor
             ).setExtensionRendererMode(playerSettings.decoderPriority)
                 .setMapDV7ToHevc(playerSettings.mapDV7ToHevc)
@@ -244,7 +246,8 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                         url = url,
                         headers = headers,
                         subtitleConfigurations = startupSubtitleConfigurations,
-                        mimeTypeOverride = currentStreamMimeType
+                        mimeTypeOverride = currentStreamMimeType,
+                        audioDelayUsProvider = audioDelayUs::get
                     )
                 )
                 playWhenReady = true
@@ -562,6 +565,7 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
 private class SubtitleOffsetRenderersFactory(
     context: Context,
     private val subtitleDelayUsProvider: () -> Long,
+    private val audioDelayUsProvider: () -> Long,
     private val gainAudioProcessor: GainAudioProcessor
 ) : DefaultRenderersFactory(context) {
 
@@ -587,19 +591,25 @@ private class SubtitleOffsetRenderersFactory(
         val startIndex = out.size
         super.buildTextRenderers(context, output, outputLooper, extensionRendererMode, out)
         for (index in startIndex until out.size) {
-            out[index] = SubtitleOffsetRenderer(out[index], subtitleDelayUsProvider)
+            out[index] = SubtitleOffsetRenderer(
+                baseRenderer = out[index],
+                subtitleDelayUsProvider = subtitleDelayUsProvider,
+                audioDelayUsProvider = audioDelayUsProvider
+            )
         }
     }
 }
 
 private class SubtitleOffsetRenderer(
     private val baseRenderer: Renderer,
-    private val subtitleDelayUsProvider: () -> Long
+    private val subtitleDelayUsProvider: () -> Long,
+    private val audioDelayUsProvider: () -> Long
 ) : ForwardingRenderer(baseRenderer) {
 
     override fun render(positionUs: Long, elapsedRealtimeUs: Long) {
-        val offset = subtitleDelayUsProvider()
-        val adjustedPositionUs = (positionUs - offset).coerceAtLeast(0L)
+        val subtitleOffsetUs = subtitleDelayUsProvider()
+        val audioOffsetUs = audioDelayUsProvider()
+        val adjustedPositionUs = (positionUs + audioOffsetUs - subtitleOffsetUs).coerceAtLeast(0L)
         
         super.render(adjustedPositionUs, elapsedRealtimeUs)
     }
