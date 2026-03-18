@@ -45,14 +45,11 @@ internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(): List<Subt
             val url = currentStreamUrl.takeIf { it.isNotBlank() }
             if (key != null && url != null) {
                 val state = _uiState.value
-                val selectedAudio = state.audioTracks.getOrNull(state.selectedAudioTrackIndex)
                 streamLinkCacheDataStore.save(
                     contentKey = key,
                     url = url,
                     streamName = state.currentStreamName ?: title,
                     headers = currentHeaders,
-                    rememberedAudioLanguage = selectedAudio?.language ?: rememberedAudioLanguage,
-                    rememberedAudioName = selectedAudio?.name ?: rememberedAudioName,
                     filename = currentFilename,
                     videoHash = currentVideoHash,
                     videoSize = currentVideoSize
@@ -86,7 +83,7 @@ internal fun PlayerRuntimeController.fetchAddonSubtitles() {
                     isLoadingAddonSubtitles = false
                 ) 
             }
-            restorePendingSameSeriesTrackSelection(
+            applyPersistedTrackPreference(
                 audioTracks = _uiState.value.audioTracks,
                 subtitleTracks = _uiState.value.subtitleTracks
             )

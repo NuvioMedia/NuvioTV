@@ -158,7 +158,6 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         pendingAddonSubtitleLanguage = null
     }
 
-    maybeApplyRememberedAudioSelection(audioTracks)
     maybeRestorePendingAudioSelectionAfterSubtitleRefresh(audioTracks)?.let { restoredIndex ->
         selectedAudioIndex = restoredIndex
     }
@@ -171,7 +170,7 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
             selectedSubtitleTrackIndex = selectedSubtitleIndex
         )
     }
-    restorePendingSameSeriesTrackSelection(
+    applyPersistedTrackPreference(
         audioTracks = audioTracks,
         subtitleTracks = subtitleTracks
     )
@@ -231,35 +230,6 @@ private fun Tracks.hasAssSsaTextTrack(): Boolean {
         }
     }
     return false
-}
-
-internal fun PlayerRuntimeController.maybeApplyRememberedAudioSelection(audioTracks: List<TrackInfo>) {
-    if (hasAppliedRememberedAudioSelection) return
-    if (!streamReuseLastLinkEnabled) return
-    if (audioTracks.isEmpty()) return
-    if (rememberedAudioLanguage.isNullOrBlank() && rememberedAudioName.isNullOrBlank()) return
-
-    val targetLang = normalizeTrackMatchValue(rememberedAudioLanguage)
-    val targetName = normalizeTrackMatchValue(rememberedAudioName)
-
-    val index = audioTracks.indexOfFirst { track ->
-        val trackLang = normalizeTrackMatchValue(track.language)
-        val trackName = normalizeTrackMatchValue(track.name)
-        val langMatch = !targetLang.isNullOrBlank() &&
-            !trackLang.isNullOrBlank() &&
-            (trackLang == targetLang || trackLang.startsWith("$targetLang-"))
-        val nameMatch = !targetName.isNullOrBlank() &&
-            !trackName.isNullOrBlank() &&
-            (trackName == targetName || trackName.contains(targetName))
-        langMatch || nameMatch
-    }
-    if (index < 0) {
-        hasAppliedRememberedAudioSelection = true
-        return
-    }
-
-    selectAudioTrack(index)
-    hasAppliedRememberedAudioSelection = true
 }
 
 internal fun PlayerRuntimeController.normalizeTrackMatchValue(value: String?): String? = value
@@ -384,42 +354,67 @@ internal fun PlayerRuntimeController.findMatchingTrackIndex(
     }
 }
 
-internal fun PlayerRuntimeController.restorePendingSameSeriesTrackSelection(
+internal fun PlayerRuntimeController.applyPersistedTrackPreference(
     audioTracks: List<TrackInfo>,
     subtitleTracks: List<TrackInfo>
 ) {
-    val pending = pendingTrackPreferenceRestore ?: return
+    val pending = persistedTrackPreference ?: return
     var updatedPending = pending
     var updatedSubtitleIndex: Int? = null
     var updatedAddonSubtitle: com.nuvio.tv.domain.model.Subtitle? = null
 
     pending.audio?.let { audioSelection ->
         val index = findMatchingTrackIndex(audioTracks, audioSelection)
-        updatedPending = updatedPending.copy(audio = null)
         if (index >= 0) {
-            Log.d(PlayerRuntimeController.TAG, "Restoring same-series audio selection index=$index")
-            selectAudioTrack(index)
-            _uiState.update { it.copy(selectedAudioTrackIndex = index) }
+            val alreadySelected = audioTracks.getOrNull(index)?.isSelected == true
+            if (!alreadySelected) {
+                Log.d(PlayerRuntimeController.TAG, "TRACK_PREF restore: audio index=$index lang=${audioTracks[index].language} name=${audioTracks[index].name}")
+                selectAudioTrack(index)
+                _uiState.update { it.copy(selectedAudioTrackIndex = index) }
+            } else {
+                Log.d(PlayerRuntimeController.TAG, "TRACK_PREF restore: audio index=$index already selected, clearing")
+                updatedPending = updatedPending.copy(audio = null)
+            }
+        } else {
+            Log.d(PlayerRuntimeController.TAG, "TRACK_PREF restore: audio no match for lang=${audioSelection.language} name=${audioSelection.name}, clearing")
+            updatedPending = updatedPending.copy(audio = null)
         }
     }
 
     when (val subtitleSelection = pending.subtitle) {
         null -> Unit
         PlayerRuntimeController.RememberedSubtitleSelection.Disabled -> {
-            Log.d(PlayerRuntimeController.TAG, "Restoring same-series subtitle state: disabled")
-            autoSubtitleSelected = true
-            disableSubtitles()
-            updatedSubtitleIndex = -1
-            updatedPending = updatedPending.copy(subtitle = null)
+            val alreadyDisabled = subtitleTracks.none { it.isSelected }
+            if (!alreadyDisabled) {
+                Log.d(PlayerRuntimeController.TAG, "TRACK_PREF restore: subtitle disabled (re-applying)")
+                autoSubtitleSelected = true
+                disableSubtitles()
+                updatedSubtitleIndex = -1
+            } else {
+                Log.d(PlayerRuntimeController.TAG, "TRACK_PREF restore: subtitle already disabled, clearing")
+                autoSubtitleSelected = true
+                updatedSubtitleIndex = -1
+                updatedPending = updatedPending.copy(subtitle = null)
+            }
         }
         is PlayerRuntimeController.RememberedSubtitleSelection.Internal -> {
             val index = findMatchingTrackIndex(subtitleTracks, subtitleSelection.track)
-            updatedPending = updatedPending.copy(subtitle = null)
             if (index >= 0) {
-                Log.d(PlayerRuntimeController.TAG, "Restoring same-series internal subtitle index=$index")
-                autoSubtitleSelected = true
-                selectSubtitleTrack(index)
-                updatedSubtitleIndex = index
+                val alreadySelected = subtitleTracks.getOrNull(index)?.isSelected == true
+                if (!alreadySelected) {
+                    Log.d(PlayerRuntimeController.TAG, "TRACK_PREF restore: internal subtitle index=$index (re-applying)")
+                    autoSubtitleSelected = true
+                    selectSubtitleTrack(index)
+                    updatedSubtitleIndex = index
+                } else {
+                    Log.d(PlayerRuntimeController.TAG, "TRACK_PREF restore: internal subtitle index=$index already selected, clearing")
+                    autoSubtitleSelected = true
+                    updatedSubtitleIndex = index
+                    updatedPending = updatedPending.copy(subtitle = null)
+                }
+            } else {
+                Log.d(PlayerRuntimeController.TAG, "TRACK_PREF restore: internal subtitle no match, clearing")
+                updatedPending = updatedPending.copy(subtitle = null)
             }
         }
         is PlayerRuntimeController.RememberedSubtitleSelection.Addon -> {
@@ -448,7 +443,7 @@ internal fun PlayerRuntimeController.restorePendingSameSeriesTrackSelection(
             selectedAddonSubtitle = updatedAddonSubtitle ?: if (updatedSubtitleIndex != null) null else state.selectedAddonSubtitle
         )
     }
-    pendingTrackPreferenceRestore =
+    persistedTrackPreference =
         updatedPending.takeUnless { it.audio == null && it.subtitle == null }
 }
 
@@ -724,7 +719,12 @@ internal fun PlayerRuntimeController.applySubtitlePreferences(preferred: String,
             builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
             builder.setPreferredTextLanguage(null)
         } else {
-            builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+            val userDisabledSubtitles = autoSubtitleSelected &&
+                _uiState.value.selectedSubtitleTrackIndex == -1 &&
+                _uiState.value.selectedAddonSubtitle == null
+            if (!userDisabledSubtitles) {
+                builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+            }
             if (preferred == SUBTITLE_LANGUAGE_FORCED) {
                 builder.setPreferredTextLanguage(null)
             } else {

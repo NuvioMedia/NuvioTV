@@ -439,8 +439,6 @@ fun NuvioNavHost(
                                 episode = playbackInfo.episode,
                                 episodeTitle = playbackInfo.episodeTitle,
                                 bingeGroup = playbackInfo.bingeGroup,
-                                rememberedAudioLanguage = playbackInfo.rememberedAudioLanguage,
-                                rememberedAudioName = playbackInfo.rememberedAudioName,
                                 autoPlayNav = false,
                                 returnToDetailOnBack = returnToDetailOnBack,
                                 returnToHomeOnBack = returnToHomeOnBack,
@@ -475,8 +473,6 @@ fun NuvioNavHost(
                                 episode = playbackInfo.episode,
                                 episodeTitle = playbackInfo.episodeTitle,
                                 bingeGroup = playbackInfo.bingeGroup,
-                                rememberedAudioLanguage = playbackInfo.rememberedAudioLanguage,
-                                rememberedAudioName = playbackInfo.rememberedAudioName,
                                 autoPlayNav = true,
                                 returnToDetailOnBack = returnToDetailOnBack,
                                 returnToHomeOnBack = returnToHomeOnBack,
@@ -567,16 +563,6 @@ fun NuvioNavHost(
                     defaultValue = null
                 },
                 navArgument("bingeGroup") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-                navArgument("rememberedAudioLanguage") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-                navArgument("rememberedAudioName") {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
