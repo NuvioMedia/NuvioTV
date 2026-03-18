@@ -7,6 +7,8 @@ fun CatalogDescriptor.supportsExtra(name: String): Boolean {
 }
 
 fun CatalogDescriptor.skipStep(defaultStep: Int = DEFAULT_SKIP_STEP): Int {
+    if (pageSize != null && pageSize > 0) return pageSize
+
     val skipExtra = extra.firstOrNull { it.name.equals("skip", ignoreCase = true) } ?: return defaultStep
     val numericOptions = skipExtra.options
         .orEmpty()
