@@ -15,7 +15,7 @@
     <string name="cw_upcoming">Em breve</string>
     <string name="cw_next_up">A seguir</string>
     <string name="cw_resume">Retomar</string>
-    <string name="cw_airs_date">Estreia a %1$s</string>
+    <string name="cw_airs_date">Estreia em %1$s</string>
     <string name="cw_action_go_to_details">Ir para detalhes</string>
     <string name="cw_action_remove">Remover</string>
     <string name="cw_dialog_subtitle">Escolha o que pretende fazer com este item.</string>
@@ -25,7 +25,7 @@
     <string name="action_see_all">Ver tudo</string>
 
     <!-- HeroSection -->
-    <string name="hero_creator">Autor: %1$s</string>
+    <string name="hero_creator">Criador: %1$s</string>
     <string name="hero_director">Realizador: %1$s</string>
     <string name="hero_writer">Argumentista: %1$s</string>
     <string name="hero_play">Reproduzir</string>
