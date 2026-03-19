@@ -15,48 +15,48 @@
     <string name="action_retry">Reintentar</string>
     <string name="error_state_generic_issue">Algo salió mal.</string>
     <string name="error_state_possible_fix">Posible solución: %1$s</string>
-    <string name="error_state_fix_retry_soon">reintenta en un momento.</string>
-    <string name="error_state_issue_no_metadata_any_addon">Este id no pudo cargar detalles porque ninguno de los addons instalados devolvió metadatos.</string>
-    <string name="error_state_fix_no_metadata_any_addon">prueba otro addon, desactiva \"Prefer external meta addon\" en la configuración de Layout, o confirma que algún addon instalado soporte este id.</string>
-    <string name="error_state_prefix_no_supported_metadata">Ningún addon instalado admite metadatos para </string>
-    <string name="error_state_prefix_no_addon_for_id">Ningún addon instalado pudo proporcionar metadatos para id=</string>
-    <string name="error_state_fix_no_supported_metadata">instala o actualiza un addon que admita este tipo de contenido y luego vuelve a intentarlo.</string>
-    <string name="error_state_prefix_tried_meta_addons">Addons de metadatos probados:</string>
-    <string name="error_state_fix_tried_meta_addons">instala un addon que admita este id, o reconfigura/actualiza el addon y vuelve a intentarlo.</string>
+    <string name="error_state_fix_retry_soon">intenta de nuevo en un momento.</string>
+    <string name="error_state_issue_no_metadata_any_addon">Este id no pudo cargar los detalles porque ninguno de los addons instalados devolvió metadatos.</string>
+    <string name="error_state_fix_no_metadata_any_addon">intenta con otro addon, desactiva \"Preferir addon de meta externo\" en los ajustes de Diseño, o confirma que un addon instalado soporta este id.</string>
+    <string name="error_state_prefix_no_supported_metadata">Ningún addon instalado soporta metadatos para </string>
+    <string name="error_state_prefix_no_addon_for_id">Ningún addon instalado pudo proporcionar metadatos para el id=</string>
+    <string name="error_state_fix_no_supported_metadata">instala o actualiza un addon que soporte este tipo de contenido, y luego reintenta.</string>
+    <string name="error_state_prefix_tried_meta_addons">Addons de meta probados:</string>
+    <string name="error_state_fix_tried_meta_addons">instala un addon que soporte este id, o reconfigura/actualiza el addon y reintenta.</string>
     <string name="error_state_issue_missing_metadata_for_id">no tiene metadatos para este id</string>
-    <string name="error_state_fix_missing_metadata_for_id">abre este id desde otro addon, desactiva \"Prefer external meta addon\" o verifica que el addon admita este id.</string>
+    <string name="error_state_fix_missing_metadata_for_id">abre este id desde un addon diferente, desactiva \"Preferir addon de meta externo\", o verifica que el addon soporte este id.</string>
     <string name="error_state_issue_addon_unreachable">no se pudo alcanzar</string>
-    <string name="error_state_fix_addon_unreachable">verifica tu conexión a internet, confirma que la URL del addon aún funcione y luego vuelve a intentarlo.</string>
+    <string name="error_state_fix_addon_unreachable">revisa tu conexión a internet, verifica que la URL del addon siga funcionando, y luego reintenta.</string>
     <string name="error_state_issue_addon_connection_failed">rechazó la conexión</string>
-    <string name="error_state_fix_addon_connection_failed">asegúrate de que el servidor del addon esté en línea y accesible, luego vuelve a intentarlo.</string>
+    <string name="error_state_fix_addon_connection_failed">asegúrate de que el servidor del addon esté en línea y accesible, y luego reintenta.</string>
     <string name="error_state_issue_addon_timeout">tardó demasiado en responder</string>
-    <string name="error_state_fix_addon_timeout">reintenta en un momento, o prueba con otro addon si esto sigue ocurriendo.</string>
+    <string name="error_state_fix_addon_timeout">reintenta en un momento, o intenta con un addon diferente si esto sigue pasando.</string>
     <string name="error_state_issue_addon_cleartext">usa una conexión HTTP insegura que Android bloqueó</string>
     <string name="error_state_fix_addon_cleartext">cambia la URL del addon a HTTPS o actualiza la configuración del addon.</string>
-    <string name="error_state_fix_addon_generic">reintenta, actualiza o reinstala el addon, o prueba con otro addon.</string>
+    <string name="error_state_fix_addon_generic">reintenta, actualiza o reinstala el addon, o intenta con un addon diferente.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
-    <string name="error_meta_not_found">Metadatos no encontrados</string>
-    <string name="error_meta_no_supported_addon">Ningún addon instalado admite metadatos para \"%1$s\".</string>
-    <string name="error_meta_no_addon_for_id">Ningún addon instalado pudo proporcionar metadatos para id=%1$s (tipo=%2$s).</string>
-    <string name="error_meta_tried_none">Addons de metadatos probados: %1$s. Ninguno proporcionó metadatos para id=%2$s (tipo=%3$s).</string>
-    <string name="error_meta_tried_generic">Addons de metadatos probados: %1$s. No se pudieron cargar los metadatos para id=%2$s (tipo=%3$s).</string>
-    <string name="error_meta_tried_issues">Addons de metadatos probados: %1$s. No se pudieron cargar los metadatos para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
-    <string name="error_stream_no_supported_addon">Ningún addon instalado admite streams para \"%1$s\".</string>
-    <string name="error_stream_tried_none">Addons de streams probados: %1$s. Ninguno devolvió streams para id=%2$s (tipo=%3$s).</string>
-    <string name="error_stream_tried_generic">Addons de streams probados: %1$s. No se pudieron cargar los streams para id=%2$s (tipo=%3$s).</string>
-    <string name="error_stream_tried_issues">Addons de streams probados: %1$s. No se pudieron cargar los streams para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
-
+    <string name="error_meta_not_found">Meta no encontrado</string>
+    <string name="error_meta_no_supported_addon">Ningún addon instalado soporta metadatos para \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">Ningún addon instalado pudo proporcionar metadatos para el id=%1$s (tipo=%2$s).</string>
+    <string name="error_meta_tried_none">Addons de meta probados: %1$s. Ninguno de ellos proporcionó metadatos para el id=%2$s (tipo=%3$s).</string>
+    <string name="error_meta_tried_generic">Addons de meta probados: %1$s. No se pudieron cargar los metadatos para el id=%2$s (tipo=%3$s).</string>
+    <string name="error_meta_tried_issues">Addons de meta probados: %1$s. No se pudieron cargar los metadatos para el id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Ningún addon instalado soporta streams para \"%1$s\".</string>
+    <string name="error_stream_tried_none">Addons de stream probados: %1$s. Ninguno de ellos devolvió streams para el id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_generic">Addons de stream probados: %1$s. No se pudieron cargar los streams para el id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_issues">Addons de stream probados: %1$s. No se pudieron cargar los streams para el id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
+    
     <!-- ContinueWatchingSection -->
-    <string name="continue_watching">Continuar viendo</string>
-    <string name="cw_upcoming">Próximamente</string>
-    <string name="cw_next_up">A continuación</string>
+    <string name="continue_watching">Seguir Viendo</string>
+    <string name="cw_upcoming">Próximos</string>
+    <string name="cw_next_up">Siguiente</string>
     <string name="cw_resume">Reanudar</string>
-    <string name="cw_percent_watched">Visto %1$d%%</string>
-    <string name="cw_hours_min_left">Restan %1$dh %2$dm</string>
-    <string name="cw_min_left">Restan %1$dm</string>
-    <string name="cw_almost_done">Casi terminado</string>
+    <string name="cw_percent_watched">%1$d%% visto</string>
+    <string name="cw_hours_min_left">faltan %1$dh %2$dm</string>
+    <string name="cw_min_left">faltan %1$dm</string>
+    <string name="cw_almost_done">Casi termina</string>
     <string name="cw_airs_date">Se emite el %1$s</string>
-    <string name="cw_action_go_to_details">Ir a detalles</string>
+    <string name="cw_action_go_to_details">Ir a los detalles</string>
     <string name="cw_action_start_from_beginning">Empezar desde el principio</string>
     <string name="cw_action_remove">Eliminar</string>
     <string name="cw_dialog_subtitle">Elige qué quieres hacer con este elemento.</string>
@@ -969,6 +969,9 @@
     <string name="cast_detail_error">Algo salió mal</string>
     <string name="cast_detail_retry">Reintentar</string>
     <string name="cast_detail_filmography">Filmografía</string>
+    <string name="cast_detail_born">Nacimiento: %1$s</string>
+    <string name="cast_detail_born_died">Nacimiento: %1$s — †%2$s</string>
+    <string name="cast_detail_age">%1$d años</string>
 
     <!-- CatalogSeeAllScreen -->
     <string name="catalog_see_all_from">de %1$s</string>
