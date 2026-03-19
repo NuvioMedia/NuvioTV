@@ -131,7 +131,8 @@ class MetaRepositoryImpl @Inject constructor(
         if (prioritizedCandidates.isEmpty()) {
             // Last resort: try addons that declare the raw type (legacy behavior).
             val fallbackAddons = addons.filter { addon ->
-                addon.rawTypes.any { it.equals(requestedType, ignoreCase = true) }
+                addon.rawTypes.any { it.equals(requestedType, ignoreCase = true) } &&
+                    addon.resources.any { it.name == "meta" }
             }
 
             for (addon in fallbackAddons) {

@@ -235,6 +235,7 @@ private fun HeroTitleContent(
             ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(false)
+                .decoderFactory(SvgDecoder.Factory())
                 .size(width = logoMaxWidthPx, height = logoHeightPx)
                 .build()
         }
@@ -382,6 +383,9 @@ private fun HeroTitleContent(
                             color = NuvioColors.TextSecondary,
                             maxLines = 1
                         )
+                    }
+                    if (!runtimeText.isNullOrBlank() && !yearText.isNullOrBlank()) {
+                        HeroMetaDivider(metaScale)
                     }
                     if (!yearText.isNullOrBlank()) {
                         Text(

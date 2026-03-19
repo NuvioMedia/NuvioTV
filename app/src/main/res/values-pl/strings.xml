@@ -850,6 +850,9 @@
     <string name="cast_detail_error">Coś poszło nie tak</string>
     <string name="cast_detail_retry">Ponów</string>
     <string name="cast_detail_filmography">Filmografia</string>
+    <string name="cast_detail_born">Urodziny: %1$s</string>
+    <string name="cast_detail_born_died">Urodziny: %1$s — †%2$s</string>
+    <string name="cast_detail_age">%1$d lat</string>
 
     <!-- CatalogSeeAllScreen -->
     <string name="catalog_see_all_from">z %1$s</string>
@@ -967,4 +970,10 @@
     <string name="watchlist_added">Dodano do listy</string>
     <string name="watchlist_removed">Usunięto z listy</string>
     <string name="account_sync_restart_note">Synchronizacja nie jest natychmiastowa na aktywnych urządzeniach. Uruchom ponownie to urządzenie po zalogowaniu lub aby pobrać zmiany wprowadzone gdzie indziej.</string>
+    <string name="audio_mix_label">Wzmocnienie (PCM)</string>
+    <string name="audio_mix_persist_on">Zachowaj między sesjami: WŁ</string>
+    <string name="audio_mix_persist_off">Zachowaj między sesjami: WYŁ</string>
+    <string name="audio_mix_range">Zakres: %1$d dB do %2$d dB</string>
+    <string name="audio_mix_range_saved">Zakres: %1$d dB do %2$d dB (zapisano)</string>
+    <string name="audio_mix_unavailable">Wzmocnienie nie jest dostępne na tym urządzeniu</string>
 </resources>

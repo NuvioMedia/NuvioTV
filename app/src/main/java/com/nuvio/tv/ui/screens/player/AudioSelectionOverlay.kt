@@ -77,13 +77,8 @@ internal fun AudioSelectionOverlay(
         if (!visible) return@LaunchedEffect
 
         if (tracks.isNotEmpty()) {
-            val targetIndex = lastFocusedAudioIndex
-                ?.let { idx -> tracks.indexOfFirst { it.index == idx } }
-                ?.takeIf { it >= 0 }
-                ?: tracks.indexOfFirst { it.index == selectedIndex }
-                    .takeIf { it >= 0 }
-                ?: 0
-            listState.scrollToItem(targetIndex)
+            val selectedListIndex = tracks.indexOfFirst { it.index == selectedIndex }.takeIf { it >= 0 } ?: 0
+            listState.scrollToItem(selectedListIndex)
             delay(120)
             runCatching { tracksFocusRequester.requestFocus() }
         } else {

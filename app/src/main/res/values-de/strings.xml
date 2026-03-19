@@ -120,7 +120,7 @@
     <string name="detail_section_production">Produktion</string>
     <string name="episodes_unavailable">Nicht verfügbar</string>
     <string name="series_status_ended">Beendet</string>
-    <string name="series_status_continuing">Laufend</string>
+    <string name="series_status_continuing">Fortlaufend</string>
     <string name="series_status_current">Aktuell</string>
     <string name="series_status_cancelled">Abgesetzt</string>
     <string name="series_status_released">Veröffentlicht</string>
@@ -202,7 +202,7 @@
 
     <!-- SupportersContributorsScreen -->
     <string name="supporters_contributors_title">Unterstützer und Mitwirkende</string>
-    <string name="supporters_contributors_subtitle">Die Menschen, die Nuvio unterstützen, und die Mitwirkenden, die es für Fernsehen und Mobilgeräte entwickeln.</string>
+    <string name="supporters_contributors_subtitle">Die Menschen, die Nuvio unterstützen, und die Mitwirkenden, die es für TV und Smartphones entwickeln.</string>
     <string name="supporters_contributors_supporters_copy">Unterstützer und Spender tragen dazu bei, das Projekt am Laufen zu halten, die Infrastruktur zu finanzieren und Raum für ambitionierte Funktionen zu schaffen.</string>
     <string name="supporters_contributors_donate_copy">Nuvio bleibt kostenlos und Open Source. Wenn Sie das Projekt unterstützen möchten, können Sie dazu beitragen, die damit verbundenen Zeit- und Infrastrukturkosten zu decken.</string>
     <string name="supporters_contributors_donate_button">Spenden Sie an Nuvio</string>
@@ -233,10 +233,10 @@
     <string name="playback_loading_overlay_sub">Lade-Bildschirm anzeigen, bis das erste Videobild erscheint.</string>
     <string name="playback_pause_overlay">Pause-Overlay</string>
     <string name="playback_pause_overlay_sub">Details-Overlay nach 5 Sekunden während der Pause anzeigen.</string>
-    <string name="playback_show_clock_sub">Aktuelle Zeit und Endzeit anzeigen, während die Steuerelemente sichtbar sind.</string>
-    <string name="playback_osd_clock">OSD-Uhr</string>
+    <string name="playback_show_clock_sub">Aktuelle Uhrzeit und Endzeit mit Steuerelementen anzeigen.</string>
+    <string name="playback_osd_clock">HUD-Uhr</string>
     <string name="playback_skip_intro">Intro überspringen</string>
-    <string name="playback_skip_intro_sub">Verwenden Sie introdb.app, um Intros und Zusammenfassungen zu erkennen.</string>
+    <string name="playback_skip_intro_sub">introdb.app verwenden, um Intros und Zusammenfassungen zu erkennen.</string>
     <string name="playback_auto_frame_rate">Automatische Bildfrequenz</string>
     <string name="playback_section_player">Player- und Stream-Auswahl</string>
     <string name="playback_section_player_desc">Player-Einstellungen, automatische Wiedergabe und Quellenfilterung.</string>
@@ -251,20 +251,20 @@
     <string name="playback_afr_open">Offen</string>
     <string name="playback_afr_closed">Geschlossen</string>
     <string name="playback_afr_off">Aus</string>
-    <string name="playback_afr_off_sub">Anzeige-Aktualisierungsrate nicht ändern.</string>
+    <string name="playback_afr_off_sub">Bildfrequenz nicht umschalten.</string>
     <string name="playback_afr_on_start">Beim Start</string>
     <string name="playback_afr_on_start_sub">Beim Start umschalten.</string>
     <string name="playback_afr_on_start_stop">Beim Start/Stopp</string>
     <string name="playback_afr_on_start_stop_sub">Beim Start umschalten und beim Stopp wiederherstellen.</string>
     <string name="playback_resolution_matching">Auflösung anpassen</string>
-    <string name="playback_resolution_matching_sub">Änderungen des Anzeigemodus zur Anpassung an die Videoauflösung zulassen.</string>
+    <string name="playback_resolution_matching_sub">Anpassung der Bildschirm-Auflösung an Videoauflösung zulassen.</string>
     <string name="playback_player_external_desc">Streams immer in einer externen App öffnen</string>
     <string name="playback_player_ask_desc">Jedes Mal den Player auswählen</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_trailer_section">Trailer</string>
     <string name="audio_autoplay_trailers">Trailer automatisch abspielen</string>
-    <string name="audio_autoplay_trailers_sub">Trailer nach einer bestimmten Zeit der Inaktivität automatisch auf dem Detailbildschirm abspielen</string>
+    <string name="audio_autoplay_trailers_sub">Trailer autmatisch nach Inaktivität auf dem Detailbildschirm abspielen.</string>
     <string name="audio_trailer_delay">Trailer-Verzögerung</string>
     <string name="audio_section">Audio</string>
     <string name="audio_lang_default">Standard (Mediendatei)</string>
@@ -278,9 +278,9 @@
     <string name="audio_decoder_prefer_device">Gerätedecoder bevorzugen</string>
     <string name="audio_decoder_prefer_app">App-Decoder bevorzugen (FFmpeg)</string>
     <string name="audio_decoder_priority">Decoder-Priorität</string>
-    <string name="audio_tunneled">Tunnelierte Wiedergabe</string>
-    <string name="audio_tunneled_sub">Audio-/Videosynchronisation auf Hardwareebene. Kann die Wiedergabe auf einigen Android TV-Geräten verbessern</string>
-    <string name="audio_dv_sub">Dolby Vision Profile 7 für Geräte ohne DV-Hardwareunterstützung auf Standard-HEVC abbilden</string>
+    <string name="audio_tunneled">Getunnelte Wiedergabe</string>
+    <string name="audio_tunneled_sub">Audio-Video-Sync auf Hardware (kann Android-TV Wiedergabe verbessern)</string>
+    <string name="audio_dv_sub">Dolby Vision Profile 7 für inkompatible Geräte auf HEVC umkodieren.</string>
     <string name="audio_decoder_device_only_desc">Nur integrierte Hardware-Decoder verwenden. Am kompatibelsten, unterstützt jedoch möglicherweise nicht alle Formate.</string>
     <string name="audio_decoder_prefer_device_desc">Verwenden Sie Hardware-Decoder, sofern verfügbar, und greifen Sie sonst auf FFmpeg zurück. Für die meisten Geräte empfohlen. </string>
     <string name="audio_decoder_prefer_app_desc">Verwenden Sie FFmpeg-Decoder, sofern verfügbar. Bessere Formatunterstützung, aber höhere CPU-Auslastung.</string>
@@ -289,7 +289,7 @@
     <!-- PlaybackSubtitleSettings -->
     <string name="sub_section">Untertitel</string>
     <string name="sub_not_set">Nicht festgelegt</string>
-    <string name="sub_forced_lang">Erzwungen</string>
+    <string name="sub_forced_lang">Erzwungen (Forced)</string>
     <string name="sub_preferred_lang">Bevorzugte Sprache</string>
     <string name="sub_secondary_lang">Zweitbevorzugte Sprache</string>
     <string name="sub_organization">Untertitelorganisation</string>
@@ -299,21 +299,21 @@
     <string name="sub_bold_sub">Fettdruck für Untertitel verwenden</string>
     <string name="sub_text_color">Textfarbe</string>
     <string name="sub_bg_color">Hintergrundfarbe</string>
-    <string name="sub_outline">Umriss</string>
+    <string name="sub_outline">Umrandung</string>
     <string name="sub_outline_sub">Umrandung um Untertiteltext für bessere Sichtbarkeit hinzufügen</string>
-    <string name="sub_outline_color">Umrissfarbe</string>
+    <string name="sub_outline_color">Umrandungs-Farbe</string>
     <string name="sub_advanced_section">Erweiterte Untertitel-Darstellung</string>
     <string name="sub_libass">libass für ASS/SSA-Untertitel verwenden</string>
-    <string name="sub_libass_sub">Experimentell: Erweiterte ASS/SSA-Wiedergabe (Stile, Positionierung, Animationen)</string>
+    <string name="sub_libass_sub">Experimentell: Erweiterte ASS/SSA-Wiedergabe (Stile, Position, Animation)</string>
     <string name="sub_libass_mode">Libass-Rendering-Modus</string>
     <string name="sub_mode_overlay_gl">Overlay OpenGL (empfohlen)</string>
     <string name="sub_mode_overlay_gl_sub">Beste Qualität mit HDR-Unterstützung. Rendert Untertitel in einem separaten Thread.</string>
     <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
-    <string name="sub_mode_effects_gl">Effekte OpenGL</string>
+    <string name="sub_mode_effects_gl">Effects OpenGL</string>
     <string name="sub_mode_effects_gl_sub">Animationsunterstützung mit Media3-Effekten. Schneller als Canvas.</string>
-    <string name="sub_mode_effects_canvas">Effekte Canvas</string>
+    <string name="sub_mode_effects_canvas">Effects Canvas</string>
     <string name="sub_mode_effects_canvas_sub">Animationsunterstützung mit Media3-Effekten und Canvas-Rendering.</string>
-    <string name="sub_mode_standard">Standard-Cues</string>
+    <string name="sub_mode_standard">Standard Cues</string>
     <string name="sub_mode_standard_sub">Grundlegende Untertitel-Rendering ohne Animationsunterstützung. Höchste Kompatibilität.</string>
     <string name="sub_org_none">Keine (Standardreihenfolge)</string>
     <string name="sub_org_by_lang">Nach Sprache</string>
@@ -331,7 +331,7 @@
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Letzten Link wiederverwenden</string>
-    <string name="autoplay_reuse_last_link_sub">Den letzten funktionierenden Stream für denselben Film/dieselbe Folge automatisch abspielen, wenn der Cache noch gültig ist</string>
+    <string name="autoplay_reuse_last_link_sub">Automatisch den letzen funktionierenden Stream wiederverwenden. (Cache)</string>
     <string name="autoplay_last_link_cache">Cache-Dauer des letzten Links</string>
     <string name="autoplay_mode_manual">Manuell (Stream auswählen)</string>
     <string name="autoplay_mode_first">Erste Quelle automatisch abspielen</string>
@@ -387,7 +387,7 @@
     <string name="layout_section_home">Startseite-Layout</string>
     <string name="layout_section_home_desc">Wählen Sie Struktur und Hero-Quelle aus.</string>
     <string name="layout_landscape_posters">Poster im Querformat</string>
-    <string name="layout_landscape_posters_sub">Wechseln Sie zwischen Hoch- und Querformat-Karten für die moderne Ansicht.</string>
+    <string name="layout_landscape_posters_sub">Wechseln Sie zwischen Hoch-/Querformat-Postern für die moderne Ansicht.</string>
     <string name="layout_preview_row">Vorschau-Zeile anzeigen</string>
     <string name="layout_preview_row_sub">Teilweise Vorschau der Zeile unten im modernen Startseitenlayout anzeigen.</string>
     <string name="layout_hero_catalogs">Hero-Kataloge</string>
@@ -397,13 +397,13 @@
     <string name="layout_collapse_sidebar">Seitenleiste ausblenden</string>
     <string name="layout_collapse_sidebar_sub">Seitenleiste standardmäßig ausblenden; bei Fokus anzeigen.</string>
     <string name="layout_modern_sidebar">Moderne Seitenleiste</string>
-    <string name="layout_modern_sidebar_sub">Floating Sidebar-Navigation aktivieren.</string>
-    <string name="layout_modern_sidebar_blur">Moderne Seitenleiste unscharf</string>
+    <string name="layout_modern_sidebar_sub">„Schwebende” Seitenleisten-Navigation aktivieren.</string>
+    <string name="layout_modern_sidebar_blur">Moderne Seitenleiste „unscharf”</string>
     <string name="layout_modern_sidebar_blur_sub">Wechseln Sie den Unschärfeeffekt für moderne Seitenleistenoberflächen.</string>
     <string name="layout_show_hero">Hero-Bereich anzeigen</string>
     <string name="layout_show_hero_sub">Hero-Karussell oben auf der Startseite anzeigen.</string>
     <string name="layout_show_discover">Entdecken in der Suche anzeigen</string>
-    <string name="layout_show_discover_sub">Browse-Bereich anzeigen, wenn die Suche leer ist.</string>
+    <string name="layout_show_discover_sub">Entdecken-Bereich anzeigen, wenn die Suche leer ist.</string>
     <string name="layout_poster_labels">Poster-Labels anzeigen</string>
     <string name="layout_poster_labels_sub">Titel unter Postern in Zeilen, Raster und „Alle anzeigen” anzeigen.</string>
     <string name="layout_addon_name">Addon-Name anzeigen</string>
@@ -415,17 +415,17 @@
     <string name="layout_section_detail">Detailseite</string>
     <string name="layout_section_detail_desc">Einstellungen für die Detail- und Episodenbildschirme.</string>
     <string name="layout_blur_unwatched">Ungesehene Episoden unscharf darstellen</string>
-    <string name="layout_blur_unwatched_sub">Miniaturansichten von Episoden bis zum Ansehen unscharf darstellen, um Spoiler zu vermeiden.</string>
-    <string name="layout_trailer_button">Trailer-Button anzeigen</string>
-    <string name="layout_trailer_button_sub">Trailer-Schaltfläche auf der Detailseite anzeigen (nur wenn Trailer verfügbar ist).</string>
-    <string name="layout_prefer_external_meta">Meta aus externem Add-on bevorzugen</string>
+    <string name="layout_blur_unwatched_sub">Vorschaubild ungesehener Folgen „unscharf” anzeigen. (Spoilervermeidung)</string>
+    <string name="layout_trailer_button">Trailer-Schaltfläche anzeigen</string>
+    <string name="layout_trailer_button_sub">Trailer-Schaltfläche auf der Detailseite anzeigen. (wenn verfügbar)</string>
+    <string name="layout_prefer_external_meta">Metainformationen aus externem Add-on bevorzugen</string>
     <string name="layout_prefer_external_meta_sub">Verwende Metadaten aus externem Add-on anstelle von Katalog-Add-on.</string>
     <string name="layout_section_focused">Fokussiertes Poster</string>
-    <string name="layout_section_focused_desc">Erweitertes Verhalten für fokussierte Posterkarten.</string>
+    <string name="layout_section_focused_desc">Erweitertes Verhalten für fokussierte Poster.</string>
     <string name="layout_expand_poster">Fokussiertes Poster auf Hintergrund erweitern</string>
-    <string name="layout_expand_poster_sub">Fokussiertes Poster nach Leerlaufverzögerung erweitern.</string>
+    <string name="layout_expand_poster_sub">Fokussiertes Poster nach Verzögerung erweitern.</string>
     <string name="layout_expand_delay">Verzögerung beim Erweitern zum Hintergrund</string>
-    <string name="layout_expand_delay_sub">Wartezeit vor dem Erweitern fokussierter Karten.</string>
+    <string name="layout_expand_delay_sub">Verzögerung vor dem Erweitern fokussierter Poster.</string>
     <string name="layout_autoplay_trailer">Trailer automatisch abspielen</string>
     <string name="layout_autoplay_trailer_expanded">Trailer in erweiterter Karte automatisch abspielen</string>
     <string name="layout_autoplay_trailer_sub">Trailer-Vorschau für fokussierte Inhalte abspielen, sofern verfügbar.</string>
@@ -433,7 +433,7 @@
     <string name="layout_trailer_muted">Trailer stumm abspielen</string>
     <string name="layout_trailer_muted_sub_preview">Trailer-Audio während der automatischen Wiedergabe der Vorschau stumm schalten.</string>
     <string name="layout_trailer_muted_sub_expanded">Trailer-Audio in erweiterten Karten stummschalten.</string>
-    <string name="layout_section_card_style">Posterkartenstil</string>
+    <string name="layout_section_card_style">Poster-Stil</string>
     <string name="layout_section_card_style_desc">Kartenbreite und Eckenradius anpassen.</string>
     <string name="layout_open">Öffnen</string>
     <string name="layout_closed">Geschlossen</string>
@@ -540,17 +540,17 @@
     <string name="trakt_login_instruction">Drücken Sie auf „Anmelden“, um die Trakt-Geräteauthentifizierung zu starten. Hier wird ein QR-Code angezeigt.</string>
     <string name="trakt_missing_credentials">TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET fehlt in local.properties.</string>
     <string name="trakt_watch_progress_title">Fortschritt anzeigen</string>
-    <string name="trakt_watch_progress_subtitle">Wählen Sie aus, welche Fortschrittsquelle die Wiederaufnahme und Fortsetzung der Wiedergabe steuert</string>
+    <string name="trakt_watch_progress_subtitle">Wählen Sie die Fortschrittsquelle für „Weiterschauen”</string>
     <string name="trakt_watch_progress_dialog_title">Fortschritt anzeigen</string>
     <string name="trakt_watch_progress_dialog_subtitle">Wählen Sie aus, ob zum Fortsetzen und Weitersehen Trakt oder Nuvio Sync verwendet werden soll, während Trakt Scrobbling aktiv bleibt.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
     <string name="trakt_watch_progress_trakt_selected">Quelle für Fortschrittsanzeige auf Trakt eingestellt</string>
     <string name="trakt_watch_progress_nuvio_selected">Quelle für den Fortschritt beim Ansehen auf Nuvio Sync eingestellt</string>
-    <string name="trakt_continue_watching_window">Fenster „Weiter ansehen”</string>
-    <string name="trakt_continue_watching_subtitle">Trakt-Verlauf für Fortsetzen der Wiedergabe berücksichtigt</string>
-    <string name="trakt_unaired_next_up">Noch nicht ausgestrahlte nächste Folgen</string>
-    <string name="trakt_unaired_next_up_subtitle">Kommende Episoden vor ihrer Ausstrahlung anzeigen</string>
+    <string name="trakt_continue_watching_window">„Weiterschauen” Zeitrahmen</string>
+    <string name="trakt_continue_watching_subtitle">Trakt-Verlauf für „Weiterschauen” berücksichtigt</string>
+    <string name="trakt_unaired_next_up">„Kommende Folgen” (unausgestrahlt)</string>
+    <string name="trakt_unaired_next_up_subtitle">„Kommende Folgen” anzeigen</string>
     <string name="trakt_unaired_shown">Gezeigt</string>
     <string name="trakt_unaired_hidden">Ausgeblendet</string>
     <string name="trakt_unaired_now_shown">Noch nicht ausgestrahlte Folgen werden jetzt angezeigt</string>
@@ -627,8 +627,8 @@
     <string name="profile_avatar_category_anime">Anime</string>
     <string name="profile_avatar_category_animation">Animation</string>
     <string name="profile_avatar_category_movie">Film</string>
-    <string name="profile_avatar_category_tv">Fernsehen</string>
-    <string name="profile_avatar_category_gaming">Gaming</string>
+    <string name="profile_avatar_category_tv">TV</string>
+    <string name="profile_avatar_category_gaming">Spiele</string>
     <string name="profile_add_new">Profil hinzufügen</string>
     <string name="profile_cancel">Abbrechen</string>
     <string name="profile_save">Speichern</string>
@@ -644,7 +644,7 @@
     <string name="addon_installed_section">Installiert</string>
     <string name="addon_empty">Keine Add-ons installiert. Fügen Sie eines hinzu, um zu beginnen. </string>
     <string name="addon_remove">Entfernen</string>
-    <string name="addon_manage_from_phone_title">Über das Telefon verwalten</string>
+    <string name="addon_manage_from_phone_title">Mit Smartphone verwalten</string>
     <string name="addon_manage_from_phone_subtitle">Scannen Sie einen QR-Code, um Add-ons und Home-Kataloge von Ihrem Telefon aus zu verwalten</string>
     <string name="addon_reorder_title">Home-Kataloge neu anordnen</string>
     <string name="addon_reorder_subtitle">Steuert die Reihenfolge der Katalogzeilen auf der Startseite (klassisch + modern + Raster)</string>
@@ -940,7 +940,7 @@
     <string name="layout_selection_continue">Weiter</string>
 
     <!-- UpdatePromptDialog -->
-    <string name="update_title">App-Update</string>
+    <string name="update_title">App-Aktualisierung</string>
     <string name="update_downloading">Update wird heruntergeladen</string>
     <string name="update_download">Herunterladen</string>
     <string name="update_downloading_ellipsis">Herunterladen…</string>
@@ -990,7 +990,7 @@
     <string name="profile_edit_title_id">Profil bearbeiten %1$d</string>
 
     <!-- PlaybackAudioSettings -->
-    <string name="audio_passthrough_info">Audio-Passthrough (TrueHD, DTS, AC-3 usw.) erfolgt automatisch. Bei Anschluss an einen kompatiblen AV-Receiver oder eine Soundbar über HDMI wird verlustfreies Audio ohne Dekodierung unverändert übertragen.</string>
+    <string name="audio_passthrough_info">Audio-Passthrough (TrueHD, DTS, AC-3 usw.) erfolgt automatisch. Bei Anschluss an einen kompatiblen AV-Receiver oder eine Soundbar über HDMI wird verlustfreies Audio ohne Dekodierung und unverändert übertragen.</string>
     <string name="audio_dv_title">DV7 – HEVC-Fallback</string>
 
     <!-- SidebarNavigation / MainActivity -->
@@ -999,7 +999,7 @@
     <string name="nav_search">Suchen</string>
     <string name="nav_library">Bibliothek</string>
     <string name="nav_addons">Addons</string>
-    <string name="nav_settings">Einstellungen</string>
+    <string name="nav_settings">Optionen</string>
     <string name="settings_rounded_ui">Abgerundete Benutzeroberfläche</string>
     <string name="cd_expand_sidebar">Seitenleiste erweitern</string>
 

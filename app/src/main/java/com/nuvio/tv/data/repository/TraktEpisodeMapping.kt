@@ -43,6 +43,19 @@ internal fun reverseRemapEpisodeByTitleOrIndex(
     )
 }
 
+internal fun matchEpisodeByUniqueTitle(
+    requestedTitle: String?,
+    episodes: List<EpisodeMappingEntry>
+): EpisodeMappingEntry? {
+    val normalizedTitle = normalizeEpisodeTitle(requestedTitle)
+    if (!isUsefulEpisodeTitle(normalizedTitle)) return null
+
+    val matches = episodes.filter {
+        normalizeEpisodeTitle(it.title) == normalizedTitle
+    }
+    return matches.singleOrNull()
+}
+
 private fun remapEpisodeBetweenLists(
     requestedSeason: Int,
     requestedEpisode: Int,
