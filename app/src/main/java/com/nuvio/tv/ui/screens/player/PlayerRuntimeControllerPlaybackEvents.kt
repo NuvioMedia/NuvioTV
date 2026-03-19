@@ -487,7 +487,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             }
         }
         is PlayerEvent.OnSelectAudioTrack -> {
-            rememberSameSeriesAudioSelection(event.index)
+            rememberAudioSelection(event.index)
             selectAudioTrack(event.index)
             _uiState.update { it.copy(showAudioOverlay = false, showSubtitleDelayOverlay = false) }
         }
@@ -515,7 +515,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
-            rememberSameSeriesInternalSubtitleSelection(event.index)
+            rememberInternalSubtitleSelection(event.index)
             selectSubtitleTrack(event.index)
             _uiState.update { 
                 it.copy(
@@ -532,7 +532,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
-            rememberSameSeriesSubtitleDisabled()
+            rememberSubtitleDisabled()
             disableSubtitles()
             _uiState.update { 
                 it.copy(
@@ -547,7 +547,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         is PlayerEvent.OnSelectAddonSubtitle -> {
             autoSubtitleSelected = true
-            rememberSameSeriesAddonSubtitleSelection(event.subtitle)
+            rememberAddonSubtitleSelection(event.subtitle)
             selectAddonSubtitle(event.subtitle)
             _uiState.update {
                 it.copy(

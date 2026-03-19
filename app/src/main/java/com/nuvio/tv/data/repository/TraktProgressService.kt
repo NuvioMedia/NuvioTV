@@ -877,7 +877,8 @@ class TraktProgressService @Inject constructor(
             toTraktUtcDateTime(System.currentTimeMillis() - windowMs)
         }
         val inProgressMovies = getPlayback("movies", force = force, startAt = playbackStartAt).mapNotNull { mapPlaybackMovie(it) }
-        val inProgressEpisodes = getPlayback("episodes", force = force, startAt = playbackStartAt).mapNotNull { mapPlaybackEpisode(it) }
+        val inProgressEpisodes = getPlayback("episodes", force = force, startAt = playbackStartAt)
+            .mapNotNull { mapPlaybackEpisode(it, applyAddonRemap = false) }
 
         val mergedByKey = linkedMapOf<String, WatchProgress>()
 
@@ -931,7 +932,7 @@ class TraktProgressService @Inject constructor(
                     continue
                 }
 
-                val mapped = mapEpisodeHistoryItem(item) ?: continue
+                val mapped = mapEpisodeHistoryItem(item, applyAddonRemap = false) ?: continue
                 results.putIfAbsent(mapped.contentId, mapped)
                 if (results.size >= maxRecentEpisodeHistoryEntries) {
                     shouldStop = true
@@ -947,7 +948,10 @@ class TraktProgressService @Inject constructor(
         return results.values.toList()
     }
 
-    private suspend fun mapEpisodeHistoryItem(item: TraktUserEpisodeHistoryItemDto): WatchProgress? {
+    private suspend fun mapEpisodeHistoryItem(
+        item: TraktUserEpisodeHistoryItemDto,
+        applyAddonRemap: Boolean
+    ): WatchProgress? {
         val show = item.show ?: return null
         val episode = item.episode ?: return null
         val season = episode.season ?: return null
@@ -957,12 +961,16 @@ class TraktProgressService @Inject constructor(
         if (contentId.isBlank()) return null
 
         val lastWatched = parseIsoToMillis(item.watchedAt)
-        val resolvedEpisode = resolveAddonEpisodeProgress(
-            contentId = contentId,
-            season = season,
-            episode = number,
-            episodeTitle = episode.title
-        )
+        val resolvedEpisode = if (applyAddonRemap) {
+            resolveAddonEpisodeProgress(
+                contentId = contentId,
+                season = season,
+                episode = number,
+                episodeTitle = episode.title
+            )
+        } else {
+            null
+        }
         val resolvedSeason = resolvedEpisode?.season ?: season
         val resolvedNumber = resolvedEpisode?.episode ?: number
         val videoId = resolveEpisodeVideoId(contentId, resolvedSeason, resolvedNumber)
@@ -1017,7 +1025,7 @@ class TraktProgressService @Inject constructor(
         val inProgress = getPlayback(
             type = "episodes"
         )
-            .mapNotNull { mapPlaybackEpisode(it) }
+            .mapNotNull { mapPlaybackEpisode(it, applyAddonRemap = true) }
             .filter { it.contentId == contentId }
 
         inProgress.forEach { progress ->
@@ -1100,7 +1108,10 @@ class TraktProgressService @Inject constructor(
         )
     }
 
-    private suspend fun mapPlaybackEpisode(item: TraktPlaybackItemDto): WatchProgress? {
+    private suspend fun mapPlaybackEpisode(
+        item: TraktPlaybackItemDto,
+        applyAddonRemap: Boolean
+    ): WatchProgress? {
         val show = item.show ?: return null
         val episode = item.episode ?: return null
         val season = episode.season ?: return null
@@ -1108,12 +1119,16 @@ class TraktProgressService @Inject constructor(
 
         val contentId = normalizeContentId(show.ids)
         if (contentId.isBlank()) return null
-        val resolvedEpisode = resolveAddonEpisodeProgress(
-            contentId = contentId,
-            season = season,
-            episode = number,
-            episodeTitle = episode.title
-        )
+        val resolvedEpisode = if (applyAddonRemap) {
+            resolveAddonEpisodeProgress(
+                contentId = contentId,
+                season = season,
+                episode = number,
+                episodeTitle = episode.title
+            )
+        } else {
+            null
+        }
         val resolvedSeason = resolvedEpisode?.season ?: season
         val resolvedNumber = resolvedEpisode?.episode ?: number
         val videoId = resolveEpisodeVideoId(contentId, resolvedSeason, resolvedNumber)

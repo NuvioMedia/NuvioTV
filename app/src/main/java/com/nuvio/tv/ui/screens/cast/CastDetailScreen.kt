@@ -317,14 +317,21 @@ private fun HeroSection(person: PersonDetail) {
             Spacer(modifier = Modifier.height(10.dp))
 
             // Personal Info Row
+            val strBorn = stringResource(R.string.cast_detail_born)
+            val strBornDied = stringResource(R.string.cast_detail_born_died)
+            val strAge = stringResource(R.string.cast_detail_age)
             val infoItems = buildList {
                 person.birthday?.let { bday ->
                     val age = calculateAge(bday, person.deathday)
-                    val ageStr = if (age != null) " (age $age)" else ""
+                    val ageStr = if (age != null) " (${strAge.format(age)})" else ""
                     val bdayDisplay = formatDateForDisplay(bday) ?: bday
                     val deathDisplay = person.deathday?.let { formatDateForDisplay(it) ?: it }
-                    val deathStr = deathDisplay?.let { " — †$it" } ?: ""
-                    add("Born: $bdayDisplay$deathStr$ageStr")
+                    val line = if (deathDisplay != null) {
+                        strBornDied.format(bdayDisplay, deathDisplay) + ageStr
+                    } else {
+                        strBorn.format(bdayDisplay) + ageStr
+                    }
+                    add(line)
                 }
                 person.placeOfBirth?.let { add(it) }
             }

@@ -473,23 +473,12 @@ private suspend fun HomeViewModel.buildNextUpItem(
     val existingBackdrop = meta.backdropUrl.normalizeImageUrl()
     val existingLogo = meta.logo.normalizeImageUrl()
     val existingThumbnail = video.thumbnail.normalizeImageUrl()
-    val tmdbData = if (
-        existingThumbnail == null ||
-        existingBackdrop == null ||
-        existingPoster == null ||
-        existingLogo == null ||
-        video.overview.isNullOrBlank() ||
-        video.title.isNullOrBlank()
-    ) {
-        resolveNextUpTmdbData(
+    val tmdbData = resolveNextUpTmdbData(
             progress = progress,
             meta = meta,
             season = nextSeason,
             episode = nextEpisodeNumber
         )
-    } else {
-        null
-    }
     val released = video.released?.trim()?.takeIf { it.isNotEmpty() }
         ?: tmdbData?.airDate
     val releaseDate = parseEpisodeReleaseDate(released)

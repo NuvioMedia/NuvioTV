@@ -59,6 +59,7 @@ fun TrailerPlayer(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val activityLifecycleOwner = remember(context) { context as? androidx.lifecycle.LifecycleOwner ?: lifecycleOwner }
     val currentIsPlaying by rememberUpdatedState(isPlaying)
     val currentTrailerUrl by rememberUpdatedState(trailerUrl)
     val currentTrailerAudioUrl by rememberUpdatedState(trailerAudioUrl)
@@ -154,7 +155,7 @@ fun TrailerPlayer(
         currentOnProgressChanged(0L, 0L)
     }
 
-    DisposableEffect(lifecycleOwner, trailerPlayer) {
+    DisposableEffect(activityLifecycleOwner, trailerPlayer) {
         val player = trailerPlayer ?: return@DisposableEffect onDispose {}
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
@@ -204,9 +205,9 @@ fun TrailerPlayer(
             }
         }
         player.addListener(listener)
-        lifecycleOwner.lifecycle.addObserver(observer)
+        activityLifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
-            runCatching { lifecycleOwner.lifecycle.removeObserver(observer) }
+            runCatching { activityLifecycleOwner.lifecycle.removeObserver(observer) }
             runCatching { player.removeListener(listener) }
             if (releaseCalled.compareAndSet(false, true)) {
                 runCatching { player.stop() }

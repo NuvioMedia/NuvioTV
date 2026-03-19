@@ -61,6 +61,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import android.util.Log
 import com.nuvio.tv.R
+import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MDBListRatings
 import com.nuvio.tv.domain.model.Video
@@ -75,6 +76,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.painter.Painter
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
+import java.util.Locale
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -110,6 +112,7 @@ fun HeroContentSection(
             ImageRequest.Builder(context)
                 .data(logo)
                 .crossfade(true)
+                .decoderFactory(SvgDecoder.Factory())
                 .build()
         }
     }
@@ -572,8 +575,15 @@ private fun MetaInfoRow(
     val context = LocalContext.current
     val genresText = remember(meta.genres) { meta.genres.joinToString(" • ") }
     val runtimeText = remember(meta.runtime) { meta.runtime?.let { formatRuntime(it) } }
-    val yearText = remember(meta.releaseInfo) {
-        meta.releaseInfo?.split("-")?.firstOrNull() ?: meta.releaseInfo
+    val yearText = remember(meta.releaseInfo, meta.released, meta.type) {
+        if (meta.type == ContentType.MOVIE) {
+            meta.released
+                ?.let { runCatching { java.time.OffsetDateTime.parse(it).toLocalDate() }.getOrNull() }
+                ?.let { java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.getDefault()).format(it) }
+                ?: meta.releaseInfo?.split("-")?.firstOrNull() ?: meta.releaseInfo
+        } else {
+            meta.releaseInfo?.split("-")?.firstOrNull() ?: meta.releaseInfo
+        }
     }
     val imdbRating = if (hideImdbRating) null else meta.imdbRating
     val shouldShowImdbRating = imdbRating != null
@@ -773,14 +783,15 @@ private fun CombinedMetaBadge(
 }
 
 private fun normalizeCountryLabel(raw: String): String {
+    val displayLocale = Locale.getDefault()
     return raw
         .split(",")
         .joinToString(", ") { part ->
-            val trimmed = part.trim()
-            if (trimmed.matches(Regex("[A-Za-z]{2,3}"))) {
-                trimmed.uppercase()
+            val code = part.trim()
+            if (code.matches(Regex("[A-Za-z]{2}"))) {
+                Locale("", code).getDisplayCountry(displayLocale).takeIf { it.isNotBlank() } ?: code
             } else {
-                trimmed
+                code
             }
         }
 }
@@ -876,7 +887,30 @@ private fun formatMDBListRating(provider: String, rating: Double): String {
 }
 
 private fun formatRuntime(runtime: String): String {
-    val minutes = runtime.filter { it.isDigit() }.toIntOrNull() ?: return runtime
+    val trimmed = runtime.trim()
+    // Already in "Xh Ym" or "Xh" format
+    if (trimmed.contains('h') || trimmed.contains('m')) {
+        val hours = Regex("(\\d+)\\s*h").find(trimmed)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        val mins = Regex("(\\d+)\\s*m").find(trimmed)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        val total = hours * 60 + mins
+        if (total > 0) return if (total >= 60) {
+            val h = total / 60; val m = total % 60
+            if (m > 0) "${h}h ${m}m" else "${h}h"
+        } else "${total}m"
+    }
+    // "H:MM" or "HH:MM" format
+    if (trimmed.contains(':')) {
+        val parts = trimmed.split(':')
+        val hours = parts.getOrNull(0)?.toIntOrNull() ?: 0
+        val mins = parts.getOrNull(1)?.toIntOrNull() ?: 0
+        val total = hours * 60 + mins
+        if (total > 0) return if (total >= 60) {
+            val m = total % 60
+            if (m > 0) "${hours}h ${m}m" else "${hours}h"
+        } else "${total}m"
+    }
+    // Plain number (minutes)
+    val minutes = trimmed.filter { it.isDigit() }.toIntOrNull() ?: return runtime
     return if (minutes >= 60) {
         val hours = minutes / 60
         val mins = minutes % 60

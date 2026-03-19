@@ -10,6 +10,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,6 +38,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nuvio.tv.R
 import androidx.tv.material3.Border
@@ -164,6 +166,8 @@ fun GridHomeContent(
 
     Box(modifier = Modifier.fillMaxSize()) {
         val contentFocusRequester = LocalContentFocusRequester.current
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val gridWidth = maxWidth
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Adaptive(minSize = posterCardStyle.width),
@@ -183,7 +187,7 @@ fun GridHomeContent(
                     false
                 },
             contentPadding = PaddingValues(
-                start = 24.dp,
+                start = 48.dp,
                 end = 24.dp,
                 top = topPadding,
                 bottom = 32.dp
@@ -212,7 +216,9 @@ fun GridHomeContent(
                                         item.apiType,
                                         ""
                                     )
-                                }
+                                },
+                                fullWidth = gridWidth,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
@@ -227,6 +233,8 @@ fun GridHomeContent(
                                 contentType = "continue_watching"
                             ) {
                                 GridContinueWatchingSection(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    fullWidth = gridWidth,
                                     items = continueWatchingItems,
                                     focusedItemIndex = if (shouldRequestInitialFocus && !hasHero) 0 else -1,
                                     onItemClick = { item ->
@@ -372,6 +380,8 @@ fun GridHomeContent(
                     contentType = "continue_watching"
                 ) {
                     GridContinueWatchingSection(
+                        modifier = Modifier.fillMaxWidth(),
+                        fullWidth = gridWidth,
                         items = continueWatchingItems,
                         focusedItemIndex = if (shouldRequestInitialFocus && !hasHero) 0 else -1,
                         onItemClick = { item ->
@@ -412,7 +422,8 @@ fun GridHomeContent(
                     )
                 }
             }
-        }
+        } // end LazyVerticalGrid
+        } // end BoxWithConstraints
 
         // Sticky header overlay
         AnimatedVisibility(
@@ -435,7 +446,7 @@ private fun SectionDivider(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = 24.dp, bottom = 12.dp, start = 24.dp, end = 24.dp)
+            .padding(top = 24.dp, bottom = 12.dp)
     ) {
         Text(
             text = catalogName,
@@ -525,7 +536,8 @@ private fun SeeAllGridCard(
                 Text(
                     text = stringResource(R.string.action_see_all),
                     style = MaterialTheme.typography.titleSmall,
-                    color = NuvioColors.TextSecondary
+                    color = NuvioColors.TextSecondary,
+                    textAlign = TextAlign.Center
                 )
             }
         }

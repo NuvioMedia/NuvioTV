@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.R
@@ -293,7 +294,7 @@ internal fun buildCatalogItem(
             else -> item.apiType.replaceFirstChar { ch -> ch.uppercase() }
         },
         isSeries = isSeriesType(item.apiType),
-        yearText = extractYear(item.releaseInfo),
+        yearText = extractYearText(item.type, item.releaseInfo, item.released),
         runtimeText = formatHeroRuntime(item.runtime),
         imdbText = item.imdbRating?.let { String.format("%.1f", it) },
         ageRatingText = item.ageRating,
@@ -377,6 +378,16 @@ internal fun firstNonBlank(vararg candidates: String?): String? {
 internal fun extractYear(releaseInfo: String?): String? {
     if (releaseInfo.isNullOrBlank()) return null
     return YEAR_REGEX.find(releaseInfo)?.value
+}
+
+internal fun extractYearText(type: ContentType, releaseInfo: String?, released: String?): String? {
+    if (type == ContentType.MOVIE) {
+        val full = released
+            ?.let { runCatching { java.time.OffsetDateTime.parse(it).toLocalDate() }.getOrNull() }
+            ?.let { java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.getDefault()).format(it) }
+        if (full != null) return full
+    }
+    return extractYear(releaseInfo)
 }
 
 private fun formatHeroRuntime(runtime: String?): String? {
