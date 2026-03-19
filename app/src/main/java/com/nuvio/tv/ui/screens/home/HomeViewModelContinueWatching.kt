@@ -35,7 +35,7 @@ import java.util.Locale
 private const val CW_MAX_RECENT_PROGRESS_ITEMS = 300
 private const val CW_MAX_NEXT_UP_LOOKUPS = 24
 private const val CW_MAX_NEXT_UP_CONCURRENCY = 4
-private const val CW_PROGRESS_DEBOUNCE_MS = 1500L
+private const val CW_PROGRESS_DEBOUNCE_MS = 500L
 
 private data class ContinueWatchingSettingsSnapshot(
     val items: List<WatchProgress>,
