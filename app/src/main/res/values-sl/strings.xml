@@ -579,6 +579,7 @@
     <string name="trakt_unaired_shown">Prikazano</string>
     <string name="trakt_unaired_hidden">Skrito</string>
     <string name="trakt_unaired_now_shown">Naslednje epizode, ki še niso izdane, so zdaj prikazane</string>																					  
+    <string name="trakt_unaired_hidden">Skrito</string>												 												   
     <string name="trakt_cached_label">V predpomnilniku</string>
     <string name="trakt_stat_movies">Filmi</string>
     <string name="trakt_stat_shows">Serije</string>

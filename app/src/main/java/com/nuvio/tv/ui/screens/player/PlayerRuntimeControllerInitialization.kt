@@ -326,6 +326,7 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                             if (playbackState != Player.STATE_BUFFERING) {
                                 emitStopScrobbleForCurrentProgress()
                             }
+                            
                             saveWatchProgress()
                         }
                     }
@@ -564,11 +565,6 @@ private class SubtitleOffsetRenderersFactory(
     private val gainAudioProcessor: GainAudioProcessor
 ) : DefaultRenderersFactory(context) {
 
-    override fun getCodecAdapterFactory():
-        androidx.media3.exoplayer.mediacodec.MediaCodecAdapter.Factory {
-        return DvUnlimitedInputAdapterFactory(super.getCodecAdapterFactory())
-    }
-
     override fun buildAudioSink(
         context: Context,
         enableFloatOutput: Boolean,
@@ -579,27 +575,6 @@ private class SubtitleOffsetRenderersFactory(
             .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
             .setAudioProcessors(arrayOf(gainAudioProcessor))
             .build()
-    }
-
-    override fun buildVideoRenderers(
-        context: Context,
-        extensionRendererMode: Int,
-        mediaCodecSelector: androidx.media3.exoplayer.mediacodec.MediaCodecSelector,
-        enableDecoderFallback: Boolean,
-        eventHandler: android.os.Handler,
-        eventListener: androidx.media3.exoplayer.video.VideoRendererEventListener,
-        allowedVideoJoiningTimeMs: Long,
-        out: ArrayList<Renderer>
-    ) {
-        val startIndex = out.size
-        super.buildVideoRenderers(
-            context, extensionRendererMode, mediaCodecSelector,
-            enableDecoderFallback, eventHandler, eventListener,
-            allowedVideoJoiningTimeMs, out
-        )
-        for (index in startIndex until out.size) {
-            out[index] = DvTolerantVideoRenderer(out[index])
-        }
     }
 
     override fun buildTextRenderers(
@@ -617,31 +592,6 @@ private class SubtitleOffsetRenderersFactory(
     }
 }
 
-
-private class DvTolerantVideoRenderer(
-    delegate: Renderer
-) : ForwardingRenderer(delegate) {
-
-    companion object {
-        private const val TOLERANCE_MS = 500L
-    }
-
-    @Volatile
-    private var lastRenderTimeNs: Long = 0L
-
-    override fun render(positionUs: Long, elapsedRealtimeUs: Long) {
-        lastRenderTimeNs = System.nanoTime()
-        super.render(positionUs, elapsedRealtimeUs)
-    }
-
-    override fun isReady(): Boolean {
-        if (super.isReady()) return true
-        if (lastRenderTimeNs == 0L) return false
-        val elapsedMs = (System.nanoTime() - lastRenderTimeNs) / 1_000_000
-        return elapsedMs < TOLERANCE_MS
-    }
-}
-
 private class SubtitleOffsetRenderer(
     private val baseRenderer: Renderer,
     private val subtitleDelayUsProvider: () -> Long
@@ -652,26 +602,5 @@ private class SubtitleOffsetRenderer(
         val adjustedPositionUs = (positionUs - offset).coerceAtLeast(0L)
         
         super.render(adjustedPositionUs, elapsedRealtimeUs)
-    }
-}
-
-
-private class DvUnlimitedInputAdapterFactory(
-    private val delegate: androidx.media3.exoplayer.mediacodec.MediaCodecAdapter.Factory
-) : androidx.media3.exoplayer.mediacodec.MediaCodecAdapter.Factory {
-
-    override fun createAdapter(
-        configuration: androidx.media3.exoplayer.mediacodec.MediaCodecAdapter.Configuration
-    ): androidx.media3.exoplayer.mediacodec.MediaCodecAdapter {
-        val codecName = configuration.codecInfo.name
-        if (codecName.contains("dvhe", ignoreCase = true) ||
-            codecName.contains("dvav", ignoreCase = true) ||
-            codecName.contains("dav1", ignoreCase = true)) {
-            configuration.mediaFormat.setInteger(
-                android.media.MediaFormat.KEY_MAX_INPUT_SIZE, 0
-            )
-            Log.d("DvAdapterFactory", "Set KEY_MAX_INPUT_SIZE=0 for DV decoder: $codecName")
-        }
-        return delegate.createAdapter(configuration)
     }
 }
