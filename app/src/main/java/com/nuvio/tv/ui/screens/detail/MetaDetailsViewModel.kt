@@ -211,6 +211,7 @@ class MetaDetailsViewModel @Inject constructor(
             MetaDetailsEvent.OnPickerSave -> savePickerMembership()
             MetaDetailsEvent.OnPickerDismiss -> dismissListPicker()
             MetaDetailsEvent.OnClearMessage -> clearMessage()
+            MetaDetailsEvent.OnLifecyclePause -> handleLifecyclePause()
         }
     }
 
@@ -1551,6 +1552,16 @@ class MetaDetailsViewModel @Inject constructor(
                 showControls = false,
                 hideLogo = false
             )
+        }
+    }
+
+    private fun handleLifecyclePause() {
+        idleTimerJob?.cancel()
+        isPlayButtonFocused = false
+        val state = _uiState.value
+        if (state.isTrailerPlaying && !state.showTrailerControls) {
+            trailerHasPlayed = true
+            setTrailerPlaybackState(isPlaying = false, showControls = false, hideLogo = false)
         }
     }
 

@@ -140,16 +140,9 @@ class TmdbMetadataService @Inject constructor(
                 val collectionId = details?.belongsToCollection?.id
                 val collectionName = details?.belongsToCollection?.name
 
-                val logoPath = images?.logos
-                    ?.sortedWith(
-                        compareByDescending<com.nuvio.tv.data.remote.api.TmdbImage> {
-                            it.iso6391 == normalizedLanguage.substringBefore("-")
-                        }
-                            .thenByDescending { it.iso6391 == "en" }
-                            .thenByDescending { it.iso6391 == null }
-                    )
-                    ?.firstOrNull()
-                    ?.filePath
+                val logoPath = images?.logos?.let {
+                    selectBestLocalizedImagePath(it, normalizedLanguage)
+                }
 
                 val logo = buildImageUrl(logoPath, size = "w500")
 
@@ -535,11 +528,21 @@ class TmdbMetadataService @Inject constructor(
     }
 
     private fun normalizeTmdbLanguage(language: String?): String {
-        return language
+        val raw = language
             ?.trim()
             ?.takeIf { it.isNotBlank() }
             ?.replace('_', '-')
-            ?: "en"
+            ?: return "en"
+        // Normalize region code to uppercase (e.g. pt-br -> pt-BR)
+        val normalized = raw.split("-").let { parts ->
+            if (parts.size == 2) "${parts[0].lowercase(Locale.US)}-${parts[1].uppercase(Locale.US)}"
+            else raw.lowercase(Locale.US)
+        }
+        // Map codes unsupported by TMDB to their closest equivalent
+        return when (normalized) {
+            "es-419" -> "es-MX"
+            else -> normalized
+        }
     }
 
     private fun selectBestLocalizedImagePath(

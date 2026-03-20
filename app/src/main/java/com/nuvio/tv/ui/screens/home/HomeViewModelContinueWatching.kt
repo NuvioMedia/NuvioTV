@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
@@ -34,6 +35,7 @@ import java.util.Locale
 private const val CW_MAX_RECENT_PROGRESS_ITEMS = 300
 private const val CW_MAX_NEXT_UP_LOOKUPS = 24
 private const val CW_MAX_NEXT_UP_CONCURRENCY = 4
+private const val CW_PROGRESS_DEBOUNCE_MS = 500L
 
 private data class ContinueWatchingSettingsSnapshot(
     val items: List<WatchProgress>,
@@ -73,7 +75,7 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 dismissedNextUp = dismissedNextUp,
                 showUnairedNextUp = showUnairedNextUp
             )
-        }.collectLatest { snapshot ->
+        }.debounce(CW_PROGRESS_DEBOUNCE_MS).collectLatest { snapshot ->
             val items = snapshot.items
             val daysCap = snapshot.daysCap
             val dismissedNextUp = snapshot.dismissedNextUp
@@ -307,7 +309,7 @@ private suspend fun HomeViewModel.enrichContinueWatchingProgressively(
     val lookupSemaphore = Semaphore(CW_MAX_NEXT_UP_CONCURRENCY)
     val mergeMutex = Mutex()
     val nextUpByContent = linkedMapOf<String, ContinueWatchingItem.NextUp>()
-    val metaCache = mutableMapOf<String, Meta?>()
+    val metaCache = cwMetaCache
     var lastEmittedNextUpCount = 0
 
     val jobs = latestCompletedBySeries.map { progress ->
@@ -364,7 +366,7 @@ private suspend fun HomeViewModel.enrichInProgressEpisodeDetailsProgressively(
 ) = coroutineScope {
     if (inProgressItems.isEmpty()) return@coroutineScope
 
-    val metaCache = mutableMapOf<String, Meta?>()
+    val metaCache = cwMetaCache
     val enrichedByProgress = linkedMapOf<WatchProgress, ContinueWatchingItem.InProgress>()
     var lastAppliedCount = 0
 
