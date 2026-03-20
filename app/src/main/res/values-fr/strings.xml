@@ -41,6 +41,10 @@
     <string name="error_meta_tried_none">Addons de métadonnées tentés : %1$s. Aucun d\'entre eux n\'a fourni de métadonnées pour l\'id=%2$s (type=%3$s).</string>
     <string name="error_meta_tried_generic">Addons de métadonnées tentés : %1$s. Impossible de charger les métadonnées pour l\'id=%2$s (type=%3$s).</string>
     <string name="error_meta_tried_issues">Addons de métadonnées tentés : %1$s. Impossible de charger les métadonnées pour l\'id=%2$s (type=%3$s). Problèmes : %4$s.</string>
+    <string name="error_stream_no_supported_addon">Aucun addon installé ne supporte les flux pour \"%1$s\".</string>
+    <string name="error_stream_tried_none">Addons de flux tentés : %1$s. Aucun d\'entre eux n\'a retourné de flux pour l\'id=%2$s (type=%3$s).</string>
+    <string name="error_stream_tried_generic">Addons de flux tentés : %1$s. Les flux n\'ont pas pu être chargés pour l\'id=%2$s (type=%3$s).</string>
+    <string name="error_stream_tried_issues">Addons de flux tentés : %1$s. Les flux n\'ont pas pu être chargés pour l\'id=%2$s (type=%3$s). Problèmes : %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Reprendre le visionnage</string>
@@ -178,6 +182,23 @@
     <string name="settings_playback_subtitle">Lecteur, sous-titres et lecture automatique.</string>
     <string name="settings_trakt_subtitle">Ouvrir l\'écran de connexion Trakt.</string>
     <string name="settings_about_subtitle">Version et politiques.</string>
+    <string name="settings_network">Débit réseau</string>
+    <string name="settings_network_subtitle">Diagnostics de latence et de téléchargement</string>
+    <string name="settings_advanced">Avancés</string>
+    <string name="settings_advanced_subtitle">Lancer les diagnostics de débit réseau</string>
+    <string name="network_speed_test_run">Lancer le test de débit</string>
+    <string name="network_speed_test_running">Test de débit en cours</string>
+    <string name="network_speed_test_subtitle">Mesurer le débit descendant et la latence</string>
+    <string name="network_testing_latency">Mesure de la latence</string>
+    <string name="network_testing_download">Mesure du débit descendant</string>
+    <string name="network_results_title">Résultats</string>
+    <string name="network_latency_label">Latence</string>
+    <string name="network_download_label">Téléchargement</string>
+    <string name="network_error_prefix">Erreur : %1$s</string>
+    <string name="network_powered_by_fast">Propulsé par fast.com</string>
+    <string name="network_connection_wifi">Wi-Fi</string>
+    <string name="network_connection_ethernet">Ethernet</string>
+    <string name="network_connection_offline">Hors ligne</string>
     <string name="settings_debug">Débogage</string>
     <string name="settings_debug_subtitle">Outils développeur et options expérimentales.</string>
     <string name="settings_plugins_section_subtitle">Gérer les dépôts, fournisseurs et états des plugins.</string>
@@ -948,6 +969,9 @@
     <string name="cast_detail_error">Une erreur est survenue</string>
     <string name="cast_detail_retry">Réessayer</string>
     <string name="cast_detail_filmography">Filmographie</string>
+    <string name="cast_detail_born">Naissance : %1$s</string>
+    <string name="cast_detail_born_died">Naissance : %1$s — †%2$s</string>
+    <string name="cast_detail_age">%1$d ans</string>
 
     <!-- CatalogSeeAllScreen -->
     <string name="catalog_see_all_from">depuis %1$s</string>
@@ -1023,6 +1047,9 @@
     <string name="settings_rounded_ui">Interface arrondie</string>
     <string name="cd_expand_sidebar">Développer la barre latérale</string>
 
+    <string name="update_checking">Vérification des mises à jour…</string>
+    <string name="update_download_complete">Téléchargement terminé. Prêt à installer.</string>
+    <string name="update_up_to_date">Le système est à jour. Dernières modifications :</string>
     <string name="update_close">Fermer</string>
     <string name="update_open_settings">Ouvrir les paramètres</string>
     <string name="update_install">Installer</string>
