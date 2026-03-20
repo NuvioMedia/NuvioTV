@@ -1,6 +1,7 @@
 <resources>
     <string name="type_movie">Film</string>
     <string name="type_series">Serier</string>
+    <string name="type_unknown">Okänd</string>
 
     <!-- HomeScreen -->
     <string name="home_no_addons">Inga tillägg installerade. Lägg till ett tillägg för att komma igång.</string>
@@ -9,12 +10,41 @@
 
     <!-- ErrorState -->
     <string name="action_retry">Försök igen</string>
+    <string name="error_state_generic_issue">Något gick fel.</string>
+    <string name="error_state_possible_fix">Möjlig lösning: %1$s</string>
+    <string name="error_state_fix_retry_soon">försök igen om en stund.</string>
+    <string name="error_state_issue_no_metadata_any_addon">Det gick inte att ladda detaljer för detta id eftersom inget installerat tillägg returnerade metadata.</string>
+    <string name="error_state_fix_no_metadata_any_addon">prova ett annat tillägg, inaktivera \"Föredra metadata från externt tillägg\" i layoutinställningar, eller bekräfta att ett installerat tillägg stödjer detta id.</string>
+    <string name="error_state_prefix_no_supported_metadata">Inget installerat tillägg stödjer metadata för </string>
+    <string name="error_state_prefix_no_addon_for_id">Inget installerat tillägg kunde tillhandahålla metadata för id=</string>
+    <string name="error_state_fix_no_supported_metadata">installera eller uppdatera ett tillägg som stödjer denna innehållstyp och försök sedan igen.</string>
+    <string name="error_state_prefix_tried_meta_addons">Provade metatillägg:</string>
+    <string name="error_state_fix_tried_meta_addons">installera ett tillägg som stödjer detta id, eller konfigurera om/uppdatera tillägget och försök igen.</string>
+    <string name="error_state_issue_missing_metadata_for_id">har inte metadata för detta id</string>
+    <string name="error_state_fix_missing_metadata_for_id">öppna detta id från ett annat tillägg, inaktivera \"Föredra metadata från externt tillägg\", eller kontrollera att tillägget stödjer detta id.</string>
+    <string name="error_state_issue_addon_unreachable">kunde inte nås</string>
+    <string name="error_state_fix_addon_unreachable">kontrollera din internetanslutning, verifiera att tilläggets URL fortfarande fungerar och försök sedan igen.</string>
+    <string name="error_state_issue_addon_connection_failed">nekade anslutningen</string>
+    <string name="error_state_fix_addon_connection_failed">kontrollera att tilläggsservern är online och nåbar och försök sedan igen.</string>
+    <string name="error_state_issue_addon_timeout">tog för lång tid att svara</string>
+    <string name="error_state_fix_addon_timeout">försök igen om en stund, eller prova ett annat tillägg om detta fortsätter hända.</string>
+    <string name="error_state_issue_addon_cleartext">använder en osäker HTTP-anslutning som Android blockerade</string>
+    <string name="error_state_fix_addon_cleartext">byt tilläggets URL till HTTPS eller uppdatera tilläggskonfigurationen.</string>
+    <string name="error_state_fix_addon_generic">försök igen, uppdatera eller installera om tillägget, eller prova ett annat tillägg.</string>
+    <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
+    <string name="error_meta_not_found">Metadata hittades inte</string>
+    <string name="error_meta_no_supported_addon">Inget installerat tillägg stödjer metadata för \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">Inget installerat tillägg kunde tillhandahålla metadata för id=%1$s (typ=%2$s).</string>
+    <string name="error_meta_tried_none">Provade metatillägg: %1$s. Inget av dem tillhandahöll metadata för id=%2$s (typ=%3$s).</string>
+    <string name="error_meta_tried_generic">Provade metatillägg: %1$s. Metadata kunde inte laddas för id=%2$s (typ=%3$s).</string>
+    <string name="error_meta_tried_issues">Provade metatillägg: %1$s. Metadata kunde inte laddas för id=%2$s (typ=%3$s). Problem: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Fortsätt titta</string>
     <string name="cw_upcoming">Kommande</string>
     <string name="cw_next_up">Nästa</string>
     <string name="cw_resume">Återuppta</string>
+    <string name="cw_percent_watched">%1$d%% sedd</string>
     <string name="cw_hours_min_left">%1$dh %2$dm kvar</string>
     <string name="cw_min_left">%1$dm kvar</string>
     <string name="cw_almost_done">Nästan färdig</string>
@@ -55,6 +85,7 @@
     <string name="episodes_mark_season_unwatched">Markera säsong som osedd</string>
     <string name="episodes_mark_previous_watched">Markera föregående avsnitt i denna säsong som sedda</string>
     <string name="episodes_play">Spela</string>
+    <string name="play_manually">Spela manuellt</string>
     <string name="episodes_season_actions">Säsongsåtgärder</string>
 
     <!-- MetaDetailsViewModel -->
@@ -86,6 +117,16 @@
     <string name="detail_tab_more_like_this">Mer som detta</string>
     <string name="detail_section_network">Nätverk</string>
     <string name="detail_section_production">Produktion</string>
+    <string name="episodes_unavailable">Ej tillgänglig</string>
+    <string name="series_status_ended">Avslutad</string>
+    <string name="series_status_continuing">Pågående</string>
+    <string name="series_status_current">Aktuell</string>
+    <string name="series_status_cancelled">Inställd</string>
+    <string name="series_status_released">Släppt</string>
+    <string name="series_status_planned">Planerad</string>
+    <string name="series_status_rumored">Ryktas</string>
+    <string name="series_status_in_production">I produktion</string>
+    <string name="series_status_post_production">Efterproduktion</string>
     <string name="detail_lists_fallback">Listor</string>
     <string name="detail_lists_subtitle">Välj vilka listor som ska inkludera denna titel.</string>
     <string name="action_save">Spara</string>
@@ -98,9 +139,14 @@
     <string name="appearance_language_dialog_title">Välj Språk</string>
     <string name="appearance_language_restart_hint">Starta om appen för att tillämpa språkändringen.</string>
 
+    <!-- Font -->
+    <string name="appearance_font">Appens typsnitt</string>
+    <string name="appearance_font_subtitle">Välj ditt föredragna typsnitt</string>
+    <string name="appearance_font_dialog_title">Välj typsnitt</string>
+
     <!-- ThemeSettingsScreen -->
     <string name="appearance_title">Utseende</string>
-    <string name="appearance_subtitle">Välj ditt färgtema och språk</string>
+    <string name="appearance_subtitle">Välj ditt färgtema, typsnitt och språk</string>
     <string name="cd_selected">Vald</string>
 
     <!-- AboutScreen -->
@@ -112,6 +158,8 @@
     <string name="about_check_updates_subtitle">Ladda ner senaste versionen</string>
     <string name="about_privacy_policy">Integritetspolicy</string>
     <string name="about_privacy_policy_subtitle">Visa vår integritetspolicy</string>
+    <string name="about_supporters_contributors">Supportrar &amp; bidragsgivare</string>
+    <string name="about_supporters_contributors_subtitle">Öppen erkänsla och projektcredits</string>
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Konto</string>
@@ -140,6 +188,7 @@
     <string name="settings_integrations_section_subtitle">Välj TMDB eller MDBList inställningar</string>
     <string name="settings_tmdb_subtitle">Metadataberikning</string>
     <string name="settings_mdblist_subtitle">Externa betygsläggare</string>
+    <string name="settings_animeskip_subtitle">Tidsstämplar för att hoppa över anime-intro/outro</string>
 
     <!-- PlaybackSettingsScreen -->
     <string name="playback_title">Uppspelningsinställningar</string>
@@ -148,6 +197,33 @@
     <string name="cd_increase">Öka</string>
     <string name="action_cancel">Avbryt</string>
     <string name="action_none">Ingen</string>
+    <string name="action_close">Stäng</string>
+
+    <!-- SupportersContributorsScreen -->
+    <string name="supporters_contributors_title">Supportrar &amp; bidragsgivare</string>
+    <string name="supporters_contributors_subtitle">Människorna bakom Nuvio och bidragsgivarna som bygger det för TV och mobil.</string>
+    <string name="supporters_contributors_supporters_copy">Supportrar och donatorer hjälper projektet framåt, finansierar infrastruktur och skapar utrymme för ambitiösa funktioner.</string>
+    <string name="supporters_contributors_donate_copy">Nuvio förblir gratis och öppen källkod. Om du vill stödja projektet kan du hjälpa till att täcka tiden och infrastrukturen bakom det.</string>
+    <string name="supporters_contributors_donate_button">Donera till Nuvio</string>
+    <string name="supporters_contributors_qr_title">Skanna för att donera</string>
+    <string name="supporters_contributors_qr_subtitle">Öppna länken på din telefon och stöd Nuvio via Ko-fi.</string>
+    <string name="supporters_contributors_qr_hint">Rikta kameran mot QR-koden eller använd knappen nedan.</string>
+    <string name="supporters_contributors_back_button">Tillbaka till detaljer</string>
+    <string name="supporters_tab">Supportrar</string>
+    <string name="contributors_tab">Bidragsgivare</string>
+    <string name="supporters_loading">Laddar supportrar…</string>
+    <string name="supporters_empty">Inga supportrar hittade ännu.</string>
+    <string name="supporters_error_title">Kunde inte ladda supportrar</string>
+    <string name="supporters_no_message">Inget meddelande delat.</string>
+    <string name="supporters_open_donations">Öppna donationssidan</string>
+    <string name="contributors_loading">Laddar GitHub-bidragsgivare…</string>
+    <string name="contributors_empty">Inga bidragsgivare hittade ännu.</string>
+    <string name="contributors_error_title">Kunde inte ladda bidragsgivare</string>
+    <string name="contributors_total_contributions">%1$d totala bidrag</string>
+    <string name="contributors_open_github">Öppna GitHub-profil</string>
+    <string name="contributors_show_kofi_qr">Visa Ko-fi QR</string>
+    <string name="contributors_hide_kofi_qr">Dölj Ko-fi QR</string>
+    <string name="contributors_profile_unavailable">GitHub-profillänk ej tillgänglig.</string>
 
     <!-- PlaybackSettingsSections -->
     <string name="playback_section_general">Allmänt</string>
@@ -179,6 +255,8 @@
     <string name="playback_afr_on_start_sub">Växla när uppspelning startar.</string>
     <string name="playback_afr_on_start_stop">Vid start/stopp</string>
     <string name="playback_afr_on_start_stop_sub">Växla vid start och återställ vid stopp.</string>
+    <string name="playback_resolution_matching">Upplösningsmatchning</string>
+    <string name="playback_resolution_matching_sub">Tillåt ändring av visningsläge för att matcha videoupplösning.</string>
     <string name="playback_player_external_desc">Öppna alltid strömmar i en extern app</string>
     <string name="playback_player_ask_desc">Välj spelare varje gång</string>
 
@@ -242,6 +320,13 @@
     <string name="sub_org_none_desc">Visa undertexter i standardordning från tillägg.</string>
     <string name="sub_org_by_lang_desc">Gruppera undertexter efter språk.</string>
     <string name="sub_org_by_addon_desc">Gruppera undertexter efter tilläggskälla.</string>
+    <string name="sub_startup_mode_title">Laddning av tilläggsundertexter</string>
+    <string name="sub_startup_mode_fast">Snabb start</string>
+    <string name="sub_startup_mode_preferred">Föredragna språk</string>
+    <string name="sub_startup_mode_all">Alla tilläggsundertexter</string>
+    <string name="sub_startup_mode_fast_desc">Starta uppspelning direkt. Att välja tilläggsundertexter kan ladda om spelaren en gång.</string>
+    <string name="sub_startup_mode_preferred_desc">Hämta tilläggsundertexter före uppspelning och koppla föredragna/sekundära språkspår.</string>
+    <string name="sub_startup_mode_all_desc">Hämta och koppla alla tilläggsundertexter före uppspelning. Långsammast start.</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">Återanvänd senaste länk</string>
@@ -253,6 +338,8 @@
     <string name="autoplay_stream_selection">Automatiskt strömval</string>
     <string name="autoplay_next_episode">Spela nästa avsnitt automatiskt</string>
     <string name="autoplay_next_episode_sub">Starta nästa avsnitt automatiskt när prompten visas.</string>
+    <string name="autoplay_prefer_binge_group">Föredra binge-grupp (nästa avsnitt)</string>
+    <string name="autoplay_prefer_binge_group_sub">Prova samma källprofil först (samma tillägg/kvalitetsgrupp) före vanliga regler för automatisk uppspelning.</string>
     <string name="autoplay_threshold_pct">Procent</string>
     <string name="autoplay_threshold_min">Minuter före slut</string>
     <string name="autoplay_threshold_mode">Tröskelvärdesläge för nästa avsnitt</string>
@@ -264,6 +351,10 @@
     <string name="autoplay_scope_addons">Endast installerade tillägg</string>
     <string name="autoplay_scope_plugins">Endast aktiverade plugins</string>
     <string name="autoplay_scope">Källomfång för automatisk uppspelning</string>
+    <string name="autoplay_timeout_title">Tidsgräns för strömval</string>
+    <string name="autoplay_timeout_sub">Väntetid för tillägg innan val görs.</string>
+    <string name="autoplay_timeout_instant">Omedelbart</string>
+    <string name="autoplay_timeout_unlimited">Obegränsad</string>
     <string name="autoplay_allowed_addons">Tillåtna tillägg</string>
     <string name="autoplay_all_addons">Alla installerade tillägg</string>
     <string name="autoplay_allowed_plugins">Tillåtna plugins</string>
@@ -318,6 +409,8 @@
     <string name="layout_addon_name_sub">Visa källnamn under katalogtitlar.</string>
     <string name="layout_catalog_type">Visa katalogtyp</string>
     <string name="layout_catalog_type_sub">Visa typsuffix bredvid katalognamn (Film/Serie).</string>
+    <string name="layout_hide_unreleased">Dölj osläppt innehåll</string>
+    <string name="layout_hide_unreleased_sub">Dölj filmer och serier som inte har släppts ännu.</string>
     <string name="layout_section_detail">Detaljsida</string>
     <string name="layout_section_detail_desc">Inställningar för detalj- och avsnittsskärmar.</string>
     <string name="layout_blur_unwatched">Sudda osedda avsnitt</string>
@@ -389,6 +482,19 @@
     <string name="mdblist_dialog_subtitle">Ange din API-nyckel för att hämta externa betyg</string>
     <string name="mdblist_dialog_placeholder">Ange MDBList API-nyckel</string>
     <string name="mdblist_not_set">Ej inställd</string>
+    <string name="mdblist_invalid_api_key">Ogiltig MDBList API-nyckel</string>
+
+    <!-- Anime-Skip -->
+    <string name="animeskip_title">Anime Skip</string>
+    <string name="animeskip_subtitle">Konfigurera ditt Anime Skip Client ID för att hoppa över anime-intro/outro</string>
+    <string name="animeskip_enable_title">Aktivera Anime Skip</string>
+    <string name="animeskip_enable_subtitle">Hämta tidsstämplar från anime-skip.com</string>
+    <string name="animeskip_client_id_title">Client ID</string>
+    <string name="animeskip_client_id_subtitle">Krävs för att hämta tidsstämplar från anime-skip.com</string>
+    <string name="animeskip_dialog_title">Anime Skip Client ID</string>
+    <string name="animeskip_dialog_subtitle">Skapa ditt eget Client ID på anime-skip.com/account/settings</string>
+    <string name="animeskip_dialog_placeholder">Ange Client ID</string>
+    <string name="animeskip_invalid_client_id">Ogiltigt Client ID</string>
     <string name="action_clear">Rensa</string>
 
     <!-- TmdbSettingsScreen -->
@@ -414,6 +520,9 @@
     <string name="tmdb_episodes_subtitle">Avsnittstitlar, sammanfattningar, miniatyrer och speltid från TMDB</string>
     <string name="tmdb_more_like_this_title">Mer som detta</string>
     <string name="tmdb_more_like_this_subtitle">TMDB-rekommendationsbakgrunder på detaljsidan</string>
+    <string name="tmdb_collections_title">Samlingar</string>
+    <string name="tmdb_collections_subtitle">TMDB-filmsamlingar i premiärordning</string>
+
     <string name="tmdb_language_dialog_title">TMDB-språk</string>
 
     <!-- TraktScreen -->
@@ -429,12 +538,22 @@
     <string name="trakt_token_refreshes">Trakt-åtkomsttoken uppdateras om %1$s</string>
     <string name="trakt_login_instruction">Tryck på Logga in för att starta Trakt-enhetsautentisering. En QR-kod visas här.</string>
     <string name="trakt_missing_credentials">TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET saknas i local.properties.</string>
+    <string name="trakt_watch_progress_title">Tittarframsteg</string>
+    <string name="trakt_watch_progress_subtitle">Välj vilken framstegskälla som styr återupptagning och fortsätt titta</string>
+    <string name="trakt_watch_progress_dialog_title">Tittarframsteg</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Välj om återupptagning och fortsätt titta ska använda Trakt eller Nuvio Sync medan Trakt-scrobbling förblir aktiv.</string>
+    <string name="trakt_watch_progress_source_trakt">Trakt</string>
+    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_trakt_selected">Tittarframstegskälla satt till Trakt</string>
+    <string name="trakt_watch_progress_nuvio_selected">Tittarframstegskälla satt till Nuvio Sync</string>
     <string name="trakt_continue_watching_window">Fortsätt titta-fönster</string>
     <string name="trakt_continue_watching_subtitle">Trakt-historik som beaktas för fortsätt titta</string>
     <string name="trakt_unaired_next_up">Osända nästa avsnitt</string>
     <string name="trakt_unaired_next_up_subtitle">Visa kommande avsnitt innan de sänds</string>
     <string name="trakt_unaired_shown">Visas</string>
     <string name="trakt_unaired_hidden">Dold</string>
+    <string name="trakt_unaired_now_shown">Osända nästa avsnitt visas nu</string>
+    <string name="trakt_unaired_now_hidden">Osända nästa avsnitt är nu dolda</string>
     <string name="trakt_cached_label">Cachad</string>
     <string name="trakt_stat_movies">Filmer</string>
     <string name="trakt_stat_shows">Serier</string>
@@ -480,6 +599,10 @@
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profiler</string>
     <string name="profile_subtitle">Hantera användarprofiler för detta konto.</string>
+    <string name="profile_manage_button">Hantera profiler</string>
+    <string name="profile_manage_title">Hantera profiler</string>
+    <string name="profile_manage_subtitle">Välj en profil att redigera, byta till, eller skapa en ny</string>
+    <string name="profile_manage_hint">Välj en profil att hantera</string>
     <string name="profile_primary_label">Primär</string>
     <string name="profile_shares_primary">Delar primärprofilens %1$s</string>
     <string name="profile_edit_label">Redigera</string>
@@ -496,6 +619,18 @@
     <string name="profile_delete">Radera</string>
     <string name="profile_addons">tillägg</string>
     <string name="profile_plugins">plugins</string>
+    <string name="profile_choose_avatar">Välj avatar</string>
+    <string name="profile_avatar_none_selected">Ingen avatar vald</string>
+    <string name="profile_avatar_focus_hint">Fokusera en avatar för att se dess namn</string>
+    <string name="profile_avatar_category_all">Alla</string>
+    <string name="profile_avatar_category_anime">Anime</string>
+    <string name="profile_avatar_category_animation">Animation</string>
+    <string name="profile_avatar_category_movie">Film</string>
+    <string name="profile_avatar_category_tv">TV</string>
+    <string name="profile_avatar_category_gaming">Spel</string>
+    <string name="profile_add_new">Lägg till profil</string>
+    <string name="profile_cancel">Avbryt</string>
+    <string name="profile_save">Spara</string>
 
 
     <!-- AddonManagerScreen -->
@@ -547,6 +682,17 @@
     <string name="stream_player_external">Extern</string>
 
     <!-- PlayerScreen -->
+    <string name="player_no_external_player">Ingen extern spelare hittades</string>
+
+    <!-- ParentalGuideOverlay -->
+    <string name="parental_nudity">Nakenhet</string>
+    <string name="parental_violence">Våld</string>
+    <string name="parental_profanity">Svordomar</string>
+    <string name="parental_alcohol">Alkohol/droger</string>
+    <string name="parental_frightening">Skrämmande</string>
+    <string name="parental_severity_severe">Allvarligt</string>
+    <string name="parental_severity_moderate">Måttligt</string>
+    <string name="parental_severity_mild">Milt</string>
     <string name="player_ends_at">Slutar kl %1$s</string>
     <string name="player_via">via %1$s</string>
     <string name="player_subtitle_delay">Undertextfördröjning</string>
@@ -582,6 +728,15 @@
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Ljud</string>
+    <string name="audio_dialog_tab_tracks">Ljud</string>
+    <string name="audio_dialog_tab_mix">Mix</string>
+    <string name="audio_mix_label">Förstärkning (PCM)</string>
+    <string name="audio_mix_value_db">%1$d dB</string>
+    <string name="audio_mix_persist_on">Spara mellan sessioner: PÅ</string>
+    <string name="audio_mix_persist_off">Spara mellan sessioner: AV</string>
+    <string name="audio_mix_range">Intervall: %1$d dB till %2$d dB</string>
+    <string name="audio_mix_range_saved">Intervall: %1$d dB till %2$d dB (sparat)</string>
+    <string name="audio_mix_unavailable">Förstärkning är inte tillgänglig på denna enhet</string>
 
     <!-- SubtitleDialog / SubtitleStyleSidePanel -->
     <string name="subtitle_dialog_title">Undertexter</string>
@@ -607,6 +762,7 @@
     <string name="subtitle_on">På</string>
     <string name="subtitle_off">Av</string>
     <string name="subtitle_style_title">Undertextstil</string>
+    <string name="subtitle_style_customize">Anpassa</string>
     <string name="subtitle_style_color">Färg</string>
     <string name="subtitle_style_reset">Återställ</string>
     <string name="subtitle_style_font_size">Teckenstorlek</string>
@@ -632,6 +788,7 @@
     <string name="next_episode_playing_via">Spelar via %1$s om %2$ds</string>
     <string name="next_episode_play">Spela</string>
     <string name="next_episode_unaired">Osänd</string>
+    <string name="next_episode_not_aired_yet">Nästa avsnitt har inte sänts ännu</string>
     <string name="skip_intro">Hoppa över intro</string>
     <string name="skip_ending">Hoppa över avslutning</string>
     <string name="skip_recap">Hoppa över sammanfattning</string>
@@ -646,6 +803,10 @@
     <string name="search_start_title">Börja söka</string>
     <string name="search_start_subtitle">Ange minst 2 tecken</string>
     <string name="search_start_subtitle_no_discover">Utforska är inaktiverat. Ange minst 2 tecken</string>
+    <string name="search_voice_no_speech">Inget tal upptäckt. Försök igen.</string>
+    <string name="search_voice_mic_permission">Mikrofonbehörighet krävs för röstsökning.</string>
+    <string name="search_voice_failed">Röstigenkänning misslyckades. Försök igen.</string>
+    <string name="search_voice_unavailable">Röstsökning är inte tillgänglig på denna enhet.</string>
 
     <!-- LibraryScreen -->
     <string name="library_syncing">Synkroniserar Trakt-bibliotek\u2026</string>
@@ -653,6 +814,11 @@
     <string name="library_filter_list">Lista</string>
     <string name="library_filter_type">Typ</string>
     <string name="library_filter_sort">Sortera</string>
+    <string name="library_sort_trakt_order">Trakt-ordning</string>
+    <string name="library_sort_added_desc">Tillagd ↓</string>
+    <string name="library_sort_added_asc">Tillagd ↑</string>
+    <string name="library_sort_title_asc">Titel A-Ö</string>
+    <string name="library_sort_title_desc">Titel Ö-A</string>
     <string name="library_manage_lists">Hantera listor</string>
     <string name="library_manage_trakt_lists">Hantera Trakt-listor</string>
     <string name="library_no_lists">Inga personliga listor ännu.</string>
@@ -679,6 +845,7 @@
     <!-- AccountSettingsContent -->
     <string name="account_loading">Laddar\u2026</string>
     <string name="account_sync_description">Synkronisera ditt bibliotek, tittarframsteg, tillägg och plugins mellan enheter.</string>
+    <string name="account_sync_restart_note">Synkronisering sker inte i realtid mellan aktiva enheter. Starta om denna enhet efter inloggning eller för att hämta ändringar gjorda på annat håll.</string>
     <string name="account_signin_qr_title">Logga in med QR</string>
     <string name="account_signin_qr_subtitle">Skanna en QR-kod och slutför e-postinloggning på din telefon</string>
     <string name="account_signed_in_label">Inloggad</string>
@@ -756,9 +923,14 @@
     <!-- ProfileSelectionScreen -->
     <string name="profile_selection_title">Vem tittar?</string>
     <string name="profile_selection_subtitle">Välj en profil för att fortsätta</string>
-    <string name="profile_selection_hint">Använd D-pad för att välja en profil</string>
+    <string name="profile_selection_hint">Håll nedtryckt för att hantera profil</string>
     <string name="profile_selection_empty">Inga profiler hittades</string>
     <string name="profile_selection_primary_badge">PRIMÄR</string>
+    <string name="profile_selection_options_title">Profilalternativ</string>
+    <string name="profile_delete_confirm_title">Radera profil?</string>
+    <string name="profile_delete_confirm_subtitle">Detta raderar permanent denna profil och all dess data inklusive bibliotek, tittarhistorik och tilläggsinställningar. Det går inte att ångra.</string>
+    <string name="profile_delete_btn">Radera profil</string>
+    <string name="profile_saving">Sparar\u2026</string>
 
     <!-- CastDetailScreen -->
     <string name="cast_detail_error">Något gick fel</string>
@@ -778,10 +950,12 @@
     <!-- UpdatePromptDialog -->
     <string name="update_title">Appuppdatering</string>
     <string name="update_downloading">Laddar ner uppdatering</string>
+    <string name="update_download">Ladda ner</string>
+    <string name="update_downloading_ellipsis">Laddar ner…</string>
     <string name="update_unknown_sources">Tillåt installation från okända källor för att fortsätta.</string>
     <!-- AccountScreen -->
     <string name="account_title">Konto</string>
-    <string name="account_sign_in_description">Logga in för att synkronisera ditt bibliotek, tittarframsteg, tillägg och plugins mellan enheter. Bibliotek och tittarframsteg synkroniseras bara när Trakt inte är anslutet.</string>
+    <string name="account_sign_in_description">Logga in för att synkronisera ditt bibliotek, tittarframsteg, tillägg och plugins mellan enheter. Bibliotekssynk använder Nuvio Sync när Trakt inte är anslutet, och tittarframsteg kan använda antingen Trakt eller Nuvio Sync.</string>
     <string name="account_sync_code_title">Synkkod</string>
     <string name="account_sync_code_description">Synkronisera mellan enheter utan att skapa ett konto.</string>
     <string name="account_linked_devices">Länkade enheter (%1$d)</string>
@@ -791,6 +965,7 @@
     <!-- EpisodeRatingsSection -->
     <string name="ratings_loading">Laddar avsnittsbetyg...</string>
     <string name="ratings_unavailable">Avsnittsbetyg är inte tillgängliga.</string>
+    <string name="ratings_load_error">Kunde inte ladda avsnittsbetyg.</string>
     <string name="ratings_season_summary">Säsong %1$d - %2$d avsnitt</string>
 
     <!-- SearchDiscoverSection -->
@@ -840,4 +1015,6 @@
     <string name="update_open_settings">Öppna inställningar</string>
     <string name="update_install">Installera</string>
     <string name="update_ignore">Ignorera</string>
+    <string name="watchlist_added">Tillagd i bevakningslistan</string>
+    <string name="watchlist_removed">Borttagen från bevakningslistan</string>
 </resources>

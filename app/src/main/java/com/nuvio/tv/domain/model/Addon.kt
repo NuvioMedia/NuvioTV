@@ -33,6 +33,7 @@ data class CatalogDescriptor(
     val extra: List<CatalogExtra> = emptyList(),
     val pageSize: Int? = null,
     val showInHome: Boolean = false,
+    val hasExplicitShowInHome: Boolean = false,
     val extraSupported: List<String> = emptyList(),
     val extraRequired: List<String> = emptyList()
 ) {

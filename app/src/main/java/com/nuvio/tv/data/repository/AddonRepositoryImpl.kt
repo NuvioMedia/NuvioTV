@@ -87,7 +87,7 @@ class AddonRepositoryImpl @Inject constructor(
     private var manifestRefreshJob: Job? = null
 
     init {
-        loadManifestCacheFromDisk()
+        syncScope.launch { loadManifestCacheFromDisk() }
     }
 
     private fun isCacheStale(): Boolean =
@@ -109,15 +109,15 @@ class AddonRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun loadManifestCacheFromDisk() {
+    private suspend fun loadManifestCacheFromDisk() = kotlinx.coroutines.withContext(Dispatchers.IO) {
         try {
             val prefs = context.getSharedPreferences(MANIFEST_CACHE_PREFS, Context.MODE_PRIVATE)
             if (prefs.contains(LEGACY_MANIFEST_CACHE_KEY)) {
                 prefs.edit().remove(LEGACY_MANIFEST_CACHE_KEY).apply()
             }
-            val json = prefs.getString(MANIFEST_CACHE_KEY, null) ?: return
+            val json = prefs.getString(MANIFEST_CACHE_KEY, null) ?: return@withContext
             val type = object : TypeToken<Map<String, Addon>>() {}.type
-            val cached: Map<String, Addon> = gson.fromJson(json, type) ?: return
+            val cached: Map<String, Addon> = gson.fromJson(json, type) ?: return@withContext
             manifestCache.putAll(cached)
             Log.d(TAG, "Loaded ${cached.size} cached manifests from disk")
         } catch (e: Exception) {
@@ -126,11 +126,14 @@ class AddonRepositoryImpl @Inject constructor(
     }
 
     private fun persistManifestCacheToDisk() {
-        try {
-            val prefs = context.getSharedPreferences(MANIFEST_CACHE_PREFS, Context.MODE_PRIVATE)
-            prefs.edit().putString(MANIFEST_CACHE_KEY, gson.toJson(manifestCache.toMap())).apply()
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to persist manifest cache to disk", e)
+        syncScope.launch {
+            try {
+                val snapshot = manifestCache.toMap()
+                val prefs = context.getSharedPreferences(MANIFEST_CACHE_PREFS, Context.MODE_PRIVATE)
+                prefs.edit().putString(MANIFEST_CACHE_KEY, gson.toJson(snapshot)).apply()
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to persist manifest cache to disk", e)
+            }
         }
     }
 

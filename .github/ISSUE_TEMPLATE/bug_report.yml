@@ -1,6 +1,6 @@
 name: Bug report
 description: Report a reproducible bug (one per issue).
-title: "[Bug]: "
+title: "[Bug]: short summary here"
 labels:
   - bug
 body:
@@ -10,6 +10,9 @@ body:
         Thanks for reporting a bug.
 
         If we can reproduce it, we can usually fix it. This form is just to get the basics in one place.
+        Please replace the default title with a short summary of the actual problem.
+
+        If the app crashes, logs are required. Crash reports without logs may be labeled `needs-info`.
 
   - type: markdown
     attributes:
@@ -197,10 +200,11 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: Logs (optional but helpful)
+      label: Logs (required for crash reports)
       description: |
-        Not required, but super helpful for playback/crash issues.
-        If you can, include a short snippet from around the time the bug happens.
+        Required if the app crashes or force closes.
+        For other bug reports, logs are optional but still helpful.
+        Include a short snippet from around the time the bug happens.
       render: shell
       placeholder: |
         adb logcat -d | tail -n 300

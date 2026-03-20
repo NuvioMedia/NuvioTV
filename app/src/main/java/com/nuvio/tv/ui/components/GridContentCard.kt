@@ -1,7 +1,6 @@
 package com.nuvio.tv.ui.components
 
 import android.view.KeyEvent as AndroidKeyEvent
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -21,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -68,11 +68,7 @@ fun GridContentCard(
     val requestHeightPx = remember(density, posterCardStyle.height) { with(density) { posterCardStyle.height.roundToPx() } }
     var isFocused by remember { mutableStateOf(false) }
     var longPressTriggered by remember { mutableStateOf(false) }
-    val watchedIconEndPadding by animateDpAsState(
-        targetValue = if (isFocused) 14.dp else 8.dp,
-        animationSpec = tween(durationMillis = 180),
-        label = "gridContentCardWatchedIconEndPadding"
-    )
+
 
     Column(
         modifier = modifier.width(posterCardStyle.width)
@@ -166,26 +162,22 @@ fun GridContentCard(
                 }
 
                 if (isWatched) {
-                    Box(
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = stringResource(R.string.episodes_cd_watched),
+                        tint = Color.White,
                         modifier = Modifier
                             .align(androidx.compose.ui.Alignment.TopEnd)
-                            .padding(end = watchedIconEndPadding, top = 8.dp)
-                            .zIndex(2f),
-                        contentAlignment = androidx.compose.ui.Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = Color.Black,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = stringResource(R.string.episodes_cd_watched),
-                            tint = Color.White,
-                            modifier = Modifier.size(21.dp)
-                        )
-                    }
+                            .padding(end = 8.dp, top = 8.dp)
+                            .zIndex(2f)
+                            .size(21.dp)
+                            .drawBehind {
+                                drawCircle(
+                                    color = androidx.compose.ui.graphics.Color.Black,
+                                    radius = size.minDimension / 2f + 1.5f
+                                )
+                            }
+                    )
                 }
             }
         }

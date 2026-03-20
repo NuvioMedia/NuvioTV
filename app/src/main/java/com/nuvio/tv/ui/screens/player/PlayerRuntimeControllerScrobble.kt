@@ -1,6 +1,8 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.util.Log
 import kotlinx.coroutines.launch
+import com.nuvio.tv.data.local.toTrackPreference
 
 internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
     url: String,
@@ -11,6 +13,24 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
     playbackPreparationJob = scope.launch {
         warmTraktEpisodeMappingForCurrentPlayback()
         refreshScrobbleItem()
+        if (persistedTrackPreference == null) {
+            contentId?.let { id ->
+                val loaded = trackPreferenceDataStore.load(id)?.toTrackPreference()
+                Log.d(
+                    PlayerRuntimeController.TAG,
+                    "TRACK_PREF load: contentId=$id S${currentSeason}E${currentEpisode} " +
+                        "result=${if (loaded == null) "null (no saved preference)" else "audio=${loaded.audio?.language}/${loaded.audio?.name} subtitle=${loaded.subtitle?.javaClass?.simpleName}"}"
+                )
+                persistedTrackPreference = loaded
+            } ?: Log.d(PlayerRuntimeController.TAG, "TRACK_PREF load: skipped (contentId is null)")
+        } else {
+            Log.d(
+                PlayerRuntimeController.TAG,
+                "TRACK_PREF load: skipped (persistedTrackPreference already set: " +
+                    "audio=${persistedTrackPreference?.audio?.language}/${persistedTrackPreference?.audio?.name} " +
+                    "subtitle=${persistedTrackPreference?.subtitle?.javaClass?.simpleName})"
+            )
+        }
         initializePlayer(url, headers)
         if (loadSavedProgress) {
             loadSavedProgressFor(currentSeason, currentEpisode)

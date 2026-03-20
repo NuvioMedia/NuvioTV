@@ -43,6 +43,9 @@ data class PlayerUiState(
     val subtitleTracks: List<TrackInfo> = emptyList(),
     val selectedAudioTrackIndex: Int = -1,
     val selectedSubtitleTrackIndex: Int = -1,
+    val audioAmplificationDb: Int = 0,
+    val isAudioAmplificationAvailable: Boolean = true,
+    val persistAudioAmplification: Boolean = false,
     val showAudioOverlay: Boolean = false,
     val showSubtitleOverlay: Boolean = false,
     val showSubtitleStylePanel: Boolean = false,
@@ -162,6 +165,8 @@ sealed class PlayerEvent {
     data object OnCommitPreviewSeek : PlayerEvent()
     data class OnSeekTo(val position: Long) : PlayerEvent()
     data class OnSelectAudioTrack(val index: Int) : PlayerEvent()
+    data class OnSetAudioAmplificationDb(val db: Int) : PlayerEvent()
+    data class OnSetPersistAudioAmplification(val enabled: Boolean) : PlayerEvent()
     data class OnSelectSubtitleTrack(val index: Int) : PlayerEvent()
     data object OnDisableSubtitles : PlayerEvent()
     data class OnSelectAddonSubtitle(val subtitle: Subtitle) : PlayerEvent()

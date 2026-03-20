@@ -45,6 +45,7 @@
     <string name="cw_upcoming">Hamarosan</string>
     <string name="cw_next_up">Következő</string>
     <string name="cw_resume">Folytatás</string>
+    <string name="cw_percent_watched">%1$d%% megtekintve</string>
     <string name="cw_hours_min_left">%1$d óra %2$d perc van hátra</string>
     <string name="cw_min_left">%1$d perc van hátra</string>
     <string name="cw_almost_done">Mindjárt kész</string>
@@ -118,6 +119,15 @@
     <string name="detail_section_network">Csatorna</string>
     <string name="detail_section_production">Stúdiók</string>
     <string name="episodes_unavailable">Nem elérhető</string>
+    <string name="series_status_ended">Befejezett</string>
+    <string name="series_status_continuing">Folyamatban</string>
+    <string name="series_status_current">Jelenlegi</string>
+    <string name="series_status_cancelled">Törölve</string>
+    <string name="series_status_released">Megjelent</string>
+    <string name="series_status_planned">Tervezett</string>
+    <string name="series_status_rumored">Lehetséges</string>
+    <string name="series_status_in_production">Gyártás alatt</string>
+    <string name="series_status_post_production">Utómunka alatt</string>	
     <string name="detail_lists_fallback">Listák</string>
     <string name="detail_lists_subtitle">Válaszd ki, melyik listába kerüljön be ez a tartalom.</string>
     <string name="action_save">Mentés</string>
@@ -342,6 +352,10 @@
     <string name="autoplay_scope_addons">Csak a telepített bővítmények</string>
     <string name="autoplay_scope_plugins">Csak az engedélyezett beépülő modulok</string>
     <string name="autoplay_scope">Auto-play források köre</string>
+    <string name="autoplay_timeout_title">Stream kiválasztási időkorlát</string>
+    <string name="autoplay_timeout_sub">Várakozási idő a bővítményekre a kiválasztás előtt.</string>
+    <string name="autoplay_timeout_instant">Azonnal</string>
+    <string name="autoplay_timeout_unlimited">Korlátlan</string>
     <string name="autoplay_allowed_addons">Engedélyezett bővítmények</string>
     <string name="autoplay_all_addons">Minden telepített bővítmény</string>
     <string name="autoplay_allowed_plugins">Engedélyezett beépülő modulok</string>
@@ -381,7 +395,7 @@
     <string name="layout_section_content">Kezdőlap tartalma</string>
     <string name="layout_section_content_desc">A kezdőlapon és a keresőben megjelenő tartalmak vezérlése.</string>
     <string name="layout_collapse_sidebar">Oldalsáv összecsukása</string>
-    <string name="layout_collapse_sidebar_sub">Oldalsáv elrejtése alapértelmezés szerint; fókusz esetén jelenik meg.</string>
+    <string name="layout_collapse_sidebar_sub">Oldalsáv elrejtése alapértelmezés szerint, fókusz esetén jelenik meg.</string>
     <string name="layout_modern_sidebar">Modern oldalsáv</string>
     <string name="layout_modern_sidebar_sub">Lebegő oldalsó navigáció engedélyezése.</string>
     <string name="layout_modern_sidebar_blur">Modern oldalsáv elmosása</string>
@@ -513,7 +527,7 @@
     <string name="tmdb_language_dialog_title">TMDB nyelv</string>
 	
     <!-- TraktScreen -->
-    <string name="trakt_description">Szinkronizáld a megnézendőket, a megtekintési folyamatot, a lejátszás folytatását és a saját listáidat a Trakttal.</string>
+    <string name="trakt_description">Szinkronizáld a várólistád, a megtekintési folyamatot, a lejátszás folytatását és a saját listáidat a Trakttal.</string>
     <string name="trakt_connected_as">Bejelentkezve mint: %1$s</string>
     <string name="trakt_account_login">Fiókbejelentkezés</string>
     <string name="trakt_awaiting_instruction">Látogass el a trakt.tv/activate oldalra, és írd be ezt a kódot:</string>
@@ -525,15 +539,23 @@
     <string name="trakt_token_refreshes">Trakt token frissítése: %1$s múlva</string>
     <string name="trakt_login_instruction">Nyomd meg a Bejelentkezés gombot a Trakt hitelesítéshez. Egy QR-kód fog megjelenni.</string>
     <string name="trakt_missing_credentials">Hiányzó TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET a local.properties fájlban.</string>
+    <string name="trakt_watch_progress_title">Megtekintési folyamat</string>
+    <string name="trakt_watch_progress_subtitle">Válaszd ki, melyik folyamatforrás vezérelje a lejátszás folytatását</string>
+    <string name="trakt_watch_progress_dialog_title">Megtekintési folyamat</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Válaszd ki, hogy a lejátszás folytatása a Traktot vagy a Nuvio Sync-et használja-e, miközben a Trakt scrobbling aktív marad.</string>
+    <string name="trakt_watch_progress_source_trakt">Trakt</string>
+    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_trakt_selected">Megtekintési folyamat forrása: Trakt</string>
+    <string name="trakt_watch_progress_nuvio_selected">Megtekintési folyamat forrása: Nuvio Sync</string>
     <string name="trakt_continue_watching_window">Folytatási időablak</string>
     <string name="trakt_continue_watching_subtitle">A Trakt előzmények figyelembe vétele a folytatáshoz</string>
     <string name="trakt_unaired_next_up">Még nem vetített epizódok</string>
     <string name="trakt_unaired_next_up_subtitle">Közelgő epizódok megjelenítése a premier előtt</string>
     <string name="trakt_unaired_shown">Látható</string>
     <string name="trakt_unaired_hidden">Rejtett</string>
-    <string name="trakt_cached_label">Gyorsítótárazva</string>
     <string name="trakt_unaired_now_shown">A még nem vetített következő epizódok mostantól láthatók</string>
     <string name="trakt_unaired_now_hidden">A még nem vetített következő epizódok mostantól rejtettek</string>
+    <string name="trakt_cached_label">Gyorsítótárazva</string>
     <string name="trakt_stat_movies">Film</string>
     <string name="trakt_stat_shows">Sorozat</string>
     <string name="trakt_stat_episodes">Epizód</string>
@@ -552,7 +574,7 @@
     <string name="trakt_hide_unaired">Még nem vetített epizódok elrejtése</string>
     <string name="trakt_all_history">Teljes előzmény</string>
     <string name="trakt_days_format">%1$d nap</string>
-	
+		
     <!-- DebugSettingsScreen -->
     <string name="debug_title">Hibakeresés</string>
     <string name="debug_subtitle">Fejlesztői eszközök és funkciókapcsolók (csak debug build esetén)</string>
@@ -606,7 +628,7 @@
     <string name="profile_avatar_category_animation">Animáció</string>
     <string name="profile_avatar_category_movie">Film</string>
     <string name="profile_avatar_category_tv">TV</string>
-    <string name="profile_avatar_category_gaming">Játékok</string>
+    <string name="profile_avatar_category_gaming">Játék</string>
     <string name="profile_add_new">Új profil</string>
     <string name="profile_cancel">Mégse</string>
     <string name="profile_save">Mentés</string>
@@ -732,6 +754,7 @@
     <string name="subtitle_on">Be</string>
     <string name="subtitle_off">Ki</string>
     <string name="subtitle_style_title">Felirat stílusa</string>
+    <string name="subtitle_style_customize">Testreszabás</string>
     <string name="subtitle_style_color">Szín</string>
     <string name="subtitle_style_reset">Visszaállítás</string>
     <string name="subtitle_style_font_size">Betűméret</string>
@@ -918,6 +941,8 @@
     <!-- UpdatePromptDialog -->
     <string name="update_title">Alkalmazásfrissítés</string>
     <string name="update_downloading">Frissítés letöltése</string>
+    <string name="update_download">Letöltés</string>
+    <string name="update_downloading_ellipsis">Letöltés\u2026</string>	
     <string name="update_unknown_sources">A folytatáshoz engedélyezd a telepítést ismeretlen forrásokból.</string>	
     <!-- AccountScreen -->
     <string name="account_title">Fiók</string>
@@ -981,5 +1006,7 @@
     <string name="update_open_settings">Beállítások megnyitása</string>
     <string name="update_install">Telepítés</string>
     <string name="update_ignore">Mellőzés</string>
+    <string name="watchlist_added">Hozzáadva a várólistához</string>
+    <string name="watchlist_removed">Eltávolítva a várólistáról</string>
 </resources>
 	

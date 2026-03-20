@@ -21,6 +21,8 @@ import javax.inject.Singleton
 
 private const val TAG = "LibrarySyncService"
 
+private const val PULL_PAGE_SIZE = 500
+
 @Singleton
 class LibrarySyncService @Inject constructor(
     private val authManager: AuthManager,
@@ -91,17 +93,29 @@ class LibrarySyncService @Inject constructor(
             }
 
             val profileId = profileManager.activeProfileId.value
-            val params = buildJsonObject {
-                put("p_profile_id", profileId)
-            }
-            val response = withJwtRefreshRetry {
-                postgrest.rpc("sync_pull_library", params)
-            }
-            val remote = response.decodeList<SupabaseLibraryItem>()
+            val allItems = mutableListOf<SupabaseLibraryItem>()
+            var offset = 0
 
-            Log.d(TAG, "pullFromRemote: fetched ${remote.size} library items from Supabase for profile $profileId")
+            while (true) {
+                val params = buildJsonObject {
+                    put("p_profile_id", profileId)
+                    put("p_limit", PULL_PAGE_SIZE)
+                    put("p_offset", offset)
+                }
+                val response = withJwtRefreshRetry {
+                    postgrest.rpc("sync_pull_library", params)
+                }
+                val page = response.decodeList<SupabaseLibraryItem>()
+                allItems.addAll(page)
+                Log.d(TAG, "pullFromRemote: fetched page at offset=$offset, got ${page.size} items")
 
-            Result.success(remote.map { entry ->
+                if (page.size < PULL_PAGE_SIZE) break
+                offset += PULL_PAGE_SIZE
+            }
+
+            Log.d(TAG, "pullFromRemote: fetched ${allItems.size} total library items for profile $profileId")
+
+            Result.success(allItems.map { entry ->
                 SavedLibraryItem(
                     id = entry.contentId,
                     type = entry.contentType,

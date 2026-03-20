@@ -186,7 +186,7 @@ fun PlayerScreen(
             uiState.nextEpisodeAutoPlayCountdownSec == null
         ) {
             viewModel.stopAndRelease()
-            val next = uiState.nextEpisode
+            val next = uiState.nextEpisode?.takeIf { it.hasAired }
             if (onPlaybackEnded != null) {
                 onPlaybackEnded(next?.videoId, next?.season, next?.episode)
             } else {
@@ -496,11 +496,13 @@ fun PlayerScreen(
                     PlayerView(context).apply {
                         this.player = player
                         useController = false
-                        keepScreenOn = true
+                        keepScreenOn = false
                         setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
                     }
                 },
                 update = { playerView ->
+                    // Keep device awake only while playback is active (or buffering), not when paused.
+                    playerView.keepScreenOn = uiState.isPlaying || uiState.isBuffering
                     Log.d("PlayerScreen", "Applying resizeMode: $resizeMode")
                     playerView.resizeMode = resizeMode
                     playerView.subtitleView?.apply {
@@ -959,7 +961,14 @@ fun PlayerScreen(
             visible = uiState.showAudioOverlay,
             tracks = uiState.audioTracks,
             selectedIndex = uiState.selectedAudioTrackIndex,
+            audioAmplificationDb = uiState.audioAmplificationDb,
+            isAmplificationAvailable = uiState.isAudioAmplificationAvailable,
+            persistAmplification = uiState.persistAudioAmplification,
             onTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectAudioTrack(it)) },
+            onAmplificationChange = { viewModel.onEvent(PlayerEvent.OnSetAudioAmplificationDb(it)) },
+            onPersistAmplificationChange = {
+                viewModel.onEvent(PlayerEvent.OnSetPersistAudioAmplification(it))
+            },
             onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissTransientOverlay) },
             modifier = Modifier
                 .fillMaxSize()

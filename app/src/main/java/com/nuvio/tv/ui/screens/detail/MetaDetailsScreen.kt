@@ -55,12 +55,14 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -253,6 +255,17 @@ fun MetaDetailsScreen(
             delay(2500)
             viewModel.onEvent(MetaDetailsEvent.OnClearMessage)
         }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                viewModel.onEvent(MetaDetailsEvent.OnLifecyclePause)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Box(
@@ -742,7 +755,7 @@ private fun MetaDetailsContent(
         pendingRestoreCollectionItemId = itemId
     }
 
-    androidx.compose.runtime.DisposableEffect(
+    DisposableEffect(
         lifecycleOwner,
         pendingRestoreType,
         pendingRestoreEpisodeId,
@@ -1268,6 +1281,9 @@ private fun MetaDetailsContent(
                     } else {
                         availablePeopleTabs.first()
                     }
+                    val hasItemsBelow = meta.networks.isNotEmpty() || meta.productionCompanies.isNotEmpty()
+                    var castSectionHeightPx by remember { mutableIntStateOf(0) }
+                    val castSectionHeight = with(LocalDensity.current) { castSectionHeightPx.toDp() }
 
                     Crossfade(
                         targetState = visiblePeopleSection,
@@ -1294,7 +1310,8 @@ private fun MetaDetailsContent(
                                                 member.character.equals("Writer", ignoreCase = true)
                                             onNavigateToCastDetail(id, member.name, preferCrew)
                                         }
-                                    }
+                                    },
+                                    modifier = Modifier.onSizeChanged { castSectionHeightPx = it.height }
                                 )
                             }
 
@@ -1342,7 +1359,8 @@ private fun MetaDetailsContent(
                                     } else {
                                         seasonDownFocusRequester ?: selectedSeasonFocusRequester
                                     },
-                                    firstItemFocusRequester = ratingsContentFocusRequester
+                                    firstItemFocusRequester = ratingsContentFocusRequester,
+                                    modifier = Modifier.heightIn(min = if (!hasItemsBelow) castSectionHeight else 0.dp)
                                 )
                             }
                         }

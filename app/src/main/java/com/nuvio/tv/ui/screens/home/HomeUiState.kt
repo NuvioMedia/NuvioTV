@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.home
 
 import androidx.compose.runtime.Immutable
+import com.nuvio.tv.data.local.StartupAuthNotice
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeLayout
@@ -46,7 +47,8 @@ data class HomeUiState(
     val posterListPickerPending: Boolean = false,
     val posterListPickerError: String? = null,
     val gridItems: List<GridItem> = emptyList(),
-    val hideUnreleasedContent: Boolean = false
+    val hideUnreleasedContent: Boolean = false,
+    val startupAuthNotice: StartupAuthNotice? = null
 )
 
 @Immutable

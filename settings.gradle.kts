@@ -21,5 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "My Application"
 include(":app")
-// include(":benchmark")  // TODO: create when ready
- 
+include(":baselineprofile")

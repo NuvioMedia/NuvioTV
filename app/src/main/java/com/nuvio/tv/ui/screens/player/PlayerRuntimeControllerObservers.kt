@@ -45,14 +45,11 @@ internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(): List<Subt
             val url = currentStreamUrl.takeIf { it.isNotBlank() }
             if (key != null && url != null) {
                 val state = _uiState.value
-                val selectedAudio = state.audioTracks.getOrNull(state.selectedAudioTrackIndex)
                 streamLinkCacheDataStore.save(
                     contentKey = key,
                     url = url,
                     streamName = state.currentStreamName ?: title,
                     headers = currentHeaders,
-                    rememberedAudioLanguage = selectedAudio?.language ?: rememberedAudioLanguage,
-                    rememberedAudioName = selectedAudio?.name ?: rememberedAudioName,
                     filename = currentFilename,
                     videoHash = currentVideoHash,
                     videoSize = currentVideoSize
@@ -79,14 +76,26 @@ internal fun PlayerRuntimeController.fetchAddonSubtitles() {
         
         try {
             val subtitles = fetchAddonSubtitlesNow()
-            
+            Log.d(PlayerRuntimeController.TAG, "fetchAddonSubtitles done: ${subtitles.size} subs, persistedPref=${persistedTrackPreference?.subtitle?.javaClass?.simpleName}")
             _uiState.update { 
                 it.copy(
                     addonSubtitles = subtitles,
                     isLoadingAddonSubtitles = false
                 ) 
             }
-            restorePendingSameSeriesTrackSelection(
+            val pendingAddon = pendingRestoredAddonSubtitle
+            if (pendingAddon != null) {
+                val match = subtitles.firstOrNull { it.id == pendingAddon.id }
+                    ?: subtitles.firstOrNull { PlayerSubtitleUtils.matchesLanguageCode(it.lang, pendingAddon.lang) }
+                if (match != null) {
+                    Log.d(PlayerRuntimeController.TAG, "fetchAddonSubtitles: re-applying restored addon id=${match.id}")
+                    autoSubtitleSelected = true
+                    selectAddonSubtitle(match)
+                    _uiState.update { it.copy(selectedAddonSubtitle = match, selectedSubtitleTrackIndex = -1) }
+                    return@launch
+                }
+            }
+            applyPersistedTrackPreference(
                 audioTracks = _uiState.value.audioTracks,
                 subtitleTracks = _uiState.value.subtitleTracks
             )
@@ -104,6 +113,9 @@ internal fun PlayerRuntimeController.fetchAddonSubtitles() {
 
 internal fun PlayerRuntimeController.refreshSubtitlesForCurrentEpisode() {
     autoSubtitleSelected = false
+    subtitleDisabledByPersistedPreference = false
+    subtitleAddonRestoredByPersistedPreference = false
+    pendingRestoredAddonSubtitle = null
     hasScannedTextTracksOnce = false
     pendingAddonSubtitleLanguage = null
     pendingAddonSubtitleTrackId = null
@@ -149,6 +161,20 @@ internal fun PlayerRuntimeController.observeEpisodeWatchProgress() {
 internal fun PlayerRuntimeController.observeSubtitleSettings() {
     scope.launch {
         playerSettingsDataStore.playerSettings.collect { settings ->
+            val currentState = _uiState.value
+            val resolvedAudioAmplificationDb = when {
+                !hasInitializedAudioAmplificationForSession -> {
+                    hasInitializedAudioAmplificationForSession = true
+                    if (settings.persistAudioAmplification) {
+                        settings.audioAmplificationDb
+                    } else {
+                        AUDIO_AMPLIFICATION_MIN_DB
+                    }
+                }
+                settings.persistAudioAmplification -> settings.audioAmplificationDb
+                else -> currentState.audioAmplificationDb
+            }
+
             _uiState.update { state ->
                 val shouldShowOverlay = if (settings.loadingOverlayEnabled && !hasRenderedFirstFrame) {
                     true
@@ -164,9 +190,16 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                     showLoadingOverlay = shouldShowOverlay,
                     pauseOverlayEnabled = settings.pauseOverlayEnabled,
                     osdClockEnabled = settings.osdClockEnabled,
-                    frameRateMatchingMode = settings.frameRateMatchingMode
+                    frameRateMatchingMode = settings.frameRateMatchingMode,
+                    persistAudioAmplification = settings.persistAudioAmplification,
+                    audioAmplificationDb = resolvedAudioAmplificationDb
                 )
             }
+
+            if (resolvedAudioAmplificationDb != currentState.audioAmplificationDb) {
+                applyAudioAmplification(resolvedAudioAmplificationDb)
+            }
+
             if (settings.frameRateMatchingMode == FrameRateMatchingMode.OFF) {
                 frameRateProbeJob?.cancel()
                 _uiState.update {
@@ -205,7 +238,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                 lastSubtitlePreferredLanguage != settings.subtitleStyle.preferredLanguage ||
                     lastSubtitleSecondaryLanguage != settings.subtitleStyle.secondaryPreferredLanguage
             if (subtitlePreferenceChanged) {
-                autoSubtitleSelected = false
+                if (!subtitleDisabledByPersistedPreference && !subtitleAddonRestoredByPersistedPreference) autoSubtitleSelected = false
                 lastSubtitlePreferredLanguage = settings.subtitleStyle.preferredLanguage
                 lastSubtitleSecondaryLanguage = settings.subtitleStyle.secondaryPreferredLanguage
                 tryAutoSelectPreferredSubtitleFromAvailableTracks()

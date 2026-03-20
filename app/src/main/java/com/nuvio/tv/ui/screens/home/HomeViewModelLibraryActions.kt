@@ -214,7 +214,7 @@ fun HomeViewModel.togglePosterMovieWatched(item: MetaPreview) {
         val currentlyWatched = _uiState.value.movieWatchedStatus[statusKey] == true
         runCatching {
             if (currentlyWatched) {
-                watchProgressRepository.removeFromHistory(item.id)
+                watchProgressRepository.removeFromHistory(item.id, videoId = item.imdbId)
             } else {
                 watchProgressRepository.markAsCompleted(buildCompletedMovieProgress(item))
             }

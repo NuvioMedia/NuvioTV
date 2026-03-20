@@ -1,6 +1,6 @@
 package com.nuvio.tv.ui.screens.home
 
-import android.view.KeyEvent as AndroidKeyEvent
+import com.nuvio.tv.LocalContentFocusRequester
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,7 +20,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.nuvio.tv.domain.model.MetaPreview
@@ -141,11 +144,14 @@ fun ClassicHomeContent(
 
     // Throttle D-pad key repeats to prevent HWUI overload when a key is held down.
     var lastKeyRepeatTime by remember { mutableStateOf(0L) }
+    val contentFocusRequester = LocalContentFocusRequester.current
 
     LazyColumn(
         state = columnListState,
         modifier = Modifier
             .fillMaxSize()
+            .focusRequester(contentFocusRequester)
+            .focusRestorer()
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
                 if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {

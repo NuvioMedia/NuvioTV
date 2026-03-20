@@ -11,29 +11,66 @@ internal fun remapEpisodeByTitleOrIndex(
     requestedSeason: Int,
     requestedEpisode: Int,
     requestedVideoId: String?,
+    requestedTitle: String? = null,
     addonEpisodes: List<EpisodeMappingEntry>,
     traktEpisodes: List<EpisodeMappingEntry>
 ): EpisodeMappingEntry? {
-    if (addonEpisodes.isEmpty() || traktEpisodes.isEmpty()) return null
+    return remapEpisodeBetweenLists(
+        requestedSeason = requestedSeason,
+        requestedEpisode = requestedEpisode,
+        requestedVideoId = requestedVideoId,
+        requestedTitle = requestedTitle,
+        sourceEpisodes = addonEpisodes,
+        targetEpisodes = traktEpisodes
+    )
+}
 
-    val orderedAddonEpisodes = addonEpisodes
+internal fun reverseRemapEpisodeByTitleOrIndex(
+    requestedSeason: Int,
+    requestedEpisode: Int,
+    requestedVideoId: String? = null,
+    requestedTitle: String? = null,
+    addonEpisodes: List<EpisodeMappingEntry>,
+    traktEpisodes: List<EpisodeMappingEntry>
+): EpisodeMappingEntry? {
+    return remapEpisodeBetweenLists(
+        requestedSeason = requestedSeason,
+        requestedEpisode = requestedEpisode,
+        requestedVideoId = requestedVideoId,
+        requestedTitle = requestedTitle,
+        sourceEpisodes = traktEpisodes,
+        targetEpisodes = addonEpisodes
+    )
+}
+
+private fun remapEpisodeBetweenLists(
+    requestedSeason: Int,
+    requestedEpisode: Int,
+    requestedVideoId: String?,
+    requestedTitle: String?,
+    sourceEpisodes: List<EpisodeMappingEntry>,
+    targetEpisodes: List<EpisodeMappingEntry>
+): EpisodeMappingEntry? {
+    if (sourceEpisodes.isEmpty() || targetEpisodes.isEmpty()) return null
+
+    val orderedSourceEpisodes = sourceEpisodes
         .sortedWith(compareBy(EpisodeMappingEntry::season, EpisodeMappingEntry::episode))
-    val orderedTraktEpisodes = traktEpisodes
+    val orderedTargetEpisodes = targetEpisodes
         .sortedWith(compareBy(EpisodeMappingEntry::season, EpisodeMappingEntry::episode))
 
-    val currentAddonEpisode = requestedVideoId
+    val currentSourceEpisode = requestedVideoId
         ?.takeIf { it.isNotBlank() }
         ?.let { videoId ->
-            orderedAddonEpisodes.firstOrNull { it.videoId == videoId }
+            orderedSourceEpisodes.firstOrNull { it.videoId == videoId }
         }
-        ?: orderedAddonEpisodes.firstOrNull {
+        ?: orderedSourceEpisodes.firstOrNull {
             it.season == requestedSeason && it.episode == requestedEpisode
         }
         ?: return null
 
-    val normalizedTitle = normalizeEpisodeTitle(currentAddonEpisode.title)
+    val normalizedTitle = normalizeEpisodeTitle(requestedTitle ?: currentSourceEpisode.title)
     if (isUsefulEpisodeTitle(normalizedTitle)) {
-        val titleMatches = orderedTraktEpisodes.filter {
+        val titleMatches = orderedTargetEpisodes.filter {
             normalizeEpisodeTitle(it.title) == normalizedTitle
         }
         if (titleMatches.size == 1) {
@@ -41,10 +78,10 @@ internal fun remapEpisodeByTitleOrIndex(
         }
     }
 
-    val addonIndex = orderedAddonEpisodes.indexOf(currentAddonEpisode)
-    if (addonIndex !in orderedTraktEpisodes.indices) return null
+    val sourceIndex = orderedSourceEpisodes.indexOf(currentSourceEpisode)
+    if (sourceIndex !in orderedTargetEpisodes.indices) return null
 
-    return orderedTraktEpisodes[addonIndex]
+    return orderedTargetEpisodes[sourceIndex]
 }
 
 private fun normalizeEpisodeTitle(title: String?): String {
