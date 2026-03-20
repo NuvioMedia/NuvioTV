@@ -33,6 +33,7 @@ import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.domain.model.Subtitle
 import io.github.peerless2012.ass.media.type.AssRenderType
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -80,17 +81,20 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                     loadingMessage = if (showLoadingStatus) context.getString(R.string.player_loading_preparing) else null
                 )
             }
-            runAfrPreflightIfEnabled(
-                url = url,
-                headers = headers,
-                frameRateMatchingMode = playerSettings.frameRateMatchingMode,
-                resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
-            )
+            val afrJob = async {
+                runAfrPreflightIfEnabled(
+                    url = url,
+                    headers = headers,
+                    frameRateMatchingMode = playerSettings.frameRateMatchingMode,
+                    resolutionMatchingEnabled = playerSettings.resolutionMatchingEnabled
+                )
+            }
             resolveCurrentStreamMimeType(
                 url = url,
                 headers = headers
             )
             val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings, showLoadingStatus)
+            afrJob.await()
             requestedUseLibassByUser = playerSettings.useLibass
             val useLibass = when {
                 !requestedUseLibassByUser -> false
