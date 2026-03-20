@@ -81,7 +81,6 @@ internal class PlayerMediaSourceFactory {
 
         return when {
             isHls && !forceDefaultFactory -> HlsMediaSource.Factory(httpDataSourceFactory)
-                .setAllowChunklessPreparation(true)
                 .createMediaSource(mediaItem)
             isDash && !forceDefaultFactory -> DashMediaSource.Factory(httpDataSourceFactory)
                 .createMediaSource(mediaItem)
