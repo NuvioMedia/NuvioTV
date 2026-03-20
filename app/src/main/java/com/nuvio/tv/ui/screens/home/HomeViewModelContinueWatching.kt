@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
@@ -34,6 +35,7 @@ import java.util.Locale
 private const val CW_MAX_RECENT_PROGRESS_ITEMS = 300
 private const val CW_MAX_NEXT_UP_LOOKUPS = 24
 private const val CW_MAX_NEXT_UP_CONCURRENCY = 4
+private const val CW_PROGRESS_DEBOUNCE_MS = 500L
 
 private data class ContinueWatchingSettingsSnapshot(
     val items: List<WatchProgress>,
@@ -42,11 +44,16 @@ private data class ContinueWatchingSettingsSnapshot(
     val showUnairedNextUp: Boolean
 )
 
-private data class NextUpArtworkFallback(
+private data class NextUpTmdbData(
     val thumbnail: String?,
     val backdrop: String?,
     val poster: String?,
-    val airDate: String?
+    val logo: String?,
+    val name: String?,
+    val episodeTitle: String?,
+    val airDate: String?,
+    val overview: String?,
+    val showDescription: String?
 )
 
 private data class NextUpResolution(
@@ -68,7 +75,7 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 dismissedNextUp = dismissedNextUp,
                 showUnairedNextUp = showUnairedNextUp
             )
-        }.collectLatest { snapshot ->
+        }.debounce(CW_PROGRESS_DEBOUNCE_MS).collectLatest { snapshot ->
             val items = snapshot.items
             val daysCap = snapshot.daysCap
             val dismissedNextUp = snapshot.dismissedNextUp
@@ -102,12 +109,21 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
 
             Log.d("HomeViewModel", "inProgressOnly: ${inProgressOnly.size} items after filter+dedup")
 
-            // Optimistic immediate render: show in-progress entries instantly.
             _uiState.update { state ->
-                if (state.continueWatchingItems == inProgressOnly) {
+                val immediateItems = if (inProgressOnly.isNotEmpty()) {
+                    inProgressOnly
+                } else {
+                    val existingNextUp = state.continueWatchingItems
+                        .filterIsInstance<ContinueWatchingItem.NextUp>()
+                    mergeContinueWatchingItems(
+                        inProgressItems = inProgressOnly,
+                        nextUpItems = existingNextUp
+                    )
+                }
+                if (state.continueWatchingItems == immediateItems) {
                     state
                 } else {
-                    state.copy(continueWatchingItems = inProgressOnly)
+                    state.copy(continueWatchingItems = immediateItems)
                 }
             }
 
@@ -141,6 +157,22 @@ private fun shouldTreatAsInProgressForContinueWatching(progress: WatchProgress):
     return hasStartedPlayback &&
         progress.source != WatchProgress.SOURCE_TRAKT_HISTORY &&
         progress.source != WatchProgress.SOURCE_TRAKT_SHOW_PROGRESS
+}
+
+private fun shouldUseAsCompletedSeed(progress: WatchProgress): Boolean {
+    if (!progress.isCompleted()) return false
+    if (progress.source != WatchProgress.SOURCE_TRAKT_PLAYBACK) return true
+    val explicitPercent = progress.progressPercent ?: return false
+    return explicitPercent >= 95f
+}
+
+private fun shouldTreatAsActiveInProgressForNextUpSuppression(
+    progress: WatchProgress,
+    latestCompletedAt: Long?
+): Boolean {
+    if (!shouldTreatAsInProgressForContinueWatching(progress)) return false
+    if (latestCompletedAt == null || latestCompletedAt == Long.MIN_VALUE) return true
+    return progress.lastWatched >= latestCompletedAt
 }
 
 private suspend fun HomeViewModel.resolveCurrentEpisodeDescription(
@@ -215,9 +247,25 @@ private suspend fun HomeViewModel.enrichContinueWatchingProgressively(
     dismissedNextUp: Set<String>,
     showUnairedNextUp: Boolean
 ) = coroutineScope {
+    val latestCompletedByContent = allProgress
+        .asSequence()
+        .filter { isSeriesTypeCW(it.contentType) }
+        .filter { it.contentId.isNotBlank() }
+        .filter { shouldUseAsCompletedSeed(it) }
+        .groupBy { it.contentId }
+        .mapValues { (_, items) ->
+            items.maxOfOrNull { it.lastWatched } ?: Long.MIN_VALUE
+        }
+
     val inProgressIds = inProgressItems
-        .map { it.progress.contentId }
-        .filter { it.isNotBlank() }
+        .map { it.progress }
+        .filter { progress ->
+            shouldTreatAsActiveInProgressForNextUpSuppression(
+                progress = progress,
+                latestCompletedAt = latestCompletedByContent[progress.contentId]
+            )
+        }
+        .map { it.contentId }
         .toSet()
 
     val latestCompletedBySeries = allProgress
@@ -226,8 +274,7 @@ private suspend fun HomeViewModel.enrichContinueWatchingProgressively(
                 progress.season != null &&
                 progress.episode != null &&
                 progress.season != 0 &&
-                progress.isCompleted() &&
-                progress.source != WatchProgress.SOURCE_TRAKT_PLAYBACK
+                shouldUseAsCompletedSeed(progress)
         }
         .groupBy { it.contentId }
         .mapNotNull { (_, items) ->
@@ -245,13 +292,24 @@ private suspend fun HomeViewModel.enrichContinueWatchingProgressively(
         .take(CW_MAX_NEXT_UP_LOOKUPS)
 
     if (latestCompletedBySeries.isEmpty()) {
+        _uiState.update { state ->
+            val mergedItems = mergeContinueWatchingItems(
+                inProgressItems = inProgressItems,
+                nextUpItems = emptyList()
+            )
+            if (state.continueWatchingItems == mergedItems) {
+                state
+            } else {
+                state.copy(continueWatchingItems = mergedItems)
+            }
+        }
         return@coroutineScope
     }
 
     val lookupSemaphore = Semaphore(CW_MAX_NEXT_UP_CONCURRENCY)
     val mergeMutex = Mutex()
     val nextUpByContent = linkedMapOf<String, ContinueWatchingItem.NextUp>()
-    val metaCache = mutableMapOf<String, Meta?>()
+    val metaCache = cwMetaCache
     var lastEmittedNextUpCount = 0
 
     val jobs = latestCompletedBySeries.map { progress ->
@@ -308,7 +366,7 @@ private suspend fun HomeViewModel.enrichInProgressEpisodeDetailsProgressively(
 ) = coroutineScope {
     if (inProgressItems.isEmpty()) return@coroutineScope
 
-    val metaCache = mutableMapOf<String, Meta?>()
+    val metaCache = cwMetaCache
     val enrichedByProgress = linkedMapOf<WatchProgress, ContinueWatchingItem.InProgress>()
     var lastAppliedCount = 0
 
@@ -417,38 +475,30 @@ private suspend fun HomeViewModel.buildNextUpItem(
     val existingBackdrop = meta.backdropUrl.normalizeImageUrl()
     val existingLogo = meta.logo.normalizeImageUrl()
     val existingThumbnail = video.thumbnail.normalizeImageUrl()
-    val artworkFallback = if (
-        existingThumbnail == null ||
-        existingBackdrop == null ||
-        existingPoster == null
-    ) {
-        resolveNextUpArtworkFallback(
+    val tmdbData = resolveNextUpTmdbData(
             progress = progress,
             meta = meta,
             season = nextSeason,
             episode = nextEpisodeNumber
         )
-    } else {
-        null
-    }
     val released = video.released?.trim()?.takeIf { it.isNotEmpty() }
-        ?: artworkFallback?.airDate
+        ?: tmdbData?.airDate
     val releaseDate = parseEpisodeReleaseDate(released)
     val todayLocal = LocalDate.now(ZoneId.systemDefault())
     val hasAired = releaseDate?.let { !it.isAfter(todayLocal) } ?: true
     val info = NextUpInfo(
         contentId = progress.contentId,
         contentType = progress.contentType,
-        name = meta.name,
-        poster = existingPoster ?: artworkFallback?.poster,
-        backdrop = existingBackdrop ?: artworkFallback?.backdrop,
-        logo = existingLogo,
+        name = tmdbData?.name ?: meta.name,
+        poster = existingPoster ?: tmdbData?.poster,
+        backdrop = existingBackdrop ?: tmdbData?.backdrop,
+        logo = tmdbData?.logo ?: existingLogo,
         videoId = video.id,
         season = nextSeason,
         episode = nextEpisodeNumber,
-        episodeTitle = video.title,
-        episodeDescription = video.overview?.takeIf { it.isNotBlank() },
-        thumbnail = existingThumbnail ?: artworkFallback?.thumbnail,
+        episodeTitle = tmdbData?.episodeTitle ?: video.title,
+        episodeDescription = tmdbData?.overview ?: video.overview?.takeIf { it.isNotBlank() },
+        thumbnail = existingThumbnail ?: tmdbData?.thumbnail,
         released = released,
         hasAired = hasAired,
         airDateLabel = if (hasAired) {
@@ -689,12 +739,13 @@ private fun parseEpisodeReleaseDate(raw: String?): LocalDate? {
     }.getOrNull()
 }
 
-private suspend fun HomeViewModel.resolveNextUpArtworkFallback(
+private suspend fun HomeViewModel.resolveNextUpTmdbData(
     progress: WatchProgress,
     meta: Meta,
     season: Int,
     episode: Int
-): NextUpArtworkFallback? {
+): NextUpTmdbData? {
+    if (!currentTmdbSettings.enabled) return null
     val tmdbId = resolveTmdbIdForNextUp(progress, meta) ?: return null
     val language = currentTmdbSettings.language
 
@@ -715,18 +766,24 @@ private suspend fun HomeViewModel.resolveNextUpArtworkFallback(
         )
     }.getOrNull()
 
-    val fallback = NextUpArtworkFallback(
+    val fallback = NextUpTmdbData(
         thumbnail = episodeMeta?.thumbnail.normalizeImageUrl(),
         backdrop = showMeta?.backdrop.normalizeImageUrl(),
         poster = showMeta?.poster.normalizeImageUrl(),
-        airDate = episodeMeta?.airDate?.trim()?.takeIf { it.isNotEmpty() }
+        logo = showMeta?.logo.normalizeImageUrl(),
+        name = showMeta?.localizedTitle?.trim()?.takeIf { it.isNotEmpty() },
+        episodeTitle = episodeMeta?.title?.trim()?.takeIf { it.isNotEmpty() },
+        airDate = episodeMeta?.airDate?.trim()?.takeIf { it.isNotEmpty() },
+        overview = episodeMeta?.overview?.trim()?.takeIf { it.isNotEmpty() },
+        showDescription = showMeta?.description?.trim()?.takeIf { it.isNotEmpty() }
     )
 
     return if (
         fallback.thumbnail == null &&
         fallback.backdrop == null &&
         fallback.poster == null &&
-        fallback.airDate == null
+        fallback.airDate == null &&
+        fallback.overview == null
     ) {
         null
     } else {

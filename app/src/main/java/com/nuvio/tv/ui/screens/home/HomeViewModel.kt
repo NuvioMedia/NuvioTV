@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
+import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
+import com.nuvio.tv.data.local.StartupAuthNotice
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchedItemsPreferences
@@ -16,6 +18,7 @@ import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.LibraryEntryInput
+import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.TmdbSettings
 import com.nuvio.tv.domain.repository.AddonRepository
@@ -49,6 +52,7 @@ class HomeViewModel @Inject constructor(
     internal val playerSettingsDataStore: PlayerSettingsDataStore,
     internal val tmdbSettingsDataStore: TmdbSettingsDataStore,
     internal val traktSettingsDataStore: TraktSettingsDataStore,
+    internal val authSessionNoticeDataStore: AuthSessionNoticeDataStore,
     internal val tmdbService: TmdbService,
     internal val tmdbMetadataService: TmdbMetadataService,
     internal val trailerService: TrailerService,
@@ -116,11 +120,13 @@ class HomeViewModel @Inject constructor(
     internal var heroEnrichmentJob: Job? = null
     internal var lastHeroEnrichmentSignature: String? = null
     internal var lastHeroEnrichedItems: List<MetaPreview> = emptyList()
+    internal var heroItemOrder: List<String> = emptyList()
     internal val prefetchedExternalMetaIds = Collections.synchronizedSet(mutableSetOf<String>())
     internal val externalMetaPrefetchInFlightIds = Collections.synchronizedSet(mutableSetOf<String>())
     internal var externalMetaPrefetchJob: Job? = null
     internal var pendingExternalMetaPrefetchItemId: String? = null
     internal val prefetchedTmdbIds = Collections.synchronizedSet(mutableSetOf<String>())
+    internal val cwMetaCache = Collections.synchronizedMap(mutableMapOf<String, Meta?>())
     internal var tmdbEnrichFocusJob: Job? = null
     internal var pendingTmdbEnrichItemId: String? = null
     internal var adjacentItemPrefetchJob: Job? = null
@@ -134,6 +140,7 @@ class HomeViewModel @Inject constructor(
     internal var externalMetaPrefetchEnabled: Boolean = false
     @Volatile
     internal var startupGracePeriodActive: Boolean = true
+    internal var startupAuthNoticeJob: Job? = null
     val trailerPreviewUrls: Map<String, String>
         get() = trailerPreviewUrlsState
     val trailerPreviewAudioUrls: Map<String, String>
@@ -146,6 +153,7 @@ class HomeViewModel @Inject constructor(
         loadDisabledHomeCatalogPreference()
         observeLibraryState()
         observeTmdbSettings()
+        observeStartupAuthNotice()
         loadContinueWatching()
         observeInstalledAddons()
         viewModelScope.launch {
@@ -181,6 +189,33 @@ class HomeViewModel @Inject constructor(
     private fun loadDisabledHomeCatalogPreference() = loadDisabledHomeCatalogPreferencePipeline()
 
     private fun observeTmdbSettings() = observeTmdbSettingsPipeline()
+
+    private fun observeStartupAuthNotice() {
+        viewModelScope.launch {
+            authSessionNoticeDataStore.pendingNotice.collect { notice ->
+                if (notice == null) return@collect
+                _uiState.update { state ->
+                    if (state.startupAuthNotice == notice) state else state.copy(startupAuthNotice = notice)
+                }
+                startupAuthNoticeJob?.cancel()
+                startupAuthNoticeJob = viewModelScope.launch {
+                    delay(3200)
+                    clearStartupAuthNotice(notice)
+                }
+                authSessionNoticeDataStore.consumeNotice(notice)
+            }
+        }
+    }
+
+    private fun clearStartupAuthNotice(notice: StartupAuthNotice) {
+        _uiState.update { state ->
+            if (state.startupAuthNotice == notice) {
+                state.copy(startupAuthNotice = null)
+            } else {
+                state
+            }
+        }
+    }
 
     fun onEvent(event: HomeEvent) {
         when (event) {
@@ -315,6 +350,7 @@ class HomeViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        startupAuthNoticeJob?.cancel()
         posterStatusReconcileJob?.cancel()
         movieWatchedBatchJob?.cancel()
         cancelInFlightCatalogLoads()

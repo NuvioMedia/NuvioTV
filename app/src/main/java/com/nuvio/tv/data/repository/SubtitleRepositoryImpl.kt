@@ -24,7 +24,7 @@ class SubtitleRepositoryImpl @Inject constructor(
 
     companion object {
         private const val TAG = "SubtitleRepository"
-        private const val PER_ADDON_TIMEOUT_MS = 8_000L
+        private const val PER_ADDON_TIMEOUT_MS = 15_000L
     }
 
     override suspend fun getSubtitles(

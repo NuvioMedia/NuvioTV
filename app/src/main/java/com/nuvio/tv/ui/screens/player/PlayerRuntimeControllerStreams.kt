@@ -5,6 +5,7 @@ import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
+import com.nuvio.tv.data.local.toTrackPreference
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.Video
@@ -290,6 +291,30 @@ private fun PlayerRuntimeController.applySelectedStreamState(
     currentVideoBitrate = null
 }
 
+private fun PlayerRuntimeController.persistSelectedStreamForReuse(
+    stream: Stream,
+    url: String,
+    headers: Map<String, String>
+) {
+    if (!streamReuseLastLinkEnabled) return
+
+    val key = streamCacheKey ?: return
+    val streamName = (stream.name?.takeIf { it.isNotBlank() } ?: stream.addonName)?.takeIf { it.isNotBlank() }
+        ?: title
+
+    scope.launch {
+        streamLinkCacheDataStore.save(
+            contentKey = key,
+            url = url,
+            streamName = streamName,
+            headers = headers,
+            filename = currentFilename,
+            videoHash = currentVideoHash,
+            videoSize = currentVideoSize
+        )
+    }
+}
+
 @androidx.annotation.OptIn(UnstableApi::class)
 internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
     val url = stream.getStreamUrl()
@@ -314,7 +339,11 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
         url = url,
         headers = newHeaders
     )
+    persistSelectedStreamForReuse(stream = stream, url = url, headers = newHeaders)
     hasRetriedCurrentStreamAfter416 = false
+    subtitleDisabledByPersistedPreference = false
+    subtitleAddonRestoredByPersistedPreference = false
+    pendingRestoredAddonSubtitle = null
     lastSavedPosition = 0L
 
     _uiState.update {
@@ -581,8 +610,11 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
         url = url,
         headers = newHeaders
     )
-    pendingSameSeriesTrackSelectionRestore =
-        sameSeriesTrackSelectionPreference?.takeIf { contentType?.lowercase() in listOf("series", "tv") }
+    persistSelectedStreamForReuse(stream = stream, url = url, headers = newHeaders)
+    persistedTrackPreference = null
+    subtitleDisabledByPersistedPreference = false
+    subtitleAddonRestoredByPersistedPreference = false
+    pendingRestoredAddonSubtitle = null
     hasRetriedCurrentStreamAfter416 = false
     currentVideoId = targetVideo?.id ?: _uiState.value.episodeStreamsForVideoId ?: currentVideoId
     currentSeason = targetVideo?.season ?: _uiState.value.episodeStreamsSeason ?: currentSeason

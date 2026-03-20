@@ -2,6 +2,7 @@ package com.nuvio.tv.core.auth
 
 import android.util.Log
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
 import com.nuvio.tv.data.remote.supabase.TvLoginExchangeResult
 import com.nuvio.tv.data.remote.supabase.TvLoginPollResult
 import com.nuvio.tv.data.remote.supabase.TvLoginStartResult
@@ -34,7 +35,8 @@ private const val TAG = "AuthManager"
 class AuthManager @Inject constructor(
     private val auth: Auth,
     private val postgrest: Postgrest,
-    private val httpClient: OkHttpClient
+    private val httpClient: OkHttpClient,
+    private val authSessionNoticeDataStore: AuthSessionNoticeDataStore
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val json = Json { ignoreUnknownKeys = true }
@@ -62,8 +64,10 @@ class AuthManager @Inject constructor(
                             }
                             if (user.email.isNullOrBlank()) {
                                 _authState.value = AuthState.SignedOut
+                                authSessionNoticeDataStore.markUnexpectedNuvioLogoutIfNeeded()
                             } else {
                                 _authState.value = AuthState.FullAccount(userId = user.id, email = user.email!!)
+                                authSessionNoticeDataStore.markNuvioAuthenticated()
                             }
                         }
                     }
@@ -78,12 +82,14 @@ class AuthManager @Inject constructor(
                                     cachedEffectiveUserId = null
                                     cachedEffectiveUserSourceUserId = null
                                     _authState.value = AuthState.SignedOut
+                                    authSessionNoticeDataStore.markUnexpectedNuvioLogoutIfNeeded()
                                 }
                             }
                         } else {
                             cachedEffectiveUserId = null
                             cachedEffectiveUserSourceUserId = null
                             _authState.value = AuthState.SignedOut
+                            authSessionNoticeDataStore.markUnexpectedNuvioLogoutIfNeeded()
                         }
                     }
                     is SessionStatus.Initializing -> {
@@ -200,7 +206,12 @@ class AuthManager @Inject constructor(
         }
     }
 
-    suspend fun signOut() {
+    suspend fun signOut(explicit: Boolean = true) {
+        if (explicit) {
+            authSessionNoticeDataStore.markNuvioExplicitLogout()
+        } else {
+            authSessionNoticeDataStore.markUnexpectedNuvioLogoutIfNeeded()
+        }
         try {
             auth.signOut()
         } catch (e: Exception) {

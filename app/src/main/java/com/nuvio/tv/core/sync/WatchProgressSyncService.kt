@@ -50,7 +50,6 @@ class WatchProgressSyncService @Inject constructor(
     suspend fun deleteFromRemote(keys: Collection<String>): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (!shouldUseSupabaseWatchProgressSync()) {
-                Log.d(TAG, "Using Trakt watch progress, skipping watch progress delete")
                 return@withContext Result.success(Unit)
             }
 

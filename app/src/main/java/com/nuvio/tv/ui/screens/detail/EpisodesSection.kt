@@ -73,6 +73,7 @@ import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
+import android.text.format.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -109,11 +110,23 @@ fun SeasonTabs(
     val typography = MaterialTheme.typography
     val tabTextStyle = remember(typography) { typography.titleMedium }
     val textSecondary = NuvioTheme.extendedColors.textSecondary
+    val lazyListState = rememberLazyListState()
+
+    LaunchedEffect(sortedSeasons, selectedSeason) {
+        val selectedIndex = sortedSeasons.indexOf(selectedSeason)
+        if (selectedIndex < 0) return@LaunchedEffect
+
+        val visibleIndices = lazyListState.layoutInfo.visibleItemsInfo.map { it.index }
+        if (selectedIndex in visibleIndices) return@LaunchedEffect
+
+        lazyListState.scrollToItem(selectedIndex)
+    }
 
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
             .focusRestorer(selectedTabFocusRequester),
+        state = lazyListState,
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -1071,7 +1084,8 @@ private fun formatEpisodeRuntime(runtimeMinutes: Int): String {
 
 private fun formatEpisodeCardDate(isoDate: String): String {
     val locale = Locale.getDefault()
-    val outputFormat = SimpleDateFormat("MMM d, yyyy", locale)
+    val bestPattern = DateFormat.getBestDateTimePattern(locale, "dMMMMy")
+    val outputFormat = SimpleDateFormat(bestPattern, locale)
     return try {
         val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")

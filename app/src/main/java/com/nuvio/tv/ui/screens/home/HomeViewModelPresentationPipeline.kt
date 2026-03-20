@@ -156,7 +156,8 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
                     currentHeroCatalogKeys != prefs.heroCatalogKeys ||
                         previousState.heroSectionEnabled != prefs.heroSectionEnabled ||
                         previousState.homeLayout != prefs.layout ||
-                        previousState.hideUnreleasedContent != prefs.hideUnreleasedContent
+                        previousState.hideUnreleasedContent != prefs.hideUnreleasedContent ||
+                        previousState.posterCardWidthDp != prefs.posterCardWidthDp
                 currentHeroCatalogKeys = prefs.heroCatalogKeys
                 _uiState.update {
                     it.copy(
@@ -301,6 +302,7 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
     }
 
     val willEnrich = currentTmdbSettings.enabled || externalMetaPrefetchEnabled
+
     if (willEnrich) setEnrichingItemId(item.id)
 
     pendingTmdbEnrichItemId = item.id

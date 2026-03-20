@@ -129,6 +129,7 @@ internal val LANGUAGE_OVERRIDES = mapOf(
 
 fun languageCodeToName(code: String): String {
     val lowerCode = code.lowercase()
+    if (lowerCode == "none") return "None"
     val bcp47 = LANGUAGE_OVERRIDES[lowerCode] ?: lowerCode
     return try {
         val locale = Locale.forLanguageTag(bcp47)

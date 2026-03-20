@@ -13,6 +13,20 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+internal const val AUDIO_AMPLIFICATION_MIN_DB = 0
+internal const val AUDIO_AMPLIFICATION_MAX_DB = 10
+
+internal fun PlayerRuntimeController.applyAudioAmplification(db: Int) {
+    val clampedDb = db.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
+    gainAudioProcessor.setGainDb(clampedDb)
+    _uiState.update {
+        it.copy(
+            audioAmplificationDb = clampedDb,
+            isAudioAmplificationAvailable = true
+        )
+    }
+}
+
 internal fun PlayerRuntimeController.startProgressUpdates() {
     progressJob?.cancel()
     progressJob = scope.launch {
@@ -388,7 +402,7 @@ fun PlayerRuntimeController.onUserInteraction() {
 
 fun PlayerRuntimeController.hideControls() {
     hideControlsJob?.cancel()
-    _uiState.update { it.copy(showControls = false, showSeekOverlay = false) }
+    _uiState.update { it.copy(showControls = false, showSeekOverlay = false, showMoreDialog = false) }
 }
 
 fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
@@ -473,22 +487,42 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             }
         }
         is PlayerEvent.OnSelectAudioTrack -> {
-            rememberSameSeriesAudioSelection(event.index)
+            rememberAudioSelection(event.index)
             selectAudioTrack(event.index)
             _uiState.update { it.copy(showAudioOverlay = false, showSubtitleDelayOverlay = false) }
+        }
+        is PlayerEvent.OnSetAudioAmplificationDb -> {
+            val clampedDb = event.db.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
+            applyAudioAmplification(clampedDb)
+            if (_uiState.value.persistAudioAmplification) {
+                scope.launch {
+                    playerSettingsDataStore.setAudioAmplificationDb(clampedDb)
+                }
+            }
+        }
+        is PlayerEvent.OnSetPersistAudioAmplification -> {
+            val currentDb = _uiState.value.audioAmplificationDb
+            _uiState.update { it.copy(persistAudioAmplification = event.enabled) }
+            scope.launch {
+                playerSettingsDataStore.setPersistAudioAmplification(
+                    enabled = event.enabled,
+                    dbToPersist = if (event.enabled) currentDb else null
+                )
+            }
         }
         is PlayerEvent.OnSelectSubtitleTrack -> {
             autoSubtitleSelected = true
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
-            rememberSameSeriesInternalSubtitleSelection(event.index)
+            rememberInternalSubtitleSelection(event.index)
             selectSubtitleTrack(event.index)
             _uiState.update { 
                 it.copy(
-                    showSubtitleOverlay = false,
+                    showSubtitleOverlay = true,
                     showSubtitleStylePanel = false,
                     showSubtitleDelayOverlay = false,
+                    showControls = true,
                     selectedAddonSubtitle = null 
                 ) 
             }
@@ -498,13 +532,14 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
-            rememberSameSeriesSubtitleDisabled()
+            rememberSubtitleDisabled()
             disableSubtitles()
             _uiState.update { 
                 it.copy(
-                    showSubtitleOverlay = false,
+                    showSubtitleOverlay = true,
                     showSubtitleStylePanel = false,
                     showSubtitleDelayOverlay = false,
+                    showControls = true,
                     selectedAddonSubtitle = null,
                     selectedSubtitleTrackIndex = -1
                 ) 
@@ -512,13 +547,14 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         is PlayerEvent.OnSelectAddonSubtitle -> {
             autoSubtitleSelected = true
-            rememberSameSeriesAddonSubtitleSelection(event.subtitle)
+            rememberAddonSubtitleSelection(event.subtitle)
             selectAddonSubtitle(event.subtitle)
             _uiState.update {
                 it.copy(
-                    showSubtitleOverlay = false,
+                    showSubtitleOverlay = true,
                     showSubtitleStylePanel = false,
-                    showSubtitleDelayOverlay = false
+                    showSubtitleDelayOverlay = false,
+                    showControls = true
                 )
             }
         }
@@ -536,8 +572,15 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             if (_uiState.value.showSubtitleDelayOverlay) {
                 hideSubtitleDelayOverlay()
             }
-            _uiState.update { it.copy(showControls = !it.showControls) }
-            if (_uiState.value.showControls) {
+            val shouldShowControls = !_uiState.value.showControls
+            _uiState.update {
+                it.copy(
+                    showControls = shouldShowControls,
+                    showSeekOverlay = false,
+                    showMoreDialog = if (shouldShowControls) it.showMoreDialog else false
+                )
+            }
+            if (shouldShowControls) {
                 scheduleHideControls()
             }
         }
