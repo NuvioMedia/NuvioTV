@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.server
 
+import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import fi.iki.elonen.NanoHTTPD
@@ -8,6 +9,7 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 class RepositoryConfigServer(
+    private val context: Context,
     private val currentRepositoriesProvider: () -> List<RepositoryInfo>,
     private val onChangeProposed: (PendingRepoChange) -> Unit,
     private val logoProvider: (() -> ByteArray?)? = null,
@@ -54,7 +56,7 @@ class RepositoryConfigServer(
     }
 
     private fun serveWebPage(): Response {
-        return newFixedLengthResponse(Response.Status.OK, "text/html", RepositoryWebPage.getHtml())
+        return newFixedLengthResponse(Response.Status.OK, "text/html", RepositoryWebPage.getHtml(context))
     }
 
     private fun serveLogo(): Response {
@@ -118,6 +120,7 @@ class RepositoryConfigServer(
 
     companion object {
         fun startOnAvailablePort(
+            context: Context,
             currentRepositoriesProvider: () -> List<RepositoryInfo>,
             onChangeProposed: (PendingRepoChange) -> Unit,
             logoProvider: (() -> ByteArray?)? = null,
@@ -126,7 +129,7 @@ class RepositoryConfigServer(
         ): RepositoryConfigServer? {
             for (port in startPort until startPort + maxAttempts) {
                 try {
-                    val server = RepositoryConfigServer(currentRepositoriesProvider, onChangeProposed, logoProvider, port)
+                    val server = RepositoryConfigServer(context, currentRepositoriesProvider, onChangeProposed, logoProvider, port)
                     server.start(SOCKET_READ_TIMEOUT, false)
                     return server
                 } catch (e: Exception) {

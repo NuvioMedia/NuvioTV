@@ -4,6 +4,44 @@
     <string name="type_series">Series</string>
     <string name="type_unknown">Unknown</string>
 
+    <!-- WebConfigServers -->
+    <string name="web_manage_addons_title">Manage Addons</string>
+    <string name="web_manage_addons_subtitle">Manage addons and home catalogs</string>
+    <string name="web_add_addon_url">Add addon by URL</string>
+    <string name="web_placeholder_url">https://example.com/manifest.json</string>
+    <string name="web_btn_add">Add</string>
+    <string name="web_installed_addons">Installed Addons</string>
+    <string name="web_no_addons">No addons installed</string>
+    <string name="web_home_catalogs">Home Catalogs</string>
+    <string name="web_no_catalogs">No home catalogs available</string>
+    <string name="web_btn_save">Save Changes</string>
+    <string name="web_connection_lost">Connection to TV lost</string>
+    <string name="web_btn_remove">Remove</string>
+    <string name="web_badge_new">New</string>
+    <string name="web_badge_disabled">Disabled</string>
+    <string name="web_btn_enable">Enable</string>
+    <string name="web_btn_disable">Disable</string>
+    <string name="web_error_addon_exists">This addon is already in the list</string>
+    <string name="web_status_waiting_tv">Waiting for TV</string>
+    <string name="web_status_msg_waiting_tv">Please confirm the changes on your TV to apply them.</string>
+    <string name="web_status_changes_applied">Changes Applied</string>
+    <string name="web_status_msg_addon_updated">Your addon configuration has been updated on the TV.</string>
+    <string name="web_status_msg_repo_updated">Your repository configuration has been updated on the TV.</string>
+    <string name="web_status_changes_rejected">Changes Rejected</string>
+    <string name="web_status_msg_changes_rejected">The changes were declined on the TV. Your list has been reverted.</string>
+    <string name="web_status_error">Something Went Wrong</string>
+    <string name="web_error_failed_save">Failed to save. Check your connection to the TV.</string>
+    <string name="web_btn_dismiss">Dismiss</string>
+    <string name="web_status_timeout">Timed Out</string>
+    <string name="web_status_msg_timeout">No response from the TV. Please try again.</string>
+    <string name="web_status_msg_connection_lost">The TV server is no longer reachable. The changes may have been applied.</string>
+    <string name="web_manage_repos_title">Manage Repositories</string>
+    <string name="web_manage_repos_subtitle">Manage your repositories</string>
+    <string name="web_add_repo_url">Add repository by URL</string>
+    <string name="web_installed">Installed</string>
+    <string name="web_no_repos">No repositories installed</string>
+    <string name="web_error_repo_exists">This repository is already in the list</string>
+
     <!-- HomeScreen -->
     <string name="home_no_addons">No addons installed. Add one to get started.</string>
     <string name="home_no_catalog_addons">No catalog addons installed. Install a catalog addon to see content.</string>

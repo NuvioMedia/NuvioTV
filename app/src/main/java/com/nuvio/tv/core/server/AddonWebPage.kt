@@ -1,14 +1,27 @@
 package com.nuvio.tv.core.server
 
+import android.content.Context
+import android.content.res.Configuration
+import com.nuvio.tv.R
+import java.util.Locale
+
 object AddonWebPage {
 
-    fun getHtml(): String = """
+    fun getHtml(baseContext: Context): String {
+        val tag = baseContext.getSharedPreferences("app_locale", Context.MODE_PRIVATE)
+            .getString("locale_tag", null)
+        val context = if (!tag.isNullOrEmpty()) {
+            val config = Configuration(baseContext.resources.configuration)
+            config.setLocale(Locale.forLanguageTag(tag))
+            baseContext.createConfigurationContext(config)
+        } else baseContext
+        return """
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>NuvioTV - Manage Addons</title>
+<title>${context.getString(R.string.app_name)} - ${context.getString(R.string.web_manage_addons_title)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   * {
@@ -399,36 +412,36 @@ object AddonWebPage {
 <div class="page">
   <div class="header">
     <img src="/logo.png" alt="NuvioTV" class="header-logo">
-    <p>Manage addons and home catalogs</p>
+    <p>${context.getString(R.string.web_manage_addons_subtitle)}</p>
   </div>
 
   <div class="add-section">
-    <label>Add addon by URL</label>
+    <label>${context.getString(R.string.web_add_addon_url)}</label>
     <div class="add-row">
-      <input type="url" id="addonUrl" placeholder="https://example.com/manifest.json" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <button class="btn" id="addBtn" onclick="addAddon()">Add</button>
+      <input type="url" id="addonUrl" placeholder="${context.getString(R.string.web_placeholder_url)}" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button class="btn" id="addBtn" onclick="addAddon()">${context.getString(R.string.web_btn_add)}</button>
     </div>
     <div class="add-error" id="addError"></div>
   </div>
 
-  <div class="section-label">Installed Addons</div>
+  <div class="section-label">${context.getString(R.string.web_installed_addons)}</div>
   <ul class="addon-list" id="addonList"></ul>
-  <div class="empty-state" id="emptyState">No addons installed</div>
+  <div class="empty-state" id="emptyState">${context.getString(R.string.web_no_addons)}</div>
 
   <div class="section-block">
-    <div class="section-label">Home Catalogs</div>
+    <div class="section-label">${context.getString(R.string.web_home_catalogs)}</div>
     <ul class="addon-list" id="catalogList"></ul>
-    <div class="empty-state" id="catalogEmptyState">No home catalogs available</div>
+    <div class="empty-state" id="catalogEmptyState">${context.getString(R.string.web_no_catalogs)}</div>
   </div>
 
-  <button class="btn btn-save" id="saveBtn" onclick="saveChanges()">Save Changes</button>
+  <button class="btn btn-save" id="saveBtn" onclick="saveChanges()">${context.getString(R.string.web_btn_save)}</button>
 </div>
 
 <div class="status-overlay" id="statusOverlay">
   <div class="status-content" id="statusContent"></div>
 </div>
 
-<div class="connection-bar" id="connectionBar">Connection to TV lost</div>
+<div class="connection-bar" id="connectionBar">${context.getString(R.string.web_connection_lost)}</div>
 
 <script>
 var addons = [];
@@ -502,13 +515,13 @@ function renderAddons() {
       '</div>' +
       '<div class="addon-info">' +
         '<div class="addon-name">' + escapeHtml(addon.name || addon.url) +
-          (addon.isNew ? '<span class="badge-new">New</span>' : '') +
+          (addon.isNew ? '<span class="badge-new">${context.getString(R.string.web_badge_new).replace("'", "\\'")}</span>' : '') +
         '</div>' +
         (addon.description ? '<div class="addon-desc">' + escapeHtml(addon.description) + '</div>' : '') +
         '<div class="addon-url">' + escapeHtml(addon.url) + '</div>' +
       '</div>' +
       '<div class="addon-actions">' +
-        '<button class="btn btn-remove" onclick="removeAddon(' + i + ')">Remove</button>' +
+        '<button class="btn btn-remove" onclick="removeAddon(' + i + ')">${context.getString(R.string.web_btn_remove).replace("'", "\\'")}</button>' +
       '</div>';
 
     list.appendChild(li);
@@ -545,13 +558,13 @@ function renderCatalogs() {
       '</div>' +
       '<div class="catalog-info">' +
         '<div class="catalog-name">' + escapeHtml(formatCatalogTitle(catalog.catalogName, catalog.type)) +
-          (catalog.isDisabled ? '<span class="badge-disabled">Disabled</span>' : '') +
+          (catalog.isDisabled ? '<span class="badge-disabled">${context.getString(R.string.web_badge_disabled).replace("'", "\\'")}</span>' : '') +
         '</div>' +
         '<div class="catalog-meta">' + escapeHtml(catalog.addonName) + '</div>' +
       '</div>' +
       '<div class="addon-actions">' +
         '<button class="' + toggleClass + '" onclick="toggleCatalog(' + i + ')">' +
-          (catalog.isDisabled ? 'Enable' : 'Disable') +
+          (catalog.isDisabled ? '${context.getString(R.string.web_btn_enable).replace("'", "\\'")}' : '${context.getString(R.string.web_btn_disable).replace("'", "\\'")}') +
         '</button>' +
       '</div>';
 
@@ -600,7 +613,7 @@ async function addAddon() {
   url = url.replace(/\/+$/, '');
 
   if (addons.some(function(a) { return a.url === url; })) {
-    errorEl.textContent = 'This addon is already in the list';
+    errorEl.textContent = '${context.getString(R.string.web_error_addon_exists).replace("'", "\\'")}';
     errorEl.style.display = 'block';
     setTimeout(function() { errorEl.style.display = 'none'; }, 3000);
     return;
@@ -646,7 +659,7 @@ async function saveChanges() {
       saveBtn.disabled = false;
     }
   } catch (e) {
-    showErrorStatus('Failed to save. Check your connection to the TV.');
+    showErrorStatus('${context.getString(R.string.web_error_failed_save).replace("'", "\\'")}');
     saveBtn.disabled = false;
   }
 }
@@ -656,8 +669,8 @@ function showPendingStatus() {
   var content = document.getElementById('statusContent');
   content.innerHTML =
     '<div class="status-icon"><div class="spinner"></div></div>' +
-    '<div class="status-title">Waiting for TV</div>' +
-    '<div class="status-message">Please confirm the changes on your TV to apply them.</div>';
+    '<div class="status-title">${context.getString(R.string.web_status_waiting_tv).replace("'", "\\'")}</div>' +
+    '<div class="status-message">${context.getString(R.string.web_status_msg_waiting_tv).replace("'", "\\'")}</div>';
   content.className = 'status-content';
   overlay.classList.add('visible');
 }
@@ -666,8 +679,8 @@ function showSuccessStatus() {
   var content = document.getElementById('statusContent');
   content.innerHTML =
     '<div class="status-icon"><div class="status-svg"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div></div>' +
-    '<div class="status-title">Changes Applied</div>' +
-    '<div class="status-message">Your addon configuration has been updated on the TV.</div>';
+    '<div class="status-title">${context.getString(R.string.web_status_changes_applied).replace("'", "\\'")}</div>' +
+    '<div class="status-message">${context.getString(R.string.web_status_msg_addon_updated).replace("'", "\\'")}</div>';
   content.className = 'status-content status-success';
   setTimeout(dismissStatus, 2500);
 }
@@ -676,8 +689,8 @@ function showRejectedStatus() {
   var content = document.getElementById('statusContent');
   content.innerHTML =
     '<div class="status-icon"><div class="status-svg"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(207,102,121,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></div></div>' +
-    '<div class="status-title">Changes Rejected</div>' +
-    '<div class="status-message">The changes were declined on the TV. Your list has been reverted.</div>';
+    '<div class="status-title">${context.getString(R.string.web_status_changes_rejected).replace("'", "\\'")}</div>' +
+    '<div class="status-message">${context.getString(R.string.web_status_msg_changes_rejected).replace("'", "\\'")}</div>';
   content.className = 'status-content status-rejected';
   setTimeout(function() {
     addons = JSON.parse(JSON.stringify(originalAddons));
@@ -693,9 +706,9 @@ function showErrorStatus(msg) {
   var content = document.getElementById('statusContent');
   content.innerHTML =
     '<div class="status-icon"><div class="status-svg"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(207,102,121,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div></div>' +
-    '<div class="status-title">Something Went Wrong</div>' +
+    '<div class="status-title">${context.getString(R.string.web_status_error).replace("'", "\\'")}</div>' +
     '<div class="status-message">' + escapeHtml(msg) + '</div>' +
-    '<div class="status-dismiss"><button class="btn" onclick="dismissStatus()">Dismiss</button></div>';
+    '<div class="status-dismiss"><button class="btn" onclick="dismissStatus()">${context.getString(R.string.web_btn_dismiss).replace("'", "\\'")}</button></div>';
   content.className = 'status-content status-error';
   overlay.classList.add('visible');
 }
@@ -704,9 +717,9 @@ function showTimeoutStatus() {
   var content = document.getElementById('statusContent');
   content.innerHTML =
     '<div class="status-icon"><div class="status-svg"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(207,102,121,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div></div>' +
-    '<div class="status-title">Timed Out</div>' +
-    '<div class="status-message">No response from the TV. Please try again.</div>' +
-    '<div class="status-dismiss"><button class="btn" onclick="dismissStatus()">Dismiss</button></div>';
+    '<div class="status-title">${context.getString(R.string.web_status_timeout).replace("'", "\\'")}</div>' +
+    '<div class="status-message">${context.getString(R.string.web_status_msg_timeout).replace("'", "\\'")}</div>' +
+    '<div class="status-dismiss"><button class="btn" onclick="dismissStatus()">${context.getString(R.string.web_btn_dismiss).replace("'", "\\'")}</button></div>';
   content.className = 'status-content status-error';
 }
 
@@ -714,9 +727,9 @@ function showDisconnectedStatus() {
   var content = document.getElementById('statusContent');
   content.innerHTML =
     '<div class="status-icon"><div class="status-svg"><svg viewBox="0 0 24 24" fill="none" stroke="rgba(207,102,121,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg></div></div>' +
-    '<div class="status-title">Connection Lost</div>' +
-    '<div class="status-message">The TV server is no longer reachable. The changes may have been applied.</div>' +
-    '<div class="status-dismiss"><button class="btn" onclick="dismissStatus()">Dismiss</button></div>';
+    '<div class="status-title">${context.getString(R.string.web_connection_lost).replace("'", "\\'")}</div>' +
+    '<div class="status-message">${context.getString(R.string.web_status_msg_connection_lost).replace("'", "\\'")}</div>' +
+    '<div class="status-dismiss"><button class="btn" onclick="dismissStatus()">${context.getString(R.string.web_btn_dismiss).replace("'", "\\'")}</button></div>';
   content.className = 'status-content status-error';
 }
 
@@ -800,4 +813,5 @@ loadState();
 </body>
 </html>
 """.trimIndent()
+    }
 }
