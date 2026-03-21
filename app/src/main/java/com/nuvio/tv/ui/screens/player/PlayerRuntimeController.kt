@@ -63,6 +63,26 @@ class PlayerRuntimeController(
         internal val PORTUGUESE_EUROPEAN_TAGS = listOf(
             "pt-pt", "pt_pt", "iberian", "european", "portugal", "europeu"
         )
+        internal val SPANISH_LATIN_AMERICAN_TAGS = listOf(
+            "es-419",
+            "es_419",
+            "latin america",
+            "latin_america",
+            "latam",
+            "latinoamerica",
+            "latinoamericano"
+        )
+        internal val SPANISH_EUROPEAN_TAGS = listOf(
+            "es-es",
+            "es_es",
+            "spain",
+            "espana",
+            "castilian",
+            "castellano",
+            "iberian",
+            "european",
+            "europeo"
+        )
     }
 
     internal data class PendingAudioSelection(

@@ -490,19 +490,36 @@ internal fun PlayerRuntimeController.findBestInternalSubtitleTrackIndex(
             PlayerSubtitleUtils.matchesLanguageCode(subtitleTracks[index].language, target)
         }
         if (candidateIndexes.isEmpty()) {
-            if (normalizedTarget == "pt-br") {
-                val brazilianFromGenericPt = findBrazilianPortugueseInGenericPtTracks(subtitleTracks)
-                if (brazilianFromGenericPt >= 0) {
-                    Log.d(
-                        PlayerRuntimeController.TAG,
-                        "AUTO_SUB pick internal pt-br via generic-pt tags index=$brazilianFromGenericPt"
-                    )
-                    return brazilianFromGenericPt
+            when (normalizedTarget) {
+                "pt-br" -> {
+                    val brazilianFromGenericPt = findBrazilianPortugueseInGenericPtTracks(subtitleTracks)
+                    if (brazilianFromGenericPt >= 0) {
+                        Log.d(
+                            PlayerRuntimeController.TAG,
+                            "AUTO_SUB pick internal pt-br via generic-pt tags index=$brazilianFromGenericPt"
+                        )
+                        return brazilianFromGenericPt
+                    }
+                    // Specific PT-BR rule:
+                    // generic "pt" tracks without brazilian tags are not accepted as PT-BR.
+                    if (targetPosition == 0) {
+                        return -1
+                    }
                 }
-                // Specific PT-BR rule:
-                // generic "pt" tracks without brazilian tags are not accepted as PT-BR.
-                if (targetPosition == 0) {
-                    return -1
+                "es-419" -> {
+                    val latinAmericanFromSpanish = findLatinAmericanSpanishInGenericEsTracks(subtitleTracks)
+                    if (latinAmericanFromSpanish >= 0) {
+                        Log.d(
+                            PlayerRuntimeController.TAG,
+                            "AUTO_SUB pick internal es-419 via spanish tags index=$latinAmericanFromSpanish"
+                        )
+                        return latinAmericanFromSpanish
+                    }
+                    // Specific ES-419 rule:
+                    // generic "es" tracks without Latin American tags are not accepted as ES-419.
+                    if (targetPosition == 0) {
+                        return -1
+                    }
                 }
             }
             continue
@@ -511,6 +528,14 @@ internal fun PlayerRuntimeController.findBestInternalSubtitleTrackIndex(
 
         if (normalizedTarget == "pt" || normalizedTarget == "pt-br") {
             val tieBroken = breakPortugueseSubtitleTie(
+                subtitleTracks = subtitleTracks,
+                candidateIndexes = candidateIndexes,
+                normalizedTarget = normalizedTarget
+            )
+            if (tieBroken >= 0) return tieBroken
+        }
+        if (normalizedTarget == "es" || normalizedTarget == "es-419") {
+            val tieBroken = breakSpanishSubtitleTie(
                 subtitleTracks = subtitleTracks,
                 candidateIndexes = candidateIndexes,
                 normalizedTarget = normalizedTarget
@@ -565,6 +590,48 @@ internal fun PlayerRuntimeController.breakPortugueseSubtitleTie(
         candidateIndexes.firstOrNull { hasEuropeanTags(it) && !hasBrazilianTags(it) }
             ?: candidateIndexes.firstOrNull { hasEuropeanTags(it) }
             ?: candidateIndexes.firstOrNull { !hasBrazilianTags(it) }
+            ?: candidateIndexes.first()
+    }
+}
+
+internal fun PlayerRuntimeController.findLatinAmericanSpanishInGenericEsTracks(
+    subtitleTracks: List<TrackInfo>
+): Int {
+    val spanishIndexes = subtitleTracks.indices.filter { index ->
+        val trackLanguage = subtitleTracks[index].language ?: return@filter false
+        PlayerSubtitleUtils.matchesLanguageCode(trackLanguage, "es")
+    }
+    if (spanishIndexes.isEmpty()) return -1
+
+    return spanishIndexes.firstOrNull { index ->
+        subtitleHasAnyTag(subtitleTracks[index], PlayerRuntimeController.SPANISH_LATIN_AMERICAN_TAGS) &&
+            !subtitleHasAnyTag(subtitleTracks[index], PlayerRuntimeController.SPANISH_EUROPEAN_TAGS)
+    } ?: spanishIndexes.firstOrNull { index ->
+        subtitleHasAnyTag(subtitleTracks[index], PlayerRuntimeController.SPANISH_LATIN_AMERICAN_TAGS)
+    } ?: -1
+}
+
+internal fun PlayerRuntimeController.breakSpanishSubtitleTie(
+    subtitleTracks: List<TrackInfo>,
+    candidateIndexes: List<Int>,
+    normalizedTarget: String
+): Int {
+    fun hasLatinAmericanTags(index: Int): Boolean {
+        return subtitleHasAnyTag(subtitleTracks[index], PlayerRuntimeController.SPANISH_LATIN_AMERICAN_TAGS)
+    }
+
+    fun hasEuropeanTags(index: Int): Boolean {
+        return subtitleHasAnyTag(subtitleTracks[index], PlayerRuntimeController.SPANISH_EUROPEAN_TAGS)
+    }
+
+    return if (normalizedTarget == "es-419") {
+        candidateIndexes.firstOrNull { hasLatinAmericanTags(it) && !hasEuropeanTags(it) }
+            ?: candidateIndexes.firstOrNull { hasLatinAmericanTags(it) }
+            ?: candidateIndexes.first()
+    } else {
+        candidateIndexes.firstOrNull { hasEuropeanTags(it) && !hasLatinAmericanTags(it) }
+            ?: candidateIndexes.firstOrNull { hasEuropeanTags(it) }
+            ?: candidateIndexes.firstOrNull { !hasLatinAmericanTags(it) }
             ?: candidateIndexes.first()
     }
 }
