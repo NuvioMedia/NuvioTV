@@ -92,6 +92,7 @@ import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaCastMember
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.MetaReview
 import com.nuvio.tv.domain.model.MDBListRatings
 import com.nuvio.tv.domain.model.NextToWatch
 import com.nuvio.tv.domain.model.Video
@@ -118,6 +119,7 @@ private enum class PeopleSectionTab {
     CAST,
     RATINGS,
     MORE_LIKE_THIS,
+    REVIEWS,
     COLLECTION
 }
 
@@ -380,6 +382,9 @@ fun MetaDetailsScreen(
                     isMovieWatched = uiState.isMovieWatched,
                     isMovieWatchedPending = uiState.isMovieWatchedPending,
                     moreLikeThis = uiState.moreLikeThis,
+                    reviews = uiState.reviews,
+                    isReviewsLoading = uiState.isReviewsLoading,
+                    reviewsError = uiState.reviewsError,
                     collection = uiState.collection,
                     collectionName = uiState.collectionName,
                     episodeImdbRatings = uiState.episodeImdbRatings,
@@ -614,6 +619,9 @@ private fun MetaDetailsContent(
     isMovieWatched: Boolean,
     isMovieWatchedPending: Boolean,
     moreLikeThis: List<MetaPreview>,
+    reviews: List<MetaReview>,
+    isReviewsLoading: Boolean,
+    reviewsError: String?,
     collection: List<MetaPreview>,
     collectionName: String?,
     episodeImdbRatings: Map<Pair<Int, Int>, Double>,
@@ -693,6 +701,7 @@ private fun MetaDetailsContent(
     val heroPlayFocusRequester = remember { FocusRequester() }
     val castTabFocusRequester = remember { FocusRequester() }
     val moreLikeTabFocusRequester = remember { FocusRequester() }
+    val reviewsTabFocusRequester = remember { FocusRequester() }
     val collectionTabFocusRequester = remember { FocusRequester() }
     val ratingsTabFocusRequester = remember { FocusRequester() }
     val ratingsContentFocusRequester = remember { FocusRequester() }
@@ -878,21 +887,30 @@ private fun MetaDetailsContent(
     }
     val hasCastSection = directorWriterMembers.isNotEmpty() || normalCastMembers.isNotEmpty()
     val hasMoreLikeThisSection = moreLikeThis.isNotEmpty()
+    val hasReviewsSection = isReviewsLoading || reviews.isNotEmpty() || !reviewsError.isNullOrBlank()
     val hasRatingsSection = isTvShow
     val strTabCast = stringResource(R.string.detail_tab_cast)
     val strTabRatings = stringResource(R.string.detail_tab_ratings)
     val strTabMoreLikeThis = stringResource(R.string.detail_tab_more_like_this)
+    val strTabReviews = stringResource(R.string.detail_tab_reviews)
     val strTabCollection = stringResource(R.string.tmdb_collections_title)
     val peopleTabItems = remember(
         hasCastSection,
         hasMoreLikeThisSection,
+        hasReviewsSection,
         hasRatingsSection,
         collection,
         castTabFocusRequester,
         ratingsTabFocusRequester,
         moreLikeTabFocusRequester,
+        reviewsTabFocusRequester,
         collectionTabFocusRequester,
-        collectionName
+        collectionName,
+        strTabCast,
+        strTabRatings,
+        strTabMoreLikeThis,
+        strTabReviews,
+        strTabCollection
     ) {
         buildList {
             if (hasCastSection) {
@@ -919,6 +937,15 @@ private fun MetaDetailsContent(
                         tab = PeopleSectionTab.MORE_LIKE_THIS,
                         label = strTabMoreLikeThis,
                         focusRequester = moreLikeTabFocusRequester
+                    )
+                )
+            }
+            if (hasReviewsSection) {
+                add(
+                    PeopleTabItem(
+                        tab = PeopleSectionTab.REVIEWS,
+                        label = strTabReviews,
+                        focusRequester = reviewsTabFocusRequester
                     )
                 )
             }
@@ -1330,6 +1357,20 @@ private fun MetaDetailsContent(
                                     onItemClick = { item ->
                                         markMoreLikeThisRestore(item.id)
                                         onNavigateToDetail(item.id, item.apiType, null)
+                                    }
+                                )
+                            }
+
+                            PeopleSectionTab.REVIEWS -> {
+                                ReviewsSection(
+                                    reviews = reviews,
+                                    isLoading = isReviewsLoading,
+                                    error = reviewsError,
+                                    title = if (hasPeopleTabs) "" else strTabReviews,
+                                    upFocusRequester = if (hasPeopleTabs) {
+                                        reviewsTabFocusRequester
+                                    } else {
+                                        seasonDownFocusRequester ?: selectedSeasonFocusRequester
                                     }
                                 )
                             }

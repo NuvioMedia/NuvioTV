@@ -122,6 +122,7 @@
     <string name="cast_role_writer">Writer</string>
     <string name="detail_tab_ratings">Ratings</string>
     <string name="detail_tab_more_like_this">More like this</string>
+    <string name="detail_tab_reviews">Reviews</string>
     <string name="detail_section_network">Network</string>
     <string name="detail_section_production">Production</string>
     <string name="episodes_unavailable">Unavailable</string>
@@ -1007,6 +1008,8 @@
     <string name="ratings_unavailable">Episode ratings are unavailable.</string>
     <string name="ratings_load_error">Unable to load episode ratings.</string>
     <string name="ratings_season_summary">Season %1$d - %2$d episodes</string>
+    <string name="reviews_loading">Loading reviews...</string>
+    <string name="reviews_unavailable">Reviews are unavailable.</string>
 
     <!-- SearchDiscoverSection -->
     <string name="discover_title">Discover</string>
