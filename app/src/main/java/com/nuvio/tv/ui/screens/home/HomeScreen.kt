@@ -92,7 +92,7 @@ fun HomeScreen(
     // downstream recomposition when uiState changes.
     val latestMovieWatchedStatus by rememberUpdatedState(uiState.movieWatchedStatus)
     val latestPosterOptionsTarget by rememberUpdatedState(posterOptionsTarget)
-    val isCatalogItemWatched: (MetaPreview) -> Boolean = remember(Unit) {
+    val isCatalogItemWatched: (MetaPreview) -> Boolean = remember(uiState.movieWatchedStatus) {
         { item -> latestMovieWatchedStatus[homeItemStatusKey(item.id, item.apiType)] == true }
     }
     val onCatalogItemLongPress: (MetaPreview, String) -> Unit = remember(Unit) {

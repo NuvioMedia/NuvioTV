@@ -525,7 +525,7 @@ internal fun ModernRowSection(
                         is ModernPayload.Catalog -> {
                             val nextCatalogItem = row.items.getOrNull(index + 1)?.metaPreview
                             val metaPreview = item.metaPreview ?: return@itemsIndexed
-                            val isWatched = remember(metaPreview) { isCatalogItemWatched(metaPreview) }
+                            val isWatched = isCatalogItemWatched(metaPreview)
                             val onLongPress: () -> Unit = remember(metaPreview, payload.addonBaseUrl) {
                                 {
                                     onCatalogItemLongPress(metaPreview, payload.addonBaseUrl)
