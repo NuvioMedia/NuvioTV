@@ -2,6 +2,8 @@ package com.nuvio.tv.ui.screens.tmdb
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -47,7 +50,11 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
+import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.nuvio.tv.R
 import com.nuvio.tv.core.tmdb.TmdbEntityBrowseData
@@ -172,7 +179,7 @@ private fun TmdbEntityBrowseContent(
                 modifier = Modifier.align(Alignment.Center)
             )
         } else {
-            val railsViewportFraction = 0.55f
+            val railsViewportFraction = 0.65f
             val railsViewportHeight = maxHeight * railsViewportFraction
 
             // Fixed hero in the upper area
@@ -180,7 +187,7 @@ private fun TmdbEntityBrowseContent(
                 data = data,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(top = 40.dp, bottom = 16.dp)
+                    .padding(top = 24.dp, bottom = 8.dp)
             )
 
             // Scrollable rails anchored to the bottom
@@ -249,16 +256,38 @@ private fun TmdbEntityHero(
     ) {
         val context = LocalContext.current
         if (!data.header.logo.isNullOrBlank()) {
-            AsyncImage(
+            val logoPainter = rememberAsyncImagePainter(
                 model = ImageRequest.Builder(context)
                     .data(data.header.logo)
                     .crossfade(true)
-                    .build(),
+                    .allowHardware(false) // needed to read pixels
+                    .build()
+            )
+
+            // Detect dark monochrome logo and tint white if needed
+            var logoColorFilter by remember { mutableStateOf<ColorFilter?>(null) }
+            val painterState = logoPainter.state
+            LaunchedEffect(painterState) {
+                if (painterState is AsyncImagePainter.State.Success) {
+                    val bitmap = (painterState.result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                    if (bitmap != null) {
+                        val isDarkMono = isLogoDarkAndMonochrome(bitmap)
+                        logoColorFilter = if (isDarkMono) {
+                            // Tint all opaque pixels white, preserving transparency
+                            ColorFilter.tint(Color.White, BlendMode.SrcIn)
+                        } else null
+                    }
+                }
+            }
+
+            androidx.compose.foundation.Image(
+                painter = logoPainter,
                 contentDescription = data.header.name,
                 modifier = Modifier
                     .width(220.dp)
                     .height(90.dp),
-                contentScale = ContentScale.Fit
+                contentScale = ContentScale.Fit,
+                colorFilter = logoColorFilter
             )
             Spacer(modifier = Modifier.width(24.dp))
         }
@@ -378,4 +407,43 @@ private fun railTitle(rail: TmdbEntityRail): String {
         TmdbEntityRailType.RECENT -> stringResource(R.string.tmdb_entity_rail_recent)
     }
     return "$mediaLabel • $railLabel"
+}
+
+/**
+ * Samples pixels from a [Bitmap] and returns true only if the non-transparent
+ * pixels are both predominantly dark AND low-saturation (grayscale / monochrome).
+ * This avoids treating colorful logos (red, blue, etc.) as "black".
+ */
+private fun isLogoDarkAndMonochrome(bitmap: Bitmap): Boolean {
+    val width = bitmap.width
+    val height = bitmap.height
+    val step = maxOf(1, minOf(width, height) / 20) // sample ~20×20 grid
+    var totalLuminance = 0.0
+    var totalSaturation = 0.0
+    var count = 0
+    val hsv = FloatArray(3)
+    var x = 0
+    while (x < width) {
+        var y = 0
+        while (y < height) {
+            val pixel = bitmap.getPixel(x, y)
+            val alpha = (pixel ushr 24) and 0xFF
+            if (alpha > 50) { // skip transparent / nearly-transparent pixels
+                val r = ((pixel ushr 16) and 0xFF) / 255.0
+                val g = ((pixel ushr 8) and 0xFF) / 255.0
+                val b = (pixel and 0xFF) / 255.0
+                totalLuminance += 0.2126 * r + 0.7152 * g + 0.0722 * b
+                android.graphics.Color.colorToHSV(pixel, hsv)
+                totalSaturation += hsv[1]
+                count++
+            }
+            y += step
+        }
+        x += step
+    }
+    if (count == 0) return false
+    val avgLuminance = totalLuminance / count
+    val avgSaturation = totalSaturation / count
+    // Dark (luminance < 0.3) AND grayscale (saturation < 0.2)
+    return avgLuminance < 0.3 && avgSaturation < 0.2
 }
