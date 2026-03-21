@@ -193,6 +193,36 @@ fun TmdbSettingsContent(
                     )
                 }
 
+                item(key = "tmdb_reviews_header") {
+                    SettingsToggleRow(
+                        title = stringResource(R.string.tmdb_reviews_enable_title),
+                        subtitle = stringResource(R.string.tmdb_reviews_enable_subtitle),
+                        checked = uiState.useReviews,
+                        enabled = uiState.enabled,
+                        onToggle = {
+                            viewModel.onEvent(
+                                TmdbSettingsEvent.ToggleReviews(!uiState.useReviews)
+                            )
+                        }
+                    )
+                }
+
+                if (uiState.useReviews) {
+                    item(key = "tmdb_reviews_expand_cards") {
+                        SettingsToggleRow(
+                            title = stringResource(R.string.tmdb_reviews_expand_cards_title),
+                            subtitle = stringResource(R.string.tmdb_reviews_expand_cards_subtitle),
+                            checked = uiState.expandReviewCards,
+                            enabled = uiState.enabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    TmdbSettingsEvent.ToggleExpandReviewCards(!uiState.expandReviewCards)
+                                )
+                            }
+                        )
+                    }
+                }
+
                 item(key = "tmdb_collections") {
                     SettingsToggleRow(
                         title = stringResource(R.string.tmdb_collections_title),

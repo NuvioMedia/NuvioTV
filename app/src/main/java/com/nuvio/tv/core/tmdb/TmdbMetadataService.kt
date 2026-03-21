@@ -9,10 +9,13 @@ import com.nuvio.tv.data.remote.api.TmdbImage
 import com.nuvio.tv.data.remote.api.TmdbPersonCreditCast
 import com.nuvio.tv.data.remote.api.TmdbPersonCreditCrew
 import com.nuvio.tv.data.remote.api.TmdbRecommendationResult
+import com.nuvio.tv.data.remote.api.TmdbReviewResult
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.MetaCastMember
 import com.nuvio.tv.domain.model.MetaCompany
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.MetaReview
+import com.nuvio.tv.domain.model.MetaReviewSource
 import com.nuvio.tv.domain.model.PersonDetail
 import com.nuvio.tv.domain.model.PosterShape
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +32,11 @@ import javax.inject.Singleton
 private const val TAG = "TmdbMetadataService"
 private val TMDB_API_KEY = BuildConfig.TMDB_API_KEY
 
+data class TmdbReviewsPage(
+    val reviews: List<MetaReview>,
+    val hasMore: Boolean
+)
+
 @Singleton
 class TmdbMetadataService @Inject constructor(
     private val tmdbApi: TmdbApi
@@ -38,6 +46,8 @@ class TmdbMetadataService @Inject constructor(
     private val episodeCache = ConcurrentHashMap<String, Map<Pair<Int, Int>, TmdbEpisodeEnrichment>>()
     private val personCache = ConcurrentHashMap<String, PersonDetail>()
     private val moreLikeThisCache = ConcurrentHashMap<String, List<MetaPreview>>()
+    private val reviewsCache = ConcurrentHashMap<String, List<MetaReview>>()
+    private val reviewsPageCache = ConcurrentHashMap<String, TmdbReviewsPage>()
     private val entityHeaderCache = ConcurrentHashMap<String, TmdbEntityHeader>()
     private val entityRailCache = ConcurrentHashMap<String, List<MetaPreview>>()
     private val entityBrowseCache = ConcurrentHashMap<String, TmdbEntityBrowseData>()
@@ -451,6 +461,121 @@ class TmdbMetadataService @Inject constructor(
         } catch (e: Exception) {
             Log.w(TAG, "Failed to fetch recommendations for $tmdbId: ${e.message}")
             emptyList()
+        }
+    }
+
+    suspend fun fetchReviews(
+        tmdbId: String,
+        contentType: ContentType,
+        language: String = "en",
+        maxItems: Int = 30
+    ): List<MetaReview> = withContext(Dispatchers.IO) {
+        val normalizedLanguage = normalizeTmdbLanguage(language)
+        val cacheKey = "$tmdbId:${contentType.name}:$normalizedLanguage:reviews:$maxItems"
+        reviewsCache[cacheKey]?.let { return@withContext it }
+
+        val numericId = tmdbId.toIntOrNull() ?: return@withContext emptyList()
+        val tmdbType = when (contentType) {
+            ContentType.SERIES, ContentType.TV -> "tv"
+            else -> "movie"
+        }
+
+        try {
+            val targetItems = maxItems.coerceAtLeast(1)
+            val pageSize = 20
+            val maxPagesToFetch = ((targetItems + pageSize - 1) / pageSize).coerceAtLeast(1)
+            val collected = mutableListOf<MetaReview>()
+            var page = 1
+
+            while (collected.size < targetItems && page <= maxPagesToFetch) {
+                val response = when (tmdbType) {
+                    "tv" -> tmdbApi.getTvReviews(
+                        tvId = numericId,
+                        apiKey = TMDB_API_KEY,
+                        language = normalizedLanguage,
+                        page = page
+                    ).body()
+                    else -> tmdbApi.getMovieReviews(
+                        movieId = numericId,
+                        apiKey = TMDB_API_KEY,
+                        language = normalizedLanguage,
+                        page = page
+                    ).body()
+                } ?: break
+
+                val pageReviews = response.results
+                    .orEmpty()
+                    .mapNotNull { it.toMetaReview() }
+                if (pageReviews.isEmpty()) break
+
+                collected += pageReviews
+
+                val totalPages = response.totalPages
+                if (totalPages != null && page >= totalPages) break
+                if (totalPages == null && pageReviews.size < pageSize) break
+                page++
+            }
+
+            val mapped = collected
+                .distinctBy { "${it.source}:${it.id}" }
+                .sortedWith(
+                    compareByDescending<MetaReview> { it.updatedAt ?: it.createdAt ?: "" }
+                        .thenByDescending { it.rating ?: -1.0 }
+                )
+                .take(targetItems)
+
+            reviewsCache[cacheKey] = mapped
+            mapped
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to fetch reviews for $tmdbId: ${e.message}")
+            emptyList()
+        }
+    }
+
+    suspend fun fetchReviewsPage(
+        tmdbId: String,
+        contentType: ContentType,
+        language: String = "en",
+        page: Int = 1
+    ): TmdbReviewsPage = withContext(Dispatchers.IO) {
+        val normalizedLanguage = normalizeTmdbLanguage(language)
+        val normalizedPage = page.coerceAtLeast(1)
+        val cacheKey = "$tmdbId:${contentType.name}:$normalizedLanguage:reviews:page:$normalizedPage"
+        reviewsPageCache[cacheKey]?.let { return@withContext it }
+
+        val numericId = tmdbId.toIntOrNull()
+            ?: return@withContext TmdbReviewsPage(reviews = emptyList(), hasMore = false)
+        val tmdbType = when (contentType) {
+            ContentType.SERIES, ContentType.TV -> "tv"
+            else -> "movie"
+        }
+
+        try {
+            val response = when (tmdbType) {
+                "tv" -> tmdbApi.getTvReviews(
+                    tvId = numericId,
+                    apiKey = TMDB_API_KEY,
+                    language = normalizedLanguage,
+                    page = normalizedPage
+                ).body()
+                else -> tmdbApi.getMovieReviews(
+                    movieId = numericId,
+                    apiKey = TMDB_API_KEY,
+                    language = normalizedLanguage,
+                    page = normalizedPage
+                ).body()
+            }
+
+            val mapped = response?.results
+                .orEmpty()
+                .mapNotNull { it.toMetaReview() }
+            val hasMore = response?.totalPages?.let { normalizedPage < it } ?: (mapped.size >= 20)
+            val result = TmdbReviewsPage(reviews = mapped, hasMore = hasMore)
+            reviewsPageCache[cacheKey] = result
+            result
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to fetch reviews page $normalizedPage for $tmdbId: ${e.message}")
+            TmdbReviewsPage(reviews = emptyList(), hasMore = false)
         }
     }
 
@@ -1039,6 +1164,25 @@ class TmdbMetadataService @Inject constructor(
                 )
             }
     }
+}
+
+private fun TmdbReviewResult.toMetaReview(): MetaReview? {
+    val text = content?.trim()?.takeIf { it.isNotBlank() } ?: return null
+    val fallbackAuthor = author?.trim()?.takeIf { it.isNotBlank() } ?: "TMDB user"
+    val authorName = authorDetails?.name?.trim()?.takeIf { it.isNotBlank() }
+        ?: authorDetails?.username?.trim()?.takeIf { it.isNotBlank() }
+        ?: fallbackAuthor
+
+    return MetaReview(
+        id = id,
+        author = authorName,
+        content = text,
+        rating = authorDetails?.rating,
+        createdAt = createdAt?.takeIf { it.isNotBlank() },
+        updatedAt = updatedAt?.takeIf { it.isNotBlank() },
+        url = url?.takeIf { it.isNotBlank() },
+        source = MetaReviewSource.TMDB
+    )
 }
 
 private data class Quadruple<A, B, C, D>(

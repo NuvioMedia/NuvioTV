@@ -10,15 +10,22 @@ import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
+import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
+import com.nuvio.tv.data.remote.api.TraktApi
+import com.nuvio.tv.data.remote.dto.trakt.TraktCommentItemDto
 import com.nuvio.tv.data.repository.ImdbEpisodeRatingsRepository
 import com.nuvio.tv.data.repository.MDBListRepository
+import com.nuvio.tv.data.repository.TraktAuthService
 import com.nuvio.tv.data.repository.parseContentIds
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.ListMembershipChanges
 import com.nuvio.tv.domain.model.Meta
+import com.nuvio.tv.domain.model.MetaReview
+import com.nuvio.tv.domain.model.MetaReviewSource
+import com.nuvio.tv.domain.model.MetaReviewType
 import com.nuvio.tv.domain.model.NextToWatch
 import com.nuvio.tv.domain.model.TmdbSettings
 import com.nuvio.tv.domain.model.Video
@@ -54,11 +61,32 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
 private const val TAG = "MetaDetailsViewModel"
+private const val REVIEWS_PAGE_SIZE = 10
+
+private data class TmdbReviewQuery(
+    val tmdbId: String,
+    val contentType: ContentType,
+    val language: String
+)
+
+private data class TraktReviewQuery(
+    val pathId: String,
+    val isShowEndpoint: Boolean
+)
+
+private data class TraktReviewsPageResult(
+    val reviews: List<MetaReview>,
+    val query: TraktReviewQuery? = null,
+    val hasMore: Boolean = false
+)
 
 @HiltViewModel
 class MetaDetailsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val metaRepository: MetaRepository,
+    private val traktApi: TraktApi,
+    private val traktAuthService: TraktAuthService,
+    private val traktAuthDataStore: TraktAuthDataStore,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
     private val tmdbService: TmdbService,
     private val tmdbMetadataService: TmdbMetadataService,
@@ -86,6 +114,7 @@ class MetaDetailsViewModel @Inject constructor(
     private var idleTimerJob: Job? = null
     private var trailerFetchJob: Job? = null
     private var moreLikeThisJob: Job? = null
+    private var reviewsJob: Job? = null
     private var collectionJob: Job? = null
     private var episodeRatingsJob: Job? = null
     private var nextToWatchJob: Job? = null
@@ -96,6 +125,19 @@ class MetaDetailsViewModel @Inject constructor(
 
     private var isPlayButtonFocused = false
     private var hideUnreleasedContent = false
+    private var currentReviewsMetaId: String? = null
+    private var tmdbReviewsCache: MutableList<MetaReview> = mutableListOf()
+    private var tmdbReviewQuery: TmdbReviewQuery? = null
+    private var hasMoreTmdbReviews = false
+    private var nextTmdbReviewsPage = 1
+    private var traktReviewsCache: MutableList<MetaReview> = mutableListOf()
+    private var displayedReviewsCache: MutableList<MetaReview> = mutableListOf()
+    private var traktReviewQuery: TraktReviewQuery? = null
+    private var hasMoreTraktReviews = false
+    private var nextTraktReviewsPage = 1
+    private var isLoadingMoreReviews = false
+    private var currentTraktPathIds: List<String> = emptyList()
+    private var currentTraktIsShow = false
 
     init {
         observeMetaViewSettings()
@@ -212,6 +254,7 @@ class MetaDetailsViewModel @Inject constructor(
             MetaDetailsEvent.OnPickerSave -> savePickerMembership()
             MetaDetailsEvent.OnPickerDismiss -> dismissListPicker()
             MetaDetailsEvent.OnClearMessage -> clearMessage()
+            is MetaDetailsEvent.OnReviewItemFocused -> maybeLoadMoreReviews(event.index)
             MetaDetailsEvent.OnLifecyclePause -> handleLifecyclePause()
         }
     }
@@ -368,6 +411,9 @@ class MetaDetailsViewModel @Inject constructor(
                     mdbListRatings = null,
                     showMdbListImdb = false,
                     moreLikeThis = emptyList(),
+                    reviews = emptyList(),
+                    isReviewsLoading = false,
+                    reviewsError = null,
                     collection = emptyList(),
                     collectionName = null
                 )
@@ -484,6 +530,7 @@ class MetaDetailsViewModel @Inject constructor(
     private suspend fun applyMetaWithEnrichment(meta: Meta) {
         // Fire all independent async jobs immediately — they run in parallel.
         loadMoreLikeThisAsync(meta)
+        loadReviewsAsync(meta)
         val enriched = enrichMeta(meta)
         applyMeta(enriched)
         // Episode ratings and MDBList are independent — launch both without waiting.
@@ -539,6 +586,487 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun shouldLoadMoreLikeThis(settings: TmdbSettings): Boolean {
         return settings.enabled && settings.useMoreLikeThis
+    }
+
+    private fun shouldLoadReviews(settings: TmdbSettings): Boolean {
+        return settings.enabled && settings.useReviews
+    }
+
+    private fun loadReviewsAsync(meta: Meta) {
+        reviewsJob?.cancel()
+        reviewsJob = viewModelScope.launch {
+            currentReviewsMetaId = meta.id
+            resetReviewsPaginationState()
+
+            val settings = tmdbSettingsDataStore.settings.first()
+            _uiState.update { state ->
+                if (state.expandReviewCards == settings.expandReviewCards) {
+                    state
+                } else {
+                    state.copy(expandReviewCards = settings.expandReviewCards)
+                }
+            }
+            if (!shouldLoadReviews(settings)) {
+                _uiState.update {
+                    it.copy(
+                        reviews = emptyList(),
+                        isReviewsLoading = false,
+                        reviewsError = null
+                    )
+                }
+                return@launch
+            }
+
+            _uiState.update { state ->
+                if (state.meta == null || state.meta.id == meta.id) {
+                    state.copy(
+                        reviews = emptyList(),
+                        isReviewsLoading = true,
+                        reviewsError = null
+                    )
+                } else {
+                    state
+                }
+            }
+
+            val tmdbContentType = resolveTmdbContentType(meta)
+            val tmdbLookupType = tmdbContentType.toApiString()
+            val tmdbId = tmdbService.ensureTmdbId(meta.id, tmdbLookupType)
+                ?: tmdbService.ensureTmdbId(itemId, itemType)
+            val tmdbQuery = tmdbId?.takeIf { it.isNotBlank() }?.let {
+                TmdbReviewQuery(
+                    tmdbId = it,
+                    contentType = tmdbContentType,
+                    language = settings.language
+                )
+            }
+            val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
+            val traktPathIds = if (isTraktConnected) {
+                resolveTraktCommentPathIds(
+                    meta = meta,
+                    tmdbId = tmdbId,
+                    tmdbLookupType = tmdbLookupType
+                )
+            } else {
+                emptyList()
+            }
+            currentTraktPathIds = traktPathIds
+            currentTraktIsShow = tmdbContentType in listOf(ContentType.SERIES, ContentType.TV)
+
+            val (tmdbInitialPage, traktInitialPage) = coroutineScope {
+                val tmdbDeferred = async {
+                    if (tmdbQuery != null) {
+                        fetchTmdbReviewsPage(
+                            metaIdForLogs = meta.id,
+                            query = tmdbQuery,
+                            page = 1
+                        ) ?: com.nuvio.tv.core.tmdb.TmdbReviewsPage(
+                            reviews = emptyList(),
+                            hasMore = false
+                        )
+                    } else {
+                        com.nuvio.tv.core.tmdb.TmdbReviewsPage(
+                            reviews = emptyList(),
+                            hasMore = false
+                        )
+                    }
+                }
+                val traktDeferred = async {
+                    if (isTraktConnected && traktPathIds.isNotEmpty()) {
+                        fetchInitialTraktReviewsPage(
+                            meta = meta,
+                            traktPathIds = traktPathIds,
+                            isShow = currentTraktIsShow
+                        )
+                    } else {
+                        TraktReviewsPageResult(reviews = emptyList())
+                    }
+                }
+                tmdbDeferred.await() to traktDeferred.await()
+            }
+
+            if (currentReviewsMetaId != meta.id) return@launch
+
+            tmdbReviewsCache = tmdbInitialPage.reviews.toMutableList()
+            tmdbReviewQuery = tmdbQuery
+            hasMoreTmdbReviews = tmdbQuery != null && tmdbInitialPage.hasMore
+            nextTmdbReviewsPage = if (tmdbQuery != null) 2 else 1
+            traktReviewsCache = traktInitialPage.reviews.toMutableList()
+            traktReviewQuery = traktInitialPage.query
+            hasMoreTraktReviews = traktInitialPage.hasMore && traktInitialPage.query != null
+            nextTraktReviewsPage = if (traktInitialPage.query != null) 2 else 1
+
+            val mergedReviews = mergeReviews(
+                tmdbReviews = tmdbReviewsCache,
+                traktReviews = traktReviewsCache
+            )
+            displayedReviewsCache = mergedReviews.toMutableList()
+            val reviewsUnavailableMessage = context.getString(R.string.reviews_unavailable_for_title)
+
+            _uiState.update { state ->
+                if (state.meta == null || state.meta.id == meta.id) {
+                    state.copy(
+                        reviews = displayedReviewsCache.toList(),
+                        isReviewsLoading = false,
+                        reviewsError = if (displayedReviewsCache.isEmpty()) reviewsUnavailableMessage else null
+                    )
+                } else {
+                    state
+                }
+            }
+        }
+    }
+
+    private fun maybeLoadMoreReviews(focusedIndex: Int) {
+        if (focusedIndex < 0) return
+        if ((!hasMoreTraktReviews && !hasMoreTmdbReviews) || isLoadingMoreReviews) return
+        val expectedMetaId = currentReviewsMetaId ?: return
+        if (_uiState.value.meta?.id != expectedMetaId) return
+
+        val lastIndex = _uiState.value.reviews.lastIndex
+        if (lastIndex < 0) return
+        val loadTriggerIndex = (lastIndex - 1).coerceAtLeast(0)
+        if (focusedIndex < loadTriggerIndex) return
+
+        loadMoreReviewsPage(expectedMetaId)
+    }
+
+    private fun loadMoreReviewsPage(expectedMetaId: String) {
+        if ((!hasMoreTraktReviews && !hasMoreTmdbReviews) || isLoadingMoreReviews) return
+        val tmdbQuery = tmdbReviewQuery
+        val traktQuery = traktReviewQuery
+        val tmdbPageToLoad = nextTmdbReviewsPage
+        val traktPageToLoad = nextTraktReviewsPage
+
+        isLoadingMoreReviews = true
+        viewModelScope.launch {
+            try {
+                val tmdbPageResult = if (hasMoreTmdbReviews && tmdbQuery != null) {
+                    fetchTmdbReviewsPage(
+                        metaIdForLogs = expectedMetaId,
+                        query = tmdbQuery,
+                        page = tmdbPageToLoad
+                    )
+                } else {
+                    null
+                }
+                val traktPageResult = if (hasMoreTraktReviews && traktQuery != null) {
+                    fetchTraktReviewsPage(
+                        metaIdForLogs = expectedMetaId,
+                        query = traktQuery,
+                        page = traktPageToLoad
+                    )
+                } else {
+                    null
+                }
+
+                if (currentReviewsMetaId != expectedMetaId) return@launch
+
+                tmdbPageResult?.let { result ->
+                    appendUniqueReviews(tmdbReviewsCache, result.reviews)
+                    hasMoreTmdbReviews = result.hasMore
+                    nextTmdbReviewsPage = tmdbPageToLoad + 1
+                }
+                traktPageResult?.let { result ->
+                    appendUniqueReviews(traktReviewsCache, result.reviews)
+                    hasMoreTraktReviews = result.hasMore
+                    nextTraktReviewsPage = traktPageToLoad + 1
+                }
+
+                val nextVisibleBatch = mergeReviews(
+                    tmdbReviews = tmdbPageResult?.reviews.orEmpty(),
+                    traktReviews = traktPageResult?.reviews.orEmpty()
+                )
+                appendUniqueReviews(displayedReviewsCache, nextVisibleBatch)
+                val reviewsUnavailableMessage = context.getString(R.string.reviews_unavailable_for_title)
+                _uiState.update { state ->
+                    if (state.meta == null || state.meta.id == expectedMetaId) {
+                        state.copy(
+                            reviews = displayedReviewsCache.toList(),
+                            reviewsError = if (displayedReviewsCache.isEmpty()) reviewsUnavailableMessage else null
+                        )
+                    } else {
+                        state
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } finally {
+                isLoadingMoreReviews = false
+            }
+        }
+    }
+
+    private suspend fun fetchTmdbReviewsPage(
+        metaIdForLogs: String,
+        query: TmdbReviewQuery,
+        page: Int
+    ): com.nuvio.tv.core.tmdb.TmdbReviewsPage? {
+        val logicalPage = page.coerceAtLeast(1)
+        var remainingSkip = (logicalPage - 1) * REVIEWS_PAGE_SIZE
+        val collected = mutableListOf<MetaReview>()
+        var apiPage = 1
+        var hasMore = false
+
+        while (true) {
+            val apiPageResult = runCatching {
+                tmdbMetadataService.fetchReviewsPage(
+                    tmdbId = query.tmdbId,
+                    contentType = query.contentType,
+                    language = query.language,
+                    page = apiPage
+                )
+            }.getOrElse {
+                Log.w(
+                    TAG,
+                    "Failed to load TMDB reviews for $metaIdForLogs with tmdbId=${query.tmdbId} page=$logicalPage apiPage=$apiPage: ${it.message}"
+                )
+                return null
+            }
+
+            val pageReviews = apiPageResult.reviews
+            if (remainingSkip >= pageReviews.size) {
+                remainingSkip -= pageReviews.size
+                if (!apiPageResult.hasMore) {
+                    hasMore = false
+                    break
+                }
+                apiPage += 1
+                continue
+            }
+
+            val startIndex = remainingSkip
+            remainingSkip = 0
+            val availableFromStart = pageReviews.drop(startIndex)
+            val taken = availableFromStart.take(REVIEWS_PAGE_SIZE - collected.size)
+            collected += taken
+
+            val consumedCount = startIndex + taken.size
+            hasMore = pageReviews.size > consumedCount || apiPageResult.hasMore
+
+            if (collected.size >= REVIEWS_PAGE_SIZE || !apiPageResult.hasMore) {
+                break
+            }
+
+            apiPage += 1
+        }
+
+        return com.nuvio.tv.core.tmdb.TmdbReviewsPage(
+            reviews = collected,
+            hasMore = hasMore
+        )
+    }
+
+    private fun appendUniqueReviews(target: MutableList<MetaReview>, incoming: List<MetaReview>) {
+        if (incoming.isEmpty()) return
+        val existingIds = target
+            .asSequence()
+            .map { "${it.source}:${it.id}" }
+            .toHashSet()
+        incoming.forEach { review ->
+            if (existingIds.add("${review.source}:${review.id}")) {
+                target.add(review)
+            }
+        }
+    }
+
+    private suspend fun fetchInitialTraktReviewsPage(
+        meta: Meta,
+        traktPathIds: List<String>,
+        isShow: Boolean
+    ): TraktReviewsPageResult {
+        for (pathId in traktPathIds.distinct()) {
+            val endpointOrder = if (isShow) listOf(true, false) else listOf(false, true)
+            for (callShowEndpoint in endpointOrder) {
+                val query = TraktReviewQuery(
+                    pathId = pathId,
+                    isShowEndpoint = callShowEndpoint
+                )
+                val pageResult = fetchTraktReviewsPage(
+                    metaIdForLogs = meta.id,
+                    query = query,
+                    page = 1
+                ) ?: continue
+
+                if (pageResult.reviews.isNotEmpty()) {
+                    return pageResult
+                }
+            }
+        }
+
+        return TraktReviewsPageResult(reviews = emptyList())
+    }
+
+    private suspend fun fetchTraktReviewsPage(
+        metaIdForLogs: String,
+        query: TraktReviewQuery,
+        page: Int
+    ): TraktReviewsPageResult? {
+        val endpointLabel = if (query.isShowEndpoint) "show" else "movie"
+        val response = runCatching {
+            traktAuthService.executeAuthorizedRequest { authorization ->
+                if (query.isShowEndpoint) {
+                    traktApi.getShowComments(
+                        authorization = authorization,
+                        id = query.pathId,
+                        page = page,
+                        limit = REVIEWS_PAGE_SIZE
+                    )
+                } else {
+                    traktApi.getMovieComments(
+                        authorization = authorization,
+                        id = query.pathId,
+                        page = page,
+                        limit = REVIEWS_PAGE_SIZE
+                    )
+                }
+            }
+        }.getOrElse {
+            Log.w(
+                TAG,
+                "Failed to load Trakt reviews for $metaIdForLogs with id=${query.pathId} endpoint=$endpointLabel page=$page: ${it.message}"
+            )
+            return null
+        } ?: run {
+            Log.w(
+                TAG,
+                "Skipped Trakt reviews for $metaIdForLogs with id=${query.pathId} endpoint=$endpointLabel page=$page: request unavailable"
+            )
+            return null
+        }
+
+        if (!response.isSuccessful) {
+            Log.w(
+                TAG,
+                "Trakt reviews request failed for $metaIdForLogs with id=${query.pathId} endpoint=$endpointLabel page=$page: HTTP ${response.code()}"
+            )
+            return null
+        }
+
+        val items = response.body().orEmpty()
+        val mapped = items.mapNotNull { it.toMetaReview() }
+        val hasMore = hasMoreTraktReviewPages(
+            response = response,
+            currentPage = page,
+            itemsCount = items.size
+        )
+
+        return TraktReviewsPageResult(
+            reviews = mapped,
+            query = query,
+            hasMore = hasMore
+        )
+    }
+
+    private fun hasMoreTraktReviewPages(
+        response: retrofit2.Response<List<TraktCommentItemDto>>,
+        currentPage: Int,
+        itemsCount: Int
+    ): Boolean {
+        val totalPages = response.headers()["X-Pagination-Page-Count"]?.toIntOrNull()
+        if (totalPages != null) {
+            return currentPage < totalPages
+        }
+
+        val totalItems = response.headers()["X-Pagination-Item-Count"]?.toIntOrNull()
+        if (totalItems != null) {
+            return currentPage * REVIEWS_PAGE_SIZE < totalItems
+        }
+
+        return itemsCount >= REVIEWS_PAGE_SIZE
+    }
+
+    private fun resetReviewsPaginationState() {
+        tmdbReviewsCache = mutableListOf()
+        tmdbReviewQuery = null
+        hasMoreTmdbReviews = false
+        nextTmdbReviewsPage = 1
+        traktReviewsCache = mutableListOf()
+        displayedReviewsCache = mutableListOf()
+        traktReviewQuery = null
+        hasMoreTraktReviews = false
+        nextTraktReviewsPage = 1
+        isLoadingMoreReviews = false
+        currentTraktPathIds = emptyList()
+        currentTraktIsShow = false
+    }
+
+    private fun mergeReviews(
+        tmdbReviews: List<MetaReview>,
+        traktReviews: List<MetaReview>
+    ): List<MetaReview> {
+        val tmdbOrdered = tmdbReviews
+            .distinctBy { "${it.source}:${it.id}" }
+            .sortedWith(
+                compareByDescending<MetaReview> { it.updatedAt ?: it.createdAt ?: "" }
+                    .thenByDescending { it.rating ?: -1.0 }
+            )
+        val traktOrdered = traktReviews
+            .distinctBy { "${it.source}:${it.id}" }
+            .sortedWith(
+                compareByDescending<MetaReview> { it.updatedAt ?: it.createdAt ?: "" }
+                    .thenByDescending { it.rating ?: -1.0 }
+            )
+
+        return tmdbOrdered + traktOrdered
+    }
+
+    private suspend fun resolveTraktCommentPathIds(
+        meta: Meta,
+        tmdbId: String?,
+        tmdbLookupType: String
+    ): List<String> {
+        val ordered = linkedSetOf<String>()
+
+        fun addParsed(rawId: String?) {
+            if (rawId.isNullOrBlank()) return
+            val parsed = parseContentIds(rawId)
+            parsed.imdb?.takeIf { it.isNotBlank() }?.let { ordered.add(it) }
+            parsed.trakt?.let { ordered.add(it.toString()) }
+        }
+
+        addParsed(meta.id)
+        addParsed(itemId)
+
+        val tmdbCandidates = buildList {
+            tmdbId?.toIntOrNull()?.let { add(it) }
+            parseContentIds(meta.id).tmdb?.let { add(it) }
+            parseContentIds(itemId).tmdb?.let { add(it) }
+        }.distinct()
+
+        tmdbCandidates.forEach { numericTmdbId ->
+            val imdb = runCatching {
+                tmdbService.tmdbToImdb(numericTmdbId, tmdbLookupType)
+            }.getOrNull()
+            imdb?.takeIf { it.isNotBlank() }?.let { ordered.add(it) }
+        }
+
+        // Last fallback if no IMDb/Trakt id resolves for this item.
+        tmdbCandidates.forEach { numericTmdbId ->
+            ordered.add("tmdb:$numericTmdbId")
+        }
+
+        return ordered.toList()
+    }
+
+    private fun TraktCommentItemDto.toMetaReview(): MetaReview? {
+        val body = comment?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        val author = user?.name?.trim()?.takeIf { it.isNotBlank() }
+            ?: user?.username?.trim()?.takeIf { it.isNotBlank() }
+            ?: "Trakt user"
+        val stableId = id?.toString() ?: body.hashCode().toString()
+
+        return MetaReview(
+            id = stableId,
+            author = author,
+            content = body,
+            rating = userStats?.rating,
+            createdAt = createdAt?.takeIf { it.isNotBlank() },
+            updatedAt = updatedAt?.takeIf { it.isNotBlank() },
+            source = MetaReviewSource.TRAKT,
+            type = if (review == true) MetaReviewType.REVIEW else MetaReviewType.SHOUT,
+            hasSpoiler = spoiler == true
+        )
     }
 
     private fun loadCollectionAsync(collectionId: Int, collectionName: String?, settings: TmdbSettings) {

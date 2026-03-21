@@ -9,6 +9,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktHistoryRemoveResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktHistoryAddRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktHistoryAddResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktHistoryItemDto
+import com.nuvio.tv.data.remote.dto.trakt.TraktCommentItemDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktCreateOrUpdateListRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktListItemDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktListItemsMutationRequestDto
@@ -72,6 +73,24 @@ interface TraktApi {
         @Header("Authorization") authorization: String,
         @Path("id") id: String
     ): Response<TraktUserStatsResponseDto>
+
+    @GET("movies/{id}/comments/{sort}")
+    suspend fun getMovieComments(
+        @Header("Authorization") authorization: String,
+        @Path(value = "id", encoded = true) id: String,
+        @Path("sort") sort: String = "newest",
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 10
+    ): Response<List<TraktCommentItemDto>>
+
+    @GET("shows/{id}/comments/{sort}")
+    suspend fun getShowComments(
+        @Header("Authorization") authorization: String,
+        @Path(value = "id", encoded = true) id: String,
+        @Path("sort") sort: String = "newest",
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 10
+    ): Response<List<TraktCommentItemDto>>
 
     @POST("scrobble/start")
     suspend fun scrobbleStart(
