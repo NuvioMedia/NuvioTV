@@ -247,13 +247,45 @@ class WatchProgressRepositoryImpl @Inject constructor(
             .distinctUntilChanged()
     }
 
+    private fun localAllProgressFlow(): Flow<List<WatchProgress>> {
+        return combine(
+            watchProgressPreferences.allProgress
+                .map { items ->
+                    hydrateMetadata(items)
+                    items
+                }
+                .onStart { emit(emptyList()) },
+            metadataState
+        ) { items, metadata ->
+            items
+                .map { enrichWithMetadata(it, metadata) }
+                .sortedByDescending { it.lastWatched }
+        }.distinctUntilChanged()
+    }
+
+    private fun localEpisodeProgressFlow(contentId: String): Flow<Map<Pair<Int, Int>, WatchProgress>> {
+        return combine(
+            watchProgressPreferences.getAllEpisodeProgress(contentId)
+                .map { progressMap ->
+                    hydrateMetadata(progressMap.values.toList())
+                    progressMap
+                }
+                .onStart { emit(emptyMap()) },
+            metadataState
+        ) { progressMap, metadata ->
+            progressMap.mapValues { (_, progress) ->
+                enrichWithMetadata(progress, metadata)
+            }
+        }.distinctUntilChanged()
+    }
+
     override val allProgress: Flow<List<WatchProgress>>
         get() = useTraktProgressFlow()
             .flatMapLatest { useTraktProgress ->
                 if (useTraktProgress) {
                     traktAllProgressFlow()
                 } else {
-                    watchProgressPreferences.allProgress
+                    localAllProgressFlow()
                 }
             }
 
@@ -270,7 +302,11 @@ class WatchProgressRepositoryImpl @Inject constructor(
                             .maxByOrNull { it.lastWatched }
                     }
                 } else {
-                    watchProgressPreferences.getProgress(contentId)
+                    localAllProgressFlow().map { items ->
+                        items
+                            .filter { it.contentId == contentId }
+                            .maxByOrNull { it.lastWatched }
+                    }
                 }
             }
     }
@@ -285,7 +321,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
                         }
                     }
                 } else {
-                    watchProgressPreferences.getEpisodeProgress(contentId, season, episode)
+                    localEpisodeProgressFlow(contentId).map { progressMap ->
+                        progressMap[season to episode]
+                    }
                 }
             }
     }
@@ -310,7 +348,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
                         merged
                     }.distinctUntilChanged()
                 } else {
-                    watchProgressPreferences.getAllEpisodeProgress(contentId)
+                    localEpisodeProgressFlow(contentId)
                 }
             }
     }
@@ -345,7 +383,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
                         mergeNextUpSeeds(canonicalSeeds, optimisticSeeds)
                     }
                 } else {
-                    watchProgressPreferences.allProgress.map { items ->
+                    localAllProgressFlow().map { items ->
                         items.filter { progress ->
                             progress.isCompleted() &&
                                 progress.contentType.equals("series", ignoreCase = true) &&

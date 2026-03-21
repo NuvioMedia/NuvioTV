@@ -236,7 +236,7 @@ class WatchProgressPreferences @Inject constructor(
             for ((key, remote) in remoteEntries) {
                 val existing = local[key]
                 if (existing == null || remote.lastWatched > existing.lastWatched) {
-                    local[key] = remote
+                    local[key] = remote.withPreservedPresentation(existing)
                     Log.d("WatchProgressPrefs", "  merged key=$key (existing=${existing != null})")
                 } else {
                     Log.d("WatchProgressPrefs", "  skipped key=$key (local is newer)")
@@ -258,7 +258,10 @@ class WatchProgressPreferences @Inject constructor(
                 Log.w(TAG, "replaceWithRemoteEntries: remote empty while local has ${current.size} entries; preserving local watch progress")
                 return@edit
             }
-            val pruned = pruneOldItems(remoteEntries.toMutableMap())
+            val merged = remoteEntries.mapValues { (key, remote) ->
+                remote.withPreservedPresentation(current[key])
+            }.toMutableMap()
+            val pruned = pruneOldItems(merged)
             Log.d("WatchProgressPrefs", "replaceWithRemoteEntries: ${pruned.size} entries after prune, writing to DataStore")
             preferences[watchProgressKey] = gson.toJson(pruned)
         }
@@ -279,6 +282,18 @@ class WatchProgressPreferences @Inject constructor(
         } else {
             progress.contentId
         }
+    }
+
+    private fun WatchProgress.withPreservedPresentation(existing: WatchProgress?): WatchProgress {
+        if (existing == null) return this
+        return copy(
+            name = name.ifBlank { existing.name },
+            poster = poster ?: existing.poster,
+            backdrop = backdrop ?: existing.backdrop,
+            logo = logo ?: existing.logo,
+            episodeTitle = episodeTitle ?: existing.episodeTitle,
+            addonBaseUrl = addonBaseUrl ?: existing.addonBaseUrl
+        )
     }
 
     private fun parseProgressMap(json: String): Map<String, WatchProgress> {
