@@ -79,7 +79,7 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                 it.copy(
                     frameRateMatchingMode = playerSettings.frameRateMatchingMode,
                     resizeMode = playerSettings.resizeMode,
-                    loadingMessage = if (showLoadingStatus) context.getString(R.string.player_loading_preparing) else null
+                    loadingMessage = if (showLoadingStatus) context.getString(R.string.player_loading_detecting_format) else null
                 )
             }
             val afrJob = async {
@@ -94,7 +94,7 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                 url = url,
                 headers = headers
             )
-            val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings)
+            val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings, showLoadingStatus)
             afrJob.await()
             requestedUseLibassByUser = playerSettings.useLibass
             val useLibass = when {
@@ -472,9 +472,11 @@ internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(
 
     val fetchedSubtitles = withTimeoutOrNull(STARTUP_SUBTITLE_PREFETCH_TIMEOUT_MS) {
         fetchAddonSubtitlesNow(
-            onProgress = if (showLoadingStatus) { completed, total ->
+            onProgress = if (showLoadingStatus) { completed, total, addonName ->
                 val msg = if (completed == 0) {
                     context.getString(R.string.player_loading_subtitles_from, total)
+                } else if (addonName != null) {
+                    context.getString(R.string.player_loading_subtitles_addon, addonName, completed, total)
                 } else {
                     context.getString(R.string.player_loading_subtitles_progress, completed, total)
                 }

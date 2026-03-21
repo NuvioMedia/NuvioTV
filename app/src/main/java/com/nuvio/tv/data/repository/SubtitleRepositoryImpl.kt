@@ -35,7 +35,7 @@ class SubtitleRepositoryImpl @Inject constructor(
         videoHash: String?,
         videoSize: Long?,
         filename: String?,
-        onProgress: ((completed: Int, total: Int) -> Unit)?
+        onProgress: ((completed: Int, total: Int, addonName: String?) -> Unit)?
     ): List<Subtitle> = withContext(Dispatchers.IO) {
         val requestType = canonicalSubtitleType(type)
         val startedAtMs = System.currentTimeMillis()
@@ -66,7 +66,7 @@ class SubtitleRepositoryImpl @Inject constructor(
 
         val total = subtitleAddons.size
         val completedCount = AtomicInteger(0)
-        onProgress?.invoke(0, total)
+        onProgress?.invoke(0, total, null)
 
         // Fetch subtitles from all addons in parallel
         val result = coroutineScope {
@@ -76,7 +76,7 @@ class SubtitleRepositoryImpl @Inject constructor(
                     val subtitles = withTimeoutOrNull(PER_ADDON_TIMEOUT_MS) {
                         fetchSubtitlesFromAddon(addon, type, id, videoId, videoHash, videoSize, filename)
                     }
-                    onProgress?.invoke(completedCount.incrementAndGet(), total)
+                    onProgress?.invoke(completedCount.incrementAndGet(), total, addon.displayName)
                     if (subtitles == null) {
                         Log.w(
                             TAG,
