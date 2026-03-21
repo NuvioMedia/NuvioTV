@@ -426,8 +426,8 @@ private fun ModernHomeRoute(
         }
     }
     val saveModernFocusState = remember(viewModel) {
-        { vi: Int, vo: Int, ri: Int, ii: Int, m: Map<String, Int> ->
-            viewModel.saveFocusState(vi, vo, ri, ii, m)
+        { vi: Int, vo: Int, ri: Int, ii: Int, m: Map<String, Int>, rowKey: String? ->
+            viewModel.saveFocusState(vi, vo, ri, ii, m, rowKey)
         }
     }
     val preloadAdjacentItem = remember(viewModel) {

@@ -133,7 +133,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     val waitForContinueWatchingFocusEnabled: Flow<Boolean> = profileFlow { prefs ->
-        prefs[waitForContinueWatchingFocusEnabledKey] ?: false
+        prefs[waitForContinueWatchingFocusEnabledKey] ?: true
     }
 
     val heroSectionEnabled: Flow<Boolean> = profileFlow { prefs ->

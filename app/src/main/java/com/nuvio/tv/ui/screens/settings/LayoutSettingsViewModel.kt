@@ -25,7 +25,7 @@ data class LayoutSettingsUiState(
     val modernSidebarEnabled: Boolean = false,
     val modernSidebarBlurEnabled: Boolean = false,
     val modernLandscapePostersEnabled: Boolean = false,
-    val waitForContinueWatchingFocusEnabled: Boolean = false,
+    val waitForContinueWatchingFocusEnabled: Boolean = true,
     val heroSectionEnabled: Boolean = true,
     val searchDiscoverEnabled: Boolean = true,
     val posterLabelsEnabled: Boolean = true,

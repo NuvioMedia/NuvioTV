@@ -160,6 +160,8 @@ private data class MainUiPrefs(
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Volatile
+    var exitAppInProgress: Boolean = false
 
     @Inject
     lateinit var themeDataStore: ThemeDataStore
@@ -212,6 +214,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        exitAppInProgress = false
         window?.setBackgroundDrawable(null)
         setContent {
             var hasSelectedProfileThisSession by remember { mutableStateOf(false) }
@@ -452,6 +455,7 @@ class MainActivity : ComponentActivity() {
                             showProfileSelector = profiles.size > 1,
                             onSwitchProfile = { hasSelectedProfileThisSession = false },
                             onExitApp = {
+                                exitAppInProgress = true
                                 finishAffinity()
                                 finishAndRemoveTask()
                             }
@@ -472,6 +476,7 @@ class MainActivity : ComponentActivity() {
                             showProfileSelector = profiles.size > 1,
                             onSwitchProfile = { hasSelectedProfileThisSession = false },
                             onExitApp = {
+                                exitAppInProgress = true
                                 finishAffinity()
                                 finishAndRemoveTask()
                             }

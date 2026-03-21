@@ -5,6 +5,9 @@
 
 package com.nuvio.tv.ui.screens.home
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.animateDpAsState
@@ -92,6 +95,7 @@ import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
+import com.nuvio.tv.MainActivity
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.MetaPreview
@@ -110,6 +114,7 @@ private const val KEY_REPEAT_THROTTLE_MS = 80L
 private const val MODERN_HERO_RAPID_NAV_THRESHOLD_MS = 130L
 private const val MODERN_HERO_RAPID_NAV_SETTLE_MS = 170L
 private const val MODERN_CONTINUE_WATCHING_STARTUP_WAIT_TIMEOUT_MS = 4_000L
+private const val MODERN_SAVED_FOCUS_RESTORE_TIMEOUT_MS = 2_000L
 
 @Composable
 fun ModernHomeContent(
@@ -130,7 +135,7 @@ fun ModernHomeContent(
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     onItemFocus: (MetaPreview) -> Unit = {},
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
-    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
+    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>, String?) -> Unit
 ) {
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val isSidebarExpanded = LocalSidebarExpanded.current
@@ -383,6 +388,13 @@ fun ModernHomeContent(
     var lastRequestedTrailerFocusKey by remember { mutableStateOf<String?>(null) }
     var expandedCatalogFocusKey by remember { mutableStateOf<String?>(null) }
     var expansionInteractionNonce by remember { mutableIntStateOf(0) }
+    var savedFocusRestoreTimedOut by remember { mutableStateOf(false) }
+    val shouldWaitForStartupFocusPreferences =
+        !focusState.hasSavedFocus &&
+            uiState.continueWatchingUsesTraktSource &&
+            uiState.continueWatchingItems.isEmpty() &&
+            !uiState.continueWatchingStartupReady &&
+            !uiState.layoutPrefsReady
     val shouldWaitForTraktContinueWatchingStartupFocus =
         !focusState.hasSavedFocus &&
             uiState.waitForContinueWatchingFocusEnabled &&
@@ -401,6 +413,21 @@ fun ModernHomeContent(
         continueWatchingStartupWaitTimedOut = false
         delay(MODERN_CONTINUE_WATCHING_STARTUP_WAIT_TIMEOUT_MS)
         continueWatchingStartupWaitTimedOut = true
+    }
+
+    val savedFocusRowKeyMissing = focusState.hasSavedFocus &&
+        !restoredFromSavedState &&
+        focusState.focusedRowKey != null &&
+        carouselRows.none { it.key == focusState.focusedRowKey }
+
+    LaunchedEffect(savedFocusRowKeyMissing, focusState.focusedRowKey, focusState.hasSavedFocus) {
+        if (!savedFocusRowKeyMissing) {
+            savedFocusRestoreTimedOut = false
+            return@LaunchedEffect
+        }
+        savedFocusRestoreTimedOut = false
+        delay(MODERN_SAVED_FOCUS_RESTORE_TIMEOUT_MS)
+        savedFocusRestoreTimedOut = true
     }
 
     LaunchedEffect(
@@ -458,6 +485,7 @@ fun ModernHomeContent(
         focusState.hasSavedFocus,
         focusState.focusedRowIndex,
         focusState.focusedItemIndex,
+        uiState.layoutPrefsReady,
         uiState.waitForContinueWatchingFocusEnabled,
         uiState.continueWatchingUsesTraktSource,
         uiState.continueWatchingStartupReady,
@@ -487,9 +515,15 @@ fun ModernHomeContent(
 
         if (!restoredFromSavedState && focusState.hasSavedFocus) {
             val savedRowKey = when {
+                !focusState.focusedRowKey.isNullOrBlank() -> focusState.focusedRowKey
+                    ?.takeIf { key -> carouselRows.any { it.key == key } }
                 focusState.focusedRowIndex == -1 && uiState.continueWatchingItems.isNotEmpty() -> "continue_watching"
                 focusState.focusedRowIndex >= 0 -> visibleCatalogRows.getOrNull(focusState.focusedRowIndex)?.let { catalogRowKey(it) }
                 else -> null
+            }
+
+            if (focusState.focusedRowKey != null && savedRowKey == null && !savedFocusRestoreTimedOut) {
+                return@LaunchedEffect
             }
 
             val resolvedRow = carouselRows.firstOrNull { it.key == savedRowKey } ?: carouselRows.first()
@@ -508,6 +542,10 @@ fun ModernHomeContent(
             pendingRowFocusIndex = resolvedIndex
             pendingRowFocusNonce++
             restoredFromSavedState = true
+            return@LaunchedEffect
+        }
+
+        if (shouldWaitForStartupFocusPreferences && focusHolder.activeRowKey == null) {
             return@LaunchedEffect
         }
 
@@ -623,6 +661,7 @@ fun ModernHomeContent(
     }
     val latestHeroRow by rememberUpdatedState(activeRow)
     val latestHeroIndex by rememberUpdatedState(clampedActiveItemIndex)
+    val latestActivity by rememberUpdatedState(LocalContext.current.findActivity())
     LaunchedEffect(activeHeroItemKey, isVerticalRowsScrolling) {
         if (isVerticalRowsScrolling) return@LaunchedEffect
         val targetHeroKey = activeHeroItemKey ?: return@LaunchedEffect
@@ -656,18 +695,29 @@ fun ModernHomeContent(
     val latestVerticalRowListState by rememberUpdatedState(verticalRowListState)
     DisposableEffect(Unit) {
         onDispose {
+            val activity = latestActivity
+            val shouldSkipSaveForExplicitExit =
+                (activity as? MainActivity)?.exitAppInProgress == true
+            val shouldSkipSaveForActivityExit =
+                shouldSkipSaveForExplicitExit ||
+                    (activity?.isFinishing == true && activity.isChangingConfigurations.not())
+            if (shouldSkipSaveForActivityExit) {
+                return@onDispose
+            }
             val row = latestActiveRow
             val focusedRowIndex = row?.globalRowIndex ?: 0
             val catalogRowScrollStates = latestCarouselRows
                 .filter { it.globalRowIndex >= 0 }
                 .associate { rowState -> rowState.key to (focusedItemByRow[rowState.key] ?: 0) }
+            val focusedRowKey = row?.key
 
             onSaveFocusState(
                 latestVerticalRowListState.firstVisibleItemIndex,
                 latestVerticalRowListState.firstVisibleItemScrollOffset,
                 focusedRowIndex,
                 latestActiveItemIndex,
-                catalogRowScrollStates
+                catalogRowScrollStates,
+                focusedRowKey
             )
         }
     }
@@ -1002,4 +1052,10 @@ fun ModernHomeContent(
             }
         )
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

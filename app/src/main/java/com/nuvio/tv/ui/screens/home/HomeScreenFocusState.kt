@@ -30,6 +30,11 @@ data class HomeScreenFocusState(
     val focusedItemIndex: Int = 0,
 
     /**
+     * Stable row key for the focused row when available.
+     */
+    val focusedRowKey: String? = null,
+
+    /**
      * Map of catalog row keys to their horizontal scroll positions.
      * Key format: "${addonId}_${type}_${catalogId}"
      */
