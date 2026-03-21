@@ -127,9 +127,19 @@ data class PlayerUiState(
     val resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
     val showAspectRatioIndicator: Boolean = false,
     val aspectRatioIndicatorText: String = "",
+<<<<<<< feature/player-quality-badges
+    // Video & audio quality info badges
+    val videoResolutionWidth: Int = 0,
+    val videoResolutionHeight: Int = 0,
+    val videoCodecName: String? = null,
+    val videoHdrType: String? = null,  // "HDR10", "HDR10+", "HLG", "Dolby Vision", null for SDR
+    val audioCodecName: String? = null,
+    val audioChannelLayout: String? = null  // "Stereo", "5.1", "7.1", etc.
+=======
     // Stream info overlay
     val showStreamInfoOverlay: Boolean = false,
     val streamInfoData: StreamInfoData? = null
+>>>>>>> dev
 )
 
 data class TrackInfo(
