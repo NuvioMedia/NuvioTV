@@ -2,7 +2,6 @@
 
 package com.nuvio.tv.ui.screens.settings
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,16 +36,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
-import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -55,8 +50,11 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.data.local.AddonSubtitleStartupMode
 import com.nuvio.tv.data.local.FrameRateMatchingMode
+import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
+import com.nuvio.tv.data.local.StreamAutoPlayMode
+import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
@@ -107,12 +105,14 @@ internal fun PlaybackSettingsSections(
     onShowStreamRegexDialog: () -> Unit,
     onShowNextEpisodeThresholdModeDialog: () -> Unit,
     onShowReuseLastLinkCacheDialog: () -> Unit,
+    onShowStreamCacheHoursDialog: () -> Unit,
     onSetStreamAutoPlayNextEpisodeEnabled: (Boolean) -> Unit,
     onSetStreamAutoPlayPreferBingeGroupForNextEpisode: (Boolean) -> Unit,
     onSetNextEpisodeThresholdPercent: (Float) -> Unit,
     onSetNextEpisodeThresholdMinutesBeforeEnd: (Float) -> Unit,
     onSetStreamAutoPlayTimeoutSeconds: (Int) -> Unit,
     onSetReuseLastLinkEnabled: (Boolean) -> Unit,
+    onSetStreamCacheEnabled: (Boolean) -> Unit,
     onSetLoadingOverlayEnabled: (Boolean) -> Unit,
     onSetPauseOverlayEnabled: (Boolean) -> Unit,
     onSetOsdClockEnabled: (Boolean) -> Unit,
@@ -311,13 +311,15 @@ internal fun PlaybackSettingsSections(
                 onShowRegexDialog = onShowStreamRegexDialog,
                 onShowNextEpisodeThresholdModeDialog = onShowNextEpisodeThresholdModeDialog,
                 onShowReuseLastLinkCacheDialog = onShowReuseLastLinkCacheDialog,
+                onShowStreamCacheHoursDialog = onShowStreamCacheHoursDialog,
                 onSetStreamAutoPlayNextEpisodeEnabled = onSetStreamAutoPlayNextEpisodeEnabled,
                 onSetStreamAutoPlayPreferBingeGroupForNextEpisode = onSetStreamAutoPlayPreferBingeGroupForNextEpisode,
                 onSetNextEpisodeThresholdPercent = onSetNextEpisodeThresholdPercent,
                 onSetNextEpisodeThresholdMinutesBeforeEnd = onSetNextEpisodeThresholdMinutesBeforeEnd,
                 onSetStreamAutoPlayTimeoutSeconds = onSetStreamAutoPlayTimeoutSeconds,
                 onSetReuseLastLinkEnabled = onSetReuseLastLinkEnabled,
-                onItemFocused = { focusedSection = PlaybackSection.STREAM_SELECTION }
+                onSetStreamCacheEnabled = onSetStreamCacheEnabled,
+                onItemFocused = { focusedSection = PlaybackSection.STREAM_SELECTION },
             )
         }
 
@@ -512,6 +514,7 @@ internal fun PlaybackSettingsDialogsHost(
     showStreamRegexDialog: Boolean,
     showNextEpisodeThresholdModeDialog: Boolean,
     showReuseLastLinkCacheDialog: Boolean,
+    showStreamCacheHoursDialog: Boolean,
     onSetPlayerPreference: (PlayerPreference) -> Unit,
     onDismissPlayerPreferenceDialog: () -> Unit,
     onSetSubtitlePreferredLanguage: (String?) -> Unit,
@@ -523,13 +526,14 @@ internal fun PlaybackSettingsDialogsHost(
     onSetPreferredAudioLanguage: (String) -> Unit,
     onSetSecondaryPreferredAudioLanguage: (String?) -> Unit,
     onSetDecoderPriority: (Int) -> Unit,
-    onSetStreamAutoPlayMode: (com.nuvio.tv.data.local.StreamAutoPlayMode) -> Unit,
-    onSetStreamAutoPlaySource: (com.nuvio.tv.data.local.StreamAutoPlaySource) -> Unit,
-    onSetNextEpisodeThresholdMode: (com.nuvio.tv.data.local.NextEpisodeThresholdMode) -> Unit,
+    onSetStreamAutoPlayMode: (StreamAutoPlayMode) -> Unit,
+    onSetStreamAutoPlaySource: (StreamAutoPlaySource) -> Unit,
+    onSetNextEpisodeThresholdMode: (NextEpisodeThresholdMode) -> Unit,
     onSetStreamAutoPlayRegex: (String) -> Unit,
     onSetStreamAutoPlaySelectedAddons: (Set<String>) -> Unit,
     onSetStreamAutoPlaySelectedPlugins: (Set<String>) -> Unit,
     onSetReuseLastLinkCacheHours: (Int) -> Unit,
+    onSetStreamCacheHours: (Int) -> Unit,
     onDismissLanguageDialog: () -> Unit,
     onDismissSecondaryLanguageDialog: () -> Unit,
     onDismissSubtitleStartupModeDialog: () -> Unit,
@@ -545,7 +549,8 @@ internal fun PlaybackSettingsDialogsHost(
     onDismissStreamAutoPlayAddonSelectionDialog: () -> Unit,
     onDismissStreamAutoPlayPluginSelectionDialog: () -> Unit,
     onDismissNextEpisodeThresholdModeDialog: () -> Unit,
-    onDismissReuseLastLinkCacheDialog: () -> Unit
+    onDismissReuseLastLinkCacheDialog: () -> Unit,
+    onDismissStreamCacheHoursDialog: () -> Unit
 ) {
     if (showPlayerPreferenceDialog) {
         PlayerPreferenceDialog(
@@ -603,6 +608,7 @@ internal fun PlaybackSettingsDialogsHost(
         showPluginSelectionDialog = showStreamAutoPlayPluginSelectionDialog,
         showNextEpisodeThresholdModeDialog = showNextEpisodeThresholdModeDialog,
         showReuseLastLinkCacheDialog = showReuseLastLinkCacheDialog,
+        showStreamCacheHoursDialog = showStreamCacheHoursDialog,
         playerSettings = playerSettings,
         installedAddonNames = installedAddonNames,
         enabledPluginNames = enabledPluginNames,
@@ -613,13 +619,15 @@ internal fun PlaybackSettingsDialogsHost(
         onSetSelectedAddons = onSetStreamAutoPlaySelectedAddons,
         onSetSelectedPlugins = onSetStreamAutoPlaySelectedPlugins,
         onSetReuseLastLinkCacheHours = onSetReuseLastLinkCacheHours,
+        onSetStreamCacheHours = onSetStreamCacheHours,
         onDismissModeDialog = onDismissStreamAutoPlayModeDialog,
         onDismissSourceDialog = onDismissStreamAutoPlaySourceDialog,
         onDismissRegexDialog = onDismissStreamRegexDialog,
         onDismissAddonSelectionDialog = onDismissStreamAutoPlayAddonSelectionDialog,
         onDismissPluginSelectionDialog = onDismissStreamAutoPlayPluginSelectionDialog,
         onDismissNextEpisodeThresholdModeDialog = onDismissNextEpisodeThresholdModeDialog,
-        onDismissReuseLastLinkCacheDialog = onDismissReuseLastLinkCacheDialog
+        onDismissReuseLastLinkCacheDialog = onDismissReuseLastLinkCacheDialog,
+        onDismissStreamCacheHoursDialog = onDismissStreamCacheHoursDialog
     )
 }
 

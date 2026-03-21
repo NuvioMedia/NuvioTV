@@ -20,29 +20,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.ClosedCaption
-import androidx.compose.material.icons.filled.FormatBold
-import androidx.compose.material.icons.filled.FormatSize
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Subtitles
-import androidx.compose.material.icons.filled.VerticalAlignBottom
-import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,16 +39,12 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
-import androidx.compose.ui.text.input.KeyboardType
 import android.view.KeyEvent
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
@@ -77,37 +55,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.tv.material3.Border
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
-import androidx.tv.material3.IconButton
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Switch
 import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import com.nuvio.tv.data.local.AVAILABLE_SUBTITLE_LANGUAGES
 import com.nuvio.tv.data.local.displayName
-import com.nuvio.tv.data.local.AudioLanguageOption
-import com.nuvio.tv.data.local.LibassRenderType
-import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
-import com.nuvio.tv.data.local.StreamAutoPlayMode
-import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.launch
-import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.PauseCircle
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.Image
 
 @Composable
 fun PlaybackSettingsScreen(
@@ -153,6 +115,7 @@ fun PlaybackSettingsContent(
     var showNextEpisodeThresholdModeDialog by remember { mutableStateOf(false) }
     var showReuseLastLinkCacheDialog by remember { mutableStateOf(false) }
     var showPlayerPreferenceDialog by remember { mutableStateOf(false) }
+    var showStreamCacheHoursDialog by remember { mutableStateOf(false) }
 
     fun dismissAllDialogs() {
         showLanguageDialog = false
@@ -172,6 +135,7 @@ fun PlaybackSettingsContent(
         showNextEpisodeThresholdModeDialog = false
         showReuseLastLinkCacheDialog = false
         showPlayerPreferenceDialog = false
+        showStreamCacheHoursDialog = false
     }
 
     fun openDialog(setter: () -> Unit) {
@@ -214,6 +178,7 @@ fun PlaybackSettingsContent(
                 onShowStreamRegexDialog = { openDialog { showStreamRegexDialog = true } },
                 onShowNextEpisodeThresholdModeDialog = { openDialog { showNextEpisodeThresholdModeDialog = true } },
                 onShowReuseLastLinkCacheDialog = { openDialog { showReuseLastLinkCacheDialog = true } },
+                onShowStreamCacheHoursDialog = { openDialog { showStreamCacheHoursDialog = true } },
                 onSetStreamAutoPlayNextEpisodeEnabled = { enabled ->
                     coroutineScope.launch { viewModel.setStreamAutoPlayNextEpisodeEnabled(enabled) }
                 },
@@ -232,6 +197,7 @@ fun PlaybackSettingsContent(
                     coroutineScope.launch { viewModel.setStreamAutoPlayTimeoutSeconds(seconds) }
                 },
                 onSetReuseLastLinkEnabled = { enabled -> coroutineScope.launch { viewModel.setStreamReuseLastLinkEnabled(enabled) } },
+                onSetStreamCacheEnabled = { enabled -> coroutineScope.launch { viewModel.setStreamCacheEnabled(enabled) } },
                 onSetLoadingOverlayEnabled = { enabled -> coroutineScope.launch { viewModel.setLoadingOverlayEnabled(enabled) } },
                 onSetPauseOverlayEnabled = { enabled -> coroutineScope.launch { viewModel.setPauseOverlayEnabled(enabled) } },
                 onSetOsdClockEnabled = { enabled -> coroutineScope.launch { viewModel.setOsdClockEnabled(enabled) } },
@@ -276,6 +242,7 @@ fun PlaybackSettingsContent(
         showStreamRegexDialog = showStreamRegexDialog,
         showNextEpisodeThresholdModeDialog = showNextEpisodeThresholdModeDialog,
         showReuseLastLinkCacheDialog = showReuseLastLinkCacheDialog,
+        showStreamCacheHoursDialog = showStreamCacheHoursDialog,
         onSetPlayerPreference = { preference ->
             coroutineScope.launch { viewModel.setPlayerPreference(preference) }
         },
@@ -328,6 +295,9 @@ fun PlaybackSettingsContent(
         onSetReuseLastLinkCacheHours = { hours ->
             coroutineScope.launch { viewModel.setStreamReuseLastLinkCacheHours(hours) }
         },
+        onSetStreamCacheHours = { hours ->
+            coroutineScope.launch { viewModel.setStreamCacheHours(hours) }
+        },
         onDismissLanguageDialog = ::dismissAllDialogs,
         onDismissSecondaryLanguageDialog = ::dismissAllDialogs,
         onDismissSubtitleStartupModeDialog = ::dismissAllDialogs,
@@ -343,7 +313,8 @@ fun PlaybackSettingsContent(
         onDismissStreamAutoPlayAddonSelectionDialog = ::dismissAllDialogs,
         onDismissStreamAutoPlayPluginSelectionDialog = ::dismissAllDialogs,
         onDismissNextEpisodeThresholdModeDialog = ::dismissAllDialogs,
-        onDismissReuseLastLinkCacheDialog = ::dismissAllDialogs
+        onDismissReuseLastLinkCacheDialog = ::dismissAllDialogs,
+        onDismissStreamCacheHoursDialog = ::dismissAllDialogs
     )
 }
 

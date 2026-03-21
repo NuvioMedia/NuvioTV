@@ -113,7 +113,8 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
             type = type,
             videoId = vid,
             season = seasonArg,
-            episode = episodeArg
+            episode = episodeArg,
+            forceRefresh = forceRefresh
         ).collect { result ->
             when (result) {
                 is NetworkResult.Success -> {
