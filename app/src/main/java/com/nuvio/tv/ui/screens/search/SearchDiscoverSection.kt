@@ -62,6 +62,7 @@ import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -554,7 +555,7 @@ private fun DiscoverActionCard(
     onFocused: () -> Unit = {},
     onClick: () -> Unit
 ) {
-    val cardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
+    val cardShape = NuvioTheme.extendedColors.posterShape
     val title = when (actionType) {
         DiscoverGridAction.ShowMore -> stringResource(R.string.discover_load_more)
         DiscoverGridAction.LoadMore -> stringResource(R.string.discover_load_more)

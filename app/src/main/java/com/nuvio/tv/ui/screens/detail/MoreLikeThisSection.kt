@@ -56,7 +56,6 @@ fun MoreLikeThisSection(
         PosterCardStyle(
             width = 260.dp,
             height = 146.dp,
-            cornerRadius = 12.dp,
             focusedBorderWidth = 2.dp,
             focusedScale = 1.02f
         )

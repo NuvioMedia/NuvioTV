@@ -85,18 +85,25 @@ fun ContentCard(
     onLongPress: (() -> Unit)? = null,
     onClick: () -> Unit = {}
 ) {
-    val cardShape = remember(posterCardStyle.cornerRadius) { RoundedCornerShape(posterCardStyle.cornerRadius) }
-    val baseCardWidth = when (item.posterShape) {
-        PosterShape.POSTER -> posterCardStyle.width
-        PosterShape.LANDSCAPE -> 260.dp
-        PosterShape.SQUARE -> 170.dp
+    val extended = NuvioTheme.extendedColors
+
+    val cardShape = extended.posterShape
+    val baseCardWidth = extended.posterWidth
+    val baseCardHeight = extended.posterHeight
+
+    val finalWidth = when (item.posterShape) {
+        PosterShape.POSTER -> baseCardWidth
+        PosterShape.LANDSCAPE -> baseCardWidth * 1.5f
+        PosterShape.SQUARE -> baseCardWidth
     }
-    val baseCardHeight = when (item.posterShape) {
-        PosterShape.POSTER -> posterCardStyle.height
-        PosterShape.LANDSCAPE -> 148.dp
-        PosterShape.SQUARE -> 170.dp
+
+    val finalHeight = when (item.posterShape) {
+        PosterShape.POSTER -> baseCardHeight
+        PosterShape.LANDSCAPE -> baseCardHeight * 0.65f 
+        PosterShape.SQUARE -> baseCardWidth 
     }
-    val expandedCardWidth = baseCardHeight * BACKDROP_ASPECT_RATIO
+
+    val expandedCardWidth = finalHeight * BACKDROP_ASPECT_RATIO
 
     var isFocused by remember { mutableStateOf(false) }
     var longPressTriggered by remember { mutableStateOf(false) }
@@ -285,7 +292,7 @@ fun ContentCard(
                 .then(
                     if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
                 ),
-            shape = CardDefaults.shape(shape = cardShape),
+            shape = CardDefaults.shape(shape = NuvioTheme.extendedColors.posterShape),
             colors = CardDefaults.colors(
                 containerColor = NuvioColors.BackgroundCard,
                 focusedContainerColor = NuvioColors.BackgroundCard
@@ -293,7 +300,7 @@ fun ContentCard(
             border = CardDefaults.border(
                 focusedBorder = Border(
                     border = BorderStroke(posterCardStyle.focusedBorderWidth, NuvioColors.FocusRing),
-                    shape = cardShape
+                    shape = NuvioTheme.extendedColors.posterShape
                 )
             ),
             scale = CardDefaults.scale(focusedScale = posterCardStyle.focusedScale)
@@ -302,13 +309,16 @@ fun ContentCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(baseCardHeight)
-                    .clip(cardShape)
+                    .clip(NuvioTheme.extendedColors.posterShape)
+                    .background(NuvioColors.BackgroundCard) // avoid showing transparent placeholder pixels during image load
             ) {
                 if (!imageUrl.isNullOrBlank()) {
                     AsyncImage(
                         model = imageModel,
                         contentDescription = item.name,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize()
+                            .fillMaxSize()
+                            .clip(cardShape),
                         contentScale = ContentScale.Crop
                     )
                 } else {

@@ -5,6 +5,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.darkColorScheme
@@ -18,7 +20,10 @@ data class NuvioExtendedColors(
     val textTertiary: Color,
     val focusRing: Color,
     val focusBackground: Color,
-    val rating: Color
+    val rating: Color,
+    val posterShape: androidx.compose.ui.graphics.Shape,
+    val posterWidth: androidx.compose.ui.unit.Dp,
+    val posterHeight: androidx.compose.ui.unit.Dp     
 )
 
 val LocalNuvioColors = staticCompositionLocalOf {
@@ -33,7 +38,10 @@ val LocalNuvioExtendedColors = staticCompositionLocalOf {
         textTertiary = Color(0xFF808080),
         focusRing = ThemeColors.Ocean.focusRing,
         focusBackground = ThemeColors.Ocean.focusBackground,
-        rating = Color(0xFFFFD700)
+        rating = Color(0xFFFFD700),
+        posterShape = RoundedCornerShape(12.dp),
+        posterWidth = 120.dp,
+        posterHeight = 180.dp
     )
 }
 
@@ -44,6 +52,8 @@ val LocalAppTheme = staticCompositionLocalOf { AppTheme.WHITE }
 fun NuvioTheme(
     appTheme: AppTheme = AppTheme.WHITE,
     appFont: AppFont = AppFont.INTER,
+    posterRadiusDp: Int, 
+    posterWidthDp: Int,
     content: @Composable () -> Unit
 ) {
     val palette = ThemeColors.getColorPalette(appTheme)
@@ -70,7 +80,10 @@ fun NuvioTheme(
         textTertiary = colorScheme.TextTertiary,
         focusRing = colorScheme.FocusRing,
         focusBackground = colorScheme.FocusBackground,
-        rating = colorScheme.Rating
+        rating = colorScheme.Rating,
+        posterShape = RoundedCornerShape(posterRadiusDp.dp),
+        posterWidth = posterWidthDp.dp,
+        posterHeight = ((posterWidthDp * 3) / 2).dp
     )
 
     CompositionLocalProvider(

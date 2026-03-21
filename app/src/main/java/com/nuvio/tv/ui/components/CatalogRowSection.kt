@@ -50,6 +50,7 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
@@ -85,7 +86,7 @@ fun CatalogRowSection(
         return "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}_${item.id}_$index"
     }
 
-    val seeAllCardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
+    val seeAllCardShape = NuvioTheme.extendedColors.posterShape
     val currentOnItemFocused by rememberUpdatedState(onItemFocused)
     val currentOnItemFocus by rememberUpdatedState(onItemFocus)
 

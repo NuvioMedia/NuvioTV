@@ -8,7 +8,6 @@ import androidx.compose.ui.unit.dp
 data class PosterCardStyle(
     val width: Dp = 126.dp,
     val height: Dp = 189.dp,
-    val cornerRadius: Dp = 12.dp,
     val focusedBorderWidth: Dp = 2.dp,
     val focusedScale: Float = 1.02f
 ) {

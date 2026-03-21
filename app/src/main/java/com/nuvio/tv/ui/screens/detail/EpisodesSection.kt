@@ -401,6 +401,7 @@ private fun EpisodeCard(
     onFocused: (() -> Unit)? = null,
     onFocusRestored: (() -> Unit)? = null
 ) {
+    val themeShape = NuvioTheme.extendedColors.posterShape
     val context = LocalContext.current
     val density = LocalDensity.current
     val formattedDate = remember(episode.released) {
@@ -427,7 +428,7 @@ private fun EpisodeCard(
     }
     var isFocused by isFocusedState
     var longPressTriggered by remember { mutableStateOf(false) }
-    val shape = remember(cardMetrics.cornerRadius) { RoundedCornerShape(cardMetrics.cornerRadius) }
+    val shape = themeShape
     val thumbnailWidthPx = remember(cardMetrics.cardWidth, density) {
         with(density) { cardMetrics.cardWidth.roundToPx() }
     }
@@ -476,7 +477,6 @@ private fun EpisodeCard(
         )
     }
     val badgeBgColor = remember { Color.Black.copy(alpha = 0.42f) }
-    val badgeShape = remember(cardMetrics.episodeBadgeCornerRadius) { RoundedCornerShape(cardMetrics.episodeBadgeCornerRadius) }
     val progressBgColor = remember { Color.Black.copy(alpha = 0.45f) }
     val notStartedBadgeColor = remember(textSecondary) { textSecondary.copy(alpha = 0.9f) }
     val thumbnailRequest = remember(context, episode.thumbnail, thumbnailWidthPx, thumbnailHeightPx, shouldBlur) {
@@ -614,7 +614,7 @@ private fun EpisodeCard(
                     modifier = Modifier
                         .background(
                             color = badgeBgColor,
-                            shape = badgeShape
+                            shape = themeShape
                         )
                         .padding(
                             horizontal = cardMetrics.episodeBadgeHorizontalPadding,

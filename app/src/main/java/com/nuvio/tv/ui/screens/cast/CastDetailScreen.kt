@@ -67,6 +67,7 @@ import java.util.Date
 import java.util.Locale
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
+import com.nuvio.tv.ui.theme.NuvioTheme
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -128,7 +129,6 @@ private fun CastDetailContent(
         PosterCardStyle(
             width = 112.dp,
             height = 168.dp,
-            cornerRadius = PosterCardDefaults.Style.cornerRadius,
             focusedBorderWidth = PosterCardDefaults.Style.focusedBorderWidth,
             focusedScale = PosterCardDefaults.Style.focusedScale
         )
@@ -574,7 +574,7 @@ private fun CastDetailSkeleton(personName: String) {
                             modifier = Modifier
                                 .width(112.dp)
                                 .height(168.dp)
-                                .clip(RoundedCornerShape(PosterCardDefaults.Style.cornerRadius))
+                                .clip(NuvioTheme.extendedColors.posterShape)
                                 .background(NuvioColors.SurfaceVariant)
                         )
                         Spacer(modifier = Modifier.height(8.dp))

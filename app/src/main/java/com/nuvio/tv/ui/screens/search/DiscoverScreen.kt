@@ -40,12 +40,11 @@ fun DiscoverScreen(
     var restoreDiscoverFocus by rememberSaveable { mutableStateOf(false) }
     var pendingDiscoverRestoreOnResume by rememberSaveable { mutableStateOf(false) }
 
-    val posterCardStyle = remember(uiState.posterCardWidthDp, uiState.posterCardCornerRadiusDp) {
+    val posterCardStyle = remember(uiState.posterCardWidthDp) {
         val computedHeightDp = (uiState.posterCardWidthDp * 1.5f).roundToInt()
         PosterCardStyle(
             width = uiState.posterCardWidthDp.dp,
             height = computedHeightDp.dp,
-            cornerRadius = uiState.posterCardCornerRadiusDp.dp,
             focusedBorderWidth = PosterCardDefaults.Style.focusedBorderWidth,
             focusedScale = PosterCardDefaults.Style.focusedScale
         )
