@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
@@ -10,6 +11,7 @@ import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.text.SubtitleParser
+import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.core.network.IPv4FirstDns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -21,6 +23,7 @@ import java.net.URLDecoder
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
+@UnstableApi
 internal class PlayerMediaSourceFactory {
     private var customExtractorsFactory: ExtractorsFactory? = null
     private var customSubtitleParserFactory: SubtitleParser.Factory? = null
@@ -41,6 +44,10 @@ internal class PlayerMediaSourceFactory {
         customExtractorsFactory = extractorsFactory
         customSubtitleParserFactory = subtitleParserFactory
     }
+
+    var useParallelConnections: Boolean = PlayerSettings.DEFAULT_USE_PARALLEL_CONNECTIONS
+    var parallelConnectionCount: Int = PlayerSettings.DEFAULT_PARALLEL_CONNECTION_COUNT
+    var parallelChunkSizeMb: Int = PlayerSettings.DEFAULT_PARALLEL_CHUNK_SIZE_MB
 
     fun createMediaSource(
         url: String,
@@ -66,8 +73,19 @@ internal class PlayerMediaSourceFactory {
         }
 
         val mediaItem = mediaItemBuilder.build()
+
+        val dataSourceFactory = if (useParallelConnections) {
+            ParallelRangeDataSource.Factory(
+                httpDataSourceFactory,
+                parallelConnectionCount,
+                parallelChunkSizeMb.toLong() * 1024 * 1024
+            )
+        } else {
+            httpDataSourceFactory
+        }
+
         val extractorsFactory = customExtractorsFactory ?: DefaultExtractorsFactory()
-        val defaultFactory = DefaultMediaSourceFactory(httpDataSourceFactory, extractorsFactory).apply {
+        val defaultFactory = DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory).apply {
             customSubtitleParserFactory?.let { parserFactory ->
                 setSubtitleParserFactory(parserFactory)
             }
@@ -85,7 +103,9 @@ internal class PlayerMediaSourceFactory {
                 .createMediaSource(mediaItem)
             isDash && !forceDefaultFactory -> DashMediaSource.Factory(httpDataSourceFactory)
                 .createMediaSource(mediaItem)
-            else -> defaultFactory.createMediaSource(mediaItem)
+            else -> {
+                defaultFactory.createMediaSource(mediaItem)
+            }
         }
     }
 

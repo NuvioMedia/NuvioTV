@@ -40,9 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
@@ -65,7 +63,8 @@ private enum class PlaybackSection {
     GENERAL,
     STREAM_SELECTION,
     AUDIO_TRAILER,
-    SUBTITLES
+    SUBTITLES,
+    BUFFER_NETWORK
 }
 
 private data class PlaybackGeneralUi(
@@ -129,13 +128,25 @@ internal fun PlaybackSettingsSections(
     onSetSubtitleBold: (Boolean) -> Unit,
     onSetSubtitleOutlineEnabled: (Boolean) -> Unit,
     onSetUseLibass: (Boolean) -> Unit,
-    onSetLibassRenderType: (com.nuvio.tv.data.local.LibassRenderType) -> Unit
+    onSetLibassRenderType: (com.nuvio.tv.data.local.LibassRenderType) -> Unit,
+    onSetUseParallelConnections: (Boolean) -> Unit,
+    onSetParallelConnectionCount: (Int) -> Unit,
+    onSetParallelChunkSizeMb: (Int) -> Unit,
+    onSetBufferMinBufferMs: (Int) -> Unit,
+    onSetBufferMaxBufferMs: (Int) -> Unit,
+    onSetBufferForPlaybackMs: (Int) -> Unit,
+    onSetBufferForPlaybackAfterRebufferMs: (Int) -> Unit,
+    onSetBufferTargetSizeMb: (Int) -> Unit,
+    onSetBufferBackBufferDurationMs: (Int) -> Unit,
+    onResetBufferSettingsToDefaults: () -> Unit,
+    onResetNetworkSettingsToDefaults: () -> Unit,
 ) {
     var generalExpanded by rememberSaveable { mutableStateOf(false) }
     var afrExpanded by rememberSaveable { mutableStateOf(false) }
     var streamExpanded by rememberSaveable { mutableStateOf(false) }
     var audioTrailerExpanded by rememberSaveable { mutableStateOf(false) }
     var subtitlesExpanded by rememberSaveable { mutableStateOf(false) }
+    var bufferAndNetworkExpanded by rememberSaveable { mutableStateOf(false) }
 
     val defaultGeneralHeaderFocus = remember { FocusRequester() }
     val afrHeaderFocus = remember { FocusRequester() }
@@ -143,6 +154,7 @@ internal fun PlaybackSettingsSections(
     val audioTrailerHeaderFocus = remember { FocusRequester() }
     val subtitlesHeaderFocus = remember { FocusRequester() }
     val generalHeaderFocus = initialFocusRequester ?: defaultGeneralHeaderFocus
+    val bufferAndNetworkHeaderFocus = remember { FocusRequester() }
 
     var focusedSection by remember { mutableStateOf<PlaybackSection?>(null) }
 
@@ -371,6 +383,31 @@ internal fun PlaybackSettingsSections(
                 onSetLibassRenderType = onSetLibassRenderType,
                 onItemFocused = { focusedSection = PlaybackSection.SUBTITLES },
                 enabled = !generalUi.isExternalPlayer
+            )
+        }
+
+        playbackCollapsibleSection(
+            keyPrefix = "buffer",
+            title = "Buffer & Network",
+            description = "How much content to keep in memory and how to fetch streams.",
+            expanded = bufferAndNetworkExpanded,
+            onToggle = { bufferAndNetworkExpanded = !bufferAndNetworkExpanded },
+            focusRequester = bufferAndNetworkHeaderFocus,
+            onHeaderFocused = { focusedSection = PlaybackSection.BUFFER_NETWORK }
+        ) {
+            bufferAndNetworkSettingsItems(
+                playerSettings = playerSettings,
+                onSetBufferMinBufferMs = onSetBufferMinBufferMs,
+                onSetBufferMaxBufferMs = onSetBufferMaxBufferMs,
+                onSetBufferForPlaybackMs = onSetBufferForPlaybackMs,
+                onSetBufferForPlaybackAfterRebufferMs = onSetBufferForPlaybackAfterRebufferMs,
+                onSetBufferTargetSizeMb = onSetBufferTargetSizeMb,
+                onSetBufferBackBufferDurationMs = onSetBufferBackBufferDurationMs,
+                onResetToDefaults = onResetBufferSettingsToDefaults,
+                onSetUseParallelConnections = onSetUseParallelConnections,
+                onSetParallelConnectionCount = onSetParallelConnectionCount,
+                onSetParallelChunkSizeMb = onSetParallelChunkSizeMb,
+                onResetNetworkToDefaults = onResetNetworkSettingsToDefaults
             )
         }
     }
