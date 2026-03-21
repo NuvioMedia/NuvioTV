@@ -93,6 +93,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 private const val MODERN_HORIZONTAL_FOCUS_DEBOUNCE_MS = 140L
 private const val POSTER_PREFETCH_DISTANCE = 8
 
+internal val LocalVerticalRowsScrolling = androidx.compose.runtime.compositionLocalOf { false }
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun ModernContinueWatchingRowItem(
@@ -672,7 +674,14 @@ private fun ModernCarouselCard(
     }
     var landscapeLogoLoadFailed by remember(effectiveLogoUrl) { mutableStateOf(false) }
     val shouldPlayTrailerInCard = playTrailerInExpandedCard && !trailerPreviewUrl.isNullOrBlank()
-    val hasImage = !imageUrl.isNullOrBlank()
+    val isVerticalRowsScrolling = LocalVerticalRowsScrolling.current
+    val imageCacheKey = "${imageUrl}_${requestWidthPx}x${requestHeightPx}"
+    val isImageCached = remember(imageModel) {
+        context.imageLoader.memoryCache?.get(MemoryCache.Key(imageCacheKey)) != null
+    }
+
+    val safeImageModel = if (isVerticalRowsScrolling && !isImageCached) null else imageModel
+    val hasImage = !imageUrl.isNullOrBlank() && safeImageModel != null
     val hasLandscapeLogo =
         (useLandscapePosters || isBackdropExpanded) &&
             !effectiveLogoUrl.isNullOrBlank() &&
@@ -771,7 +780,7 @@ private fun ModernCarouselCard(
                 Box(modifier = mediaLayerModifier) {
                     if (hasImage) {
                         AsyncImage(
-                            model = imageModel,
+                            model = safeImageModel,
                             contentDescription = item.title,
                             modifier = Modifier.fillMaxSize(),
                             placeholder = backgroundPainter,
