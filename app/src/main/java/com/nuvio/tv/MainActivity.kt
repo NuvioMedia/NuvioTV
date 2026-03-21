@@ -638,7 +638,6 @@ private fun LegacySidebarScaffold(
                                     modifier = Modifier
                                         .width(itemWidth)
                                         .height(52.dp)
-                                        .clip(profileItemShape)
                                         .background(color = profileBgColor, shape = profileItemShape)
                                         .onFocusChanged { isProfileFocused = it.isFocused }
                                         .clickable {
@@ -796,7 +795,6 @@ private fun LegacySidebarButton(
         modifier = modifier
             .height(52.dp)
             .focusProperties { canFocus = expanded }
-            .clip(itemShape)
             .background(color = backgroundColor, shape = itemShape)
             .onFocusChanged { isFocused = it.isFocused }
             .clickable(onClick = onClick),
@@ -1271,7 +1269,6 @@ private fun CollapsedSidebarPill(
                 .graphicsLayer {
                     shape = pillShape
                     clip = true
-                    compositingStrategy = CompositingStrategy.Offscreen
                 }
                 .clip(pillShape)
                 .background(brush = pillBackgroundBrush, shape = pillShape)
