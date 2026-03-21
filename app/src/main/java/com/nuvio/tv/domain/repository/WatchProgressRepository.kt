@@ -33,6 +33,22 @@ interface WatchProgressRepository {
      */
     fun getAllEpisodeProgress(contentId: String): Flow<Map<Pair<Int, Int>, WatchProgress>>
 
+    /**
+     * Get the aired episode order for a series when available from the current progress backend.
+     */
+    fun getAiredEpisodeOrder(contentId: String): Flow<List<Pair<Int, Int>>>
+
+    /**
+     * Get completed series episode seeds suitable for building a lightweight "Next Up".
+     */
+    fun observeNextUpSeeds(): Flow<List<WatchProgress>>
+
+    /**
+     * Emits immediate optimistic updates that should patch Continue Watching
+     * without waiting for the regular progress flows to settle.
+     */
+    fun observeOptimisticContinueWatchingUpdates(): Flow<WatchProgress>
+
 
     /**
      * Returns whether the item is marked as watched/completed.

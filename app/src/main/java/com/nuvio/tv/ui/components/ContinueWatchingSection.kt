@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -308,6 +310,9 @@ fun ContinueWatchingCard(
 
     val bgColor = NuvioColors.Background
     val badgeBackground = remember(bgColor) { bgColor.copy(alpha = 0.8f) }
+    
+    val bgCardColor = NuvioColors.BackgroundCard
+    val backgroundPainter = remember(bgCardColor) { androidx.compose.ui.graphics.painter.ColorPainter(bgCardColor) }
 
     Card(
         onClick = {
@@ -342,8 +347,8 @@ fun ContinueWatchingCard(
             },
         shape = CardDefaults.shape(shape = CwCardShape),
         colors = CardDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.FocusBackground
+            containerColor = Color.Transparent,
+            focusedContainerColor = Color.Transparent
         ),
         border = CardDefaults.border(
             focusedBorder = Border(
@@ -369,26 +374,35 @@ fun ContinueWatchingCard(
                         model = imageRequest,
                         contentDescription = titleText,
                         modifier = Modifier.fillMaxSize(),
+                        placeholder = backgroundPainter,
+                        error = backgroundPainter,
+                        fallback = backgroundPainter,
                         contentScale = ContentScale.Crop
                     )
                 }
 
-                // Gradient overlay for text readability
+                // Gradient overlay for text readability - Optimized bounding to avoid transparent overdraw
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .drawWithCache {
+                            val startYPos = size.height * 0.5f // Skip top 50%
                             val gradient = Brush.verticalGradient(
                                 colorStops = arrayOf(
                                     0.0f to Color.Transparent,
-                                    0.5f to Color.Transparent,
-                                    0.8f to bgColor.copy(alpha = 0.7f),
+                                    0.6f to bgColor.copy(alpha = 0.7f), // Mapped from original 0.8
                                     1.0f to bgColor.copy(alpha = 0.95f)
                                 ),
-                                startY = 0f,
+                                startY = startYPos,
                                 endY = size.height
                             )
-                            onDrawBehind { drawRect(gradient) }
+                            onDrawBehind { 
+                                drawRect(
+                                    brush = gradient,
+                                    topLeft = Offset(0f, startYPos),
+                                    size = Size(size.width, size.height - startYPos)
+                                ) 
+                            }
                         }
                 )
 

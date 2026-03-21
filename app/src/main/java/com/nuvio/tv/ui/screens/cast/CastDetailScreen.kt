@@ -82,7 +82,6 @@ fun CastDetailScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioColors.Background)
     ) {
         Crossfade(
             targetState = uiState,
@@ -149,47 +148,11 @@ private fun CastDetailContent(
                 )
             )
         }
-        // Left-to-right dark gradient for readability
-        val leftGradient = remember(backgroundColor) {
-            Brush.horizontalGradient(
-                colorStops = arrayOf(
-                    0.0f to backgroundColor.copy(alpha = 0.74f),
-                    0.22f to backgroundColor.copy(alpha = 0.70f),
-                    0.38f to backgroundColor.copy(alpha = 0.60f),
-                    0.55f to backgroundColor.copy(alpha = 0.46f),
-                    0.72f to backgroundColor.copy(alpha = 0.26f),
-                    1.0f to Color.Transparent
-                )
-            )
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(leftGradient)
-        )
-
-        // Accent goes on top of the dark gradient so it stays visible.
+        // Accent goes on top of the plain background to provide the Cast theme coloring
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(accentGradient)
-        )
-
-        // Bottom gradient
-        val bottomGradient = remember(backgroundColor) {
-            Brush.verticalGradient(
-                colorStops = arrayOf(
-                    0.0f to Color.Transparent,
-                    0.6f to Color.Transparent,
-                    0.85f to backgroundColor.copy(alpha = 0.85f),
-                    1.0f to backgroundColor
-                )
-            )
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(bottomGradient)
         )
 
         // Main content
@@ -247,8 +210,8 @@ private fun HeroSection(person: PersonDetail) {
                 shape = RoundedCornerShape(16.dp)
             ),
             colors = CardDefaults.colors(
-                containerColor = NuvioColors.SurfaceVariant,
-                focusedContainerColor = NuvioColors.SurfaceVariant
+                containerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent
             ),
             border = CardDefaults.border(
                 border = Border(
@@ -261,13 +224,16 @@ private fun HeroSection(person: PersonDetail) {
                 )
             )
         ) {
+            val bgCardColor = NuvioColors.SurfaceVariant
+            val bgPainter = remember(bgCardColor) { androidx.compose.ui.graphics.painter.ColorPainter(bgCardColor) }
+            val photo = person.profilePhoto
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(16.dp)),
+                    .clip(RoundedCornerShape(16.dp))
+                    .then(if (photo.isNullOrBlank()) Modifier.background(bgCardColor) else Modifier),
                 contentAlignment = Alignment.Center
             ) {
-                val photo = person.profilePhoto
                 if (!photo.isNullOrBlank()) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
@@ -280,6 +246,9 @@ private fun HeroSection(person: PersonDetail) {
                             .build(),
                         contentDescription = person.name,
                         modifier = Modifier.fillMaxSize(),
+                        placeholder = bgPainter,
+                        error = bgPainter,
+                        fallback = bgPainter,
                         contentScale = ContentScale.Crop
                     )
                 } else {
@@ -317,14 +286,21 @@ private fun HeroSection(person: PersonDetail) {
             Spacer(modifier = Modifier.height(10.dp))
 
             // Personal Info Row
+            val strBorn = stringResource(R.string.cast_detail_born)
+            val strBornDied = stringResource(R.string.cast_detail_born_died)
+            val strAge = stringResource(R.string.cast_detail_age)
             val infoItems = buildList {
                 person.birthday?.let { bday ->
                     val age = calculateAge(bday, person.deathday)
-                    val ageStr = if (age != null) " (age $age)" else ""
+                    val ageStr = if (age != null) " (${strAge.format(age)})" else ""
                     val bdayDisplay = formatDateForDisplay(bday) ?: bday
                     val deathDisplay = person.deathday?.let { formatDateForDisplay(it) ?: it }
-                    val deathStr = deathDisplay?.let { " — †$it" } ?: ""
-                    add("Born: $bdayDisplay$deathStr$ageStr")
+                    val line = if (deathDisplay != null) {
+                        strBornDied.format(bdayDisplay, deathDisplay) + ageStr
+                    } else {
+                        strBorn.format(bdayDisplay) + ageStr
+                    }
+                    add(line)
                 }
                 person.placeOfBirth?.let { add(it) }
             }
@@ -448,33 +424,8 @@ private fun CastDetailSkeleton(personName: String) {
                 )
             )
         }
-        val leftGradient = remember(backgroundColor) {
-            Brush.horizontalGradient(
-                colorStops = arrayOf(
-                    0.0f to backgroundColor.copy(alpha = 0.74f),
-                    0.22f to backgroundColor.copy(alpha = 0.70f),
-                    0.38f to backgroundColor.copy(alpha = 0.60f),
-                    0.55f to backgroundColor.copy(alpha = 0.46f),
-                    0.72f to backgroundColor.copy(alpha = 0.26f),
-                    1.0f to Color.Transparent
-                )
-            )
-        }
-        Box(modifier = Modifier.fillMaxSize().background(leftGradient))
-
+        // Accent gradient provides skeleton color depth
         Box(modifier = Modifier.fillMaxSize().background(accentGradient))
-
-        val bottomGradient = remember(backgroundColor) {
-            Brush.verticalGradient(
-                colorStops = arrayOf(
-                    0.0f to Color.Transparent,
-                    0.6f to Color.Transparent,
-                    0.85f to backgroundColor.copy(alpha = 0.85f),
-                    1.0f to backgroundColor
-                )
-            )
-        }
-        Box(modifier = Modifier.fillMaxSize().background(bottomGradient))
 
         Column(modifier = Modifier.fillMaxSize()) {
             // Hero skeleton
@@ -661,7 +612,8 @@ private fun parseDateFlexible(date: String?): Date? {
 private fun formatDateForDisplay(date: String?): String? {
     val parsed = parseDateFlexible(date) ?: return null
     return try {
-        SimpleDateFormat("d MMM yyyy", Locale.getDefault()).format(parsed)
+        val locale = Locale.getDefault()
+        SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMy"), locale).format(parsed)
     } catch (_: Exception) {
         null
     }

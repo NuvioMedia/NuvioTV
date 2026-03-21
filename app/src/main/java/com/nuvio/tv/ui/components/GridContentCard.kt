@@ -125,8 +125,8 @@ fun GridContentCard(
                 },
             shape = CardDefaults.shape(shape = cardShape),
             colors = CardDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                focusedContainerColor = NuvioColors.BackgroundCard
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent
             ),
             border = CardDefaults.border(
                 focusedBorder = Border(
@@ -142,6 +142,8 @@ fun GridContentCard(
                     .clip(cardShape)
             ) {
                 val context = LocalContext.current
+                val bgCardColor = NuvioColors.BackgroundCard
+                val bgPainter = remember(bgCardColor) { androidx.compose.ui.graphics.painter.ColorPainter(bgCardColor) }
                 val imageModel = remember(item.poster, requestWidthPx, requestHeightPx) {
                     ImageRequest.Builder(context)
                         .data(item.poster)
@@ -157,7 +159,10 @@ fun GridContentCard(
                         model = imageModel,
                         contentDescription = item.name,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        placeholder = bgPainter,
+                        error = bgPainter,
+                        fallback = bgPainter
                     )
                 }
 

@@ -425,6 +425,18 @@ fun LayoutSettingsContent(
                         },
                         onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
                     )
+
+                    CompactToggleRow(
+                        title = stringResource(R.string.layout_show_full_release_date),
+                        subtitle = stringResource(R.string.layout_show_full_release_date_sub),
+                        checked = uiState.showFullReleaseDate,
+                        onToggle = {
+                            viewModel.onEvent(
+                                LayoutSettingsEvent.SetShowFullReleaseDate(!uiState.showFullReleaseDate)
+                            )
+                        },
+                        onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
+                    )
                 }
             }
 

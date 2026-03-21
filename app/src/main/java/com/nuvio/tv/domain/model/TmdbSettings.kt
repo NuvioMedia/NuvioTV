@@ -2,6 +2,7 @@ package com.nuvio.tv.domain.model
 
 data class TmdbSettings(
     val enabled: Boolean = false,
+    val modernHomeEnabled: Boolean = false,
     // TMDB language preference (ISO-639-1, default English)
     val language: String = "en",
     // Group: Artwork (logo, backdrop)

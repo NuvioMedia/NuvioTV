@@ -147,6 +147,7 @@ class MetaDetailsViewModel @Inject constructor(
         observeWatchedEpisodes()
         observeMovieWatched()
         observeBlurUnwatchedEpisodes()
+        observeShowFullReleaseDate()
         observeHideUnreleasedContent()
         loadMeta()
     }
@@ -254,6 +255,7 @@ class MetaDetailsViewModel @Inject constructor(
             MetaDetailsEvent.OnPickerDismiss -> dismissListPicker()
             MetaDetailsEvent.OnClearMessage -> clearMessage()
             is MetaDetailsEvent.OnReviewItemFocused -> maybeLoadMoreReviews(event.index)
+            MetaDetailsEvent.OnLifecyclePause -> handleLifecyclePause()
         }
     }
 
@@ -380,6 +382,18 @@ class MetaDetailsViewModel @Inject constructor(
                 .collectLatest { enabled ->
                 _uiState.update { state ->
                     if (state.blurUnwatchedEpisodes == enabled) state else state.copy(blurUnwatchedEpisodes = enabled)
+                }
+            }
+        }
+    }
+
+    private fun observeShowFullReleaseDate() {
+        viewModelScope.launch {
+            layoutPreferenceDataStore.showFullReleaseDate
+                .distinctUntilChanged()
+                .collectLatest { enabled ->
+                _uiState.update { state ->
+                    if (state.showFullReleaseDate == enabled) state else state.copy(showFullReleaseDate = enabled)
                 }
             }
         }
@@ -2079,6 +2093,16 @@ class MetaDetailsViewModel @Inject constructor(
                 showControls = false,
                 hideLogo = false
             )
+        }
+    }
+
+    private fun handleLifecyclePause() {
+        idleTimerJob?.cancel()
+        isPlayButtonFocused = false
+        val state = _uiState.value
+        if (state.isTrailerPlaying && !state.showTrailerControls) {
+            trailerHasPlayed = true
+            setTrailerPlaybackState(isPlaying = false, showControls = false, hideLogo = false)
         }
     }
 

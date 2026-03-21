@@ -29,6 +29,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktUserEpisodeHistoryItemDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktUserSettingsResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktUserStatsResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktWatchedMovieItemDto
+import com.nuvio.tv.data.remote.dto.trakt.TraktWatchedShowItemDto
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -122,6 +123,12 @@ interface TraktApi {
         @Path("type") type: String,
         @Query("extended") extended: String? = null
     ): Response<List<TraktWatchedMovieItemDto>>
+
+    @GET("sync/watched/shows")
+    suspend fun getWatchedShows(
+        @Header("Authorization") authorization: String,
+        @Query("extended") extended: String? = null
+    ): Response<List<TraktWatchedShowItemDto>>
 
     @GET("sync/history/episodes")
     suspend fun getEpisodeHistory(

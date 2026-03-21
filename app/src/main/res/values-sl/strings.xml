@@ -5,23 +5,57 @@
 	<string name="type_unknown">Neznano</string>
     <!-- HomeScreen -->
     <string name="home_no_addons">Ni nameščenih dodatkov. Dodajte enega za začetek.</string>
-    <string name="home_no_catalog_addons">Ni nameščenih dodatkov za katalog. Namestite dodatek za katalog, da boste videli vsebino.</string>
-    <string name="error_generic">Prišlo je do napake</string>
-
-    <!-- ErrorState -->
-    <string name="action_retry">Poskusi znova</string>
-
-    <!-- ContinueWatchingSection -->
+    <string name="home_no_catalog_addons">Nameščen ni noben dodatek za katalog. Namestite dodatek za katalog, da vidite vsebino.</string>
+    <string name="auth_notice_nuvio_logged_out">Odjavljeni ste bili iz storitve Nuvio. Prosimo, prijavite se znova.</string>
+    <string name="auth_notice_trakt_logged_out">Odjavljeni ste bili iz storitve Trakt. Prosimo, ponovno se povežite.</string>
+    <string name="error_generic">Prišlo je do napake</string>
+	<!-- ErrorState -->
+	<string name="action_retry">Poskusi znova</string>
+    <string name="error_state_generic_issue">Nekaj je šlo narobe.</string>
+    <string name="error_state_possible_fix">Možna rešitev: %1$s</string>
+    <string name="error_state_fix_retry_soon">poskusite znova čez trenutek.</string>
+    <string name="error_state_issue_no_metadata_any_addon">Podatkov o tem ID-ju ni bilo mogoče naložiti, ker nobeden od nameščenih dodatkov ni vrnil metapodatkov.</string>
+    <string name="error_state_fix_no_metadata_any_addon">poskusite z drugim dodatkom, onemogočite možnost \"Prednost zunanjemu meta dodatku\" v nastavitvah postavitve ali preverite, ali nameščeni dodatek podpira ta ID.</string>
+    <string name="error_state_prefix_no_supported_metadata">Noben nameščen dodatek ne podpira metapodatkov za </string>
+    <string name="error_state_prefix_no_addon_for_id">Noben nameščen dodatek ni mogel zagotoviti metapodatkov za id=</string>
+    <string name="error_state_fix_no_supported_metadata">namestite ali posodobite dodatek, ki podpira to vrsto vsebine, in poskusite znova.</string>
+    <string name="error_state_prefix_tried_meta_addons">Preizkušeni meta dodatki:</string>
+    <string name="error_state_fix_tried_meta_addons">namestite dodatek, ki podpira ta ID, ali pa ponovno konfigurirajte/posodobite dodatek in poskusite znova.</string>
+    <string name="error_state_issue_missing_metadata_for_id">nima metapodatkov za ta ID</string>
+    <string name="error_state_fix_missing_metadata_for_id">odprite ta ID prek drugega dodatka, onemogočite možnost \"Prednost zunanjemu meta dodatku\" ali preverite, ali dodatek podpira ta ID.</string>
+    <string name="error_state_issue_addon_unreachable">ni bilo mogoče doseči</string>
+    <string name="error_state_fix_addon_unreachable">preverite internetno povezavo, potrdite, da URL dodatka še vedno deluje, in poskusite znova.</string>
+    <string name="error_state_issue_addon_connection_failed">je zavrnil povezavo</string>
+    <string name="error_state_fix_addon_connection_failed">prepričajte se, da je strežnik dodatka v spletu in dosegljiv, nato poskusite znova.</string>
+    <string name="error_state_issue_addon_timeout">je potreboval preveč časa za odziv</string>
+    <string name="error_state_fix_addon_timeout">poskusite znova čez trenutek ali poskusite z drugim dodatkom, če se težava ponavlja.</string>
+    <string name="error_state_issue_addon_cleartext">uporablja nevarno povezavo HTTP, ki jo je Android blokiral</string>
+    <string name="error_state_fix_addon_cleartext">spremenite URL dodatka v HTTPS ali posodobite konfiguracijo dodatka.</string>
+    <string name="error_state_fix_addon_generic">poskusite znova, posodobite ali ponovno namestite dodatek ali pa poskusite z drugim dodatkom.</string>
+    <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
+    <string name="error_meta_not_found">Metapodatkov ni mogoče najti</string>
+    <string name="error_meta_no_supported_addon">Noben nameščen dodatek ne podpira metapodatkov za \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">Noben nameščen dodatek ni mogel zagotoviti metapodatkov za id=%1$s (vrsta=%2$s).</string>
+    <string name="error_meta_tried_none">Preizkušeni meta dodatki: %1$s. Nobeden od njih ni zagotovil metapodatkov za id=%2$s (vrsta=%3$s).</string>
+    <string name="error_meta_tried_generic">Preizkušeni meta dodatki: %1$s. Metapodatkov ni bilo mogoče naložiti za id=%2$s (vrsta=%3$s).</string>
+    <string name="error_meta_tried_issues">Preizkušeni meta dodatki: %1$s. Metapodatkov ni bilo mogoče naložiti za id=%2$s (vrsta=%3$s). Težave: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Noben nameščen dodatek ne podpira virov za \"%1$s\".</string>
+    <string name="error_stream_tried_none">Preizkušeni dodatki za vire: %1$s. Nobeden od njih ni vrnil virov za id=%2$s (vrsta=%3$s).</string>
+    <string name="error_stream_tried_generic">Preizkušeni dodatki za vire: %1$s. Virov ni bilo mogoče naložiti za id=%2$s (vrsta=%3$s).</string>
+    <string name="error_stream_tried_issues">Preizkušeni dodatki za vire: %1$s. Virov ni bilo mogoče naložiti za id=%2$s (vrsta=%3$s). Težave: %4$s.</string>																   
+	<!-- ContinueWatchingSection -->
     <string name="continue_watching">Nadaljuj z gledanjem</string>
     <string name="cw_upcoming">Prihajajoče</string>
     <string name="cw_next_up">Naslednje na vrsti</string>
     <string name="cw_resume">Nadaljuj</string>
+	<string name="cw_percent_watched">%1$d%% ogledano</string>														 
 	<string name="cw_hours_min_left">Še %1$dh %2$dm</string>
     <string name="cw_min_left">Še %1$dm</string>
     <string name="cw_almost_done">Skoraj pri koncu</string>														  												  
     <string name="cw_airs_date">Na sporedu %1$s</string>
     <string name="cw_action_go_to_details">Pojdi na podrobnosti</string>
-    <string name="cw_action_remove">Odstrani</string>											   
+    <string name="cw_action_start_from_beginning">Začni od začetka</string>											   
+	<string name="cw_action_remove">Odstrani</string>											   
     <string name="cw_dialog_subtitle">Izberite, kaj želite storiti s tem elementom.</string>
 	<string name="home_poster_dialog_subtitle">Dejanja naslova</string>																 
 
@@ -71,25 +105,53 @@
     <string name="detail_marked_episodes_watched">Epizode, označene kot ogledane: %1$d</string>
     <string name="detail_marked_episodes_unwatched">Epizode, označene kot neogledane: %1$d</string>
     <string name="detail_marked_previous_watched">Prejšnje epizode, označene kot ogledane: %1$d</string>																		
-<!-- MetaDetailsScreen -->
-<string name="detail_btn_play">Predvajaj</string>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <!-- MetaDetailsScreen -->
+    <string name="detail_btn_play">Predvajaj</string>
     <string name="detail_btn_resume">Nadaljuj</string>
     <string name="detail_btn_play_episode">Predvajaj S%1$dE%2$d</string>
     <string name="detail_btn_resume_episode">Nadaljuj S%1$dE%2$d</string>
     <string name="detail_btn_next_episode">Naslednja S%1$dE%2$d</string>
-    <string name="detail_tab_cast">Ustvarjalci in igralska zasedba</string>
+    <string name="detail_tab_cast">Ustvarjalci in zasedba</string>
     <string name="cast_role_creator">Ustvarjalec</string>
     <string name="cast_role_director">Režiser</string>
     <string name="cast_role_writer">Scenarist</string>
     <string name="detail_tab_ratings">Ocene</string>
-    <string name="detail_tab_more_like_this">Podobno temu</string>
-    <string name="detail_section_network">Mreža</string>
+    <string name="detail_tab_more_like_this">Podobno</string>
+    <string name="detail_section_network">Omrežje</string>
     <string name="detail_section_production">Produkcija</string>
+    <string name="episodes_unavailable">Ni na voljo</string>
+    <string name="series_status_ended">Končano</string>
+    <string name="series_status_continuing">V teku</string>
+    <string name="series_status_current">Trenutno</string>
+    <string name="series_status_cancelled">Preklicano</string>
+    <string name="series_status_released">Izdano</string>
+    <string name="series_status_planned">Načrtovano</string>
+    <string name="series_status_rumored">Govorice</string>
+    <string name="series_status_in_production">V produkciji</string>
+    <string name="series_status_post_production">Postprodukcija</string>
     <string name="detail_lists_fallback">Seznami</string>
-    <string name="detail_lists_subtitle">Izberite, kateri seznami naj vključujejo ta naslov.</string>
+    <string name="detail_lists_subtitle">Izberite, na katere sezname naj bo vključen ta naslov.</string>
     <string name="action_save">Shrani</string>
     <string name="action_saving">Shranjevanje…</string>
-
     <!-- AppLanguage -->
     <string name="appearance_language">Jezik aplikacije</string>
     <string name="appearance_language_subtitle">Prepiši sistemski jezik</string>
@@ -114,7 +176,7 @@
     <string name="about_check_updates_subtitle">Prenesi najnovejšo različico</string>
     <string name="about_privacy_policy">Politika zasebnosti</string>
     <string name="about_privacy_policy_subtitle">Oglejte si našo politiko zasebnosti</string>
-	<string name="about_supporters_contributors">Podporniki &amp; prispevalci</string>
+	<string name="about_supporters_contributors">Podporniki &amp; soustvarjalci</string>
     <string name="about_supporters_contributors_subtitle">Javne zahvale in zasluge pri projektu</string>																				   
     <!-- SettingsScreen categories -->
     <string name="settings_account">Račun</string>
@@ -155,8 +217,8 @@
 	<string name="action_close">Zapri</string>										  
 
     <!-- SupportersContributorsScreen -->										 
-	<string name="supporters_contributors_title">Podporniki &amp; prispevalci</string>
-    <string name="supporters_contributors_subtitle">Ljudje, ki podpirajo Nuvio, in prispevalci, ki ga gradijo za TV in mobilne naprave.</string>
+	<string name="supporters_contributors_title">Podporniki &amp; soustvarjalci</string>
+    <string name="supporters_contributors_subtitle">Ljudje, ki podpirajo Nuvio, in soustvarjalci, ki ga gradijo za TV in mobilne naprave.</string>
     <string name="supporters_contributors_supporters_copy">Podporniki in donatorji pomagajo ohranjati projekt pri življenju, financirajo infrastrukturo in omogočajo ambiciozne funkcije.</string>
     <string name="supporters_contributors_donate_copy">Nuvio bo ostal brezplačen in odprtokoden. Če želite podpreti projekt, lahko pomagate pokriti porabljen čas in infrastrukturo, ki stoji za njim.</string>
     <string name="supporters_contributors_donate_button">Donirajte za Nuvio</string>
@@ -165,15 +227,15 @@
     <string name="supporters_contributors_qr_hint">Usmerite kamero v QR kodo ali uporabite spodnji gumb.</string>
     <string name="supporters_contributors_back_button">Nazaj na podrobnosti</string>
     <string name="supporters_tab">Podporniki</string>
-    <string name="contributors_tab">Prispevalci</string>
+    <string name="contributors_tab">Soustvarjalci</string>
     <string name="supporters_loading">Nalaganje podpornikov…</string>
     <string name="supporters_empty">Ni še najdenih podpornikov.</string>
     <string name="supporters_error_title">Ni bilo mogoče naložiti podpornikov</string>
     <string name="supporters_no_message">Sporočilo ni bilo deljeno.</string>
     <string name="supporters_open_donations">Odpri stran za donacije</string>
-    <string name="contributors_loading">Nalaganje GitHub prispevalcev…</string>
-    <string name="contributors_empty">Ni še najdenih prispevalcev.</string>
-    <string name="contributors_error_title">Ni bilo mogoče naložiti prispevalcev</string>
+    <string name="contributors_loading">Nalaganje GitHub soustvarjalcev…</string>
+    <string name="contributors_empty">Ni še najdenih soustvarjalcev.</string>
+    <string name="contributors_error_title">Ni bilo mogoče naložiti soustvarjalcev</string>
     <string name="contributors_total_contributions">Skupno %1$d prispevkov</string>
     <string name="contributors_open_github">Odpri GitHub profil</string>
     <string name="contributors_show_kofi_qr">Prikaži Ko-fi QR</string>
@@ -304,7 +366,11 @@
     <string name="autoplay_scope_addons">Samo nameščeni dodatki</string>
     <string name="autoplay_scope_plugins">Samo omogočeni vtičniki</string>
     <string name="autoplay_scope">Obseg samodejnega predvajanja virov</string>
-    <string name="autoplay_allowed_addons">Dovoljeni dodatki</string>
+	<string name="autoplay_timeout_title">Časovna omejitev izbire vira</string>
+    <string name="autoplay_timeout_sub">Čas čakanja na dodatke pred izbiro.</string>
+    <string name="autoplay_timeout_instant">Takoj</string>
+    <string name="autoplay_timeout_unlimited">Neomejeno</string>																	   
+	<string name="autoplay_allowed_addons">Dovoljeni dodatki</string>
     <string name="autoplay_all_addons">Vsi nameščeni dodatki</string>
     <string name="autoplay_allowed_plugins">Dovoljeni vtičniki</string>
     <string name="autoplay_all_plugins">Vsi omogočeni vtičniki</string>
@@ -383,8 +449,8 @@
     <string name="layout_trailer_muted_sub_expanded">Utišaj zvok napovednika v razširjenih karticah.</string>
     <string name="layout_section_card_style">Slog kartice plakata</string>
     <string name="layout_section_card_style_desc">Prilagodite širino kartice in radij vogalov.</string>
-    <string name="layout_open">Odprto</string>
-    <string name="layout_closed">Zaprto</string>
+    <string name="layout_open">Razširjeno</string>
+    <string name="layout_closed">Strnjeno</string>
     <string name="layout_trailer_location">Lokacija predvajanja modernega napovednika</string>
     <string name="layout_trailer_location_sub">Izberite, kje se predvaja predogled napovednika na modernem domačem zaslonu.</string>
     <string name="layout_trailer_expanded_card">Razširjena kartica</string>
@@ -432,6 +498,19 @@
     <string name="mdblist_dialog_placeholder">Vnesite MDBList API ključ</string>
     <string name="mdblist_not_set">Ni nastavljeno</string>
 	<string name="mdblist_invalid_api_key">Napačen MDBList API ključ</string>																	   
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	<!-- Anime-Skip -->				   
 	<string name="animeskip_title">Anime Skip</string>
     <string name="animeskip_subtitle">Konfigurirajte svoj Anime Skip ID odjemalca za preskakovanje uvodov/odjav animejev</string>
@@ -445,7 +524,7 @@
     <string name="animeskip_invalid_client_id">Neveljaven ID odjemalca</string>												  
     <string name="action_clear">Počisti</string>
 
-    <!-- TmdbSettingsScreen -->
+	<!-- TmdbSettingsScreen -->
     <string name="tmdb_title">Obogatitev s TMDB</string>
     <string name="tmdb_subtitle">Izberite, katera polja metapodatkov naj prihajajo iz TMDB</string>
     <string name="tmdb_enable_title">Omogoči obogatitev s TMDB</string>
@@ -485,12 +564,21 @@
     <string name="trakt_token_refreshes">Žeton za dostop do Trakt se osveži čez %1$s</string>
     <string name="trakt_login_instruction">Pritisnite Prijava, da začnete preverjanje pristnosti naprave Trakt. Tukaj se bo prikazala QR koda.</string>
     <string name="trakt_missing_credentials">Manjka TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET v local.properties.</string>
-    <string name="trakt_continue_watching_window">Okno za nadaljevanje gledanja</string>
-    <string name="trakt_continue_watching_subtitle">Zgodovina Trakt upoštevana za nadaljevanje gledanja</string>
-    <string name="trakt_unaired_next_up">Nepredvajane naslednje epizode</string>
-    <string name="trakt_unaired_next_up_subtitle">Prikaži prihajajoče epizode, preden so na sporedu</string>
-	<string name="trakt_unaired_shown">Prikazano</string>
-    <string name="trakt_unaired_hidden">Skrito</string>												 												   
+    <string name="trakt_watch_progress_title">Napredek gledanja</string>
+    <string name="trakt_watch_progress_subtitle">Izberite, kateri vir napredka omogoča nadaljevanje predvajanja in nadaljnje gledanje</string>
+    <string name="trakt_watch_progress_dialog_title">Napredek gledanja</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Izberite, ali naj nadaljevanje predvajanja in nadaljnje gledanje uporablja Trakt ali Nuvio Sync, medtem ko beleženje na Trakt (scrobbling) ostane aktivno.</string>
+    <string name="trakt_watch_progress_source_trakt">Trakt</string>
+    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_trakt_selected">Vir napredka gledanja je nastavljen na Trakt</string>
+    <string name="trakt_watch_progress_nuvio_selected">Vir napredka gledanja je nastavljen na Nuvio Sync</string>
+    <string name="trakt_continue_watching_window">Časovni okvir za nadaljnje gledanje</string>
+    <string name="trakt_continue_watching_subtitle">Zgodovina Trakt, ki se upošteva za nadaljnje gledanje</string>
+    <string name="trakt_unaired_next_up">Naslednje epizode, ki še niso izdane</string>
+    <string name="trakt_unaired_next_up_subtitle">Prikaži prihajajoče epizode pred njihovim izidom</string>
+    <string name="trakt_unaired_shown">Prikazano</string>
+    <string name="trakt_unaired_hidden">Skrito</string>
+    <string name="trakt_unaired_now_shown">Naslednje epizode, ki še niso izdane, so zdaj prikazane</string>																					  
     <string name="trakt_cached_label">V predpomnilniku</string>
     <string name="trakt_stat_movies">Filmi</string>
     <string name="trakt_stat_shows">Serije</string>
@@ -532,8 +620,13 @@
     <string name="debug_error_dialog_title">Napaka pri predvajanju</string>
     <string name="debug_error_dialog_subtitle">Prišlo je do napake med predvajanjem.\n\nNapaka: Testna simulirana napaka - to ni resnična napaka. Vir je vrnil HTTP 503 (Storitev ni na voljo).</string>
     <string name="debug_dismiss">Opusti</string>
-
-    <!-- ProfileSettingsContent -->
+	<string name="debug_section_library">Knjižnica</string>
+    <string name="debug_generate_library_title">Ustvari elemente knjižnice</string>
+    <string name="debug_generate_library_subtitle">Dodaj naključne filme/serije v knjižnico za testiranje</string>
+    <string name="debug_generate_library_placeholder">Število elementov</string>
+    <string name="debug_generate_library_button">Ustvari</string>
+    <string name="debug_generating_library">Ustvarjanje\u2026</string>													 
+	<!-- ProfileSettingsContent -->
     <string name="profile_title">Profili</string>
     <string name="profile_subtitle">Upravljajte uporabniške profile za ta račun.</string>
 	<string name="profile_manage_button">Upravljanje profilov</string>
@@ -575,7 +668,10 @@
     <string name="addon_install_placeholder">https://example.com</string>
     <string name="addon_installing">Nameščanje</string>
     <string name="addon_install_btn">Namesti</string>
-    <string name="addon_installed_section">Nameščeno</string>
+	<string name="addon_install_success">Nameščen %1$s</string>
+    <string name="addon_error_invalid_url">Vnesite veljaven URL dodatka</string>
+    <string name="addon_error_invalid_scheme">URL dodatka se mora začeti s http ali https</string>															
+	<string name="addon_installed_section">Nameščeno</string>
     <string name="addon_empty">Ni nameščenih dodatkov. Dodajte enega za začetek.</string>
     <string name="addon_remove">Odstrani</string>
     <string name="addon_manage_from_phone_title">Upravljajte s telefonom</string>
@@ -617,12 +713,12 @@
     <string name="stream_player_external">Zunanji</string>
 
     <!-- PlayerScreen -->
-    <string name="player_no_external_player">No external player found</string>
+    <string name="player_no_external_player">Zunanjega predvajalnika ni bilo mogoče najti</string>
 
     <!-- ParentalGuideOverlay -->													   
 	<string name="parental_nudity">Gola vsebina</string>
     <string name="parental_violence">Nasilje</string>
-    <string name="parental_profanity">Vulgarnega izražanja</string>
+    <string name="parental_profanity">Vulgarno izražanje</string>
     <string name="parental_alcohol">Alkohol/Droge</string>
     <string name="parental_frightening">Strašljiva vsebina</string>
     <string name="parental_severity_severe">Močno</string>
@@ -638,6 +734,13 @@
     <string name="player_more_speed">Hitrost predvajanja</string>
     <string name="player_more_aspect_ratio">Razmerje stranic</string>
     <string name="player_more_open_external">Odpri v zunanjem predvajalniku</string>										   
+	
+	
+	
+	
+	
+	
+	
 	<!-- StreamSourcesSidePanel -->
     <string name="sources_title">Viri</string>
     <string name="sources_reload">Osveži</string>
@@ -645,7 +748,7 @@
 	<string name="sources_playing">Predvajanje</string>											   
     <string name="sources_no_streams">Prenosi niso najdeni</string>
 
-    <!-- EpisodesSidePanel -->
+	<!-- EpisodesSidePanel -->
     <string name="episodes_panel_close">Zapri</string>
     <string name="episodes_panel_back">Nazaj</string>
     <string name="episodes_panel_reload">Osveži</string>
@@ -661,8 +764,16 @@
     <string name="player_aspect_crop">Obreži</string>													 
 	<!-- AudioDialog -->
     <string name="audio_dialog_title">Zvok</string>
-
-    <!-- SubtitleDialog / SubtitleStyleSidePanel -->
+	<string name="audio_dialog_tab_tracks">Zvok</string>
+    <string name="audio_dialog_tab_mix">Mešanje</string>
+    <string name="audio_mix_label">Ojačitev (PCM)</string>
+    <string name="audio_mix_value_db">%1$d dB</string>
+    <string name="audio_mix_persist_on">Ohrani med sejami: VKLOPLJENO</string>
+    <string name="audio_mix_persist_off">Ohrani med sejami: IZKLOPLJENO</string>
+    <string name="audio_mix_range">Razpon: od %1$d dB do %2$d dB</string>
+    <string name="audio_mix_range_saved">Razpon: od %1$d dB do %2$d dB (shranjeno)</string>
+    <string name="audio_mix_unavailable">Ojačitev na tej napravi ni na voljo</string>													 
+	<!-- SubtitleDialog / SubtitleStyleSidePanel -->
     <string name="subtitle_dialog_title">Podnapisi</string>
     <string name="subtitle_no_builtin">Vgrajeni podnapisi niso na voljo</string>
     <string name="subtitle_loading_addon">Nalaganje podnapisov iz dodatkov\u2026</string>
@@ -686,6 +797,7 @@
     <string name="subtitle_on">Vklopljeno</string>
     <string name="subtitle_off">Izklopljeno</string>
     <string name="subtitle_style_title">Slog podnapisov</string>
+	<string name="subtitle_style_customize">Prilagodi</string>														  
     <string name="subtitle_style_color">Barva</string>
     <string name="subtitle_style_reset">Ponastavi</string>
     <string name="subtitle_style_font_size">Velikost pisave</string>
@@ -698,13 +810,19 @@
     <string name="subtitle_style_off">Izklopljeno</string>
     <string name="panel_failed_load_streams">Nalaganje virov ni uspelo</string>
     <string name="panel_failed_load_episodes">Nalaganje epizod ni uspelo</string>													 
+	
+	
+	
+	
+	
+	
 	<!-- PauseOverlay -->
     <string name="pause_you_are_watching">Gledate</string>
     <string name="pause_cast_label">Zasedba</string>
     <string name="pause_back_to_details">Nazaj na podrobnosti</string>
     <string name="pause_as_character">kot %1$s</string>
 
-    <!-- NextEpisodeCardOverlay -->
+	 <!-- NextEpisodeCardOverlay -->
     <string name="next_episode_label">Naslednja epizoda</string>
 	<string name="next_episode_finding_source">Iskanje vira…</string>
     <string name="next_episode_playing_via">Predvajanje prek %1$s čez %2$ds</string>
@@ -764,6 +882,7 @@
     <!-- AccountSettingsContent -->
     <string name="account_loading">Nalaganje\u2026</string>
     <string name="account_sync_description">Sinhronizirajte svojo knjižnico, napredek ogledov, dodatke in vtičnike na več napravah.</string>
+	<string name="account_sync_restart_note">Sinhronizacija med aktivnimi napravami ne poteka v realnem času. Po prijavi ali za uveljavitev sprememb, narejenih drugje, znova zaženite to napravo.</string>																																										 
     <string name="account_signin_qr_title">Prijava s QR</string>
     <string name="account_signin_qr_subtitle">Skenirajte QR kodo in dokončajte prijavo z e-pošto na telefonu</string>
     <string name="account_signed_in_label">Prijavljeni</string>
@@ -848,12 +967,17 @@
     <string name="profile_delete_confirm_subtitle">S tem boste trajno izbrisali ta profil in vse njegove podatke, vključno s knjižnico, zgodovino ogledov in nastavitvami dodatkov. Tega dejanja ni mogoče razveljaviti.</string>
     <string name="profile_delete_btn">Izbriši profil</string>
     <string name="profile_saving">Shranjevanje\u2026</string>																	   
+	
+	
+	
+	
+	
 	<!-- CastDetailScreen -->
     <string name="cast_detail_error">Nekaj je šlo narobe</string>
     <string name="cast_detail_retry">Poskusi znova</string>
     <string name="cast_detail_filmography">Filmografija</string>
 
-    <!-- CatalogSeeAllScreen -->
+	<!-- CatalogSeeAllScreen -->
     <string name="catalog_see_all_from">od %1$s</string>
     <string name="catalog_see_all_empty_title">Ni elementov na voljo</string>
     <string name="catalog_see_all_empty_subtitle">Poskusite z drugim katalogom ali preverite kasneje</string>
@@ -866,7 +990,9 @@
     <!-- UpdatePromptDialog -->
     <string name="update_title">Posodobitev aplikacije</string>
     <string name="update_downloading">Prenašanje posodobitve</string>
-    <string name="update_unknown_sources">Dovolite namestitve iz neznanih virov za nadaljevanje.</string>
+	<string name="update_download">Prenos</string>
+    <string name="update_downloading_ellipsis">Prenašanje…</string>																																																													  
+	<string name="update_unknown_sources">Dovolite namestitve iz neznanih virov za nadaljevanje.</string>
     <!-- AccountScreen -->
     <string name="account_title">Račun</string>
     <string name="account_sign_in_description">Prijavite se za sinhronizacijo knjižnice, napredka gledanja, dodatkov in vtičnikov v vseh napravah. Knjižnica in napredek se sinhronizirata le, če Trakt ni povezan.</string>
@@ -929,4 +1055,6 @@
     <string name="update_open_settings">Odpri nastavitve</string>
     <string name="update_install">Namesti</string>
     <string name="update_ignore">Prezri</string>
+	<string name="watchlist_added">Dodano na seznam za ogled</string>
+    <string name="watchlist_removed">Odstranjeno s seznama za ogled</string>														  
 </resources>

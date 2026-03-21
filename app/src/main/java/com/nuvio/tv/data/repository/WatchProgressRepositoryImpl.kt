@@ -21,6 +21,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.combine
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
@@ -53,6 +55,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
 ) : WatchProgressRepository {
     companion object {
         private const val TAG = "WatchProgressRepo"
+        private const val OPTIMISTIC_NEXT_UP_SEED_WINDOW_MS = 3 * 60_000L
     }
 
     private data class EpisodeMetadata(
@@ -76,6 +79,10 @@ class WatchProgressRepositoryImpl @Inject constructor(
     var hasCompletedInitialWatchedItemsPull = false
 
     private val metadataState = MutableStateFlow<Map<String, ContentMetadata>>(emptyMap())
+    private val optimisticContinueWatchingUpdates = MutableSharedFlow<WatchProgress>(
+        replay = 1,
+        extraBufferCapacity = 16
+    )
     private val metadataMutex = Mutex()
     private val inFlightMetadataKeys = mutableSetOf<String>()
     private val metadataHydrationLimit = 30
@@ -233,16 +240,11 @@ class WatchProgressRepositoryImpl @Inject constructor(
         traktAuthDataStore.isEffectivelyAuthenticated.first()
 
     private fun traktAllProgressFlow(): Flow<List<WatchProgress>> {
-        return combine(
-            traktProgressService.observeAllProgress()
-                .onStart {
-                    emit(emptyList())
-                },
-            metadataState
-        ) { remoteItems, metadataMap ->
-            hydrateMetadata(remoteItems)
-            remoteItems.map { enrichWithMetadata(it, metadataMap) }
-        }.distinctUntilChanged()
+        return traktProgressService.observeAllProgress()
+            .onStart {
+                emit(emptyList())
+            }
+            .distinctUntilChanged()
     }
 
     override val allProgress: Flow<List<WatchProgress>>
@@ -251,13 +253,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 if (useTraktProgress) {
                     traktAllProgressFlow()
                 } else {
-                    combine(
-                        watchProgressPreferences.allProgress,
-                        metadataState
-                    ) { items, metadataMap ->
-                        hydrateMetadata(items)
-                        items.map { enrichWithMetadata(it, metadataMap) }
-                    }
+                    watchProgressPreferences.allProgress
                 }
             }
 
@@ -317,6 +313,110 @@ class WatchProgressRepositoryImpl @Inject constructor(
                     watchProgressPreferences.getAllEpisodeProgress(contentId)
                 }
             }
+    }
+
+    override fun getAiredEpisodeOrder(contentId: String): Flow<List<Pair<Int, Int>>> {
+        return useTraktProgressFlow()
+            .flatMapLatest { useTraktProgress ->
+                if (useTraktProgress) {
+                    traktProgressService.observeAiredEpisodes(contentId)
+                } else {
+                    flowOf(emptyList())
+                }
+            }
+            .distinctUntilChanged()
+    }
+
+    override fun observeNextUpSeeds(): Flow<List<WatchProgress>> {
+        return useTraktProgressFlow()
+            .flatMapLatest { useTraktProgress ->
+                if (useTraktProgress) {
+                    combine(
+                        traktProgressService.observeWatchedShowSeeds(),
+                        traktProgressService.observeAllProgress()
+                            .map { items ->
+                                val nowMs = System.currentTimeMillis()
+                                items.filter { progress ->
+                                    isOptimisticNextUpSeedCandidate(progress, nowMs)
+                                }
+                            }
+                            .onStart { emit(emptyList()) }
+                    ) { canonicalSeeds, optimisticSeeds ->
+                        mergeNextUpSeeds(canonicalSeeds, optimisticSeeds)
+                    }
+                } else {
+                    watchProgressPreferences.allProgress.map { items ->
+                        items.filter { progress ->
+                            progress.isCompleted() &&
+                                progress.contentType.equals("series", ignoreCase = true) &&
+                                progress.season != null &&
+                                progress.episode != null &&
+                                progress.season != 0
+                        }
+                    }
+                }
+            }
+            .distinctUntilChanged()
+    }
+
+    private fun isOptimisticNextUpSeedCandidate(
+        progress: WatchProgress,
+        nowMs: Long
+    ): Boolean {
+        if (!progress.contentType.equals("series", ignoreCase = true)) return false
+        if (!progress.isCompleted()) return false
+        if (progress.source != WatchProgress.SOURCE_TRAKT_PLAYBACK) return false
+        if (progress.season == null || progress.episode == null || progress.season == 0) return false
+        val ageMs = nowMs - progress.lastWatched
+        return ageMs in 0..OPTIMISTIC_NEXT_UP_SEED_WINDOW_MS
+    }
+
+    private fun mergeNextUpSeeds(
+        canonicalSeeds: List<WatchProgress>,
+        optimisticSeeds: List<WatchProgress>
+    ): List<WatchProgress> {
+        val merged = linkedMapOf<String, WatchProgress>()
+        canonicalSeeds.forEach { seed ->
+            merged[nextUpSeedKey(seed)] = seed
+        }
+        optimisticSeeds.forEach { seed ->
+            val key = nextUpSeedKey(seed)
+            val existing = merged[key]
+            if (existing == null || shouldReplaceNextUpSeed(existing, seed)) {
+                merged[key] = seed
+            }
+        }
+        return merged.values.sortedByDescending { it.lastWatched }
+    }
+
+    private fun nextUpSeedKey(progress: WatchProgress): String {
+        return progress.traktShowId?.let { "trakt_show:$it" }
+            ?: progress.contentId.trim()
+    }
+
+    private fun shouldReplaceNextUpSeed(
+        existing: WatchProgress,
+        candidate: WatchProgress
+    ): Boolean {
+        val candidateSeason = candidate.season ?: -1
+        val candidateEpisode = candidate.episode ?: -1
+        val existingSeason = existing.season ?: -1
+        val existingEpisode = existing.episode ?: -1
+        return candidateSeason > existingSeason ||
+            (
+                candidateSeason == existingSeason &&
+                    (
+                        candidateEpisode > existingEpisode ||
+                            (
+                                candidateEpisode == existingEpisode &&
+                                    candidate.lastWatched >= existing.lastWatched
+                                )
+                        )
+                )
+    }
+
+    override fun observeOptimisticContinueWatchingUpdates(): Flow<WatchProgress> {
+        return optimisticContinueWatchingUpdates
     }
 
     @OptIn(FlowPreview::class)
@@ -484,6 +584,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 progressPercent = 100f,
                 lastWatched = now
             )
+            optimisticContinueWatchingUpdates.tryEmit(completed)
             traktProgressService.applyOptimisticProgress(completed)
             runCatching {
                 traktProgressService.markAsWatched(
@@ -532,6 +633,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 progressPercent = 100f,
                 lastWatched = now
             )
+            optimisticContinueWatchingUpdates.tryEmit(completed)
             runCatching {
                 traktProgressService.markAsWatched(
                     progress = completed,

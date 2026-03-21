@@ -384,8 +384,7 @@ fun SearchScreen(
 
     Box(
         modifier = Modifier
-            .fillMaxSize()
-            .background(NuvioColors.Background),
+            .fillMaxSize(),
         contentAlignment = Alignment.TopCenter
     ) {
         if (isDiscoverMode) {

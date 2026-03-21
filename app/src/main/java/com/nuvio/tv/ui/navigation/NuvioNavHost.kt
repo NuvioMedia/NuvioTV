@@ -40,6 +40,7 @@ import com.nuvio.tv.ui.screens.account.AuthQrSignInScreen
 import com.nuvio.tv.ui.screens.cast.CastDetailScreen
 import com.nuvio.tv.ui.screens.profile.ProfileSelectionMode
 import com.nuvio.tv.ui.screens.profile.ProfileSelectionScreen
+import com.nuvio.tv.ui.screens.tmdb.TmdbEntityBrowseScreen
 
 @Composable
 fun NuvioNavHost(
@@ -246,6 +247,16 @@ fun NuvioNavHost(
                 onNavigateToCastDetail = { personId, personName, preferCrew ->
                     navController.navigate(Screen.CastDetail.createRoute(personId, personName, preferCrew))
                 },
+                onNavigateToTmdbEntityBrowse = { entityKind, entityId, entityName, sourceType ->
+                    navController.navigate(
+                        Screen.TmdbEntityBrowse.createRoute(
+                            entityKind = entityKind,
+                            entityId = entityId,
+                            entityName = entityName,
+                            sourceType = sourceType
+                        )
+                    )
+                },
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
                 },
@@ -439,8 +450,6 @@ fun NuvioNavHost(
                                 episode = playbackInfo.episode,
                                 episodeTitle = playbackInfo.episodeTitle,
                                 bingeGroup = playbackInfo.bingeGroup,
-                                rememberedAudioLanguage = playbackInfo.rememberedAudioLanguage,
-                                rememberedAudioName = playbackInfo.rememberedAudioName,
                                 autoPlayNav = false,
                                 returnToDetailOnBack = returnToDetailOnBack,
                                 returnToHomeOnBack = returnToHomeOnBack,
@@ -475,8 +484,6 @@ fun NuvioNavHost(
                                 episode = playbackInfo.episode,
                                 episodeTitle = playbackInfo.episodeTitle,
                                 bingeGroup = playbackInfo.bingeGroup,
-                                rememberedAudioLanguage = playbackInfo.rememberedAudioLanguage,
-                                rememberedAudioName = playbackInfo.rememberedAudioName,
                                 autoPlayNav = true,
                                 returnToDetailOnBack = returnToDetailOnBack,
                                 returnToHomeOnBack = returnToHomeOnBack,
@@ -567,16 +574,6 @@ fun NuvioNavHost(
                     defaultValue = null
                 },
                 navArgument("bingeGroup") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-                navArgument("rememberedAudioLanguage") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-                navArgument("rememberedAudioName") {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
@@ -987,6 +984,26 @@ fun NuvioNavHost(
             )
         ) {
             CastDetailScreen(
+                onBackPress = { navController.popBackStack() },
+                onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
+                    navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.TmdbEntityBrowse.route,
+            arguments = listOf(
+                navArgument("entityKind") { type = NavType.StringType },
+                navArgument("entityId") { type = NavType.IntType },
+                navArgument("entityName") { type = NavType.StringType },
+                navArgument("sourceType") {
+                    type = NavType.StringType
+                    defaultValue = "tv"
+                }
+            )
+        ) {
+            TmdbEntityBrowseScreen(
                 onBackPress = { navController.popBackStack() },
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))

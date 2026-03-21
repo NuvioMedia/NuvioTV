@@ -96,10 +96,15 @@ internal fun ModernHeroMediaLayer(
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer {
-                    alpha = 1f - transitionProgressState.value
-                    compositingStrategy = CompositingStrategy.Offscreen
-                },
+                .then(
+                    if (transitionProgressState.value > 0f) {
+                        Modifier.graphicsLayer {
+                            alpha = 1f - transitionProgressState.value
+                        }
+                    } else {
+                        Modifier
+                    }
+                ),
             contentScale = ContentScale.Crop,
             alignment = Alignment.TopEnd
         )
@@ -117,9 +122,8 @@ internal fun ModernHeroMediaLayer(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
-                    alpha = transitionProgressState.value
-                    compositingStrategy = CompositingStrategy.Offscreen
-                }
+                        alpha = transitionProgressState.value
+                    }
             )
         }
     }
@@ -132,11 +136,8 @@ internal fun ModernHeroGradientLayer(
 ) {
     Box(
         modifier = modifier
-            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithCache {
-                val leftBlendSolidWidth = size.width * 0.018f
-                val horizontalGradientStartX = leftBlendSolidWidth
-                val horizontalFadeEndX = horizontalGradientStartX + (size.width * 0.42f)
+                val horizontalFadeEndX = size.width * 0.45f
                 val horizontalGradient = Brush.horizontalGradient(
                     colorStops = arrayOf(
                         0.0f to bgColor,
@@ -145,45 +146,34 @@ internal fun ModernHeroGradientLayer(
                         0.76f to bgColor.copy(alpha = 0.16f),
                         1.0f to Color.Transparent
                     ),
-                    startX = horizontalGradientStartX,
+                    startX = 0f,
                     endX = horizontalFadeEndX
                 )
-                val topContourGradient = Brush.linearGradient(
-                    colorStops = arrayOf(
-                        0.0f to bgColor.copy(alpha = 0.28f),
-                        0.38f to bgColor.copy(alpha = 0.14f),
-                        0.72f to bgColor.copy(alpha = 0.05f),
-                        1.0f to Color.Transparent
-                    ),
-                    start = Offset(0f, 0f),
-                    end = Offset(size.width * 0.24f, size.height * 0.40f)
-                )
-                val bottomContourGradient = Brush.linearGradient(
-                    colorStops = arrayOf(
-                        0.0f to bgColor.copy(alpha = 0.24f),
-                        0.42f to bgColor.copy(alpha = 0.12f),
-                        0.74f to bgColor.copy(alpha = 0.05f),
-                        1.0f to Color.Transparent
-                    ),
-                    start = Offset(0f, size.height),
-                    end = Offset(size.width * 0.24f, size.height * 0.61f)
-                )
+
+                val bottomStripStartY = size.height * 0.82f
                 val verticalGradient = Brush.verticalGradient(
-                    0.89f to Color.Transparent,
-                    0.93f to bgColor.copy(alpha = 0.14f),
-                    0.965f to bgColor.copy(alpha = 0.52f),
-                    0.99f to bgColor.copy(alpha = 0.92f),
-                    1.0f to bgColor
+                    0.0f to Color.Transparent,
+                    0.40f to bgColor.copy(alpha = 0.25f),
+                    0.75f to bgColor.copy(alpha = 0.65f),
+                    1.0f to bgColor,
+                    startY = bottomStripStartY,
+                    endY = size.height
                 )
+
                 onDrawBehind {
+                    // 1. Horizontal fade
                     drawRect(
-                        color = bgColor,
-                        size = Size(leftBlendSolidWidth, size.height)
+                        brush = horizontalGradient,
+                        topLeft = Offset(0f, 0f),
+                        size = Size(horizontalFadeEndX, size.height)
                     )
-                    drawRect(brush = horizontalGradient, size = size)
-                    drawRect(brush = topContourGradient, size = size)
-                    drawRect(brush = bottomContourGradient, size = size)
-                    drawRect(brush = verticalGradient, size = size)
+                    
+                    // 2. Bottom vertical strip
+                    drawRect(
+                        brush = verticalGradient,
+                        topLeft = Offset(0f, bottomStripStartY),
+                        size = Size(size.width, size.height - bottomStripStartY)
+                    )
                 }
             }
     )
@@ -235,6 +225,7 @@ private fun HeroTitleContent(
             ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(false)
+                .decoderFactory(SvgDecoder.Factory())
                 .size(width = logoMaxWidthPx, height = logoHeightPx)
                 .build()
         }
@@ -382,6 +373,9 @@ private fun HeroTitleContent(
                             color = NuvioColors.TextSecondary,
                             maxLines = 1
                         )
+                    }
+                    if (!runtimeText.isNullOrBlank() && !yearText.isNullOrBlank()) {
+                        HeroMetaDivider(metaScale)
                     }
                     if (!yearText.isNullOrBlank()) {
                         Text(

@@ -48,6 +48,7 @@ class PlayerRuntimeController(
     internal val streamLinkCacheDataStore: StreamLinkCacheDataStore,
     internal val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     internal val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
+    internal val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
     savedStateHandle: SavedStateHandle,
     internal val scope: CoroutineScope
 ) {
@@ -84,11 +85,12 @@ class PlayerRuntimeController(
         data class Addon(
             val id: String,
             val url: String,
-            val language: String
+            val language: String,
+            val addonName: String
         ) : RememberedSubtitleSelection()
     }
 
-    internal data class EpisodeTrackSelectionPreference(
+    internal data class TrackPreference(
         val audio: RememberedTrackSelection? = null,
         val subtitle: RememberedSubtitleSelection? = null
     )
@@ -109,8 +111,6 @@ class PlayerRuntimeController(
     internal val initialSeason: Int? = navigationArgs.initialSeason
     internal val initialEpisode: Int? = navigationArgs.initialEpisode
     internal val initialEpisodeTitle: String? = navigationArgs.initialEpisodeTitle
-    internal val rememberedAudioLanguage: String? = navigationArgs.rememberedAudioLanguage
-    internal val rememberedAudioName: String? = navigationArgs.rememberedAudioName
     internal val mediaSourceFactory = PlayerMediaSourceFactory()
 
     internal var currentVideoHash: String? = navigationArgs.videoHash
@@ -209,8 +209,11 @@ class PlayerRuntimeController(
     internal var pendingAddonSubtitleLanguage: String? = null
     internal var pendingAddonSubtitleTrackId: String? = null
     internal var pendingAudioSelectionAfterSubtitleRefresh: PendingAudioSelection? = null
-    internal var sameSeriesTrackSelectionPreference: EpisodeTrackSelectionPreference? = null
-    internal var pendingSameSeriesTrackSelectionRestore: EpisodeTrackSelectionPreference? = null
+    internal var rememberedTrackPreference: TrackPreference? = null
+    internal var persistedTrackPreference: TrackPreference? = null
+    internal var subtitleDisabledByPersistedPreference: Boolean = false
+    internal var subtitleAddonRestoredByPersistedPreference: Boolean = false
+    internal var pendingRestoredAddonSubtitle: com.nuvio.tv.domain.model.Subtitle? = null
     internal var attachedAddonSubtitleKeys: Set<String> = emptySet()
     internal var hasScannedTextTracksOnce: Boolean = false
     internal var streamReuseLastLinkEnabled: Boolean = false
@@ -221,7 +224,6 @@ class PlayerRuntimeController(
     internal var nextEpisodeThresholdPercentSetting: Float = 98f
     internal var nextEpisodeThresholdMinutesBeforeEndSetting: Float = 2f
     internal var currentStreamBingeGroup: String? = navigationArgs.bingeGroup
-    internal var hasAppliedRememberedAudioSelection: Boolean = false
     internal var hasInitializedAudioAmplificationForSession: Boolean = false
 
     internal var lastBufferLogTimeMs: Long = 0L

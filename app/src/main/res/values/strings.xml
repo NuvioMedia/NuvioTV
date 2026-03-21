@@ -125,6 +125,13 @@
     <string name="detail_tab_reviews">Reviews</string>
     <string name="detail_section_network">Network</string>
     <string name="detail_section_production">Production</string>
+    <string name="tmdb_entity_kind_company">Production Company</string>
+    <string name="tmdb_entity_kind_network">Network</string>
+    <string name="tmdb_entity_rail_popular">Popular</string>
+    <string name="tmdb_entity_rail_top_rated">Top Rated</string>
+    <string name="tmdb_entity_rail_recent">Recent</string>
+    <string name="tmdb_entity_empty_title">No titles found</string>
+    <string name="tmdb_entity_empty_subtitle">TMDB does not currently have browseable titles for this selection.</string>
     <string name="episodes_unavailable">Unavailable</string>
     <string name="series_status_ended">Ended</string>
     <string name="series_status_continuing">Ongoing</string>
@@ -444,6 +451,8 @@
     <string name="layout_trailer_button_sub">Show trailer button on detail page (only when trailer is available).</string>
     <string name="layout_prefer_external_meta">Prefer meta from external addon</string>
     <string name="layout_prefer_external_meta_sub">Use metadata from external addon instead of catalog addon.</string>
+    <string name="layout_show_full_release_date">Show full release date</string>
+    <string name="layout_show_full_release_date_sub">For movies, show full release date instead of year only.</string>
     <string name="layout_section_focused">Focused Poster</string>
     <string name="layout_section_focused_desc">Advanced behavior for focused poster cards.</string>
     <string name="layout_expand_poster">Expand Focused Poster to Backdrop</string>
@@ -527,6 +536,8 @@
     <string name="tmdb_subtitle">Choose which metadata fields should come from TMDB</string>
     <string name="tmdb_enable_title">Enable TMDB Enrichment</string>
     <string name="tmdb_enable_subtitle">Use TMDB as a metadata source to enhance addon data</string>
+    <string name="tmdb_modern_home_title">Enable on Modern Home</string>
+    <string name="tmdb_modern_home_subtitle">Also apply TMDB enrichment to Modern Home hero and focused cards</string>
     <string name="tmdb_language_title">Language</string>
     <string name="tmdb_language_subtitle">TMDB metadata language for title, logo, and enabled fields</string>
     <string name="tmdb_artwork_title">Artwork</string>
@@ -980,6 +991,9 @@
     <string name="cast_detail_error">Something went wrong</string>
     <string name="cast_detail_retry">Retry</string>
     <string name="cast_detail_filmography">Filmography</string>
+    <string name="cast_detail_born">Born: %1$s</string>
+    <string name="cast_detail_born_died">Born: %1$s — †%2$s</string>
+    <string name="cast_detail_age">age %1$d</string>
 
     <!-- CatalogSeeAllScreen -->
     <string name="catalog_see_all_from">from %1$s</string>

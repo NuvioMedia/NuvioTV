@@ -15,13 +15,11 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
-import com.nuvio.tv.core.player.SubtitleFormatUtils
 import javax.inject.Inject
 
 class SubtitleRepositoryImpl @Inject constructor(
     private val api: AddonApi,
-    private val addonRepository: AddonRepositoryImpl,
-    private val subtitleFormatUtils: SubtitleFormatUtils
+    private val addonRepository: AddonRepositoryImpl
 ) : SubtitleRepository {
 
     companion object {
@@ -151,14 +149,12 @@ class SubtitleRepositoryImpl @Inject constructor(
             when (val result = safeApiCall { api.getSubtitles(subtitleUrl) }) {
                 is NetworkResult.Success -> {
                     val subtitles = result.data.subtitles?.mapNotNull { dto ->
-                        val resolvedFormat = subtitleFormatUtils.resolveFormat(dto.url, dto.format)
                         Subtitle(
                             id = dto.id ?: "${dto.lang}-${dto.url.hashCode()}",
                             url = dto.url,
                             lang = dto.lang,
                             addonName = addon.displayName,
-                            addonLogo = addon.logo,
-                            format = resolvedFormat
+                            addonLogo = addon.logo
                         )
                     } ?: emptyList()
                     

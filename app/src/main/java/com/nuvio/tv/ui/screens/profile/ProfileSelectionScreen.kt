@@ -331,7 +331,6 @@ private fun ProfileSelectionBackground(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioColors.Background)
             .background(
                 brush = Brush.verticalGradient(
                     colorStops = arrayOf(

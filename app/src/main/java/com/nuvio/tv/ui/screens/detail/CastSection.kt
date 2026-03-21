@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -249,6 +252,8 @@ private fun CastMemberItem(
         }
     }
 
+    var isFocused by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier.width(itemWidth),
         horizontalAlignment = Alignment.Start
@@ -259,14 +264,15 @@ private fun CastMemberItem(
                 .size(cardSize)
                 .align(Alignment.Start)
                 .onFocusChanged { state ->
+                    isFocused = state.isFocused
                     if (state.isFocused) onFocused()
                 },
             shape = CardDefaults.shape(
                 shape = CircleShape
             ),
             colors = CardDefaults.colors(
-                containerColor = NuvioColors.SurfaceVariant,
-                focusedContainerColor = NuvioColors.FocusBackground
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent
             ),
             border = CardDefaults.border(
                 focusedBorder = Border(
@@ -279,19 +285,30 @@ private fun CastMemberItem(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
+                val currentBgColor = if (isFocused) NuvioColors.FocusBackground else NuvioColors.SurfaceVariant
+                val bgPainter = remember(currentBgColor) { androidx.compose.ui.graphics.painter.ColorPainter(currentBgColor) }
+
                 if (photoModel != null) {
                     AsyncImage(
                         model = photoModel,
                         contentDescription = member.name,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        placeholder = bgPainter,
+                        error = bgPainter,
+                        fallback = bgPainter
                     )
                 } else {
-                    Text(
-                        text = member.name.firstOrNull()?.uppercase() ?: "?",
-                        style = initialsStyle,
-                        color = NuvioColors.TextPrimary
-                    )
+                    androidx.compose.foundation.layout.Box(
+                        modifier = Modifier.fillMaxSize().background(currentBgColor),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = member.name.firstOrNull()?.uppercase() ?: "?",
+                            style = initialsStyle,
+                            color = NuvioColors.TextPrimary
+                        )
+                    }
                 }
             }
         }

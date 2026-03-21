@@ -39,6 +39,7 @@ data class MetaDetailsUiState(
     val watchedEpisodes: Set<Pair<Int, Int>> = emptySet(),
     val episodeWatchedPendingKeys: Set<String> = emptySet(),
     val blurUnwatchedEpisodes: Boolean = false,
+    val showFullReleaseDate: Boolean = true,
     val moreLikeThis: List<MetaPreview> = emptyList(),
     val reviews: List<MetaReview> = emptyList(),
     val isReviewsLoading: Boolean = false,
@@ -77,4 +78,5 @@ sealed class MetaDetailsEvent {
     data object OnPickerDismiss : MetaDetailsEvent()
     data object OnClearMessage : MetaDetailsEvent()
     data class OnReviewItemFocused(val index: Int) : MetaDetailsEvent()
+    data object OnLifecyclePause : MetaDetailsEvent()
 }
