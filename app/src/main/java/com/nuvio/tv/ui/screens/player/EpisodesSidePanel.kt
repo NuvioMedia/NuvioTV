@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,7 +46,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -61,8 +59,6 @@ import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.screens.detail.formatReleaseDate
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
@@ -116,7 +112,7 @@ internal fun EpisodesSidePanel(
     Box(
         modifier = modifier
             .fillMaxHeight()
-            .width(520.dp)
+            .width(760.dp)
             .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
             .background(NuvioColors.BackgroundElevated)
     ) {
@@ -276,8 +272,10 @@ private fun EpisodesListView(
     onSeasonSelected: (Int) -> Unit,
     onEpisodeSelected: (Video) -> Unit
 ) {
-    val seasonTabFocusRequester = remember { FocusRequester() }
+    val context = LocalContext.current
+    val seasonRailFocusRequester = remember { FocusRequester() }
     val episodesListState = rememberLazyListState()
+    val seasonRailState = rememberLazyListState()
     val lastOpenedEpisodeIndex = remember(
         uiState.episodes,
         uiState.episodeStreamsForVideoId
@@ -290,6 +288,60 @@ private fun EpisodesListView(
         uiState.episodes.indexOfFirst { episode ->
             episode.season == uiState.currentSeason && episode.episode == uiState.currentEpisode
         }
+    }
+    val seasonCounts = remember(uiState.episodesAll) {
+        uiState.episodesAll
+            .mapNotNull { episode -> episode.season?.let { it to episode } }
+            .groupBy(keySelector = { it.first }, valueTransform = { it.second })
+            .mapValues { (_, episodes) -> episodes.size }
+    }
+    val seasonWatchedCounts = remember(
+        uiState.episodesAll,
+        uiState.episodeWatchProgressMap,
+        uiState.watchedEpisodeKeys
+    ) {
+        uiState.episodesAll
+            .groupBy { it.season }
+            .mapNotNull { (season, episodes) ->
+                season?.let { seasonNumber ->
+                    seasonNumber to episodes.count { episode ->
+                        val key = episode.episodeKey() ?: return@count false
+                        uiState.episodeWatchProgressMap[key]?.isCompleted() == true ||
+                            uiState.watchedEpisodeKeys.contains(key)
+                    }
+                }
+            }
+            .toMap()
+    }
+    val selectedSeasonEpisodeCount = remember(
+        uiState.episodesSelectedSeason,
+        uiState.episodes,
+        seasonCounts
+    ) {
+        uiState.episodesSelectedSeason?.let { seasonCounts[it] } ?: uiState.episodes.size
+    }
+    val selectedSeasonWatchedCount = remember(
+        uiState.episodesSelectedSeason,
+        seasonWatchedCounts
+    ) {
+        uiState.episodesSelectedSeason?.let { seasonWatchedCounts[it] } ?: 0
+    }
+    val currentEpisodeVideo = remember(
+        uiState.episodesAll,
+        uiState.currentSeason,
+        uiState.currentEpisode
+    ) {
+        uiState.episodesAll.firstOrNull { episode ->
+            episode.season == uiState.currentSeason && episode.episode == uiState.currentEpisode
+        }
+    }
+    val currentEpisodeCode = remember(uiState.currentSeason, uiState.currentEpisode) {
+        formatEpisodeCode(uiState.currentSeason, uiState.currentEpisode)
+    }
+    val currentEpisodeTitle = remember(currentEpisodeVideo, uiState.currentEpisodeTitle, context) {
+        (currentEpisodeVideo?.title ?: uiState.currentEpisodeTitle)
+            ?.localizeEpisodeTitle(context)
+            ?.takeIf { it.isNotBlank() }
     }
 
     LaunchedEffect(uiState.showEpisodeStreams, uiState.episodes, currentEpisodeIndex) {
@@ -304,6 +356,16 @@ private fun EpisodesListView(
             episodesListState.scrollToItem(targetIndex)
             delay(32)
             episodesFocusRequester.requestFocus()
+        }
+    }
+
+    LaunchedEffect(uiState.episodesAvailableSeasons, uiState.episodesSelectedSeason) {
+        val selectedSeason = uiState.episodesSelectedSeason ?: return@LaunchedEffect
+        val seasonIndex = uiState.episodesAvailableSeasons
+            .sortedWith(compareBy<Int> { if (it == 0) Int.MAX_VALUE else it })
+            .indexOf(selectedSeason)
+        if (seasonIndex >= 0) {
+            runCatching { seasonRailState.scrollToItem(seasonIndex) }
         }
     }
 
@@ -336,50 +398,73 @@ private fun EpisodesListView(
         }
 
         else -> {
-            Column(modifier = Modifier.fillMaxHeight()) {
+            Row(
+                modifier = Modifier.fillMaxHeight(),
+                horizontalArrangement = Arrangement.spacedBy(18.dp)
+            ) {
                 if (uiState.episodesAvailableSeasons.isNotEmpty()) {
-                    EpisodesSeasonTabs(
+                    EpisodesSeasonRail(
                         seasons = uiState.episodesAvailableSeasons,
                         selectedSeason = uiState.episodesSelectedSeason,
-                        selectedTabFocusRequester = seasonTabFocusRequester,
-                        onSeasonSelected = onSeasonSelected
+                        currentSeason = uiState.currentSeason,
+                        seasonCounts = seasonCounts,
+                        seasonWatchedCounts = seasonWatchedCounts,
+                        seasonRailState = seasonRailState,
+                        selectedSeasonFocusRequester = seasonRailFocusRequester,
+                        episodeFocusRequester = episodesFocusRequester,
+                        onSeasonSelected = onSeasonSelected,
+                        modifier = Modifier
+                            .width(188.dp)
+                            .fillMaxHeight()
                     )
-
-                    Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                LazyColumn(
-                    state = episodesListState,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(top = 4.dp),
+                Column(
                     modifier = Modifier
-                        .fillMaxHeight()
-                        .focusProperties { up = seasonTabFocusRequester }
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    itemsIndexed(uiState.episodes) { index, episode ->
-                        val isCurrent = episode.season == uiState.currentSeason &&
-                            episode.episode == uiState.currentEpisode
-                        val requestInitialFocus = when {
-                            lastOpenedEpisodeIndex >= 0 -> index == lastOpenedEpisodeIndex
-                            currentEpisodeIndex >= 0 -> isCurrent
-                            else -> index == 0
+                    EpisodeSelectorSummaryCard(
+                        selectedSeason = uiState.episodesSelectedSeason,
+                        selectedSeasonEpisodeCount = selectedSeasonEpisodeCount,
+                        selectedSeasonWatchedCount = selectedSeasonWatchedCount,
+                        currentEpisodeCode = currentEpisodeCode,
+                        currentEpisodeTitle = currentEpisodeTitle
+                    )
+
+                    LazyColumn(
+                        state = episodesListState,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(top = 4.dp, end = 4.dp, bottom = 4.dp),
+                        modifier = Modifier.fillMaxHeight()
+                    ) {
+                        itemsIndexed(uiState.episodes) { index, episode ->
+                            val isCurrent = episode.season == uiState.currentSeason &&
+                                episode.episode == uiState.currentEpisode
+                            val requestInitialFocus = when {
+                                lastOpenedEpisodeIndex >= 0 -> index == lastOpenedEpisodeIndex
+                                currentEpisodeIndex >= 0 -> isCurrent
+                                else -> index == 0
+                            }
+                            val episodeKey = episode.episodeKey()
+                            val isWatched = episodeKey != null && (
+                                uiState.episodeWatchProgressMap[episodeKey]?.isCompleted() == true ||
+                                uiState.watchedEpisodeKeys.contains(episodeKey)
+                            )
+                            EpisodeItem(
+                                episode = episode,
+                                isCurrent = isCurrent,
+                                isWatched = isWatched,
+                                blurUnwatched = uiState.blurUnwatchedEpisodes,
+                                focusRequester = episodesFocusRequester,
+                                requestInitialFocus = requestInitialFocus,
+                                leftFocusRequester = seasonRailFocusRequester.takeIf {
+                                    uiState.episodesAvailableSeasons.isNotEmpty()
+                                },
+                                onClick = { onEpisodeSelected(episode) }
+                            )
                         }
-                        val episodeKey = episode.season?.let { s ->
-                            episode.episode?.let { e -> s to e }
-                        }
-                        val isWatched = episodeKey != null && (
-                            uiState.episodeWatchProgressMap[episodeKey]?.isCompleted() == true ||
-                            uiState.watchedEpisodeKeys.contains(episodeKey)
-                        )
-                        EpisodeItem(
-                            episode = episode,
-                            isCurrent = isCurrent,
-                            isWatched = isWatched,
-                            blurUnwatched = uiState.blurUnwatchedEpisodes,
-                            focusRequester = episodesFocusRequester,
-                            requestInitialFocus = requestInitialFocus,
-                            onClick = { onEpisodeSelected(episode) }
-                        )
                     }
                 }
             }
@@ -389,11 +474,17 @@ private fun EpisodesListView(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun EpisodesSeasonTabs(
+private fun EpisodesSeasonRail(
     seasons: List<Int>,
     selectedSeason: Int?,
-    selectedTabFocusRequester: FocusRequester,
-    onSeasonSelected: (Int) -> Unit
+    currentSeason: Int?,
+    seasonCounts: Map<Int, Int>,
+    seasonWatchedCounts: Map<Int, Int>,
+    seasonRailState: androidx.compose.foundation.lazy.LazyListState,
+    selectedSeasonFocusRequester: FocusRequester,
+    episodeFocusRequester: FocusRequester,
+    onSeasonSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val sortedSeasons = remember(seasons) {
         val regular = seasons.filter { it > 0 }.sorted()
@@ -401,50 +492,253 @@ private fun EpisodesSeasonTabs(
         regular + specials
     }
 
-    LazyRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .focusRestorer(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(NuvioColors.BackgroundCard)
+            .padding(16.dp)
     ) {
-        items(sortedSeasons, key = { it }) { season ->
-            val isSelected = selectedSeason == season
-            var isFocused by remember { mutableStateOf(false) }
+        Text(
+            text = stringResource(R.string.episodes_panel_seasons_title),
+            style = MaterialTheme.typography.labelLarge,
+            color = NuvioTheme.extendedColors.textSecondary
+        )
 
-            Card(
-                onClick = { onSeasonSelected(season) },
-                modifier = Modifier
-                    .then(if (isSelected) Modifier.focusRequester(selectedTabFocusRequester) else Modifier)
-                    .onFocusChanged { isFocused = it.isFocused },
-                shape = CardDefaults.shape(shape = RoundedCornerShape(24.dp)),
-                colors = CardDefaults.colors(
-                    containerColor = if (isSelected) Color(0xFFF5F5F5) else NuvioColors.BackgroundCard,
-                    focusedContainerColor = if (isSelected) Color.White else NuvioColors.Secondary
-                ),
-                border = CardDefaults.border(
-                    border = Border(
-                        border = BorderStroke(1.dp, if (isSelected) Color.Transparent else NuvioColors.Border),
-                        shape = RoundedCornerShape(24.dp)
-                    ),
-                    focusedBorder = Border(
-                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                        shape = RoundedCornerShape(24.dp)
-                    )
-                ),
-                scale = CardDefaults.scale(focusedScale = 1.0f)
-            ) {
-                Text(
-                    text = if (season == 0) stringResource(R.string.episodes_specials) else stringResource(R.string.episodes_season, season),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = when {
-                        isSelected -> Color.Black
-                        isFocused -> NuvioColors.OnSecondary
-                        else -> NuvioTheme.extendedColors.textSecondary
-                    },
-                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 20.dp)
+        Spacer(modifier = Modifier.height(12.dp))
+
+        LazyColumn(
+            state = seasonRailState,
+            modifier = Modifier
+                .fillMaxHeight()
+                .focusRestorer(),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(vertical = 4.dp)
+        ) {
+            items(sortedSeasons, key = { it }) { season ->
+                SeasonRailItem(
+                    season = season,
+                    episodeCount = seasonCounts[season] ?: 0,
+                    watchedCount = seasonWatchedCounts[season] ?: 0,
+                    isSelected = selectedSeason == season,
+                    isCurrentSeason = currentSeason == season,
+                    selectedSeasonFocusRequester = selectedSeasonFocusRequester,
+                    episodeFocusRequester = episodeFocusRequester,
+                    onClick = { onSeasonSelected(season) }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun EpisodeSelectorSummaryCard(
+    selectedSeason: Int?,
+    selectedSeasonEpisodeCount: Int,
+    selectedSeasonWatchedCount: Int,
+    currentEpisodeCode: String?,
+    currentEpisodeTitle: String?
+) {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(NuvioColors.BackgroundCard)
+            .padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.episodes_panel_title),
+            style = MaterialTheme.typography.labelLarge,
+            color = NuvioTheme.extendedColors.textSecondary
+        )
+
+        Text(
+            text = buildString {
+                if (!currentEpisodeCode.isNullOrBlank()) {
+                    append(currentEpisodeCode)
+                }
+                if (!currentEpisodeTitle.isNullOrBlank()) {
+                    if (isNotEmpty()) append(" • ")
+                    append(currentEpisodeTitle)
+                }
+                if (isEmpty() && selectedSeason != null) {
+                    append(
+                        if (selectedSeason == 0) {
+                            context.getString(R.string.episodes_specials)
+                        } else {
+                            context.getString(R.string.episodes_season, selectedSeason)
+                        }
+                    )
+                }
+            },
+            style = MaterialTheme.typography.titleLarge,
+            color = NuvioColors.TextPrimary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            selectedSeason?.let { season ->
+                EpisodeMetaChip(
+                    text = if (season == 0) {
+                        stringResource(R.string.episodes_specials)
+                    } else {
+                        stringResource(R.string.episodes_season, season)
+                    },
+                    containerColor = NuvioColors.Secondary.copy(alpha = 0.16f),
+                    contentColor = NuvioColors.OnSecondaryVariant
+                )
+            }
+
+            EpisodeMetaChip(
+                text = stringResource(R.string.episodes_panel_episode_count, selectedSeasonEpisodeCount),
+                containerColor = Color.White.copy(alpha = 0.08f),
+                contentColor = NuvioColors.TextPrimary
+            )
+
+            EpisodeMetaChip(
+                text = stringResource(R.string.episodes_panel_watched_count, selectedSeasonWatchedCount),
+                containerColor = NuvioColors.Primary.copy(alpha = 0.16f),
+                contentColor = NuvioColors.TextPrimary
+            )
+        }
+
+        Text(
+            text = stringResource(R.string.episodes_panel_pick_episode),
+            style = MaterialTheme.typography.bodySmall,
+            color = NuvioTheme.extendedColors.textSecondary
+        )
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun SeasonRailItem(
+    season: Int,
+    episodeCount: Int,
+    watchedCount: Int,
+    isSelected: Boolean,
+    isCurrentSeason: Boolean,
+    selectedSeasonFocusRequester: FocusRequester,
+    episodeFocusRequester: FocusRequester,
+    onClick: () -> Unit
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(18.dp)
+    val progressFraction = remember(watchedCount, episodeCount) {
+        if (episodeCount > 0) watchedCount.toFloat() / episodeCount.toFloat() else 0f
+    }
+
+    Card(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (isSelected) Modifier.focusRequester(selectedSeasonFocusRequester) else Modifier)
+            .focusProperties { right = episodeFocusRequester }
+            .onFocusChanged { isFocused = it.isFocused },
+        shape = CardDefaults.shape(shape = shape),
+        colors = CardDefaults.colors(
+            containerColor = if (isSelected) NuvioColors.Secondary.copy(alpha = 0.18f) else NuvioColors.BackgroundElevated,
+            focusedContainerColor = NuvioColors.FocusBackground
+        ),
+        border = CardDefaults.border(
+            border = Border(
+                border = BorderStroke(
+                    1.dp,
+                    if (isSelected) NuvioColors.Secondary.copy(alpha = 0.45f) else NuvioColors.Border
+                ),
+                shape = shape
+            ),
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                shape = shape
+            )
+        ),
+        scale = CardDefaults.scale(focusedScale = 1.02f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = if (season == 0) stringResource(R.string.episodes_specials) else stringResource(R.string.episodes_season, season),
+                style = MaterialTheme.typography.titleSmall,
+                color = when {
+                    isSelected -> NuvioColors.TextPrimary
+                    isFocused -> NuvioColors.OnSecondary
+                    else -> NuvioColors.TextPrimary
+                },
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Text(
+                text = stringResource(R.string.episodes_panel_episode_count, episodeCount),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isSelected) {
+                    NuvioColors.TextPrimary.copy(alpha = 0.78f)
+                } else {
+                    NuvioTheme.extendedColors.textSecondary
+                }
+            )
+
+            SeasonProgressBar(
+                progressFraction = progressFraction,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Text(
+                text = stringResource(R.string.episodes_panel_watched_count, watchedCount),
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isSelected) {
+                    NuvioColors.TextPrimary.copy(alpha = 0.82f)
+                } else {
+                    NuvioTheme.extendedColors.textTertiary
+                }
+            )
+
+            if (isCurrentSeason) {
+                EpisodeMetaChip(
+                    text = stringResource(R.string.episodes_panel_now_playing),
+                    containerColor = if (isSelected) {
+                        Color.Black.copy(alpha = 0.16f)
+                    } else {
+                        NuvioColors.Secondary.copy(alpha = 0.16f)
+                    },
+                    contentColor = if (isSelected) {
+                        NuvioColors.TextPrimary
+                    } else {
+                        NuvioColors.OnSecondaryVariant
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeasonProgressBar(
+    progressFraction: Float,
+    modifier: Modifier = Modifier
+) {
+    val fraction = progressFraction.coerceIn(0f, 1f)
+    Box(
+        modifier = modifier
+            .height(4.dp)
+            .clip(RoundedCornerShape(999.dp))
+            .background(Color.White.copy(alpha = 0.08f))
+    ) {
+        if (fraction > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(fraction)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(NuvioColors.Secondary)
+            )
         }
     }
 }
@@ -457,6 +751,7 @@ private fun EpisodeItem(
     blurUnwatched: Boolean = false,
     focusRequester: FocusRequester,
     requestInitialFocus: Boolean,
+    leftFocusRequester: FocusRequester? = null,
     onClick: () -> Unit
 ) {
     val shouldBlur = blurUnwatched && !isWatched && !isCurrent
@@ -466,25 +761,32 @@ private fun EpisodeItem(
         episode.released?.let { formatReleaseDate(it) }?.takeIf { it.isNotBlank() }
     }
     val episodeCode = remember(episode.season, episode.episode) {
-        val s = episode.season
-        val e = episode.episode
-        if (s != null && e != null) {
-            "S${s.toString().padStart(2, '0')}E${e.toString().padStart(2, '0')}"
-        } else {
-            null
-        }
+        formatEpisodeCode(episode.season, episode.episode)
     }
+    val isUnavailable = episode.available == false
 
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (requestInitialFocus) Modifier.focusRequester(focusRequester) else Modifier),
+            .then(if (requestInitialFocus) Modifier.focusRequester(focusRequester) else Modifier)
+            .then(if (leftFocusRequester != null) Modifier.focusProperties { left = leftFocusRequester } else Modifier),
         colors = CardDefaults.colors(
             containerColor = NuvioColors.BackgroundCard,
             focusedContainerColor = NuvioColors.FocusBackground
         ),
         border = CardDefaults.border(
+            border = Border(
+                border = BorderStroke(
+                    1.dp,
+                    when {
+                        isCurrent -> NuvioColors.Secondary.copy(alpha = 0.35f)
+                        isWatched -> NuvioColors.Primary.copy(alpha = 0.25f)
+                        else -> Color.Transparent
+                    }
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ),
             focusedBorder = Border(
                 border = BorderStroke(2.dp, NuvioColors.FocusRing),
                 shape = RoundedCornerShape(16.dp)
@@ -539,25 +841,6 @@ private fun EpisodeItem(
                         )
                     }
                 }
-
-                if (isCurrent) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp)
-                            .size(22.dp)
-                            .clip(RoundedCornerShape(11.dp))
-                            .background(NuvioColors.Primary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Current",
-                            tint = Color.White,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
             }
 
             // Episode info
@@ -565,20 +848,65 @@ private fun EpisodeItem(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    text = episodeTitle,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = NuvioColors.TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                if (formattedDate != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
                     Text(
-                        text = formattedDate,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = NuvioTheme.extendedColors.textTertiary
+                        text = episodeTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = NuvioColors.TextPrimary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (isCurrent) {
+                            EpisodeMetaChip(
+                                text = stringResource(R.string.episodes_panel_now_playing),
+                                containerColor = NuvioColors.Secondary.copy(alpha = 0.16f),
+                                contentColor = NuvioColors.OnSecondaryVariant
+                            )
+                        } else if (isWatched) {
+                            EpisodeMetaChip(
+                                text = stringResource(R.string.episodes_cd_watched),
+                                containerColor = NuvioColors.Primary.copy(alpha = 0.16f),
+                                contentColor = NuvioColors.TextPrimary
+                            )
+                        }
+
+                        if (isUnavailable) {
+                            EpisodeMetaChip(
+                                text = stringResource(R.string.episodes_unavailable),
+                                containerColor = NuvioColors.Error.copy(alpha = 0.16f),
+                                contentColor = NuvioColors.Error
+                            )
+                        }
+                    }
+                }
+
+                if (episodeCode != null || formattedDate != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        episodeCode?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = NuvioTheme.extendedColors.textSecondary
+                            )
+                        }
+
+                        formattedDate?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = NuvioTheme.extendedColors.textTertiary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
 
                 episode.overview?.takeIf { it.isNotBlank() }?.let {
@@ -593,4 +921,37 @@ private fun EpisodeItem(
             }
         }
     }
+}
+
+@Composable
+private fun EpisodeMetaChip(
+    text: String,
+    containerColor: Color,
+    contentColor: Color
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(containerColor)
+            .padding(horizontal = 10.dp, vertical = 5.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+private fun Video.episodeKey(): Pair<Int, Int>? {
+    val seasonNumber = season ?: return null
+    val episodeNumber = episode ?: return null
+    return seasonNumber to episodeNumber
+}
+
+private fun formatEpisodeCode(season: Int?, episode: Int?): String? {
+    if (season == null || episode == null) return null
+    return "S${season.toString().padStart(2, '0')}E${episode.toString().padStart(2, '0')}"
 }

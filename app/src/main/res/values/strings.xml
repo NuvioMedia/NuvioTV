@@ -756,6 +756,11 @@
     <string name="episodes_panel_no_episodes">No episodes available</string>
     <string name="episodes_panel_title">Episodes</string>
     <string name="episodes_panel_streams_title">Streams</string>
+    <string name="episodes_panel_seasons_title">Seasons</string>
+    <string name="episodes_panel_episode_count">%1$d episodes</string>
+    <string name="episodes_panel_watched_count">%1$d watched</string>
+    <string name="episodes_panel_pick_episode">Pick an episode to load available sources.</string>
+    <string name="episodes_panel_now_playing">Now Playing</string>
     <string name="player_speed_normal">Normal</string>
     <string name="player_aspect_fit">Fit (Original)</string>
     <string name="player_aspect_stretch">Stretch</string>
