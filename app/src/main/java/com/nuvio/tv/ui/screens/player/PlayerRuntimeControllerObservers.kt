@@ -377,7 +377,8 @@ internal fun PlayerRuntimeController.retryCurrentStreamFromStartAfter416() {
                 mediaSourceFactory.createMediaSource(
                     url = currentStreamUrl,
                     headers = currentHeaders,
-                    mimeTypeOverride = currentStreamMimeType
+                    mimeTypeOverride = currentStreamMimeType,
+                    audioDelayUsProvider = audioDelayUs::get
                 )
             )
             player.seekTo(0L)

@@ -961,10 +961,12 @@ fun PlayerScreen(
             visible = uiState.showAudioOverlay,
             tracks = uiState.audioTracks,
             selectedIndex = uiState.selectedAudioTrackIndex,
+            audioDelayMs = uiState.audioDelayMs,
             audioAmplificationDb = uiState.audioAmplificationDb,
             isAmplificationAvailable = uiState.isAudioAmplificationAvailable,
             persistAmplification = uiState.persistAudioAmplification,
             onTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectAudioTrack(it)) },
+            onAudioDelayChange = { viewModel.onEvent(PlayerEvent.OnSetAudioDelayMs(it)) },
             onAmplificationChange = { viewModel.onEvent(PlayerEvent.OnSetAudioAmplificationDb(it)) },
             onPersistAmplificationChange = {
                 viewModel.onEvent(PlayerEvent.OnSetPersistAudioAmplification(it))
