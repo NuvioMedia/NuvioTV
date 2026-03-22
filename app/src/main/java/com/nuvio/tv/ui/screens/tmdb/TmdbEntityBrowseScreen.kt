@@ -180,7 +180,7 @@ private fun TmdbEntityBrowseContent(
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
-                alpha = 0.22f
+                alpha = 0.14f
             )
         }
 
