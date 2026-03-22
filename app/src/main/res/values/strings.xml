@@ -727,6 +727,17 @@
 
     <!-- PlayerScreen -->
     <string name="player_no_external_player">No external player found</string>
+    <string name="player_loading_preparing">Preparing stream…</string>
+    <string name="player_loading_detecting_format">Detecting stream format…</string>
+    <string name="player_loading_subtitles">Fetching subtitles…</string>
+    <string name="player_loading_subtitles_from">Fetching subtitles from %1$d addons…</string>
+    <string name="player_loading_subtitles_progress">Fetching subtitles… (%1$d / %2$d)</string>
+    <string name="player_loading_subtitles_addon">Subtitles: %1$s (%2$d / %3$d)</string>
+    <string name="player_loading_building">Building player…</string>
+    <string name="player_loading_starting">Starting stream…</string>
+    <string name="player_loading_buffering">Buffering…</string>
+    <string name="playback_show_loading_status">Show loading status</string>
+    <string name="playback_show_loading_status_sub">Display step-by-step progress while the player is initializing.</string>
 
     <!-- ParentalGuideOverlay -->
     <string name="parental_nudity">Nudity</string>

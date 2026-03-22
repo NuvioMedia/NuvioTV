@@ -36,6 +36,7 @@ data class PlayerUiState(
     val playbackSpeed: Float = 1f,
     val loadingOverlayEnabled: Boolean = true,
     val showLoadingOverlay: Boolean = true,
+    val loadingMessage: String? = null,
     val pauseOverlayEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
     val showPauseOverlay: Boolean = false,

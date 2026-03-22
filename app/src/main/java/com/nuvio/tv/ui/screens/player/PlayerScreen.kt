@@ -560,6 +560,7 @@ fun PlayerScreen(
             backdropUrl = uiState.backdrop,
             logoUrl = uiState.logo,
             title = uiState.title,
+            message = uiState.loadingMessage,
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(2f)

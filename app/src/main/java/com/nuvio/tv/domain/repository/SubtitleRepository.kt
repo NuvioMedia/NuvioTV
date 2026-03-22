@@ -19,6 +19,7 @@ interface SubtitleRepository {
         videoId: String? = null,
         videoHash: String? = null,
         videoSize: Long? = null,
-        filename: String? = null
+        filename: String? = null,
+        onProgress: ((completed: Int, total: Int, addonName: String?) -> Unit)? = null
     ): List<Subtitle>
 }

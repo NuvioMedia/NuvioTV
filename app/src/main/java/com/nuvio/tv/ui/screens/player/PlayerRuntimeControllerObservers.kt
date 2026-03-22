@@ -27,7 +27,9 @@ internal fun PlayerRuntimeController.buildSubtitleFetchRequest(): SubtitleFetchR
     )
 }
 
-internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(): List<Subtitle> {
+internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(
+    onProgress: ((completed: Int, total: Int, addonName: String?) -> Unit)? = null
+): List<Subtitle> {
     val request = buildSubtitleFetchRequest() ?: return emptyList()
     val installedAddonOrder = addonRepository.getInstalledAddons().firstOrNull()
         ?.map { it.displayName }
@@ -64,7 +66,8 @@ internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(): List<Subt
         videoId = request.videoId,
         videoHash = currentVideoHash,
         videoSize = currentVideoSize,
-        filename = currentFilename
+        filename = currentFilename,
+        onProgress = onProgress
     )
 }
 
