@@ -594,17 +594,12 @@ fun ModernHomeContent(
 
     val portraitBaseWidth = uiState.posterCardWidthDp.dp
     val portraitBaseHeight = uiState.posterCardHeightDp.dp
-    val modernPosterScale = if (useLandscapePosters) 1.34f else 1.08f
-    val modernCatalogCardWidth = if (useLandscapePosters) {
-        portraitBaseWidth * 1.24f * modernPosterScale
-    } else {
-        portraitBaseWidth * 0.84f * modernPosterScale
-    }
-    val modernCatalogCardHeight = if (useLandscapePosters) {
-        modernCatalogCardWidth / 1.77f
-    } else {
-        portraitBaseHeight * 0.84f * modernPosterScale
-    }
+    val portraitModernPosterScale = 1.08f
+    val landscapeModernPosterScale = 1.34f
+    val portraitCatalogCardWidth = portraitBaseWidth * 0.84f * portraitModernPosterScale
+    val portraitCatalogCardHeight = portraitBaseHeight * 0.84f * portraitModernPosterScale
+    val landscapeCatalogCardWidth = portraitBaseWidth * 1.24f * landscapeModernPosterScale
+    val landscapeCatalogCardHeight = landscapeCatalogCardWidth / 1.77f
     val continueWatchingScale = 1.34f
     val continueWatchingCardWidth = portraitBaseWidth * 1.24f * continueWatchingScale
     val continueWatchingCardHeight = continueWatchingCardWidth / 1.77f
@@ -853,8 +848,10 @@ fun ModernHomeContent(
                         expandedCatalogFocusKey = expandedCatalogFocusKey,
                         expandedTrailerPreviewUrl = expandedCatalogTrailerUrl,
                         expandedTrailerPreviewAudioUrl = expandedCatalogTrailerAudioUrl,
-                        modernCatalogCardWidth = modernCatalogCardWidth,
-                        modernCatalogCardHeight = modernCatalogCardHeight,
+                        portraitCatalogCardWidth = portraitCatalogCardWidth,
+                        portraitCatalogCardHeight = portraitCatalogCardHeight,
+                        landscapeCatalogCardWidth = landscapeCatalogCardWidth,
+                        landscapeCatalogCardHeight = landscapeCatalogCardHeight,
                         continueWatchingCardWidth = continueWatchingCardWidth,
                         continueWatchingCardHeight = continueWatchingCardHeight,
                         onContinueWatchingClick = onContinueWatchingClick,

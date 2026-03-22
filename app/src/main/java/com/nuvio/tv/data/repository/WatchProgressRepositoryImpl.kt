@@ -389,7 +389,8 @@ class WatchProgressRepositoryImpl @Inject constructor(
                                 progress.contentType.equals("series", ignoreCase = true) &&
                                 progress.season != null &&
                                 progress.episode != null &&
-                                progress.season != 0
+                                progress.season != 0 &&
+                                !isMalformedNextUpSeedContentId(progress.contentId)
                         }
                     }
                 }
@@ -425,6 +426,18 @@ class WatchProgressRepositoryImpl @Inject constructor(
             }
         }
         return merged.values.sortedByDescending { it.lastWatched }
+    }
+
+    private fun isMalformedNextUpSeedContentId(contentId: String?): Boolean {
+        val trimmed = contentId?.trim().orEmpty()
+        if (trimmed.isEmpty()) return true
+        val lowered = trimmed.lowercase()
+        return lowered == "tmdb" ||
+            lowered == "imdb" ||
+            lowered == "trakt" ||
+            lowered == "tmdb:" ||
+            lowered == "imdb:" ||
+            lowered == "trakt:"
     }
 
     private fun nextUpSeedKey(progress: WatchProgress): String {
@@ -556,6 +569,43 @@ class WatchProgressRepositoryImpl @Inject constructor(
                     watchedAt = System.currentTimeMillis()
                 )
             )
+            triggerWatchedItemsSync()
+        }
+    }
+
+    override suspend fun saveProgressBatch(progressList: List<WatchProgress>, syncRemote: Boolean) {
+        if (progressList.isEmpty()) return
+        if (shouldUseTraktProgress()) {
+            progressList.forEach { progress ->
+                traktProgressService.applyOptimisticProgress(progress)
+            }
+            watchProgressPreferences.saveProgressBatch(progressList)
+            return
+        }
+
+        watchProgressPreferences.saveProgressBatch(progressList)
+
+        if (syncRemote && authManager.isAuthenticated) {
+            triggerRemoteSync()
+        }
+
+        var completedSaved = false
+        progressList
+            .filter { it.isCompleted() }
+            .forEach { progress ->
+                watchedItemsPreferences.markAsWatched(
+                    WatchedItem(
+                        contentId = progress.contentId,
+                        contentType = progress.contentType,
+                        title = progress.name,
+                        season = progress.season,
+                        episode = progress.episode,
+                        watchedAt = System.currentTimeMillis()
+                    )
+                )
+                completedSaved = true
+            }
+        if (completedSaved) {
             triggerWatchedItemsSync()
         }
     }

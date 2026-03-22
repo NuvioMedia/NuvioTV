@@ -50,12 +50,15 @@ import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.data.local.StartupAuthNotice
 import com.nuvio.tv.ui.theme.NuvioColors
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 private data class HomePosterOptionsTarget(
     val item: MetaPreview,
     val addonBaseUrl: String
 )
+
+private const val HOME_STARTUP_CW_GATE_TIMEOUT_MS = 5_000L
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -86,6 +89,8 @@ fun HomeScreen(
     val hasCatalogContent = uiState.catalogRows.any { it.items.isNotEmpty() }
     var hasEnteredCatalogContent by rememberSaveable { mutableStateOf(false) }
     var showHomeContentWithAnimation by rememberSaveable { mutableStateOf(false) }
+    var hasReleasedStartupCwGate by rememberSaveable { mutableStateOf(false) }
+    var startupCwGateTimedOut by rememberSaveable { mutableStateOf(false) }
     var posterOptionsTarget by remember { mutableStateOf<HomePosterOptionsTarget?>(null) }
 
     // Stable lambdas — captured via rememberUpdatedState so they never cause
@@ -102,6 +107,19 @@ fun HomeScreen(
     LaunchedEffect(hasCatalogContent) {
         if (hasCatalogContent) {
             hasEnteredCatalogContent = true
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        delay(HOME_STARTUP_CW_GATE_TIMEOUT_MS)
+        startupCwGateTimedOut = true
+    }
+
+    LaunchedEffect(uiState.continueWatchingItems.isNotEmpty(), startupCwGateTimedOut) {
+        if (!hasReleasedStartupCwGate &&
+            (uiState.continueWatchingItems.isNotEmpty() || startupCwGateTimedOut)
+        ) {
+            hasReleasedStartupCwGate = true
         }
     }
 
@@ -170,7 +188,9 @@ fun HomeScreen(
             }
 
             else -> {
-                val shouldShowLoadingGate = !hasEnteredCatalogContent && !hasCatalogContent
+                val shouldShowLoadingGate =
+                    !hasReleasedStartupCwGate ||
+                        (!hasEnteredCatalogContent && !hasCatalogContent)
                 LaunchedEffect(shouldShowLoadingGate) {
                     if (shouldShowLoadingGate) {
                         showHomeContentWithAnimation = false

@@ -62,7 +62,7 @@ class HomeViewModel @Inject constructor(
     companion object {
         internal const val TAG = "HomeViewModel"
         internal const val STARTUP_GRACE_PERIOD_MS = 3_000L
-        internal const val CONTINUE_WATCHING_ENRICHMENT_GRACE_PERIOD_MS = 10_000L
+        internal const val CONTINUE_WATCHING_ENRICHMENT_GRACE_PERIOD_MS = 1_000L
         private const val CONTINUE_WATCHING_WINDOW_MS = 30L * 24 * 60 * 60 * 1000
         private const val MAX_RECENT_PROGRESS_ITEMS = 300
         private const val MAX_NEXT_UP_LOOKUPS = 24
@@ -130,6 +130,8 @@ class HomeViewModel @Inject constructor(
     internal var pendingExternalMetaPrefetchItemId: String? = null
     internal val prefetchedTmdbIds = Collections.synchronizedSet(mutableSetOf<String>())
     internal val cwMetaCache = Collections.synchronizedMap(mutableMapOf<String, Meta?>())
+    internal val cwTmdbIdCache = Collections.synchronizedMap(mutableMapOf<String, String?>())
+    internal val cwNextUpResolutionCache = Collections.synchronizedMap(mutableMapOf<String, NextUpResolution?>())
     internal var tmdbEnrichFocusJob: Job? = null
     internal var pendingTmdbEnrichItemId: String? = null
     internal var adjacentItemPrefetchJob: Job? = null

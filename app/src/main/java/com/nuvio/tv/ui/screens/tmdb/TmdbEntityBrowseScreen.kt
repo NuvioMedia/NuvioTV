@@ -180,24 +180,9 @@ private fun TmdbEntityBrowseContent(
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
-                alpha = 0.34f
+                alpha = 0.14f
             )
         }
-
-        // Gradient overlay
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            NuvioColors.Background.copy(alpha = 0.35f),
-                            NuvioColors.Background.copy(alpha = 0.75f),
-                            NuvioColors.Background
-                        )
-                    )
-                )
-        )
 
         if (data.rails.isEmpty()) {
             EmptyScreenState(
@@ -487,7 +472,7 @@ private fun EntityRailRow(
                     item = item,
                     onClick = { onItemClick(item) },
                     posterCardStyle = posterCardStyle,
-                    showLabel = true,
+                    showLabel = false,
                     focusRequester = requester,
                     onFocused = {
                         onFocusedItemIndexChanged(itemIndex)

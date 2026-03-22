@@ -62,6 +62,11 @@ interface WatchProgressRepository {
      * Save or update watch progress
      */
     suspend fun saveProgress(progress: WatchProgress, syncRemote: Boolean = true)
+
+    /**
+     * Save or update multiple watch progress entries in a single batch.
+     */
+    suspend fun saveProgressBatch(progressList: List<WatchProgress>, syncRemote: Boolean = true)
     
     /**
      * Remove watch progress (playback only, does not affect Trakt history)

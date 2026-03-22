@@ -716,8 +716,12 @@ class TraktProgressService @Inject constructor(
 
         if (!force && !hasActivityChanged()) return
 
-        if (watchedMoviesStale && hasLoadedWatchedMovies) {
+        if ((force || watchedMoviesStale) && hasLoadedWatchedMovies) {
             getWatchedMoviesSnapshot(forceRefresh = true)
+        }
+
+        if (force && hasLoadedWatchedShowSeeds) {
+            getWatchedShowSeedsSnapshot(forceRefresh = true)
         }
 
         val snapshot = fetchAllProgressSnapshot(force = force)
@@ -725,10 +729,8 @@ class TraktProgressService @Inject constructor(
         hasLoadedRemoteProgress.value = true
         reconcileOptimistic(snapshot)
         hydrateMetadata(snapshot)
-        if (watchedShowSeedsStale && hasLoadedWatchedShowSeeds) {
-            scope.launch {
-                getWatchedShowSeedsSnapshot(forceRefresh = true)
-            }
+        if (!force && watchedShowSeedsStale && hasLoadedWatchedShowSeeds) {
+            getWatchedShowSeedsSnapshot(forceRefresh = true)
         }
     }
 

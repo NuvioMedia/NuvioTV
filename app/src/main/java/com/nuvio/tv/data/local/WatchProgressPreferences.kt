@@ -129,19 +129,19 @@ class WatchProgressPreferences @Inject constructor(
         store().edit { preferences ->
             val json = preferences[watchProgressKey] ?: "{}"
             val map = parseProgressMap(json).toMutableMap()
-            
-            val key = createKey(progress)
-            map[key] = progress
+            upsertProgressEntries(map, listOf(progress))
 
-            if (progress.season != null && progress.episode != null) {
-                val seriesKey = progress.contentId
-                val existingSeriesProgress = map[seriesKey]
-                
-                if (existingSeriesProgress == null || progress.lastWatched > existingSeriesProgress.lastWatched) {
-                    map[seriesKey] = progress.copy(videoId = progress.videoId)
-                }
-            }
+            val pruned = pruneOldItems(map)
+            preferences[watchProgressKey] = gson.toJson(pruned)
+        }
+    }
 
+    suspend fun saveProgressBatch(progressList: List<WatchProgress>) {
+        if (progressList.isEmpty()) return
+        store().edit { preferences ->
+            val json = preferences[watchProgressKey] ?: "{}"
+            val map = parseProgressMap(json).toMutableMap()
+            upsertProgressEntries(map, progressList)
             val pruned = pruneOldItems(map)
             preferences[watchProgressKey] = gson.toJson(pruned)
         }
@@ -236,7 +236,7 @@ class WatchProgressPreferences @Inject constructor(
             for ((key, remote) in remoteEntries) {
                 val existing = local[key]
                 if (existing == null || remote.lastWatched > existing.lastWatched) {
-                    local[key] = remote.withPreservedPresentation(existing)
+                    local[key] = mergeDisplayMetadata(remote, existing)
                     Log.d("WatchProgressPrefs", "  merged key=$key (existing=${existing != null})")
                 } else {
                     Log.d("WatchProgressPrefs", "  skipped key=$key (local is newer)")
@@ -259,7 +259,7 @@ class WatchProgressPreferences @Inject constructor(
                 return@edit
             }
             val merged = remoteEntries.mapValues { (key, remote) ->
-                remote.withPreservedPresentation(current[key])
+                mergeDisplayMetadata(remote, current[key])
             }.toMutableMap()
             val pruned = pruneOldItems(merged)
             Log.d("WatchProgressPrefs", "replaceWithRemoteEntries: ${pruned.size} entries after prune, writing to DataStore")
@@ -284,15 +284,34 @@ class WatchProgressPreferences @Inject constructor(
         }
     }
 
-    private fun WatchProgress.withPreservedPresentation(existing: WatchProgress?): WatchProgress {
-        if (existing == null) return this
-        return copy(
-            name = name.ifBlank { existing.name },
-            poster = poster ?: existing.poster,
-            backdrop = backdrop ?: existing.backdrop,
-            logo = logo ?: existing.logo,
-            episodeTitle = episodeTitle ?: existing.episodeTitle,
-            addonBaseUrl = addonBaseUrl ?: existing.addonBaseUrl
+    private fun upsertProgressEntries(
+        map: MutableMap<String, WatchProgress>,
+        progressList: List<WatchProgress>
+    ) {
+        progressList.forEach { progress ->
+            val key = createKey(progress)
+            map[key] = progress
+
+            if (progress.season != null && progress.episode != null) {
+                val seriesKey = progress.contentId
+                val existingSeriesProgress = map[seriesKey]
+
+                if (existingSeriesProgress == null || progress.lastWatched > existingSeriesProgress.lastWatched) {
+                    map[seriesKey] = progress.copy(videoId = progress.videoId)
+                }
+            }
+        }
+    }
+
+    private fun mergeDisplayMetadata(remote: WatchProgress, existing: WatchProgress?): WatchProgress {
+        if (existing == null) return remote
+        return remote.copy(
+            name = remote.name.takeIf { it.isNotBlank() } ?: existing.name,
+            poster = remote.poster ?: existing.poster,
+            backdrop = remote.backdrop ?: existing.backdrop,
+            logo = remote.logo ?: existing.logo,
+            episodeTitle = remote.episodeTitle ?: existing.episodeTitle,
+            addonBaseUrl = remote.addonBaseUrl ?: existing.addonBaseUrl
         )
     }
 
