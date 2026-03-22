@@ -35,6 +35,7 @@ class TraktSettingsDataStore @Inject constructor(
         const val CONTINUE_WATCHING_DAYS_CAP_ALL = 0
         const val DEFAULT_CONTINUE_WATCHING_DAYS_CAP = 60
         const val DEFAULT_SHOW_UNAIRED_NEXT_UP = true
+        const val DEFAULT_SHOW_META_COMMENTS = true
         val DEFAULT_WATCH_PROGRESS_SOURCE = WatchProgressSource.TRAKT
         const val MIN_CONTINUE_WATCHING_DAYS_CAP = 7
         const val MAX_CONTINUE_WATCHING_DAYS_CAP = 365
@@ -46,6 +47,7 @@ class TraktSettingsDataStore @Inject constructor(
     private val continueWatchingDaysCapKey = intPreferencesKey("continue_watching_days_cap")
     private val dismissedNextUpKeysKey = stringSetPreferencesKey("dismissed_next_up_keys")
     private val showUnairedNextUpKey = booleanPreferencesKey("show_unaired_next_up")
+    private val showMetaCommentsKey = booleanPreferencesKey("show_meta_comments")
     private val watchProgressSourceKey = stringPreferencesKey("watch_progress_source")
 
     val continueWatchingDaysCap: Flow<Int> = profileManager.activeProfileId.flatMapLatest { pid ->
@@ -65,6 +67,12 @@ class TraktSettingsDataStore @Inject constructor(
     val showUnairedNextUp: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             prefs[showUnairedNextUpKey] ?: DEFAULT_SHOW_UNAIRED_NEXT_UP
+        }
+    }
+
+    val showMetaComments: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            prefs[showMetaCommentsKey] ?: DEFAULT_SHOW_META_COMMENTS
         }
     }
 
@@ -99,6 +107,12 @@ class TraktSettingsDataStore @Inject constructor(
     suspend fun setShowUnairedNextUp(enabled: Boolean) {
         store().edit { prefs ->
             prefs[showUnairedNextUpKey] = enabled
+        }
+    }
+
+    suspend fun setShowMetaComments(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[showMetaCommentsKey] = enabled
         }
     }
 

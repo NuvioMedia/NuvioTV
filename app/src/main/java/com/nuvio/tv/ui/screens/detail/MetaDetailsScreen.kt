@@ -94,6 +94,7 @@ import com.nuvio.tv.domain.model.MetaCastMember
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.MDBListRatings
 import com.nuvio.tv.domain.model.NextToWatch
+import com.nuvio.tv.domain.model.TraktCommentReview
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.ui.components.ErrorState
@@ -388,6 +389,10 @@ fun MetaDetailsScreen(
                     episodeRatingsError = uiState.episodeRatingsError,
                     mdbListRatings = uiState.mdbListRatings,
                     showMdbListImdb = uiState.showMdbListImdb,
+                    comments = uiState.comments,
+                    isCommentsLoading = uiState.isCommentsLoading,
+                    commentsError = uiState.commentsError,
+                    shouldShowCommentsSection = uiState.shouldShowCommentsSection,
                     onSeasonSelected = { viewModel.onEvent(MetaDetailsEvent.OnSeasonSelected(it)) },
                     onEpisodeClick = { video ->
                         onPlayClick(
@@ -528,6 +533,7 @@ fun MetaDetailsScreen(
                     onTrailerProgressChanged = onTrailerProgressChanged,
                     onTrailerEnded = { viewModel.onEvent(MetaDetailsEvent.OnTrailerEnded) },
                     onTrailerButtonClick = { viewModel.onEvent(MetaDetailsEvent.OnTrailerButtonClick) },
+                    onRetryComments = { viewModel.onEvent(MetaDetailsEvent.OnRetryComments) },
                     restorePlayFocusAfterTrailerBackToken = restorePlayFocusAfterTrailerBackToken,
                     onNavigateToCastDetail = onNavigateToCastDetail,
                     onNavigateToTmdbEntityBrowse = onNavigateToTmdbEntityBrowse,
@@ -623,6 +629,10 @@ private fun MetaDetailsContent(
     episodeRatingsError: String?,
     mdbListRatings: MDBListRatings?,
     showMdbListImdb: Boolean,
+    comments: List<TraktCommentReview>,
+    isCommentsLoading: Boolean,
+    commentsError: String?,
+    shouldShowCommentsSection: Boolean,
     onSeasonSelected: (Int) -> Unit,
     onEpisodeClick: (Video) -> Unit,
     onEpisodeManualPlayClick: (Video) -> Unit,
@@ -650,6 +660,7 @@ private fun MetaDetailsContent(
     onTrailerProgressChanged: (Long, Long) -> Unit,
     onTrailerEnded: () -> Unit,
     onTrailerButtonClick: () -> Unit,
+    onRetryComments: () -> Unit,
     restorePlayFocusAfterTrailerBackToken: Int,
     onNavigateToCastDetail: (personId: Int, personName: String, preferCrew: Boolean) -> Unit = { _, _, _ -> },
     onNavigateToTmdbEntityBrowse: (entityKind: String, entityId: Int, entityName: String, sourceType: String) -> Unit = { _, _, _, _ -> },
@@ -1006,6 +1017,12 @@ private fun MetaDetailsContent(
         hasPeopleTabs -> activePeopleTabFocusRequester
         activePeopleTab == PeopleSectionTab.RATINGS -> ratingsContentFocusRequester
         else -> null
+    }
+    val commentsUpFocusRequester = when {
+        hasPeopleTabs -> activePeopleTabFocusRequester
+        hasPeopleSection -> seasonDownFocusRequester ?: heroPlayFocusRequester
+        isSeries -> seasonDownFocusRequester ?: heroPlayFocusRequester
+        else -> heroPlayFocusRequester
     }
 
     LaunchedEffect(availablePeopleTabs) {
@@ -1393,6 +1410,19 @@ private fun MetaDetailsContent(
                             }
                         }
                     }
+                }
+            }
+
+            if (shouldShowCommentsSection) {
+                item(key = "trakt_comments", contentType = "horizontal_row") {
+                    CommentsSection(
+                        stateKey = meta.id,
+                        comments = comments,
+                        isLoading = isCommentsLoading,
+                        error = commentsError,
+                        upFocusRequester = commentsUpFocusRequester,
+                        onRetry = onRetryComments
+                    )
                 }
             }
 
