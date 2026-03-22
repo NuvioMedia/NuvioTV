@@ -124,6 +124,13 @@
     <string name="detail_tab_more_like_this">Similaires</string>
     <string name="detail_section_network">Chaîne</string>
     <string name="detail_section_production">Production</string>
+    <string name="tmdb_entity_kind_company">Société de Production</string>
+    <string name="tmdb_entity_kind_network">Chaîne</string>
+    <string name="tmdb_entity_rail_popular">Populaires</string>
+    <string name="tmdb_entity_rail_top_rated">Meilleures Notes</string>
+    <string name="tmdb_entity_rail_recent">Nouveautés</string>
+    <string name="tmdb_entity_empty_title">Aucun titre trouvé</string>
+    <string name="tmdb_entity_empty_subtitle">TMDB n\'a actuellement aucun titre consultable pour cette sélection.</string>
     <string name="episodes_unavailable">Indisponible</string>
     <string name="series_status_ended">Terminée</string>
     <string name="series_status_continuing">En cours</string>
@@ -443,6 +450,8 @@
     <string name="layout_trailer_button_sub">Afficher le bouton bande-annonce sur la page de détail (uniquement quand une bande-annonce est disponible).</string>
     <string name="layout_prefer_external_meta">Préférer les métadonnées de l\'addon externe</string>
     <string name="layout_prefer_external_meta_sub">Utiliser les métadonnées de l\'addon externe au lieu de l\'addon de catalogue.</string>
+    <string name="layout_show_full_release_date">Afficher la date de sortie complète</string>
+    <string name="layout_show_full_release_date_sub">Pour les films, afficher la date de sortie complète au lieu de l\'année seulement.</string>
     <string name="layout_section_focused">Affiche au focus</string>
     <string name="layout_section_focused_desc">Comportement avancé des cartes d\'affiches au focus.</string>
     <string name="layout_expand_poster">Étendre l\'affiche au focus en arrière-plan</string>
@@ -526,6 +535,8 @@
     <string name="tmdb_subtitle">Choisir les champs de métadonnées provenant de TMDB</string>
     <string name="tmdb_enable_title">Activer l\'enrichissement TMDB</string>
     <string name="tmdb_enable_subtitle">Utiliser TMDB comme source de métadonnées pour enrichir les données de l\'addon</string>
+    <string name="tmdb_modern_home_title">Activer sur l\'accueil Moderne</string>
+    <string name="tmdb_modern_home_subtitle">Appliquer également l\'enrichissement TMDB aux vedettes et aux cartes au focus de l\'accueil Moderne</string>
     <string name="tmdb_language_title">Langue</string>
     <string name="tmdb_language_subtitle">Langue des métadonnées TMDB pour le titre, le logo et les champs activés</string>
     <string name="tmdb_artwork_title">Illustrations</string>
