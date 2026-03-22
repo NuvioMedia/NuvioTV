@@ -104,8 +104,14 @@ class UpdateViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isDownloading = true, downloadProgress = 0f, errorMessage = null) }
 
+            // Auto-cleanup: Delete any previously downloaded APKs to save storage space
+            val updatesDir = File(context.cacheDir, "updates")
+            if (updatesDir.exists()) {
+                updatesDir.deleteRecursively()
+            }
+
             val safeName = update.assetName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-            val dest = File(File(context.cacheDir, "updates"), safeName)
+            val dest = File(updatesDir, safeName)
 
             val result = withContext(Dispatchers.IO) {
                 apkDownloader.download(update.assetUrl, dest) { downloaded, total ->
