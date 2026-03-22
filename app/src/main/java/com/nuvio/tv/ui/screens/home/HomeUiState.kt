@@ -23,6 +23,7 @@ data class HomeUiState(
     val layoutPrefsReady: Boolean = false,
     val waitForContinueWatchingFocusEnabled: Boolean = true,
     val continueWatchingUsesTraktSource: Boolean = false,
+    val continueWatchingUsesNuvioSyncSource: Boolean = false,
     val continueWatchingStartupReady: Boolean = false,
     val continueWatchingResolved: Boolean = false,
     val heroItems: List<MetaPreview> = emptyList(),

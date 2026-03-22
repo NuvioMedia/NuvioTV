@@ -10,6 +10,7 @@ import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchProgressSource
 import com.nuvio.tv.data.local.WatchProgressPreferences
 import com.nuvio.tv.data.local.WatchedItemsPreferences
+import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.model.WatchedItem
 import com.nuvio.tv.domain.repository.MetaRepository
@@ -361,6 +362,15 @@ class WatchProgressRepositoryImpl @Inject constructor(
 
     override fun observeUsingTraktProgress(): Flow<Boolean> {
         return useTraktProgressFlow()
+    }
+
+    override fun observeUsingNuvioSyncProgress(): Flow<Boolean> {
+        return combine(
+            authManager.authState,
+            traktSettingsDataStore.watchProgressSource
+        ) { authState, source ->
+            authState is AuthState.FullAccount && source == WatchProgressSource.NUVIO_SYNC
+        }.distinctUntilChanged()
     }
 
     override fun observeContinueWatchingResolved(): Flow<Boolean> {

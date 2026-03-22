@@ -49,6 +49,11 @@ interface WatchProgressRepository {
     fun observeUsingTraktProgress(): Flow<Boolean>
 
     /**
+     * Emits whether Continue Watching is currently backed by authenticated Nuvio Sync progress.
+     */
+    fun observeUsingNuvioSyncProgress(): Flow<Boolean>
+
+    /**
      * Emits when the active Continue Watching source has resolved enough data for startup focus.
      * For non-Trakt sources this resolves immediately.
      */

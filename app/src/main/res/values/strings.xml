@@ -419,7 +419,7 @@
     <string name="layout_landscape_posters">Landscape Posters</string>
     <string name="layout_landscape_posters_sub">Switch between portrait and landscape cards for Modern view.</string>
     <string name="layout_wait_for_continue_watching_focus">Wait for Continue Watching Focus</string>
-    <string name="layout_wait_for_continue_watching_focus_sub">Before setting initial focus. Can take longer. 4s máx.</string>
+    <string name="layout_wait_for_continue_watching_focus_sub">Instead of first catalog initial focus. Can take longer. </string>
     <string name="layout_preview_row">Show Preview Row</string>
     <string name="layout_preview_row_sub">Show a partial preview of the row below in Modern Home layout.</string>
     <string name="layout_hero_catalogs">Hero Catalogs</string>

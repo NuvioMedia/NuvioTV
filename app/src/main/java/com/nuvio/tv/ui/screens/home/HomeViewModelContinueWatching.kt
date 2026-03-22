@@ -1,5 +1,4 @@
 package com.nuvio.tv.ui.screens.home
-
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.local.TraktSettingsDataStore
@@ -88,13 +87,15 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
     viewModelScope.launch {
         combine(
             watchProgressRepository.observeUsingTraktProgress(),
+            watchProgressRepository.observeUsingNuvioSyncProgress(),
             watchProgressRepository.observeContinueWatchingResolved()
-        ) { usesTraktSource, resolved ->
-            usesTraktSource to resolved
-        }.distinctUntilChanged().collect { (usesTraktSource, resolved) ->
+        ) { usesTraktSource, usesNuvioSyncSource, resolved ->
+            Triple(usesTraktSource, usesNuvioSyncSource, resolved)
+        }.distinctUntilChanged().collect { (usesTraktSource, usesNuvioSyncSource, resolved) ->
             _uiState.update { state ->
                 val nextState = state.copy(
                     continueWatchingUsesTraktSource = usesTraktSource,
+                    continueWatchingUsesNuvioSyncSource = usesNuvioSyncSource,
                     continueWatchingStartupReady = !usesTraktSource,
                     continueWatchingResolved = resolved
                 )

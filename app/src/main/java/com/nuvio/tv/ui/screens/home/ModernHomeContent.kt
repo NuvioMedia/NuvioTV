@@ -401,12 +401,18 @@ fun ModernHomeContent(
             uiState.continueWatchingUsesTraktSource &&
             uiState.continueWatchingItems.isEmpty() &&
             !uiState.continueWatchingStartupReady
-    val canStartTraktContinueWatchingStartupTimeout = shouldWaitForTraktContinueWatchingStartupFocus &&
-        firstCatalogRow != null
+    val shouldWaitForNuvioSyncContinueWatchingStartupFocus =
+        !focusState.hasSavedFocus &&
+            uiState.waitForContinueWatchingFocusEnabled &&
+            uiState.continueWatchingUsesNuvioSyncSource &&
+            uiState.continueWatchingItems.isEmpty()
+    val canStartContinueWatchingStartupTimeout =
+        (shouldWaitForTraktContinueWatchingStartupFocus || shouldWaitForNuvioSyncContinueWatchingStartupFocus) &&
+            firstCatalogRow != null
     var continueWatchingStartupWaitTimedOut by remember { mutableStateOf(false) }
 
-    LaunchedEffect(canStartTraktContinueWatchingStartupTimeout) {
-        if (!canStartTraktContinueWatchingStartupTimeout) {
+    LaunchedEffect(canStartContinueWatchingStartupTimeout) {
+        if (!canStartContinueWatchingStartupTimeout) {
             continueWatchingStartupWaitTimedOut = false
             return@LaunchedEffect
         }
@@ -488,6 +494,7 @@ fun ModernHomeContent(
         uiState.layoutPrefsReady,
         uiState.waitForContinueWatchingFocusEnabled,
         uiState.continueWatchingUsesTraktSource,
+        uiState.continueWatchingUsesNuvioSyncSource,
         uiState.continueWatchingStartupReady,
         uiState.continueWatchingResolved,
         uiState.continueWatchingItems.isNotEmpty(),
@@ -550,6 +557,13 @@ fun ModernHomeContent(
         }
 
         if (shouldWaitForTraktContinueWatchingStartupFocus &&
+            (firstCatalogRow == null || !continueWatchingStartupWaitTimedOut) &&
+            focusHolder.activeRowKey == null
+        ) {
+            return@LaunchedEffect
+        }
+
+        if (shouldWaitForNuvioSyncContinueWatchingStartupFocus &&
             (firstCatalogRow == null || !continueWatchingStartupWaitTimedOut) &&
             focusHolder.activeRowKey == null
         ) {
