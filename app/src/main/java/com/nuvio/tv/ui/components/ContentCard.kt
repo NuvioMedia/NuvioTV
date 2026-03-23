@@ -39,6 +39,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -108,6 +110,7 @@ fun ContentCard(
     var interactionNonce by remember { mutableIntStateOf(0) }
     var isBackdropExpanded by remember { mutableStateOf(false) }
     var trailerFirstFrameRendered by remember(trailerPreviewUrl) { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
 
 
     val needsFocusState = focusedPosterBackdropExpandEnabled || focusedPosterBackdropTrailerEnabled
@@ -130,7 +133,9 @@ fun ContentCard(
             isBackdropExpanded = false
             val backdropDelayMs = delaySeconds * 1000L
             delay(backdropDelayMs)
-            if (isFocused && focusedPosterBackdropExpandEnabled) {
+            if (isFocused && focusedPosterBackdropExpandEnabled &&
+                lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+            ) {
                 isBackdropExpanded = true
             }
         }
@@ -146,6 +151,7 @@ fun ContentCard(
             if (trailerPreviewUrl != null) return@LaunchedEffect
             delay(TRAILER_PREVIEW_REQUEST_FOCUS_DEBOUNCE_MS)
             if (!isFocused) return@LaunchedEffect
+            if (!lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@LaunchedEffect
             onRequestTrailerPreview(item)
         }
     }
@@ -225,6 +231,9 @@ fun ContentCard(
         var logoLoadFailed by remember(item.logo) { mutableStateOf(false) }
         val showExpandedLogo = !item.logo.isNullOrBlank() && !logoLoadFailed
 
+        val bgCardColor = NuvioColors.BackgroundCard
+        val backgroundPainter = remember(bgCardColor) { androidx.compose.ui.graphics.painter.ColorPainter(bgCardColor) }
+
         Card(
             onClick = {
                 if (longPressTriggered) {
@@ -288,8 +297,8 @@ fun ContentCard(
                 ),
             shape = CardDefaults.shape(shape = NuvioTheme.extendedColors.posterShape),
             colors = CardDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                focusedContainerColor = NuvioColors.BackgroundCard
+                containerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent
             ),
             border = CardDefaults.border(
                 focusedBorder = Border(
@@ -313,6 +322,9 @@ fun ContentCard(
                         modifier = Modifier.fillMaxSize()
                             .fillMaxSize()
                             .clip(cardShape),
+                        placeholder = backgroundPainter,
+                        error = backgroundPainter,
+                        fallback = backgroundPainter,
                         contentScale = ContentScale.Crop
                     )
                 } else {
