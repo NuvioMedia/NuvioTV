@@ -60,6 +60,7 @@ internal fun PlayerCastRow(
     onDownKey: () -> Unit,
     upFocusRequester: FocusRequester,
     onFocused: () -> Unit,
+    onUpKey: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val displayMembers = remember(castMembers) { castMembers.take(10) }
@@ -88,6 +89,7 @@ internal fun PlayerCastRow(
                     focusRequester = if (isFirst) firstCastItemFocusRequester else null,
                     upFocusRequester = upFocusRequester,
                     onDownKey = onDownKey,
+                    onUpKey = onUpKey,
                     onFocused = onFocused,
                     onClick = { onCastMemberClick(member) }
                 )
@@ -102,6 +104,7 @@ private fun PlayerCastMemberItem(
     focusRequester: FocusRequester?,
     upFocusRequester: FocusRequester,
     onDownKey: () -> Unit,
+    onUpKey: (() -> Unit)?,
     onFocused: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -133,12 +136,21 @@ private fun PlayerCastMemberItem(
                     if (focusRequester != null) Modifier.focusRequester(focusRequester)
                     else Modifier
                 )
-                .focusProperties { up = upFocusRequester }
+                .then(
+                    if (onUpKey == null) Modifier.focusProperties { up = upFocusRequester }
+                    else Modifier
+                )
                 .onPreviewKeyEvent { keyEvent ->
                     if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
                         keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_DOWN
                     ) {
                         onDownKey()
+                        true
+                    } else if (onUpKey != null &&
+                        keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                        keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_UP
+                    ) {
+                        onUpKey()
                         true
                     } else {
                         false

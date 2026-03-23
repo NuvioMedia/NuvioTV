@@ -1044,11 +1044,23 @@ private fun PlayerControlsOverlay(
     val customEpisodesPainter = rememberRawSvgPainter(R.raw.ic_player_episodes)
 
     val firstCastItemFocusRequester = remember { FocusRequester() }
+    var showCastRow by remember { mutableStateOf(false) }
     val handleDownFromControls: () -> Unit = {
         if (uiState.castMembers.isNotEmpty()) {
-            try { firstCastItemFocusRequester.requestFocus() } catch (_: Exception) {}
+            showCastRow = true
         } else {
             onHideControls()
+        }
+    }
+    val handleCastRowUpKey: () -> Unit = {
+        showCastRow = false
+        try { playPauseFocusRequester.requestFocus() } catch (_: Exception) {}
+    }
+
+    // Focus first cast item when row becomes visible
+    LaunchedEffect(showCastRow) {
+        if (showCastRow) {
+            try { firstCastItemFocusRequester.requestFocus() } catch (_: Exception) {}
         }
     }
 
@@ -1073,7 +1085,7 @@ private fun PlayerControlsOverlay(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(if (uiState.castMembers.isNotEmpty()) 310.dp else 200.dp)
+                .height(200.dp)
                 .align(Alignment.BottomCenter)
                 .background(
                     Brush.verticalGradient(
@@ -1347,24 +1359,51 @@ private fun PlayerControlsOverlay(
                 )
             }
 
-            // Cast row below controls
-            if (uiState.castMembers.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                PlayerCastRow(
-                    castMembers = uiState.castMembers,
-                    firstCastItemFocusRequester = firstCastItemFocusRequester,
-                    onCastMemberClick = { member ->
-                        member.tmdbId?.let { id ->
-                            val preferCrew = member.character.equals("Creator", ignoreCase = true) ||
-                                member.character.equals("Director", ignoreCase = true) ||
-                                member.character.equals("Writer", ignoreCase = true)
-                            onCastMemberClick(id, member.name, preferCrew)
-                        }
-                    },
-                    onDownKey = onHideControls,
-                    upFocusRequester = playPauseFocusRequester,
-                    onFocused = onResetHideTimer
+            // Cast hint chevron
+            if (uiState.castMembers.isNotEmpty() && !showCastRow) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "▾",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.4f),
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
+            }
+
+            // Cast row - slides in when user presses down from controls
+            AnimatedVisibility(
+                visible = showCastRow && uiState.castMembers.isNotEmpty(),
+                enter = fadeIn(animationSpec = tween(200)) + slideInVertically(
+                    animationSpec = tween(200),
+                    initialOffsetY = { it / 2 }
+                ),
+                exit = fadeOut(animationSpec = tween(150)) + slideOutVertically(
+                    animationSpec = tween(150),
+                    targetOffsetY = { it / 2 }
+                )
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    PlayerCastRow(
+                        castMembers = uiState.castMembers,
+                        firstCastItemFocusRequester = firstCastItemFocusRequester,
+                        onCastMemberClick = { member ->
+                            member.tmdbId?.let { id ->
+                                val preferCrew = member.character.equals("Creator", ignoreCase = true) ||
+                                    member.character.equals("Director", ignoreCase = true) ||
+                                    member.character.equals("Writer", ignoreCase = true)
+                                onCastMemberClick(id, member.name, preferCrew)
+                            }
+                        },
+                        onDownKey = {
+                            showCastRow = false
+                            onHideControls()
+                        },
+                        upFocusRequester = playPauseFocusRequester,
+                        onFocused = onResetHideTimer,
+                        onUpKey = handleCastRowUpKey
+                    )
+                }
             }
         }
     }
