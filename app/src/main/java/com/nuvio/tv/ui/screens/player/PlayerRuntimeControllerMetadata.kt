@@ -2,12 +2,16 @@ package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
+import com.nuvio.tv.domain.model.MetaCastMember
 import com.nuvio.tv.domain.model.Stream
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 internal fun PlayerRuntimeController.fetchMetaDetails(id: String?, type: String?) {
     if (id.isNullOrBlank() || type.isNullOrBlank()) return
@@ -21,12 +25,62 @@ internal fun PlayerRuntimeController.fetchMetaDetails(id: String?, type: String?
                 applyMetaDetails(result.data)
             }
             is NetworkResult.Error -> {
-                
+
             }
             NetworkResult.Loading -> {
-                
+
             }
         }
+
+        // Enrich cast from TMDB if addon didn't provide cast data
+        if (_uiState.value.castMembers.isEmpty()) {
+            fetchTmdbCast(id, type)
+        }
+    }
+}
+
+private suspend fun PlayerRuntimeController.fetchTmdbCast(id: String, type: String) {
+    try {
+        val tmdbType = when (type.lowercase()) {
+            "movie" -> "movie"
+            "series", "tv" -> "tv"
+            else -> return
+        }
+        val tmdbId = withContext(Dispatchers.IO) {
+            tmdbService.ensureTmdbId(id, tmdbType)
+        } ?: return
+
+        val tmdbContentType = when (type.lowercase()) {
+            "movie" -> ContentType.MOVIE
+            "series", "tv" -> ContentType.SERIES
+            else -> return
+        }
+        val enrichment = withContext(Dispatchers.IO) {
+            tmdbMetadataService.fetchEnrichment(
+                tmdbId = tmdbId,
+                contentType = tmdbContentType
+            )
+        } ?: return
+
+        val castMembers = buildList {
+            addAll(enrichment.directorMembers)
+            addAll(enrichment.writerMembers)
+            addAll(enrichment.castMembers)
+        }
+            .filter { it.name.isNotBlank() }
+            .distinctBy { it.tmdbId ?: (it.name.lowercase() + "|" + (it.character ?: "")) }
+
+        if (castMembers.isNotEmpty()) {
+            _uiState.update { state ->
+                if (state.castMembers.isEmpty()) {
+                    state.copy(castMembers = castMembers)
+                } else {
+                    state
+                }
+            }
+        }
+    } catch (_: Exception) {
+        // TMDB enrichment is best-effort, don't crash the player
     }
 }
 

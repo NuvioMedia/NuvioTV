@@ -118,7 +118,8 @@ fun PlayerScreen(
     viewModel: PlayerViewModel = hiltViewModel(),
     onBackPress: (currentSeason: Int?, currentEpisode: Int?, autoPlayEnabled: Boolean) -> Unit,
     onPlaybackErrorBack: () -> Unit = { onBackPress(null, null, false) },
-    onPlaybackEnded: ((nextVideoId: String?, nextSeason: Int?, nextEpisode: Int?) -> Unit)? = null
+    onPlaybackEnded: ((nextVideoId: String?, nextSeason: Int?, nextEpisode: Int?) -> Unit)? = null,
+    onNavigateToCastDetail: (personId: Int, personName: String, preferCrew: Boolean) -> Unit = { _, _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -775,7 +776,8 @@ fun PlayerScreen(
                 onResetHideTimer = { viewModel.scheduleHideControls(); viewModel.onUserInteraction() },
                 onHideControls = { viewModel.hideControls() },
                 onBack = { exitPlayer() },
-                skipButtonVisible = skipButtonActuallyVisible
+                skipButtonVisible = skipButtonActuallyVisible,
+                onCastMemberClick = onNavigateToCastDetail
             )
         }
 
@@ -1030,7 +1032,8 @@ private fun PlayerControlsOverlay(
     onResetHideTimer: () -> Unit,
     onHideControls: () -> Unit,
     onBack: () -> Unit,
-    skipButtonVisible: Boolean = false
+    skipButtonVisible: Boolean = false,
+    onCastMemberClick: (personId: Int, personName: String, preferCrew: Boolean) -> Unit = { _, _, _ -> }
 ) {
     val customPlayPainter = rememberRawSvgPainter(R.raw.ic_player_play)
     val customPausePainter = rememberRawSvgPainter(R.raw.ic_player_pause)
@@ -1039,6 +1042,15 @@ private fun PlayerControlsOverlay(
     val customSourcePainter = rememberRawSvgPainter(R.raw.ic_player_source)
     val customAspectPainter = rememberRawSvgPainter(R.raw.ic_player_aspect_ratio)
     val customEpisodesPainter = rememberRawSvgPainter(R.raw.ic_player_episodes)
+
+    val firstCastItemFocusRequester = remember { FocusRequester() }
+    val handleDownFromControls: () -> Unit = {
+        if (uiState.castMembers.isNotEmpty()) {
+            try { firstCastItemFocusRequester.requestFocus() } catch (_: Exception) {}
+        } else {
+            onHideControls()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Top gradient
@@ -1061,7 +1073,7 @@ private fun PlayerControlsOverlay(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(if (uiState.castMembers.isNotEmpty()) 310.dp else 200.dp)
                 .align(Alignment.BottomCenter)
                 .background(
                     Brush.verticalGradient(
@@ -1193,7 +1205,7 @@ private fun PlayerControlsOverlay(
                         onClick = onPlayPause,
                         focusRequester = playPauseFocusRequester,
                         upFocusRequester = progressBarFocusRequester,
-                        onDownKey = onHideControls,
+                        onDownKey = handleDownFromControls,
                         onFocused = onResetHideTimer
                     )
 
@@ -1203,7 +1215,7 @@ private fun PlayerControlsOverlay(
                             contentDescription = stringResource(R.string.next_episode_label),
                             onClick = onPlayNextEpisode,
                             upFocusRequester = progressBarFocusRequester,
-                            onDownKey = onHideControls,
+                            onDownKey = handleDownFromControls,
                             onFocused = onResetHideTimer
                         )
                     }
@@ -1215,7 +1227,7 @@ private fun PlayerControlsOverlay(
                             contentDescription = "Subtitles",
                             onClick = onShowSubtitleDialog,
                             upFocusRequester = progressBarFocusRequester,
-                            onDownKey = onHideControls,
+                            onDownKey = handleDownFromControls,
                             onFocused = onResetHideTimer
                         )
                     }
@@ -1227,7 +1239,7 @@ private fun PlayerControlsOverlay(
                             contentDescription = "Audio tracks",
                             onClick = onShowAudioDialog,
                             upFocusRequester = progressBarFocusRequester,
-                            onDownKey = onHideControls,
+                            onDownKey = handleDownFromControls,
                             onFocused = onResetHideTimer
                         )
                     }
@@ -1238,7 +1250,7 @@ private fun PlayerControlsOverlay(
                         contentDescription = "Sources",
                         onClick = onShowSourcesPanel,
                         upFocusRequester = progressBarFocusRequester,
-                        onDownKey = onHideControls,
+                        onDownKey = handleDownFromControls,
                         onFocused = onResetHideTimer
                     )
 
@@ -1249,7 +1261,7 @@ private fun PlayerControlsOverlay(
                             contentDescription = "Episodes",
                             onClick = onShowEpisodesPanel,
                             upFocusRequester = progressBarFocusRequester,
-                            onDownKey = onHideControls,
+                            onDownKey = handleDownFromControls,
                             onFocused = onResetHideTimer
                         )
                     }
@@ -1276,7 +1288,7 @@ private fun PlayerControlsOverlay(
                                     onShowSpeedDialog()
                                 },
                                 upFocusRequester = progressBarFocusRequester,
-                                onDownKey = onHideControls,
+                                onDownKey = handleDownFromControls,
                                 onFocused = onResetHideTimer
                             )
                             ControlButton(
@@ -1287,7 +1299,7 @@ private fun PlayerControlsOverlay(
                                     onToggleAspectRatio()
                                 },
                                 upFocusRequester = progressBarFocusRequester,
-                                onDownKey = onHideControls,
+                                onDownKey = handleDownFromControls,
                                 onFocused = onResetHideTimer
                             )
                             ControlButton(
@@ -1297,7 +1309,7 @@ private fun PlayerControlsOverlay(
                                     onOpenInExternalPlayer()
                                 },
                                 upFocusRequester = progressBarFocusRequester,
-                                onDownKey = onHideControls,
+                                onDownKey = handleDownFromControls,
                                 onFocused = onResetHideTimer
                             )
                             ControlButton(
@@ -1307,7 +1319,7 @@ private fun PlayerControlsOverlay(
                                     onShowStreamInfo()
                                 },
                                 upFocusRequester = progressBarFocusRequester,
-                                onDownKey = onHideControls,
+                                onDownKey = handleDownFromControls,
                                 onFocused = onResetHideTimer
                             )
                         }
@@ -1322,7 +1334,7 @@ private fun PlayerControlsOverlay(
                         contentDescription = if (uiState.showMoreDialog) "Close more actions" else "More actions",
                         onClick = onToggleMoreActions,
                         upFocusRequester = progressBarFocusRequester,
-                        onDownKey = onHideControls,
+                        onDownKey = handleDownFromControls,
                         onFocused = onResetHideTimer
                     )
                 }
@@ -1332,6 +1344,26 @@ private fun PlayerControlsOverlay(
                     text = "${formatTime(uiState.currentPosition)} / ${formatTime(uiState.duration)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.9f)
+                )
+            }
+
+            // Cast row below controls
+            if (uiState.castMembers.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                PlayerCastRow(
+                    castMembers = uiState.castMembers,
+                    firstCastItemFocusRequester = firstCastItemFocusRequester,
+                    onCastMemberClick = { member ->
+                        member.tmdbId?.let { id ->
+                            val preferCrew = member.character.equals("Creator", ignoreCase = true) ||
+                                member.character.equals("Director", ignoreCase = true) ||
+                                member.character.equals("Writer", ignoreCase = true)
+                            onCastMemberClick(id, member.name, preferCrew)
+                        }
+                    },
+                    onDownKey = onHideControls,
+                    upFocusRequester = playPauseFocusRequester,
+                    onFocused = onResetHideTimer
                 )
             }
         }
