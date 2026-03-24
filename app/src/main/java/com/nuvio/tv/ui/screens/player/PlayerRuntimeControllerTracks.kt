@@ -109,7 +109,13 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
         }
     }
 
-    hasScannedTextTracksOnce = true
+    if (subtitleTracks.isNotEmpty() && _uiState.value.subtitleTracks.isEmpty()) {
+        autoSubtitleSelected = false
+    }
+
+    if (subtitleTracks.isNotEmpty()) {
+        hasScannedTextTracksOnce = true
+    }
     Log.d(
         PlayerRuntimeController.TAG,
         "TRACKS updated: internalSubs=${subtitleTracks.size}, selectedInternalIndex=$selectedSubtitleIndex, " +
@@ -468,12 +474,12 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
     if (preferred == SUBTITLE_LANGUAGE_FORCED) {
 
     // Defer forced selection until internal AND addon tracks are loaded
-    if (!hasScannedTextTracksOnce ||
-        _uiState.value.subtitleTracks.isEmpty() ||
-        _uiState.value.addonSubtitles.isEmpty()
-    ) {
-        return
-    }
+        if (!hasScannedTextTracksOnce) return
+        if (_uiState.value.subtitleTracks.isEmpty()) {
+            // if no internal tracks, wait for addon subtitles to trigger a refresh
+            if (_uiState.value.addonSubtitles.isEmpty()) return
+        }
+
 
 
         val languageTargets = subtitleLanguageTargets()
