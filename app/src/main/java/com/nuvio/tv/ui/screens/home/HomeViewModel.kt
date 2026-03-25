@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.home
 
+import android.os.SystemClock
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,6 +19,7 @@ import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.LibraryEntryInput
+import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.TmdbSettings
 import com.nuvio.tv.domain.repository.AddonRepository
@@ -59,6 +61,8 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         internal const val TAG = "HomeViewModel"
+        internal const val STARTUP_GRACE_PERIOD_MS = 3_000L
+        internal const val CONTINUE_WATCHING_ENRICHMENT_GRACE_PERIOD_MS = 1_000L
         private const val CONTINUE_WATCHING_WINDOW_MS = 30L * 24 * 60 * 60 * 1000
         private const val MAX_RECENT_PROGRESS_ITEMS = 300
         private const val MAX_NEXT_UP_LOOKUPS = 24
@@ -125,6 +129,9 @@ class HomeViewModel @Inject constructor(
     internal var externalMetaPrefetchJob: Job? = null
     internal var pendingExternalMetaPrefetchItemId: String? = null
     internal val prefetchedTmdbIds = Collections.synchronizedSet(mutableSetOf<String>())
+    internal val cwMetaCache = Collections.synchronizedMap(mutableMapOf<String, Meta?>())
+    internal val cwTmdbIdCache = Collections.synchronizedMap(mutableMapOf<String, String?>())
+    internal val cwNextUpResolutionCache = Collections.synchronizedMap(mutableMapOf<String, NextUpResolution?>())
     internal var tmdbEnrichFocusJob: Job? = null
     internal var pendingTmdbEnrichItemId: String? = null
     internal var adjacentItemPrefetchJob: Job? = null
@@ -133,9 +140,12 @@ class HomeViewModel @Inject constructor(
     internal val movieWatchedObserverJobs = mutableMapOf<String, Job>()
     internal var movieWatchedBatchJob: Job? = null
     internal var lastMovieWatchedItemKeys: Set<String> = emptySet()
+    internal var libraryTabsObserverJob: Job? = null
     internal var activePosterListPickerInput: LibraryEntryInput? = null
+    internal var posterStatusObservationEnabled: Boolean = false
     @Volatile
     internal var externalMetaPrefetchEnabled: Boolean = false
+    internal val startupStartedAtMs: Long = SystemClock.elapsedRealtime()
     @Volatile
     internal var startupGracePeriodActive: Boolean = true
     internal var startupAuthNoticeJob: Job? = null
@@ -151,18 +161,41 @@ class HomeViewModel @Inject constructor(
         loadDisabledHomeCatalogPreference()
         observeLibraryState()
         observeTmdbSettings()
+        observeBlurUnwatchedEpisodes()
         observeStartupAuthNotice()
         loadContinueWatching()
         observeInstalledAddons()
         viewModelScope.launch {
-            delay(3000)
+            delay(STARTUP_GRACE_PERIOD_MS)
             startupGracePeriodActive = false
         }
+    }
+
+    internal fun remainingStartupGraceMs(nowMs: Long = SystemClock.elapsedRealtime()): Long {
+        if (!startupGracePeriodActive) return 0L
+        return (STARTUP_GRACE_PERIOD_MS - (nowMs - startupStartedAtMs)).coerceAtLeast(0L)
+    }
+
+    internal fun remainingContinueWatchingEnrichmentGraceMs(
+        nowMs: Long = SystemClock.elapsedRealtime()
+    ): Long {
+        return (CONTINUE_WATCHING_ENRICHMENT_GRACE_PERIOD_MS - (nowMs - startupStartedAtMs))
+            .coerceAtLeast(0L)
     }
 
     private fun observeLayoutPreferences() = observeLayoutPreferencesPipeline()
 
     private fun observeExternalMetaPrefetchPreference() = observeExternalMetaPrefetchPreferencePipeline()
+
+    private fun observeBlurUnwatchedEpisodes() {
+        viewModelScope.launch {
+            layoutPreferenceDataStore.blurUnwatchedEpisodes
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    _uiState.update { it.copy(blurUnwatchedEpisodes = enabled) }
+                }
+        }
+    }
 
     fun requestTrailerPreview(item: MetaPreview) = requestTrailerPreviewPipeline(item)
 
@@ -229,7 +262,9 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun loadContinueWatching() = loadContinueWatchingPipeline()
+    private fun loadContinueWatching() {
+        loadContinueWatchingPipeline()
+    }
 
     private fun removeContinueWatching(
         contentId: String,

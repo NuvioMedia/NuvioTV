@@ -12,12 +12,25 @@ on:
           - dry_run
           - draft
           - publish
-      version:
-        description: "Target versionName, for example 0.4.19-beta"
+      manual_release:
+        description: "Use manual tag/title without changing Gradle version"
         required: true
+        default: false
+        type: boolean
+      version:
+        description: "Target versionName for auto mode, for example 0.4.19-beta"
+        required: false
         type: string
       version_code:
-        description: "Optional versionCode override. Defaults to current versionCode + 1."
+        description: "Optional versionCode override for auto mode. Defaults to current versionCode + 1."
+        required: false
+        type: string
+      release_tag:
+        description: "Manual mode tag. Required when manual release is enabled."
+        required: false
+        type: string
+      release_title:
+        description: "Manual mode GitHub release title. Required when manual release is enabled."
         required: false
         type: string
       downloader_code:
@@ -97,15 +110,24 @@ jobs:
 
       - name: Preview beta release
         if: ${{ inputs.release_mode == 'dry_run' }}
-        env:
-          CUSTOM_RELEASE_NOTES: ${{ inputs.custom_release_notes }}
         run: |
-          args=(python3 scripts/release_beta.py "${{ inputs.version }}" --dry-run)
-          if [ -n "${{ inputs.version_code }}" ]; then
-            args+=(--version-code "${{ inputs.version_code }}")
+          args=(python3 scripts/release_beta.py --dry-run)
+          if [ "${{ inputs.manual_release }}" = "true" ]; then
+            args+=(--manual-release --release-tag "${{ inputs.release_tag }}" --release-title "${{ inputs.release_title }}")
+          else
+            args+=("${{ inputs.version }}")
+            if [ -n "${{ inputs.version_code }}" ]; then
+              args+=(--version-code "${{ inputs.version_code }}")
+            fi
+            if [ -n "${{ inputs.release_tag }}" ]; then
+              args+=(--release-tag "${{ inputs.release_tag }}")
+            fi
+            if [ -n "${{ inputs.release_title }}" ]; then
+              args+=(--release-title "${{ inputs.release_title }}")
+            fi
           fi
-          if [ -n "$CUSTOM_RELEASE_NOTES" ]; then
-            printf '%s' "$CUSTOM_RELEASE_NOTES" > "$RUNNER_TEMP/custom-release-notes.md"
+          if [ -n "${{ inputs.custom_release_notes }}" ]; then
+            printf '%s\n' '${{ inputs.custom_release_notes }}' > "$RUNNER_TEMP/custom-release-notes.md"
             args+=(--custom-notes-file "$RUNNER_TEMP/custom-release-notes.md")
           fi
           if [ -n "${{ inputs.downloader_code }}" ]; then
@@ -120,25 +142,35 @@ jobs:
         if: ${{ inputs.release_mode == 'dry_run' }}
         uses: actions/upload-artifact@v4
         with:
-          name: beta-release-preview-${{ inputs.version }}
-          path: build/release/release-notes-${{ inputs.version }}.md
+          name: beta-release-preview-${{ inputs.manual_release && inputs.release_tag || inputs.version }}
+          path: build/release/release-notes-${{ inputs.manual_release && inputs.release_tag || inputs.version }}.md
 
       - name: Build beta release
         if: ${{ inputs.release_mode != 'dry_run' }}
         env:
           GH_TOKEN: ${{ github.token }}
-          CUSTOM_RELEASE_NOTES: ${{ inputs.custom_release_notes }}
         run: |
-          args=(python3 scripts/release_beta.py "${{ inputs.version }}")
+          args=(python3 scripts/release_beta.py)
           case "${{ inputs.release_mode }}" in
             draft) args+=(--draft) ;;
             publish) args+=(--publish) ;;
           esac
-          if [ -n "${{ inputs.version_code }}" ]; then
-            args+=(--version-code "${{ inputs.version_code }}")
+          if [ "${{ inputs.manual_release }}" = "true" ]; then
+            args+=(--manual-release --release-tag "${{ inputs.release_tag }}" --release-title "${{ inputs.release_title }}")
+          else
+            args+=("${{ inputs.version }}")
+            if [ -n "${{ inputs.version_code }}" ]; then
+              args+=(--version-code "${{ inputs.version_code }}")
+            fi
+            if [ -n "${{ inputs.release_tag }}" ]; then
+              args+=(--release-tag "${{ inputs.release_tag }}")
+            fi
+            if [ -n "${{ inputs.release_title }}" ]; then
+              args+=(--release-title "${{ inputs.release_title }}")
+            fi
           fi
-          if [ -n "$CUSTOM_RELEASE_NOTES" ]; then
-            printf '%s' "$CUSTOM_RELEASE_NOTES" > "$RUNNER_TEMP/custom-release-notes.md"
+          if [ -n "${{ inputs.custom_release_notes }}" ]; then
+            printf '%s\n' '${{ inputs.custom_release_notes }}' > "$RUNNER_TEMP/custom-release-notes.md"
             args+=(--custom-notes-file "$RUNNER_TEMP/custom-release-notes.md")
           fi
           if [ -n "${{ inputs.downloader_code }}" ]; then

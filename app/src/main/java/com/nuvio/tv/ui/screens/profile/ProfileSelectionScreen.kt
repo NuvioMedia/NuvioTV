@@ -1,15 +1,24 @@
 package com.nuvio.tv.ui.screens.profile
 
+import android.graphics.Rect
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,6 +40,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -39,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -57,16 +68,21 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
@@ -78,6 +94,7 @@ import com.nuvio.tv.ui.components.AvatarPickerGrid
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
 import com.nuvio.tv.ui.theme.NuvioColors
+import kotlinx.coroutines.delay
 
 private object ProfileSelectionSpacing {
     val ScreenPaddingHorizontal = 56.dp
@@ -102,14 +119,40 @@ private object ProfileSelectionSpacing {
     val EditorPreviewTopOffset = 28.dp
     val EditorDividerHeight = 320.dp
     val EditorDividerSpacing = 18.dp
+    val PinKickerToHeading = 14.dp
+    val PinHeadingToBoxes = 42.dp
+    val PinBoxesToSupport = 26.dp
+    val PinBoxSize = 118.dp
+    val PinBoxGap = 14.dp
+    val PinSupportMaxWidth = 720.dp
 }
 
 private val ProfileCardFocusEasing = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
+private const val ProfilePinLength = 4
 
 enum class ProfileSelectionMode {
     Selection,
     Management
 }
+
+private sealed interface ProfilePinOverlayState {
+    val profile: UserProfile
+
+    data class Unlock(override val profile: UserProfile) : ProfilePinOverlayState
+    data class Set(override val profile: UserProfile, val currentPin: String? = null) : ProfilePinOverlayState
+    data class VerifyCurrentForChange(override val profile: UserProfile) : ProfilePinOverlayState
+    data class VerifyCurrentForRemove(override val profile: UserProfile) : ProfilePinOverlayState
+}
+
+private enum class ProfilePinEntryStage {
+    Create,
+    Confirm
+}
+
+private data class KeyboardVisibilityState(
+    val isVisible: Boolean,
+    val bottomPx: Int
+)
 
 @Composable
 fun ProfileSelectionScreen(
@@ -123,6 +166,8 @@ fun ProfileSelectionScreen(
     val avatarCatalog by viewModel.avatarCatalog.collectAsState()
     val isCreating by viewModel.isCreating.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
+    val profilePinEnabled by viewModel.profilePinEnabled.collectAsState()
+    val isPinOperationInProgress by viewModel.isPinOperationInProgress.collectAsState()
     val avatarImageUrlsById = remember(avatarCatalog) {
         avatarCatalog.associate { it.id to it.imageUrl }
     }
@@ -132,6 +177,9 @@ fun ProfileSelectionScreen(
     var suppressOptionsDialogFirstKeyUp by remember { mutableStateOf(true) }
     var profileToDelete by remember { mutableStateOf<UserProfile?>(null) }
     var profileToEdit by remember { mutableStateOf<UserProfile?>(null) }
+    var pinOverlayState by remember { mutableStateOf<ProfilePinOverlayState?>(null) }
+    var pinOverlayError by remember { mutableStateOf<String?>(null) }
+    var pinActionMessage by remember { mutableStateOf<String?>(null) }
     val onProfileFocusedColorChange = remember {
         { colorHex: String ->
             focusedAvatarColor = parseProfileColor(colorHex)
@@ -174,32 +222,152 @@ fun ProfileSelectionScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        ProfileSelectionBackground(focusedAvatarColor = focusedAvatarColor)
+        val overlayProfileColor = pinOverlayState?.profile?.avatarColorHex?.let(::parseProfileColor)
+        ProfileSelectionBackground(focusedAvatarColor = overlayProfileColor ?: focusedAvatarColor)
 
-        ProfileSelectionMainContent(
-            screenTitle = screenTitle,
-            screenSubtitle = screenSubtitle,
-            screenHint = screenHint,
-            isManagementMode = isManagementMode,
-            profiles = profiles,
-            activeProfileId = activeProfileId,
-            canAddProfile = viewModel.canAddProfile,
-            avatarImageUrlsById = avatarImageUrlsById,
-            onProfileFocused = onProfileFocusedColorChange,
-            onProfileSelected = { profile ->
-                if (isManagementMode) {
-                    suppressOptionsDialogFirstKeyUp = false
-                    longPressedProfile = profile
-                } else {
-                    viewModel.selectProfile(profile.id, onComplete = onProfileSelected)
-                }
+        AnimatedContent(
+            targetState = pinOverlayState,
+            transitionSpec = {
+                val entering = fadeIn(tween(240)) + slideInHorizontally(
+                    animationSpec = tween(320, easing = ProfileCardFocusEasing),
+                    initialOffsetX = { fullWidth ->
+                        if (targetState == null) -fullWidth / 10 else fullWidth / 12
+                    }
+                )
+                val exiting = fadeOut(tween(180)) + slideOutHorizontally(
+                    animationSpec = tween(240),
+                    targetOffsetX = { fullWidth ->
+                        if (targetState == null) fullWidth / 12 else -fullWidth / 12
+                    }
+                )
+                entering togetherWith exiting
             },
-            onProfileLongPress = { profile ->
-                suppressOptionsDialogFirstKeyUp = true
-                longPressedProfile = profile
-            },
-            onAddProfileClick = { showCreateProfile = true }
-        )
+            modifier = Modifier.fillMaxSize(),
+            label = "profilePinTransition"
+        ) { activePinOverlay ->
+            if (activePinOverlay == null) {
+                ProfileSelectionMainContent(
+                    screenTitle = screenTitle,
+                    screenSubtitle = screenSubtitle,
+                    screenHint = screenHint,
+                    isManagementMode = isManagementMode,
+                    profiles = profiles,
+                    activeProfileId = activeProfileId,
+                    canAddProfile = viewModel.canAddProfile,
+                    profilePinEnabled = profilePinEnabled,
+                    avatarImageUrlsById = avatarImageUrlsById,
+                    onProfileFocused = onProfileFocusedColorChange,
+                    onProfileSelected = { profile ->
+                        if (isManagementMode) {
+                            suppressOptionsDialogFirstKeyUp = false
+                            longPressedProfile = profile
+                        } else {
+                            if (profilePinEnabled[profile.id] == true) {
+                                pinOverlayError = null
+                                pinOverlayState = ProfilePinOverlayState.Unlock(profile)
+                            } else {
+                                viewModel.selectProfile(profile.id, onComplete = onProfileSelected)
+                            }
+                        }
+                    },
+                    onProfileLongPress = { profile ->
+                        suppressOptionsDialogFirstKeyUp = true
+                        longPressedProfile = profile
+                    },
+                    onAddProfileClick = { showCreateProfile = true }
+                )
+            } else {
+                ProfilePinOverlay(
+                    state = activePinOverlay,
+                    isWorking = isPinOperationInProgress,
+                    errorMessage = pinOverlayError,
+                    onClearError = { pinOverlayError = null },
+                    onDismiss = {
+                        pinOverlayState = null
+                        pinOverlayError = null
+                    },
+                    onSubmit = { pin ->
+                        when (activePinOverlay) {
+                            is ProfilePinOverlayState.Set -> {
+                                viewModel.setProfilePin(
+                                    activePinOverlay.profile.id,
+                                    pin,
+                                    activePinOverlay.currentPin
+                                ) { success ->
+                                    if (success) {
+                                        pinOverlayState = null
+                                        pinOverlayError = null
+                                        pinActionMessage = "PIN saved for ${activePinOverlay.profile.name}."
+                                    } else {
+                                        pinOverlayError = "Could not save PIN. Try again."
+                                    }
+                                }
+                            }
+
+                            is ProfilePinOverlayState.Unlock -> {
+                                viewModel.verifyProfilePin(activePinOverlay.profile.id, pin) { result ->
+                                    result.onSuccess { verify ->
+                                        if (verify.unlocked) {
+                                            pinOverlayError = null
+                                            pinOverlayState = null
+                                            viewModel.selectProfile(
+                                                activePinOverlay.profile.id,
+                                                onComplete = onProfileSelected
+                                            )
+                                        } else {
+                                            pinOverlayError = if (verify.retryAfterSeconds > 0) {
+                                                "Profile is locked. Try again in ${verify.retryAfterSeconds}s."
+                                            } else {
+                                                "Invalid PIN. Try again."
+                                            }
+                                        }
+                                    }.onFailure {
+                                        pinOverlayError = "Could not verify PIN. Try again."
+                                    }
+                                }
+                            }
+
+                            is ProfilePinOverlayState.VerifyCurrentForChange -> {
+                                viewModel.verifyProfilePin(activePinOverlay.profile.id, pin) { result ->
+                                    result.onSuccess { verify ->
+                                        if (verify.unlocked) {
+                                            pinOverlayError = null
+                                            pinOverlayState = ProfilePinOverlayState.Set(
+                                                profile = activePinOverlay.profile,
+                                                currentPin = pin
+                                            )
+                                        } else {
+                                            pinOverlayError = if (verify.retryAfterSeconds > 0) {
+                                                "Profile is locked. Try again in ${verify.retryAfterSeconds}s."
+                                            } else {
+                                                "Current PIN is incorrect."
+                                            }
+                                        }
+                                    }.onFailure {
+                                        pinOverlayError = "Could not verify PIN. Try again."
+                                    }
+                                }
+                            }
+
+                            is ProfilePinOverlayState.VerifyCurrentForRemove -> {
+                                viewModel.clearProfilePin(
+                                    profileId = activePinOverlay.profile.id,
+                                    currentPin = pin
+                                ) { success ->
+                                    if (success) {
+                                        pinOverlayError = null
+                                        pinOverlayState = null
+                                        pinActionMessage = "PIN lock removed for ${activePinOverlay.profile.name}."
+                                    } else {
+                                        pinOverlayError = "Current PIN is incorrect."
+                                    }
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+        }
 
         // Create Profile Overlay
         AnimatedVisibility(
@@ -233,6 +401,42 @@ fun ProfileSelectionScreen(
             )
         }
 
+        LaunchedEffect(pinActionMessage) {
+            if (pinActionMessage != null) {
+                delay(2600)
+                pinActionMessage = null
+            }
+        }
+
+        AnimatedVisibility(
+            visible = pinActionMessage != null,
+            enter = fadeIn(tween(180)),
+            exit = fadeOut(tween(180)),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            pinActionMessage?.let { message ->
+                Box(
+                    modifier = Modifier
+                        .padding(bottom = 34.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(Color.Black.copy(alpha = 0.78f))
+                        .border(
+                            width = 1.dp,
+                            color = Color.White.copy(alpha = 0.14f),
+                            shape = RoundedCornerShape(999.dp)
+                        )
+                        .padding(horizontal = 24.dp, vertical = 14.dp)
+                ) {
+                    Text(
+                        text = message,
+                        color = NuvioColors.TextPrimary,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+
         // Long-press options dialog (Edit / Delete)
         longPressedProfile?.let { profile ->
             val primaryDialogFocusRequester = remember(profile.id) { FocusRequester() }
@@ -260,6 +464,48 @@ fun ProfileSelectionScreen(
                     )
                 ) {
                     Text(stringResource(R.string.profile_edit_label))
+                }
+
+                Button(
+                    onClick = {
+                        longPressedProfile = null
+                        pinOverlayError = null
+                        pinOverlayState = if (profilePinEnabled[profile.id] == true) {
+                            ProfilePinOverlayState.VerifyCurrentForChange(profile)
+                        } else {
+                            ProfilePinOverlayState.Set(profile)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.colors(
+                        containerColor = NuvioColors.BackgroundCard,
+                        contentColor = NuvioColors.TextPrimary
+                    )
+                ) {
+                    Text(
+                        if (profilePinEnabled[profile.id] == true) {
+                            stringResource(R.string.profile_pin_change)
+                        } else {
+                            stringResource(R.string.profile_pin_set)
+                        }
+                    )
+                }
+
+                if (profilePinEnabled[profile.id] == true) {
+                    Button(
+                        onClick = {
+                            longPressedProfile = null
+                            pinOverlayError = null
+                            pinOverlayState = ProfilePinOverlayState.VerifyCurrentForRemove(profile)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.colors(
+                            containerColor = NuvioColors.BackgroundCard,
+                            contentColor = NuvioColors.TextPrimary
+                        )
+                    ) {
+                        Text(stringResource(R.string.profile_pin_remove))
+                    }
                 }
 
                 if (!profile.isPrimary) {
@@ -331,7 +577,6 @@ private fun ProfileSelectionBackground(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioColors.Background)
             .background(
                 brush = Brush.verticalGradient(
                     colorStops = arrayOf(
@@ -363,6 +608,7 @@ private fun ProfileSelectionMainContent(
     profiles: List<UserProfile>,
     activeProfileId: Int,
     canAddProfile: Boolean,
+    profilePinEnabled: Map<Int, Boolean>,
     avatarImageUrlsById: Map<String, String>,
     onProfileFocused: (String) -> Unit,
     onProfileSelected: (UserProfile) -> Unit,
@@ -413,6 +659,7 @@ private fun ProfileSelectionMainContent(
             activeProfileId = activeProfileId,
             isManagementMode = isManagementMode,
             canAddProfile = canAddProfile,
+            profilePinEnabled = profilePinEnabled,
             avatarImageUrlsById = avatarImageUrlsById,
             onProfileFocused = onProfileFocused,
             onProfileSelected = onProfileSelected,
@@ -437,6 +684,7 @@ private fun ProfileGrid(
     activeProfileId: Int,
     isManagementMode: Boolean,
     canAddProfile: Boolean,
+    profilePinEnabled: Map<Int, Boolean>,
     avatarImageUrlsById: Map<String, String>,
     onProfileFocused: (String) -> Unit,
     onProfileSelected: (UserProfile) -> Unit,
@@ -984,6 +1232,69 @@ private fun isProfileSelectKey(keyCode: Int): Boolean {
         keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER
 }
 
+private fun keyCodeToDigit(keyCode: Int): Char? {
+    return when (keyCode) {
+        AndroidKeyEvent.KEYCODE_0,
+        AndroidKeyEvent.KEYCODE_NUMPAD_0 -> '0'
+        AndroidKeyEvent.KEYCODE_1,
+        AndroidKeyEvent.KEYCODE_NUMPAD_1 -> '1'
+        AndroidKeyEvent.KEYCODE_2,
+        AndroidKeyEvent.KEYCODE_NUMPAD_2 -> '2'
+        AndroidKeyEvent.KEYCODE_3,
+        AndroidKeyEvent.KEYCODE_NUMPAD_3 -> '3'
+        AndroidKeyEvent.KEYCODE_4,
+        AndroidKeyEvent.KEYCODE_NUMPAD_4 -> '4'
+        AndroidKeyEvent.KEYCODE_5,
+        AndroidKeyEvent.KEYCODE_NUMPAD_5 -> '5'
+        AndroidKeyEvent.KEYCODE_6,
+        AndroidKeyEvent.KEYCODE_NUMPAD_6 -> '6'
+        AndroidKeyEvent.KEYCODE_7,
+        AndroidKeyEvent.KEYCODE_NUMPAD_7 -> '7'
+        AndroidKeyEvent.KEYCODE_8,
+        AndroidKeyEvent.KEYCODE_NUMPAD_8 -> '8'
+        AndroidKeyEvent.KEYCODE_9,
+        AndroidKeyEvent.KEYCODE_NUMPAD_9 -> '9'
+        else -> null
+    }
+}
+
+@Composable
+private fun rememberKeyboardVisibilityState(): KeyboardVisibilityState {
+    val view = LocalView.current
+    var state by remember(view) { mutableStateOf(KeyboardVisibilityState(isVisible = false, bottomPx = 0)) }
+
+    DisposableEffect(view) {
+        val rect = Rect()
+        val listener = android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            view.getWindowVisibleDisplayFrame(rect)
+            val rootHeight = view.rootView.height
+            val obscuredHeight = (rootHeight - rect.height()).coerceAtLeast(0)
+            val rootInsets = ViewCompat.getRootWindowInsets(view)
+            val imeInsets = rootInsets?.getInsets(WindowInsetsCompat.Type.ime())
+            val imeVisible = rootInsets?.isVisible(WindowInsetsCompat.Type.ime()) == true
+            val threshold = (rootHeight * 0.12f).toInt()
+            val keyboardVisible = imeVisible || obscuredHeight > threshold
+            val bottomPx = when {
+                imeVisible && imeInsets != null -> imeInsets.bottom
+                keyboardVisible -> obscuredHeight
+                else -> 0
+            }
+            state = KeyboardVisibilityState(
+                isVisible = keyboardVisible,
+                bottomPx = bottomPx
+            )
+        }
+
+        view.viewTreeObserver.addOnGlobalLayoutListener(listener)
+        listener.onGlobalLayout()
+        onDispose {
+            view.viewTreeObserver.removeOnGlobalLayoutListener(listener)
+        }
+    }
+
+    return state
+}
+
 @Composable
 private fun EditProfileOverlay(
     profile: UserProfile,
@@ -1208,6 +1519,419 @@ private fun EditProfileOverlay(
 }
 
 @Composable
+private fun ProfilePinOverlay(
+    state: ProfilePinOverlayState,
+    isWorking: Boolean,
+    errorMessage: String?,
+    onClearError: () -> Unit,
+    onDismiss: () -> Unit,
+    onSubmit: (String) -> Unit
+) {
+    val density = LocalDensity.current
+    val keyboardState = rememberKeyboardVisibilityState()
+    val focusManager = LocalFocusManager.current
+    val focusRequester = remember(state) { FocusRequester() }
+    val isSingleEntryMode = state !is ProfilePinOverlayState.Set
+    var pin by remember(state) { mutableStateOf("") }
+    var draftPin by remember(state) { mutableStateOf<String?>(null) }
+    var entryStage by remember(state) { mutableStateOf(ProfilePinEntryStage.Create) }
+    var internalErrorMessage by remember(state) { mutableStateOf<String?>(null) }
+    var isInputFocused by remember(state) { mutableStateOf(false) }
+    var keyboardWasVisible by remember(state) { mutableStateOf(false) }
+    val shakeOffset = remember(state) { androidx.compose.animation.core.Animatable(0f) }
+    val cursorAlpha by rememberInfiniteTransition(label = "pinCursor").animateFloat(
+        initialValue = 0.25f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(520),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pinCursorAlpha"
+    )
+    val resolvedErrorMessage = if (isSingleEntryMode) errorMessage else internalErrorMessage ?: errorMessage
+    val isErrorState = !resolvedErrorMessage.isNullOrEmpty()
+    val mismatchMessage = stringResource(R.string.profile_pin_overlay_mismatch)
+    val shouldUseCompactLayout = keyboardState.isVisible
+    val headerFontSize by animateFloatAsState(
+        targetValue = if (shouldUseCompactLayout) 28f else 42f,
+        animationSpec = tween(180),
+        label = "pinHeaderFontSize"
+    )
+    val headerLineHeight by animateFloatAsState(
+        targetValue = if (shouldUseCompactLayout) 34f else 48f,
+        animationSpec = tween(180),
+        label = "pinHeaderLineHeight"
+    )
+    val supportFontSize by animateFloatAsState(
+        targetValue = if (shouldUseCompactLayout) 16f else 18f,
+        animationSpec = tween(180),
+        label = "pinSupportFontSize"
+    )
+    val topPadding by animateDpAsState(
+        targetValue = if (shouldUseCompactLayout) 40.dp else 0.dp,
+        animationSpec = tween(180),
+        label = "pinOverlayTopPadding"
+    )
+    val headingGap by animateDpAsState(
+        targetValue = if (shouldUseCompactLayout) 10.dp else ProfileSelectionSpacing.PinKickerToHeading,
+        animationSpec = tween(180),
+        label = "pinHeadingGap"
+    )
+    val boxesGap by animateDpAsState(
+        targetValue = if (shouldUseCompactLayout) 24.dp else ProfileSelectionSpacing.PinHeadingToBoxes,
+        animationSpec = tween(180),
+        label = "pinBoxesGap"
+    )
+    val supportGap by animateDpAsState(
+        targetValue = if (shouldUseCompactLayout) 18.dp else ProfileSelectionSpacing.PinBoxesToSupport,
+        animationSpec = tween(180),
+        label = "pinSupportGap"
+    )
+    val backHintGap by animateDpAsState(
+        targetValue = if (shouldUseCompactLayout) 10.dp else 14.dp,
+        animationSpec = tween(180),
+        label = "pinBackHintGap"
+    )
+    val contentBottomPadding = if (keyboardState.isVisible) {
+        with(density) { keyboardState.bottomPx.toDp() } + 28.dp
+    } else {
+        28.dp
+    }
+
+    BackHandler(enabled = isInputFocused && keyboardState.isVisible) {
+        focusManager.clearFocus(force = true)
+    }
+
+    BackHandler(onBack = onDismiss)
+
+    suspend fun playErrorAnimation() {
+        shakeOffset.snapTo(0f)
+        listOf(-22f, 18f, -14f, 10f, -6f, 0f).forEach { offset ->
+            shakeOffset.animateTo(offset, animationSpec = tween(42))
+        }
+    }
+
+    LaunchedEffect(state) {
+        repeat(2) { withFrameNanos { } }
+        runCatching { focusRequester.requestFocus() }
+    }
+
+    LaunchedEffect(keyboardState.isVisible, isInputFocused) {
+        if (keyboardState.isVisible) {
+            keyboardWasVisible = true
+        } else if (keyboardWasVisible && isInputFocused) {
+            keyboardWasVisible = false
+            focusManager.clearFocus(force = true)
+        }
+    }
+
+    LaunchedEffect(errorMessage) {
+        if (!errorMessage.isNullOrEmpty()) {
+            pin = ""
+            playErrorAnimation()
+        }
+    }
+
+    LaunchedEffect(pin, entryStage, isWorking) {
+        if (pin.length != ProfilePinLength || isWorking) return@LaunchedEffect
+        if (isSingleEntryMode) {
+            onSubmit(pin)
+        } else {
+            if (entryStage == ProfilePinEntryStage.Create) {
+                draftPin = pin
+                pin = ""
+                internalErrorMessage = null
+                entryStage = ProfilePinEntryStage.Confirm
+            } else if (draftPin == pin) {
+                onSubmit(pin)
+            } else {
+                pin = ""
+                draftPin = null
+                entryStage = ProfilePinEntryStage.Create
+                internalErrorMessage = mismatchMessage
+                playErrorAnimation()
+            }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = { runCatching { focusRequester.requestFocus() } }
+            )
+            .onPreviewKeyEvent { event ->
+                val native = event.nativeKeyEvent
+                if (native.action != AndroidKeyEvent.ACTION_DOWN) {
+                    return@onPreviewKeyEvent false
+                }
+                when (native.keyCode) {
+                    AndroidKeyEvent.KEYCODE_BACK,
+                    AndroidKeyEvent.KEYCODE_ESCAPE -> {
+                        if (isInputFocused) {
+                            focusManager.clearFocus(force = true)
+                        } else {
+                            onDismiss()
+                        }
+                        true
+                    }
+
+                    AndroidKeyEvent.KEYCODE_DEL,
+                    AndroidKeyEvent.KEYCODE_CLEAR -> {
+                        if (!isWorking && pin.isNotEmpty()) {
+                            pin = pin.dropLast(1)
+                            if (!errorMessage.isNullOrEmpty()) onClearError()
+                            if (!isSingleEntryMode) internalErrorMessage = null
+                        }
+                        true
+                    }
+
+                    else -> {
+                        val digit = keyCodeToDigit(native.keyCode)
+                        if (digit != null && !isWorking && pin.length < ProfilePinLength) {
+                            pin += digit
+                            if (!errorMessage.isNullOrEmpty()) onClearError()
+                            if (!isSingleEntryMode) internalErrorMessage = null
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        val headingText = when {
+            state is ProfilePinOverlayState.Unlock -> stringResource(R.string.profile_pin_overlay_unlock_heading, state.profile.name)
+            state is ProfilePinOverlayState.VerifyCurrentForChange -> stringResource(R.string.profile_pin_overlay_change_verify_heading, state.profile.name)
+            state is ProfilePinOverlayState.VerifyCurrentForRemove -> stringResource(R.string.profile_pin_overlay_remove_verify_heading, state.profile.name)
+            entryStage == ProfilePinEntryStage.Confirm -> stringResource(R.string.profile_pin_overlay_confirm_heading)
+            else -> stringResource(R.string.profile_pin_overlay_set_heading, state.profile.name)
+        }
+        val supportText = when {
+            !resolvedErrorMessage.isNullOrEmpty() -> resolvedErrorMessage
+            isWorking && isSingleEntryMode -> stringResource(R.string.profile_pin_verifying)
+            isWorking -> stringResource(R.string.action_saving)
+            state is ProfilePinOverlayState.Unlock -> stringResource(R.string.profile_pin_overlay_unlock_support)
+            state is ProfilePinOverlayState.VerifyCurrentForChange -> stringResource(R.string.profile_pin_overlay_change_verify_support)
+            state is ProfilePinOverlayState.VerifyCurrentForRemove -> stringResource(R.string.profile_pin_overlay_remove_verify_support)
+            entryStage == ProfilePinEntryStage.Confirm -> stringResource(R.string.profile_pin_overlay_confirm_support)
+            else -> stringResource(R.string.profile_pin_overlay_set_support)
+        }
+        val supportTextColor = if (isErrorState) {
+            Color(0xFFFF8E8E)
+        } else {
+            NuvioColors.TextSecondary
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = ProfileSelectionSpacing.ScreenPaddingHorizontal),
+            verticalArrangement = if (shouldUseCompactLayout) Arrangement.Top else Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(topPadding))
+
+            Spacer(modifier = Modifier.height(headingGap))
+
+            Text(
+                text = headingText,
+                color = NuvioColors.TextPrimary,
+                fontSize = headerFontSize.sp,
+                lineHeight = headerLineHeight.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(boxesGap))
+
+            ProfilePinBoxes(
+                value = pin,
+                isWorking = isWorking,
+                isErrorState = isErrorState,
+                isInputFocused = isInputFocused,
+                cursorAlpha = cursorAlpha,
+                compactMode = shouldUseCompactLayout,
+                modifier = Modifier.graphicsLayer {
+                    translationX = shakeOffset.value
+                }
+            )
+
+            Spacer(modifier = Modifier.height(supportGap))
+
+            Text(
+                text = supportText,
+                modifier = Modifier.widthIn(max = ProfileSelectionSpacing.PinSupportMaxWidth),
+                color = supportTextColor,
+                fontSize = supportFontSize.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                lineHeight = 24.sp
+            )
+
+            if (state is ProfilePinOverlayState.Unlock ||
+                state is ProfilePinOverlayState.VerifyCurrentForChange ||
+                state is ProfilePinOverlayState.VerifyCurrentForRemove
+            ) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = stringResource(R.string.profile_pin_overlay_forgot_hint),
+                    modifier = Modifier.widthIn(max = ProfileSelectionSpacing.PinSupportMaxWidth),
+                    color = NuvioColors.TextTertiary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(backHintGap))
+
+            Text(
+                text = stringResource(R.string.profile_pin_overlay_back_hint),
+                color = NuvioColors.TextTertiary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            Spacer(modifier = Modifier.height(contentBottomPadding))
+        }
+
+        BasicTextField(
+            value = pin,
+            onValueChange = { value ->
+                if (!isWorking) {
+                    pin = value.filter(Char::isDigit).take(ProfilePinLength)
+                    if (!errorMessage.isNullOrEmpty()) onClearError()
+                    if (!isSingleEntryMode) internalErrorMessage = null
+                }
+            },
+            modifier = Modifier
+                .size(1.dp)
+                .graphicsLayer { alpha = 0f }
+                .focusRequester(focusRequester)
+                .onFocusChanged { state ->
+                    isInputFocused = state.isFocused
+                },
+            singleLine = true,
+            textStyle = TextStyle(color = Color.Transparent),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.NumberPassword,
+                imeAction = ImeAction.Done
+            ),
+            cursorBrush = SolidColor(Color.Transparent)
+        )
+    }
+}
+
+@Composable
+private fun ProfilePinBoxes(
+    value: String,
+    isWorking: Boolean,
+    isErrorState: Boolean,
+    isInputFocused: Boolean,
+    cursorAlpha: Float,
+    compactMode: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val boxSize by animateDpAsState(
+        targetValue = if (compactMode) 90.dp else ProfileSelectionSpacing.PinBoxSize,
+        animationSpec = tween(180),
+        label = "pinBoxSize"
+    )
+    val boxGap by animateDpAsState(
+        targetValue = if (compactMode) 10.dp else ProfileSelectionSpacing.PinBoxGap,
+        animationSpec = tween(180),
+        label = "pinBoxGap"
+    )
+    val activeCursorHeight by animateDpAsState(
+        targetValue = if (compactMode) 28.dp else 40.dp,
+        animationSpec = tween(180),
+        label = "pinCursorHeight"
+    )
+    val dotSize by animateDpAsState(
+        targetValue = if (compactMode) 12.dp else 16.dp,
+        animationSpec = tween(180),
+        label = "pinDotSize"
+    )
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(boxGap),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(ProfilePinLength) { index ->
+            val isFilled = index < value.length
+            val isActive = index == value.length.coerceAtMost(ProfilePinLength - 1) &&
+                value.length < ProfilePinLength &&
+                isInputFocused &&
+                !isWorking
+            val borderColor by animateColorAsState(
+                targetValue = when {
+                    isErrorState -> Color(0xFFE35D5D)
+                    isFilled -> Color.White.copy(alpha = 0.92f)
+                    isActive -> Color.White
+                    else -> Color.White.copy(alpha = 0.72f)
+                },
+                animationSpec = tween(140),
+                label = "pinBoxBorder"
+            )
+            val backgroundColor by animateColorAsState(
+                targetValue = when {
+                    isErrorState -> Color(0xFF311818).copy(alpha = 0.76f)
+                    isFilled -> Color.White.copy(alpha = 0.07f)
+                    isActive -> Color.White.copy(alpha = 0.04f)
+                    else -> Color.Transparent
+                },
+                animationSpec = tween(140),
+                label = "pinBoxBackground"
+            )
+            val borderWidth by animateDpAsState(
+                targetValue = if (isActive || isErrorState) 2.dp else 1.dp,
+                animationSpec = tween(140),
+                label = "pinBoxBorderWidth"
+            )
+
+            Box(
+                modifier = Modifier
+                    .size(boxSize)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(backgroundColor)
+                    .border(
+                        width = borderWidth,
+                        color = borderColor,
+                        shape = RoundedCornerShape(2.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    isFilled -> {
+                        Box(
+                            modifier = Modifier
+                                .size(dotSize)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                        )
+                    }
+
+                    isActive -> {
+                        Box(
+                            modifier = Modifier
+                                .width(2.dp)
+                                .height(activeCursorHeight)
+                                .background(Color.White.copy(alpha = cursorAlpha))
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun EditorSectionDivider() {
     Box(
         modifier = Modifier
@@ -1333,6 +2057,16 @@ private fun OverlayButton(
             .background(bgColor)
             .border(borderWidth, borderColor, RoundedCornerShape(12.dp))
             .onFocusChanged { isFocused = it.isFocused }
+            .focusable(enabled = enabled, interactionSource = interactionSource)
+            .onPreviewKeyEvent { event ->
+                val native = event.nativeKeyEvent
+                if (enabled && native.action == AndroidKeyEvent.ACTION_UP && isProfileSelectKey(native.keyCode)) {
+                    onClick()
+                    true
+                } else {
+                    false
+                }
+            }
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,

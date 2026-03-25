@@ -142,7 +142,6 @@ fun CatalogSeeAllScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioColors.Background)
             .padding(vertical = 24.dp)
     ) {
         // Header

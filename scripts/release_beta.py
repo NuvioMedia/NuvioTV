@@ -349,7 +349,6 @@ def build_release() -> list[Path]:
 
 
 def commit_tag_push(
-    version_name: str,
     release_tag: str,
     release_title: str,
     commit_message: str,
@@ -362,6 +361,21 @@ def commit_tag_push(
         check=True,
         text=True,
     )
+    subprocess.run(
+        ["git", "tag", "-a", release_tag, "-m", f"Release {release_title}"],
+        cwd=ROOT,
+        check=True,
+        text=True,
+    )
+    subprocess.run(["git", "push", "origin", f"HEAD:{branch_name}"], cwd=ROOT, check=True)
+    subprocess.run(["git", "push", "origin", release_tag], cwd=ROOT, check=True)
+
+
+def tag_push(
+    release_tag: str,
+    release_title: str,
+    branch_name: str,
+) -> None:
     subprocess.run(
         ["git", "tag", "-a", release_tag, "-m", f"Release {release_title}"],
         cwd=ROOT,
@@ -402,15 +416,25 @@ def create_github_release(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Preview, draft, or publish a beta GitHub release by bumping app version, "
-            "building APKs, and generating release notes from recent commits."
+            "Preview, draft, or publish a beta GitHub release by either bumping the app "
+            "version or manually supplying the release tag/title, then building APKs and "
+            "generating release notes from recent commits."
         )
     )
-    parser.add_argument("version", help="Target versionName, for example 0.4.19-beta")
+    parser.add_argument(
+        "version",
+        nargs="?",
+        help="Target versionName, for example 0.4.19-beta. Required unless --manual-release is set.",
+    )
+    parser.add_argument(
+        "--manual-release",
+        action="store_true",
+        help="Skip changing Gradle version metadata and publish using the provided tag/title.",
+    )
     parser.add_argument(
         "--version-code",
         type=int,
-        help="Explicit versionCode to write. Defaults to current versionCode + 1.",
+        help="Explicit versionCode to write. Defaults to current versionCode + 1. Ignored in manual mode.",
     )
     parser.add_argument(
         "--release-tag",
@@ -479,18 +503,41 @@ def main() -> int:
     if args.custom_notes and args.custom_notes_file:
         raise SystemExit("Use either --custom-notes or --custom-notes-file, not both.")
 
-    if not VERSION_PATTERN.match(args.version):
-        raise SystemExit(f"Invalid version format: {args.version}")
-
     original_contents = read_build_file()
     current_version_name, current_version_code = parse_versions(original_contents)
-    next_version_code = args.version_code if args.version_code is not None else current_version_code + 1
-    if next_version_code < 1:
-        raise SystemExit("versionCode must be a positive integer.")
     previous_tag = last_tag()
-    release_tag = args.release_tag or args.version
-    release_title = args.release_title or release_tag
-    commit_message = args.commit_message or f"release: {release_tag}"
+
+    if args.manual_release:
+        if args.version:
+            raise SystemExit("Do not provide version when --manual-release is set.")
+        if args.version_code is not None:
+            raise SystemExit("--version-code is not supported when --manual-release is set.")
+        if not args.release_tag:
+            raise SystemExit("--release-tag is required when --manual-release is set.")
+        if not args.release_title:
+            raise SystemExit("--release-title is required when --manual-release is set.")
+        target_version_name = current_version_name
+        next_version_code = current_version_code
+        release_tag = args.release_tag
+        release_title = args.release_title
+        commit_message = "manual release: no version bump"
+        notes_key = release_tag
+    else:
+        if not args.version:
+            raise SystemExit("version is required unless --manual-release is set.")
+        if not VERSION_PATTERN.match(args.version):
+            raise SystemExit(f"Invalid version format: {args.version}")
+        target_version_name = args.version
+        next_version_code = (
+            args.version_code if args.version_code is not None else current_version_code + 1
+        )
+        if next_version_code < 1:
+            raise SystemExit("versionCode must be a positive integer.")
+        release_tag = args.release_tag or target_version_name
+        release_title = args.release_title or release_tag
+        commit_message = args.commit_message or f"release: {release_tag}"
+        notes_key = target_version_name
+
     custom_notes = args.custom_notes
     if args.custom_notes_file:
         custom_notes = Path(args.custom_notes_file).read_text(encoding="utf-8")
@@ -502,11 +549,11 @@ def main() -> int:
         extra_lines=args.extra_line,
         custom_notes=custom_notes,
     )
-    notes_path = write_release_notes(args.version, notes)
+    notes_path = write_release_notes(notes_key, notes)
 
     print(f"Current versionName: {current_version_name}")
     print(f"Current versionCode: {current_version_code}")
-    print(f"Target versionName: {args.version}")
+    print(f"Target versionName: {target_version_name}")
     print(f"Release tag: {release_tag}")
     print(f"Release title: {release_title}")
     print(f"Commit message: {commit_message}")
@@ -530,7 +577,7 @@ def main() -> int:
             print(f"- {asset_name}")
         append_job_summary(
             mode=mode,
-            version_name=args.version,
+            version_name=target_version_name,
             release_tag=release_tag,
             release_title=release_title,
             commit_message=commit_message,
@@ -545,11 +592,15 @@ def main() -> int:
         ensure_clean_worktree()
         ensure_version_available(release_tag)
 
-    updated_contents = updated_build_file(
-        original_contents, version_name=args.version, version_code=next_version_code
-    )
-    write_build_file(updated_contents)
-    print(f"Updated {BUILD_FILE.relative_to(ROOT)}")
+    updated_contents = original_contents
+    if not args.manual_release:
+        updated_contents = updated_build_file(
+            original_contents,
+            version_name=target_version_name,
+            version_code=next_version_code,
+        )
+        write_build_file(updated_contents)
+        print(f"Updated {BUILD_FILE.relative_to(ROOT)}")
 
     assets: list[Path] = []
     try:
@@ -560,9 +611,12 @@ def main() -> int:
 
         if args.publish or args.draft:
             branch_name = current_branch()
-            commit_tag_push(
-                args.version, release_tag, release_title, commit_message, branch_name
-            )
+            if args.manual_release:
+                tag_push(release_tag, release_title, branch_name)
+            else:
+                commit_tag_push(
+                    release_tag, release_title, commit_message, branch_name
+                )
             create_github_release(
                 release_tag,
                 release_title,
@@ -587,7 +641,7 @@ def main() -> int:
 
     append_job_summary(
         mode=mode,
-        version_name=args.version,
+        version_name=target_version_name,
         release_tag=release_tag,
         release_title=release_title,
         commit_message=commit_message,

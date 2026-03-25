@@ -9,6 +9,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktHistoryRemoveResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktHistoryAddRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktHistoryAddResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktHistoryItemDto
+import com.nuvio.tv.data.remote.dto.trakt.TraktCommentDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktCreateOrUpdateListRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktListItemDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktListItemsMutationRequestDto
@@ -21,6 +22,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktRefreshTokenRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktRevokeRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktScrobbleRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktScrobbleResponseDto
+import com.nuvio.tv.data.remote.dto.trakt.TraktSearchResultDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktSeasonDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktShowProgressResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktTokenResponseDto
@@ -28,6 +30,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktUserEpisodeHistoryItemDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktUserSettingsResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktUserStatsResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktWatchedMovieItemDto
+import com.nuvio.tv.data.remote.dto.trakt.TraktWatchedShowItemDto
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -104,6 +107,12 @@ interface TraktApi {
         @Query("extended") extended: String? = null
     ): Response<List<TraktWatchedMovieItemDto>>
 
+    @GET("sync/watched/shows")
+    suspend fun getWatchedShows(
+        @Header("Authorization") authorization: String,
+        @Query("extended") extended: String? = null
+    ): Response<List<TraktWatchedShowItemDto>>
+
     @GET("sync/history/episodes")
     suspend fun getEpisodeHistory(
         @Header("Authorization") authorization: String,
@@ -141,6 +150,32 @@ interface TraktApi {
         @Path("id") id: String,
         @Query("extended") extended: String? = null
     ): Response<List<TraktSeasonDto>>
+
+    @GET("movies/{id}/comments/{sort}")
+    suspend fun getMovieComments(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Path("sort") sort: String = "likes",
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 10
+    ): Response<List<TraktCommentDto>>
+
+    @GET("shows/{id}/comments/{sort}")
+    suspend fun getShowComments(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Path("sort") sort: String = "likes",
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 10
+    ): Response<List<TraktCommentDto>>
+
+    @GET("search/{id_type}/{id}")
+    suspend fun searchById(
+        @Header("Authorization") authorization: String,
+        @Path("id_type") idType: String,
+        @Path("id") id: String,
+        @Query("type") type: String
+    ): Response<List<TraktSearchResultDto>>
 
     @DELETE("sync/playback/{id}")
     suspend fun deletePlayback(

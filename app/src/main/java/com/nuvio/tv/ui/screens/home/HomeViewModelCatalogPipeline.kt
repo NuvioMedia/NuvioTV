@@ -305,6 +305,12 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
         } else {
             emptyList()
         }
+        fun stableHeroCandidates(row: CatalogRow, candidates: Collection<MetaPreview>): List<MetaPreview> {
+            return candidates.sortedWith(
+                compareBy<MetaPreview> { stableHeroSortKey(row, it) }
+                    .thenBy { it.id }
+            )
+        }
         fun slotShuffled(rows: List<CatalogRow>, filter: (MetaPreview) -> Boolean, currentOrder: List<String>): List<MetaPreview> {
             val totalCatalogs = rows.size.coerceAtLeast(1)
             val baseSlot = 7 / totalCatalogs
@@ -315,7 +321,10 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
                 val existing = currentOrder.filter { id -> row.items.any { it.id == id } }
                 val byId = row.items.filter(filter).associateBy { it.id }
                 val ordered = existing.mapNotNull { byId[it] }
-                val new = byId.values.filter { it.id !in existing }.shuffled()
+                val new = stableHeroCandidates(
+                    row = row,
+                    candidates = byId.values.filter { it.id !in existing }
+                )
                 result += (ordered + new).take(slot)
             }
             return result
@@ -443,7 +452,9 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
     }
 
     val tmdbSettings = currentTmdbSettings
-    val shouldUseEnrichedHeroItems = tmdbSettings.enabled &&
+    val tmdbEnabledForCurrentLayout = tmdbSettings.enabled &&
+        (currentLayout != HomeLayout.MODERN || tmdbSettings.modernHomeEnabled)
+    val shouldUseEnrichedHeroItems = tmdbEnabledForCurrentLayout &&
         (tmdbSettings.useArtwork || tmdbSettings.useBasicInfo || tmdbSettings.useDetails)
 
     if (shouldUseEnrichedHeroItems && baseHeroItems.isNotEmpty()) {
@@ -483,6 +494,13 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
     }
 
     schedulePosterStatusReconcilePipeline(displayRows)
+}
+
+private fun stableHeroSortKey(
+    row: CatalogRow,
+    item: MetaPreview
+): Int {
+    return "${row.addonId}|${row.apiType}|${row.catalogId}|${item.id}".hashCode()
 }
 
 internal fun HomeViewModel.schedulePosterStatusReconcilePipeline(rows: List<CatalogRow>) {

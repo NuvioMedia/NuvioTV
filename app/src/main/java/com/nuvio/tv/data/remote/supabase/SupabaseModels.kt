@@ -2,6 +2,8 @@ package com.nuvio.tv.data.remote.supabase
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
 
 @Serializable
 data class SupabasePlugin(
@@ -136,6 +138,19 @@ data class SupabaseProfile(
 )
 
 @Serializable
+data class SupabaseProfileLockState(
+    @SerialName("profile_index") val profileIndex: Int,
+    @SerialName("pin_enabled") val pinEnabled: Boolean = false,
+    @SerialName("pin_locked_until") val pinLockedUntil: String? = null
+)
+
+@Serializable
+data class SupabaseProfilePinVerifyResult(
+    val unlocked: Boolean = false,
+    @SerialName("retry_after_seconds") val retryAfterSeconds: Int = 0
+)
+
+@Serializable
 data class SupabaseAvatarCatalogItem(
     val id: String,
     @SerialName("display_name") val displayName: String,
@@ -143,4 +158,11 @@ data class SupabaseAvatarCatalogItem(
     val category: String,
     @SerialName("sort_order") val sortOrder: Int = 0,
     @SerialName("bg_color") val bgColor: String? = null
+)
+
+@Serializable
+data class SupabaseProfileSettingsBlob(
+    @SerialName("profile_id") val profileId: Int = 1,
+    @SerialName("settings_json") val settingsJson: JsonObject = buildJsonObject { },
+    @SerialName("updated_at") val updatedAt: String? = null
 )

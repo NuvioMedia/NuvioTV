@@ -44,6 +44,7 @@ data class TraktUiState(
     val deviceCodeExpiresAtMillis: Long? = null,
     val continueWatchingDaysCap: Int = TraktSettingsDataStore.DEFAULT_CONTINUE_WATCHING_DAYS_CAP,
     val showUnairedNextUp: Boolean = TraktSettingsDataStore.DEFAULT_SHOW_UNAIRED_NEXT_UP,
+    val showMetaComments: Boolean = TraktSettingsDataStore.DEFAULT_SHOW_META_COMMENTS,
     val watchProgressSource: WatchProgressSource = TraktSettingsDataStore.DEFAULT_WATCH_PROGRESS_SOURCE,
     val connectedStats: TraktProgressService.TraktCachedStats? = null,
     val statusMessage: String? = null,
@@ -97,6 +98,22 @@ class TraktViewModel @Inject constructor(
                         context.getString(R.string.trakt_unaired_now_shown)
                     } else {
                         context.getString(R.string.trakt_unaired_now_hidden)
+                    }
+                )
+            }
+        }
+    }
+
+    fun onShowMetaCommentsChanged(enabled: Boolean) {
+        viewModelScope.launch {
+            traktSettingsDataStore.setShowMetaComments(enabled)
+            _uiState.update {
+                it.copy(
+                    showMetaComments = enabled,
+                    statusMessage = if (enabled) {
+                        context.getString(R.string.trakt_comments_now_shown)
+                    } else {
+                        context.getString(R.string.trakt_comments_now_hidden)
                     }
                 )
             }
@@ -221,20 +238,34 @@ class TraktViewModel @Inject constructor(
             combine(
                 traktSettingsDataStore.continueWatchingDaysCap,
                 traktSettingsDataStore.showUnairedNextUp,
+                traktSettingsDataStore.showMetaComments,
                 traktSettingsDataStore.watchProgressSource
-            ) { daysCap, showUnairedNextUp, watchProgressSource ->
-                Triple(daysCap, showUnairedNextUp, watchProgressSource)
-            }.collectLatest { (daysCap, showUnairedNextUp, watchProgressSource) ->
+            ) { daysCap, showUnairedNextUp, showMetaComments, watchProgressSource ->
+                SettingsSnapshot(
+                    continueWatchingDaysCap = daysCap,
+                    showUnairedNextUp = showUnairedNextUp,
+                    showMetaComments = showMetaComments,
+                    watchProgressSource = watchProgressSource
+                )
+            }.collectLatest { snapshot ->
                 _uiState.update {
                     it.copy(
-                        continueWatchingDaysCap = daysCap,
-                        showUnairedNextUp = showUnairedNextUp,
-                        watchProgressSource = watchProgressSource
+                        continueWatchingDaysCap = snapshot.continueWatchingDaysCap,
+                        showUnairedNextUp = snapshot.showUnairedNextUp,
+                        showMetaComments = snapshot.showMetaComments,
+                        watchProgressSource = snapshot.watchProgressSource
                     )
                 }
             }
         }
     }
+
+    private data class SettingsSnapshot(
+        val continueWatchingDaysCap: Int,
+        val showUnairedNextUp: Boolean,
+        val showMetaComments: Boolean,
+        val watchProgressSource: WatchProgressSource
+    )
 
     private fun applyAuthState(authState: TraktAuthState) {
         val expiresAtSeconds = (authState.createdAt ?: 0L) + (authState.expiresIn ?: 0)

@@ -160,7 +160,6 @@ fun SupportersContributorsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioColors.Background)
             .padding(horizontal = 36.dp, vertical = 28.dp)
     ) {
         Row(

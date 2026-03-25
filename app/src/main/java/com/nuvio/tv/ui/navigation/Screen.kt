@@ -160,4 +160,20 @@ sealed class Screen(val route: String) {
             return "cast_detail/$personId/${encode(personName)}?preferCrew=$preferCrew"
         }
     }
+
+    data object TmdbEntityBrowse : Screen(
+        "tmdb_entity_browse/{entityKind}/{entityId}/{entityName}?sourceType={sourceType}"
+    ) {
+        private fun encode(value: String): String =
+            URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+
+        fun createRoute(
+            entityKind: String,
+            entityId: Int,
+            entityName: String,
+            sourceType: String
+        ): String {
+            return "tmdb_entity_browse/${encode(entityKind)}/$entityId/${encode(entityName)}?sourceType=${encode(sourceType)}"
+        }
+    }
 }
