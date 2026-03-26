@@ -47,7 +47,7 @@
     <string name="error_stream_tried_issues">Addons de flux tentés : %1$s. Les flux n\'ont pas pu être chargés pour l\'id=%2$s (type=%3$s). Problèmes : %4$s.</string>
 
     <!-- ContinueWatchingSection -->
-    <string name="continue_watching">Reprendre le visionnage</string>
+    <string name="continue_watching">Visionnage en cours</string>
     <string name="cw_upcoming">À venir</string>
     <string name="cw_next_up">Épisode suivant</string>
     <string name="cw_new_episode">Nouvel Épisode</string>
@@ -444,6 +444,8 @@
     <string name="layout_modern_sidebar_sub">Activer la navigation par barre latérale flottante.</string>
     <string name="layout_modern_sidebar_blur">Flou de la barre latérale moderne</string>
     <string name="layout_modern_sidebar_blur_sub">Activer l\'effet de flou pour les surfaces de la barre latérale moderne.</string>
+    <string name="layout_fullscreen_hero_backdrop">Arrière-plan en plein écran</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">Étendre l\'arrière-plan pour couvrir la totalité de l\'écran.</string>
     <string name="layout_show_hero">Afficher la section vedette</string>
     <string name="layout_show_hero_sub">Afficher le carrousel vedette en haut de l\'accueil.</string>
     <string name="layout_show_discover">Afficher Découvrir dans la recherche</string>
@@ -460,6 +462,8 @@
     <string name="layout_section_detail_desc">Paramètres pour les écrans de détail et d\'épisodes.</string>
     <string name="layout_blur_unwatched">Flouter les épisodes non vus</string>
     <string name="layout_blur_unwatched_sub">Flouter les miniatures d\'épisodes jusqu\'à ce qu\'ils soient vus pour éviter les spoilers.</string>
+    <string name="layout_blur_cw_next_up">Flouter les épisodes non vus dans le visionnage en cours</string>
+    <string name="layout_blur_cw_next_up_sub">Flouter les miniatures des épisodes suivants dans le visionnage en cours pour éviter les spoilers.</string>
     <string name="layout_trailer_button">Afficher le bouton bande-annonce</string>
     <string name="layout_trailer_button_sub">Afficher le bouton bande-annonce sur la page de détail (uniquement quand une bande-annonce est disponible).</string>
     <string name="layout_prefer_external_meta">Préférer les métadonnées de l\'addon externe</string>
@@ -551,6 +555,8 @@
     <string name="tmdb_enable_subtitle">Utiliser TMDB comme source de métadonnées pour enrichir les données de l\'addon</string>
     <string name="tmdb_modern_home_title">Activer sur l\'accueil Moderne</string>
     <string name="tmdb_modern_home_subtitle">Appliquer également l\'enrichissement TMDB aux vedettes et aux cartes au focus de l\'accueil Moderne</string>
+    <string name="tmdb_enrich_continue_watching_title">Enrichir le visionnage en cours</string>
+    <string name="tmdb_enrich_continue_watching_subtitle">Appliquer l\'enrichissement TMDB aux éléments du visionnage en cours</string>
     <string name="tmdb_language_title">Langue</string>
     <string name="tmdb_language_subtitle">Langue des métadonnées TMDB pour le titre, le logo et les champs activés</string>
     <string name="tmdb_artwork_title">Illustrations</string>
@@ -588,9 +594,9 @@
     <string name="trakt_login_instruction">Appuyez sur Connexion pour démarrer l\'authentification Trakt. Un code QR apparaîtra ici.</string>
     <string name="trakt_missing_credentials">TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET manquants dans local.properties.</string>
     <string name="trakt_watch_progress_title">Progression</string>
-    <string name="trakt_watch_progress_subtitle">Choisir quelle source de progression alimente \"Reprendre\" et \"Reprendre le visionnage\"</string>
+    <string name="trakt_watch_progress_subtitle">Choisir quelle source de progression alimente la reprise et le visionnage en cours</string>
     <string name="trakt_watch_progress_dialog_title">Progression</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Choisir si \"Reprendre\" et \"Reprendre le visionnage\" utilisent Trakt ou Nuvio Sync, tout en maintenant le scrobbling Trakt actif.</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Choisir si la reprise et le visionnage en cours utilisent Trakt ou Nuvio Sync, tout en maintenant le scrobbling Trakt actif.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
     <string name="trakt_setting_on">Activé</string>
@@ -885,7 +891,7 @@
     <string name="next_episode_playing_via">Lecture via %1$s dans %2$ds</string>
     <string name="next_episode_play">Lire</string>
     <string name="next_episode_unaired">Non diffusé</string>
-    <string name="next_episode_not_aired_yet">Le prochain épisode n\'est pas encore diffusé</string>
+    <string name="next_episode_not_aired_yet">L\'épisode suivant n\'est pas encore diffusé</string>
     <string name="skip_intro">Passer le générique</string>
     <string name="skip_ending">Passer les crédits</string>
     <string name="skip_recap">Passer le résumé</string>

@@ -388,6 +388,17 @@ fun LayoutSettingsContent(
                         },
                         onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                     )
+                    CompactToggleRow(
+                        title = stringResource(R.string.layout_blur_cw_next_up),
+                        subtitle = stringResource(R.string.layout_blur_cw_next_up_sub),
+                        checked = uiState.blurContinueWatchingNextUp,
+                        onToggle = {
+                            viewModel.onEvent(
+                                LayoutSettingsEvent.SetBlurContinueWatchingNextUp(!uiState.blurContinueWatchingNextUp)
+                            )
+                        },
+                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                    )
                 }
             }
 

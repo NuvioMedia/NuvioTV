@@ -7,6 +7,8 @@
     <!-- HomeScreen -->
     <string name="home_no_addons">Yüklü eklenti yok. Başlamak için bir eklenti ekleyin.</string>
     <string name="home_no_catalog_addons">Katalog eklentisi yok. İçerikleri görmek için bir katalog eklentisi yükleyin.</string>
+    <string name="auth_notice_nuvio_logged_out">Nuvio hesabınızdan çıkış yapıldı. Lütfen tekrar giriş yapın.</string>
+    <string name="auth_notice_trakt_logged_out">Trakt hesabınızdan çıkış yapıldı. Lütfen yeniden bağlanın.</string>
     <string name="error_generic">Bir hata oluştu</string>
 
     <!-- ErrorState -->
@@ -39,12 +41,19 @@
     <string name="error_meta_tried_none">Şu eklentiler denendi: %1$s. Hiçbiri bu içerik için bilgi sağlamadı: id=%2$s (tür=%3$s).</string>
     <string name="error_meta_tried_generic">Şu eklentiler denendi: %1$s. Bu içerik için gerekli bilgiler yüklenemedi: id=%2$s (tür=%3$s).</string>
     <string name="error_meta_tried_issues">Şu eklentiler denendi: %1$s. Bu içerik için gerekli bilgiler yüklenemedi: id=%2$s (tür=%3$s). Karşılaşılan sorunlar: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Yüklü eklentilerin hiçbiri \"%1$s\" için yayın desteği sunmuyor.</string>
+    <string name="error_stream_tried_none">Şu eklentiler denendi: %1$s. Hiçbiri id=%2$s (tür=%3$s) için yayın döndürmedi.</string>
+    <string name="error_stream_tried_generic">Şu eklentiler denendi: %1$s. id=%2$s (tür=%3$s) için yayınlar yüklenemedi.</string>
+    <string name="error_stream_tried_issues">Şu eklentiler denendi: %1$s. id=%2$s (tür=%3$s) için yayınlar yüklenemedi. Sorunlar: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">İzlemeye Devam Et</string>
     <string name="cw_upcoming">Yaklaşanlar</string>
     <string name="cw_next_up">Sıradaki</string>
+    <string name="cw_new_episode">Yeni Bölüm</string>
+    <string name="cw_new_season">Yeni Sezon</string>
     <string name="cw_resume">Devam Et</string>
+    <string name="cw_percent_watched">%%%1$d izlendi</string>
     <string name="cw_hours_min_left">%1$d sa %2$d dk kaldı</string>
     <string name="cw_min_left">%1$d dk kaldı</string>
     <string name="cw_almost_done">Neredeyse bitti</string>
@@ -115,9 +124,39 @@
     <string name="cast_role_writer">Yazar</string>
     <string name="detail_tab_ratings">Değerlendirmeler</string>
     <string name="detail_tab_more_like_this">Benzer İçerikler</string>
+    <string name="detail_more_like_this_powered_by_tmdb">TMDB tarafından desteklenmektedir</string>
+    <string name="detail_more_like_this_powered_by_trakt">Trakt tarafından desteklenmektedir</string>
+    <string name="detail_comments_title">Yorumlar</string>
+    <string name="detail_comments_subtitle">Trakt incelemeleri</string>
     <string name="detail_section_network">Kanal</string>
     <string name="detail_section_production">Yapım</string>
+    <string name="detail_comments_empty">Henüz Trakt incelemesi yok.</string>
+    <string name="detail_comments_error">Trakt incelemeleri şu an yüklenemiyor.</string>
+    <string name="detail_comments_spoiler_hidden">Spoiler içeriyor. Görmek için Tamam\'a basın.</string>
+    <string name="detail_comments_reveal_spoiler">Spoiler\'ı göster</string>
+    <string name="detail_comments_reveal_spoiler_hint">Spoiler\'ı görmek için Tamam\'a basın.</string>
+    <string name="detail_comments_back_hint">Kapatmak için geri tuşuna basın</string>
+    <string name="detail_comments_badge_review">İnceleme</string>
+    <string name="detail_comments_badge_spoiler">Spoiler</string>
+    <string name="detail_comments_badge_rating">%1$d/10</string>
+    <string name="detail_comments_likes">%1$d beğeni</string>
+    <string name="tmdb_entity_kind_company">Yapım Şirketi</string>
+    <string name="tmdb_entity_kind_network">Kanal</string>
+    <string name="tmdb_entity_rail_popular">Popüler</string>
+    <string name="tmdb_entity_rail_top_rated">En Yüksek Puanlı</string>
+    <string name="tmdb_entity_rail_recent">Son Eklenenler</string>
+    <string name="tmdb_entity_empty_title">İçerik bulunamadı</string>
+    <string name="tmdb_entity_empty_subtitle">TMDB bu seçim için şu an göz atılabilir içerik sunmuyor.</string>
     <string name="episodes_unavailable">Mevcut Değil</string>
+    <string name="series_status_ended">Sona Erdi</string>
+    <string name="series_status_continuing">Devam Ediyor</string>
+    <string name="series_status_current">Güncel</string>
+    <string name="series_status_cancelled">İptal Edildi</string>
+    <string name="series_status_released">Yayınlandı</string>
+    <string name="series_status_planned">Planlanıyor</string>
+    <string name="series_status_rumored">Söylenti</string>
+    <string name="series_status_in_production">Yapım Aşamasında</string>
+    <string name="series_status_post_production">Post Prodüksiyon</string>
     <string name="detail_lists_fallback">Listeler</string>
     <string name="detail_lists_subtitle">Bu içeriğin hangi listelerde yer alacağını seçin.</string>
     <string name="action_save">Kaydet</string>
@@ -380,6 +419,8 @@
     <string name="layout_hero_catalogs_sub">Ana alandaki içerikler için bir veya daha fazla katalog seçin.</string>
     <string name="layout_section_content">Ana Sayfa İçeriği</string>
     <string name="layout_section_content_desc">Ana sayfada ve aramada nelerin görüneceğini kontrol edin.</string>
+    <string name="layout_fullscreen_hero_backdrop">Tam Ekran Hero Arka Planı</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">Hero arka planını tüm ekrana yayacak şekilde genişlet.</string>
     <string name="layout_collapse_sidebar">Yan Menüyü Daralt</string>
     <string name="layout_collapse_sidebar_sub">Yan menüyü varsayılan olarak gizle; odaklanıldığında göster.</string>
     <string name="layout_modern_sidebar">Modern Yan Menü</string>
@@ -402,10 +443,14 @@
     <string name="layout_section_detail_desc">Detay ve bölüm ekranları için ayarlar.</string>
     <string name="layout_blur_unwatched">İzlenmemiş Bölümleri Bulanıklaştır</string>
     <string name="layout_blur_unwatched_sub">Spoiler önlemek için bölüm resimlerini izlenene kadar bulanık tutar.</string>
+    <string name="layout_blur_cw_next_up">İzlemeye Devam\'da İzlenmemişleri Bulanıklaştır</string>
+    <string name="layout_blur_cw_next_up_sub">Spoiler önlemek için İzlemeye Devam Et bölümündeki sonraki bölüm resimlerini bulanıklaştır.</string>
     <string name="layout_trailer_button">Fragman Düğmesini Göster</string>
     <string name="layout_trailer_button_sub">Ayrıntı sayfasında fragman düğmesi göster (sadece fragman mevcutsa).</string>
     <string name="layout_prefer_external_meta">Harici eklentinin meta verisini tercih et</string>
     <string name="layout_prefer_external_meta_sub">Katalog eklentisi yerine harici (ekstra) eklentiden gelen meta verileri kullanın.</string>
+    <string name="layout_show_full_release_date">Tam çıkış tarihini göster</string>
+    <string name="layout_show_full_release_date_sub">Filmler için yalnızca yıl yerine tam çıkış tarihini göster.</string>
     <string name="layout_section_focused">Seçilen Poster</string>
     <string name="layout_section_focused_desc">Seçilen kartlar için gelişmiş ayarlamalar.</string>
     <string name="layout_expand_poster">Seçilen Posteri Arkaplana Genişlet</string>
@@ -489,6 +534,10 @@
     <string name="tmdb_subtitle">Hangi meta veri alanlarının TMDB\'den geleceğini seçin</string>
     <string name="tmdb_enable_title">TMDB Zenginleştirmeyi Etkinleştir</string>
     <string name="tmdb_enable_subtitle">Eklenti verilerini geliştirmek için TMDB\'yi bir meta veri kaynağı olarak kullanın</string>
+    <string name="tmdb_modern_home_title">Modern Ana Sayfada Etkinleştir</string>
+    <string name="tmdb_modern_home_subtitle">TMDB zenginleştirmesini Modern Ana Sayfa hero alanı ve seçilen kartlara da uygula</string>
+    <string name="tmdb_enrich_continue_watching_title">İzlemeye Devam Et Öğelerini Zenginleştir</string>
+    <string name="tmdb_enrich_continue_watching_subtitle">TMDB zenginleştirmesini izlemeye devam edilen öğelere uygula</string>
     <string name="tmdb_language_title">Dil</string>
     <string name="tmdb_language_subtitle">TMDB için meta veri dili</string>
     <string name="tmdb_artwork_title">Görseller</string>
@@ -525,6 +574,16 @@
     <string name="trakt_token_refreshes">Trakt erişim jetonu %1$s içinde yenilenir</string>
     <string name="trakt_login_instruction">Trakt cihazı kimlik doğrulamasını başlatmak için Giriş\'e basın. Burada bir QR kodu görünecektir.</string>
     <string name="trakt_missing_credentials">local.properties içinde TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET eksik.</string>
+    <string name="trakt_watch_progress_title">İzleme İlerlemesi</string>
+    <string name="trakt_watch_progress_subtitle">Devam etme ve izlemeye devam etme için hangi ilerleme kaynağının kullanılacağını seçin</string>
+    <string name="trakt_watch_progress_dialog_title">İzleme İlerlemesi</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Trakt scrobbling aktifken devam etme ve izlemeye devam etmenin Trakt mı yoksa Nuvio Sync mi kullanacağını seçin.</string>
+    <string name="trakt_watch_progress_source_trakt">Trakt</string>
+    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_setting_on">Açık</string>
+    <string name="trakt_setting_off">Kapalı</string>
+    <string name="trakt_watch_progress_trakt_selected">İzleme ilerlemesi kaynağı Trakt olarak ayarlandı</string>
+    <string name="trakt_watch_progress_nuvio_selected">İzleme ilerlemesi kaynağı Nuvio Sync olarak ayarlandı</string>
     <string name="trakt_continue_watching_window">İzlemeye Devam Etme Penceresi</string>
     <string name="trakt_continue_watching_subtitle">İzlemeye devam etme için dikkate alınan Trakt geçmişi</string>
     <string name="trakt_unaired_next_up">Yayınlanmamış Sıradaki Bölümler</string>
@@ -533,6 +592,12 @@
     <string name="trakt_unaired_hidden">Gizlenen</string>
     <string name="trakt_unaired_now_shown">Yayınlanmamış sıradaki bölümler artık gösteriliyor</string>
     <string name="trakt_unaired_now_hidden">Yayınlanmamış sıradaki bölümler artık gizleniyor</string>
+    <string name="trakt_comments_title">Yorumlar</string>
+    <string name="trakt_comments_subtitle">Meta veri sayfalarında Trakt incelemelerini göster</string>
+    <string name="trakt_comments_dialog_title">Yorumlar</string>
+    <string name="trakt_comments_dialog_subtitle">Hesabınız bağlıyken meta veri sayfalarının Trakt incelemelerini gösterip göstermeyeceğini seçin.</string>
+    <string name="trakt_comments_now_shown">Meta veri sayfalarındaki Trakt incelemeleri artık gösteriliyor</string>
+    <string name="trakt_comments_now_hidden">Meta veri sayfalarındaki Trakt incelemeleri artık gizleniyor</string>
     <string name="trakt_cached_label">Önbellekte</string>
     <string name="trakt_stat_movies">Filmler</string>
     <string name="trakt_stat_shows">Diziler</string>
@@ -574,6 +639,12 @@
     <string name="debug_error_dialog_title">Oynatma Hatası</string>
     <string name="debug_error_dialog_subtitle">Oynatma sırasında bir hata oluştu.\n\nHata: Test simülasyon hatası - bu gerçek bir hata değil. Kaynak HTTP 503 döndürdü (Hizmet Kullanılamıyor).</string>
     <string name="debug_dismiss">Kapat</string>
+    <string name="debug_section_library">Kütüphane</string>
+    <string name="debug_generate_library_title">Kütüphane Öğeleri Oluştur</string>
+    <string name="debug_generate_library_subtitle">Test için kütüphaneye rastgele film/dizi ekle</string>
+    <string name="debug_generate_library_placeholder">Öğe sayısı</string>
+    <string name="debug_generate_library_button">Oluştur</string>
+    <string name="debug_generating_library">Oluşturuluyor\u2026</string>
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profiller</string>
@@ -619,6 +690,9 @@
     <string name="addon_install_placeholder">https://example.com</string>
     <string name="addon_installing">Kuruluyor</string>
     <string name="addon_install_btn">Kur</string>
+    <string name="addon_install_success">%1$s kuruldu</string>
+    <string name="addon_error_invalid_url">Geçerli bir eklenti URL\'si girin</string>
+    <string name="addon_error_invalid_scheme">Eklenti URL\'si http veya https ile başlamalıdır</string>
     <string name="addon_installed_section">Kurulu</string>
     <string name="addon_empty">Kurulu eklenti bulunamadı. Başlamak için bir tane ekleyin.</string>
     <string name="addon_remove">Kaldır</string>
@@ -707,6 +781,15 @@
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Ses</string>
+    <string name="audio_dialog_tab_tracks">Ses</string>
+    <string name="audio_dialog_tab_mix">Karıştırıcı</string>
+    <string name="audio_mix_label">Yükseltme (PCM)</string>
+    <string name="audio_mix_value_db">%1$d dB</string>
+    <string name="audio_mix_persist_on">Oturumlar arası sakla: Açık</string>
+    <string name="audio_mix_persist_off">Oturumlar arası sakla: Kapalı</string>
+    <string name="audio_mix_range">Aralık: %1$d dB - %2$d dB</string>
+    <string name="audio_mix_range_saved">Aralık: %1$d dB - %2$d dB (kaydedildi)</string>
+    <string name="audio_mix_unavailable">Bu cihazda amplifikasyon kullanılamıyor</string>
 
     <!-- SubtitleDialog / SubtitleStyleSidePanel -->
     <string name="subtitle_dialog_title">Altyazılar</string>
@@ -732,6 +815,7 @@
     <string name="subtitle_on">Açık</string>
     <string name="subtitle_off">Kapalı</string>
     <string name="subtitle_style_title">Altyazı Stili</string>
+    <string name="subtitle_style_customize">Özelleştir</string>
     <string name="subtitle_style_color">Renk</string>
     <string name="subtitle_style_reset">Sıfırla</string>
     <string name="subtitle_style_font_size">Yazı Boyutu</string>
@@ -905,6 +989,9 @@
     <string name="cast_detail_error">İçerik çekilirken bilinmeyen bir sorun ile karşılaşıldı.</string>
     <string name="cast_detail_retry">Hata oluştu! Tekrar Dene</string>
     <string name="cast_detail_filmography">Yapımları ve Filmografisi</string>
+    <string name="cast_detail_born">Doğum: %1$s</string>
+    <string name="cast_detail_born_died">Doğum: %1$s — †%2$s</string>
+    <string name="cast_detail_age">%1$d yaşında</string>
 
     <!-- CatalogSeeAllScreen -->
     <string name="catalog_see_all_from">Kaynak: %1$s</string>
@@ -913,23 +1000,23 @@
 
     <!-- LayoutSelectionScreen -->
     <string name="layout_selection_welcome">Nuvio\'ya Hoş Geldiniz</string>
-    <string name="layout_selection_subtitle">Televizyon boyutuna uygun ideal ekran düzenini oluşturabilirsiniz.</string>
-    <string name="layout_selection_continue">Uygulamaya Devam Et</string>
+    <string name="layout_selection_subtitle">Ana sayfa düzeninizi seçin.</string>
+    <string name="layout_selection_continue">Devam Et</string>
 
     <!-- UpdatePromptDialog -->
-    <string name="update_title">Uygulama Güncellemesi</string>
-    <string name="update_downloading">Güncelleme İndiriliyor</string>
+    <string name="update_title">Güncelleme</string>
+    <string name="update_downloading">İndiriliyor</string>
     <string name="update_download">İndir</string>
     <string name="update_downloading_ellipsis">İndiriliyor…</string>
     <string name="update_unknown_sources">Nuvio\'nun indirdiği eklentileri yüklayabilmek adına `Bilinmeyen kaynaklar` veya `Dışarıdan yükleme` iznine ihtiyaç var.</string>
     <!-- AccountScreen -->
-    <string name="account_title">Ana Bilgi Modülleri</string>
-    <string name="account_sign_in_description">Senkron başlatmak için oturumunuzun aktif olduğundan emin olmalısınız. Ayrıca bağlantıların her türlü kopya dosyaları da bulutta bekleyecektir.</string>
-    <string name="account_sync_code_title">Bağlantı Kod Değeriniz</string>
-    <string name="account_sync_code_description">Eşleştirme ile hesap kullanmadan bağlantı gerçekleştirebilirsiniz.</string>
-    <string name="account_linked_devices">Eşleştirilen Uygulamalar (%1$d)</string>
-    <string name="account_no_linked_devices">Aktif bağlantı bulunamadı.</string>
-    <string name="account_unlink">Bağlantıyı Sil</string>
+    <string name="account_title">Hesap</string>
+    <string name="account_sign_in_description">Kütüphanenizi, izleme ilerlemenizi, eklenti ve uzantılarınızı cihazlar arasında eşleyin. Trakt bağlı değilken Nuvio Sync kullanılır.</string>
+    <string name="account_sync_code_title">Eşleştirme Kodu</string>
+    <string name="account_sync_code_description">Hesap oluşturmadan cihazlarınızı eşleyin.</string>
+    <string name="account_linked_devices">Bağlı Cihazlar (%1$d)</string>
+    <string name="account_no_linked_devices">Bağlı cihaz yok</string>
+    <string name="account_unlink">Bağlantıyı Kes</string>
 
     <!-- EpisodeRatingsSection -->
     <string name="ratings_loading">Kullanıcı geri dönüşü verisi sunucu merkezine ulaşıyor.</string>
@@ -939,32 +1026,32 @@
 
     <!-- SearchDiscoverSection -->
     <string name="discover_title">Keşfet</string>
-    <string name="discover_load_more">Daha Fazla Sonuç</string>
-    <string name="discover_loading">Arama çalıştırılıyor...</string>
-    <string name="discover_filter_type">Tür filtresi</string>
-    <string name="discover_filter_catalog">Katalog filtresi</string>
-    <string name="discover_filter_genre">Kategori filtresi</string>
-    <string name="discover_select_catalog">Türünü Seçin</string>
-    <string name="discover_genre_default">Varsayılan Filtre</string>
-    <string name="discover_empty_no_catalog_title">Bir eklenti katalog tablosuna işaret oluşturun</string>
-    <string name="discover_empty_no_catalog_subtitle">Keşfetmeye başlamanın temel başlangıcı bu kısımdandır.</string>
-    <string name="discover_empty_no_content_title">Girdiğiniz kelimeyle eşleşen içerik bulunamadı</string>
-    <string name="discover_empty_no_content_subtitle">Kelimenizi tekrar değerlendirin.</string>
+    <string name="discover_load_more">Daha Fazla</string>
+    <string name="discover_loading">Yükleniyor...</string>
+    <string name="discover_filter_type">Tür</string>
+    <string name="discover_filter_catalog">Katalog</string>
+    <string name="discover_filter_genre">Kategori</string>
+    <string name="discover_select_catalog">Seç</string>
+    <string name="discover_genre_default">Varsayılan</string>
+    <string name="discover_empty_no_catalog_title">Katalog seçin</string>
+    <string name="discover_empty_no_catalog_subtitle">Keşfetmek için bir katalog seçin</string>
+    <string name="discover_empty_no_content_title">İçerik bulunamadı</string>
+    <string name="discover_empty_no_content_subtitle">Farklı bir kategori veya katalog deneyin</string>
 
     <!-- AddonManagerScreen -->
-    <string name="addon_confirm_total_addons">Mevcut toplam eklenti adedi: %1$d</string>
-    <string name="addon_confirm_total_catalogs">Görüntüleme sayısı: %1$d</string>
+    <string name="addon_confirm_total_addons">Toplam eklenti: %1$d</string>
+    <string name="addon_confirm_total_catalogs">Toplam katalog: %1$d</string>
     <string name="addon_catalogs_types">%1$d Katalog | Tür: %2$s</string>
 
     <!-- PluginScreen -->
-    <string name="plugin_and_more">... ve geriye kalan %1$d tanesi daha</string>
-    <string name="plugin_providers_count">%1$d yayıncı sistem servisi</string>
-    <string name="plugin_enabled">Aktif Edilmiş</string>
-    <string name="plugin_disabled">Kapalı veya Sorunlu</string>
-    <string name="plugin_no_repos">Aktif paket depo klasörünüz boş.\\nHemen yükleme için devam edin.</string>
+    <string name="plugin_and_more">... ve %1$d daha</string>
+    <string name="plugin_providers_count">%1$d sağlayıcı</string>
+    <string name="plugin_enabled">Etkin</string>
+    <string name="plugin_disabled">Devre Dışı</string>
+    <string name="plugin_no_repos">Henüz depo eklenmedi.\nBaşlamak için bir depo ekleyin.</string>
 
     <!-- ProfileSettingsContent -->
-    <string name="profile_edit_title_id">Profil Düzenleyici | KOD: %1$d</string>
+    <string name="profile_edit_title_id">Profili Düzenle: %1$d</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Yüksek kaliteli ses geçidi (TrueHD, DTS, AC-3) desteklenen HDMI veya uyumlu ses alıcı / arayüz bar donanımlarına bağlanıldığında yazılımın çözümüne bırakılmadan direkt doğrudan iletilir.</string>
@@ -987,4 +1074,6 @@
     <string name="update_open_settings">Ayarları Aç</string>
     <string name="update_install">Yükle</string>
     <string name="update_ignore">Atla</string>
+    <string name="watchlist_added">İzleme listesine eklendi</string>
+    <string name="watchlist_removed">İzleme listesinden kaldırıldı</string>
 </resources>

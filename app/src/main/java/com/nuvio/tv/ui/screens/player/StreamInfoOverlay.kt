@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -24,6 +25,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.nuvio.tv.R
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.util.languageCodeToName
 
@@ -57,7 +59,7 @@ private fun StreamInfoContent(data: StreamInfoData) {
     // SOURCE section
     val hasSourceInfo = data.addonName != null || data.streamName != null
     if (hasSourceInfo) {
-        SectionLabel("SOURCE")
+        SectionLabel(stringResource(R.string.stream_info_section_source))
         Spacer(modifier = Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (!data.addonLogo.isNullOrBlank()) {
@@ -87,7 +89,7 @@ private fun StreamInfoContent(data: StreamInfoData) {
                 }
                 if (data.streamName != null && data.streamName != data.addonName) {
                     Text(
-                        text = data.streamName,
+                        text = data.streamName.replace("\n", " · "),
                         style = MaterialTheme.typography.bodyLarge,
                         color = NuvioColors.TextSecondary,
                         maxLines = 1,
@@ -98,7 +100,7 @@ private fun StreamInfoContent(data: StreamInfoData) {
         }
         if (!data.streamDescription.isNullOrBlank()) {
             Text(
-                text = data.streamDescription,
+                text = data.streamDescription.replace("\n", " · "),
                 style = MaterialTheme.typography.bodyMedium,
                 color = NuvioColors.TextSecondary,
                 maxLines = 1,
@@ -112,11 +114,11 @@ private fun StreamInfoContent(data: StreamInfoData) {
     // FILE section
     val hasFileInfo = data.filename != null || data.fileSize != null
     if (hasFileInfo) {
-        SectionLabel("FILE")
+        SectionLabel(stringResource(R.string.stream_info_section_file))
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(36.dp)) {
-            InfoItem(label = "Filename", value = data.filename)
-            InfoItem(label = "Size", value = data.fileSize?.let { formatFileSize(it) })
+            InfoItem(label = stringResource(R.string.stream_info_filename), value = data.filename, modifier = Modifier.weight(1f))
+            InfoItem(label = stringResource(R.string.stream_info_size), value = data.fileSize?.let { formatFileSize(it) })
         }
         Spacer(modifier = Modifier.height(16.dp))
     }
@@ -124,22 +126,22 @@ private fun StreamInfoContent(data: StreamInfoData) {
     // VIDEO section
     val hasVideoInfo = data.videoCodec != null || data.videoWidth != null || data.videoFrameRate != null || data.videoBitrate != null
     if (hasVideoInfo) {
-        SectionLabel("VIDEO")
+        SectionLabel(stringResource(R.string.stream_info_section_video))
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(36.dp)) {
-            InfoItem(label = "Codec", value = data.videoCodec)
+            InfoItem(label = stringResource(R.string.stream_info_codec), value = data.videoCodec)
             InfoItem(
-                label = "Resolution",
+                label = stringResource(R.string.stream_info_resolution),
                 value = if (data.videoWidth != null && data.videoHeight != null) {
                     formatResolution(data.videoWidth, data.videoHeight)
                 } else null
             )
             InfoItem(
-                label = "Frame Rate",
+                label = stringResource(R.string.stream_info_frame_rate),
                 value = data.videoFrameRate?.let { "%.3f fps".format(it) }
             )
             InfoItem(
-                label = "Bitrate",
+                label = stringResource(R.string.stream_info_bitrate),
                 value = data.videoBitrate?.let { formatBitrate(it) }
             )
         }
@@ -149,17 +151,17 @@ private fun StreamInfoContent(data: StreamInfoData) {
     // AUDIO section
     val hasAudioInfo = data.audioCodec != null || data.audioChannels != null || data.audioLanguage != null || data.audioSampleRate != null
     if (hasAudioInfo) {
-        SectionLabel("AUDIO")
+        SectionLabel(stringResource(R.string.stream_info_section_audio))
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(36.dp)) {
-            InfoItem(label = "Codec", value = data.audioCodec)
-            InfoItem(label = "Channels", value = data.audioChannels)
+            InfoItem(label = stringResource(R.string.stream_info_codec), value = data.audioCodec)
+            InfoItem(label = stringResource(R.string.stream_info_channels), value = data.audioChannels)
             InfoItem(
-                label = "Sample Rate",
+                label = stringResource(R.string.stream_info_sample_rate),
                 value = data.audioSampleRate?.let { "${it / 1000} kHz" }
             )
             InfoItem(
-                label = "Language",
+                label = stringResource(R.string.stream_info_language),
                 value = data.audioLanguage?.let { languageCodeToName(it) }
             )
         }
@@ -169,16 +171,16 @@ private fun StreamInfoContent(data: StreamInfoData) {
     // SUBTITLE section
     val hasSubtitleInfo = data.subtitleName != null || data.subtitleCodec != null || data.subtitleLanguage != null
     if (hasSubtitleInfo) {
-        SectionLabel("SUBTITLE")
+        SectionLabel(stringResource(R.string.stream_info_section_subtitle))
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(36.dp)) {
-            InfoItem(label = "Name", value = data.subtitleName)
-            InfoItem(label = "Codec", value = data.subtitleCodec)
+            InfoItem(label = stringResource(R.string.stream_info_name), value = data.subtitleName)
+            InfoItem(label = stringResource(R.string.stream_info_codec), value = data.subtitleCodec)
             InfoItem(
-                label = "Language",
+                label = stringResource(R.string.stream_info_language),
                 value = data.subtitleLanguage?.let { languageCodeToName(it) }
             )
-            InfoItem(label = "Source", value = data.subtitleSource)
+            InfoItem(label = stringResource(R.string.stream_info_source), value = data.subtitleSource)
         }
     }
 }
@@ -194,9 +196,9 @@ private fun SectionLabel(text: String) {
 }
 
 @Composable
-private fun InfoItem(label: String, value: String?) {
+private fun InfoItem(label: String, value: String?, modifier: Modifier = Modifier) {
     if (value == null) return
-    Column {
+    Column(modifier = modifier) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,

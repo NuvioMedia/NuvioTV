@@ -138,25 +138,46 @@ internal fun ModernHeroGradientLayer(
     Box(
         modifier = modifier
             .drawWithCache {
-                val horizontalFadeEndX = size.width * if (isFullScreen) 0.55f else 0.45f
+                val horizontalFadeEndX = size.width * if (isFullScreen) 0.65f else 0.45f
                 val horizontalGradient = Brush.horizontalGradient(
-                    colorStops = arrayOf(
-                        0.0f to bgColor,
-                        0.22f to bgColor.copy(alpha = 0.86f),
-                        0.46f to bgColor.copy(alpha = 0.56f),
-                        0.76f to bgColor.copy(alpha = 0.16f),
-                        1.0f to Color.Transparent
-                    ),
+                    colorStops = if (isFullScreen) {
+                        arrayOf(
+                            0.0f to bgColor,
+                            0.22f to bgColor.copy(alpha = 0.90f),
+                            0.46f to bgColor.copy(alpha = 0.80f),
+                            0.76f to bgColor.copy(alpha = 0.42f),
+                            1.0f to Color.Transparent
+                        )
+                    } else {
+                        arrayOf(
+                            0.0f to bgColor,
+                            0.22f to bgColor.copy(alpha = 0.86f),
+                            0.46f to bgColor.copy(alpha = 0.56f),
+                            0.76f to bgColor.copy(alpha = 0.16f),
+                            1.0f to Color.Transparent
+                        )
+                    },
                     startX = 0f,
                     endX = horizontalFadeEndX
                 )
 
-                val bottomStripStartY = size.height * 0.82f
+                val bottomStripStartY = size.height * if (isFullScreen) 0.64f else 0.82f
                 val verticalGradient = Brush.verticalGradient(
-                    0.0f to Color.Transparent,
-                    0.40f to bgColor.copy(alpha = 0.25f),
-                    0.75f to bgColor.copy(alpha = 0.65f),
-                    1.0f to bgColor,
+                    colorStops = if (isFullScreen) {
+                        arrayOf(
+                            0.0f to Color.Transparent,
+                            0.30f to bgColor.copy(alpha = 0.35f),
+                            0.60f to bgColor.copy(alpha = 0.75f),
+                            1.0f to bgColor
+                        )
+                    } else {
+                        arrayOf(
+                            0.0f to Color.Transparent,
+                            0.40f to bgColor.copy(alpha = 0.25f),
+                            0.75f to bgColor.copy(alpha = 0.65f),
+                            1.0f to bgColor
+                        )
+                    },
                     startY = bottomStripStartY,
                     endY = size.height
                 )
@@ -209,7 +230,7 @@ private fun HeroTitleContent(
     trailerPlaying: Boolean = false
 ) {
     if (preview == null) return
-    val descriptionMaxLines = if (portraitMode) 4 else 5
+    val descriptionMaxLines = 4
     val descriptionScale = if (portraitMode) 0.90f else 1f
     val titleScale = if (portraitMode) 0.92f else 1f
     val metaScale = 1f

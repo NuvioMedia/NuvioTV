@@ -268,7 +268,8 @@ fun ModernHomeContent(
                                     occurrence = occurrence,
                                     strTypeMovie = strTypeMovie,
                                     strTypeSeries = strTypeSeries,
-                                    showFullReleaseDate = showFullReleaseDate
+                                    showFullReleaseDate = showFullReleaseDate,
+                                    previousCachedItem = cachedItem?.carouselItem
                                 )
                                 rowItemCache[cacheKey] = CachedCarouselItem(
                                     source = item,
@@ -759,7 +760,7 @@ fun ModernHomeContent(
             modifier = heroMediaModifier
         )
         val trailerContentAlpha by animateFloatAsState(
-            targetValue = if (shouldPlayHeroTrailer && heroTrailerFirstFrameRendered) 0.12f else 1f,
+            targetValue = if (fullScreenBackdrop && shouldPlayHeroTrailer && heroTrailerFirstFrameRendered) 0f else 1f,
             animationSpec = tween(durationMillis = 480),
             label = "trailerContentFade"
         )
@@ -768,7 +769,7 @@ fun ModernHomeContent(
             preview = if (enrichmentActive) null else resolvedHero,
             enrichmentActive = enrichmentActive,
             portraitMode = !useLandscapePosters,
-            trailerPlaying = shouldPlayHeroTrailer && heroTrailerFirstFrameRendered,
+            trailerPlaying = fullScreenBackdrop && shouldPlayHeroTrailer && heroTrailerFirstFrameRendered,
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(

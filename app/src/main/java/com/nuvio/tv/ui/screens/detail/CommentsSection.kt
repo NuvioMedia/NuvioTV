@@ -1,5 +1,11 @@
 package com.nuvio.tv.ui.screens.detail
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -31,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -68,24 +76,42 @@ import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.TraktCommentReview
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalTvMaterial3Api::class)
 @Composable
 fun CommentsSection(
     comments: List<TraktCommentReview>,
     isLoading: Boolean,
+    isLoadingMore: Boolean,
+    canLoadMore: Boolean,
     error: String?,
     upFocusRequester: FocusRequester? = null,
     onRetry: () -> Unit,
+    onLoadMore: () -> Unit,
     onCommentClick: (TraktCommentReview) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val cardShape = RoundedCornerShape(16.dp)
     val firstItemFocusRequester = remember { FocusRequester() }
+    val listState = rememberLazyListState()
     val upFocusModifier = if (upFocusRequester != null) {
         Modifier.focusProperties { up = upFocusRequester }
     } else {
         Modifier
+    }
+
+    LaunchedEffect(listState, comments.size, canLoadMore, isLoadingMore, isLoading, error) {
+        if (isLoading || !error.isNullOrBlank()) return@LaunchedEffect
+        snapshotFlow {
+            val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            val totalItems = listState.layoutInfo.totalItemsCount
+            canLoadMore && !isLoadingMore && totalItems > 0 && lastVisibleIndex >= totalItems - 3
+        }
+            .distinctUntilChanged()
+            .collect { shouldLoadMore ->
+                if (shouldLoadMore) onLoadMore()
+            }
     }
 
     Column(
@@ -187,6 +213,7 @@ fun CommentsSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRestorer { firstItemFocusRequester },
+                    state = listState,
                     contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -202,6 +229,11 @@ fun CommentsSection(
                                 .then(upFocusModifier),
                             onClick = { onCommentClick(review) }
                         )
+                    }
+                    if (isLoadingMore) {
+                        item(key = "loading_more_comments") {
+                            LoadingCommentCard(shape = cardShape)
+                        }
                     }
                 }
             }
@@ -311,32 +343,16 @@ private fun CommentChip(text: String) {
 @Composable
 fun CommentOverlay(
     review: TraktCommentReview,
+    canNavigatePrevious: Boolean,
+    canNavigateNext: Boolean,
+    isLoadingNext: Boolean,
+    transitionDirection: Int,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val primaryFocusRequester = remember { FocusRequester() }
     val mainContentFocusRequester = remember { FocusRequester() }
-    val commentScrollState = rememberScrollState()
-    val coroutineScope = rememberCoroutineScope()
-    var isSpoilerRevealed by rememberSaveable(review.id) { mutableStateOf(!review.hasSpoilerContent) }
-    val commentText = if (review.hasSpoilerContent && !isSpoilerRevealed) {
-        stringResource(R.string.detail_comments_spoiler_hidden)
-    } else {
-        review.comment
-    }
-    val commentStyle = readerCommentStyle(commentText.length)
-    val overlayLabels = buildList {
-        if (review.review) add(stringResource(R.string.detail_comments_badge_review))
-        if (review.hasSpoilerContent) add(stringResource(R.string.detail_comments_badge_spoiler))
-        review.rating?.let { add(stringResource(R.string.detail_comments_badge_rating, it)) }
-    }
-
-    LaunchedEffect(review.id) {
-        mainContentFocusRequester.requestFocus()
-        withFrameNanos { }
-        commentScrollState.scrollTo(0)
-        withFrameNanos { }
-        commentScrollState.scrollTo(0)
-    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -354,114 +370,60 @@ fun CommentOverlay(
                         )
                     )
                 )
-                .padding(horizontal = 24.dp, vertical = 10.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(end = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.detail_comments_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White.copy(alpha = 0.82f)
-                )
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = review.authorDisplayName,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        review.authorUsername
-                            ?.takeIf { it.isNotBlank() }
-                            ?.let { username ->
-                                Text(
-                                    text = "@$username",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = Color.White.copy(alpha = 0.62f)
-                                )
-                            }
-                        if (overlayLabels.isNotEmpty()) {
-                            OverlayMetaRow(labels = overlayLabels)
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .verticalScroll(commentScrollState)
-                            .focusRequester(mainContentFocusRequester)
-                            .focusable()
-                            .focusProperties {
-                                up = primaryFocusRequester
-                            }
-                            .onPreviewKeyEvent { event ->
-                                when {
-                                    event.type != KeyEventType.KeyDown -> false
-                                    event.key == Key.DirectionDown && commentScrollState.value < commentScrollState.maxValue -> {
-                                        coroutineScope.launch {
-                                            commentScrollState.animateScrollTo(
-                                                (commentScrollState.value + 260).coerceAtMost(commentScrollState.maxValue)
-                                            )
-                                        }
-                                        true
-                                    }
-                                    event.key == Key.DirectionUp && commentScrollState.value > 0 -> {
-                                        coroutineScope.launch {
-                                            commentScrollState.animateScrollTo(
-                                                (commentScrollState.value - 260).coerceAtLeast(0)
-                                            )
-                                        }
-                                        true
-                                    }
-                                    !isSpoilerRevealed && (
-                                        event.key == Key.DirectionCenter ||
-                                            event.key == Key.Enter ||
-                                            event.key == Key.NumPadEnter
-                                        ) -> {
-                                        isSpoilerRevealed = true
-                                        true
-                                    }
-                                    else -> false
+                .onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) {
+                        false
+                    } else {
+                        when (event.key) {
+                            Key.DirectionLeft -> {
+                                if (canNavigatePrevious) {
+                                    onPrevious()
+                                    true
+                                } else {
+                                    false
                                 }
-                            },
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        Text(
-                            text = commentText,
-                            style = commentStyle,
-                            color = Color.White,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.detail_comments_likes, review.likes),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.56f)
-                        )
-                        if (review.hasSpoilerContent && !isSpoilerRevealed) {
-                            Text(
-                                text = stringResource(R.string.detail_comments_reveal_spoiler_hint),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.62f)
-                            )
+                            }
+                            Key.DirectionRight -> {
+                                if (canNavigateNext) {
+                                    if (!isLoadingNext) onNext()
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            else -> false
                         }
                     }
                 }
+                .padding(horizontal = 24.dp, vertical = 10.dp)
+        ) {
+            AnimatedContent(
+                targetState = review,
+                transitionSpec = {
+                    when {
+                        transitionDirection > 0 -> {
+                            slideInHorizontally(initialOffsetX = { it / 5 }) + fadeIn() togetherWith
+                                slideOutHorizontally(targetOffsetX = { -it / 5 }) + fadeOut()
+                        }
+                        transitionDirection < 0 -> {
+                            slideInHorizontally(initialOffsetX = { -it / 5 }) + fadeIn() togetherWith
+                                slideOutHorizontally(targetOffsetX = { it / 5 }) + fadeOut()
+                        }
+                        else -> fadeIn() togetherWith fadeOut()
+                    }
+                },
+                label = "comment_overlay_transition",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(end = 10.dp)
+            ) {
+                currentReview ->
+                CommentOverlayContent(
+                    review = currentReview,
+                    primaryFocusRequester = primaryFocusRequester,
+                    mainContentFocusRequester = mainContentFocusRequester,
+                    isLoadingNext = isLoadingNext
+                )
             }
 
             Column(
@@ -489,6 +451,151 @@ fun CommentOverlay(
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.34f)
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun CommentOverlayContent(
+    review: TraktCommentReview,
+    primaryFocusRequester: FocusRequester,
+    mainContentFocusRequester: FocusRequester,
+    isLoadingNext: Boolean
+) {
+    val commentScrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+    var isSpoilerRevealed by rememberSaveable(review.id) { mutableStateOf(!review.hasSpoilerContent) }
+    val commentText = if (review.hasSpoilerContent && !isSpoilerRevealed) {
+        stringResource(R.string.detail_comments_spoiler_hidden)
+    } else {
+        review.comment
+    }
+    val commentStyle = readerCommentStyle(commentText.length)
+    val overlayLabels = buildList {
+        if (review.review) add(stringResource(R.string.detail_comments_badge_review))
+        if (review.hasSpoilerContent) add(stringResource(R.string.detail_comments_badge_spoiler))
+        review.rating?.let { add(stringResource(R.string.detail_comments_badge_rating, it)) }
+    }
+
+    LaunchedEffect(review.id) {
+        mainContentFocusRequester.requestFocus()
+        withFrameNanos { }
+        commentScrollState.scrollTo(0)
+        withFrameNanos { }
+        commentScrollState.scrollTo(0)
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.detail_comments_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = Color.White.copy(alpha = 0.82f)
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = review.authorDisplayName,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold
+                )
+                review.authorUsername
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { username ->
+                        Text(
+                            text = "@$username",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.White.copy(alpha = 0.62f)
+                        )
+                    }
+                if (overlayLabels.isNotEmpty()) {
+                    OverlayMetaRow(labels = overlayLabels)
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(commentScrollState)
+                    .focusRequester(mainContentFocusRequester)
+                    .focusable()
+                    .focusProperties {
+                        up = primaryFocusRequester
+                    }
+                    .onPreviewKeyEvent { event ->
+                        when {
+                            event.type != KeyEventType.KeyDown -> false
+                            event.key == Key.DirectionDown && commentScrollState.value < commentScrollState.maxValue -> {
+                                coroutineScope.launch {
+                                    commentScrollState.animateScrollTo(
+                                        (commentScrollState.value + 260).coerceAtMost(commentScrollState.maxValue)
+                                    )
+                                }
+                                true
+                            }
+                            event.key == Key.DirectionUp && commentScrollState.value > 0 -> {
+                                coroutineScope.launch {
+                                    commentScrollState.animateScrollTo(
+                                        (commentScrollState.value - 260).coerceAtLeast(0)
+                                    )
+                                }
+                                true
+                            }
+                            !isSpoilerRevealed && (
+                                event.key == Key.DirectionCenter ||
+                                    event.key == Key.Enter ||
+                                    event.key == Key.NumPadEnter
+                                ) -> {
+                                isSpoilerRevealed = true
+                                true
+                            }
+                            else -> false
+                        }
+                    },
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Text(
+                    text = commentText,
+                    style = commentStyle,
+                    color = Color.White,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.detail_comments_likes, review.likes),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.56f)
+                )
+                if (review.hasSpoilerContent && !isSpoilerRevealed) {
+                    Text(
+                        text = stringResource(R.string.detail_comments_reveal_spoiler_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.62f)
+                    )
+                }
+                if (isLoadingNext) {
+                    Text(
+                        text = "...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.42f)
+                    )
+                }
             }
         }
     }

@@ -15,28 +15,30 @@ import org.junit.Test
 class TraktCommentsServiceTest {
 
     @Test
-    fun `selectBestCommentReviews prefers reviews over regular comments`() {
+    fun `filterDisplayableComments preserves reviews and comments in API order`() {
         val comments = listOf(
             TraktCommentDto(id = 1, comment = "short comment", review = false),
             TraktCommentDto(id = 2, comment = "full review", review = true),
             TraktCommentDto(id = 3, comment = "another review", review = true)
         )
 
-        val selected = selectBestCommentReviews(comments)
+        val selected = filterDisplayableComments(comments)
 
-        assertEquals(listOf(2L, 3L), selected.map { it.id })
+        assertEquals(listOf(1L, 2L, 3L), selected.map { it.id })
     }
 
     @Test
-    fun `selectBestCommentReviews falls back to top comments when no reviews exist`() {
+    fun `filterDisplayableComments removes blank comments`() {
         val comments = listOf(
             TraktCommentDto(id = 1, comment = "first comment", review = false),
-            TraktCommentDto(id = 2, comment = "second comment", review = false)
+            TraktCommentDto(id = 2, comment = null, review = false),
+            TraktCommentDto(id = 3, comment = "   ", review = false),
+            TraktCommentDto(id = 4, comment = "second comment", review = false)
         )
 
-        val selected = selectBestCommentReviews(comments)
+        val selected = filterDisplayableComments(comments)
 
-        assertEquals(listOf(1L, 2L), selected.map { it.id })
+        assertEquals(listOf(1L, 4L), selected.map { it.id })
     }
 
     @Test
@@ -92,7 +94,7 @@ class TraktCommentsServiceTest {
     }
 
     @Test
-    fun `display limit caps the selected results`() {
+    fun `filterDisplayableComments does not cap the selected results`() {
         val comments = (1L..10L).map { id ->
             TraktCommentDto(
                 id = id,
@@ -102,9 +104,9 @@ class TraktCommentsServiceTest {
             )
         }
 
-        val selected = selectBestCommentReviews(comments)
+        val selected = filterDisplayableComments(comments)
 
-        assertEquals(6, selected.size)
-        assertEquals(listOf(1L, 2L, 3L, 4L, 5L, 6L), selected.map { it.id })
+        assertEquals(10, selected.size)
+        assertEquals((1L..10L).toList(), selected.map { it.id })
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -29,6 +30,7 @@ import com.nuvio.tv.ui.theme.NuvioColors
 @Composable
 fun MoreLikeThisSection(
     items: List<MetaPreview>,
+    sourceLabel: String? = null,
     upFocusRequester: FocusRequester? = null,
     sectionFocusRequester: FocusRequester? = null,
     restoreItemId: String? = null,
@@ -121,5 +123,20 @@ fun MoreLikeThisSection(
                 }
             }
         }
+
+        sourceLabel
+            ?.takeIf { it.isNotBlank() }
+            ?.let { label ->
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioColors.TextTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .align(androidx.compose.ui.Alignment.End)
+                        .padding(end = 10.dp, top = 2.dp, bottom = 2.dp)
+                )
+            }
     }
 }

@@ -14,7 +14,6 @@ import com.nuvio.tv.domain.model.WatchProgress
 data class HomeUiState(
     val catalogRows: List<CatalogRow> = emptyList(),
     val continueWatchingItems: List<ContinueWatchingItem> = emptyList(),
-    val cwIsLoading: Boolean = true,
     val isLoading: Boolean = true,
     val error: String? = null,
     val selectedItemId: String? = null,

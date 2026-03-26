@@ -47,7 +47,13 @@ internal data class HeroPreview(
     val genres: List<String>,
     val poster: String?,
     val backdrop: String?,
-    val imageUrl: String?
+    val imageUrl: String?,
+    /** Snapshot of the backdrop URL captured before TMDB enrichment.
+     *  Survives cache rebuilds so landscape cards keep their original art
+     *  even after navigation away and back. */
+    val frozenBackdropUrl: String? = null,
+    /** Same idea for the logo URL. */
+    val frozenLogoUrl: String? = null
 )
 
 @Immutable
@@ -336,8 +342,24 @@ internal fun buildCatalogItem(
     occurrence: Int,
     strTypeMovie: String = "",
     strTypeSeries: String = "",
-    showFullReleaseDate: Boolean = true
+    showFullReleaseDate: Boolean = true,
+    previousCachedItem: ModernCarouselItem? = null
 ): ModernCarouselItem {
+    // Carry forward the frozen URLs from the previous cache entry so that
+    // TMDB enrichment never changes the image shown on landscape cards,
+    // even after the composable remember-state is lost (e.g. navigation).
+    val carriedBackdrop = previousCachedItem?.heroPreview?.frozenBackdropUrl
+    val carriedLogo = previousCachedItem?.heroPreview?.frozenLogoUrl
+
+    val currentBackdrop = item.backdropUrl
+    val currentLogo = item.logo
+
+    // First non-blank value wins and is never replaced.
+    val frozenBackdrop = carriedBackdrop?.takeIf { it.isNotBlank() }
+        ?: currentBackdrop
+    val frozenLogo = carriedLogo?.takeIf { it.isNotBlank() }
+        ?: currentLogo
+
     val heroPreview = HeroPreview(
         title = item.name,
         logo = item.logo,
@@ -362,7 +384,9 @@ internal fun buildCatalogItem(
             item.backdropUrl ?: item.poster
         } else {
             item.poster ?: item.backdropUrl
-        }
+        },
+        frozenBackdropUrl = frozenBackdrop,
+        frozenLogoUrl = frozenLogo
     )
 
     return ModernCarouselItem(

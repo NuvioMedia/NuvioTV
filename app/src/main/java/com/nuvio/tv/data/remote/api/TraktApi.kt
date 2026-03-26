@@ -15,6 +15,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktListItemDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktListItemsMutationRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktListItemsMutationResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktListSummaryDto
+import com.nuvio.tv.data.remote.dto.trakt.TraktMovieDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktPlaybackItemDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktReorderListsRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktReorderListsResponseDto
@@ -24,6 +25,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktScrobbleRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktScrobbleResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktSearchResultDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktSeasonDto
+import com.nuvio.tv.data.remote.dto.trakt.TraktShowDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktShowProgressResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktTokenResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktUserEpisodeHistoryItemDto
@@ -168,6 +170,24 @@ interface TraktApi {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 10
     ): Response<List<TraktCommentDto>>
+
+    @GET("movies/{id}/related")
+    suspend fun getMovieRelated(
+        @Header("Authorization") authorization: String? = null,
+        @Path("id") id: String,
+        @Query("extended") extended: String = "full,images",
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Response<List<TraktMovieDto>>
+
+    @GET("shows/{id}/related")
+    suspend fun getShowRelated(
+        @Header("Authorization") authorization: String? = null,
+        @Path("id") id: String,
+        @Query("extended") extended: String = "full,images",
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Response<List<TraktShowDto>>
 
     @GET("search/{id_type}/{id}")
     suspend fun searchById(

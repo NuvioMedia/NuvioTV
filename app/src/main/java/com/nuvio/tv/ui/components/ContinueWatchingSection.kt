@@ -316,7 +316,7 @@ fun ContinueWatchingCard(
         ImageRequest.Builder(context)
             .data(imageModel)
             .crossfade(false)
-            .memoryCacheKey("${imageModel}_${requestWidthPx}x${requestHeightPx}")
+            .memoryCacheKey("${imageModel}_${requestWidthPx}x${requestHeightPx}_blur${shouldBlur}")
             .size(width = requestWidthPx, height = requestHeightPx)
             .apply {
                 if (shouldBlur) transformations(com.nuvio.tv.ui.util.BlurTransformation())

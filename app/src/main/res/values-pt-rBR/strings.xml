@@ -123,7 +123,9 @@
     <string name="cast_role_director">Direção</string>
     <string name="cast_role_writer">Roteiro</string>
     <string name="detail_tab_ratings">Avaliações</string>
-    <string name="detail_tab_more_like_this">Títulos similares</string>
+    <string name="detail_tab_more_like_this">Recomendações</string>
+    <string name="detail_more_like_this_powered_by_tmdb">Fonte: TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">Fonte: Trakt</string>
     <string name="detail_comments_title">Comentários</string>
     <string name="detail_comments_subtitle">Avaliações do Trakt</string>
     <string name="detail_section_network">Rede e Emissora</string>
@@ -444,6 +446,8 @@
     <string name="layout_modern_sidebar_sub">Ativar navegação lateral flutuante.</string>
     <string name="layout_modern_sidebar_blur">Desfoque no menu lateral</string>
     <string name="layout_modern_sidebar_blur_sub">Ativar efeito de desfoque (blur) no menu.</string>
+    <string name="layout_fullscreen_hero_backdrop">Plano de Fundo Moderno em Tela Cheia</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">Expandir o fundo do visual Moderno para preencher toda a tela</string>
     <string name="layout_show_hero">Mostrar Destaque</string>
     <string name="layout_show_hero_sub">Exibir Destaque de topo na home.</string>
     <string name="layout_show_discover">Mostrar Descobrir na busca</string>
@@ -460,6 +464,8 @@
     <string name="layout_section_detail_desc">Opções para as telas de títulos e episódios.</string>
     <string name="layout_blur_unwatched">Desfocar episódios não assistidos</string>
     <string name="layout_blur_unwatched_sub">Desfoca a imagem para evitar spoilers.</string>
+    <string name="layout_blur_cw_next_up">Desfocar não assistidos no Continuar Assistindo</string>
+    <string name="layout_blur_cw_next_up_sub">Desfocar próximos episódios no Continuar Assistindo para evitar spoilers.</string>
     <string name="layout_trailer_button">Botão de Trailer</string>
     <string name="layout_trailer_button_sub">Mostrar botão em detalhes, se existir.</string>
     <string name="layout_prefer_external_meta">Priorizar metadados externos</string>
@@ -551,6 +557,8 @@
     <string name="tmdb_enable_subtitle">Usa o TMDB para aprimorar os dados dos addons</string>
     <string name="tmdb_modern_home_title">Ativar no Visual Moderno</string>
     <string name="tmdb_modern_home_subtitle">Aplicar enriquecimento do TMDB no Visual Moderno</string>
+    <string name="tmdb_enrich_continue_watching_title">Aprimorar Continuar Assistindo</string>
+    <string name="tmdb_enrich_continue_watching_subtitle">Aplicar metadados do TMDB aos itens do Continuar Assistindo</string>
     <string name="tmdb_language_title">Idioma</string>
     <string name="tmdb_language_subtitle">Idioma dos títulos, logos e metadados</string>
     <string name="tmdb_artwork_title">Imagens e Logos</string>

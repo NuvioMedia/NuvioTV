@@ -189,7 +189,7 @@ class HomeViewModel @Inject constructor(
 
     private fun observeBlurUnwatchedEpisodes() {
         viewModelScope.launch {
-            layoutPreferenceDataStore.blurUnwatchedEpisodes
+            layoutPreferenceDataStore.blurContinueWatchingNextUp
                 .distinctUntilChanged()
                 .collect { enabled ->
                     _uiState.update { it.copy(blurUnwatchedEpisodes = enabled) }

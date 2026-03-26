@@ -347,6 +347,8 @@
     <string name="layout_hide_unreleased_sub">Ukryj filmy i seriale, które jeszcze nie zostały wydane.</string>
     <string name="layout_blur_unwatched">Rozmyj nieobejrzane odcinki</string>
     <string name="layout_blur_unwatched_sub">Rozmyj miniatury odcinków do czasu obejrzenia, aby uniknąć spoilerów.</string>
+    <string name="layout_blur_cw_next_up">Rozmyj nieobejrzane w Kontynuuj oglądanie</string>
+    <string name="layout_blur_cw_next_up_sub">Rozmyj miniatury następnych odcinków w sekcji Kontynuuj oglądanie</string>
     <string name="layout_trailer_button">Pokaż przycisk zwiastuna</string>
     <string name="layout_trailer_button_sub">Pokaż przycisk zwiastuna na stronie szczegółów (tylko gdy zwiastun jest dostępny).</string>
     <string name="layout_prefer_external_meta">Preferuj metadane z zewnętrznego dodatku</string>
@@ -361,6 +363,8 @@
     <string name="layout_expand_delay_sub">Jak długo czekać przed rozwinięciem zaznaczonych kart.</string>
     <string name="layout_autoplay_trailer">Auto-odtwarzanie zwiastuna</string>
     <string name="layout_autoplay_trailer_expanded">Auto-odtwarzanie zwiastuna w rozszerzonej karcie</string>
+    <string name="layout_fullscreen_hero_backdrop">Pełnoekranowe tło hero</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">Rozciągnij tło hero na cały ekran.</string>
     <string name="layout_autoplay_trailer_sub">Odtwarzaj podgląd zwiastuna dla zaznaczonej treści gdy dostępny.</string>
     <string name="layout_autoplay_trailer_expanded_sub">Odtwarzaj zwiastun w rozszerzonym tle gdy dostępny.</string>
     <string name="layout_trailer_muted">Odtwarzaj zwiastun bez dźwięku</string>
@@ -634,6 +638,26 @@
     <string name="player_more_speed">Prędkość odtwarzania</string>
     <string name="player_more_aspect_ratio">Proporcje obrazu</string>
     <string name="player_more_open_external">Otwórz w zewnętrznym odtwarzaczu</string>
+
+    <!-- StreamInfoOverlay -->
+    <string name="stream_info_section_source">ŹRÓDŁO</string>
+    <string name="stream_info_section_file">PLIK</string>
+    <string name="stream_info_section_video">WIDEO</string>
+    <string name="stream_info_section_audio">AUDIO</string>
+    <string name="stream_info_section_subtitle">NAPISY</string>
+    <string name="stream_info_filename">Nazwa pliku</string>
+    <string name="stream_info_size">Rozmiar</string>
+    <string name="stream_info_codec">Kodek</string>
+    <string name="stream_info_resolution">Rozdzielczość</string>
+    <string name="stream_info_frame_rate">Klatki/s</string>
+    <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_channels">Kanały</string>
+    <string name="stream_info_sample_rate">Próbkowanie</string>
+    <string name="stream_info_language">Język</string>
+    <string name="stream_info_name">Nazwa</string>
+    <string name="stream_info_source">Źródło</string>
+    <string name="stream_info_subtitle_source_addon">Dodatek</string>
+    <string name="stream_info_subtitle_source_embedded">Wbudowane</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Źródła</string>

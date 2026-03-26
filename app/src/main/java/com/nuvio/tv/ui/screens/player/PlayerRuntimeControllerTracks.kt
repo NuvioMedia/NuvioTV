@@ -598,6 +598,20 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
         targets = targets
     )
     if (internalIndex >= 0) {
+        // Determine which target position this internal match satisfies
+        val matchedTargetPosition = targets.indexOfFirst { target ->
+            PlayerSubtitleUtils.matchesLanguageCode(state.subtitleTracks[internalIndex].language, target)
+        }
+        // If the match is only for a secondary (non-primary) target and addon subtitles haven't
+        // loaded yet, defer - a primary addon subtitle may still arrive.
+        val addonSubtitlesLoaded = !state.isLoadingAddonSubtitles
+        if (matchedTargetPosition > 0 && !addonSubtitlesLoaded) {
+            Log.d(
+                PlayerRuntimeController.TAG,
+                "AUTO_SUB defer: internal match is secondary target pos=$matchedTargetPosition, addons still loading"
+            )
+            return
+        }
         autoSubtitleSelected = true
         val currentInternal = state.selectedSubtitleTrackIndex
         val currentAddon = state.selectedAddonSubtitle

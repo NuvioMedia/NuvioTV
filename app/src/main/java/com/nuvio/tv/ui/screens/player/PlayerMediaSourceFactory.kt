@@ -30,10 +30,12 @@ internal class PlayerMediaSourceFactory {
     private val playbackHttpClient by lazy {
         OkHttpClient.Builder()
             .dns(IPv4FirstDns())
-            .connectTimeout(8, TimeUnit.SECONDS)
-            .readTimeout(8, TimeUnit.SECONDS)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
             .followRedirects(true)
             .followSslRedirects(true)
+            .retryOnConnectionFailure(true)
             .build()
     }
 

@@ -13,8 +13,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val COMMENTS_SORT = "likes"
-private const val COMMENTS_LIMIT = 10
-private const val DISPLAY_LIMIT = 6
+private const val COMMENTS_LIMIT = 100
 private const val COMMENTS_CACHE_TTL_MS = 10 * 60_000L
 private val INLINE_SPOILER_REGEX = Regex(
     "\\[spoiler\\].*?\\[/spoiler\\]",
@@ -32,33 +31,64 @@ internal data class ResolvedCommentsTarget(
     val pathId: String
 )
 
+data class TraktCommentsPage(
+    val items: List<TraktCommentReview>,
+    val currentPage: Int,
+    val pageCount: Int,
+    val itemCount: Int
+)
+
 @Singleton
 class TraktCommentsService @Inject constructor(
     private val traktApi: TraktApi,
     private val traktAuthService: TraktAuthService
 ) {
     private data class TimedCache(
-        val items: List<TraktCommentReview>,
+        val pages: Map<Int, List<TraktCommentReview>>,
+        val pageCount: Int,
+        val itemCount: Int,
         val updatedAtMs: Long
     )
 
     private val cacheMutex = Mutex()
     private val cache = mutableMapOf<String, TimedCache>()
 
-    suspend fun getBestReviews(
+    suspend fun getCommentsPage(
         meta: Meta,
         fallbackItemId: String? = null,
         fallbackItemType: String? = null,
+        page: Int = 1,
         forceRefresh: Boolean = false
-    ): List<TraktCommentReview> {
-        val target = resolveCommentsTarget(meta, fallbackItemId, fallbackItemType) ?: return emptyList()
+    ): TraktCommentsPage {
+        val target = resolveCommentsTarget(meta, fallbackItemId, fallbackItemType)
+            ?: return TraktCommentsPage(
+                items = emptyList(),
+                currentPage = page,
+                pageCount = 0,
+                itemCount = 0
+            )
         val cacheKey = "${target.type.apiValue}|${target.pathId}"
+
+        if (forceRefresh) {
+            cacheMutex.withLock {
+                cache.remove(cacheKey)
+            }
+        }
 
         if (!forceRefresh) {
             cacheMutex.withLock {
                 val cached = cache[cacheKey]
-                if (cached != null && System.currentTimeMillis() - cached.updatedAtMs <= COMMENTS_CACHE_TTL_MS) {
-                    return cached.items
+                if (
+                    cached != null &&
+                    System.currentTimeMillis() - cached.updatedAtMs <= COMMENTS_CACHE_TTL_MS &&
+                    cached.pages.containsKey(page)
+                ) {
+                    return TraktCommentsPage(
+                        items = cached.pages.getValue(page),
+                        currentPage = page,
+                        pageCount = cached.pageCount,
+                        itemCount = cached.itemCount
+                    )
                 }
             }
         }
@@ -69,7 +99,7 @@ class TraktCommentsService @Inject constructor(
                     authorization = authHeader,
                     id = target.pathId,
                     sort = COMMENTS_SORT,
-                    page = 1,
+                    page = page,
                     limit = COMMENTS_LIMIT
                 )
 
@@ -77,7 +107,7 @@ class TraktCommentsService @Inject constructor(
                     authorization = authHeader,
                     id = target.pathId,
                     sort = COMMENTS_SORT,
-                    page = 1,
+                    page = page,
                     limit = COMMENTS_LIMIT
                 )
             }
@@ -89,16 +119,26 @@ class TraktCommentsService @Inject constructor(
             else -> response.body().orEmpty()
         }
 
-        val selected = selectBestCommentReviews(comments).map(::toReviewModel)
+        val pageCount = response.headers()["X-Pagination-Page-Count"]?.toIntOrNull() ?: page
+        val itemCount = response.headers()["X-Pagination-Item-Count"]?.toIntOrNull() ?: comments.size
+        val selected = filterDisplayableComments(comments).map(::toReviewModel)
 
         cacheMutex.withLock {
+            val cached = cache[cacheKey]
             cache[cacheKey] = TimedCache(
-                items = selected,
+                pages = (cached?.pages.orEmpty() + (page to selected)),
+                pageCount = pageCount,
+                itemCount = itemCount,
                 updatedAtMs = System.currentTimeMillis()
             )
         }
 
-        return selected
+        return TraktCommentsPage(
+            items = selected,
+            currentPage = page,
+            pageCount = pageCount,
+            itemCount = itemCount
+        )
     }
 
     private suspend fun resolveCommentsTarget(
@@ -176,10 +216,8 @@ class TraktCommentsService @Inject constructor(
     }
 }
 
-internal fun selectBestCommentReviews(comments: List<TraktCommentDto>): List<TraktCommentDto> {
-    val filtered = comments.filter { !it.comment.isNullOrBlank() }
-    val reviews = filtered.filter { it.review == true }
-    return (if (reviews.isNotEmpty()) reviews else filtered).take(DISPLAY_LIMIT)
+internal fun filterDisplayableComments(comments: List<TraktCommentDto>): List<TraktCommentDto> {
+    return comments.filter { !it.comment.isNullOrBlank() }
 }
 
 internal fun containsInlineSpoilers(comment: String?): Boolean {

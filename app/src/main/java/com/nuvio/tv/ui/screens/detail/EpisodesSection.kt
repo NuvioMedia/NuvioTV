@@ -229,7 +229,8 @@ fun EpisodesRow(
     restoreFocusToken: Int = 0,
     onRestoreFocusHandled: () -> Unit = {},
     onEpisodeFocused: (episodeId: String) -> Unit = {},
-    scrollToEpisodeId: String? = null
+    scrollToEpisodeId: String? = null,
+    onScrollToEpisodeHandled: () -> Unit = {}
 ) {
     val dedupedEpisodes = remember(episodes) { episodes.distinctBy { it.id } }
     val restoreTargetRequester = restoreEpisodeId?.let { episodeFocusRequesters[it] }
@@ -269,6 +270,7 @@ fun EpisodesRow(
         if (index < 0) return@LaunchedEffect
         val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
         lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
+        onScrollToEpisodeHandled()
     }
 
     LazyRow(
