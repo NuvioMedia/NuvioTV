@@ -608,7 +608,7 @@
     <string name="profile_edit_label">Redigera</string>
     <string name="profile_add">Lägg till profil</string>
     <string name="profile_create_title">Skapa profil</string>
-    <string name="profile_edit_title">Redigera profil %1$s</string>
+    <string name="profile_edit_title">Redigera profil</string>
     <string name="profile_name_placeholder">Profilnamn</string>
     <string name="profile_avatar_color">Avatarfärg</string>
     <string name="profile_use_primary_addons">Använd primärprofilens tillägg</string>
@@ -993,9 +993,6 @@
     <string name="plugin_enabled">Aktiverad</string>
     <string name="plugin_disabled">Inaktiverad</string>
     <string name="plugin_no_repos">Inga arkiv tillagda ännu.\nLägg till ett arkiv för att komma igång.</string>
-
-    <!-- ProfileSettingsContent -->
-    <string name="profile_edit_title_id">Redigera profil %1$d</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Ljudgenomströmning (TrueHD, DTS, AC-3, etc.) är automatisk. När enheten är ansluten till en kompatibel AV-receiver eller soundbar via HDMI skickas förlustfritt ljud som det är utan avkodning.</string>

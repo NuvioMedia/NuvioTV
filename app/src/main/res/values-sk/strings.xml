@@ -446,7 +446,7 @@
     <string name="profile_edit_label">Upraviť</string>
     <string name="profile_add">Pridať profil</string>
     <string name="profile_create_title">Vytvoriť profil</string>
-    <string name="profile_edit_title">Upraviť profil %1$s</string>
+    <string name="profile_edit_title">Upraviť profil</string>
     <string name="profile_name_placeholder">Názov profilu</string>
     <string name="profile_avatar_color">Farba avatara</string>
     <string name="profile_use_primary_addons">Použiť doplnky primárneho profilu</string>
@@ -718,9 +718,6 @@
     <string name="plugin_enabled">Povolené</string>
     <string name="plugin_disabled">Zakázané</string>
     <string name="plugin_no_repos">Zatiaľ neboli pridané žiadne repozitáre.\nPridajte repozitár pre začiatok.</string>
-
-    <!-- ProfileSettingsContent (extra) -->
-    <string name="profile_edit_title_id">Upraviť profil %1$d</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Audio passthrough (TrueHD, DTS, AC-3 atď.) je automatický. Pri pripojení k kompatibilnému AV prijímaču alebo soundbaru cez HDMI sa bezstratové audio odosiela bez dekódovania.</string>

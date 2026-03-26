@@ -638,7 +638,7 @@
     <string name="profile_edit_label">Uredi</string>
     <string name="profile_add">Dodaj profil</string>
     <string name="profile_create_title">Ustvari profil</string>
-    <string name="profile_edit_title">Uredi profil %1$s</string>
+    <string name="profile_edit_title">Uredi profil</string>
     <string name="profile_name_placeholder">Ime profila</string>
     <string name="profile_avatar_color">Barva avatarja</string>
     <string name="profile_use_primary_addons">Uporabi dodatke glavnega profila</string>
@@ -1033,9 +1033,6 @@
     <string name="plugin_enabled">Omogočeno</string>
     <string name="plugin_disabled">Onemogočeno</string>
     <string name="plugin_no_repos">Ni še dodanih repozitorijev.\nDodajte repozitorij za začetek.</string>
-
-    <!-- ProfileSettingsContent -->
-    <string name="profile_edit_title_id">Uredi profil %1$d</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Prehod zvoka (TrueHD, DTS, AC-3 itd.) je samodejen. Ob povezavi z združljivim AV sprejemnikom ali zvočno vrstico prek HDMI se zvok brez izgub pošlje nespremenjen, brez dekodiranja.</string>

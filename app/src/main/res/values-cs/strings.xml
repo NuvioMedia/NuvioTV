@@ -582,7 +582,7 @@
     <string name="profile_edit_label">Upravit</string>
     <string name="profile_add">Přidat profil</string>
     <string name="profile_create_title">Vytvořit profil</string>
-    <string name="profile_edit_title">Upravit profil %1$s</string>
+    <string name="profile_edit_title">Upravit profil</string>
     <string name="profile_name_placeholder">Název profilu</string>
     <string name="profile_avatar_color">Barva avatara</string>
     <string name="profile_use_primary_addons">Použít doplňky primárního profilu</string>
@@ -927,8 +927,6 @@
     <string name="plugin_enabled">Povoleno</string>
     <string name="plugin_disabled">Zakázáno</string>
     <string name="plugin_no_repos">Zatím nebyly přidány žádné repozitáře.\nPřidejte repozitář pro začátek.</string>
-
-    <string name="profile_edit_title_id">Upravit profil %1$d</string>
 
     <string name="audio_passthrough_info">Audio passthrough (TrueHD, DTS, AC-3 atd.) je automatický. Při připojení ke kompatibilnímu AV přijímači nebo soundbaru přes HDMI se bezztrátové audio odesílá bez dekódování.</string>
     <string name="audio_dv_title">DV7 - HEVC Fallback</string>

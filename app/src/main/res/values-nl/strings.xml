@@ -517,7 +517,7 @@
 <string name="profile_edit_label">Bewerken</string>
 <string name="profile_add">Profiel toevoegen</string>
 <string name="profile_create_title">Profiel aanmaken</string>
-<string name="profile_edit_title">Profiel %1$s bewerken</string>
+<string name="profile_edit_title">Profiel bewerken</string>
 <string name="profile_name_placeholder">Profielnaam</string>
 <string name="profile_avatar_color">Avatarkleur</string>
 <string name="profile_use_primary_addons">Addons van het primaire profiel gebruiken</string>
@@ -849,10 +849,7 @@
 <string name="plugin_disabled">Uitgeschakeld</string>
 <string name="plugin_no_repos">Nog geen repositories toegevoegd.\nVoeg een repository toe om te beginnen.</string>
 
-<!-- ProfileSettingsContent -->
-<string name="profile_edit_title_id">Profiel %1$d bewerken</string>
-
-<!-- PlaybackAudioSettings -->
+    <!-- PlaybackAudioSettings -->
 <string name="audio_passthrough_info">Audio passthrough (TrueHD, DTS, AC-3, enz.) is automatisch. Wanneer aangesloten op een compatibele AV-receiver of soundbar via HDMI, wordt lossless audio direct doorgestuurd zonder decodering.</string>
 <string name="audio_dv_title">DV7 - HEVC fallback</string>
 

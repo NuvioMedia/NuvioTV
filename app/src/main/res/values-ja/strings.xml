@@ -615,7 +615,7 @@
     <string name="profile_edit_label">編集</string>
     <string name="profile_add">プロフィールを追加</string>
     <string name="profile_create_title">プロフィールを作成</string>
-    <string name="profile_edit_title">プロフィール%1$sを編集</string>
+    <string name="profile_edit_title">プロフィールを編集</string>
     <string name="profile_name_placeholder">プロフィール名</string>
     <string name="profile_avatar_color">アバターカラー</string>
     <string name="profile_use_primary_addons">プライマリプロフィールのアドオンを使用</string>
@@ -1001,9 +1001,6 @@
     <string name="plugin_enabled">有効</string>
     <string name="plugin_disabled">無効</string>
     <string name="plugin_no_repos">リポジトリはまだ追加されていません。\nリポジトリを追加して始めましょう</string>
-
-    <!-- ProfileSettingsContent -->
-    <string name="profile_edit_title_id">プロフィール%1$dを編集</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">音声パススルー（TrueHD、DTS、AC-3など）は自動です。HDMI経由で対応するAVレシーバーやサウンドバーに接続している場合、ロスレスオーディオはデコードされずにそのまま送信されます</string>

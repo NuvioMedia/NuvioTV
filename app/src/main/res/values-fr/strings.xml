@@ -677,7 +677,7 @@
     <string name="profile_edit_label">Modifier</string>
     <string name="profile_add">Ajouter un profil</string>
     <string name="profile_create_title">Créer un profil</string>
-    <string name="profile_edit_title">Modifier le profil %1$s</string>
+    <string name="profile_edit_title">Modifier le profil</string>
     <string name="profile_name_placeholder">Nom du profil</string>
     <string name="profile_avatar_color">Couleur de l\'avatar</string>
     <string name="profile_use_primary_addons">Utiliser les addons du profil principal</string>
@@ -1099,9 +1099,6 @@
     <string name="plugin_enabled">Activé</string>
     <string name="plugin_disabled">Désactivé</string>
     <string name="plugin_no_repos">Aucun dépôt ajouté pour le moment.\nAjoutez un dépôt pour commencer.</string>
-
-    <!-- ProfileSettingsContent -->
-    <string name="profile_edit_title_id">Modifier le profil %1$d</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Le passthrough audio (TrueHD, DTS, AC-3, etc.) est automatique. Lorsqu\'il est connecté à un récepteur AV ou une barre de son compatible via HDMI, l\'audio sans perte est envoyé tel quel sans décodage.</string>

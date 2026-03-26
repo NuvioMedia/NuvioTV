@@ -638,7 +638,7 @@
     <string name="profile_edit_label">Szerkesztés</string>
     <string name="profile_add">Profil hozzáadása</string>
     <string name="profile_create_title">Profil létrehozása</string>
-    <string name="profile_edit_title">%1$s profil szerkesztése</string>
+    <string name="profile_edit_title">Profil szerkesztése</string>
     <string name="profile_name_placeholder">Profil neve</string>
     <string name="profile_avatar_color">Avatar színe</string>
     <string name="profile_use_primary_addons">Elsődleges profil bővítményeinek használata</string>
@@ -1029,9 +1029,6 @@
     <string name="plugin_enabled">Engedélyezve</string>
     <string name="plugin_disabled">Letiltva</string>
     <string name="plugin_no_repos">Nincsenek hozzáadott adattárak.\nAdj hozzá egyet a kezdéshez.</string>
-
-    <!-- ProfileSettingsContent -->
-    <string name="profile_edit_title_id">%1$d. profil szerkesztése</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">A hangátvitel (passthrough – TrueHD, DTS, AC-3 stb.) automatikus. Kompatibilis erősítőhöz vagy soundbarhoz HDMI-n csatlakozva a veszteségmentes hang dekódolás nélkül továbbítódik.</string>

@@ -611,7 +611,7 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="profile_edit_label">Redaguoti</string>
     <string name="profile_add">Pridėti profilį</string>
     <string name="profile_create_title">Sukurti profilį</string>
-    <string name="profile_edit_title">Redaguoti profilį %1$s</string>
+    <string name="profile_edit_title">Redaguoti profilį</string>
     <string name="profile_name_placeholder">Profilio pavadinimas</string>
     <string name="profile_avatar_color">Avataro spalva</string>
     <string name="profile_use_primary_addons">Naudoti pagrindinio profilio priedus</string>
@@ -987,9 +987,6 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="plugin_enabled">Įjungta</string>
     <string name="plugin_disabled">Išjungta</string>
     <string name="plugin_no_repos">Repozitorijų nerasta</string>
-
-    <!-- ProfileSettingsContent -->
-    <string name="profile_edit_title_id">Redaguoti profilį #%1$d</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Garso pralaidumas tiesiogiai į jūsų garso sistemą</string>

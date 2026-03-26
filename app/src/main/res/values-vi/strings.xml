@@ -522,7 +522,7 @@
     <string name="profile_edit_label">Chỉnh sửa</string>
     <string name="profile_add">Thêm hồ sơ</string>
     <string name="profile_create_title">Tạo hồ sơ</string>
-    <string name="profile_edit_title">Chỉnh sửa hồ sơ %1$s</string>
+    <string name="profile_edit_title">Chỉnh sửa hồ sơ</string>
     <string name="profile_name_placeholder">Tên hồ sơ</string>
     <string name="profile_avatar_color">Màu avatar</string>
     <string name="profile_use_primary_addons">Dùng addon của hồ sơ chính</string>
@@ -869,9 +869,6 @@
     <string name="plugin_enabled">Đã bật</string>
     <string name="plugin_disabled">Đã tắt</string>
     <string name="plugin_no_repos">Chưa thêm kho lưu trữ nào.\nThêm kho lưu trữ để bắt đầu.</string>
-
-    <!-- ProfileSettingsContent -->
-    <string name="profile_edit_title_id">Chỉnh sửa hồ sơ %1$d</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Audio passthrough (TrueHD, DTS, AC-3...) là tự động. Khi kết nối với bộ khuếch đại AV hoặc soundbar tương thích qua HDMI, âm thanh lossless được truyền nguyên vẹn mà không giải mã.</string>

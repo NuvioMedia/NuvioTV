@@ -658,7 +658,7 @@
     <string name="profile_edit_label">Düzenle</string>
     <string name="profile_add">Profil Ekle</string>
     <string name="profile_create_title">Profil Oluştur</string>
-    <string name="profile_edit_title">Profili Düzenle: %1$s</string>
+    <string name="profile_edit_title">Profili Düzenle</string>
     <string name="profile_name_placeholder">Profil Adı</string>
     <string name="profile_avatar_color">Avatar Rengi</string>
     <string name="profile_use_primary_addons">Birincil profilin eklentilerini kullan</string>
@@ -1049,9 +1049,6 @@
     <string name="plugin_enabled">Etkin</string>
     <string name="plugin_disabled">Devre Dışı</string>
     <string name="plugin_no_repos">Henüz depo eklenmedi.\nBaşlamak için bir depo ekleyin.</string>
-
-    <!-- ProfileSettingsContent -->
-    <string name="profile_edit_title_id">Profili Düzenle: %1$d</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Yüksek kaliteli ses geçidi (TrueHD, DTS, AC-3) desteklenen HDMI veya uyumlu ses alıcı / arayüz bar donanımlarına bağlanıldığında yazılımın çözümüne bırakılmadan direkt doğrudan iletilir.</string>

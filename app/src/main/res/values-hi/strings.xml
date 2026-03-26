@@ -601,7 +601,7 @@
     <string name="profile_edit_label">संपादित करें</string>
     <string name="profile_add">प्रोफाइल जोड़ें</string>
     <string name="profile_create_title">प्रोफाइल बनाएँ</string>
-    <string name="profile_edit_title">प्रोफाइल संपादित करें %1$s</string>
+    <string name="profile_edit_title">प्रोफाइल संपादित करें</string>
     <string name="profile_name_placeholder">प्रोफाइल नाम</string>
     <string name="profile_avatar_color">अवतार रंग</string>
     <string name="profile_use_primary_addons">प्राइमरी प्रोफाइल के ऐडऑन उपयोग करें</string>
@@ -976,9 +976,6 @@
     <string name="plugin_enabled">सक्षम</string>
     <string name="plugin_disabled">अक्षम</string>
     <string name="plugin_no_repos">अभी तक कोई रिपॉजिटरी नहीं जोड़ी गई।\nशुरू करने के लिए एक रिपॉजिटरी जोड़ें।</string>
-
-    <!-- ProfileSettingsContent -->
-    <string name="profile_edit_title_id">प्रोफाइल संपादित करें %1$d</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">ऑडियो पासथ्रू (TrueHD, DTS, AC-3 आदि) स्वचालित है। HDMI के माध्यम से संगत AV रिसीवर या साउंडबार से जुड़ने पर लॉसलेस ऑडियो बिना डिकोड किए सीधे भेजा जाता है।</string>

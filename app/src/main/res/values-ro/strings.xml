@@ -488,7 +488,7 @@
     <string name="profile_edit_label">Editează</string>
     <string name="profile_add">Adaugă profil</string>
     <string name="profile_create_title">Creează profil</string>
-    <string name="profile_edit_title">Editează profilul %1$s</string>
+    <string name="profile_edit_title">Editează profilul</string>
     <string name="profile_name_placeholder">Nume profil</string>
     <string name="profile_avatar_color">Culoare avatar</string>
     <string name="profile_use_primary_addons">Folosește suplimentele profilului principal</string>
@@ -821,9 +821,6 @@
     <string name="plugin_enabled">Activat</string>
     <string name="plugin_disabled">Dezactivat</string>
     <string name="plugin_no_repos">Nu au fost adăugate încă depozite.\nAdăugați un depozit pentru a începe.</string>
-
-    <!-- ProfileSettingsContent -->
-    <string name="profile_edit_title_id">Editați profilul %1$d</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Passthrough audio (TrueHD, DTS, AC-3, etc.) este automat. Când este conectat la un receptor AV compatibil sau soundbar prin HDMI, audio lossless este trimis așa cum este, fără decodare.</string>

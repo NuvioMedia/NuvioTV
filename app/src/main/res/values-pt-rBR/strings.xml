@@ -679,7 +679,7 @@
     <string name="profile_edit_label">Editar</string>
     <string name="profile_add">Adicionar Perfil</string>
     <string name="profile_create_title">Criar Perfil</string>
-    <string name="profile_edit_title">Editar Perfil %1$s</string>
+    <string name="profile_edit_title">Editar Perfil</string>
     <string name="profile_name_placeholder">Nome do perfil</string>
     <string name="profile_avatar_color">Cor do Avatar</string>
     <string name="profile_use_primary_addons">Usar addons do perfil principal</string>
@@ -1101,11 +1101,8 @@
     <string name="plugin_enabled">Ativado</string>
     <string name="plugin_disabled">Desativado</string>
     <string name="plugin_no_repos">Nenhum repositório adicionado.\nAdicione um para começar.</string>
-    
-    <!-- ProfileSettingsContent -->
-    <string name="profile_edit_title_id">Editar Perfil %1$d</string>
 
-    <!-- PlaybackAudioSettings -->
+      <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">A passagem direta de áudio (passthrough) para TrueHD, DTS e AC-3 é automática. Se sua Soundbar/Receiver for compatível via HDMI, o áudio será enviado sem perdas e sem decodificação prévia.</string>
     <string name="audio_dv_title">DV7 - Modo HEVC Alternativo</string>
 

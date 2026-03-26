@@ -534,7 +534,7 @@
     <string name="profile_edit_label">Edytuj</string>
     <string name="profile_add">Dodaj profil</string>
     <string name="profile_create_title">Utwórz profil</string>
-    <string name="profile_edit_title">Edytuj profil %1$s</string>
+    <string name="profile_edit_title">Edytuj profil</string>
     <string name="profile_name_placeholder">Nazwa profilu</string>
     <string name="profile_avatar_color">Kolor awatara</string>
     <string name="profile_use_primary_addons">Używaj dodatków profilu głównego</string>
@@ -936,9 +936,6 @@
     <string name="plugin_enabled">Wlaczone</string>
     <string name="plugin_disabled">Wylaczone</string>
     <string name="plugin_no_repos">Nie dodano zadnych repozytoriow.\nDodaj repozytorium, aby zaczac.</string>
-
-    <!-- ProfileSettingsContent -->
-    <string name="profile_edit_title_id">Edytuj profil %1$d</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Przepuszczanie audio (TrueHD, DTS, AC-3 itp.) jest automatyczne. Po podlaczeniu do kompatybilnego amplitunera lub soundbara przez HDMI, bezstratne audio jest przesylane bez dekodowania.</string>

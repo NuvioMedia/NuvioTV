@@ -669,7 +669,7 @@
     <string name="profile_edit_label">Modifica</string>
     <string name="profile_add">Aggiungi profilo</string>
     <string name="profile_create_title">Crea profilo</string>
-    <string name="profile_edit_title">Modifica profilo %1$s</string>
+    <string name="profile_edit_title">Modifica profilo</string>
     <string name="profile_name_placeholder">Nome profilo</string>
     <string name="profile_avatar_color">Colore avatar</string>
     <string name="profile_use_primary_addons">Usa gli addon del profilo principale</string>
@@ -1090,11 +1090,8 @@
     <string name="plugin_enabled">Abilitato</string>
     <string name="plugin_disabled">Disabilitato</string>
     <string name="plugin_no_repos">Nessuna repository ancora aggiunta.\nAggiungi una repository per iniziare.</string>
-    
-    <!-- ProfileSettingsContent -->
-   <string name="profile_edit_title_id">Modifica profilo %1$d</string>
 
-    <!-- PlaybackAudioSettings -->
+ <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Il passthrough audio (TrueHD, DTS, AC-3, ecc.) è automatico. Se collegato a un ricevitore AV o soundbar compatibile tramite HDMI, l\'audio lossless viene inviato così com\'è senza decodifica.</string>
     <string name="audio_dv_title">DV7 - HEVC Fallback</string>
 

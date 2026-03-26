@@ -1374,7 +1374,7 @@ private fun EditProfileOverlay(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = "Edit Profile",
+                        text = stringResource(R.string.profile_edit_title),
                         color = NuvioColors.TextSecondary,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold

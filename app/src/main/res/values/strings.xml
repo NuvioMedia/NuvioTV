@@ -679,7 +679,7 @@
     <string name="profile_edit_label">Edit</string>
     <string name="profile_add">Add Profile</string>
     <string name="profile_create_title">Create Profile</string>
-    <string name="profile_edit_title">Edit Profile %1$s</string>
+    <string name="profile_edit_title">Edit Profile</string>
     <string name="profile_name_placeholder">Profile name</string>
     <string name="profile_avatar_color">Avatar Color</string>
     <string name="profile_use_primary_addons">Use primary profile\'s addons</string>
@@ -1121,9 +1121,6 @@
     <string name="plugin_enabled">Enabled</string>
     <string name="plugin_disabled">Disabled</string>
     <string name="plugin_no_repos">No repositories added yet.\nAdd a repository to get started.</string>
-
-    <!-- ProfileSettingsContent -->
-    <string name="profile_edit_title_id">Edit Profile %1$d</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Audio passthrough (TrueHD, DTS, AC-3, etc.) is automatic. When connected to a compatible AV receiver or soundbar via HDMI, lossless audio is sent as-is without decoding.</string>
