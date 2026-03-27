@@ -97,7 +97,8 @@ import kotlinx.coroutines.delay
 fun AddonManagerScreen(
     viewModel: AddonManagerViewModel = hiltViewModel(),
     showBuiltInHeader: Boolean = true,
-    onNavigateToCatalogOrder: () -> Unit = {}
+    onNavigateToCatalogOrder: () -> Unit = {},
+    onNavigateToGroupManagement: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -325,6 +326,9 @@ fun AddonManagerScreen(
                 if (hasHomeVisibleCatalogs) {
                     item {
                         CatalogOrderEntryCard(onClick = onNavigateToCatalogOrder)
+                    }
+                    item {
+                        GroupManagementEntryCard(onClick = onNavigateToGroupManagement)
                     }
                 }
             }
@@ -561,6 +565,67 @@ private fun CatalogOrderEntryCard(onClick: () -> Unit) {
                     )
                     Text(
                         text = stringResource(R.string.addon_reorder_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = NuvioColors.TextSecondary
+                    )
+                }
+            }
+            Icon(
+                imageVector = Icons.Default.ArrowDownward,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = NuvioColors.TextSecondary
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun GroupManagementEntryCard(onClick: () -> Unit) {
+    var isFocused by remember { mutableStateOf(false) }
+
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { isFocused = it.isFocused },
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = NuvioColors.BackgroundCard,
+            focusedContainerColor = NuvioColors.FocusBackground
+        ),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                shape = RoundedCornerShape(18.dp)
+            )
+        ),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(18.dp)),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.01f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Reorder,
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    tint = if (isFocused) NuvioColors.Secondary else NuvioColors.TextSecondary
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "Group management",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = NuvioColors.TextPrimary
+                    )
+                    Text(
+                        text = "Create and manage home screen groups",
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )

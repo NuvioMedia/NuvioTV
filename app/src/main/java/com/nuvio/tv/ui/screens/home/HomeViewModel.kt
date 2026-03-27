@@ -9,6 +9,7 @@ import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
+import com.nuvio.tv.data.local.GroupPreferenceDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.StartupAuthNotice
@@ -19,6 +20,8 @@ import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.domain.model.CatalogGroup
+import com.nuvio.tv.domain.model.MainGroup
 import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
@@ -53,6 +56,7 @@ class HomeViewModel @Inject constructor(
     internal val libraryRepository: LibraryRepository,
     internal val metaRepository: MetaRepository,
     internal val layoutPreferenceDataStore: LayoutPreferenceDataStore,
+    internal val groupPreferenceDataStore: GroupPreferenceDataStore,
     internal val playerSettingsDataStore: PlayerSettingsDataStore,
     internal val tmdbSettingsDataStore: TmdbSettingsDataStore,
     internal val traktSettingsDataStore: TraktSettingsDataStore,
@@ -101,6 +105,8 @@ class HomeViewModel @Inject constructor(
     internal val catalogsMap = linkedMapOf<String, CatalogRow>()
     internal val catalogOrder = mutableListOf<String>()
     internal var addonsCache: List<Addon> = emptyList()
+    internal var mainGroupsCache: List<MainGroup> = emptyList()
+    internal var catalogGroupsCache: List<CatalogGroup> = emptyList()
     internal var homeCatalogOrderKeys: List<String> = emptyList()
     internal var disabledHomeCatalogKeys: Set<String> = emptySet()
     internal var currentHeroCatalogKeys: List<String> = emptyList()
@@ -166,6 +172,7 @@ class HomeViewModel @Inject constructor(
         observeLayoutPreferences()
         observeModernHomePresentation()
         observeExternalMetaPrefetchPreference()
+        observeGroupPreferences()
         loadHomeCatalogOrderPreference()
         loadDisabledHomeCatalogPreference()
         observeLibraryState()
@@ -225,6 +232,8 @@ class HomeViewModel @Inject constructor(
     fun onItemFocus(item: MetaPreview) = onItemFocusPipeline(item)
 
     fun preloadAdjacentItem(item: MetaPreview) = preloadAdjacentItemPipeline(item)
+
+    private fun observeGroupPreferences() = observeGroupPreferencesPipeline()
 
     private fun loadHomeCatalogOrderPreference() = loadHomeCatalogOrderPreferencePipeline()
 

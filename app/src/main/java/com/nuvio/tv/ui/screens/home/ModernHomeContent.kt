@@ -561,9 +561,9 @@ fun ModernHomeContent(
         if (!fullScreenBackdrop && !heroSceneState.heroBackdrop.isNullOrBlank()) {
             val screenConf = LocalConfiguration.current
             val density = LocalDensity.current
-            val screenWPx = remember(screenConf, density) { with(density) { screenConf.screenWidthDp.dp.roundToPx() } }
-            val screenHPx = remember(screenConf, density) { with(density) { screenConf.screenHeightDp.dp.roundToPx() } }
-            val heroUrl = heroSceneState.heroBackdrop!!
+            val screenWPx = remember(screenConf, density) { with(density) { (screenConf.screenWidthDp * 1.5f).dp.roundToPx() } }
+            val screenHPx = remember(screenConf, density) { with(density) { (screenConf.screenHeightDp * 1.5f).dp.roundToPx() } }
+            val heroUrl = heroSceneState.heroBackdrop.upgradeToHighRes()!!
             val req = remember(prefetchContext, heroUrl, screenWPx, screenHPx) {
                 buildPrefetchRequest(prefetchContext, heroUrl, screenWPx, screenHPx)
             }
@@ -618,14 +618,14 @@ fun ModernHomeContent(
         }
         val heroMediaWidthPx = remember(maxWidth, localDensity, fullScreenBackdrop) {
             with(localDensity) {
-                if (fullScreenBackdrop) maxWidth.roundToPx()
-                else (maxWidth * MODERN_HERO_MEDIA_WIDTH_FRACTION).roundToPx()
+                if (fullScreenBackdrop) (maxWidth * 1.5f).roundToPx()
+                else (maxWidth * MODERN_HERO_MEDIA_WIDTH_FRACTION * 1.5f).roundToPx()
             }
         }
         val heroMediaHeightPx = remember(heroBackdropHeight, maxHeight, localDensity, fullScreenBackdrop) {
             with(localDensity) {
-                if (fullScreenBackdrop) maxHeight.roundToPx()
-                else heroBackdropHeight.roundToPx()
+                if (fullScreenBackdrop) (maxHeight * 1.5f).roundToPx()
+                else (heroBackdropHeight * 1.5f).roundToPx()
             }
         }
 

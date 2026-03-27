@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NuvioTV - Manage Groups</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  *:focus, *:active { outline: none !important; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #000; color: #fff; min-height: 100vh; line-height: 1.5;
+  }
+  .page { max-width: 600px; margin: 0 auto; padding: 0 1.5rem 6rem; }
+  .header { text-align: center; padding: 2rem 0 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+  .header-logo { height: 32px; width: auto; margin-bottom: 0.5rem; filter: brightness(0) invert(1); opacity: 0.9; }
+  .header p { font-size: 0.875rem; font-weight: 300; color: rgba(255, 255, 255, 0.4); letter-spacing: 0.02em; }
+  
+  .tabs { display: flex; gap: 1rem; margin-top: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .tab { flex: 1; text-align: center; padding: 0.75rem; cursor: pointer; color: rgba(255,255,255,0.5); font-weight: 600; font-size: 0.9rem; border-bottom: 2px solid transparent; }
+  .tab.active { color: #fff; border-bottom-color: #fff; }
+  
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 100px; padding: 0.75rem 1.25rem; color: #fff; font-family: inherit; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.3s ease; }
+  .btn:hover { background: #fff; color: #000; border-color: #fff; }
+  .btn-primary { background: #fff; color: #000; border: none; }
+  .btn-primary:hover { background: #eee; }
+  .btn-block { width: 100%; margin-top: 1rem; padding: 1rem; font-size: 0.95rem; font-weight: 600; }
+  .btn-danger { color: #CF6679; border-color: rgba(207, 102, 121, 0.3); }
+  .btn-danger:hover { background: rgba(207, 102, 121, 0.1); color: #CF6679; border-color: #CF6679; }
+  
+  .input-field { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.875rem 1rem; border-radius: 8px; font-size: 0.95rem; margin-top: 0.25rem; font-family: inherit; }
+  .input-field:focus { border-color: #fff; }
+  .input-label { font-size: 0.75rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1.5rem; display: block; }
+  
+  select.input-field { appearance: none; }
+  
+  .list-view { margin-top: 1rem; }
+  .list-item { border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 1rem; background: rgba(255,255,255,0.02); }
+  .list-item-content { flex: 1; min-width: 0; cursor: pointer; }
+  .list-item-title { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .list-item-subtitle { font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 0.25rem; }
+  
+  .order-controls { display: flex; flex-direction: column; gap: 0.25rem; }
+  .btn-order { background: transparent; border: none; color: rgba(255,255,255,0.3); cursor: pointer; padding: 0.25rem; border-radius: 4px; }
+  .btn-order:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  .btn-order:disabled { opacity: 0.2; pointer-events: none; }
+
+  .empty-state { text-align: center; color: rgba(255, 255, 255, 0.3); padding: 3rem 0; font-size: 0.875rem; }
+  
+  .editor-header { display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; margin-bottom: 1rem; }
+  .back-btn { background: transparent; border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0.5rem; margin-left: -0.5rem; }
+  .editor-title { font-size: 1.1rem; font-weight: 600; }
+  
+  .catalog-list { margin-top: 1.5rem; }
+  .catalog-item { padding: 0.75rem 0; border-top: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.75rem; }
+  .catalog-item:last-child { border-bottom: 1px solid rgba(255,255,255,0.05); }
+  
+  .hidden { display: none !important; }
+
+  /* Checkbox styling */
+  .checkbox-wrapper { display: flex; align-items: center; justify-content: center; width: 40px; cursor: pointer; }
+  .checkbox { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.5); border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .checkbox.checked { background: #fff; border-color: #fff; }
+  .checkbox.checked::after { content: ''; width: 5px; height: 10px; border-right: 2px solid #000; border-bottom: 2px solid #000; transform: rotate(45deg); margin-bottom: 2px; }
+
+  .view-container { display: none; }
+  .view-container.active { display: block; }
+
+  /* Overlay styles */
+  .status-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); backdrop-filter: blur(10px); z-index: 500; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all 0.3s; }
+  .status-overlay.visible { opacity: 1; visibility: visible; }
+  .status-content { text-align: center; max-width: 320px; padding: 2rem; }
+  .spinner { width: 40px; height: 40px; border: 2px solid rgba(255,255,255,0.1); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1.5rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .status-message { font-size: 0.875rem; color: rgba(255,255,255,0.5); line-height: 1.5; }
+  .connection-bar { position: fixed; top: 0; left: 0; right: 0; background: rgba(207,102,121,0.2); text-align: center; padding: 0.5rem; font-size: 0.75rem; color: #CF6679; display: none; }
+</style>
+</head>
+<body>
+
+<div class="connection-bar" id="connectionBar">Connection to TV lost / Unauthorized</div>
+
+<div class="page">
+  <div class="header" id="mainHeader">
+    <img src="/logo.png" alt="NuvioTV" class="header-logo">
+    <p>Manage Groups & Layout</p>
+  </div>
+
+  <!-- Main View -->
+  <div id="mainView" class="view-container active">
+    <div class="tabs">
+      <div class="tab active" id="tabSubgroups" onclick="switchTab('subgroups')">Subgroups</div>
+      <div class="tab" id="tabMaingroups" onclick="switchTab('maingroups')">Primary Groups</div>
+    </div>
+
+    <!-- Subgroups List -->
+    <div id="subgroupsListContainer" style="margin-top: 1.5rem;">
+      <button class="btn btn-block" onclick="createSubgroup()">+ Create Subgroup</button>
+      <div id="subgroupsList" class="list-view"></div>
+    </div>
+
+    <!-- Main Groups List -->
+    <div id="maingroupsListContainer" class="hidden" style="margin-top: 1.5rem;">
+      <button class="btn btn-block" onclick="createMainGroup()">+ Create Primary Group</button>
+      <div id="maingroupsList" class="list-view"></div>
+    </div>
+
+    <button class="btn btn-primary btn-block" id="saveAllBtn" onclick="saveAllChanges()" style="margin-top: 3rem;">Sync to TV</button>
+  </div>
+
+  <!-- Editor View -->
+  <div id="editorView" class="view-container">
+    <div class="editor-header">
+      <button class="back-btn" onclick="closeEditor()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="editor-title" id="editorTitle">Edit Group</div>
+    </div>
+
+    <div class="editor-body">
+      <label class="input-label">Name</label>
+      <input type="text" id="editName" class="input-field" autocomplete="off" placeholder="Group Name">
+
+      <label class="input-label">Custom Logo URL (Optional)</label>
+      <input type="text" id="editLogoUrl" class="input-field" autocomplete="off" placeholder="https://...">
+
+      <!-- Main Group Specific -->
+      <div id="maingroupFields" class="hidden">
+        <label class="input-label">Select Subgroups</label>
+        <div id="editorSubgroupList" class="catalog-list"></div>
+      </div>
+
+      <!-- Subgroup Specific -->
+      <div id="subgroupFields" class="hidden">
+        <div class="input-label">Select Catalogs</div>
+        <div id="editorCatalogList" class="catalog-list"></div>
+      </div>
+
+      <button class="btn btn-primary btn-block" onclick="saveEditor()">Apply</button>
+      <button class="btn btn-danger btn-block" style="background: transparent" onclick="deleteEditingItem()">Delete Group</button>
+    </div>
+  </div>
+</div>
+
+<div class="status-overlay" id="statusOverlay">
+  <div class="status-content" id="statusContent"></div>
+</div>
+
+<script>
+let state = {
+  availableCatalogs: [],
+  catalogGroups: [],
+  mainGroups: [],
+  currentTab: 'subgroups',
+  editingMode: null,
+  editingItem: null,
+  editingItemIndex: -1
+};
+
+const urlParams = new URLSearchParams(window.location.search);
+const token = urlParams.get('token') || '';
+
+// UUID Gen
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+function el(id) { return document.getElementById(id); }
+
+async function loadState() {
+  try {
+    let res = await fetch(`/api/state?token=${token}`);
+    if (!res.ok) throw new Error("Unauthorized");
+    let data = await res.json();
+    state.availableCatalogs = data.availableCatalogs || [];
+    state.catalogGroups = data.catalogGroups || [];
+    state.mainGroups = data.mainGroups || [];
+    el('connectionBar').style.display = 'none';
+    renderLists();
+  } catch (e) {
+    el('connectionBar').style.display = 'block';
+  }
+}
+
+async function refreshFromTv() {
+  await loadState();
+}
+
+function switchTab(tab) {
+  state.currentTab = tab;
+  el('tabSubgroups').className = 'tab' + (tab === 'subgroups' ? ' active' : '');
+  el('tabMaingroups').className = 'tab' + (tab === 'maingroups' ? ' active' : '');
+  el('subgroupsListContainer').classList.toggle('hidden', tab !== 'subgroups');
+  el('maingroupsListContainer').classList.toggle('hidden', tab !== 'maingroups');
+}
+
+function renderLists() {
+  let sgHtml = '';
+  if (state.catalogGroups.length === 0) {
+    sgHtml = '<div class="empty-state">No subgroups configured</div>';
+  } else {
+    state.catalogGroups.forEach((sg, i) => {
+      sgHtml += `
+        <div class="list-item">
+          <div class="order-controls">
+            <button class="btn-order" ${i===0?'disabled':''} onclick="moveArrayItem('catalogGroups', ${i}, -1)">▲</button>
+            <button class="btn-order" ${i===state.catalogGroups.length-1?'disabled':''} onclick="moveArrayItem('catalogGroups', ${i}, 1)">▼</button>
+          </div>
+          <div class="list-item-content" onclick="editSubgroup(${i})">
+            <div class="list-item-title">${escapeHtml(sg.name)}</div>
+            <div class="list-item-subtitle">${(sg.catalogKeys||[]).length} catalogs</div>
+          </div>
+          <button class="btn btn-primary" style="padding: 0.5rem 1rem;" onclick="editSubgroup(${i})">Edit</button>
+        </div>
+      `;
+    });
+  }
+  el('subgroupsList').innerHTML = sgHtml;
+
+  let mgHtml = '';
+  if (state.mainGroups.length === 0) {
+    mgHtml = '<div class="empty-state">No primary groups configured</div>';
+  } else {
+    state.mainGroups.forEach((mg, i) => {
+      mgHtml += `
+        <div class="list-item">
+          <div class="order-controls">
+            <button class="btn-order" ${i===0?'disabled':''} onclick="moveArrayItem('mainGroups', ${i}, -1)">▲</button>
+            <button class="btn-order" ${i===state.mainGroups.length-1?'disabled':''} onclick="moveArrayItem('mainGroups', ${i}, 1)">▼</button>
+          </div>
+          <div class="list-item-content" onclick="editMainGroup(${i})">
+            <div class="list-item-title">${escapeHtml(mg.name)}</div>
+            <div class="list-item-subtitle">${(mg.subGroupIds||[]).length} subgroups</div>
+          </div>
+          <button class="btn btn-primary" style="padding: 0.5rem 1rem;" onclick="editMainGroup(${i})">Edit</button>
+        </div>
+      `;
+    });
+  }
+  el('maingroupsList').innerHTML = mgHtml;
+}
+
+function moveArrayItem(arrayName, index, dir) {
+  let arr = state[arrayName];
+  if (index + dir < 0 || index + dir >= arr.length) return;
+  let temp = arr[index];
+  arr[index] = arr[index + dir];
+  arr[index + dir] = temp;
+  renderLists();
+}
+
+// --- Editors ---
+function showEditor() {
+  el('mainView').classList.remove('active');
+  el('editorView').classList.add('active');
+  el('mainHeader').classList.add('hidden');
+}
+function closeEditor() {
+  el('editorView').classList.remove('active');
+  el('mainView').classList.add('active');
+  el('mainHeader').classList.remove('hidden');
+  state.editingMode = null;
+  state.editingItem = null;
+  state.editingItemIndex = -1;
+  renderLists();
+}
+
+function processUrl(url) {
+  if (!url) return null;
+  return url.trim();
+}
+
+function saveEditor() {
+  if (!state.editingMode) return;
+  
+  let name = el('editName').value.trim();
+  if (!name) { alert("Name cannot be empty"); return; }
+  
+  state.editingItem.name = name;
+  state.editingItem.logoUrl = processUrl(el('editLogoUrl').value);
+  
+  if (state.editingMode === 'subgroup') {
+    if (state.editingItemIndex === -1) state.catalogGroups.push(state.editingItem);
+    else state.catalogGroups[state.editingItemIndex] = state.editingItem;
+  } else if (state.editingMode === 'maingroup') {
+    state.editingItem.posterType = "Square";
+    state.editingItem.posterSize = "Default";
+    if (state.editingItemIndex === -1) state.mainGroups.push(state.editingItem);
+    else state.mainGroups[state.editingItemIndex] = state.editingItem;
+  }
+  
+  closeEditor();
+}
+
+function deleteEditingItem() {
+  if (!confirm("Are you sure you want to delete this group?")) return;
+  
+  if (state.editingMode === 'subgroup' && state.editingItemIndex !== -1) {
+    state.catalogGroups.splice(state.editingItemIndex, 1);
+    let id = state.editingItem.id;
+    state.mainGroups.forEach(mg => {
+      mg.subGroupIds = mg.subGroupIds.filter(sid => sid !== id);
+    });
+  } else if (state.editingMode === 'maingroup' && state.editingItemIndex !== -1) {
+    state.mainGroups.splice(state.editingItemIndex, 1);
+  }
+  closeEditor();
+}
+
+function editSubgroup(index) {
+  state.editingMode = 'subgroup';
+  state.editingItemIndex = index;
+  state.editingItem = index === -1 ? { id: uuidv4(), name: '', catalogKeys: [] } : JSON.parse(JSON.stringify(state.catalogGroups[index]));
+  
+  el('editorTitle').innerText = index === -1 ? 'New Subgroup' : 'Edit Subgroup';
+  el('editName').value = state.editingItem.name || '';
+  el('editLogoUrl').value = state.editingItem.logoUrl || '';
+  
+  el('subgroupFields').classList.remove('hidden');
+  el('maingroupFields').classList.add('hidden');
+  
+  renderEditorCatalogList();
+  showEditor();
+}
+function createSubgroup() { editSubgroup(-1); }
+
+function renderEditorCatalogList() {
+  let selected = state.editingItem.catalogKeys || [];
+  let combined = [];
+  
+  selected.forEach(k => {
+    let cat = state.availableCatalogs.find(c => c.key === k);
+    if (cat) combined.push({ ...cat, isSelected: true });
+  });
+  
+  state.availableCatalogs.forEach(c => {
+    if (!selected.includes(c.key)) combined.push({ ...c, isSelected: false });
+  });
+  
+  let html = '';
+  combined.forEach((cat, i) => {
+    let cbClass = cat.isSelected ? 'checkbox checked' : 'checkbox';
+    html += `
+      <div class="catalog-item">
+        <div class="order-controls">
+          <button class="btn-order" ${i===0?'disabled':''} onclick="moveEditorCatalog(${i}, -1)">▲</button>
+          <button class="btn-order" ${i===combined.length-1?'disabled':''} onclick="moveEditorCatalog(${i}, 1)">▼</button>
+        </div>
+        <div class="checkbox-wrapper" onclick="toggleEditorCatalog('${cat.key}')">
+          <div class="${cbClass}"></div>
+        </div>
+        <div class="list-item-content" onclick="toggleEditorCatalog('${cat.key}')">
+          <div class="list-item-title">${escapeHtml(cat.catalogName)}</div>
+          <div class="list-item-subtitle">${escapeHtml(cat.addonName)} - ${escapeHtml(cat.type)}</div>
+        </div>
+      </div>
+    `;
+  });
+  el('editorCatalogList').innerHTML = html;
+  state.editingItem.catalogKeys = combined.filter(c => c.isSelected).map(c => c.key);
+}
+
+function toggleEditorCatalog(key) {
+  let idx = state.editingItem.catalogKeys.indexOf(key);
+  if (idx !== -1) state.editingItem.catalogKeys.splice(idx, 1);
+  else state.editingItem.catalogKeys.push(key);
+  renderEditorCatalogList();
+}
+function moveEditorCatalog(currentIndex, dir) {
+  let selected = state.editingItem.catalogKeys || [];
+  let combined = [];
+  selected.forEach(k => { let c = state.availableCatalogs.find(c => c.key === k); if(c) combined.push({key:k, sel:true}); });
+  state.availableCatalogs.forEach(c => { if(!selected.includes(c.key)) combined.push({key:c.key, sel:false}); });
+  
+  let targetIndex = currentIndex + dir;
+  if(targetIndex < 0 || targetIndex >= combined.length) return;
+  
+  let temp = combined[currentIndex];
+  combined[currentIndex] = combined[targetIndex];
+  combined[targetIndex] = temp;
+  
+  let newSelectedKeys = [];
+  combined.forEach(c => { if (c.sel) newSelectedKeys.push(c.key); });
+  state.editingItem.catalogKeys = newSelectedKeys;
+  
+  let sortedAvailable = [];
+  combined.forEach(c => {
+    let cat = state.availableCatalogs.find(av => av.key === c.key);
+    if(cat) sortedAvailable.push(cat);
+  });
+  state.availableCatalogs = sortedAvailable;
+  
+  renderEditorCatalogList();
+}
+
+function editMainGroup(index) {
+  state.editingMode = 'maingroup';
+  state.editingItemIndex = index;
+  state.editingItem = index === -1 ? { id: uuidv4(), name: '', subGroupIds: [] } : JSON.parse(JSON.stringify(state.mainGroups[index]));
+  
+  el('editorTitle').innerText = index === -1 ? 'New Primary Group' : 'Edit Primary Group';
+  el('editName').value = state.editingItem.name || '';
+  el('editLogoUrl').value = state.editingItem.logoUrl || '';
+  
+  el('maingroupFields').classList.remove('hidden');
+  el('subgroupFields').classList.add('hidden');
+  
+  renderEditorSubgroupList();
+  showEditor();
+}
+function createMainGroup() { editMainGroup(-1); }
+
+function renderEditorSubgroupList() {
+  let selected = state.editingItem.subGroupIds || [];
+  let combined = [];
+  selected.forEach(id => {
+    let sg = state.catalogGroups.find(c => c.id === id);
+    if (sg) combined.push({ ...sg, isSelected: true });
+  });
+  state.catalogGroups.forEach(sg => {
+    if (!selected.includes(sg.id)) combined.push({ ...sg, isSelected: false });
+  });
+
+  let html = '';
+  combined.forEach((sg, i) => {
+    let cbClass = sg.isSelected ? 'checkbox checked' : 'checkbox';
+    html += `
+      <div class="catalog-item">
+        <div class="order-controls">
+          <button class="btn-order" ${i===0?'disabled':''} onclick="moveEditorSubgroup(${i}, -1)">▲</button>
+          <button class="btn-order" ${i===combined.length-1?'disabled':''} onclick="moveEditorSubgroup(${i}, 1)">▼</button>
+        </div>
+        <div class="checkbox-wrapper" onclick="toggleEditorSubgroup('${sg.id}')">
+          <div class="${cbClass}"></div>
+        </div>
+        <div class="list-item-content" onclick="toggleEditorSubgroup('${sg.id}')">
+          <div class="list-item-title">${escapeHtml(sg.name)}</div>
+          <div class="list-item-subtitle">${(sg.catalogKeys||[]).length} catalogs</div>
+        </div>
+      </div>
+    `;
+  });
+  el('editorSubgroupList').innerHTML = html;
+  state.editingItem.subGroupIds = combined.filter(c => c.isSelected).map(c => c.id);
+}
+
+function toggleEditorSubgroup(id) {
+  let idx = state.editingItem.subGroupIds.indexOf(id);
+  if (idx !== -1) state.editingItem.subGroupIds.splice(idx, 1);
+  else state.editingItem.subGroupIds.push(id);
+  renderEditorSubgroupList();
+}
+
+function moveEditorSubgroup(currentIndex, dir) {
+  let selected = state.editingItem.subGroupIds || [];
+  let combined = [];
+  selected.forEach(id => { let sg = state.catalogGroups.find(c => c.id === id); if(sg) combined.push({id:id, sel:true}); });
+  state.catalogGroups.forEach(sg => { if(!selected.includes(sg.id)) combined.push({id:sg.id, sel:false}); });
+  
+  let targetIndex = currentIndex + dir;
+  if(targetIndex < 0 || targetIndex >= combined.length) return;
+  
+  let temp = combined[currentIndex];
+  combined[currentIndex] = combined[targetIndex];
+  combined[targetIndex] = temp;
+  
+  let newSelectedIds = [];
+  combined.forEach(c => { if (c.sel) newSelectedIds.push(c.id); });
+  state.editingItem.subGroupIds = newSelectedIds;
+  
+  let sortedCatalogGroups = [];
+  combined.forEach(c => {
+    let sg = state.catalogGroups.find(av => av.id === c.id);
+    if(sg) sortedCatalogGroups.push(sg);
+  });
+  state.catalogGroups = sortedCatalogGroups;
+  
+  renderEditorSubgroupList();
+}
+
+async function saveAllChanges() {
+  el('saveAllBtn').disabled = true;
+  showOverlay('<div class="spinner"></div><div class="status-title">Waiting for TV...</div><div class="status-message">Please confirm the changes on your TV.</div>');
+  
+  try {
+    let res = await fetch(`/api/catalogs?token=${token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        catalogGroups: state.catalogGroups,
+        mainGroups: state.mainGroups
+      })
+    });
+    if (!res.ok) throw new Error("Unauthorized or Invalid token");
+    let data = await res.json();
+    if (data.status === 'pending_confirmation') {
+      pollStatus(data.id);
+    } else {
+      showOverlayError(data.error || 'Failed to save');
+    }
+  } catch (e) {
+    showOverlayError('Unauthorized or network error.');
+  }
+}
+
+async function pollStatus(changeId) {
+  let timerId = setInterval(async () => {
+    try {
+      let res = await fetch(`/api/status/${changeId}?token=${token}`);
+      if (!res.ok) throw new Error("Unauthorized");
+      let data = await res.json();
+      if (data.status === 'confirmed') {
+        clearInterval(timerId);
+        showOverlay('<div class="status-title" style="color:#4CAF50;">Success!</div><div class="status-message">Changes applied on TV.</div>');
+        setTimeout(() => hideOverlay(), 2000);
+      } else if (data.status === 'rejected') {
+        clearInterval(timerId);
+        showOverlayError('Changes were rejected on the TV.');
+      }
+    } catch (e) {
+      clearInterval(timerId);
+      showOverlayError('Connection lost.');
+    }
+  }, 1500);
+}
+
+function showOverlay(html) {
+  el('statusContent').innerHTML = html;
+  el('statusOverlay').classList.add('visible');
+}
+function hideOverlay() {
+  el('statusOverlay').classList.remove('visible');
+  el('saveAllBtn').disabled = false;
+}
+function showOverlayError(msg) {
+  showOverlay(`<div class="status-title" style="color:#CF6679;">Error</div><div class="status-message">${escapeHtml(msg)}</div><button class="btn btn-primary" style="margin-top:1rem;" onclick="hideOverlay()">Dismiss</button>`);
+}
+function escapeHtml(str) {
+  let div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+loadState();
+</script>
+</body>
+</html>

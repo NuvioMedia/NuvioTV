@@ -20,6 +20,8 @@ import com.nuvio.tv.ui.screens.detail.MetaDetailsScreen
 import com.nuvio.tv.ui.screens.home.HomeScreen
 import com.nuvio.tv.ui.screens.addon.AddonManagerScreen
 import com.nuvio.tv.ui.screens.addon.CatalogOrderScreen
+import com.nuvio.tv.ui.screens.addon.GroupManagementScreen
+import com.nuvio.tv.ui.screens.addon.SubgroupListingsScreen
 import com.nuvio.tv.ui.screens.library.LibraryScreen
 import com.nuvio.tv.ui.screens.player.PlayerScreen
 import com.nuvio.tv.ui.screens.plugin.PluginScreen
@@ -171,15 +173,19 @@ fun NuvioNavHost(
 
             HomeScreen(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
-                    val heroBackdrop = HeroBackdropState.currentHeroBackdropUrl
-                    navController.navigate(
-                        Screen.Detail.createRoute(
-                            itemId = itemId,
-                            itemType = itemType,
-                            addonBaseUrl = addonBaseUrl,
-                            heroBackdropUrl = heroBackdrop
+                    if (itemType == "other" && itemId.startsWith("subgroup_")) {
+                        navController.navigate(Screen.Subgroup.createRoute(itemId.substringAfter("subgroup_")))
+                    } else {
+                        val heroBackdrop = HeroBackdropState.currentHeroBackdropUrl
+                        navController.navigate(
+                            Screen.Detail.createRoute(
+                                itemId = itemId,
+                                itemType = itemType,
+                                addonBaseUrl = addonBaseUrl,
+                                heroBackdropUrl = heroBackdrop
+                            )
                         )
-                    )
+                    }
                 },
                 onContinueWatchingClick = { item ->
                     navController.navigate(createContinueWatchingRoute(item))
@@ -925,13 +931,34 @@ fun NuvioNavHost(
         composable(Screen.AddonManager.route) {
             AddonManagerScreen(
                 showBuiltInHeader = !hideBuiltInHeaders,
-                onNavigateToCatalogOrder = { navController.navigate(Screen.CatalogOrder.route) }
+                onNavigateToCatalogOrder = { navController.navigate(Screen.CatalogOrder.route) },
+                onNavigateToGroupManagement = { navController.navigate(Screen.GroupManagement.route) }
             )
         }
 
         composable(Screen.CatalogOrder.route) {
             CatalogOrderScreen(
                 onBackPress = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.GroupManagement.route) {
+            GroupManagementScreen()
+        }
+
+        composable(
+            route = Screen.Subgroup.route,
+            arguments = listOf(navArgument("subgroupId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val subgroupId = backStackEntry.arguments?.getString("subgroupId") ?: return@composable
+            SubgroupListingsScreen(
+                subgroupId = subgroupId,
+                onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
+                    navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
+                },
+                onNavigateToCatalogSeeAll = { catalogId, addonId, type ->
+                    navController.navigate(Screen.CatalogSeeAll.createRoute(catalogId, addonId, type))
+                }
             )
         }
 

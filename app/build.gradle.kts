@@ -1,4 +1,4 @@
-﻿plugins {
+plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
@@ -185,11 +185,8 @@ android {
     }
 }
 
-androidComponents {
-    onVariants(selector().withBuildType("debug")) { variant ->
-        variant.applicationId.set("com.nuviodebug.com")
-    }
-}
+// Removed applicationId override for debug builds to ensure consistent package name.
+
 
 composeCompiler {
     // Enable Compose compiler metrics for performance analysis

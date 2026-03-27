@@ -115,7 +115,7 @@ internal fun ModernHeroMediaLayer(
 
     val imageModel = remember(localContext, stableBackdrop, requestWidthPx, requestHeightPx) {
         ImageRequest.Builder(localContext)
-            .data(stableBackdrop)
+            .data(stableBackdrop.upgradeToHighRes())
             .crossfade(400)
             .size(width = requestWidthPx, height = requestHeightPx)
             .build()
@@ -273,12 +273,12 @@ private fun HeroTitleContent(
     val headlineLarge = MaterialTheme.typography.headlineLarge
     val labelMedium = MaterialTheme.typography.labelMedium
     val bodyMedium = MaterialTheme.typography.bodyMedium
-    val logoMaxWidthPx = remember(density) { with(density) { 220.dp.roundToPx() } }
-    val logoHeightPx = remember(density) { with(density) { 100.dp.roundToPx() } }
+    val logoMaxWidthPx = remember(density) { with(density) { (220.dp * 1.5f).roundToPx() } }
+    val logoHeightPx = remember(density) { with(density) { (100.dp * 1.5f).roundToPx() } }
     val logoModel = remember(context, preview.logo, logoMaxWidthPx, logoHeightPx) {
         preview.logo?.let {
             ImageRequest.Builder(context)
-                .data(it)
+                .data(it.upgradeToHighRes())
                 .crossfade(false)
                 .decoderFactory(SvgDecoder.Factory())
                 .size(width = logoMaxWidthPx, height = logoHeightPx)
@@ -652,4 +652,15 @@ private fun HeroMetaDivider(scale: Float) {
             .clip(RoundedCornerShape(percent = 50))
             .background(NuvioColors.TextTertiary.copy(alpha = 0.78f))
     )
+}
+
+internal fun String?.upgradeToHighRes(): String? {
+    if (this == null) return null
+    if (this.contains("image.tmdb.org")) {
+        return this.replace("/w500/", "/original/")
+            .replace("/w780/", "/original/")
+            .replace("/w1280/", "/original/")
+            .replace("/w342/", "/original/")
+    }
+    return this
 }

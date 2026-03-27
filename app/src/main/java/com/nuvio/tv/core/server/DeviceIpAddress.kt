@@ -17,7 +17,7 @@ object DeviceIpAddress {
         }
 
         // Fallback: iterate NetworkInterface for Ethernet / other connections
-        return try {
+        val fallbackIp = try {
             NetworkInterface.getNetworkInterfaces()?.toList()
                 ?.flatMap { it.inetAddresses.toList() }
                 ?.firstOrNull { !it.isLoopbackAddress && it is Inet4Address }
@@ -25,6 +25,8 @@ object DeviceIpAddress {
         } catch (e: Exception) {
             null
         }
+
+        return fallbackIp
     }
 
     private fun formatIp(ip: Int): String {

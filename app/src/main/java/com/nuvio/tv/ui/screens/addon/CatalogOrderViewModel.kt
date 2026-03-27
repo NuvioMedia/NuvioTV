@@ -2,9 +2,11 @@ package com.nuvio.tv.ui.screens.addon
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.data.local.GroupPreferenceDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
+import com.nuvio.tv.domain.model.MainGroup
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +21,8 @@ import javax.inject.Inject
 @HiltViewModel
 class CatalogOrderViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
-    private val layoutPreferenceDataStore: LayoutPreferenceDataStore
+    private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
+    private val groupPreferenceDataStore: GroupPreferenceDataStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CatalogOrderUiState())
@@ -70,12 +73,14 @@ class CatalogOrderViewModel @Inject constructor(
             combine(
                 addonRepository.getInstalledAddons(),
                 layoutPreferenceDataStore.homeCatalogOrderKeys,
-                layoutPreferenceDataStore.disabledHomeCatalogKeys
-            ) { addons, savedOrderKeys, disabledKeys ->
+                layoutPreferenceDataStore.disabledHomeCatalogKeys,
+                groupPreferenceDataStore.mainGroups
+            ) { addons, savedOrderKeys, disabledKeys, mainGroups ->
                 buildOrderedCatalogItems(
                     addons = addons,
                     savedOrderKeys = savedOrderKeys,
-                    disabledKeys = disabledKeys.toSet()
+                    disabledKeys = disabledKeys.toSet(),
+                    mainGroups = mainGroups
                 )
             }.collectLatest { orderedItems ->
                 disabledKeysCache = orderedItems.filter { it.isDisabled }.map { it.disableKey }.toSet()
@@ -92,9 +97,10 @@ class CatalogOrderViewModel @Inject constructor(
     private fun buildOrderedCatalogItems(
         addons: List<Addon>,
         savedOrderKeys: List<String>,
-        disabledKeys: Set<String>
+        disabledKeys: Set<String>,
+        mainGroups: List<MainGroup>
     ): List<CatalogOrderItem> {
-        val defaultEntries = buildDefaultCatalogEntries(addons)
+        val defaultEntries = buildDefaultCatalogEntries(addons, mainGroups)
         val availableMap = defaultEntries.associateBy { it.key }
         val defaultOrderKeys = defaultEntries.map { it.key }
 
@@ -123,9 +129,24 @@ class CatalogOrderViewModel @Inject constructor(
         }
     }
 
-    private fun buildDefaultCatalogEntries(addons: List<Addon>): List<CatalogOrderEntry> {
+    private fun buildDefaultCatalogEntries(addons: List<Addon>, mainGroups: List<MainGroup>): List<CatalogOrderEntry> {
         val entries = mutableListOf<CatalogOrderEntry>()
         val seenKeys = mutableSetOf<String>()
+
+        mainGroups.forEach { mainGroup ->
+            val key = "maingroup:${mainGroup.id}"
+            if (seenKeys.add(key)) {
+                entries.add(
+                    CatalogOrderEntry(
+                        key = key,
+                        disableKey = "maingroup_disable:${mainGroup.id}",
+                        catalogName = mainGroup.name,
+                        addonName = "Home Group",
+                        typeLabel = "Primary Group"
+                    )
+                )
+            }
+        }
 
         addons.forEach { addon ->
             addon.catalogs

@@ -130,6 +130,7 @@ sealed class Screen(val route: String) {
     data object SupportersContributors : Screen("supporters_contributors")
     data object AddonManager : Screen("addon_manager")
     data object CatalogOrder : Screen("catalog_order")
+    data object GroupManagement : Screen("group_management")
     data object Plugins : Screen("plugins")
     data object LayoutSelection : Screen("layout_selection")
     data object LayoutSettings : Screen("layout_settings")
@@ -146,6 +147,11 @@ sealed class Screen(val route: String) {
         fun createRoute(catalogId: String, addonId: String, type: String): String {
             return "catalog_see_all/${encode(catalogId)}/${encode(addonId)}/${encode(type)}"
         }
+    }
+
+    data object Subgroup : Screen("subgroup/{subgroupId}") {
+        private fun encode(value: String): String = URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+        fun createRoute(subgroupId: String): String = "subgroup/${encode(subgroupId)}"
     }
 
     data object ProfileSelection : Screen("profile_selection")

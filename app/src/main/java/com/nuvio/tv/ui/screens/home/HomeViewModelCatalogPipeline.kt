@@ -18,6 +18,7 @@ import com.nuvio.tv.domain.model.MetaPreview
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withPermit
 import com.nuvio.tv.core.util.filterReleasedItems
+import com.nuvio.tv.domain.model.PosterShape
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
@@ -62,6 +63,27 @@ internal fun HomeViewModel.observeTmdbSettingsPipeline() {
                 currentTmdbSettings = settings
                 scheduleUpdateCatalogRows()
             }
+    }
+}
+
+internal fun HomeViewModel.observeGroupPreferencesPipeline() {
+    viewModelScope.launch {
+        launch {
+            groupPreferenceDataStore.mainGroups.collectLatest { mainGroups ->
+                Log.d("GroupPipeline", "mainGroups changed: count=${mainGroups.size} ids=${mainGroups.map { it.id }}")
+                mainGroupsCache = mainGroups
+                rebuildCatalogOrder(addonsCache)
+                scheduleUpdateCatalogRows()
+            }
+        }
+        launch {
+            groupPreferenceDataStore.catalogGroups.collectLatest { catalogGroups ->
+                Log.d("GroupPipeline", "catalogGroups changed: count=${catalogGroups.size} ids=${catalogGroups.map { it.id }}")
+                catalogGroupsCache = catalogGroups
+                rebuildCatalogOrder(addonsCache)
+                scheduleUpdateCatalogRows()
+            }
+        }
     }
 }
 
@@ -289,7 +311,49 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
     val hideUnreleased = _uiState.value.hideUnreleasedContent
 
     val (displayRows, baseHeroItems, baseGridItems, fullRowsFiltered) = withContext(Dispatchers.Default) {
-        val rawRows = orderedKeys.mapNotNull { key -> catalogSnapshot[key] }
+        val rawRows = orderedKeys.mapNotNull { key ->
+            if (key.startsWith("maingroup:")) {
+                val mainGroupId = key.substringAfter("maingroup:")
+                val mainGroup = mainGroupsCache.find { it.id == mainGroupId }
+                if (mainGroup != null) {
+                    val subGroups = mainGroup.subGroupIds.mapNotNull { subGroupId ->
+                        catalogGroupsCache.find { it.id == subGroupId }
+                    }
+                    Log.d("GroupPipeline", "MainGroup '${mainGroup.name}': subGroupIds=${mainGroup.subGroupIds} resolved=${subGroups.size} subgroups")
+                    val items = subGroups.map { subGroup ->
+                        MetaPreview(
+                            id = "subgroup_${subGroup.id}",
+                            type = com.nuvio.tv.domain.model.ContentType.UNKNOWN,
+                            rawType = "other",
+                            name = subGroup.name,
+                            poster = subGroup.logoUrl,
+                            posterShape = if (mainGroup.posterType == "Square") PosterShape.SQUARE else PosterShape.POSTER,
+                            background = null,
+                            logo = null,
+                            description = null,
+                            releaseInfo = null,
+                            imdbRating = null,
+                            genres = emptyList()
+                        )
+                    }
+                    CatalogRow(
+                        addonId = "maingroup",
+                        addonName = "Local",
+                        addonBaseUrl = "local",
+                        catalogId = mainGroupId,
+                        catalogName = mainGroup.name,
+                        type = com.nuvio.tv.domain.model.ContentType.UNKNOWN,
+                        rawType = "other",
+                        items = items,
+                        supportsSkip = false,
+                        hasMore = false
+                    )
+                } else null
+            } else {
+                catalogSnapshot[key]
+            }
+        }
+        
         val orderedRows = if (hideUnreleased) {
             val today = LocalDate.now()
             rawRows.map { it.filterReleasedItems(today) }

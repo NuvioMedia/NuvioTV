@@ -45,7 +45,9 @@ internal fun HomeViewModel.cancelInFlightCatalogLoads() {
 
 internal fun HomeViewModel.rebuildCatalogOrder(addons: List<Addon>) {
     val defaultOrder = buildDefaultCatalogOrder(addons)
-    val availableSet = defaultOrder.toSet()
+    val mainGroupOrderKeys = mainGroupsCache.map { "maingroup:${it.id}" }
+    val fullAvailableOrder = mainGroupOrderKeys + defaultOrder
+    val availableSet = fullAvailableOrder.toSet()
 
     val savedValid = homeCatalogOrderKeys
         .asSequence()
@@ -54,7 +56,7 @@ internal fun HomeViewModel.rebuildCatalogOrder(addons: List<Addon>) {
         .toList()
 
     val savedSet = savedValid.toSet()
-    val mergedOrder = savedValid + defaultOrder.filterNot { it in savedSet }
+    val mergedOrder = savedValid + fullAvailableOrder.filterNot { it in savedSet }
 
     catalogOrder.clear()
     catalogOrder.addAll(mergedOrder)
