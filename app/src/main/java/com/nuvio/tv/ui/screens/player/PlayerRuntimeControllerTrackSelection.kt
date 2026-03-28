@@ -55,6 +55,10 @@ internal fun PlayerRuntimeController.selectAudioTrack(trackIndex: Int) {
                             .buildUpon()
                             .setOverrideForType(override)
                             .build()
+                        // Nudge the player to avoid infinite buffering after audio track switch
+                        // where the new track requires a different segment.
+                        val pos = player.currentPosition
+                        if (pos > 0) player.seekTo((pos - 1).coerceAtLeast(0))
                         return
                     }
                     currentAudioIndex++
@@ -92,7 +96,11 @@ internal fun PlayerRuntimeController.applyAddonSubtitleOverride(addonTrackId: St
                     .setOverrideForType(override)
                     .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
                     .build()
-                Log.d(PlayerRuntimeController.TAG, "applyAddonSubtitleOverride: found id=${format.id} at group/track $i")
+                Log.d(
+                    PlayerRuntimeController.TAG,
+                    "applyAddonSubtitleOverride: found id=${format.id} at group/track $i " +
+                        "mime=${format.sampleMimeType} codecs=${format.codecs} label=${format.label} lang=${format.language}"
+                )
                 return true
             }
         }
@@ -232,9 +240,15 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         if (currentlySelected?.id == subtitle.id && currentlySelected.url == subtitle.url) {
             return@let
         }
-        Log.d(PlayerRuntimeController.TAG, "Selecting ADDON subtitle lang=${subtitle.lang} id=${subtitle.id}")
-
         val normalizedLang = PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)
+        val inferredMime = PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url)
+        Log.d(
+            PlayerRuntimeController.TAG,
+            "Selecting ADDON subtitle addon=${subtitle.addonName} lang=${subtitle.lang} normalizedLang=$normalizedLang " +
+                "id=${subtitle.id} inferredMime=$inferredMime " +
+                "url=${subtitle.url}"
+        )
+
         val addonTrackId = buildAddonSubtitleTrackId(subtitle)
         val preAttachedByStartup = attachedAddonSubtitleKeys.contains(addonSubtitleKey(subtitle))
         val appliedWithoutReload = applyAddonSubtitleOverride(addonTrackId) ||
@@ -243,7 +257,8 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         if (appliedWithoutReload) {
             Log.d(
                 PlayerRuntimeController.TAG,
-                "Switching ADDON subtitle without media reload id=${subtitle.id}"
+                "Switching ADDON subtitle without media reload addon=${subtitle.addonName} id=${subtitle.id} " +
+                    "trackId=$addonTrackId"
             )
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
@@ -265,6 +280,11 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         val subtitleConfigurations = (_uiState.value.addonSubtitles + subtitle)
             .distinctBy { "${it.id}|${it.url}" }
             .map(::toSubtitleConfiguration)
+        Log.d(
+            PlayerRuntimeController.TAG,
+            "Selecting ADDON subtitle with media refresh addon=${subtitle.addonName} id=${subtitle.id} " +
+                "attachedConfigs=${subtitleConfigurations.size}"
+        )
         attachedAddonSubtitleKeys = (_uiState.value.addonSubtitles + subtitle)
             .distinctBy { addonSubtitleKey(it) }
             .map(::addonSubtitleKey)
@@ -301,6 +321,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         }
     }
 }
+
 
 internal fun PlayerRuntimeController.rememberAddonSubtitleSelection(subtitle: Subtitle) {
     persistedTrackPreference = null

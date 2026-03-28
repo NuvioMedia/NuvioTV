@@ -449,7 +449,11 @@ class TraktProgressService @Inject constructor(
                 }
             }
             result as Set<String>
-        }.distinctUntilChanged()
+        }
+            .onStart {
+                scope.launch { getWatchedMoviesSnapshot(forceRefresh = false) }
+            }
+            .distinctUntilChanged()
     }
 
     suspend fun markAsWatched(
@@ -668,7 +672,21 @@ class TraktProgressService @Inject constructor(
                 watched = false
             )
         } else {
-            invalidateEpisodeProgressCache(contentId)
+            // Optimistically remove just this episode from the cache instead of
+            // invalidating the entire series cache (which causes all episodes to
+            // briefly appear unwatched until the next Trakt fetch completes).
+            val cacheKey = canonicalLookupKey(contentId.trim())
+            if (season != null && episode != null) {
+                episodeProgressState.update { current ->
+                    val entry = current[cacheKey] ?: return@update current
+                    val updatedProgress = entry.progress.toMutableMap().apply {
+                        remove(season to episode)
+                    }
+                    current + (cacheKey to entry.copy(progress = updatedProgress))
+                }
+            } else {
+                invalidateEpisodeProgressCache(contentId)
+            }
         }
         refreshNow()
     }
@@ -1140,7 +1158,7 @@ class TraktProgressService @Inject constructor(
         }
         val inProgressMovies = getPlayback("movies", force = force, startAt = playbackStartAt).mapNotNull { mapPlaybackMovie(it) }
         val inProgressEpisodes = getPlayback("episodes", force = force, startAt = playbackStartAt)
-            .mapNotNull { mapPlaybackEpisode(it, applyAddonRemap = false) }
+            .mapNotNull { mapPlaybackEpisode(it, applyAddonRemap = true) }
 
         val mergedByKey = linkedMapOf<String, WatchProgress>()
 
@@ -1194,7 +1212,7 @@ class TraktProgressService @Inject constructor(
                     continue
                 }
 
-                val mapped = mapEpisodeHistoryItem(item, applyAddonRemap = false) ?: continue
+                val mapped = mapEpisodeHistoryItem(item, applyAddonRemap = true) ?: continue
                 results.putIfAbsent(mapped.contentId, mapped)
                 if (results.size >= maxRecentEpisodeHistoryEntries) {
                     shouldStop = true

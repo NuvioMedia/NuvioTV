@@ -104,6 +104,18 @@ class TraktSettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun removeDismissedNextUpKeysForContent(contentId: String) {
+        if (contentId.isBlank()) return
+        val prefix = "${contentId.trim()}|"
+        store().edit { prefs ->
+            val current = prefs[dismissedNextUpKeysKey] ?: emptySet()
+            val filtered = current.filterNot { it.startsWith(prefix) }
+            if (filtered.size != current.size) {
+                prefs[dismissedNextUpKeysKey] = filtered.toSet()
+            }
+        }
+    }
+
     suspend fun setShowUnairedNextUp(enabled: Boolean) {
         store().edit { prefs ->
             prefs[showUnairedNextUpKey] = enabled

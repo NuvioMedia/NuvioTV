@@ -540,6 +540,17 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
         }
     val desiredMovieKeys = allMovieItemsByKey.keys
 
+    val allSeriesItemsByKey = linkedMapOf<String, String>()
+    rows.asSequence()
+        .flatMap { row -> row.items.asSequence() }
+        .filter { it.apiType.equals("series", ignoreCase = true) || it.apiType.equals("tv", ignoreCase = true) }
+        .forEach { item ->
+            val key = homeItemStatusKey(item.id, item.apiType)
+            if (key !in allSeriesItemsByKey) {
+                allSeriesItemsByKey[key] = item.id
+            }
+        }
+
     posterLibraryObserverJobs.keys
         .filterNot { it in desiredLibraryKeys }
         .forEach { staleKey ->
@@ -580,15 +591,18 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
                 watchProgressRepository.observeWatchedMovieIds()
                     .collectLatest { watchedIds ->
                         _uiState.update { state ->
-                            val newStatus = buildMap {
+                            val movieStatus = buildMap {
                                 allMovieItemsByKey.forEach { (statusKey, contentId) ->
                                     put(statusKey, contentId in watchedIds)
                                 }
                             }
-                            if (state.movieWatchedStatus == newStatus) {
+                            // Merge with existing status to preserve series entries.
+                            val merged = state.movieWatchedStatus
+                                .filterKeys { it !in desiredMovieKeys } + movieStatus
+                            if (state.movieWatchedStatus == merged) {
                                 state
                             } else {
-                                state.copy(movieWatchedStatus = newStatus)
+                                state.copy(movieWatchedStatus = merged)
                             }
                         }
                     }
@@ -596,11 +610,34 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
         }
     }
 
+    // Update series watched status from CW pipeline's fully-watched resolution.
+    // This piggybacks on the meta lookups CW already performs — no extra network calls.
+    if (allSeriesItemsByKey.isNotEmpty()) {
+        seriesWatchedObserverJob?.cancel()
+        seriesWatchedObserverJob = viewModelScope.launch {
+            fullyWatchedSeriesIds.fullyWatchedSeriesIds.collectLatest { fullyWatched ->
+                val seriesStatus = buildMap {
+                    allSeriesItemsByKey.forEach { (statusKey, contentId) ->
+                        put(statusKey, contentId in fullyWatched)
+                    }
+                }
+                _uiState.update { state ->
+                    // Merge with existing status to preserve movie entries.
+                    val merged = state.movieWatchedStatus
+                        .filterKeys { it !in allSeriesItemsByKey.keys } + seriesStatus
+                    if (state.movieWatchedStatus == merged) state
+                    else state.copy(movieWatchedStatus = merged)
+                }
+            }
+        }
+    } else {
+        seriesWatchedObserverJob?.cancel()
+        seriesWatchedObserverJob = null
+    }
+
     _uiState.update { state ->
         val trimmedLibraryMembership =
             state.posterLibraryMembership.filterKeys { it in desiredLibraryKeys }
-        val trimmedMovieWatchedStatus =
-            state.movieWatchedStatus.filterKeys { it in desiredMovieKeys }
         val trimmedLibraryPending =
             state.posterLibraryPending.filterTo(linkedSetOf()) { it in desiredLibraryKeys }
         val trimmedMovieWatchedPending =
@@ -608,7 +645,6 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
 
         if (
             trimmedLibraryMembership == state.posterLibraryMembership &&
-            trimmedMovieWatchedStatus == state.movieWatchedStatus &&
             trimmedLibraryPending == state.posterLibraryPending &&
             trimmedMovieWatchedPending == state.movieWatchedPending
         ) {
@@ -616,7 +652,6 @@ internal fun HomeViewModel.reconcilePosterStatusObserversPipeline(rows: List<Cat
         } else {
             state.copy(
                 posterLibraryMembership = trimmedLibraryMembership,
-                movieWatchedStatus = trimmedMovieWatchedStatus,
                 posterLibraryPending = trimmedLibraryPending,
                 movieWatchedPending = trimmedMovieWatchedPending
             )

@@ -41,6 +41,7 @@ import com.nuvio.tv.ui.screens.cast.CastDetailScreen
 import com.nuvio.tv.ui.screens.profile.ProfileSelectionMode
 import com.nuvio.tv.ui.screens.profile.ProfileSelectionScreen
 import com.nuvio.tv.ui.screens.tmdb.TmdbEntityBrowseScreen
+import com.nuvio.tv.ui.screens.home.HeroBackdropState
 
 @Composable
 fun NuvioNavHost(
@@ -170,7 +171,15 @@ fun NuvioNavHost(
 
             HomeScreen(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
-                    navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
+                    val heroBackdrop = HeroBackdropState.currentHeroBackdropUrl
+                    navController.navigate(
+                        Screen.Detail.createRoute(
+                            itemId = itemId,
+                            itemType = itemType,
+                            addonBaseUrl = addonBaseUrl,
+                            heroBackdropUrl = heroBackdrop
+                        )
+                    )
                 },
                 onContinueWatchingClick = { item ->
                     navController.navigate(createContinueWatchingRoute(item))
@@ -215,6 +224,11 @@ fun NuvioNavHost(
                     type = NavType.StringType
                     nullable = true
                     defaultValue = "false"
+                },
+                navArgument("heroBackdropUrl") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
                 }
             )
         ) { backStackEntry ->
@@ -229,9 +243,11 @@ fun NuvioNavHost(
             val returnFocusEpisode by savedState.getStateFlow(
                 "returnFocusEpisode", detailArgs?.getString("returnFocusEpisode")?.toIntOrNull()
             ).collectAsState()
+            val heroBackdropUrl = detailArgs?.getString("heroBackdropUrl")?.takeIf { it.isNotBlank() }
             MetaDetailsScreen(
                 returnFocusSeason = returnFocusSeason,
                 returnFocusEpisode = returnFocusEpisode,
+                heroBackdropUrl = heroBackdropUrl,
                 onBackPress = {
                     if (returnToHomeOnBack) {
                         val popped = navController.popBackStack(Screen.Home.route, inclusive = false)

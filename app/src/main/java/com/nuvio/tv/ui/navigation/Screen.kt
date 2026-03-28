@@ -4,7 +4,7 @@ import java.net.URLEncoder
 
 sealed class Screen(val route: String) {
     data object Home : Screen("home")
-    data object Detail : Screen("detail/{itemId}/{itemType}?addonBaseUrl={addonBaseUrl}&returnFocusSeason={returnFocusSeason}&returnFocusEpisode={returnFocusEpisode}&returnToHomeOnBack={returnToHomeOnBack}") {
+    data object Detail : Screen("detail/{itemId}/{itemType}?addonBaseUrl={addonBaseUrl}&returnFocusSeason={returnFocusSeason}&returnFocusEpisode={returnFocusEpisode}&returnToHomeOnBack={returnToHomeOnBack}&heroBackdropUrl={heroBackdropUrl}") {
         private fun encode(value: String): String =
             URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 
@@ -14,12 +14,14 @@ sealed class Screen(val route: String) {
             addonBaseUrl: String? = null,
             returnFocusSeason: Int? = null,
             returnFocusEpisode: Int? = null,
-            returnToHomeOnBack: Boolean = false
+            returnToHomeOnBack: Boolean = false,
+            heroBackdropUrl: String? = null
         ): String {
             val encodedItemId = encode(itemId)
             val encodedItemType = encode(itemType)
             val encodedAddon = addonBaseUrl?.let { encode(it) } ?: ""
-            return "detail/$encodedItemId/$encodedItemType?addonBaseUrl=$encodedAddon&returnFocusSeason=${returnFocusSeason ?: ""}&returnFocusEpisode=${returnFocusEpisode ?: ""}&returnToHomeOnBack=$returnToHomeOnBack"
+            val encodedHeroBackdrop = heroBackdropUrl?.let { encode(it) } ?: ""
+            return "detail/$encodedItemId/$encodedItemType?addonBaseUrl=$encodedAddon&returnFocusSeason=${returnFocusSeason ?: ""}&returnFocusEpisode=${returnFocusEpisode ?: ""}&returnToHomeOnBack=$returnToHomeOnBack&heroBackdropUrl=$encodedHeroBackdrop"
         }
     }
     data object Stream : Screen("stream/{videoId}/{contentType}/{title}?poster={poster}&backdrop={backdrop}&logo={logo}&season={season}&episode={episode}&episodeName={episodeName}&genres={genres}&year={year}&contentId={contentId}&contentName={contentName}&runtime={runtime}&manualSelection={manualSelection}&returnToDetailOnBack={returnToDetailOnBack}&returnToHomeOnBack={returnToHomeOnBack}&startFromBeginning={startFromBeginning}") {

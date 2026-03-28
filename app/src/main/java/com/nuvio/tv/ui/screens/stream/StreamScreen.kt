@@ -622,6 +622,7 @@ private fun AddonFilterChips(
 ) {
     val chipMap = sourceChips.associateBy { it.name }
     var chipRowHasFocus by remember { mutableStateOf(false) }
+    val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
@@ -629,6 +630,14 @@ private fun AddonFilterChips(
             .onFocusChanged { chipRowHasFocus = it.hasFocus }
             .onKeyEvent { event ->
                 if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) return@onKeyEvent false
+
+                // Throttle rapid key repeats (long-press)
+                if (event.nativeKeyEvent.repeatCount > 0) {
+                    val now = android.os.SystemClock.uptimeMillis()
+                    if (now - lastKeyRepeatDispatchRef.get() < 112L) return@onKeyEvent true
+                    lastKeyRepeatDispatchRef.set(now)
+                }
+
                 val allOptions = listOf<String?>(null) + orderedNames
                 val currentIdx = allOptions.indexOf(selectedAddon)
                 when (event.key) {
@@ -775,6 +784,7 @@ private fun StreamsList(
     onFocusChanged: (Boolean) -> Unit = {}
 ) {
     val firstCardFocusRequester = remember { FocusRequester() }
+    val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
     val restoreFocusRequester = remember { FocusRequester() }
     val firstStreamKey = streams.firstOrNull()?.let { first ->
         "${first.addonName}_${first.url ?: first.infoHash ?: first.ytId ?: "unknown"}"
@@ -811,6 +821,13 @@ private fun StreamsList(
             .onFocusChanged { onFocusChanged(it.hasFocus) }
             .onKeyEvent { event ->
                 if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
+
+                // Throttle rapid key repeats (long-press)
+                if (event.nativeKeyEvent.repeatCount > 0) {
+                    val now = android.os.SystemClock.uptimeMillis()
+                    if (now - lastKeyRepeatDispatchRef.get() < 112L) return@onKeyEvent true
+                    lastKeyRepeatDispatchRef.set(now)
+                }
                 if (availableAddons.isEmpty()) return@onKeyEvent false
                 val allOptions = listOf<String?>(null) + availableAddons
                 val currentIdx = allOptions.indexOf(selectedAddonFilter)

@@ -93,6 +93,8 @@ fun SearchScreen(
     onOpenDiscover: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val watchedMovieIds by viewModel.watchedMovieIds.collectAsState()
+    val watchedSeriesIds by viewModel.watchedSeriesIds.collectAsState()
     val context = LocalContext.current
     val view = LocalView.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -529,6 +531,10 @@ fun SearchScreen(
                                 showAddonName = uiState.catalogAddonNameEnabled,
                                 showCatalogTypeSuffix = uiState.catalogTypeSuffixEnabled,
                                 enableRowFocusRestorer = false,
+                                isItemWatched = { item ->
+                                    val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
+                                    if (isSeries) item.id in watchedSeriesIds else item.id in watchedMovieIds
+                                },
                                 focusedItemIndex = if (focusResults && index == 0) 0 else -1,
                                 onItemFocused = {
                                     if (focusResults) {

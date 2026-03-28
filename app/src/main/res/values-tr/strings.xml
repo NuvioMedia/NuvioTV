@@ -205,6 +205,23 @@
     <string name="settings_playback_subtitle">Oynatıcı, altyazılar ve otomatik oynatma.</string>
     <string name="settings_trakt_subtitle">Trakt bağlantı ekranını aç.</string>
     <string name="settings_about_subtitle">Sürüm ve politikalar.</string>
+    <string name="settings_network">Ağ Hızı</string>
+    <string name="settings_network_subtitle">Gecikme ve indirme hızı testleri</string>
+    <string name="settings_advanced">Gelişmiş</string>
+    <string name="settings_advanced_subtitle">Ağ hızı tanılaması çalıştır</string>
+    <string name="network_speed_test_run">Hız Testi Başlat</string>
+    <string name="network_speed_test_running">Hız Testi Çalışıyor</string>
+    <string name="network_speed_test_subtitle">İndirme hızını ve gecikmeyi ölç</string>
+    <string name="network_testing_latency">Gecikme ölçülüyor</string>
+    <string name="network_testing_download">İndirme hızı ölçülüyor</string>
+    <string name="network_results_title">Sonuçlar</string>
+    <string name="network_latency_label">Gecikme</string>
+    <string name="network_download_label">İndirme</string>
+    <string name="network_error_prefix">Hata: %1$s</string>
+    <string name="network_powered_by_fast">fast.com tarafından desteklenmektedir</string>
+    <string name="network_connection_wifi">Wi-Fi</string>
+    <string name="network_connection_ethernet">Ethernet</string>
+    <string name="network_connection_offline">Çevrimdışı</string>
     <string name="settings_debug">Hata Ayıklama</string>
     <string name="settings_debug_subtitle">Geliştirici araçları ve özellik bayrakları.</string>
     <string name="settings_plugins_section_subtitle">Depoları, sağlayıcıları ve eklenti durumlarını yönetin.</string>
@@ -682,6 +699,38 @@
     <string name="profile_cancel">Vazgeç</string>
     <string name="profile_save">Değişiklikleri Kaydet</string>
 
+    <string name="profile_pin_title">Profil PIN Kilidi</string>
+    <string name="profile_pin_enabled_subtitle">Bu profili açmadan önce 4 haneli PIN girmek gerekiyor.</string>
+    <string name="profile_pin_disabled_subtitle">Bu profili kilitlemek için 4 haneli bir PIN belirleyin.</string>
+    <string name="profile_pin_set">PIN Belirle</string>
+    <string name="profile_pin_change">PIN Değiştir</string>
+    <string name="profile_pin_remove">PIN Kaldır</string>
+    <string name="profile_pin_set_title">Profil PIN Ayarla</string>
+    <string name="profile_pin_set_subtitle">4 haneli bir PIN girin ve onaylayın.</string>
+    <string name="profile_pin_enter">4 haneli PIN girin</string>
+    <string name="profile_pin_confirm">4 haneli PIN onaylayın</string>
+    <string name="profile_pin_mismatch">PINler eşleşmiyor.</string>
+    <string name="profile_pin_save">PIN Kaydet</string>
+    <string name="profile_pin_unlock_title">%1$s kilidini aç</string>
+    <string name="profile_pin_unlock_subtitle">Devam etmek için 4 haneli PIN girin.</string>
+    <string name="profile_pin_verifying">Doğrulanıyor…</string>
+    <string name="profile_pin_unlock_action">Kilidi Aç</string>
+    <string name="profile_pin_overlay_unlock_heading">%1$s profiline girmek için PIN girin.</string>
+    <string name="profile_pin_overlay_set_heading">%1$s için 4 haneli PIN oluşturun.</string>
+    <string name="profile_pin_overlay_confirm_heading">Yeni PIN onaylayın.</string>
+    <string name="profile_pin_overlay_unlock_support">Girmek için uzaktan kumanda veya klavyenizi kullanın.</string>
+    <string name="profile_pin_overlay_change_verify_kicker">Güvenlik doğrulaması gerekiyor.</string>
+    <string name="profile_pin_overlay_change_verify_heading">%1$s profilinin PINini değiştirmek için mevcut PIN girin.</string>
+    <string name="profile_pin_overlay_change_verify_support">Yeni PIN belirlemeden önce mevcut 4 haneli PIN girin.</string>
+    <string name="profile_pin_overlay_remove_verify_kicker">Güvenlik doğrulaması gerekiyor.</string>
+    <string name="profile_pin_overlay_remove_verify_heading">%1$s profilinin kilidini kaldırmak için mevcut PIN girin.</string>
+    <string name="profile_pin_overlay_remove_verify_support">Kilidi kaldırmak için mevcut 4 haneli PIN girin.</string>
+    <string name="profile_pin_overlay_set_support">Bu PIN, profil açılmadan önce her seferinde istenecek.</string>
+    <string name="profile_pin_overlay_confirm_support">Kurulumu tamamlamak için aynı 4 rakamı tekrar girin.</string>
+    <string name="profile_pin_overlay_mismatch">PINler eşleşmedi. Tekrar deneyin.</string>
+    <string name="profile_pin_overlay_forgot_hint">PIN mi unuttunuz? Nuvio web sitesinden sıfırlayabilirsiniz.</string>
+    <string name="profile_pin_overlay_back_hint">İptal etmek için geri tuşuna basın</string>
+
 
     <!-- AddonManagerScreen -->
     <string name="addon_title">Eklentiler</string>
@@ -756,6 +805,26 @@
     <string name="player_more_speed">Oynatma Hızı</string>
     <string name="player_more_aspect_ratio">Görüntü Oranı</string>
     <string name="player_more_open_external">Harici Oynatıcıda Aç</string>
+
+    <!-- StreamInfoOverlay -->
+    <string name="stream_info_section_source">KAYNAK</string>
+    <string name="stream_info_section_file">DOSYA</string>
+    <string name="stream_info_section_video">VİDEO</string>
+    <string name="stream_info_section_audio">SES</string>
+    <string name="stream_info_section_subtitle">ALTYAZI</string>
+    <string name="stream_info_filename">Dosya Adı</string>
+    <string name="stream_info_size">Boyut</string>
+    <string name="stream_info_codec">Kodek</string>
+    <string name="stream_info_resolution">Çözünürlük</string>
+    <string name="stream_info_frame_rate">Kare Hızı</string>
+    <string name="stream_info_bitrate">Bit Hızı</string>
+    <string name="stream_info_channels">Kanallar</string>
+    <string name="stream_info_sample_rate">Örnekleme Hızı</string>
+    <string name="stream_info_language">Dil</string>
+    <string name="stream_info_name">Ad</string>
+    <string name="stream_info_source">Kaynak</string>
+    <string name="stream_info_subtitle_source_addon">Eklenti</string>
+    <string name="stream_info_subtitle_source_embedded">Gömülü</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Kaynaklar</string>
@@ -864,9 +933,40 @@
     <!-- LibraryScreen -->
     <string name="library_syncing">Trakt kütüphanesi senkronize ediliyor\u2026</string>
     <string name="library_title">Kütüphane</string>
-    <string name="library_filter_list">Yalnızca Liste</string>
-    <string name="library_filter_type">Kategori</string>
+    <string name="library_filter_list">Liste</string>
+    <string name="library_filter_type">Tür</string>
     <string name="library_filter_sort">Sırala</string>
+    <string name="library_filter_genre">Kategori</string>
+    <string name="library_filter_year">Yıl</string>
+    <!-- Tür isimleri (TMDB film + dizi) -->
+    <string name="genre_action">Aksiyon</string>
+    <string name="genre_adventure">Macera</string>
+    <string name="genre_animation">Animasyon</string>
+    <string name="genre_comedy">Komedi</string>
+    <string name="genre_crime">Suç</string>
+    <string name="genre_documentary">Belgesel</string>
+    <string name="genre_drama">Dram</string>
+    <string name="genre_family">Aile</string>
+    <string name="genre_fantasy">Fantastik</string>
+    <string name="genre_history">Tarih</string>
+    <string name="genre_horror">Korku</string>
+    <string name="genre_music">Müzik</string>
+    <string name="genre_mystery">Gizem</string>
+    <string name="genre_romance">Romantik</string>
+    <string name="genre_science_fiction">Bilim Kurgu</string>
+    <string name="genre_tv_movie">TV Filmi</string>
+    <string name="genre_thriller">Gerilim</string>
+    <string name="genre_war">Savaş</string>
+    <string name="genre_western">Vahşi Batı</string>
+    <!-- Dizi'ye özgü türler -->
+    <string name="genre_action_adventure">Aksiyon &amp; Macera</string>
+    <string name="genre_kids">Çocuk</string>
+    <string name="genre_news">Haber</string>
+    <string name="genre_reality">Reality</string>
+    <string name="genre_sci_fi_fantasy">Bilim Kurgu &amp; Fantastik</string>
+    <string name="genre_soap">Pembe Dizi</string>
+    <string name="genre_talk">Talk Show</string>
+    <string name="genre_war_politics">Savaş &amp; Siyaset</string>
     <string name="library_sort_trakt_order">Trakt Sıralaması</string>
     <string name="library_sort_added_desc">En Son Eklenenler</string>
     <string name="library_sort_added_asc">İlk Eklenenler</string>
@@ -888,6 +988,9 @@
     <string name="library_delete_subtitle">Bu işlem listeyi ve içindeki tüm öğeleri Trakt hesabınızdan kaldırır.</string>
     <string name="library_delete_confirm">Sil</string>
     <string name="library_source_local">YEREL</string>
+    <string name="library_source_nuvio">NUVİO</string>
+    <string name="library_source_trakt">TRAKT</string>
+    <string name="library_syncing_library">Kütüphane senkronize ediliyor\u2026</string>
     <string name="library_type_all">Tümü</string>
     <string name="library_type_items">içerik bulundu</string>
     <string name="library_empty_local_title">Henüz içerik eklemediniz</string>
@@ -986,8 +1089,8 @@
     <string name="profile_saving">Kaydediliyor\u2026</string>
 
     <!-- CastDetailScreen -->
-    <string name="cast_detail_error">İçerik çekilirken bilinmeyen bir sorun ile karşılaşıldı.</string>
-    <string name="cast_detail_retry">Hata oluştu! Tekrar Dene</string>
+    <string name="cast_detail_error">Bir şeyler ters gitti.</string>
+    <string name="cast_detail_retry">Tekrar Dene</string>
     <string name="cast_detail_filmography">Yapımları ve Filmografisi</string>
     <string name="cast_detail_born">Doğum: %1$s</string>
     <string name="cast_detail_born_died">Doğum: %1$s — †%2$s</string>
@@ -1019,9 +1122,9 @@
     <string name="account_unlink">Bağlantıyı Kes</string>
 
     <!-- EpisodeRatingsSection -->
-    <string name="ratings_loading">Kullanıcı geri dönüşü verisi sunucu merkezine ulaşıyor.</string>
-    <string name="ratings_unavailable">Bu bölüm tablosu için harici Puan formatı bulunmamaktadır.</string>
-    <string name="ratings_load_error">Bölümün çevrimiçi puanlarına ulaşılamadı.</string>
+    <string name="ratings_loading">Bölüm puanları yükleniyor...</string>
+    <string name="ratings_unavailable">Bölüm puanları mevcut değil.</string>
+    <string name="ratings_load_error">Bölüm puanları yüklenemedi.</string>
     <string name="ratings_season_summary">Sezon %1$d | %2$d Bölüm</string>
 
     <!-- SearchDiscoverSection -->

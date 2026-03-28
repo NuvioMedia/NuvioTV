@@ -651,9 +651,13 @@ private fun SubtitleLanguageCard(
             Text(
                 text = item.label,
                 style = MaterialTheme.typography.bodyLarge,
-                color = textColor
+                color = textColor,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
             )
             if (item.count > 0) {
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(6.dp))
                 CountBadge(count = item.count, selected = isSelected)
             }
         }
@@ -1156,7 +1160,7 @@ private fun buildSubtitleLanguageRailItems(
 ): List<SubtitleLanguageRailItem> {
     val counts = linkedMapOf<String, Int>()
     internalTracks.forEach { track ->
-        val key = normalizeOverlayLanguageKey(track.language)
+        val key = normalizeOverlayLanguageKeyForTrack(track)
         counts[key] = (counts[key] ?: 0) + 1
     }
     addonSubtitles.forEach { subtitle ->
@@ -1226,7 +1230,7 @@ private fun buildSubtitleOptionRailItems(
 
     val addonOrderMap = installedAddonOrder.withIndex().associate { (index, name) -> name to index }
     val internalItems = internalTracks
-        .filter { normalizeOverlayLanguageKey(it.language) == selectedLanguageKey }
+        .filter { normalizeOverlayLanguageKeyForTrack(it) == selectedLanguageKey }
         .map { track ->
             SubtitleOptionRailItem(
                 id = "internal:${track.index}",
@@ -1277,11 +1281,9 @@ private fun selectedSubtitleLanguageKey(
 
     val selectedInternalKey = internalTracks
         .firstOrNull { it.index == selectedInternalIndex }
-        ?.language
-        ?.let(::normalizeOverlayLanguageKey)
+        ?.let { normalizeOverlayLanguageKeyForTrack(it) }
         ?: internalTracks.firstOrNull { it.isSelected }
-            ?.language
-        ?.let(::normalizeOverlayLanguageKey)
+            ?.let { normalizeOverlayLanguageKeyForTrack(it) }
     if (selectedInternalKey != null) return selectedInternalKey
 
     return SubtitleOffLanguageKey
@@ -1289,9 +1291,30 @@ private fun selectedSubtitleLanguageKey(
 
 private fun normalizeOverlayLanguageKey(language: String?): String {
     if (language.isNullOrBlank()) return SubtitleUnknownLanguageKey
-    return when (PlayerSubtitleUtils.normalizeLanguageCode(language)) {
-        "pt-br" -> "pt-br"
-        else -> PlayerSubtitleUtils.normalizeLanguageCode(language)
+    val normalized = PlayerSubtitleUtils.normalizeLanguageCode(language)
+    return when (normalized) {
+        "pt-br", "es-419" -> normalized
+        else -> normalized
+            .substringBefore('-')
+            .substringBefore('_')
+            .ifBlank { SubtitleUnknownLanguageKey }
+    }
+}
+
+/**
+ * Variant-aware language key for embedded tracks. Inspects name/label/trackId
+ * to detect regional accents (e.g. Brazilian Portuguese, Latin American Spanish)
+ * even when the language field is generic ("por", "spa").
+ */
+private fun normalizeOverlayLanguageKeyForTrack(track: TrackInfo): String {
+    val variant = PlayerSubtitleUtils.detectTrackLanguageVariant(
+        language = track.language,
+        name = track.name,
+        trackId = track.trackId
+    )
+    return when (variant) {
+        "pt-br", "es-419" -> variant
+        else -> variant
             .substringBefore('-')
             .substringBefore('_')
             .ifBlank { SubtitleUnknownLanguageKey }
