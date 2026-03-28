@@ -53,7 +53,7 @@
     <string name="cw_new_episode">Nouvel Épisode</string>
     <string name="cw_new_season">Nouvelle Saison</string>
     <string name="cw_resume">Reprendre</string>
-    <string name="cw_percent_watched">%1$d%% regardé</string>
+    <string name="cw_percent_watched">%1$d%% visionné</string>
     <string name="cw_hours_min_left">%1$dh %2$dm restantes</string>
     <string name="cw_min_left">%1$dm restantes</string>
     <string name="cw_almost_done">Presque terminé</string>
@@ -124,6 +124,8 @@
     <string name="cast_role_writer">Scénariste</string>
     <string name="detail_tab_ratings">Notes</string>
     <string name="detail_tab_more_like_this">Similaires</string>
+    <string name="detail_more_like_this_powered_by_tmdb">Propulsé par TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">Propulsé par Trakt</string>
     <string name="detail_comments_title">Commentaires</string>
     <string name="detail_comments_subtitle">Critiques de Trakt</string>
     <string name="detail_section_network">Chaîne</string>
@@ -807,6 +809,26 @@
     <string name="player_more_aspect_ratio">Format d\'image</string>
     <string name="player_more_open_external">Ouvrir dans un lecteur externe</string>
 
+    <!-- StreamInfoOverlay -->
+    <string name="stream_info_section_source">SOURCE</string>
+    <string name="stream_info_section_file">FICHIER</string>
+    <string name="stream_info_section_video">VIDÉO</string>
+    <string name="stream_info_section_audio">AUDIO</string>
+    <string name="stream_info_section_subtitle">SOUS-TITRE</string>
+    <string name="stream_info_filename">Nom du fichier</string>
+    <string name="stream_info_size">Taille</string>
+    <string name="stream_info_codec">Codec</string>
+    <string name="stream_info_resolution">Résolution</string>
+    <string name="stream_info_frame_rate">Fréquence d\'images</string>
+    <string name="stream_info_bitrate">Débit binaire</string>
+    <string name="stream_info_channels">Canaux</string>
+    <string name="stream_info_sample_rate">Fréquence d\'échantillonnage</string>
+    <string name="stream_info_language">Language</string>
+    <string name="stream_info_name">Nom</string>
+    <string name="stream_info_source">Source</string>
+    <string name="stream_info_subtitle_source_addon">Addon</string>
+    <string name="stream_info_subtitle_source_embedded">Intégré</string>
+
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Sources</string>
     <string name="sources_reload">Recharger</string>
@@ -896,7 +918,7 @@
     <string name="skip_ending">Passer les crédits</string>
     <string name="skip_recap">Passer le résumé</string>
     <string name="skip_generic">Passer</string>
-    <string name="display_mode_refresh">Fréquence d\'image</string>
+    <string name="display_mode_refresh">Rafraîchissement</string>
     <string name="display_mode_resolution">Resolution</string>
 
 
@@ -917,6 +939,37 @@
     <string name="library_filter_list">Liste</string>
     <string name="library_filter_type">Type</string>
     <string name="library_filter_sort">Tri</string>
+    <string name="library_filter_genre">Genre</string>
+    <string name="library_filter_year">Année</string>
+    <!-- Genre names (from TMDB movie + TV) -->
+    <string name="genre_action">Action</string>
+    <string name="genre_adventure">Aventure</string>
+    <string name="genre_animation">Animation</string>
+    <string name="genre_comedy">Comédie</string>
+    <string name="genre_crime">Policier</string>
+    <string name="genre_documentary">Documentaire</string>
+    <string name="genre_drama">Drame</string>
+    <string name="genre_family">Famille</string>
+    <string name="genre_fantasy">Fantastique</string>
+    <string name="genre_history">Histoire</string>
+    <string name="genre_horror">Horreur</string>
+    <string name="genre_music">Musique</string>
+    <string name="genre_mystery">Mystère</string>
+    <string name="genre_romance">Romance</string>
+    <string name="genre_science_fiction">Science-fiction</string>
+    <string name="genre_tv_movie">Téléfilm</string>
+    <string name="genre_thriller">Thriller</string>
+    <string name="genre_war">Guerre</string>
+    <string name="genre_western">Western</string>
+    <!-- TV-specific genres -->
+    <string name="genre_action_adventure">Action et Aventure</string>
+    <string name="genre_kids">Jeunesse</string>
+    <string name="genre_news">Information</string>
+    <string name="genre_reality">Téléréalité</string>
+    <string name="genre_sci_fi_fantasy">SF et Fantastique</string>
+    <string name="genre_soap">Soap</string>
+    <string name="genre_talk">Talk-show</string>
+    <string name="genre_war_politics">Guerre et Politique</string>
     <string name="library_sort_trakt_order">Ordre Trakt</string>
     <string name="library_sort_added_desc">Ajoutés ↓</string>
     <string name="library_sort_added_asc">Ajoutés ↑</string>
@@ -938,6 +991,9 @@
     <string name="library_delete_subtitle">Cela supprime la liste et tous ses éléments de Trakt.</string>
     <string name="library_delete_confirm">Supprimer</string>
     <string name="library_source_local">LOCAL</string>
+    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_trakt">TRAKT</string>
+    <string name="library_syncing_library">Synchronisation de la bibliothèque\u2026</string>
     <string name="library_type_all">Tout</string>
     <string name="library_type_items">éléments</string>
     <string name="library_empty_local_title">Aucun %1$s pour le moment</string>
