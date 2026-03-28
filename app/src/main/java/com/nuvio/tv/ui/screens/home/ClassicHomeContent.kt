@@ -61,7 +61,8 @@ fun ClassicHomeContent(
     onItemFocus: (MetaPreview) -> Unit = {},
     onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit,
     onSurpriseMe: () -> Unit = {},
-    isSurpriseMeLoading: Boolean = false
+    isSurpriseMeLoading: Boolean = false,
+    showSurpriseMeButton: Boolean = true
 ) {
 
     // Nested prefetch: when LazyColumn prefetches a row ahead of scrolling,
@@ -236,12 +237,14 @@ fun ClassicHomeContent(
             }
         }
 
-        item(key = "surprise_me", contentType = "surprise_me") {
-            SurpriseMeButton(
-                onClick = onSurpriseMe,
-                isLoading = isSurpriseMeLoading,
-                modifier = Modifier.padding(horizontal = 48.dp)
-            )
+        if (showSurpriseMeButton) {
+            item(key = "surprise_me", contentType = "surprise_me") {
+                SurpriseMeButton(
+                    onClick = onSurpriseMe,
+                    isLoading = isSurpriseMeLoading,
+                    modifier = Modifier.padding(horizontal = 48.dp)
+                )
+            }
         }
 
         itemsIndexed(

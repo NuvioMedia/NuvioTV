@@ -452,6 +452,10 @@
     <string name="layout_show_hero_sub">Display hero carousel at top of home.</string>
     <string name="layout_show_discover">Show Discover in Search</string>
     <string name="layout_show_discover_sub">Show browse section when search is empty.</string>
+    <string name="surprise_me">Surprise Me</string>
+    <string name="surprise_me_loading">Finding something…</string>
+    <string name="layout_show_surprise_me">Show Surprise Me Button</string>
+    <string name="layout_show_surprise_me_sub">Display a button on the home screen to pick a random title.</string>
     <string name="layout_poster_labels">Show Poster Labels</string>
     <string name="layout_poster_labels_sub">Show titles under posters in rows, grid, and see-all.</string>
     <string name="layout_addon_name">Show Addon Name</string>

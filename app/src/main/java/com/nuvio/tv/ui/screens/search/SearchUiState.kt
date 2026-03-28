@@ -32,7 +32,8 @@ data class SearchUiState(
     val posterCardHeightDp: Int = 189,
     val posterCardCornerRadiusDp: Int = 12,
     val suggestions: List<String> = emptyList(),
-    val isSurpriseMeLoading: Boolean = false
+    val isSurpriseMeLoading: Boolean = false,
+    val showSurpriseMeButton: Boolean = true
 )
 
 @Immutable

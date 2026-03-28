@@ -81,7 +81,8 @@ fun GridHomeContent(
     onItemFocus: (com.nuvio.tv.domain.model.MetaPreview) -> Unit = {},
     onSaveGridFocusState: (Int, Int) -> Unit,
     onSurpriseMe: () -> Unit = {},
-    isSurpriseMeLoading: Boolean = false
+    isSurpriseMeLoading: Boolean = false,
+    showSurpriseMeButton: Boolean = true
 ) {
     val gridState = rememberLazyGridState(
         initialFirstVisibleItemIndex = gridFocusState.verticalScrollIndex,
@@ -284,11 +285,13 @@ fun GridHomeContent(
                                 span = { GridItemSpan(maxLineSpan) },
                                 contentType = "surprise_me"
                             ) {
-                                SurpriseMeButton(
-                                    onClick = onSurpriseMe,
-                                    isLoading = isSurpriseMeLoading,
-                                    modifier = Modifier.padding(horizontal = 24.dp)
-                                )
+                                if (showSurpriseMeButton) {
+                                    SurpriseMeButton(
+                                        onClick = onSurpriseMe,
+                                        isLoading = isSurpriseMeLoading,
+                                        modifier = Modifier.padding(horizontal = 24.dp)
+                                    )
+                                }
                             }
                         }
 

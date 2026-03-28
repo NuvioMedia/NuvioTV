@@ -66,6 +66,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val modernHeroFullScreenBackdropKey = booleanPreferencesKey("modern_hero_full_screen_backdrop")
     private val hideUnreleasedContentKey = booleanPreferencesKey("hide_unreleased_content")
     private val showFullReleaseDateKey = booleanPreferencesKey("show_full_release_date")
+    private val showSurpriseMeButtonKey = booleanPreferencesKey("show_surprise_me_button")
 
     private fun <T> profileFlow(extract: (prefs: androidx.datastore.preferences.core.Preferences) -> T): Flow<T> =
         profileManager.activeProfileId.flatMapLatest { pid ->
@@ -216,6 +217,10 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     val showFullReleaseDate: Flow<Boolean> = profileFlow { prefs ->
         prefs[showFullReleaseDateKey] ?: true
+    }
+
+    val showSurpriseMeButton: Flow<Boolean> = profileFlow { prefs ->
+        prefs[showSurpriseMeButtonKey] ?: true
     }
 
     suspend fun setLayout(layout: HomeLayout) {
@@ -430,6 +435,12 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setShowFullReleaseDate(enabled: Boolean) {
         store().edit { prefs ->
             prefs[showFullReleaseDateKey] = enabled
+        }
+    }
+
+    suspend fun setShowSurpriseMeButton(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[showSurpriseMeButtonKey] = enabled
         }
     }
 

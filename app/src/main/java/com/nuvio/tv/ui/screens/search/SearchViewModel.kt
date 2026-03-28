@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
@@ -125,6 +126,13 @@ class SearchViewModel @Inject constructor(
                 hideUnreleasedContent = enabled
                 scheduleCatalogRowsUpdate()
             }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.showSurpriseMeButton
+                .distinctUntilChanged()
+                .collectLatest { enabled ->
+                    _uiState.update { it.copy(showSurpriseMeButton = enabled) }
+                }
         }
     }
 

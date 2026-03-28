@@ -53,7 +53,8 @@ data class HomeUiState(
     val showFullReleaseDate: Boolean = true,
     val blurUnwatchedEpisodes: Boolean = false,
     val startupAuthNotice: StartupAuthNotice? = null,
-    val isSurpriseMeLoading: Boolean = false
+    val isSurpriseMeLoading: Boolean = false,
+    val showSurpriseMeButton: Boolean = true
 )
 
 @Immutable

@@ -86,6 +86,7 @@ internal fun DiscoverSection(
     onLoadMore: () -> Unit,
     onSurpriseMe: () -> Unit = {},
     isSurpriseMeLoading: Boolean = false,
+    showSurpriseMeButton: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val selectedCatalog = uiState.discoverCatalogs.firstOrNull { it.key == uiState.selectedDiscoverCatalogKey }
@@ -178,10 +179,12 @@ internal fun DiscoverSection(
                 }
             )
 
-            SurpriseMeButton(
-                onClick = onSurpriseMe,
-                isLoading = isSurpriseMeLoading
-            )
+            if (showSurpriseMeButton) {
+                SurpriseMeButton(
+                    onClick = onSurpriseMe,
+                    isLoading = isSurpriseMeLoading
+                )
+            }
         }
 
         selectedCatalog?.let { catalog ->

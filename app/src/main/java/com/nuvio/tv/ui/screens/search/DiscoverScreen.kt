@@ -105,6 +105,7 @@ fun DiscoverScreen(
                 onLoadMore = { viewModel.onEvent(SearchEvent.LoadNextDiscoverResults) },
                 onSurpriseMe = { viewModel.onEvent(SearchEvent.SurpriseMe) },
                 isSurpriseMeLoading = uiState.isSurpriseMeLoading,
+                showSurpriseMeButton = uiState.showSurpriseMeButton,
                 modifier = Modifier.padding(top = 16.dp)
             )
         }

@@ -80,9 +80,11 @@ fun HomeScreen(
         )
     },
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = onContinueWatchingClick,
+    onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit = onContinueWatchingClick,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit = { _, _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val effectiveAutoplayEnabled by viewModel.effectiveAutoplayEnabled.collectAsStateWithLifecycle(initialValue = false)
     val hasCatalogContent = uiState.catalogRows.any { it.items.isNotEmpty() }
     var hasEnteredCatalogContent by rememberSaveable { mutableStateOf(false) }
     var showHomeContentWithAnimation by rememberSaveable { mutableStateOf(false) }
@@ -246,7 +248,8 @@ fun HomeScreen(
                                 isCatalogItemWatched = isCatalogItemWatched,
                                 onCatalogItemLongPress = onCatalogItemLongPress,
                                 onSurpriseMe = onSurpriseMe,
-                                isSurpriseMeLoading = uiState.isSurpriseMeLoading
+                                isSurpriseMeLoading = uiState.isSurpriseMeLoading,
+                                showSurpriseMeButton = uiState.showSurpriseMeButton
                             )
 
                             HomeLayout.GRID -> GridHomeRoute(
@@ -260,7 +263,8 @@ fun HomeScreen(
                                 isCatalogItemWatched = isCatalogItemWatched,
                                 onCatalogItemLongPress = onCatalogItemLongPress,
                                 onSurpriseMe = onSurpriseMe,
-                                isSurpriseMeLoading = uiState.isSurpriseMeLoading
+                                isSurpriseMeLoading = uiState.isSurpriseMeLoading,
+                                showSurpriseMeButton = uiState.showSurpriseMeButton
                             )
 
                             HomeLayout.MODERN -> ModernHomeRoute(
@@ -274,7 +278,8 @@ fun HomeScreen(
                                 isCatalogItemWatched = isCatalogItemWatched,
                                 onCatalogItemLongPress = onCatalogItemLongPress,
                                 onSurpriseMe = onSurpriseMe,
-                                isSurpriseMeLoading = uiState.isSurpriseMeLoading
+                                isSurpriseMeLoading = uiState.isSurpriseMeLoading,
+                                showSurpriseMeButton = uiState.showSurpriseMeButton
                             )
                         }
                     }
@@ -365,7 +370,8 @@ private fun ClassicHomeRoute(
     isCatalogItemWatched: (MetaPreview) -> Boolean,
     onCatalogItemLongPress: (MetaPreview, String) -> Unit,
     onSurpriseMe: () -> Unit,
-    isSurpriseMeLoading: Boolean
+    isSurpriseMeLoading: Boolean,
+    showSurpriseMeButton: Boolean
 ) {
     val focusState by viewModel.focusState.collectAsStateWithLifecycle()
     ClassicHomeContent(
@@ -393,7 +399,8 @@ private fun ClassicHomeRoute(
             viewModel.saveFocusState(vi, vo, ri, ii, m)
         },
         onSurpriseMe = onSurpriseMe,
-        isSurpriseMeLoading = isSurpriseMeLoading
+        isSurpriseMeLoading = isSurpriseMeLoading,
+        showSurpriseMeButton = showSurpriseMeButton
     )
 }
 
@@ -409,7 +416,8 @@ private fun GridHomeRoute(
     isCatalogItemWatched: (MetaPreview) -> Boolean,
     onCatalogItemLongPress: (MetaPreview, String) -> Unit,
     onSurpriseMe: () -> Unit,
-    isSurpriseMeLoading: Boolean
+    isSurpriseMeLoading: Boolean,
+    showSurpriseMeButton: Boolean
 ) {
     val gridFocusState by viewModel.gridFocusState.collectAsStateWithLifecycle()
     GridHomeContent(
@@ -432,7 +440,8 @@ private fun GridHomeRoute(
             viewModel.saveGridFocusState(vi, vo)
         },
         onSurpriseMe = onSurpriseMe,
-        isSurpriseMeLoading = isSurpriseMeLoading
+        isSurpriseMeLoading = isSurpriseMeLoading,
+        showSurpriseMeButton = showSurpriseMeButton
     )
 }
 
@@ -448,7 +457,8 @@ private fun ModernHomeRoute(
     isCatalogItemWatched: (MetaPreview) -> Boolean,
     onCatalogItemLongPress: (MetaPreview, String) -> Unit,
     onSurpriseMe: () -> Unit,
-    isSurpriseMeLoading: Boolean
+    isSurpriseMeLoading: Boolean,
+    showSurpriseMeButton: Boolean
 ) {
     val focusState by viewModel.focusState.collectAsStateWithLifecycle()
     val enrichingItemId by viewModel.enrichingItemId.collectAsStateWithLifecycle()
@@ -499,7 +509,8 @@ private fun ModernHomeRoute(
         onPreloadAdjacentItem = preloadAdjacentItem,
         onSaveFocusState = saveModernFocusState,
         onSurpriseMe = onSurpriseMe,
-        isSurpriseMeLoading = isSurpriseMeLoading
+        isSurpriseMeLoading = isSurpriseMeLoading,
+        showSurpriseMeButton = showSurpriseMeButton
     )
 }
 

@@ -57,6 +57,7 @@ class HomeViewModel @Inject constructor(
     internal val libraryRepository: LibraryRepository,
     internal val metaRepository: MetaRepository,
     internal val layoutPreferenceDataStore: LayoutPreferenceDataStore,
+    internal val playerSettingsDataStore: PlayerSettingsDataStore,
     internal val tmdbSettingsDataStore: TmdbSettingsDataStore,
     internal val traktSettingsDataStore: TraktSettingsDataStore,
     internal val authSessionNoticeDataStore: AuthSessionNoticeDataStore,
@@ -211,6 +212,13 @@ class HomeViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .collect { enabled ->
                     _uiState.update { it.copy(blurUnwatchedEpisodes = enabled) }
+                }
+        }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.showSurpriseMeButton
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    _uiState.update { it.copy(showSurpriseMeButton = enabled) }
                 }
         }
     }

@@ -134,6 +134,8 @@ fun ModernHomeContent(
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
+    onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit = {},
+    showContinueWatchingManualPlayOption: Boolean = false,
     onRequestTrailerPreview: (String, String, String?, String) -> Unit,
     onLoadMoreCatalog: (String, String, String) -> Unit,
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
@@ -143,7 +145,8 @@ fun ModernHomeContent(
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
     onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit,
     onSurpriseMe: () -> Unit = {},
-    isSurpriseMeLoading: Boolean = false
+    isSurpriseMeLoading: Boolean = false,
+    showSurpriseMeButton: Boolean = true
 ) {
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val isSidebarExpanded = LocalSidebarExpanded.current
@@ -725,12 +728,14 @@ fun ModernHomeContent(
                 contentPadding = PaddingValues(bottom = rowsViewportHeight),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                item(key = "surprise_me", contentType = "surprise_me") {
-                    SurpriseMeButton(
-                        onClick = onSurpriseMe,
-                        isLoading = isSurpriseMeLoading,
-                        modifier = Modifier.padding(horizontal = 48.dp)
-                    )
+                if (showSurpriseMeButton) {
+                    item(key = "surprise_me", contentType = "surprise_me") {
+                        SurpriseMeButton(
+                            onClick = onSurpriseMe,
+                            isLoading = isSurpriseMeLoading,
+                            modifier = Modifier.padding(horizontal = 48.dp)
+                        )
+                    }
                 }
 
                 itemsIndexed(
@@ -866,6 +871,11 @@ fun ModernHomeContent(
             },
             onStartFromBeginning = {
                 onContinueWatchingStartFromBeginning(selectedOptionsItem)
+                optionsItem = null
+            },
+            showPlayManually = showContinueWatchingManualPlayOption,
+            onPlayManually = {
+                onContinueWatchingPlayManually(selectedOptionsItem)
                 optionsItem = null
             }
         )
