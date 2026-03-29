@@ -264,7 +264,7 @@ fun ClassicHomeContent(
             CatalogRowSection(
                 catalogRow = catalogRow,
                 posterCardStyle = posterCardStyle,
-                showPosterLabels = uiState.posterLabelsEnabled,
+                showPosterLabels = false,
                 showAddonName = uiState.catalogAddonNameEnabled,
                 showCatalogTypeSuffix = uiState.catalogTypeSuffixEnabled,
                 focusedPosterBackdropExpandEnabled = uiState.focusedPosterBackdropExpandEnabled,

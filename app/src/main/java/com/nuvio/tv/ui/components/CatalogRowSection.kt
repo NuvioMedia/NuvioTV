@@ -59,7 +59,7 @@ fun CatalogRowSection(
     onItemClick: (String, String, String) -> Unit,
     onSeeAll: () -> Unit = {},
     posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
-    showPosterLabels: Boolean = true,
+    showPosterLabels: Boolean = false,
     showAddonName: Boolean = true,
     showCatalogTypeSuffix: Boolean = true,
     focusedPosterBackdropExpandEnabled: Boolean = false,
@@ -136,9 +136,13 @@ fun CatalogRowSection(
             else -> formatAddonTypeLabel(raw)
         }
     }
-    val catalogTitle = remember(catalogRow.catalogName, typeLabel, showCatalogTypeSuffix) {
+    val catalogTitle = remember(catalogRow.catalogName, typeLabel, showCatalogTypeSuffix, catalogRow.addonId) {
         val formattedName = catalogRow.catalogName.replaceFirstChar { it.uppercase() }
-        if (showCatalogTypeSuffix && typeLabel.isNotEmpty()) "$formattedName - $typeLabel" else formattedName
+        if (showCatalogTypeSuffix && typeLabel.isNotEmpty() && catalogRow.addonId != "maingroup") {
+            "$formattedName - $typeLabel"
+        } else {
+            formattedName
+        }
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -149,22 +153,18 @@ fun CatalogRowSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = catalogTitle,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = NuvioColors.TextPrimary,
-                    maxLines = 3,
-                    overflow = TextOverflow.Clip
-                )
-                if (showAddonName) {
-                    Text(
-                        text = stringResource(R.string.catalog_from_addon, catalogRow.addonName),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = NuvioColors.TextTertiary
-                    )
-                }
+            val titleText = if (showAddonName) {
+                "$catalogTitle - ${stringResource(R.string.catalog_from_addon, catalogRow.addonName)}"
+            } else {
+                catalogTitle
             }
+            Text(
+                text = titleText,
+                style = MaterialTheme.typography.titleLarge,
+                color = NuvioColors.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
 
         LazyRow(

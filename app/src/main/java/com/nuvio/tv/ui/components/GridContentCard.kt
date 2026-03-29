@@ -152,6 +152,7 @@ fun GridContentCard(
                         .memoryCacheKey("${item.poster}_${requestWidthPx}x${requestHeightPx}")
                         .build()
                 }
+                val isMaingroupItem = item.rawType == "maingroup_item"
                 if (item.poster.isNullOrBlank()) {
                     MonochromePosterPlaceholder()
                 } else {
@@ -159,7 +160,7 @@ fun GridContentCard(
                         model = imageModel,
                         contentDescription = item.name,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
+                        contentScale = if (isMaingroupItem) ContentScale.Fit else ContentScale.Crop,
                         placeholder = bgPainter,
                         error = bgPainter,
                         fallback = bgPainter
@@ -187,7 +188,8 @@ fun GridContentCard(
             }
         }
 
-        if (showLabel) {
+        val isMaingroupItem = item.rawType == "maingroup_item"
+        if (showLabel && !isMaingroupItem) {
             Text(
                 text = item.name,
                 style = MaterialTheme.typography.titleMedium,

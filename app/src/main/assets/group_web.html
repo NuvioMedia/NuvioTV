@@ -123,8 +123,13 @@
       <label class="input-label">Name</label>
       <input type="text" id="editName" class="input-field" autocomplete="off" placeholder="Group Name">
 
-      <label class="input-label">Custom Logo URL (Optional)</label>
-      <input type="text" id="editLogoUrl" class="input-field" autocomplete="off" placeholder="https://...">
+      <div id="logoUrlField">
+        <label class="input-label" style="display:flex; justify-content:space-between; align-items:flex-end;">
+          <span>Custom Logo URL (Optional)</span>
+          <span style="font-size: 0.75rem; color: #888; font-weight: normal;">Must be direct link (.jpg/.png)</span>
+        </label>
+        <input type="text" id="editLogoUrl" class="input-field" autocomplete="off" placeholder="e.g. https://i.ibb.co/XYZ123/image.jpg">
+      </div>
 
       <!-- Main Group Specific -->
       <div id="maingroupFields" class="hidden">
@@ -282,9 +287,9 @@ function saveEditor() {
   if (!name) { alert("Name cannot be empty"); return; }
   
   state.editingItem.name = name;
-  state.editingItem.logoUrl = processUrl(el('editLogoUrl').value);
   
   if (state.editingMode === 'subgroup') {
+    state.editingItem.logoUrl = processUrl(el('editLogoUrl').value);
     if (state.editingItemIndex === -1) state.catalogGroups.push(state.editingItem);
     else state.catalogGroups[state.editingItemIndex] = state.editingItem;
   } else if (state.editingMode === 'maingroup') {
@@ -323,6 +328,7 @@ function editSubgroup(index) {
   
   el('subgroupFields').classList.remove('hidden');
   el('maingroupFields').classList.add('hidden');
+  el('logoUrlField').classList.remove('hidden');
   
   renderEditorCatalogList();
   showEditor();
@@ -409,6 +415,7 @@ function editMainGroup(index) {
   
   el('maingroupFields').classList.remove('hidden');
   el('subgroupFields').classList.add('hidden');
+  el('logoUrlField').classList.add('hidden');
   
   renderEditorSubgroupList();
   showEditor();

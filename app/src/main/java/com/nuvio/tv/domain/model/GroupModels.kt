@@ -17,6 +17,5 @@ data class MainGroup(
     val name: String,
     val posterType: String = "Square",
     val posterSize: String = "Default",
-    val logoUrl: String? = null,
     val subGroupIds: List<String> = emptyList()
 )

@@ -289,7 +289,7 @@ fun GridHomeContent(
                                 "series" -> strTypeSeries
                                 else -> gridItem.type.replaceFirstChar { it.uppercase() }
                             }
-                            val displayName = if (uiState.catalogTypeSuffixEnabled && typeLabel.isNotBlank()) {
+                            val displayName = if (uiState.catalogTypeSuffixEnabled && typeLabel.isNotBlank() && gridItem.addonId != "maingroup") {
                                 "${gridItem.catalogName.replaceFirstChar { it.uppercase() }} - $typeLabel"
                             } else {
                                 gridItem.catalogName.replaceFirstChar { it.uppercase() }
@@ -324,7 +324,7 @@ fun GridHomeContent(
                                 item = gridItem.item,
                                 focusRequester = focusRequester,
                                 posterCardStyle = posterCardStyle,
-                                showLabel = uiState.posterLabelsEnabled,
+                                showLabel = false,
                                 isWatched = isCatalogItemWatched(gridItem.item),
                                 onFocused = { onItemFocus(gridItem.item) },
                                 onClick = {

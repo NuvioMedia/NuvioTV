@@ -178,6 +178,8 @@ fun ContentCard(
         emptyList()
     }
 
+    val isMaingroupItem = item.rawType == "maingroup_item"
+
     Column(
         modifier = modifier.width(animatedCardWidth)
     ) {
@@ -190,10 +192,10 @@ fun ContentCard(
             baseCardWidth
         }
         val requestWidthPx = remember(maxRequestCardWidth, density) {
-            with(density) { maxRequestCardWidth.roundToPx() }
+            with(density) { (maxRequestCardWidth * 1.5f).roundToPx() }
         }
         val requestHeightPx = remember(baseCardHeight, density) {
-            with(density) { baseCardHeight.roundToPx() }
+            with(density) { (baseCardHeight * 1.5f).roundToPx() }
         }
         val imageUrl = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
             item.backdropUrl ?: item.poster
@@ -206,6 +208,7 @@ fun ContentCard(
                 .crossfade(false)
                 .memoryCacheKey("${imageUrl}_${requestWidthPx}x${requestHeightPx}")
                 .size(width = requestWidthPx, height = requestHeightPx)
+                .scale(coil.size.Scale.FILL)
                 .build()
         }
         val logoRequestHeightPx = remember(density) {
@@ -315,7 +318,7 @@ fun ContentCard(
                         placeholder = backgroundPainter,
                         error = backgroundPainter,
                         fallback = backgroundPainter,
-                        contentScale = ContentScale.Crop
+                        contentScale = if (isMaingroupItem) ContentScale.Fit else ContentScale.Crop
                     )
                 } else {
                     MonochromePosterPlaceholder()
@@ -374,7 +377,7 @@ fun ContentCard(
                     )
                 }
 
-                if (isBackdropExpanded) {
+                if (isBackdropExpanded && !isMaingroupItem) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
@@ -443,7 +446,7 @@ fun ContentCard(
             }
         }
 
-        if (isBackdropExpanded) {
+        if (isBackdropExpanded && !isMaingroupItem) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -472,7 +475,7 @@ fun ContentCard(
             }
         }
 
-        if (showLabels && !isBackdropExpanded) {
+        if (showLabels && !isBackdropExpanded && !isMaingroupItem) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

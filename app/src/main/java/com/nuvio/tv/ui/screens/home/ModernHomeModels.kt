@@ -385,51 +385,32 @@ internal fun buildCatalogItem(
     val currentBackdrop = item.backdropUrl
     val currentLogo = item.logo
 
-    // First non-blank value wins and is never replaced.
-    val frozenBackdrop = carriedBackdrop?.takeIf { it.isNotBlank() }
-        ?: currentBackdrop
+    val frozenBackdrop = carriedBackdrop?.takeIf { it.isNotBlank() } ?: currentBackdrop
     val frozenLogo = carriedLogo?.takeIf { it.isNotBlank() }
         ?: currentLogo
 
-    val heroPreview = HeroPreview(
-        title = item.name,
-        logo = item.logo,
-        description = item.description,
-        contentTypeText = when (item.apiType.lowercase()) {
-            "movie" -> strTypeMovie.ifBlank { item.apiType.replaceFirstChar { ch -> ch.uppercase() } }
-            "series" -> strTypeSeries.ifBlank { item.apiType.replaceFirstChar { ch -> ch.uppercase() } }
-            else -> item.apiType.replaceFirstChar { ch -> ch.uppercase() }
-        },
-        isSeries = isSeriesType(item.apiType),
-        yearText = extractYearText(item.type, item.releaseInfo, item.released, showFullReleaseDate),
-        runtimeText = formatHeroRuntime(item.runtime),
-        imdbText = item.imdbRating?.let { String.format("%.1f", it) },
-        ageRatingText = item.ageRating,
-        statusText = item.status,
-        countryText = item.country,
-        languageText = item.language?.uppercase(),
-        genres = item.genres.take(3),
-        poster = item.poster,
-        backdrop = item.backdropUrl,
-        imageUrl = if (useLandscapePosters) {
-            item.backdropUrl ?: item.poster
-        } else {
-            item.poster ?: item.backdropUrl
-        },
-        frozenBackdropUrl = frozenBackdrop,
-        frozenLogoUrl = frozenLogo
+    val heroPreview = item.toHeroPreview(
+        useLandscapePosters = useLandscapePosters,
+        strTypeMovie = strTypeMovie,
+        strTypeSeries = strTypeSeries,
+        showFullReleaseDate = showFullReleaseDate,
+        frozenBackdrop = frozenBackdrop,
+        frozenLogo = frozenLogo
     )
 
     return ModernCarouselItem(
         key = "catalog_${row.key()}_${item.id}_${occurrence}",
-        title = item.name,
-        subtitle = item.releaseInfo,
+        title = if (row.addonId == "maingroup") "" else item.name,
+        subtitle = if (row.addonId == "maingroup") null else item.releaseInfo,
         imageUrl = if (useLandscapePosters) {
             item.backdropUrl ?: item.poster
         } else {
             item.poster ?: item.backdropUrl
         },
-        heroPreview = heroPreview,
+        heroPreview = heroPreview.copy(
+            title = if (row.addonId == "maingroup") "" else heroPreview.title,
+            contentTypeText = if (row.addonId == "maingroup") "" else heroPreview.contentTypeText
+        ),
         payload = ModernPayload.Catalog(
             focusKey = "${row.key()}::${item.id}",
             itemId = item.id,
@@ -440,6 +421,44 @@ internal fun buildCatalogItem(
             trailerApiType = item.apiType
         ),
         metaPreview = item
+    )
+}
+
+internal fun MetaPreview.toHeroPreview(
+    useLandscapePosters: Boolean,
+    strTypeMovie: String = "",
+    strTypeSeries: String = "",
+    showFullReleaseDate: Boolean = true,
+    frozenBackdrop: String? = null,
+    frozenLogo: String? = null
+): HeroPreview {
+    return HeroPreview(
+        title = name,
+        logo = logo,
+        description = description,
+        contentTypeText = when (apiType.lowercase()) {
+            "movie" -> strTypeMovie.ifBlank { apiType.replaceFirstChar { ch -> ch.uppercase() } }
+            "series" -> strTypeSeries.ifBlank { apiType.replaceFirstChar { ch -> ch.uppercase() } }
+            else -> apiType.replaceFirstChar { ch -> ch.uppercase() }
+        },
+        isSeries = isSeriesType(apiType),
+        yearText = extractYearText(type, releaseInfo, released, showFullReleaseDate),
+        runtimeText = formatHeroRuntime(runtime),
+        imdbText = imdbRating?.let { String.format("%.1f", it) },
+        ageRatingText = ageRating,
+        statusText = status,
+        countryText = country,
+        languageText = language?.uppercase(),
+        genres = genres.take(3),
+        poster = poster,
+        backdrop = backdropUrl,
+        imageUrl = if (useLandscapePosters) {
+            backdropUrl ?: poster
+        } else {
+            poster ?: backdropUrl
+        },
+        frozenBackdropUrl = frozenBackdrop ?: backdropUrl,
+        frozenLogoUrl = frozenLogo ?: logo
     )
 }
 
@@ -463,7 +482,7 @@ internal fun catalogRowTitle(
     strTypeSeries: String = ""
 ): String {
     val catalogName = row.catalogName.replaceFirstChar { it.uppercase() }
-    if (!showCatalogTypeSuffix) return catalogName
+    if (!showCatalogTypeSuffix || row.addonId == "maingroup") return catalogName
     val typeLabel = when (row.apiType.lowercase()) {
         "movie" -> strTypeMovie.ifBlank { row.apiType.replaceFirstChar { it.uppercase() } }
         "series" -> strTypeSeries.ifBlank { row.apiType.replaceFirstChar { it.uppercase() } }
@@ -505,7 +524,7 @@ internal fun extractYearText(type: ContentType, releaseInfo: String?, released: 
     return extractYear(releaseInfo)
 }
 
-private fun formatHeroRuntime(runtime: String?): String? {
+internal fun formatHeroRuntime(runtime: String?): String? {
     val normalized = runtime?.trim()?.lowercase()?.takeIf { it.isNotBlank() } ?: return null
     val hours = "(\\d+)\\s*h".toRegex().find(normalized)?.groupValues?.getOrNull(1)?.toIntOrNull()
     val minutes = "(\\d+)\\s*m(?:in)?".toRegex().find(normalized)?.groupValues?.getOrNull(1)?.toIntOrNull()

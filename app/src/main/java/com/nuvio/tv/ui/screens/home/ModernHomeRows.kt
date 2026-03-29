@@ -320,9 +320,9 @@ internal fun ModernRowSection(
 
     val rowKey = row.key
     Column {
-        val titleMediumStyle = MaterialTheme.typography.titleMedium
-        val rowTitleStyle = remember(titleMediumStyle) {
-            titleMediumStyle.copy(fontWeight = FontWeight.SemiBold)
+        val titleSmallStyle = MaterialTheme.typography.titleSmall
+        val rowTitleStyle = remember(titleSmallStyle) {
+            titleSmallStyle.copy(fontWeight = FontWeight.SemiBold)
         }
         val rowTitle = remember(row.title) { row.title }
         val textColor = remember { NuvioColors.TextPrimary }
@@ -858,6 +858,7 @@ private fun ModernCarouselCard(
 
                 Box(modifier = mediaLayerModifier) {
                     if (hasImage) {
+                        val isMaingroupItem = item.metaPreview?.rawType == "maingroup_item"
                         AsyncImage(
                             model = safeImageModel,
                             contentDescription = item.title,
@@ -865,7 +866,7 @@ private fun ModernCarouselCard(
                             placeholder = backgroundPainter,
                             error = backgroundPainter,
                             fallback = backgroundPainter,
-                            contentScale = ContentScale.Crop
+                            contentScale = if (isMaingroupItem) ContentScale.Fit else ContentScale.Crop
                         )
                     } else {
                         MonochromePosterPlaceholder()
@@ -898,7 +899,7 @@ private fun ModernCarouselCard(
                         contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart
                     )
-                } else if (useLandscapeOverlayTreatment || isBackdropExpanded) {
+                } else if ((useLandscapeOverlayTreatment || isBackdropExpanded) && item.title.isNotBlank()) {
                     Text(
                         text = item.title,
                         style = titleStyle,

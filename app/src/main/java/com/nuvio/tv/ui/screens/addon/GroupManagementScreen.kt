@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.addon
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -112,8 +113,8 @@ fun GroupManagementScreen(
             MainGroupEditor(
                 initialGroup = editingMainGroup,
                 uiState = uiState,
-                onSave = { name, type, size, logoUrl, keys ->
-                    viewModel.saveMainGroup(editingMainGroup?.id, name, type, size, logoUrl, keys)
+                onSave = { name, type, size, keys ->
+                    viewModel.saveMainGroup(editingMainGroup?.id, name, type, size, keys)
                     creatingMainGroup = false
                     editingMainGroup = null
                 },
@@ -454,9 +455,10 @@ private fun SubgroupEditor(
                 border = ClickableSurfaceDefaults.border(
                     focusedBorder = Border(border = BorderStroke(2.dp, NuvioColors.FocusRing), shape = RoundedCornerShape(12.dp))
                 ),
-                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp))
+                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
             ) {
-                Box(modifier = Modifier.padding(16.dp)) {
+                Box(modifier = Modifier.padding(16.dp).clipToBounds()) {
                     BasicTextField(
                         value = name,
                         onValueChange = { name = it },
@@ -502,9 +504,10 @@ private fun SubgroupEditor(
                 border = ClickableSurfaceDefaults.border(
                     focusedBorder = Border(border = BorderStroke(2.dp, NuvioColors.FocusRing), shape = RoundedCornerShape(12.dp))
                 ),
-                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp))
+                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
             ) {
-                Box(modifier = Modifier.padding(16.dp)) {
+                Box(modifier = Modifier.padding(16.dp).clipToBounds()) {
                     BasicTextField(
                         value = logoUrl,
                         onValueChange = { logoUrl = it },
@@ -529,7 +532,7 @@ private fun SubgroupEditor(
                         cursorBrush = SolidColor(if (isEditingLogo) NuvioColors.Primary else Color.Transparent),
                         decorationBox = { innerTextField ->
                             if (logoUrl.isEmpty()) {
-                                Text("Enter Custom Artwork URL (Hosted Image)", color = NuvioColors.TextTertiary)
+                                Text("Direct Image Link (.jpg/.png)", color = NuvioColors.TextTertiary)
                             }
                             innerTextField()
                         }
@@ -592,25 +595,19 @@ private fun SubgroupEditor(
 private fun MainGroupEditor(
     initialGroup: MainGroup?,
     uiState: GroupManagementUiState,
-    onSave: (name: String, type: String, size: String, logoUrl: String?, keys: List<String>) -> Unit,
+    onSave: (name: String, type: String, size: String, keys: List<String>) -> Unit,
     onCancel: () -> Unit,
     onDelete: () -> Unit
 ) {
     var name by remember { mutableStateOf(initialGroup?.name ?: "") }
-    var logoUrl by remember { mutableStateOf(initialGroup?.logoUrl ?: "") }
     var selectedSubGroups by remember { mutableStateOf(initialGroup?.subGroupIds?.toSet() ?: emptySet()) }
     var isEditingName by remember { mutableStateOf(false) }
-    var isEditingLogo by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val textFieldFocusRequester = remember { FocusRequester() }
-    val logoFieldFocusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(isEditingName, isEditingLogo) {
+    LaunchedEffect(isEditingName) {
         if (isEditingName) {
             textFieldFocusRequester.requestFocus()
-            keyboardController?.show()
-        } else if (isEditingLogo) {
-            logoFieldFocusRequester.requestFocus()
             keyboardController?.show()
         }
     }
@@ -636,7 +633,7 @@ private fun MainGroupEditor(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Button(
-                        onClick = { onSave(name, "Square", "Default", logoUrl.takeIf { it.isNotBlank() }, selectedSubGroups.toList()) },
+                        onClick = { onSave(name, "Square", "Default", selectedSubGroups.toList()) },
                         enabled = name.isNotBlank() && selectedSubGroups.isNotEmpty()
                     ) {
                         Text("Save")
@@ -664,9 +661,10 @@ private fun MainGroupEditor(
                 border = ClickableSurfaceDefaults.border(
                     focusedBorder = Border(border = BorderStroke(2.dp, NuvioColors.FocusRing), shape = RoundedCornerShape(12.dp))
                 ),
-                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp))
+                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
             ) {
-                Box(modifier = Modifier.padding(16.dp)) {
+                Box(modifier = Modifier.padding(16.dp).clipToBounds()) {
                     BasicTextField(
                         value = name,
                         onValueChange = { name = it },
@@ -680,11 +678,11 @@ private fun MainGroupEditor(
                                 }
                             },
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(
-                            onNext = {
+                            onDone = {
                                 isEditingName = false
-                                isEditingLogo = true
+                                keyboardController?.hide()
                             }
                         ),
                         textStyle = MaterialTheme.typography.titleMedium.copy(color = NuvioColors.TextPrimary),
@@ -692,54 +690,6 @@ private fun MainGroupEditor(
                         decorationBox = { innerTextField ->
                             if (name.isEmpty()) {
                                 Text("Enter Primary Group Name", color = NuvioColors.TextTertiary)
-                            }
-                            innerTextField()
-                        }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Logo URL Input
-            Surface(
-                onClick = { isEditingLogo = true },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ClickableSurfaceDefaults.colors(
-                    containerColor = NuvioColors.BackgroundCard,
-                    focusedContainerColor = NuvioColors.FocusBackground
-                ),
-                border = ClickableSurfaceDefaults.border(
-                    focusedBorder = Border(border = BorderStroke(2.dp, NuvioColors.FocusRing), shape = RoundedCornerShape(12.dp))
-                ),
-                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp))
-            ) {
-                Box(modifier = Modifier.padding(16.dp)) {
-                    BasicTextField(
-                        value = logoUrl,
-                        onValueChange = { logoUrl = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(logoFieldFocusRequester)
-                            .onFocusChanged {
-                                if (!it.isFocused && isEditingLogo) {
-                                    isEditingLogo = false
-                                    keyboardController?.hide()
-                                }
-                            },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, keyboardType = KeyboardType.Uri),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                isEditingLogo = false
-                                keyboardController?.hide()
-                            }
-                        ),
-                        textStyle = MaterialTheme.typography.titleMedium.copy(color = NuvioColors.TextPrimary),
-                        cursorBrush = SolidColor(if (isEditingLogo) NuvioColors.Primary else Color.Transparent),
-                        decorationBox = { innerTextField ->
-                            if (logoUrl.isEmpty()) {
-                                Text("Enter Custom Artwork URL (Hosted Image)", color = NuvioColors.TextTertiary)
                             }
                             innerTextField()
                         }

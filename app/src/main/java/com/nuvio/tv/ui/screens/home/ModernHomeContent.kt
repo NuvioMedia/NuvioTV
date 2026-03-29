@@ -785,7 +785,7 @@ fun ModernHomeContent(
                         },
                         onRowItemFocused = stableOnRowItemFocused,
                         useLandscapePosters = useLandscapePosters,
-                        showLabels = uiState.posterLabelsEnabled,
+                        showLabels = false,
                         posterCardCornerRadius = posterCardCornerRadius,
                         focusedPosterBackdropTrailerMuted = uiState.focusedPosterBackdropTrailerMuted,
                         effectiveExpandEnabled = effectiveExpandEnabled,

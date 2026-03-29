@@ -118,14 +118,13 @@ class GroupManagementViewModel @Inject constructor(
         }
     }
 
-    fun saveMainGroup(id: String?, name: String, posterType: String, posterSize: String, logoUrl: String?, subGroupIds: List<String>) {
+    fun saveMainGroup(id: String?, name: String, posterType: String, posterSize: String, subGroupIds: List<String>) {
         viewModelScope.launch {
             val group = MainGroup(
                 id = id ?: UUID.randomUUID().toString(),
                 name = name.trim(),
                 posterType = posterType,
                 posterSize = posterSize,
-                logoUrl = resolveImageUrl(logoUrl),
                 subGroupIds = subGroupIds
             )
             groupPreferenceDataStore.updateMainGroup(group)
@@ -241,9 +240,7 @@ class GroupManagementViewModel @Inject constructor(
             val sanitizedCatalogGroups = pending.proposedCatalogGroups.map { cg ->
                 cg.copy(logoUrl = resolveImageUrl(cg.logoUrl))
             }
-            val sanitizedMainGroups = pending.proposedMainGroups.map { mg ->
-                mg.copy(logoUrl = resolveImageUrl(mg.logoUrl))
-            }
+            val sanitizedMainGroups = pending.proposedMainGroups
             Log.d("GroupMgmt", "Syncing from phone: ${sanitizedCatalogGroups.size} catalog groups, ${sanitizedMainGroups.size} main groups")
             sanitizedCatalogGroups.forEach { cg ->
                 Log.d("GroupMgmt", "  CatalogGroup id=${cg.id} name=${cg.name} keys=${cg.catalogKeys}")
@@ -275,15 +272,30 @@ class GroupManagementViewModel @Inject constructor(
 
     private fun resolveImageUrl(url: String?): String? {
         if (url.isNullOrBlank()) return null
-        val driveRegex = Regex("""drive\.google\.com/file/d/([^/]+)""")
-        val match = driveRegex.find(url)
+        val trimmed = url.trim()
+
+        // 1. Handle HTML Embed codes (extract src="...")
+        if (trimmed.startsWith("<") && trimmed.contains("src=\"")) {
+            val srcMatch = Regex("""src="([^"]+)"""").find(trimmed)
+            if (srcMatch != null) {
+                return resolveImageUrl(srcMatch.groupValues[1])
+            }
+        }
+
+        // 2. Handle Google Drive links
+        val driveRegex = Regex("""drive\.google\.com/(?:file/d/|open\?id=|uc\?id=)([^/&?]+)""")
+        val match = driveRegex.find(trimmed)
         if (match != null) {
             val id = match.groupValues[1]
-            return "https://drive.google.com/thumbnail?id=$id&sz=w400"
+            // Using /uc?id= instead of /thumbnail ensures we get the original uncompressed file
+            // as requested by the user. Note: Large files may show a Google virus scan warning
+            // if fetched via browser, but Coil's loader handles the direct stream fine.
+            return "https://drive.google.com/uc?export=download&id=$id"
         }
+
         return try {
-            java.net.URL(url)
-            url.trim()
+            java.net.URL(trimmed)
+            trimmed
         } catch (e: Exception) {
             null
         }

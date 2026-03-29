@@ -185,8 +185,11 @@ android {
     }
 }
 
-// Removed applicationId override for debug builds to ensure consistent package name.
-
+androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        variant.applicationId.set("com.nuviodebug.com")
+    }
+}
 
 composeCompiler {
     // Enable Compose compiler metrics for performance analysis

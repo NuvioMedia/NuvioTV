@@ -324,7 +324,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
                         MetaPreview(
                             id = "subgroup_${subGroup.id}",
                             type = com.nuvio.tv.domain.model.ContentType.UNKNOWN,
-                            rawType = "other",
+                            rawType = "maingroup_item",
                             name = subGroup.name,
                             poster = subGroup.logoUrl,
                             posterShape = if (mainGroup.posterType == "Square") PosterShape.SQUARE else PosterShape.POSTER,

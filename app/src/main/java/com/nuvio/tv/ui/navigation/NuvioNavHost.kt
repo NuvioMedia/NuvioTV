@@ -173,7 +173,7 @@ fun NuvioNavHost(
 
             HomeScreen(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
-                    if (itemType == "other" && itemId.startsWith("subgroup_")) {
+                    if ((itemType == "maingroup_item" || itemType == "other") && itemId.startsWith("subgroup_")) {
                         navController.navigate(Screen.Subgroup.createRoute(itemId.substringAfter("subgroup_")))
                     } else {
                         val heroBackdrop = HeroBackdropState.currentHeroBackdropUrl
