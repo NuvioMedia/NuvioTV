@@ -218,7 +218,7 @@ fun SubgroupListingsScreen(
             item {
                 Text(
                     text = groupName,
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     color = NuvioColors.TextPrimary,
                     modifier = Modifier.padding(start = rowHorizontalPadding, bottom = 24.dp)
                 )

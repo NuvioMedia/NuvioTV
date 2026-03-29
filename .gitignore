@@ -46,3 +46,5 @@ HOME_UI_OPTIMIZATION_NOTES.local.md
 bugs/
 avatars/
 logs
+PR_MESSAGE.md
+finish_pr.sh
