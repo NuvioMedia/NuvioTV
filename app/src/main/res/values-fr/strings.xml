@@ -118,7 +118,7 @@
     <string name="detail_btn_play_episode">Lire S%1$dE%2$d</string>
     <string name="detail_btn_resume_episode">Reprendre S%1$dE%2$d</string>
     <string name="detail_btn_next_episode">Suivant S%1$dE%2$d</string>
-    <string name="detail_tab_cast">Créateur et casting</string>
+    <string name="detail_tab_cast">Créateur et distribution</string>
     <string name="cast_role_creator">Créateur</string>
     <string name="cast_role_director">Réalisateur</string>
     <string name="cast_role_writer">Scénariste</string>
@@ -248,7 +248,7 @@
 
     <!-- SupportersContributorsScreen -->
     <string name="supporters_contributors_title">Soutiens et contributeurs</string>
-    <string name="supporters_contributors_subtitle">Les personnes qui soutiennent Nuvio et les contributeurs qui le construisent sur TV et mobile.</string>
+    <string name="supporters_contributors_subtitle">Les personnes qui soutiennent Nuvio et les contributeurs qui le développent sur TV et mobile.</string>
     <string name="supporters_contributors_supporters_copy">Les soutiens et les donateurs permettent au projet de continuer à avancer, de financer l\'infrastructure et de laisser la place à des fonctionnalités ambitieuses.</string>
     <string name="supporters_contributors_donate_copy">Nuvio restera gratuit et open source. Si vous souhaitez soutenir le projet, vous pouvez aider à couvrir le temps et l\'infrastructure nécessaires à son développement.</string>
     <string name="supporters_contributors_donate_button">Faire un don à Nuvio</string>
@@ -568,7 +568,7 @@
     <string name="tmdb_details_title">Détails</string>
     <string name="tmdb_details_subtitle">Durée, date de sortie, pays et langue depuis TMDB</string>
     <string name="tmdb_credits_title">Crédits</string>
-    <string name="tmdb_credits_subtitle">Casting avec photos, réalisateur et scénariste depuis TMDB</string>
+    <string name="tmdb_credits_subtitle">Distribution avec photos, réalisateur et scénariste depuis TMDB</string>
     <string name="tmdb_productions_title">Productions</string>
     <string name="tmdb_productions_subtitle">Sociétés de production depuis TMDB</string>
     <string name="tmdb_networks_title">Chaînes</string>
@@ -903,7 +903,7 @@
 
     <!-- PauseOverlay -->
     <string name="pause_you_are_watching">Vous regardez</string>
-    <string name="pause_cast_label">Casting</string>
+    <string name="pause_cast_label">Distribution</string>
     <string name="pause_back_to_details">Retour aux détails</string>
     <string name="pause_as_character">dans le rôle de %1$s</string>
 
@@ -914,7 +914,7 @@
     <string name="next_episode_play">Lire</string>
     <string name="next_episode_unaired">Non diffusé</string>
     <string name="next_episode_not_aired_yet">L\'épisode suivant n\'est pas encore diffusé</string>
-    <string name="skip_intro">Passer le générique</string>
+    <string name="skip_intro">Passer l\'intro</string>
     <string name="skip_ending">Passer les crédits</string>
     <string name="skip_recap">Passer le résumé</string>
     <string name="skip_generic">Passer</string>
@@ -1117,7 +1117,7 @@
     <string name="update_unknown_sources">Autorisez l\'installation depuis des sources inconnues pour continuer.</string>
     <!-- AccountScreen -->
     <string name="account_title">Compte</string>
-    <string name="account_sign_in_description">Connectez-vous pour synchroniser votre bibliothèque, votre progression, vos addons et plugins entre vos appareils. La synchronisation de la bibliothèque et de la progression ne fonctionne que lorsque Trakt n\'est pas connecté.</string>
+    <string name="account_sign_in_description">Connectez-vous pour synchroniser votre bibliothèque, votre progression, vos addons et plugins entre vos appareils. La synchronisation de la bibliothèque utilise Nuvio Sync quand Trakt n\'est pas connecté, et la progression peut utiliser Trakt ou Nuvio Sync.</string>
     <string name="account_sync_code_title">Code de synchronisation</string>
     <string name="account_sync_code_description">Synchroniser entre appareils sans créer de compte.</string>
     <string name="account_linked_devices">Appareils liés (%1$d)</string>
