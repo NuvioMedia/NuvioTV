@@ -101,6 +101,7 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.ContinueWatchingCard
 import com.nuvio.tv.ui.components.ContinueWatchingOptionsDialog
 import com.nuvio.tv.ui.components.MonochromePosterPlaceholder
+import com.nuvio.tv.ui.components.SurpriseMeButton
 import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.LocalSidebarExpanded
 import com.nuvio.tv.LocalContentFocusRequester
@@ -142,7 +143,10 @@ fun ModernHomeContent(
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     onItemFocus: (MetaPreview) -> Unit = {},
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
-    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
+    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit,
+    onSurpriseMe: () -> Unit = {},
+    isSurpriseMeLoading: Boolean = false,
+    showSurpriseMeButton: Boolean = true
 ) {
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val isSidebarExpanded = LocalSidebarExpanded.current
@@ -724,6 +728,16 @@ fun ModernHomeContent(
                 contentPadding = PaddingValues(bottom = rowsViewportHeight),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
+                if (showSurpriseMeButton) {
+                    item(key = "surprise_me", contentType = "surprise_me") {
+                        SurpriseMeButton(
+                            onClick = onSurpriseMe,
+                            isLoading = isSurpriseMeLoading,
+                            modifier = Modifier.padding(horizontal = 48.dp)
+                        )
+                    }
+                }
+
                 itemsIndexed(
                     items = carouselRows,
                     key = { _, row -> row.key },

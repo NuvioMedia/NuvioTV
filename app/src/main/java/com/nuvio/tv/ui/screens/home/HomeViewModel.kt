@@ -27,13 +27,17 @@ import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.CatalogRepository
 import com.nuvio.tv.domain.repository.LibraryRepository
 import com.nuvio.tv.domain.repository.MetaRepository
+import com.nuvio.tv.domain.repository.RecommendationRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -61,7 +65,8 @@ class HomeViewModel @Inject constructor(
     internal val tmdbMetadataService: TmdbMetadataService,
     internal val trailerService: TrailerService,
     internal val watchedItemsPreferences: WatchedItemsPreferences,
-    internal val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder
+    internal val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
+    private val recommendationRepository: RecommendationRepository
 ) : ViewModel() {
     companion object {
         internal const val TAG = "HomeViewModel"
@@ -97,6 +102,9 @@ class HomeViewModel @Inject constructor(
     internal val _enrichingItemId = MutableStateFlow<String?>(null)
     val enrichingItemId: StateFlow<String?> = _enrichingItemId.asStateFlow()
     internal fun setEnrichingItemId(id: String?) { _enrichingItemId.value = id }
+
+    private val _surpriseMeNavigation = MutableSharedFlow<Triple<String, String, String>>()
+    val surpriseMeNavigation: SharedFlow<Triple<String, String, String>> = _surpriseMeNavigation.asSharedFlow()
 
     internal val catalogsMap = linkedMapOf<String, CatalogRow>()
     internal val catalogOrder = mutableListOf<String>()
@@ -207,6 +215,13 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { it.copy(blurUnwatchedEpisodes = enabled) }
                 }
         }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.showSurpriseMeButton
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    _uiState.update { it.copy(showSurpriseMeButton = enabled) }
+                }
+        }
     }
 
     fun requestTrailerPreview(item: MetaPreview) = requestTrailerPreviewPipeline(item)
@@ -271,6 +286,7 @@ class HomeViewModel @Inject constructor(
                 isNextUp = event.isNextUp
             )
             HomeEvent.OnRetry -> viewModelScope.launch { loadAllCatalogs(addonsCache, forceReload = true) }
+            HomeEvent.OnSurpriseMe -> surpriseMe()
         }
     }
 
@@ -392,6 +408,20 @@ class HomeViewModel @Inject constructor(
             focusedRowIndex = focusedRowIndex,
             focusedItemIndex = focusedItemIndex
         )
+    }
+
+    private fun surpriseMe() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSurpriseMeLoading = true) }
+            try {
+                val item = recommendationRepository.getSurpriseRecommendation()
+                if (item != null) {
+                    _surpriseMeNavigation.emit(Triple(item.id, item.apiType, ""))
+                }
+            } finally {
+                _uiState.update { it.copy(isSurpriseMeLoading = false) }
+            }
+        }
     }
 
     override fun onCleared() {

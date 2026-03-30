@@ -14,13 +14,18 @@ import com.nuvio.tv.core.util.isUnreleased
 import com.nuvio.tv.domain.repository.AddonRepository
 import java.time.LocalDate
 import com.nuvio.tv.domain.repository.CatalogRepository
+import com.nuvio.tv.domain.repository.RecommendationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
@@ -33,7 +38,8 @@ class SearchViewModel @Inject constructor(
     private val catalogRepository: CatalogRepository,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val watchProgressRepository: com.nuvio.tv.domain.repository.WatchProgressRepository,
-    private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder
+    private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
+    private val recommendationRepository: RecommendationRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -42,6 +48,9 @@ class SearchViewModel @Inject constructor(
     private val _watchedMovieIds = MutableStateFlow<Set<String>>(emptySet())
     val watchedMovieIds: StateFlow<Set<String>> = _watchedMovieIds.asStateFlow()
     val watchedSeriesIds: StateFlow<Set<String>> = watchedSeriesStateHolder.fullyWatchedSeriesIds
+
+    private val _surpriseMeNavigation = MutableSharedFlow<Triple<String, String, String>>()
+    val surpriseMeNavigation: SharedFlow<Triple<String, String, String>> = _surpriseMeNavigation.asSharedFlow()
 
     private val catalogsMap = linkedMapOf<String, CatalogRow>()
     private val catalogOrder = mutableListOf<String>()
@@ -118,6 +127,13 @@ class SearchViewModel @Inject constructor(
                 scheduleCatalogRowsUpdate()
             }
         }
+        viewModelScope.launch {
+            layoutPreferenceDataStore.showSurpriseMeButton
+                .distinctUntilChanged()
+                .collectLatest { enabled ->
+                    _uiState.update { it.copy(showSurpriseMeButton = enabled) }
+                }
+        }
     }
 
     private data class LayoutPrefs(
@@ -142,6 +158,7 @@ class SearchViewModel @Inject constructor(
             is SearchEvent.SelectDiscoverGenre -> selectDiscoverGenre(event.genre)
             SearchEvent.LoadNextDiscoverResults -> loadNextDiscoverResults()
             SearchEvent.Retry -> performSearch(uiState.value.submittedQuery.ifBlank { uiState.value.query })
+            SearchEvent.SurpriseMe -> surpriseMe()
         }
     }
 
@@ -738,5 +755,19 @@ class SearchViewModel @Inject constructor(
 
     private fun catalogKey(addonId: String, type: String, catalogId: String): String {
         return "${addonId}_${type}_${catalogId}"
+    }
+
+    private fun surpriseMe() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSurpriseMeLoading = true) }
+            try {
+                val item = recommendationRepository.getSurpriseRecommendation()
+                if (item != null) {
+                    _surpriseMeNavigation.emit(Triple(item.id, item.apiType, ""))
+                }
+            } finally {
+                _uiState.update { it.copy(isSurpriseMeLoading = false) }
+            }
+        }
     }
 }

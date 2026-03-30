@@ -59,6 +59,7 @@ import com.nuvio.tv.ui.components.GridContinueWatchingSection
 import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
+import com.nuvio.tv.ui.components.SurpriseMeButton
 import com.nuvio.tv.ui.theme.NuvioColors
 
 /** Minimum interval between processed key repeat events to prevent HWUI overload. */
@@ -72,15 +73,16 @@ fun GridHomeContent(
     onNavigateToDetail: (String, String, String) -> Unit,
     onContinueWatchingClick: (ContinueWatchingItem) -> Unit,
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = {},
-    onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit = {},
-    showContinueWatchingManualPlayOption: Boolean = false,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean = { false },
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
     onItemFocus: (com.nuvio.tv.domain.model.MetaPreview) -> Unit = {},
-    onSaveGridFocusState: (Int, Int) -> Unit
+    onSaveGridFocusState: (Int, Int) -> Unit,
+    onSurpriseMe: () -> Unit = {},
+    isSurpriseMeLoading: Boolean = false,
+    showSurpriseMeButton: Boolean = true
 ) {
     val gridState = rememberLazyGridState(
         initialFirstVisibleItemIndex = gridFocusState.verticalScrollIndex,
@@ -196,6 +198,7 @@ fun GridHomeContent(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             var continueWatchingInserted = false
+            var surpriseMeInserted = false
             var firstGridFocusableAssigned = false
             val contentOccurrencesByCatalogAndId = mutableMapOf<String, Int>()
 
@@ -241,8 +244,6 @@ fun GridHomeContent(
                                         onContinueWatchingClick(item)
                                     },
                                     onStartFromBeginning = onContinueWatchingStartFromBeginning,
-                                    showManualPlayOption = showContinueWatchingManualPlayOption,
-                                    onPlayManually = onContinueWatchingPlayManually,
                                     onDetailsClick = { item ->
                                         onNavigateToDetail(
                                             when (item) {
@@ -274,6 +275,23 @@ fun GridHomeContent(
                                     },
                                     blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes
                                 )
+                            }
+                        }
+
+                        if (!surpriseMeInserted) {
+                            surpriseMeInserted = true
+                            item(
+                                key = "surprise_me",
+                                span = { GridItemSpan(maxLineSpan) },
+                                contentType = "surprise_me"
+                            ) {
+                                if (showSurpriseMeButton) {
+                                    SurpriseMeButton(
+                                        onClick = onSurpriseMe,
+                                        isLoading = isSurpriseMeLoading,
+                                        modifier = Modifier.padding(horizontal = 24.dp)
+                                    )
+                                }
                             }
                         }
 
@@ -389,8 +407,6 @@ fun GridHomeContent(
                             onContinueWatchingClick(item)
                         },
                         onStartFromBeginning = onContinueWatchingStartFromBeginning,
-                        showManualPlayOption = showContinueWatchingManualPlayOption,
-                        onPlayManually = onContinueWatchingPlayManually,
                         onDetailsClick = { item ->
                             onNavigateToDetail(
                                 when (item) {

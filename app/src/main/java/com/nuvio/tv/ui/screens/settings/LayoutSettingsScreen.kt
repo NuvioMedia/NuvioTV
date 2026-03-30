@@ -340,6 +340,17 @@ fun LayoutSettingsContent(
                         },
                         onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                     )
+                    CompactToggleRow(
+                        title = stringResource(R.string.layout_show_surprise_me),
+                        subtitle = stringResource(R.string.layout_show_surprise_me_sub),
+                        checked = uiState.showSurpriseMeButton,
+                        onToggle = {
+                            viewModel.onEvent(
+                                LayoutSettingsEvent.SetShowSurpriseMeButton(!uiState.showSurpriseMeButton)
+                            )
+                        },
+                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                    )
                     if (uiState.selectedLayout != HomeLayout.MODERN) {
                         CompactToggleRow(
                             title = stringResource(R.string.layout_poster_labels),

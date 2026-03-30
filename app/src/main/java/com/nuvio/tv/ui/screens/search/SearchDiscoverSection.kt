@@ -60,6 +60,7 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.EmptyScreenState
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.SurpriseMeButton
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
@@ -83,6 +84,9 @@ internal fun DiscoverSection(
     onSelectCatalog: (String) -> Unit,
     onSelectGenre: (String?) -> Unit,
     onLoadMore: () -> Unit,
+    onSurpriseMe: () -> Unit = {},
+    isSurpriseMeLoading: Boolean = false,
+    showSurpriseMeButton: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val selectedCatalog = uiState.discoverCatalogs.firstOrNull { it.key == uiState.selectedDiscoverCatalogKey }
@@ -174,6 +178,13 @@ internal fun DiscoverSection(
                     expandedPicker = null
                 }
             )
+
+            if (showSurpriseMeButton) {
+                SurpriseMeButton(
+                    onClick = onSurpriseMe,
+                    isLoading = isSurpriseMeLoading
+                )
+            }
         }
 
         selectedCatalog?.let { catalog ->
