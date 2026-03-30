@@ -65,6 +65,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -114,7 +115,10 @@ fun UpdatePromptDialog(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         var isVisible by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
             isVisible = true
@@ -133,16 +137,20 @@ fun UpdatePromptDialog(
 
         val shape = RoundedCornerShape(16.dp)
         Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+        Box(
             modifier = Modifier
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
                     this.alpha = alpha
                 }
-                .fillMaxWidth(0.9f)
+                .fillMaxWidth(0.85f)
                 .background(NuvioColors.BackgroundCard, shape)
                 .border(BorderStroke(2.dp, NuvioColors.FocusRing), shape)
-                .padding(32.dp)
+                .padding(28.dp)
         ) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -243,7 +251,7 @@ fun UpdatePromptDialog(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 220.dp)
+                            .heightIn(max = 160.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .drawBehind {
                                 drawRect(textContainerBg.value)
@@ -493,6 +501,7 @@ fun UpdatePromptDialog(
                 }
             }
         }
+        } // end centering Box
     }
 
     LaunchedEffect(state.showDialog, hasPrimaryAction, state.downloadedApkPath, state.showUnknownSourcesDialog, state.isUpdateAvailable, state.update?.notes) {
