@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.home
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
@@ -91,6 +92,7 @@ fun HomeScreen(
     var showHomeContentWithAnimation by rememberSaveable { mutableStateOf(false) }
     var hasReleasedStartupCwGate by rememberSaveable { mutableStateOf(false) }
     var startupCwGateTimedOut by rememberSaveable { mutableStateOf(false) }
+    var hasShownInitialHomeContent by rememberSaveable { mutableStateOf(false) }
     var posterOptionsTarget by remember { mutableStateOf<HomePosterOptionsTarget?>(null) }
 
     // Stable lambdas — captured via rememberUpdatedState so they never cause
@@ -120,6 +122,12 @@ fun HomeScreen(
             (uiState.continueWatchingItems.isNotEmpty() || startupCwGateTimedOut)
         ) {
             hasReleasedStartupCwGate = true
+        }
+    }
+
+    LaunchedEffect(showHomeContentWithAnimation) {
+        if (showHomeContentWithAnimation) {
+            hasShownInitialHomeContent = true
         }
     }
 
@@ -210,11 +218,15 @@ fun HomeScreen(
                 } else {
                     AnimatedVisibility(
                         visible = showHomeContentWithAnimation,
-                        enter = fadeIn(animationSpec = tween(320)) +
-                            slideInVertically(
-                                initialOffsetY = { it / 24 },
-                                animationSpec = tween(320)
-                            )
+                        enter = if (hasShownInitialHomeContent) {
+                            fadeIn(animationSpec = tween(320)) +
+                                slideInVertically(
+                                    initialOffsetY = { it / 24 },
+                                    animationSpec = tween(320)
+                                )
+                        } else {
+                            EnterTransition.None
+                        }
                     ) {
                         when (uiState.homeLayout) {
                             HomeLayout.CLASSIC -> ClassicHomeRoute(

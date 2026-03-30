@@ -6,6 +6,8 @@
 
     <string name="home_no_addons">Žádné doplňky nejsou nainstalovány. Přidejte jeden pro začátek.</string>
     <string name="home_no_catalog_addons">Žádné katalogové doplňky. Nainstalujte katalogový doplněk pro zobrazení obsahu.</string>
+    <string name="auth_notice_nuvio_logged_out">Byli jste odhlášeni z Nuvio. Přihlaste se prosím znovu.</string>
+    <string name="auth_notice_trakt_logged_out">Byli jste odhlášeni z Trakt. Připojte se prosím znovu.</string>
     <string name="error_generic">Vyskytla se chyba</string>
 
     <string name="action_retry">Zkusit znovu</string>
@@ -37,10 +39,16 @@
     <string name="error_meta_tried_none">Vyzkoušené meta doplňky: %1$s. Žádný z nich neposkytl metadata pro id=%2$s (typ=%3$s).</string>
     <string name="error_meta_tried_generic">Vyzkoušené meta doplňky: %1$s. Metadata nebylo možné načíst pro id=%2$s (typ=%3$s).</string>
     <string name="error_meta_tried_issues">Vyzkoušené meta doplňky: %1$s. Metadata nebylo možné načíst pro id=%2$s (typ=%3$s). Problémy: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Žádný nainstalovaný doplněk nepodporuje streamy pro „%1$s“.</string>
+    <string name="error_stream_tried_none">Vyzkoušené doplňky pro streamy: %1$s. Žádný z nich nevrátil streamy pro id=%2$s (typ=%3$s).</string>
+    <string name="error_stream_tried_generic">Vyzkoušené doplňky pro streamy: %1$s. Streamy nebylo možné načíst pro id=%2$s (typ=%3$s).</string>
+    <string name="error_stream_tried_issues">Vyzkoušené doplňky pro streamy: %1$s. Streamy nebylo možné načíst pro id=%2$s (typ=%3$s). Problémy: %4$s.</string>
 
     <string name="continue_watching">Pokračovat ve sledování</string>
     <string name="cw_upcoming">Brzy</string>
     <string name="cw_next_up">Další díl</string>
+    <string name="cw_new_episode">Nová epizoda</string>
+    <string name="cw_new_season">Nová série</string>
     <string name="cw_resume">Pokračovat</string>
     <string name="cw_percent_watched">%1$d%% zhlédnuto</string>
     <string name="cw_hours_min_left">Zbývá %1$dh %2$dm</string>
@@ -108,8 +116,29 @@
     <string name="cast_role_writer">Scénář</string>
     <string name="detail_tab_ratings">Hodnocení</string>
     <string name="detail_tab_more_like_this">Podobné tituly</string>
+    <string name="detail_more_like_this_powered_by_tmdb">Zajišťuje TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">Zajišťuje Trakt</string>
+    <string name="detail_comments_title">Komentáře</string>
+    <string name="detail_comments_subtitle">Recenze z Traktu</string>
     <string name="detail_section_network">Stanice</string>
     <string name="detail_section_production">Produkce</string>
+    <string name="detail_comments_empty">Zatím nejsou dostupné žádné Trakt recenze.</string>
+    <string name="detail_comments_error">Momentálně se nepodařilo načíst recenze z Traktu.</string>
+    <string name="detail_comments_spoiler_hidden">Recenze obsahuje spoilery. Stiskněte OK pro zobrazení.</string>
+    <string name="detail_comments_reveal_spoiler">Zobrazit spoiler</string>
+    <string name="detail_comments_reveal_spoiler_hint">Stiskněte OK pro zobrazení spoileru.</string>
+    <string name="detail_comments_back_hint">Stiskněte zpět pro zavření</string>
+    <string name="detail_comments_badge_review">Recenze</string>
+    <string name="detail_comments_badge_spoiler">Spoiler</string>
+    <string name="detail_comments_badge_rating">%1$d/10</string>
+    <string name="detail_comments_likes">%1$d to se mi líbí</string>
+    <string name="tmdb_entity_kind_company">Produkční společnost</string>
+    <string name="tmdb_entity_kind_network">Stanice</string>
+    <string name="tmdb_entity_rail_popular">Populární</string>
+    <string name="tmdb_entity_rail_top_rated">Nejlépe hodnocené</string>
+    <string name="tmdb_entity_rail_recent">Nedávné</string>
+    <string name="tmdb_entity_empty_title">Nenašly se žádné tituly</string>
+    <string name="tmdb_entity_empty_subtitle">TMDB aktuálně nemá pro tento výběr žádné tituly k prohlížení.</string>
     <string name="episodes_unavailable">Nedostupné</string>
     <string name="series_status_ended">Ukončeno</string>
     <string name="series_status_continuing">Pokračuje</string>
@@ -163,6 +192,23 @@
     <string name="settings_playback_subtitle">Přehrávač, titulky a automatické přehrávání.</string>
     <string name="settings_trakt_subtitle">Otevřít obrazovku připojení Trakt.</string>
     <string name="settings_about_subtitle">Verze a zásady.</string>
+    <string name="settings_network">Rychlost sítě</string>
+    <string name="settings_network_subtitle">Diagnostika odezvy a stahování</string>
+    <string name="settings_advanced">Pokročilé</string>
+    <string name="settings_advanced_subtitle">Spustit diagnostiku rychlosti sítě</string>
+    <string name="network_speed_test_run">Spustit test rychlosti</string>
+    <string name="network_speed_test_running">Probíhá test rychlosti</string>
+    <string name="network_speed_test_subtitle">Změřit rychlost stahování a odezvu</string>
+    <string name="network_testing_latency">Měří se odezva</string>
+    <string name="network_testing_download">Měří se rychlost stahování</string>
+    <string name="network_results_title">Výsledky</string>
+    <string name="network_latency_label">Odezva</string>
+    <string name="network_download_label">Stahování</string>
+    <string name="network_error_prefix">Chyba: %1$s</string>
+    <string name="network_powered_by_fast">Zajišťuje fast.com</string>
+    <string name="network_connection_wifi">Wi-Fi</string>
+    <string name="network_connection_ethernet">Ethernet</string>
+    <string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Debug</string>
     <string name="settings_debug_subtitle">Nástroje pro vývojáře a funkční přepínače.</string>
     <string name="settings_plugins_section_subtitle">Spravovat repozitáře, poskytovatele a stavy pluginů.</string>
@@ -320,7 +366,7 @@
     <string name="autoplay_stream_selection">Automatický výběr streamu</string>
     <string name="autoplay_next_episode">Automaticky přehrát další epizodu</string>
     <string name="autoplay_next_episode_sub">Spustit další epizodu automaticky, když se zobrazí výzva.</string>
-    <string name="autoplay_prefer_binge_group">Preferovat Binge Group (další epizoda)</string>
+    <string name="autoplay_prefer_binge_group">Preferovat Binge skupinu (další epizoda)</string>
     <string name="autoplay_prefer_binge_group_sub">Před použitím běžných pravidel zkusit nejprve stejný profil zdroje (stejný doplněk/skupina kvality).</string>
     <string name="autoplay_threshold_pct">Procenta</string>
     <string name="autoplay_threshold_min">Minuty před koncem</string>
@@ -380,6 +426,8 @@
     <string name="layout_modern_sidebar_sub">Povolit plovoucí boční navigaci.</string>
     <string name="layout_modern_sidebar_blur">Rozmazání moderního panelu</string>
     <string name="layout_modern_sidebar_blur_sub">Přepínat efekt rozmazání pro moderní boční panel.</string>
+    <string name="layout_fullscreen_hero_backdrop">Hero pozadí přes celou obrazovku</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">Rozšířit hero pozadí na celou obrazovku.</string>
     <string name="layout_show_hero">Zobrazit hero sekci</string>
     <string name="layout_show_hero_sub">Zobrazit hero karusel v horní části domovské obrazovky.</string>
     <string name="layout_show_discover">Zobrazit Objevovat ve vyhledávání</string>
@@ -396,10 +444,14 @@
     <string name="layout_section_detail_desc">Nastavení pro detailní a epizodovou obrazovku.</string>
     <string name="layout_blur_unwatched">Rozmazat nezhlédnuté epizody</string>
     <string name="layout_blur_unwatched_sub">Rozmazat náhledy epizod, dokud nejsou zhlédnuté, aby se předešlo spoilerům.</string>
+    <string name="layout_blur_cw_next_up">Rozmazat nezhlédnuté v Pokračování ve sledování</string>
+    <string name="layout_blur_cw_next_up_sub">Rozmazat náhledy dalších epizod v Pokračování ve sledování, aby se předešlo spoilerům.</string>
     <string name="layout_trailer_button">Zobrazit tlačítko traileru</string>
     <string name="layout_trailer_button_sub">Zobrazit tlačítko traileru na detailní stránce (pouze pokud je dostupný).</string>
     <string name="layout_prefer_external_meta">Preferovat externí meta</string>
     <string name="layout_prefer_external_meta_sub">Použít metadata z externího doplňku namísto katalogového.</string>
+    <string name="layout_show_full_release_date">Zobrazit celé datum vydání</string>
+    <string name="layout_show_full_release_date_sub">U filmů zobrazit celé datum vydání místo pouhého roku.</string>
     <string name="layout_section_focused">Zaměřená karta</string>
     <string name="layout_section_focused_desc">Pokročilé chování pro zaměřené karty.</string>
     <string name="layout_expand_poster">Rozšířit zaměřený poster na pozadí</string>
@@ -436,6 +488,7 @@
     <string name="layout_card_radius">Zaoblení rohů</string>
     <string name="layout_reset_default">Obnovit výchozí</string>
     <string name="layout_custom">Vlastní</string>
+
 
     <string name="mdblist_title">MDBList hodnocení</string>
     <string name="mdblist_subtitle">Nastavení externích hodnocení zobrazených v detailu</string>
@@ -479,6 +532,10 @@
     <string name="tmdb_subtitle">Vyberte, která metadata mají pocházet z TMDB</string>
     <string name="tmdb_enable_title">Povolit TMDB obohacení</string>
     <string name="tmdb_enable_subtitle">Použít TMDB jako zdroj metadat pro obohacení údajů doplňků</string>
+    <string name="tmdb_modern_home_title">Povolit na moderní domovské obrazovce</string>
+    <string name="tmdb_modern_home_subtitle">Použít obohacení z TMDB i na hero a zaměřené karty</string>
+    <string name="tmdb_enrich_continue_watching_title">Obohatit pokračování ve sledování</string>
+    <string name="tmdb_enrich_continue_watching_subtitle">Použít obohacení z TMDB na položky v Pokračování ve sledování</string>
     <string name="tmdb_language_title">Jazyk</string>
     <string name="tmdb_language_subtitle">Jazyk TMDB metadat pro název, logo a povolená pole</string>
     <string name="tmdb_artwork_title">Grafika</string>
@@ -520,6 +577,8 @@
     <string name="trakt_watch_progress_dialog_subtitle">Vyberte, zda má pokračování používat Trakt nebo Nuvio Sync (odesílání do Traktu zůstane aktivní).</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_setting_on">Zapnuto</string>
+    <string name="trakt_setting_off">Vypnuto</string>
     <string name="trakt_watch_progress_trakt_selected">Zdroj postupu nastaven na Trakt</string>
     <string name="trakt_watch_progress_nuvio_selected">Zdroj postupu nastaven na Nuvio Sync</string>
     <string name="trakt_continue_watching_window">Okno pokračování ve sledování</string>
@@ -530,6 +589,12 @@
     <string name="trakt_unaired_hidden">Skryté</string>
     <string name="trakt_unaired_now_shown">Nevysílané epizody jsou nyní zobrazeny</string>
     <string name="trakt_unaired_now_hidden">Nevysílané epizody jsou nyní skryty</string>
+    <string name="trakt_comments_title">Komentáře</string>
+    <string name="trakt_comments_subtitle">Zobrazovat Trakt recenze u detailů titulů</string>
+    <string name="trakt_comments_dialog_title">Komentáře</string>
+    <string name="trakt_comments_dialog_subtitle">Vyberte, zda se mají na stránkách s detaily zobrazovat recenze z Traktu (pokud je váš účet připojen).</string>
+    <string name="trakt_comments_now_shown">Recenze z Traktu u detailů jsou nyní zobrazeny</string>
+    <string name="trakt_comments_now_hidden">Recenze z Traktu u detailů jsou nyní skryty</string>
     <string name="trakt_cached_label">V cache</string>
     <string name="trakt_stat_movies">Filmy</string>
     <string name="trakt_stat_shows">Seriály</string>
@@ -570,6 +635,12 @@
     <string name="debug_error_dialog_title">Chyba přehrávání</string>
     <string name="debug_error_dialog_subtitle">Během přehrávání se vyskytla chyba.\n\nChyba: Testovaná simulovaná chyba – nejde o reálné selhání. Zdroj vrátil HTTP 503.</string>
     <string name="debug_dismiss">Zavřít</string>
+    <string name="debug_section_library">Knihovna</string>
+    <string name="debug_generate_library_title">Generovat položky knihovny</string>
+    <string name="debug_generate_library_subtitle">Přidat náhodné filmy/seriály do knihovny pro účely testování</string>
+    <string name="debug_generate_library_placeholder">Počet položek</string>
+    <string name="debug_generate_library_button">Generovat</string>
+    <string name="debug_generating_library">Generuje se…</string>
 
     <string name="profile_title">Profily</string>
     <string name="profile_subtitle">Spravujte uživatelské profily pro tento účet.</string>
@@ -605,6 +676,37 @@
     <string name="profile_add_new">Přidat profil</string>
     <string name="profile_cancel">Zrušit</string>
     <string name="profile_save">Uložit</string>
+    <string name="profile_pin_title">Zámek profilu PINem</string>
+    <string name="profile_pin_enabled_subtitle">Tento profil vyžaduje před přepnutím 4místný PIN.</string>
+    <string name="profile_pin_disabled_subtitle">Nastavte 4místný PIN pro uzamčení tohoto profilu.</string>
+    <string name="profile_pin_set">Nastavit PIN</string>
+    <string name="profile_pin_change">Změnit PIN</string>
+    <string name="profile_pin_remove">Odstranit PIN</string>
+    <string name="profile_pin_set_title">Nastavit PIN profilu</string>
+    <string name="profile_pin_set_subtitle">Zadejte 4místný PIN a potvrďte ho.</string>
+    <string name="profile_pin_enter">Zadejte 4místný PIN</string>
+    <string name="profile_pin_confirm">Potvrďte 4místný PIN</string>
+    <string name="profile_pin_mismatch">Zadané PINy se neshodují.</string>
+    <string name="profile_pin_save">Uložit PIN</string>
+    <string name="profile_pin_unlock_title">Odemknout %1$s</string>
+    <string name="profile_pin_unlock_subtitle">Zadejte 4místný PIN pro pokračování.</string>
+    <string name="profile_pin_verifying">Ověřování…</string>
+    <string name="profile_pin_unlock_action">Odemknout</string>
+    <string name="profile_pin_overlay_unlock_heading">Zadejte svůj PIN pro přístup k %1$s.</string>
+    <string name="profile_pin_overlay_set_heading">Vytvořte 4místný PIN pro %1$s.</string>
+    <string name="profile_pin_overlay_confirm_heading">Potvrďte svůj nový PIN.</string>
+    <string name="profile_pin_overlay_unlock_support">K zadání 4 číslic použijte dálkový ovladač nebo klávesnici.</string>
+    <string name="profile_pin_overlay_change_verify_kicker">Je vyžadována bezpečnostní kontrola.</string>
+    <string name="profile_pin_overlay_change_verify_heading">Zadejte aktuální PIN pro změnu PINu u %1$s.</string>
+    <string name="profile_pin_overlay_change_verify_support">Před nastavením nového zadejte aktuální 4místný PIN.</string>
+    <string name="profile_pin_overlay_remove_verify_kicker">Je vyžadována bezpečnostní kontrola.</string>
+    <string name="profile_pin_overlay_remove_verify_heading">Zadejte aktuální PIN pro odstranění zámku u %1$s.</string>
+    <string name="profile_pin_overlay_remove_verify_support">Zadejte aktuální 4místný PIN pro odstranění tohoto zámku.</string>
+    <string name="profile_pin_overlay_set_support">Tento PIN bude vyžadován před otevřením tohoto profilu.</string>
+    <string name="profile_pin_overlay_confirm_support">Zadejte stejné 4 číslice znovu pro dokončení nastavení.</string>
+    <string name="profile_pin_overlay_mismatch">PINy se neshodují. Zadejte nový PIN znovu.</string>
+    <string name="profile_pin_overlay_forgot_hint">Zapomněli jste PIN? Resetujte si ho v účtu Nuvio na webových stránkách nuvio.</string>
+    <string name="profile_pin_overlay_back_hint">Stiskněte zpět pro zrušení</string>
 
     <string name="addon_title">Doplňky</string>
     <string name="addon_readonly_notice">Používají se doplňky primárního profilu a nelze je měnit</string>
@@ -612,6 +714,9 @@
     <string name="addon_install_placeholder">https://example.com</string>
     <string name="addon_installing">Instaluje se</string>
     <string name="addon_install_btn">Instalovat</string>
+    <string name="addon_install_success">Nainstalováno %1$s</string>
+    <string name="addon_error_invalid_url">Zadejte platnou URL adresu doplňku</string>
+    <string name="addon_error_invalid_scheme">URL doplňku musí začínat http nebo https</string>
     <string name="addon_installed_section">Nainstalované</string>
     <string name="addon_empty">Žádné doplňky nejsou nainstalovány. Přidejte jeden pro začátek.</string>
     <string name="addon_remove">Odstranit</string>
@@ -671,6 +776,25 @@
     <string name="player_more_aspect_ratio">Poměr stran</string>
     <string name="player_more_open_external">Otevřít v externím přehrávači</string>
 
+    <string name="stream_info_section_source">ZDROJ</string>
+    <string name="stream_info_section_file">SOUBOR</string>
+    <string name="stream_info_section_video">VIDEO</string>
+    <string name="stream_info_section_audio">AUDIO</string>
+    <string name="stream_info_section_subtitle">TITULKY</string>
+    <string name="stream_info_filename">Název souboru</string>
+    <string name="stream_info_size">Velikost</string>
+    <string name="stream_info_codec">Kodek</string>
+    <string name="stream_info_resolution">Rozlišení</string>
+    <string name="stream_info_frame_rate">Snímková frekvence</string>
+    <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_channels">Kanály</string>
+    <string name="stream_info_sample_rate">Vzorkovací frekvence</string>
+    <string name="stream_info_language">Jazyk</string>
+    <string name="stream_info_name">Název</string>
+    <string name="stream_info_source">Zdroj</string>
+    <string name="stream_info_subtitle_source_addon">Doplněk</string>
+    <string name="stream_info_subtitle_source_embedded">Vestavěné</string>
+
     <string name="sources_title">Zdroje</string>
     <string name="sources_reload">Obnovit</string>
     <string name="sources_close">Zavřít</string>
@@ -692,6 +816,15 @@
     <string name="player_aspect_crop">Oříznout</string>
 
     <string name="audio_dialog_title">Audio</string>
+    <string name="audio_dialog_tab_tracks">Audio</string>
+    <string name="audio_dialog_tab_mix">Mix</string>
+    <string name="audio_mix_label">Zesílení (PCM)</string>
+    <string name="audio_mix_value_db">%1$d dB</string>
+    <string name="audio_mix_persist_on">Ponechat mezi relacemi: ZAPNUTO</string>
+    <string name="audio_mix_persist_off">Ponechat mezi relacemi: VYPNUTO</string>
+    <string name="audio_mix_range">Rozsah: %1$d dB až %2$d dB</string>
+    <string name="audio_mix_range_saved">Rozsah: %1$d dB až %2$d dB (uloženo)</string>
+    <string name="audio_mix_unavailable">Zesílení není na tomto zařízení dostupné</string>
 
     <string name="subtitle_dialog_title">Titulky</string>
     <string name="subtitle_no_builtin">Žádné vestavěné titulky nejsou dostupné</string>
@@ -748,6 +881,7 @@
     <string name="display_mode_refresh">Obnovit</string>
     <string name="display_mode_resolution">Rozlišení</string>
 
+
     <string name="search_keyboard_hint">Stiskněte Hotovo na klávesnici pro vyhledávání</string>
     <string name="search_placeholder">Hledat filmy a seriály</string>
     <string name="search_start_title">Začněte hledat</string>
@@ -763,6 +897,35 @@
     <string name="library_filter_list">Seznam</string>
     <string name="library_filter_type">Typ</string>
     <string name="library_filter_sort">Třídit</string>
+    <string name="library_filter_genre">Žánr</string>
+    <string name="library_filter_year">Rok</string>
+    <string name="genre_action">Akční</string>
+    <string name="genre_adventure">Dobrodružný</string>
+    <string name="genre_animation">Animovaný</string>
+    <string name="genre_comedy">Komedie</string>
+    <string name="genre_crime">Krimi</string>
+    <string name="genre_documentary">Dokumentární</string>
+    <string name="genre_drama">Drama</string>
+    <string name="genre_family">Rodinný</string>
+    <string name="genre_fantasy">Fantasy</string>
+    <string name="genre_history">Historický</string>
+    <string name="genre_horror">Horor</string>
+    <string name="genre_music">Hudební</string>
+    <string name="genre_mystery">Mysteriózní</string>
+    <string name="genre_romance">Romantický</string>
+    <string name="genre_science_fiction">Sci-Fi</string>
+    <string name="genre_tv_movie">TV film</string>
+    <string name="genre_thriller">Thriller</string>
+    <string name="genre_war">Válečný</string>
+    <string name="genre_western">Western</string>
+    <string name="genre_action_adventure">Akční a dobrodružný</string>
+    <string name="genre_kids">Dětský</string>
+    <string name="genre_news">Zpravodajský</string>
+    <string name="genre_reality">Reality show</string>
+    <string name="genre_sci_fi_fantasy">Sci-Fi a fantasy</string>
+    <string name="genre_soap">Telenovela</string>
+    <string name="genre_talk">Talk show</string>
+    <string name="genre_war_politics">Válečný a politický</string>
     <string name="library_sort_trakt_order">Pořadí Trakt</string>
     <string name="library_sort_added_desc">Přidáno ↓</string>
     <string name="library_sort_added_asc">Přidáno ↑</string>
@@ -784,6 +947,9 @@
     <string name="library_delete_subtitle">Tímto odstraníte seznam a všechny položky seznamu z Trakt.</string>
     <string name="library_delete_confirm">Odstranit</string>
     <string name="library_source_local">LOKÁLNÍ</string>
+    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_trakt">TRAKT</string>
+    <string name="library_syncing_library">Synchronizuje se knihovna…</string>
     <string name="library_type_all">Vše</string>
     <string name="library_type_items">položek</string>
     <string name="library_empty_local_title">Zatím žádné %1$s</string>
@@ -848,7 +1014,7 @@
     <string name="plugin_add_repository">Přidat repozitář</string>
     <string name="plugin_add_btn">Přidat</string>
     <string name="plugin_manage_from_phone_title">Spravovat z telefonu</string>
-    <string name="plugin_manage_from_phone_subtitle">Naskenujte QR kód pro přidání nebo odstranění repozitářů</string>
+    <string name="plugin_manage_from_phone_subtitle">Naskenujte QR kód pro přidání nebo odstranění repozitářů z telefonu</string>
     <string name="plugin_qr_instruction">Naskenujte telefonem pro správu repozitářů</string>
     <string name="plugin_qr_close">Zavřít</string>
     <string name="plugin_confirm_title">Potvrdit změny repozitářů</string>
@@ -877,6 +1043,9 @@
     <string name="cast_detail_error">Něco se pokazilo</string>
     <string name="cast_detail_retry">Zkusit znovu</string>
     <string name="cast_detail_filmography">Filmografie</string>
+    <string name="cast_detail_born">Narozen: %1$s</string>
+    <string name="cast_detail_born_died">Narozen: %1$s — †%2$s</string>
+    <string name="cast_detail_age">věk %1$d</string>
 
     <string name="catalog_see_all_from">z %1$s</string>
     <string name="catalog_see_all_empty_title">Žádné položky nejsou dostupné</string>
@@ -890,10 +1059,9 @@
     <string name="update_downloading">Stahuje se aktualizace</string>
     <string name="update_download">Stáhnout</string>
     <string name="update_downloading_ellipsis">Stahuje se…</string>
-    <string name="update_unknown_sources">Povolte instalace z neznámých zdrojů, abyste mohli pokračovať.</string>
-    
+    <string name="update_unknown_sources">Povolte instalace z neznámých zdrojů, abyste mohli pokračovat.</string>
     <string name="account_title">Účet</string>
-    <string name="account_sign_in_description">Přihlaste se pro synchronizaci knihovny, postupu sledování, doplňků a pluginů. Knihovna používá Nuvio Sync, pokud není Trakt připojen. Postup sledování může používat Trakt nebo Nuvio Sync.</string>
+    <string name="account_sign_in_description">Přihlaste se pro synchronizaci knihovny, postupu sledování, doplňků a pluginů mezi zařízeními. Knihovna používá Nuvio Sync, pokud není Trakt připojen. Postup sledování může používat Trakt nebo Nuvio Sync.</string>
     <string name="account_sync_code_title">Sync kód</string>
     <string name="account_sync_code_description">Synchronizujte zařízení bez vytváření účtu.</string>
     <string name="account_linked_devices">Propojená zařízení (%1$d)</string>
@@ -942,6 +1110,9 @@
     <string name="settings_rounded_ui">Zaoblené UI</string>
     <string name="cd_expand_sidebar">Rozbalit boční panel</string>
 
+    <string name="update_checking">Hledají se aktualizace…</string>
+    <string name="update_download_complete">Stahování dokončeno. Připraveno k instalaci.</string>
+    <string name="update_up_to_date">Systém je aktuální. Nejnovější změny:</string>
     <string name="update_close">Zavřít</string>
     <string name="update_open_settings">Otevřít nastavení</string>
     <string name="update_install">Instalovat</string>

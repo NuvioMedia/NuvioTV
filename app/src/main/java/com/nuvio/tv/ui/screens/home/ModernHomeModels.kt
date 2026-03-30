@@ -30,7 +30,7 @@ internal val MODERN_LANDSCAPE_LOGO_GRADIENT = Brush.verticalGradient(
 )
 
 @Immutable
-internal data class HeroPreview(
+data class HeroPreview(
     val title: String,
     val logo: String?,
     val description: String?,
@@ -57,7 +57,7 @@ internal data class HeroPreview(
 )
 
 @Immutable
-internal sealed class ModernPayload {
+sealed class ModernPayload {
     data class ContinueWatching(val item: ContinueWatchingItem) : ModernPayload()
     data class Catalog(
         val focusKey: String,
@@ -77,7 +77,7 @@ internal data class FocusedCatalogSelection(
 )
 
 @Immutable
-internal data class ModernCarouselItem(
+data class ModernCarouselItem(
     val key: String,
     val title: String,
     val subtitle: String?,
@@ -88,7 +88,7 @@ internal data class ModernCarouselItem(
 )
 
 @Immutable
-internal data class HeroCarouselRow(
+data class HeroCarouselRow(
     val key: String,
     val title: String,
     val globalRowIndex: Int,
@@ -102,12 +102,43 @@ internal data class HeroCarouselRow(
 )
 
 @Immutable
-internal data class CarouselRowLookups(
+data class CarouselRowLookups(
     val rowIndexByKey: Map<String, Int>,
     val rowByKey: Map<String, HeroCarouselRow>,
+    val rowKeyByGlobalRowIndex: Map<Int, String>,
+    val firstHeroPreviewByRow: Map<String, HeroPreview>,
+    val fallbackBackdropByRow: Map<String, String>,
     val activeRowKeys: Set<String>,
     val activeItemKeysByRow: Map<String, Set<String>>,
     val activeCatalogItemIds: Set<String>
+)
+
+@Immutable
+data class ModernHomePresentationState(
+    val rows: List<HeroCarouselRow> = emptyList(),
+    val lookups: CarouselRowLookups = CarouselRowLookups(
+        rowIndexByKey = emptyMap(),
+        rowByKey = emptyMap(),
+        rowKeyByGlobalRowIndex = emptyMap(),
+        firstHeroPreviewByRow = emptyMap(),
+        fallbackBackdropByRow = emptyMap(),
+        activeRowKeys = emptySet(),
+        activeItemKeysByRow = emptyMap(),
+        activeCatalogItemIds = emptySet()
+    )
+)
+
+@Immutable
+internal data class ModernHeroSceneState(
+    val heroBackdrop: String?,
+    val preview: HeroPreview?,
+    val enrichmentActive: Boolean,
+    val shouldPlayTrailer: Boolean,
+    val trailerFirstFrameRendered: Boolean,
+    val trailerUrl: String?,
+    val trailerAudioUrl: String?,
+    val trailerMuted: Boolean,
+    val fullScreenBackdrop: Boolean
 )
 
 internal data class ModernCatalogRowBuildCacheEntry(

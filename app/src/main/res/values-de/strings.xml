@@ -7,6 +7,8 @@
     <!-- HomeScreen -->
     <string name="home_no_addons">Keine Add-ons installiert. Fügen Sie eines hinzu, um zu beginnen.</string>
     <string name="home_no_catalog_addons">Keine Katalog-Add-ons installiert. Installieren Sie ein Katalog-Add-on, um Inhalte anzuzeigen.</string>
+	<string name="auth_notice_nuvio_logged_out">Du wurdest von Nuvio abgemeldet. Bitte logge dich erneut ein.</string>
+    <string name="auth_notice_trakt_logged_out">Du wurdest von Trakt abgemeldet. Bitte logge dich erneut ein.</string>
     <string name="error_generic">Ein Fehler ist aufgetreten</string>
 
     <!-- ErrorState -->
@@ -39,6 +41,10 @@
     <string name="error_meta_tried_none">Versuchte Meta-Add-ons: %1$s. Keines davon lieferte Metadaten für id=%2$s (Typ=%3$s).</string>
     <string name="error_meta_tried_generic">Ausprobierte Meta-Add-ons: %1$s. Metadaten konnten für id=%2$s (Typ=%3$s) nicht geladen werden. </string>
     <string name="error_meta_tried_issues">Versuchte Meta-Add-ons: %1$s. Metadaten konnten für id=%2$s (Typ=%3$s) nicht geladen werden. Probleme: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Kein installiertes Add-on unterstützt \"%1$s\" Streams.</string>
+    <string name="error_stream_tried_none">Versuchte Add-ons: %1$s. Keines hat Streams für id=%2$s (type=%3$s) gefunden.</string>
+    <string name="error_stream_tried_generic">Versuchte Add-ons: %1$s. Streams konnten nicht geladen werden für id=%2$s (type=%3$s).</string>
+    <string name="error_stream_tried_issues">Versuchte Add-ons: %1$s. Streams konnten nicht geladen werden für id=%2$s (type=%3$s). Fehler: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Weiter ansehen</string>
@@ -118,8 +124,29 @@
     <string name="cast_role_writer">Autor</string>
     <string name="detail_tab_ratings">Bewertungen</string>
     <string name="detail_tab_more_like_this">Ähnliche Titel</string>
+    <string name="detail_more_like_this_powered_by_tmdb">Bereitgestellt von TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">Bereitgestellt von Trakt</string>
+    <string name="detail_comments_title">Kommentare</string>
+    <string name="detail_comments_subtitle">Bewertungen von Trakt</string>
     <string name="detail_section_network">Netzwerk</string>
     <string name="detail_section_production">Produktion</string>
+<string name="detail_comments_empty">Noch keine Trakt-Bewertungen verfügbar.</string>
+<string name="detail_comments_error">Trakt-Bewertungen konnten derzeit nicht geladen werden.</string>
+<string name="detail_comments_spoiler_hidden">Bewertung enthält Spoiler. Drücke OK, um sie anzuzeigen.</string>
+<string name="detail_comments_reveal_spoiler">Spoiler anzeigen</string>
+<string name="detail_comments_reveal_spoiler_hint">Drücke OK, um den Spoiler anzuzeigen.</string>
+<string name="detail_comments_back_hint">Zurück klicken, um zu schließen</string>
+<string name="detail_comments_badge_review">Bewertung</string>
+<string name="detail_comments_badge_spoiler">Spoiler</string>
+<string name="detail_comments_badge_rating">%1$d/10</string>
+<string name="detail_comments_likes">%1$d Likes</string>
+<string name="tmdb_entity_kind_company">Produktionsfirma</string>
+<string name="tmdb_entity_kind_network">Sender</string>
+<string name="tmdb_entity_rail_popular">Beliebt</string>
+<string name="tmdb_entity_rail_top_rated">Am besten bewertet</string>
+<string name="tmdb_entity_rail_recent">Neu</string>
+<string name="tmdb_entity_empty_title">Keine Titel gefunden</string>
+<string name="tmdb_entity_empty_subtitle">TMDB hat derzeit keine durchsuchbaren Titel für diese Auswahl.</string>
     <string name="episodes_unavailable">Nicht verfügbar</string>
     <string name="series_status_ended">Abgeschlossen</string>
     <string name="series_status_continuing">Fortlaufend</string>
@@ -178,6 +205,23 @@
     <string name="settings_playback_subtitle">Player, Untertitel und automatische Wiedergabe.</string>
     <string name="settings_trakt_subtitle">Trakt-Verbindungsbildschirm öffnen.</string>
     <string name="settings_about_subtitle">Version und Richtlinien.</string>
+<string name="settings_network">Netzwerkgeschwindigkeit</string>
+<string name="settings_network_subtitle">Latenz- und Download-Diagnose</string>
+<string name="settings_advanced">Erweitert</string>
+<string name="settings_advanced_subtitle">Netzwerkgeschwindigkeit testen</string>
+<string name="network_speed_test_run">Geschwindigkeitstest starten</string>
+<string name="network_speed_test_running">Geschwindigkeitstest läuft</string>
+<string name="network_speed_test_subtitle">Downloadgeschwindigkeit und Latenz messen</string>
+<string name="network_testing_latency">Latenz wird gemessen</string>
+<string name="network_testing_download">Downloadgeschwindigkeit wird gemessen</string>
+<string name="network_results_title">Ergebnisse</string>
+<string name="network_latency_label">Latenz</string>
+<string name="network_download_label">Download</string>
+<string name="network_error_prefix">Fehler: %1$s</string>
+<string name="network_powered_by_fast">Bereitgestellt von fast.com</string>
+<string name="network_connection_wifi">WLAN</string>
+<string name="network_connection_ethernet">Ethernet</string>
+<string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Debugging</string>
     <string name="settings_debug_subtitle">Entwicklertools und Feature-Flags.</string>
     <string name="settings_plugins_section_subtitle">Repositorys, Anbieter und Plugin-Status verwalten.</string>
@@ -402,7 +446,9 @@
     <string name="layout_modern_sidebar_sub">„Schwebende” Seitenleisten-Navigation aktivieren.</string>
     <string name="layout_modern_sidebar_blur">Moderne Seitenleiste „unscharf”</string>
     <string name="layout_modern_sidebar_blur_sub">Wechseln Sie den Unschärfeeffekt für moderne Seitenleistenoberflächen.</string>
-    <string name="layout_show_hero">Hero-Bereich anzeigen</string>
+	<string name="layout_fullscreen_hero_backdrop">Vollbild-Hintergrund (Hero)</string>
+	<string name="layout_fullscreen_hero_backdrop_sub">Erweitert den Hero-Hintergrund, sodass er den gesamten Bildschirm ausfüllt.</string>
+	<string name="layout_show_hero">Hero-Bereich anzeigen</string>
     <string name="layout_show_hero_sub">Hero-Karussell oben auf der Startseite anzeigen.</string>
     <string name="layout_show_discover">Entdecken in der Suche anzeigen</string>
     <string name="layout_show_discover_sub">Entdecken-Bereich anzeigen, wenn die Suche leer ist.</string>
@@ -418,10 +464,14 @@
     <string name="layout_section_detail_desc">Einstellungen für die Detail- und Episodenbildschirme.</string>
     <string name="layout_blur_unwatched">Ungesehene Episoden unscharf darstellen</string>
     <string name="layout_blur_unwatched_sub">Vorschaubild ungesehener Folgen „unscharf” anzeigen. (Spoilervermeidung)</string>
+    <string name="layout_blur_cw_next_up">Vorschaubild in „Weiterschauen” unscharf anzeigen.</string>
+    <string name="layout_blur_cw_next_up_sub">Vorschaubild in „Weiterschauen” „unscharf” anzeigen. (Spoilervermeidung)</string>
     <string name="layout_trailer_button">Trailer-Schaltfläche anzeigen</string>
     <string name="layout_trailer_button_sub">Trailer-Schaltfläche auf der Detailseite anzeigen. (wenn verfügbar)</string>
     <string name="layout_prefer_external_meta">Metainformationen aus externem Add-on bevorzugen</string>
     <string name="layout_prefer_external_meta_sub">Verwende Metadaten aus externem Add-on anstelle von Katalog-Add-on.</string>
+    <string name="layout_show_full_release_date">Vollständiges Erscheinungsdatum anzeigen</string>
+    <string name="layout_show_full_release_date_sub">Zeigt für Filme vollständiges Erscheinungsdatum anstatt nur das Jahr.</string>
     <string name="layout_section_focused">Fokussiertes Poster</string>
     <string name="layout_section_focused_desc">Erweitertes Verhalten für fokussierte Poster.</string>
     <string name="layout_expand_poster">Fokussiertes Poster auf Hintergrund erweitern</string>
@@ -505,6 +555,10 @@
     <string name="tmdb_subtitle">Wählen Sie aus, welche Metadatenfelder aus TMDB stammen sollen</string>
     <string name="tmdb_enable_title">TMDB-Anreicherung aktivieren</string>
     <string name="tmdb_enable_subtitle">TMDB als Metadatenquelle zur Verbesserung der Add-on-Daten verwenden</string>
+    <string name="tmdb_modern_home_title">Für modernes „Home” aktivieren</string>
+    <string name="tmdb_modern_home_subtitle">TMDB Metadaten-Anreicherung für Modernes „Home” und fokussierte Poster aktivieren</string>
+    <string name="tmdb_enrich_continue_watching_title">Für „Weiterschauen” aktivieren</string>
+    <string name="tmdb_enrich_continue_watching_subtitle">TMDB Metadaten-Anreicherung für „Weiterschauen” aktivieren.</string>
     <string name="tmdb_language_title">Sprache</string>
     <string name="tmdb_language_subtitle">TMDB-Metadatensprache für Titel, Logo und aktivierte Felder</string>
     <string name="tmdb_artwork_title">Grafik</string>
@@ -547,7 +601,9 @@
     <string name="trakt_watch_progress_dialog_subtitle">Wählen Sie aus, ob zum Fortsetzen und Weitersehen Trakt oder Nuvio Sync verwendet werden soll, während Trakt Scrobbling aktiv bleibt.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
-    <string name="trakt_watch_progress_trakt_selected">Quelle für Fortschrittsanzeige auf Trakt eingestellt</string>
+    <string name="trakt_setting_on">An</string>
+    <string name="trakt_setting_off">Aus</string> 
+	<string name="trakt_watch_progress_trakt_selected">Quelle für Fortschrittsanzeige auf Trakt eingestellt</string>
     <string name="trakt_watch_progress_nuvio_selected">Quelle für den Fortschritt beim Ansehen auf Nuvio Sync eingestellt</string>
     <string name="trakt_continue_watching_window">„Weiterschauen” Zeitrahmen</string>
     <string name="trakt_continue_watching_subtitle">Trakt-Verlauf für „Weiterschauen” berücksichtigt</string>
@@ -557,6 +613,12 @@
     <string name="trakt_unaired_hidden">Ausgeblendet</string>
     <string name="trakt_unaired_now_shown">Noch nicht ausgestrahlte Folgen werden jetzt angezeigt</string>
     <string name="trakt_unaired_now_hidden">Noch nicht ausgestrahlte Folgen von „Next Up“ sind jetzt ausgeblendet</string>
+<string name="trakt_comments_title">Kommentare</string>
+<string name="trakt_comments_subtitle">Trakt-Bewertungen auf Metadatenseiten anzeigen</string>
+<string name="trakt_comments_dialog_title">Kommentare</string>
+<string name="trakt_comments_dialog_subtitle">Wähle, ob Metadatenseiten Trakt-Bewertungen anzeigen sollen, wenn dein Konto verbunden ist.</string>
+<string name="trakt_comments_now_shown">Trakt-Bewertungen auf Metadatenseiten werden jetzt angezeigt</string>
+<string name="trakt_comments_now_hidden">Trakt-Bewertungen auf Metadatenseiten werden jetzt ausgeblendet</string>
     <string name="trakt_cached_label">Zwischengespeichert</string>
     <string name="trakt_stat_movies">Filme</string>
     <string name="trakt_stat_shows">Serien</string>
@@ -598,6 +660,12 @@
     <string name="debug_error_dialog_title">Wiedergabefehler</string>
     <string name="debug_error_dialog_subtitle">Während der Wiedergabe ist ein Fehler aufgetreten.\n\nFehler: Simulierter Testfehler – dies ist kein echter Fehler. Quelle hat HTTP 503 (Dienst nicht verfügbar) zurückgegeben.</string>
     <string name="debug_dismiss">Schließen</string>
+	<string name="debug_section_library">Bibliothek</string>
+    <string name="debug_generate_library_title">Generiere Bibliothek-Einträge</string>
+    <string name="debug_generate_library_subtitle">Fügt für Tests zufällige Filme und Serien der Bibliothek hinzu.</string>
+    <string name="debug_generate_library_placeholder">Anzahl Einträge</string>
+    <string name="debug_generate_library_button">Generieren</string>
+    <string name="debug_generating_library">Generiert\u2026</string>
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profile</string>
@@ -634,6 +702,37 @@
     <string name="profile_add_new">Profil hinzufügen</string>
     <string name="profile_cancel">Abbrechen</string>
     <string name="profile_save">Speichern</string>
+    <string name="profile_pin_title">Profil-PIN-Sperre</string>
+    <string name="profile_pin_enabled_subtitle">Für dieses Profil ist vor dem Wechsel eine 4-stellige PIN erforderlich.</string>
+    <string name="profile_pin_disabled_subtitle">Lege eine 4-stellige PIN fest, um dieses Profil zu sperren.</string>
+    <string name="profile_pin_set">PIN festlegen</string>
+    <string name="profile_pin_change">PIN ändern</string>
+    <string name="profile_pin_remove">PIN entfernen</string>
+    <string name="profile_pin_set_title">Profil-PIN festlegen</string>
+    <string name="profile_pin_set_subtitle">Gib eine 4-stellige PIN ein und bestätige sie.</string>
+    <string name="profile_pin_enter">4-stellige PIN eingeben</string>
+    <string name="profile_pin_confirm">4-stellige PIN bestätigen</string>
+    <string name="profile_pin_mismatch">Die PINs stimmen nicht überein.</string>
+    <string name="profile_pin_save">PIN speichern</string>
+    <string name="profile_pin_unlock_title">%1$s entsperren</string>
+    <string name="profile_pin_unlock_subtitle">Gib die 4-stellige PIN ein, um fortzufahren.</string>
+    <string name="profile_pin_verifying">Wird überprüft…</string>
+    <string name="profile_pin_unlock_action">Entsperren</string>
+    <string name="profile_pin_overlay_unlock_heading">Gib deine PIN ein, um auf %1$s zuzugreifen.</string>
+    <string name="profile_pin_overlay_set_heading">Erstelle eine 4-stellige PIN für %1$s.</string>
+    <string name="profile_pin_overlay_confirm_heading">Bestätige deine neue PIN.</string>
+    <string name="profile_pin_overlay_unlock_support">Verwende deine Fernbedienung oder Tastatur, um 4 Ziffern einzugeben.</string>
+    <string name="profile_pin_overlay_change_verify_kicker">Sicherheitsprüfung erforderlich.</string>
+    <string name="profile_pin_overlay_change_verify_heading">Gib die aktuelle PIN ein, um die PIN für %1$s zu ändern.</string>
+    <string name="profile_pin_overlay_change_verify_support">Gib die aktuelle 4-stellige PIN ein, bevor du eine neue festlegst.</string>
+    <string name="profile_pin_overlay_remove_verify_kicker">Sicherheitsprüfung erforderlich.</string>
+    <string name="profile_pin_overlay_remove_verify_heading">Gib die aktuelle PIN ein, um die Sperre für %1$s zu entfernen.</string>
+    <string name="profile_pin_overlay_remove_verify_support">Gib die aktuelle 4-stellige PIN ein, um diese Sperre zu entfernen.</string>
+    <string name="profile_pin_overlay_set_support">Diese PIN wird benötigt, bevor dieses Profil geöffnet werden kann.</string>
+    <string name="profile_pin_overlay_confirm_support">Gib dieselben 4 Ziffern erneut ein, um die Einrichtung abzuschließen.</string>
+    <string name="profile_pin_overlay_mismatch">Die PINs stimmen nicht überein. Gib erneut eine neue PIN ein.</string>
+    <string name="profile_pin_overlay_forgot_hint">PIN vergessen? Setze sie über dein Nuvio-Konto auf der Nuvio-Website zurück.</string>
+    <string name="profile_pin_overlay_back_hint">Zurück drücken, um abzubrechen</string>	
 
 
     <!-- AddonManagerScreen -->
@@ -643,6 +742,9 @@
     <string name="addon_install_placeholder">https://example.com</string>
     <string name="addon_installing">Installation läuft</string>
     <string name="addon_install_btn">Installieren</string>
+    <string name="addon_install_success">%1$s installiert</string>
+    <string name="addon_error_invalid_url">Gültige Add-on URL eingeben</string>
+    <string name="addon_error_invalid_scheme">Add-on URL  muss mit http oder https beginnen</string>
     <string name="addon_installed_section">Installiert</string>
     <string name="addon_empty">Keine Add-ons installiert. Fügen Sie eines hinzu, um zu beginnen. </string>
     <string name="addon_remove">Entfernen</string>
@@ -707,6 +809,26 @@
     <string name="player_more_aspect_ratio">Seitenverhältnis</string>
     <string name="player_more_open_external">In externem Player öffnen</string>
 
+    <!-- StreamInfoOverlay -->
+    <string name="stream_info_section_source">QUELLE</string>
+    <string name="stream_info_section_file">DATEI</string>
+    <string name="stream_info_section_video">VIDEO</string>
+    <string name="stream_info_section_audio">AUDIO</string>
+    <string name="stream_info_section_subtitle">UNTERTITEL</string>
+    <string name="stream_info_filename">Dateiname</string>
+    <string name="stream_info_size">Größe</string>
+    <string name="stream_info_codec">Codec</string>
+    <string name="stream_info_resolution">Auflösung</string>
+    <string name="stream_info_frame_rate">Bildrate</string>
+    <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_channels">Kanäle</string>
+    <string name="stream_info_sample_rate">Abtastrate</string>
+    <string name="stream_info_language">Sprache</string>
+    <string name="stream_info_name">Name</string>
+    <string name="stream_info_source">Quelle</string>
+    <string name="stream_info_subtitle_source_addon">Addon</string>
+    <string name="stream_info_subtitle_source_embedded">Eingebettet</string>
+
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Quellen</string>
     <string name="sources_reload">Neu laden</string>
@@ -731,6 +853,15 @@
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
+    <string name="audio_dialog_tab_tracks">Audio</string>
+    <string name="audio_dialog_tab_mix">Mix</string>
+    <string name="audio_mix_label">Verstärkung (PCM)</string>
+    <string name="audio_mix_value_db">%1$d dB</string>
+    <string name="audio_mix_persist_on">Zwischen Sitzungen speichern: EIN</string>
+    <string name="audio_mix_persist_off">Zwischen Sitzungen speichern: AUS</string>
+    <string name="audio_mix_range">Bereich: %1$d dB bis %2$d dB</string>
+    <string name="audio_mix_range_saved">Bereich: %1$d dB bis %2$d dB (gespeichert)</string>
+    <string name="audio_mix_unavailable">Verstärkung ist auf diesem Gerät nicht verfügbar</string>
 
     <!-- SubtitleDialog / SubtitleStyleSidePanel -->
     <string name="subtitle_dialog_title">Untertitel</string>
@@ -839,7 +970,7 @@
     <!-- AccountSettingsContent -->
     <string name="account_loading">Wird geladen\u2026</string>
     <string name="account_sync_description">Synchronisieren Sie Ihre Bibliothek, den Fortschritt, Add-ons und Plugins auf allen Geräten.</string>
-    <string name="account_sync_restart_note">Die Synchronisierung erfolgt nicht in Echtzeit auf allen aktiven Geräten. Starten Sie dieses Gerät nach der Anmeldung neu, um Änderungen zu übernehmen, die an anderer Stelle vorgenommen wurden. </string>
+    <string name="account_sync_restart_note">Die Synchronisierung erfolgt nicht in Echtzeit auf allen aktiven Geräten. Starten Sie dieses Gerät nach der Anmeldung neu, um Änderungen zu übernehmen, die an anderer Stelle vorgenommen wurden.</string>
     <string name="account_signin_qr_title">Mit QR anmelden</string>
     <string name="account_signin_qr_subtitle">Scannen Sie einen QR-Code und schließen Sie die E-Mail-Anmeldung auf Ihrem Smartphone ab</string>
     <string name="account_signed_in_label">Angemeldet</string>
@@ -930,6 +1061,9 @@
     <string name="cast_detail_error">Es ist ein Fehler aufgetreten</string>
     <string name="cast_detail_retry">Wiederholen</string>
     <string name="cast_detail_filmography">Filmografie</string>
+    <string name="cast_detail_born">Geboren: %1$s</string>
+    <string name="cast_detail_born_died">Geboren: %1$s — †%2$s</string>
+    <string name="cast_detail_age">Alter %1$d</string>
 
     <!-- CatalogSeeAllScreen -->
     <string name="catalog_see_all_from">von %1$s</string>
@@ -1005,6 +1139,9 @@
     <string name="settings_rounded_ui">Abgerundete Benutzeroberfläche</string>
     <string name="cd_expand_sidebar">Seitenleiste erweitern</string>
 
+    <string name="update_checking">Auf Updates prüfen…</string>
+    <string name="update_download_complete">Update heruntergeladen. Bereit zum Installieren.</string>
+    <string name="update_up_to_date">System ist aktuell. Letzte Änderungen:</string>
     <string name="update_close">Schließen</string>
     <string name="update_open_settings">Einstellungen öffnen</string>
     <string name="update_install">Installieren</string>

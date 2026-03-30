@@ -273,6 +273,8 @@ private fun ModernCatalogRowItem(
 @Composable
 internal fun ModernRowSection(
     row: HeroCarouselRow,
+    isActiveRow: Boolean,
+    isVerticalRowsScrolling: Boolean,
     rowTitleBottom: Dp,
     defaultBringIntoViewSpec: BringIntoViewSpec,
     focusStateCatalogRowScrollIndex: Int,
@@ -437,6 +439,8 @@ internal fun ModernRowSection(
         val rowItemCount = row.items.size
         LaunchedEffect(
             row.key,
+            isActiveRow,
+            isVerticalRowsScrolling,
             rowItemCount,
             portraitCatalogCardWidth,
             portraitCatalogCardHeight,
@@ -445,6 +449,7 @@ internal fun ModernRowSection(
             continueWatchingCardWidth,
             continueWatchingCardHeight
         ) {
+            if (!isActiveRow || isVerticalRowsScrolling) return@LaunchedEffect
             delay(150) // Wait before spamming image requests to survive rapid vertical D-pad scrolls!
             val cwWidthPx = with(density) { continueWatchingCardWidth.roundToPx() }
             val cwHeightPx = with(density) { continueWatchingCardHeight.roundToPx() }

@@ -47,7 +47,9 @@
     <string name="continue_watching">Nadaljuj z gledanjem</string>
     <string name="cw_upcoming">Prihajajoče</string>
     <string name="cw_next_up">Naslednje na vrsti</string>
-    <string name="cw_resume">Nadaljuj</string>
+	<string name="cw_new_episode">Nova epizoda</string>
+    <string name="cw_new_season">Nova sezona</string>												  
+	<string name="cw_resume">Nadaljuj</string>
 	<string name="cw_percent_watched">%1$d%% ogledano</string>														 
 	<string name="cw_hours_min_left">Še %1$dh %2$dm</string>
     <string name="cw_min_left">Še %1$dm</string>
@@ -82,15 +84,30 @@
     <string name="episodes_specials">Posebne epizode</string>
     <string name="episodes_episode">Epizoda</string>
     <string name="episodes_cd_watched">Ogledano</string>
-    <string name="episodes_dialog_subtitle">Dejanja epizode</string>
+    <string name="episodes_dialog_subtitle">Možnosti epizode</string>
     <string name="episodes_mark_watched">Označi kot ogledano</string>
     <string name="episodes_mark_unwatched">Označi kot neogledano</string>
     <string name="episodes_mark_season_watched">Označi sezono kot ogledano</string>
     <string name="episodes_mark_season_unwatched">Označi sezono kot neogledano</string>
     <string name="episodes_mark_previous_watched">Označi prejšnje v tej sezoni kot ogledane</string>
     <string name="episodes_play">Predvajaj</string>
-	<string name="play_manually">Predvajaj ročno</string>															  
-    <string name="episodes_season_actions">Dejanja sezone</string>
+	<string name="play_manually">Ročna izbira vira</string>															  
+    <string name="episodes_season_actions">Upravljanje sezone</string>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	<!-- MetaDetailsViewModel -->																
 	<string name="detail_added_to_library">Dodano v knjižnico</string>
     <string name="detail_removed_from_library">Odstranjeno iz knjižnice</string>
@@ -105,26 +122,7 @@
     <string name="detail_marked_episodes_watched">Epizode, označene kot ogledane: %1$d</string>
     <string name="detail_marked_episodes_unwatched">Epizode, označene kot neogledane: %1$d</string>
     <string name="detail_marked_previous_watched">Prejšnje epizode, označene kot ogledane: %1$d</string>																		
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    <!-- MetaDetailsScreen -->
+	<!-- MetaDetailsScreen -->
     <string name="detail_btn_play">Predvajaj</string>
     <string name="detail_btn_resume">Nadaljuj</string>
     <string name="detail_btn_play_episode">Predvajaj S%1$dE%2$d</string>
@@ -136,8 +134,29 @@
     <string name="cast_role_writer">Scenarist</string>
     <string name="detail_tab_ratings">Ocene</string>
     <string name="detail_tab_more_like_this">Podobno</string>
-    <string name="detail_section_network">Omrežje</string>
+    <string name="detail_more_like_this_powered_by_tmdb">Poganja TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">Poganja Trakt</string>
+    <string name="detail_comments_title">Komentarji</string>
+    <string name="detail_comments_subtitle">Ocene s Trakta</string>
+    <string name="detail_section_network">Televizijska mreža</string>
     <string name="detail_section_production">Produkcija</string>
+    <string name="detail_comments_empty">Na Traktu še ni ocen.</string>
+    <string name="detail_comments_error">Trenutno ni bilo mogoče naložiti ocen s Trakta.</string>
+    <string name="detail_comments_spoiler_hidden">Ocena vsebuje kvarnik. Pritisnite OK za prikaz.</string>
+    <string name="detail_comments_reveal_spoiler">Prikaži kvarnik</string>
+    <string name="detail_comments_reveal_spoiler_hint">Pritisnite OK za prikaz kvarnika.</string>
+    <string name="detail_comments_back_hint">Kliknite nazaj za zapiranje</string>
+    <string name="detail_comments_badge_review">Ocena</string>
+    <string name="detail_comments_badge_spoiler">Kvarnik</string>
+    <string name="detail_comments_badge_rating">%1$d/10</string>
+    <string name="detail_comments_likes">%1$d všečkov</string>
+    <string name="tmdb_entity_kind_company">Produkcijska hiša</string>
+    <string name="tmdb_entity_kind_network">Televizijska mreža</string>
+    <string name="tmdb_entity_rail_popular">Priljubljeno</string>
+    <string name="tmdb_entity_rail_top_rated">Najbolje ocenjeno</string>
+    <string name="tmdb_entity_rail_recent">Nedavno</string>
+    <string name="tmdb_entity_empty_title">Ni najdenih naslovov</string>
+    <string name="tmdb_entity_empty_subtitle">TMDB trenutno nima naslovov za brskanje za to izbiro.</string>
     <string name="episodes_unavailable">Ni na voljo</string>
     <string name="series_status_ended">Končano</string>
     <string name="series_status_continuing">V teku</string>
@@ -152,19 +171,115 @@
     <string name="detail_lists_subtitle">Izberite, na katere sezname naj bo vključen ta naslov.</string>
     <string name="action_save">Shrani</string>
     <string name="action_saving">Shranjevanje…</string>
-    <!-- AppLanguage -->
+	
+	<!-- AppLanguage -->
     <string name="appearance_language">Jezik aplikacije</string>
     <string name="appearance_language_subtitle">Prepiši sistemski jezik</string>
     <string name="appearance_language_system">Sistemsko privzeto</string>
     <string name="appearance_language_dialog_title">Izberite jezik</string>
     <string name="appearance_language_restart_hint">Ponovno zaženite aplikacijo, da uveljavite spremembo jezika.</string>
+	
 	<!-- Font -->												
     <string name="appearance_font">Pisava aplikacije</string>
     <string name="appearance_font_subtitle">Izberite želeno pisavo</string>
     <string name="appearance_font_dialog_title">Izberite pisavo</string>																			   
-    <!-- ThemeSettingsScreen -->
-    <string name="appearance_title">Videz</string>
+    
+	<!-- ThemeSettingsScreen -->
+    
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<string name="appearance_title">Videz</string>
     <string name="appearance_subtitle">Izberite barvno temo in jezik</string>
+    
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
     <string name="cd_selected">Izbrano</string>
 
     <!-- AboutScreen -->
@@ -192,8 +307,25 @@
     <string name="settings_playback_subtitle">Predvajalnik, podnapisi in samodejno predvajanje.</string>
     <string name="settings_trakt_subtitle">Odpri zaslon za povezavo s Trakt.</string>
     <string name="settings_about_subtitle">Različica in pravilniki.</string>
-    <string name="settings_debug">Odpravljanje napak</string>
-    <string name="settings_debug_subtitle">Orodja za razvijalce in zastavice funkcij.</string>
+    <string name="settings_network">Hitrost omrežja</string>
+    <string name="settings_network_subtitle">Diagnostika zakasnitve in prenosa</string>
+    <string name="settings_advanced">Napredno</string>
+    <string name="settings_advanced_subtitle">Zaženi diagnostiko hitrosti omrežja</string>
+    <string name="network_speed_test_run">Zaženi preizkus hitrosti</string>
+    <string name="network_speed_test_running">Izvajanje preizkusa hitrosti</string>
+    <string name="network_speed_test_subtitle">Izmeri hitrost prenosa in zakasnitev</string>
+    <string name="network_testing_latency">Merjenje zakasnitve</string>
+    <string name="network_testing_download">Merjenje hitrosti prenosa</string>
+    <string name="network_results_title">Rezultati</string>
+    <string name="network_latency_label">Zakasnitev</string>
+    <string name="network_download_label">Prenos</string>
+    <string name="network_error_prefix">Napaka: %1$s</string>
+    <string name="network_powered_by_fast">Poganja fast.com</string>
+    <string name="network_connection_wifi">Wi-Fi</string>
+    <string name="network_connection_ethernet">Ethernet</string>
+    <string name="network_connection_offline">Brez povezave</string>
+    <string name="settings_debug">Odpravljanje napak</string>
+    <string name="settings_debug_subtitle">Razvojna orodja in zastavice funkcij.</string>																  
     <string name="settings_plugins_section_subtitle">Upravljanje repozitorijev, ponudnikov in stanj vtičnikov.</string>
     <string name="settings_account_section_subtitle">Stanje računa in sinhronizacije.</string>
 	<string name="account_stat_addons">dodatki</string>
@@ -215,8 +347,7 @@
     <string name="action_cancel">Prekliči</string>
     <string name="action_none">Brez</string>
 	<string name="action_close">Zapri</string>										  
-
-    <!-- SupportersContributorsScreen -->										 
+	<!-- SupportersContributorsScreen -->										 
 	<string name="supporters_contributors_title">Podporniki &amp; soustvarjalci</string>
     <string name="supporters_contributors_subtitle">Ljudje, ki podpirajo Nuvio, in soustvarjalci, ki ga gradijo za TV in mobilne naprave.</string>
     <string name="supporters_contributors_supporters_copy">Podporniki in donatorji pomagajo ohranjati projekt pri življenju, financirajo infrastrukturo in omogočajo ambiciozne funkcije.</string>
@@ -241,7 +372,33 @@
     <string name="contributors_show_kofi_qr">Prikaži Ko-fi QR</string>
     <string name="contributors_hide_kofi_qr">Skrij Ko-fi QR</string>
     <string name="contributors_profile_unavailable">Povezava do GitHub profila ni na voljo.</string>																				   
-    <!-- PlaybackSettingsSections -->
+    
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<!-- PlaybackSettingsSections -->
     <string name="playback_section_general">Splošno</string>
     <string name="playback_section_general_desc">Osnovno obnašanje pri predvajanju.</string>
     <string name="playback_loading_overlay">Prekrivanje ob nalaganju</string>
@@ -263,8 +420,8 @@
     <string name="playback_section_audio_desc">Obnašanje napovednika in kontrole zvoka.</string>
     <string name="playback_section_subtitles">Podnapisi</string>
     <string name="playback_section_subtitles_desc">Jezik, slog in način izrisa.</string>
-    <string name="playback_afr_open">Odprto</string>
-    <string name="playback_afr_closed">Zaprto</string>
+    <string name="playback_afr_open">Razširjeno</string>
+    <string name="playback_afr_closed">Strnjeno</string>
     <string name="playback_afr_off">Izklopljeno</string>
     <string name="playback_afr_off_sub">Ne spreminjaj hitrosti osveževanja zaslona.</string>
     <string name="playback_afr_on_start">Ob zagonu</string>
@@ -414,7 +571,9 @@
     <string name="layout_modern_sidebar_sub">Omogoči lebdečo navigacijo v stranski vrstici.</string>
     <string name="layout_modern_sidebar_blur">Zameglitev moderne stranske vrstice</string>
     <string name="layout_modern_sidebar_blur_sub">Vklopi/izklopi učinek zameglitve za moderne površine stranske vrstice.</string>
-    <string name="layout_show_hero">Prikaži razdelek z glavno vsebino</string>
+    <string name="layout_fullscreen_hero_backdrop">Celozaslonsko glavno ozadje</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">Razširi glavno ozadje, da zapolni celoten zaslon.</string>
+    <string name="layout_show_hero">Prikaži glavni odsek</string>							  
     <string name="layout_show_hero_sub">Prikaži vrtiljak glavne vsebine na vrhu domačega zaslona.</string>
     <string name="layout_show_discover">Prikaži Odkrij v iskanju</string>
     <string name="layout_show_discover_sub">Prikaži razdelek za brskanje, ko je iskanje prazno.</string>
@@ -430,10 +589,14 @@
     <string name="layout_section_detail_desc">Nastavitve za zaslone s podrobnostmi in epizodami.</string>
     <string name="layout_blur_unwatched">Zamegli neogledane epizode</string>
     <string name="layout_blur_unwatched_sub">Zamegli sličice epizod, dokler niso ogledane, da se izognete kvarnikom.</string>
-    <string name="layout_trailer_button">Prikaži gumb za napovednik</string>
-    <string name="layout_trailer_button_sub">Prikaži gumb za napovednik na strani s podrobnostmi (samo, ko je na voljo).</string>
-    <string name="layout_prefer_external_meta">Preferiraj meta podatke iz zunanjega dodatka</string>
-    <string name="layout_prefer_external_meta_sub">Uporabi metapodatke iz zunanjega dodatka namesto iz kataloga.</string>
+	<string name="layout_blur_cw_next_up">Zamegli neogledano v Nadaljuj z gledanjem</string>
+    <string name="layout_blur_cw_next_up_sub">Zamegli sličice naslednjih epizod v Nadaljuj z gledanjem, da preprečite kvarnike.</string>
+    <string name="layout_trailer_button">Prikaži gumb za napovednik</string>
+    <string name="layout_trailer_button_sub">Prikaži gumb za napovednik na strani s podrobnostmi (samo, ko je napovednik na voljo).</string>
+    <string name="layout_prefer_external_meta">Prednost metapodatkom iz zunanjega dodatka</string>
+    <string name="layout_prefer_external_meta_sub">Uporabi metapodatke iz zunanjega dodatka namesto dodatka za katalog.</string>
+    <string name="layout_show_full_release_date">Prikaži celoten datum izida</string>
+    <string name="layout_show_full_release_date_sub">Pri filmih prikaži celoten datum izida namesto samo leta.</string>																  
     <string name="layout_section_focused">Fokusiran plakat</string>
     <string name="layout_section_focused_desc">Napredno obnašanje za fokusirane kartice plakatov.</string>
     <string name="layout_expand_poster">Razširi fokusiran plakat v ozadje</string>
@@ -523,15 +686,18 @@
     <string name="animeskip_dialog_placeholder">Vnesite ID odjemalca</string>
     <string name="animeskip_invalid_client_id">Neveljaven ID odjemalca</string>												  
     <string name="action_clear">Počisti</string>
-
 	<!-- TmdbSettingsScreen -->
     <string name="tmdb_title">Obogatitev s TMDB</string>
     <string name="tmdb_subtitle">Izberite, katera polja metapodatkov naj prihajajo iz TMDB</string>
     <string name="tmdb_enable_title">Omogoči obogatitev s TMDB</string>
-    <string name="tmdb_enable_subtitle">Uporabi TMDB kot vir metapodatkov za izboljšanje podatkov iz dodatkov</string>
+    <string name="tmdb_enable_subtitle">Uporabi TMDB kot vir metapodatkov za izboljšanje podatkov dodatkov</string>
+    <string name="tmdb_modern_home_title">Omogoči na modernem začetnem zaslonu</string>
+    <string name="tmdb_modern_home_subtitle">Uporabi obogatitev s TMDB tudi za glavni prikaz in izpostavljene kartice na modernem začetnem zaslonu</string>
+    <string name="tmdb_enrich_continue_watching_title">Obogati Nadaljuj z gledanjem</string>
+    <string name="tmdb_enrich_continue_watching_subtitle">Uporabi obogatitev s TMDB za elemente v Nadaljuj z gledanjem</string>																	   
     <string name="tmdb_language_title">Jezik</string>
     <string name="tmdb_language_subtitle">Jezik metapodatkov TMDB za naslov, logotip in omogočena polja</string>
-    <string name="tmdb_artwork_title">Umetnine</string>
+    <string name="tmdb_artwork_title">Naslovnice</string>
     <string name="tmdb_artwork_subtitle">Logotip in slike ozadja iz TMDB</string>
     <string name="tmdb_basic_info_title">Osnovne informacije</string>
     <string name="tmdb_basic_info_subtitle">Opis, žanri in ocena iz TMDB</string>
@@ -541,17 +707,45 @@
     <string name="tmdb_credits_subtitle">Igralska zasedba s fotografijami, režiser in scenarist iz TMDB</string>
     <string name="tmdb_productions_title">Produkcije</string>
     <string name="tmdb_productions_subtitle">Produkcijska podjetja iz TMDB</string>
-    <string name="tmdb_networks_title">Mreže</string>
-    <string name="tmdb_networks_subtitle">Mreže z logotipi iz TMDB</string>
+    <string name="tmdb_networks_title">Televizijska mreže</string>
+    <string name="tmdb_networks_subtitle">Televizijska mreže z logotipi iz TMDB</string>
     <string name="tmdb_episodes_title">Epizode</string>
     <string name="tmdb_episodes_subtitle">Naslovi epizod, pregledi, sličice in čas izvajanja iz TMDB</string>
     <string name="tmdb_more_like_this_title">Podobno temu</string>
     <string name="tmdb_more_like_this_subtitle">Ozadja priporočil TMDB na strani s podrobnostmi</string>
     <string name="tmdb_collections_title">Zbirke</string>
     <string name="tmdb_collections_subtitle">TMDB filmske zbirke po vrstnem redu izdaje</string>
-    <string name="tmdb_language_dialog_title">TMDB Jezik</string>
+    
+	<string name="tmdb_language_dialog_title">TMDB Jezik</string>
 	
-    <!-- TraktScreen -->
+    
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<!-- TraktScreen -->
     <string name="trakt_description">Sinhronizirajte svoj seznam za ogled, napredek ogledov, nadaljevanje gledanja, beleženje in osebne sezname s Trakt.</string>
     <string name="trakt_connected_as">Povezan kot %1$s</string>
     <string name="trakt_account_login">Prijava v račun</string>
@@ -570,6 +764,8 @@
     <string name="trakt_watch_progress_dialog_subtitle">Izberite, ali naj nadaljevanje predvajanja in nadaljnje gledanje uporablja Trakt ali Nuvio Sync, medtem ko beleženje na Trakt (scrobbling) ostane aktivno.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+	<string name="trakt_setting_on">Vklopljeno</string>
+    <string name="trakt_setting_off">Izklopljeno</string>										 
     <string name="trakt_watch_progress_trakt_selected">Vir napredka gledanja je nastavljen na Trakt</string>
     <string name="trakt_watch_progress_nuvio_selected">Vir napredka gledanja je nastavljen na Nuvio Sync</string>
     <string name="trakt_continue_watching_window">Časovni okvir za nadaljnje gledanje</string>
@@ -578,8 +774,14 @@
     <string name="trakt_unaired_next_up_subtitle">Prikaži prihajajoče epizode pred njihovim izidom</string>
     <string name="trakt_unaired_shown">Prikazano</string>
     <string name="trakt_unaired_hidden">Skrito</string>
-    <string name="trakt_unaired_now_shown">Naslednje epizode, ki še niso izdane, so zdaj prikazane</string>																					  
-    <string name="trakt_cached_label">V predpomnilniku</string>
+	<string name="trakt_unaired_now_shown">Naslednje epizode, ki še niso izdane, so zdaj prikazane</string>																					  
+	<string name="trakt_comments_title">Komentarji</string>
+    <string name="trakt_comments_subtitle">Prikaži ocene s Trakta na straneh z metapodatki</string>
+    <string name="trakt_comments_dialog_title">Komentarji</string>
+    <string name="trakt_comments_dialog_subtitle">Izberite, ali naj strani z metapodatki prikazujejo ocene s Trakta, ko je vaš račun povezan.</string>
+    <string name="trakt_comments_now_shown">Ocene s Trakta na straneh z metapodatki so zdaj prikazane</string>
+    <string name="trakt_comments_now_hidden">Ocene s Trakta na straneh z metapodatki so zdaj skrite</string>
+	<string name="trakt_cached_label">V predpomnilniku</string>
     <string name="trakt_stat_movies">Filmi</string>
     <string name="trakt_stat_shows">Serije</string>
     <string name="trakt_stat_episodes">Epizode</string>
@@ -659,13 +861,44 @@
     <string name="profile_avatar_category_tv">TV</string>
     <string name="profile_avatar_category_gaming">Igre</string>
     <string name="profile_add_new">Dodaj profil</string>
-    <string name="profile_cancel">Prekliči</string>
-    <string name="profile_save">Shrani</string>														   
-    <!-- AddonManagerScreen -->
+	<string name="profile_cancel">Prekliči</string>
+	<string name="profile_save">Shrani</string>														   
+	<string name="profile_pin_title">Zaklepanje profila s kodo PIN</string>
+    <string name="profile_pin_enabled_subtitle">Za preklop na ta profil je potrebna 4-mestna koda PIN.</string>
+    <string name="profile_pin_disabled_subtitle">Nastavite 4-mestno kodo PIN, da zaklenete ta profil.</string>
+    <string name="profile_pin_set">Nastavi kodo PIN</string>
+    <string name="profile_pin_change">Spremeni kodo PIN</string>
+    <string name="profile_pin_remove">Odstrani kodo PIN</string>
+    <string name="profile_pin_set_title">Nastavitev kode PIN za profil</string>
+    <string name="profile_pin_set_subtitle">Vnesite 4-mestno kodo PIN in jo potrdite.</string>
+    <string name="profile_pin_enter">Vnesite 4-mestno kodo PIN</string>
+    <string name="profile_pin_confirm">Potrdite 4-mestno kodo PIN</string>
+    <string name="profile_pin_mismatch">Vneseni kodi PIN se ne ujemata.</string>
+    <string name="profile_pin_save">Shrani kodo PIN</string>
+    <string name="profile_pin_unlock_title">Odkleni %1$s</string>
+    <string name="profile_pin_unlock_subtitle">Vnesite 4-mestno kodo PIN za nadaljevanje.</string>
+    <string name="profile_pin_verifying">Preverjanje…</string>
+    <string name="profile_pin_unlock_action">Odkleni</string>
+    <string name="profile_pin_overlay_unlock_heading">Vnesite kodo PIN za dostop do profila %1$s.</string>
+    <string name="profile_pin_overlay_set_heading">Ustvarite 4-mestno kodo PIN za profil %1$s.</string>
+    <string name="profile_pin_overlay_confirm_heading">Potrdite svojo novo kodo PIN.</string>
+    <string name="profile_pin_overlay_unlock_support">Uporabite daljinski upravljalnik ali tipkovnico, da vnesete 4 števke.</string>
+    <string name="profile_pin_overlay_change_verify_kicker">Potrebno je varnostno preverjanje.</string>
+    <string name="profile_pin_overlay_change_verify_heading">Vnesite trenutno kodo PIN, da jo spremenite za profil %1$s.</string>
+    <string name="profile_pin_overlay_change_verify_support">Preden nastavite novo kodo, vnesite trenutno 4-mestno kodo PIN.</string>
+    <string name="profile_pin_overlay_remove_verify_kicker">Potrebno je varnostno preverjanje.</string>
+    <string name="profile_pin_overlay_remove_verify_heading">Vnesite trenutno kodo PIN, da odstranite zaklepanje za profil %1$s.</string>
+    <string name="profile_pin_overlay_remove_verify_support">Za odstranitev zaklepanja vnesite trenutno 4-mestno kodo PIN.</string>
+    <string name="profile_pin_overlay_set_support">Ta koda PIN bo zahtevana pred odpiranjem tega profila.</string>
+    <string name="profile_pin_overlay_confirm_support">Ponovno vnesite iste 4 števke, da dokončate namestitev.</string>
+    <string name="profile_pin_overlay_mismatch">Kodi PIN se nista ujemali. Ponovno vnesite novo kodo PIN.</string>
+    <string name="profile_pin_overlay_forgot_hint">Ste pozabili kodo PIN? Ponastavite jo v svojem računu Nuvio na spletni strani Nuvio.</string>
+    <string name="profile_pin_overlay_back_hint">Pritisnite nazaj za preklic</string>															
+	<!-- AddonManagerScreen -->
     <string name="addon_title">Dodatki</string>
     <string name="addon_readonly_notice">Uporaba dodatkov glavnega profila in se jih ne da spremeniti</string>
     <string name="addon_install_title">Namesti dodatek</string>
-    <string name="addon_install_placeholder">https://example.com</string>
+    <string name="addon_install_placeholder">https://primer.si</string>
     <string name="addon_installing">Nameščanje</string>
     <string name="addon_install_btn">Namesti</string>
 	<string name="addon_install_success">Nameščen %1$s</string>
@@ -714,14 +947,13 @@
 
     <!-- PlayerScreen -->
     <string name="player_no_external_player">Zunanjega predvajalnika ni bilo mogoče najti</string>
-
-    <!-- ParentalGuideOverlay -->													   
+	<!-- ParentalGuideOverlay -->													   
 	<string name="parental_nudity">Gola vsebina</string>
     <string name="parental_violence">Nasilje</string>
     <string name="parental_profanity">Vulgarno izražanje</string>
     <string name="parental_alcohol">Alkohol/Droge</string>
     <string name="parental_frightening">Strašljiva vsebina</string>
-    <string name="parental_severity_severe">Močno</string>
+    <string name="parental_severity_severe">Izrazito</string>
     <string name="parental_severity_moderate">Zmerno</string>
     <string name="parental_severity_mild">Blago</string>
     <string name="player_ends_at">Konča se ob %1$s</string>
@@ -735,19 +967,30 @@
     <string name="player_more_aspect_ratio">Razmerje stranic</string>
     <string name="player_more_open_external">Odpri v zunanjem predvajalniku</string>										   
 	
-	
-	
-	
-	
-	
-	
+	<string name="stream_info_section_source">VIR</string>
+    <string name="stream_info_section_file">DATOTEKA</string>
+    <string name="stream_info_section_video">VIDEO</string>
+    <string name="stream_info_section_audio">ZVOK</string>
+    <string name="stream_info_section_subtitle">PODNAPIS</string>
+    <string name="stream_info_filename">Ime datoteke</string>
+    <string name="stream_info_size">Velikost</string>
+    <string name="stream_info_codec">Kodek</string>
+    <string name="stream_info_resolution">Ločljivost</string>
+    <string name="stream_info_frame_rate">Hitrost sličic</string>
+    <string name="stream_info_bitrate">Bitna hitrost</string>
+    <string name="stream_info_channels">Kanali</string>
+    <string name="stream_info_sample_rate">Hitrost vzorčenja</string>
+    <string name="stream_info_language">Jezik</string>
+    <string name="stream_info_name">Ime</string>
+    <string name="stream_info_source">Vir</string>
+    <string name="stream_info_subtitle_source_addon">Dodatek</string>
+    <string name="stream_info_subtitle_source_embedded">Vdelano</string>						  
 	<!-- StreamSourcesSidePanel -->
     <string name="sources_title">Viri</string>
     <string name="sources_reload">Osveži</string>
     <string name="sources_close">Zapri</string>
 	<string name="sources_playing">Predvajanje</string>											   
     <string name="sources_no_streams">Prenosi niso najdeni</string>
-
 	<!-- EpisodesSidePanel -->
     <string name="episodes_panel_close">Zapri</string>
     <string name="episodes_panel_back">Nazaj</string>
@@ -762,6 +1005,7 @@
     <string name="player_aspect_fit_width">Prilagodi širini</string>
     <string name="player_aspect_fit_height">Prilagodi višini</string>
     <string name="player_aspect_crop">Obreži</string>													 
+	
 	<!-- AudioDialog -->
     <string name="audio_dialog_title">Zvok</string>
 	<string name="audio_dialog_tab_tracks">Zvok</string>
@@ -773,6 +1017,7 @@
     <string name="audio_mix_range">Razpon: od %1$d dB do %2$d dB</string>
     <string name="audio_mix_range_saved">Razpon: od %1$d dB do %2$d dB (shranjeno)</string>
     <string name="audio_mix_unavailable">Ojačitev na tej napravi ni na voljo</string>													 
+	
 	<!-- SubtitleDialog / SubtitleStyleSidePanel -->
     <string name="subtitle_dialog_title">Podnapisi</string>
     <string name="subtitle_no_builtin">Vgrajeni podnapisi niso na voljo</string>
@@ -811,11 +1056,6 @@
     <string name="panel_failed_load_streams">Nalaganje virov ni uspelo</string>
     <string name="panel_failed_load_episodes">Nalaganje epizod ni uspelo</string>													 
 	
-	
-	
-	
-	
-	
 	<!-- PauseOverlay -->
     <string name="pause_you_are_watching">Gledate</string>
     <string name="pause_cast_label">Zasedba</string>
@@ -833,8 +1073,10 @@
     <string name="skip_ending">Preskoči konec</string>
     <string name="skip_recap">Preskoči obnovo</string>
     <string name="skip_generic">Preskoči</string>
-    <string name="display_mode_refresh">Osveževanje</string>
+    <string name="display_mode_refresh">Frekvenca osveževanja</string>
     <string name="display_mode_resolution">Ločljivost</string>																	 
+	
+	
 	<!-- SearchScreen -->
     <string name="search_keyboard_hint">Pritisnite Končano na tipkovnici za iskanje</string>
     <string name="search_placeholder">Iskanje filmov in serij</string>
@@ -845,12 +1087,248 @@
     <string name="search_voice_mic_permission">Za glasovno iskanje je potrebno dovoljenje za mikrofon.</string>
     <string name="search_voice_failed">Prepoznavanje govora ni uspelo. Poskusite znova.</string>
     <string name="search_voice_unavailable">Glasovno iskanje na tej napravi ni na voljo.</string>														  
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+    
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	<!-- LibraryScreen -->
     <string name="library_syncing">Sinhronizacija knjižnice Trakt\u2026</string>
     <string name="library_title">Knjižnica</string>
     <string name="library_filter_list">Seznam</string>
     <string name="library_filter_type">Vrsta</string>
     <string name="library_filter_sort">Razvrsti</string>
+    <string name="library_filter_genre">Žanr</string>
+    <string name="library_filter_year">Leto</string>
+    <!-- Genre names (from TMDB movie + TV) -->
+    <string name="genre_action">Akcija</string>
+    <string name="genre_adventure">Pustolovščina</string>
+    <string name="genre_animation">Animacija</string>
+    <string name="genre_comedy">Komedija</string>
+    <string name="genre_crime">Kriminalka</string>
+    <string name="genre_documentary">Dokumentarni</string>
+    <string name="genre_drama">Drama</string>
+    <string name="genre_family">Družinski</string>
+    <string name="genre_fantasy">Fantazija</string>
+    <string name="genre_history">Zgodovinski</string>
+    <string name="genre_horror">Grozljivka</string>
+    <string name="genre_music">Glasbeni</string>
+    <string name="genre_mystery">Misterij</string>
+    <string name="genre_romance">Romantika</string>
+    <string name="genre_science_fiction">Znanstvena fantastika</string>
+    <string name="genre_tv_movie">TV film</string>
+    <string name="genre_thriller">Triler</string>
+    <string name="genre_war">Vojni</string>
+    <string name="genre_western">Vestern</string>
+    <!-- TV-specific genres -->
+    <string name="genre_action_adventure">Akcija &amp; pustolovščina</string>
+    <string name="genre_kids">Otroški</string>
+    <string name="genre_news">Novice</string>
+    <string name="genre_reality">Resničnostni</string>
+    <string name="genre_sci_fi_fantasy">Znanstvena fantastika &amp; fantazija</string>
+    <string name="genre_soap">Telenovela</string>
+    <string name="genre_talk">Pogovorni</string>
+    <string name="genre_war_politics">Vojni &amp; politika</string>
 	<string name="library_sort_trakt_order">Vrstni red Trakt</string>
     <string name="library_sort_added_desc">Dodano ↓</string>
     <string name="library_sort_added_asc">Dodano ↑</string>
@@ -872,8 +1350,11 @@
     <string name="library_delete_subtitle">To odstrani seznam in vse elemente seznama iz Trakt.</string>
     <string name="library_delete_confirm">Izbriši</string>
     <string name="library_source_local">LOKALNO</string>
-    <string name="library_type_all">Vse</string>
-    <string name="library_type_items">elementi</string>
+	<string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_trakt">TRAKT</string>																 
+	<string name="library_syncing_library">Sinhroniziranje knjižnice\u2026</string>
+	<string name="library_type_all">Vse</string>
+	<string name="library_type_items">elementi</string>
     <string name="library_empty_local_title">Še ni %1$s</string>
     <string name="library_empty_trakt_title">V tem seznamu ni %1$s</string>
     <string name="library_empty_local_subtitle">Začnite shranjevati priljubljene, da jih vidite tukaj</string>
@@ -974,8 +1455,11 @@
 	
 	<!-- CastDetailScreen -->
     <string name="cast_detail_error">Nekaj je šlo narobe</string>
-    <string name="cast_detail_retry">Poskusi znova</string>
-    <string name="cast_detail_filmography">Filmografija</string>
+	<string name="cast_detail_retry">Poskusi znova</string>
+    <string name="cast_detail_filmography">Filmografija</string>
+    <string name="cast_detail_born">Rojen/a: %1$s</string>											   
+	<string name="cast_detail_born_died">Rojen/a: %1$s — †%2$s</string>
+    <string name="cast_detail_age">starost %1$d</string>
 
 	<!-- CatalogSeeAllScreen -->
     <string name="catalog_see_all_from">od %1$s</string>
@@ -1052,6 +1536,8 @@
     <string name="cd_expand_sidebar">Razširi stransko vrstico</string>
 
     <string name="update_close">Zapri</string>
+	<string name="update_download_complete">Prenos je končan. Pripravljeno na namestitev.</string>
+    <string name="update_up_to_date">Sistem je posodobljen. Najnovejše spremembe:</string>
     <string name="update_open_settings">Odpri nastavitve</string>
     <string name="update_install">Namesti</string>
     <string name="update_ignore">Prezri</string>

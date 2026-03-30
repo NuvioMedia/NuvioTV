@@ -1154,4 +1154,40 @@
     <string name="update_checking">Sprawdzanie aktualizacji…</string>
     <string name="update_download_complete">Pobieranie zakończone. Gotowe do instalacji.</string>
     <string name="update_up_to_date">System jest aktualny. Ostatnie zmiany:</string>
+
+    <string name="detail_more_like_this_powered_by_tmdb">Na podstawie danych TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">Na podstawie danych Trakt</string>
+    <string name="library_filter_genre">Gatunek</string>
+    <string name="library_filter_year">Rok</string>
+    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_trakt">TRAKT</string>
+    <string name="library_syncing_library">Synchronizacja biblioteki\u2026</string>
+
+    <string name="genre_action">Akcja</string>
+    <string name="genre_action_adventure">Akcja i przygoda</string>
+    <string name="genre_adventure">Przygodowy</string>
+    <string name="genre_animation">Animacja</string>
+    <string name="genre_comedy">Komedia</string>
+    <string name="genre_crime">Kryminał</string>
+    <string name="genre_documentary">Dokumentalny</string>
+    <string name="genre_drama">Dramat</string>
+    <string name="genre_family">Familijny</string>
+    <string name="genre_fantasy">Fantasy</string>
+    <string name="genre_history">Historyczny</string>
+    <string name="genre_horror">Horror</string>
+    <string name="genre_kids">Dla dzieci</string>
+    <string name="genre_music">Muzyczny</string>
+    <string name="genre_mystery">Tajemnica</string>
+    <string name="genre_news">Wiadomości</string>
+    <string name="genre_reality">Reality</string>
+    <string name="genre_romance">Romans</string>
+    <string name="genre_science_fiction">Sci-Fi</string>
+    <string name="genre_sci_fi_fantasy">Sci-Fi i fantasy</string>
+    <string name="genre_soap">Telenowela</string>
+    <string name="genre_talk">Talk-show</string>
+    <string name="genre_thriller">Thriller</string>
+    <string name="genre_tv_movie">Film TV</string>
+    <string name="genre_war">Wojenny</string>
+    <string name="genre_war_politics">Wojna i polityka</string>
+    <string name="genre_western">Western</string>
 </resources>

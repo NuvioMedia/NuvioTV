@@ -253,7 +253,7 @@
     <string name="supporters_contributors_donate_copy">O Nuvio continuará sendo gratuito e de código aberto. Se você quiser apoiar o projeto, pode ajudar com os custos de tempo e infraestrutura.</string>
     <string name="supporters_contributors_donate_button">Apoiar o Nuvio</string>
     <string name="supporters_contributors_qr_title">Escaneie para apoiar</string>
-    <string name="supporters_contributors_qr_subtitle">Abra o link no seu celular para apoiar o Nuvio via Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Abra o link no seu celular para apoiar o Nuvio pelo Ko-fi.</string>
     <string name="supporters_contributors_qr_hint">Aponte a câmera para o código QR ou use o botão abaixo.</string>
     <string name="supporters_contributors_back_button">Voltar para detalhes</string>
     <string name="supporters_tab">Apoiadores</string>
@@ -325,12 +325,12 @@
     <string name="audio_decoder_prefer_app">Preferir decodificadores do app (FFmpeg)</string>
     <string name="audio_decoder_priority">Prioridade do Decodificador</string>
     <string name="audio_tunneled">Reprodução Tunneled</string>
-    <string name="audio_tunneled_sub">Sincronia A/V via hardware para maior fluidez.</string>
+    <string name="audio_tunneled_sub">Sincronia de A/V pelo hardware para maior fluidez.</string>
     <string name="audio_dv_sub">Mapear Dolby Vision 7 para HEVC padrão.</string>
     <string name="audio_decoder_device_only_desc">Usa apenas decodificadores nativos. Mais estável, mas suporta menos formatos.</string>
     <string name="audio_decoder_prefer_device_desc">Usa hardware quando disponível, com FFmpeg como fallback. (Recomendado)</string>
     <string name="audio_decoder_prefer_app_desc">Usa FFmpeg sempre que possível. Melhor suporte a formatos, mas usa mais CPU.</string>
-    <string name="audio_decoder_controls">Controla se o A/V será processado via hardware ou software (FFmpeg).</string>
+    <string name="audio_decoder_controls">Controla se o A/V será processado pelo hardware ou software (FFmpeg).</string>
     
     <!-- PlaybackSubtitleSettings -->
     <string name="sub_section">Legendas</string>
@@ -356,9 +356,9 @@
     <string name="sub_mode_overlay_gl_sub">Melhor com HDR. Renderiza legendas em segundo plano.</string>
     <string name="sub_mode_overlay_canvas">Sobreposição Canvas</string>
     <string name="sub_mode_effects_gl">Efeitos OpenGL</string>
-    <string name="sub_mode_effects_gl_sub">Suporte a animações via Media3. Mais rápido que Canvas.</string>
+    <string name="sub_mode_effects_gl_sub">Suporte a animações pelo Media3. Mais rápido que Canvas.</string>
     <string name="sub_mode_effects_canvas">Efeitos Canvas</string>
-    <string name="sub_mode_effects_canvas_sub">Suporte a animações via Media3 com renderização Canvas.</string>
+    <string name="sub_mode_effects_canvas_sub">Suporte a animações pelo Media3 com renderização Canvas.</string>
     <string name="sub_mode_standard">Padrão (Cues)</string>
     <string name="sub_mode_standard_sub">Renderização básica sem animações. Máxima compatibilidade.</string>
     <string name="sub_org_none">Nenhuma (ordem padrão)</string>
@@ -380,8 +380,8 @@
     <string name="autoplay_reuse_last_link_sub">Usa automaticamente o último link válido se o cache estiver ativo.</string>
     <string name="autoplay_last_link_cache">Duração do cache do link</string>
     <string name="autoplay_mode_manual">Manual (escolher fonte)</string>
-    <string name="autoplay_mode_first">Autorreproduzir primeira fonte</string>
-    <string name="autoplay_mode_regex">Autorreproduzir via Regex</string>
+    <string name="autoplay_mode_first">Reproduzir automaticamente a primeira fonte</string>
+    <string name="autoplay_mode_regex">Reprodução Automática pelo regex</string>
     <string name="autoplay_stream_selection">Seleção automática de fonte</string>
     <string name="autoplay_next_episode">Autorreproduzir próximo episódio</string>
     <string name="autoplay_next_episode_sub">Inicia o próximo episódio automaticamente após aviso.</string>
@@ -799,7 +799,7 @@
     <string name="parental_severity_moderate">Moderado</string>
     <string name="parental_severity_mild">Leve</string>
     <string name="player_ends_at">Termina às %1$s</string>
-    <string name="player_via">via %1$s</string>
+    <string name="player_via"> %1$s</string>
     <string name="player_subtitle_delay">Atraso da legenda</string>
     <string name="player_error_title">Erro de Reprodução</string>
     <string name="player_go_back">Voltar</string>
@@ -890,7 +890,7 @@
     <!-- NextEpisodeCardOverlay -->
     <string name="next_episode_label">Próximo Episódio</string>
     <string name="next_episode_finding_source">Buscando fonte…</string>
-    <string name="next_episode_playing_via">Reproduzindo via %1$s em %2$ds</string>
+    <string name="next_episode_playing_via">Reproduzindo: %1$s em %2$ds</string>
     <string name="next_episode_play">Reproduzir</string>
     <string name="next_episode_unaired">Ainda não estreou</string>
     <string name="next_episode_not_aired_yet">O próximo episódio ainda não foi exibido</string>
@@ -960,7 +960,7 @@
 
     <!-- AuthSignInScreen -->
     <string name="auth_signin_title">Fazer Login</string>
-    <string name="auth_signin_tv_disabled">Login por e-mail/senha na TV está desativado. Prossiga com o login via QR Code.</string>
+    <string name="auth_signin_tv_disabled">Login por e-mail/senha na TV está desativado. Continue com o login pelo QR Code.</string>
     <string name="auth_signin_qr_btn">Continuar com QR Code</string>
 
     <!-- AuthQrSignInScreen -->
@@ -969,7 +969,7 @@
     <string name="auth_qr_finishing">Finalizando acesso\u2026</string>
     <string name="auth_qr_code_label">Código: %1$s</string>
     <string name="auth_qr_expires">Expira em %1$s</string>
-    <string name="auth_qr_phone_hint">Use o celular para entrar. Login rápido via QR.</string>
+    <string name="auth_qr_phone_hint">Use o celular para entrar. Login rápido com QR.</string>
     <string name="auth_qr_scan_instruction">Escaneie o QR, aprove no navegador e retorne aqui.</string>
     <string name="auth_qr_code_display">Código: %1$s</string>
     <string name="auth_qr_refresh">Atualizar QR Code</string>
@@ -1014,7 +1014,7 @@
     <string name="plugin_qr_instruction">Escaneie com seu celular para gerenciar os repositórios</string>
     <string name="plugin_qr_close">Fechar</string>
     <string name="plugin_confirm_title">Confirmar alterações</string>
-    <string name="plugin_confirm_subtitle">Mudanças detectadas via celular:</string>
+    <string name="plugin_confirm_subtitle">Mudanças detectadas pelo celular:</string>
     <string name="plugin_confirm_added">Adicionado:</string>
     <string name="plugin_confirm_removed">Removido:</string>
     <string name="plugin_confirm_no_changes">Nenhuma alteração detectada</string>
@@ -1106,7 +1106,7 @@
     <string name="profile_edit_title_id">Editar Perfil %1$d</string>
 
     <!-- PlaybackAudioSettings -->
-    <string name="audio_passthrough_info">A passagem direta de áudio (passthrough) para TrueHD, DTS e AC-3 é automática. Se sua Soundbar/Receiver for compatível via HDMI, o áudio será enviado sem perdas e sem decodificação prévia.</string>
+    <string name="audio_passthrough_info">A passagem direta de áudio (passthrough) para TrueHD, DTS e AC-3 é automática. Se a sua Soundbar/Receiver for compatível, o áudio será enviado sem perdas e sem decodificação prévia.</string>
     <string name="audio_dv_title">DV7 - Modo HEVC Alternativo</string>
 
     <!-- SidebarNavigation / MainActivity -->

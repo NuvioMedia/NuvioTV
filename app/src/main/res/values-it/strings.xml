@@ -1115,6 +1115,7 @@
     <string name="update_open_settings">Apri Impostazioni</string>
     <string name="update_install">Installa</string>
     <string name="update_ignore">Ignora</string>
-    <string name="watchlist_added">Aggiunto alla lista Da guardare</string>
-    <string name="watchlist_removed">Rimosso dalla lista Da guardare</string>
+
+    <string name="watchlist_added">Aggiunto alla watchlist</string>
+    <string name="watchlist_removed">Rimosso dalla watchlist</string>
 </resources>

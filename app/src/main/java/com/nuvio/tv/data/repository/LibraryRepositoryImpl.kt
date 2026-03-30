@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -41,7 +42,10 @@ class LibraryRepositoryImpl @Inject constructor(
 
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var syncJob: Job? = null
-    var isSyncingFromRemote = false
+    private val _isSyncingFromRemote = MutableStateFlow(false)
+    var isSyncingFromRemote: Boolean
+        get() = _isSyncingFromRemote.value
+        set(value) { _isSyncingFromRemote.value = value }
     var hasCompletedInitialPull = false
 
     private fun triggerRemoteSync() {
@@ -66,7 +70,7 @@ class LibraryRepositoryImpl @Inject constructor(
             if (mode == LibrarySourceMode.TRAKT) {
                 traktLibraryService.observeIsRefreshing()
             } else {
-                flowOf(false)
+                _isSyncingFromRemote
             }
         }
         .distinctUntilChanged()

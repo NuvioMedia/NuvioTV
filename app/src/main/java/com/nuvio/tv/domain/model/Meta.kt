@@ -51,6 +51,23 @@ data class Meta(
 
     val backdropUrl: String?
         get() = background ?: landscapePoster ?: poster
+
+    /**
+     * Returns the list of watchable episodes — non-special (season > 0),
+     * excluding entire seasons where the first episode is not yet available.
+     */
+    fun watchableEpisodes(): List<Video> {
+        val candidates = videos.filter {
+            it.season != null && it.episode != null && (it.season ?: 0) > 0
+        }
+        val unavailableSeasons = candidates.groupBy { it.season }
+            .filter { (_, eps) ->
+                val first = eps.minByOrNull { it.episode ?: Int.MAX_VALUE }
+                first?.available == false
+            }.keys
+        return if (unavailableSeasons.isEmpty()) candidates
+        else candidates.filter { it.season !in unavailableSeasons }
+    }
 }
 
 @Immutable

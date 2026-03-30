@@ -449,7 +449,11 @@ class TraktProgressService @Inject constructor(
                 }
             }
             result as Set<String>
-        }.distinctUntilChanged()
+        }
+            .onStart {
+                scope.launch { getWatchedMoviesSnapshot(forceRefresh = false) }
+            }
+            .distinctUntilChanged()
     }
 
     suspend fun markAsWatched(
@@ -545,7 +549,39 @@ class TraktProgressService @Inject constructor(
             progress.contentType.equals("series", ignoreCase = true) ||
             progress.contentType.equals("tv", ignoreCase = true)
         ) {
-            invalidateEpisodeProgressCache(progress.contentId)
+            // Optimistically add the episode to the cache instead of invalidating
+            // the entire series cache (which causes all episodes to briefly appear
+            // unwatched until the next Trakt fetch completes).
+            val cacheKey = canonicalLookupKey(effectiveProgress.contentId.trim())
+            val season = effectiveProgress.season
+            val episode = effectiveProgress.episode
+            if (season != null && episode != null) {
+                val completedEntry = effectiveProgress.copy(
+                    position = effectiveProgress.duration.coerceAtLeast(1L),
+                    duration = effectiveProgress.duration.coerceAtLeast(1L),
+                    progressPercent = 100f,
+                    lastWatched = System.currentTimeMillis()
+                )
+                episodeProgressState.update { current ->
+                    val entry = current[cacheKey]
+                    if (entry != null) {
+                        val updatedProgress = entry.progress.toMutableMap().apply {
+                            this[season to episode] = completedEntry
+                        }
+                        current + (cacheKey to entry.copy(progress = updatedProgress))
+                    } else {
+                        // No cache entry yet — force a full fetch instead.
+                        current
+                    }
+                }
+                // If there was no cache entry, fall back to invalidation so the
+                // next observer emission triggers a fresh fetch.
+                if (episodeProgressState.value[cacheKey] == null) {
+                    invalidateEpisodeProgressCache(effectiveProgress.contentId)
+                }
+            } else {
+                invalidateEpisodeProgressCache(effectiveProgress.contentId)
+            }
             updateWatchedShowSeedOptimistically(effectiveProgress)
         }
         refreshNow()
@@ -668,7 +704,21 @@ class TraktProgressService @Inject constructor(
                 watched = false
             )
         } else {
-            invalidateEpisodeProgressCache(contentId)
+            // Optimistically remove just this episode from the cache instead of
+            // invalidating the entire series cache (which causes all episodes to
+            // briefly appear unwatched until the next Trakt fetch completes).
+            val cacheKey = canonicalLookupKey(contentId.trim())
+            if (season != null && episode != null) {
+                episodeProgressState.update { current ->
+                    val entry = current[cacheKey] ?: return@update current
+                    val updatedProgress = entry.progress.toMutableMap().apply {
+                        remove(season to episode)
+                    }
+                    current + (cacheKey to entry.copy(progress = updatedProgress))
+                }
+            } else {
+                invalidateEpisodeProgressCache(contentId)
+            }
         }
         refreshNow()
     }
@@ -1140,7 +1190,7 @@ class TraktProgressService @Inject constructor(
         }
         val inProgressMovies = getPlayback("movies", force = force, startAt = playbackStartAt).mapNotNull { mapPlaybackMovie(it) }
         val inProgressEpisodes = getPlayback("episodes", force = force, startAt = playbackStartAt)
-            .mapNotNull { mapPlaybackEpisode(it, applyAddonRemap = false) }
+            .mapNotNull { mapPlaybackEpisode(it, applyAddonRemap = true) }
 
         val mergedByKey = linkedMapOf<String, WatchProgress>()
 
@@ -1194,7 +1244,7 @@ class TraktProgressService @Inject constructor(
                     continue
                 }
 
-                val mapped = mapEpisodeHistoryItem(item, applyAddonRemap = false) ?: continue
+                val mapped = mapEpisodeHistoryItem(item, applyAddonRemap = true) ?: continue
                 results.putIfAbsent(mapped.contentId, mapped)
                 if (results.size >= maxRecentEpisodeHistoryEntries) {
                     shouldStop = true

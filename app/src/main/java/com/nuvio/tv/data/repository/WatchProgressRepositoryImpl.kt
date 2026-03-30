@@ -504,6 +504,11 @@ class WatchProgressRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveProgress(progress: WatchProgress, syncRemote: Boolean) {
+        // Clear any CW dismiss keys for this series so it reappears in Continue Watching.
+        if (progress.contentType.equals("series", ignoreCase = true) ||
+            progress.contentType.equals("tv", ignoreCase = true)) {
+            traktSettingsDataStore.removeDismissedNextUpKeysForContent(progress.contentId)
+        }
         if (shouldUseTraktProgress()) {
             traktProgressService.applyOptimisticProgress(progress)
             watchProgressPreferences.saveProgress(progress)
@@ -618,11 +623,22 @@ class WatchProgressRepositoryImpl @Inject constructor(
                     Log.w(TAG, "removeFromHistory remote delete failed; relying on push sync", error)
                 }
         }
+        if (authManager.isAuthenticated && !useTraktProgress) {
+            watchedItemsSyncService.deleteFromRemote(contentId, season, episode)
+                .onFailure { error ->
+                    Log.w(TAG, "removeFromHistory watched item remote delete failed", error)
+                }
+        }
         triggerRemoteSync()
         triggerWatchedItemsSync()
     }
 
     override suspend fun markAsCompleted(progress: WatchProgress) {
+        // Clear any CW dismiss keys for this series so it reappears in Continue Watching.
+        if (progress.contentType.equals("series", ignoreCase = true) ||
+            progress.contentType.equals("tv", ignoreCase = true)) {
+            traktSettingsDataStore.removeDismissedNextUpKeysForContent(progress.contentId)
+        }
         val useTraktProgress = shouldUseTraktProgress()
         val hasEffectiveTraktConnection = hasEffectiveTraktConnection()
         if (useTraktProgress && hasEffectiveTraktConnection) {

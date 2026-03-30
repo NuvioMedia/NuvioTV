@@ -6,6 +6,8 @@
     <!-- HomeScreen -->
     <string name="home_no_addons">Inga tillägg installerade. Lägg till ett tillägg för att komma igång.</string>
     <string name="home_no_catalog_addons">Inga tillägg med kataloger installerade. Installera ett katalogtillägg för att se innehåll.</string>
+    <string name="auth_notice_nuvio_logged_out">Du har loggats ut från Nuvio. Logga in igen.</string>
+    <string name="auth_notice_trakt_logged_out">Du har loggats ut från Trakt. Anslut igen.</string>
     <string name="error_generic">Ett fel uppstod</string>
 
     <!-- ErrorState -->
@@ -43,6 +45,8 @@
     <string name="continue_watching">Fortsätt titta</string>
     <string name="cw_upcoming">Kommande</string>
     <string name="cw_next_up">Nästa</string>
+    <string name="cw_new_episode">Nytt avsnitt</string>
+    <string name="cw_new_season">Ny säsong</string>
     <string name="cw_resume">Återuppta</string>
     <string name="cw_percent_watched">%1$d%% sedd</string>
     <string name="cw_hours_min_left">%1$dh %2$dm kvar</string>
@@ -814,6 +818,37 @@
     <string name="library_filter_list">Lista</string>
     <string name="library_filter_type">Typ</string>
     <string name="library_filter_sort">Sortera</string>
+    <string name="library_filter_genre">Genre</string>
+    <string name="library_filter_year">År</string>
+    <!-- Genre names -->
+    <string name="genre_action">Action</string>
+    <string name="genre_adventure">Äventyr</string>
+    <string name="genre_animation">Animation</string>
+    <string name="genre_comedy">Komedi</string>
+    <string name="genre_crime">Kriminal</string>
+    <string name="genre_documentary">Dokumentär</string>
+    <string name="genre_drama">Drama</string>
+    <string name="genre_family">Familj</string>
+    <string name="genre_fantasy">Fantasy</string>
+    <string name="genre_history">Historia</string>
+    <string name="genre_horror">Skräck</string>
+    <string name="genre_music">Musik</string>
+    <string name="genre_mystery">Mysterium</string>
+    <string name="genre_romance">Romantik</string>
+    <string name="genre_science_fiction">Science fiction</string>
+    <string name="genre_tv_movie">TV-film</string>
+    <string name="genre_thriller">Thriller</string>
+    <string name="genre_war">Krig</string>
+    <string name="genre_western">Western</string>
+    <!-- TV-specifika genrer -->
+    <string name="genre_action_adventure">Action &amp; äventyr</string>
+    <string name="genre_kids">Barn</string>
+    <string name="genre_news">Nyheter</string>
+    <string name="genre_reality">Reality</string>
+    <string name="genre_sci_fi_fantasy">Sci-fi &amp; fantasy</string>
+    <string name="genre_soap">Såpa</string>
+    <string name="genre_talk">Talkshow</string>
+    <string name="genre_war_politics">Krig &amp; politik</string>
     <string name="library_sort_trakt_order">Trakt-ordning</string>
     <string name="library_sort_added_desc">Tillagd ↓</string>
     <string name="library_sort_added_asc">Tillagd ↑</string>
@@ -835,6 +870,9 @@
     <string name="library_delete_subtitle">Detta tar bort listan och alla listobjekt från Trakt.</string>
     <string name="library_delete_confirm">Radera</string>
     <string name="library_source_local">LOKAL</string>
+    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_trakt">TRAKT</string>
+    <string name="library_syncing_library">Synkroniserar bibliotek\u2026</string>
     <string name="library_type_all">Alla</string>
     <string name="library_type_items">objekt</string>
     <string name="library_empty_local_title">Inga %1$s ännu</string>
@@ -1017,4 +1055,152 @@
     <string name="update_ignore">Ignorera</string>
     <string name="watchlist_added">Tillagd i bevakningslistan</string>
     <string name="watchlist_removed">Borttagen från bevakningslistan</string>
+
+    <!-- Missing: ErrorState (streams) -->
+    <string name="error_stream_no_supported_addon">Inget installerat tillägg stödjer strömmar för \"%1$s\".</string>
+    <string name="error_stream_tried_none">Provade strömtillägg: %1$s. Inget av dem returnerade strömmar för id=%2$s (typ=%3$s).</string>
+    <string name="error_stream_tried_generic">Provade strömtillägg: %1$s. Strömmar kunde inte laddas för id=%2$s (typ=%3$s).</string>
+    <string name="error_stream_tried_issues">Provade strömtillägg: %1$s. Strömmar kunde inte laddas för id=%2$s (typ=%3$s). Problem: %4$s.</string>
+
+    <!-- Missing: AddonManager -->
+    <string name="addon_install_success">Installerade %1$s</string>
+    <string name="addon_error_invalid_url">Ange en giltig tilläggs-URL</string>
+    <string name="addon_error_invalid_scheme">Tilläggs-URL måste börja med http eller https</string>
+
+    <!-- Missing: Detail comments -->
+    <string name="detail_comments_title">Kommentarer</string>
+    <string name="detail_comments_subtitle">Recensioner från Trakt</string>
+    <string name="detail_comments_empty">Inga Trakt-recensioner tillgängliga ännu.</string>
+    <string name="detail_comments_error">Kunde inte ladda Trakt-recensioner just nu.</string>
+    <string name="detail_comments_spoiler_hidden">Spoilerrecension. Tryck OK för att visa.</string>
+    <string name="detail_comments_reveal_spoiler">Visa spoiler</string>
+    <string name="detail_comments_reveal_spoiler_hint">Tryck OK för att visa spoiler.</string>
+    <string name="detail_comments_back_hint">Tryck tillbaka för att stänga</string>
+    <string name="detail_comments_badge_review">Recension</string>
+    <string name="detail_comments_badge_spoiler">Spoiler</string>
+    <string name="detail_comments_badge_rating">%1$d/10</string>
+    <string name="detail_comments_likes">%1$d gillar</string>
+    <string name="detail_more_like_this_powered_by_tmdb">Drivs av TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">Drivs av Trakt</string>
+
+    <!-- Missing: Layout settings -->
+    <string name="layout_blur_cw_next_up">Sudda osedda i Fortsätt titta</string>
+    <string name="layout_blur_cw_next_up_sub">Sudda nästa avsnittsminiatyrer i Fortsätt titta för att undvika spoilers.</string>
+    <string name="layout_fullscreen_hero_backdrop">Helskärms karusellbakgrund</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">Expandera karusellbakgrunden till helskärm.</string>
+    <string name="layout_show_full_release_date">Visa fullständigt premiärdatum</string>
+    <string name="layout_show_full_release_date_sub">Visa fullständigt premiärdatum istället för bara år för filmer.</string>
+
+    <!-- Missing: Trakt comments settings -->
+    <string name="trakt_comments_title">Kommentarer</string>
+    <string name="trakt_comments_subtitle">Visa Trakt-recensioner på metadatasidor</string>
+    <string name="trakt_comments_dialog_title">Kommentarer</string>
+    <string name="trakt_comments_dialog_subtitle">Välj om metadatasidor ska visa Trakt-recensioner när ditt konto är anslutet.</string>
+    <string name="trakt_comments_now_shown">Trakt-recensioner på metadatasidor visas nu</string>
+    <string name="trakt_comments_now_hidden">Trakt-recensioner på metadatasidor är nu dolda</string>
+    <string name="trakt_setting_on">På</string>
+    <string name="trakt_setting_off">Av</string>
+
+    <!-- Missing: TMDB settings -->
+    <string name="tmdb_modern_home_title">Aktivera på Modern hem</string>
+    <string name="tmdb_modern_home_subtitle">Tillämpa TMDB-berikning även på Modern hems karusell och fokuserade kort</string>
+    <string name="tmdb_enrich_continue_watching_title">Berika Fortsätt titta</string>
+    <string name="tmdb_enrich_continue_watching_subtitle">Tillämpa TMDB-berikning på Fortsätt titta-objekt</string>
+    <string name="tmdb_entity_kind_company">Produktionsbolag</string>
+    <string name="tmdb_entity_kind_network">Nätverk</string>
+    <string name="tmdb_entity_rail_popular">Populärt</string>
+    <string name="tmdb_entity_rail_top_rated">Högst betyg</string>
+    <string name="tmdb_entity_rail_recent">Senaste</string>
+    <string name="tmdb_entity_empty_title">Inga titlar hittades</string>
+    <string name="tmdb_entity_empty_subtitle">TMDB har för närvarande inga bläddringsbara titlar för detta val.</string>
+
+    <!-- Missing: Stream info -->
+    <string name="stream_info_section_source">KÄLLA</string>
+    <string name="stream_info_section_file">FIL</string>
+    <string name="stream_info_section_video">VIDEO</string>
+    <string name="stream_info_section_audio">LJUD</string>
+    <string name="stream_info_section_subtitle">UNDERTEXT</string>
+    <string name="stream_info_filename">Filnamn</string>
+    <string name="stream_info_size">Storlek</string>
+    <string name="stream_info_codec">Codec</string>
+    <string name="stream_info_resolution">Upplösning</string>
+    <string name="stream_info_frame_rate">Bildfrekvens</string>
+    <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_channels">Kanaler</string>
+    <string name="stream_info_sample_rate">Samplingsfrekvens</string>
+    <string name="stream_info_language">Språk</string>
+    <string name="stream_info_name">Namn</string>
+    <string name="stream_info_source">Källa</string>
+    <string name="stream_info_subtitle_source_addon">Tillägg</string>
+    <string name="stream_info_subtitle_source_embedded">Inbäddad</string>
+
+    <!-- Missing: Network speed -->
+    <string name="settings_network">Nätverkshastighet</string>
+    <string name="settings_network_subtitle">Latens- och nedladdningsdiagnostik</string>
+    <string name="settings_advanced">Avancerat</string>
+    <string name="settings_advanced_subtitle">Kör nätverkshastighetstester</string>
+    <string name="network_speed_test_run">Kör hastighetstest</string>
+    <string name="network_speed_test_running">Kör hastighetstest</string>
+    <string name="network_speed_test_subtitle">Mät nedladdningshastighet och latens</string>
+    <string name="network_testing_latency">Mäter latens</string>
+    <string name="network_testing_download">Mäter nedladdningshastighet</string>
+    <string name="network_results_title">Resultat</string>
+    <string name="network_latency_label">Latens</string>
+    <string name="network_download_label">Nedladdning</string>
+    <string name="network_error_prefix">Fel: %1$s</string>
+    <string name="network_powered_by_fast">Drivs av fast.com</string>
+    <string name="network_connection_wifi">Wi-Fi</string>
+    <string name="network_connection_ethernet">Ethernet</string>
+    <string name="network_connection_offline">Offline</string>
+
+    <!-- Missing: Profile PIN -->
+    <string name="profile_pin_title">Profil-PIN-lås</string>
+    <string name="profile_pin_enabled_subtitle">Denna profil kräver en 4-siffrig PIN innan byte.</string>
+    <string name="profile_pin_disabled_subtitle">Ange en 4-siffrig PIN för att låsa denna profil.</string>
+    <string name="profile_pin_set">Ange PIN</string>
+    <string name="profile_pin_change">Ändra PIN</string>
+    <string name="profile_pin_remove">Ta bort PIN</string>
+    <string name="profile_pin_set_title">Ange profil-PIN</string>
+    <string name="profile_pin_set_subtitle">Ange en 4-siffrig PIN och bekräfta den.</string>
+    <string name="profile_pin_enter">Ange 4-siffrig PIN</string>
+    <string name="profile_pin_confirm">Bekräfta 4-siffrig PIN</string>
+    <string name="profile_pin_mismatch">PIN-koderna matchar inte.</string>
+    <string name="profile_pin_save">Spara PIN</string>
+    <string name="profile_pin_unlock_title">Lås upp %1$s</string>
+    <string name="profile_pin_unlock_subtitle">Ange den 4-siffriga PIN-koden för att fortsätta.</string>
+    <string name="profile_pin_verifying">Verifierar…</string>
+    <string name="profile_pin_unlock_action">Lås upp</string>
+    <string name="profile_pin_overlay_unlock_heading">Ange din PIN för att komma åt %1$s.</string>
+    <string name="profile_pin_overlay_set_heading">Skapa en 4-siffrig PIN för %1$s.</string>
+    <string name="profile_pin_overlay_confirm_heading">Bekräfta din nya PIN.</string>
+    <string name="profile_pin_overlay_unlock_support">Använd fjärrkontrollen eller tangentbordet för att ange 4 siffror.</string>
+    <string name="profile_pin_overlay_change_verify_kicker">Säkerhetskontroll krävs.</string>
+    <string name="profile_pin_overlay_change_verify_heading">Ange nuvarande PIN för att ändra PIN för %1$s.</string>
+    <string name="profile_pin_overlay_change_verify_support">Ange den nuvarande 4-siffriga PIN-koden innan du anger en ny.</string>
+    <string name="profile_pin_overlay_remove_verify_kicker">Säkerhetskontroll krävs.</string>
+    <string name="profile_pin_overlay_remove_verify_heading">Ange nuvarande PIN för att ta bort låset för %1$s.</string>
+    <string name="profile_pin_overlay_remove_verify_support">Ange den nuvarande 4-siffriga PIN-koden för att ta bort detta lås.</string>
+    <string name="profile_pin_overlay_set_support">Denna PIN krävs innan denna profil öppnas.</string>
+    <string name="profile_pin_overlay_confirm_support">Ange samma 4 siffror igen för att slutföra.</string>
+    <string name="profile_pin_overlay_mismatch">PIN-koderna matchade inte. Ange en ny PIN igen.</string>
+    <string name="profile_pin_overlay_forgot_hint">Glömt PIN? Återställ den från ditt Nuvio-konto på Nuvios webbplats.</string>
+    <string name="profile_pin_overlay_back_hint">Tryck tillbaka för att avbryta</string>
+
+    <!-- Missing: Debug library -->
+    <string name="debug_section_library">Bibliotek</string>
+    <string name="debug_generate_library_title">Generera biblioteksobjekt</string>
+    <string name="debug_generate_library_subtitle">Lägg till slumpmässiga filmer/serier i biblioteket för testning</string>
+    <string name="debug_generate_library_placeholder">Antal objekt</string>
+    <string name="debug_generate_library_button">Generera</string>
+    <string name="debug_generating_library">Genererar\u2026</string>
+
+    <!-- Missing: Cast detail -->
+    <string name="cast_detail_born">Född: %1$s</string>
+    <string name="cast_detail_born_died">Född: %1$s — †%2$s</string>
+    <string name="cast_detail_age">ålder %1$d</string>
+
+    <!-- Missing: Update -->
+    <string name="update_checking">Söker efter uppdateringar…</string>
+    <string name="update_download_complete">Nedladdning klar. Redo att installera.</string>
+    <string name="update_up_to_date">Systemet är uppdaterat. Senaste ändringarna:</string>
 </resources>

@@ -1,21 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Nuvio</string>
     <string name="type_movie">Película</string>
     <string name="type_series">Series</string>
+    <string name="type_unknown">Desconocido</string>
 
     <!-- HomeScreen -->
     <string name="home_no_addons">No hay complementos instalados. Instala uno para empezar.</string>
     <string name="home_no_catalog_addons">No hay complementos de catálogo instalados. Instala un complemento de catálogo para ver contenido.</string>
+    <string name="auth_notice_nuvio_logged_out">Has sido desconectado de Nuvio. Por favor, inicia sesión de nuevo.</string>
+    <string name="auth_notice_trakt_logged_out">Has sido desconectado de Trakt. Por favor, reconéctate.</string>
     <string name="error_generic">Ha ocurrido un error</string>
 
     <!-- ErrorState -->
     <string name="action_retry">Reintentar</string>
+    <string name="error_state_generic_issue">Something went wrong.</string>
+    <string name="error_state_possible_fix">Posible solución: %1$s</string>
+    <string name="error_state_fix_retry_soon">reintentar en un momento.</string>
+    <string name="error_state_issue_no_metadata_any_addon">Este ID no pudo cargar detalles porque ninguno de los complementos instalados devolvió metadatos.</string>
+    <string name="error_state_fix_no_metadata_any_addon">intenta otro complemento, desactiva \"Preferir complemento de metadatos externo\" en configuración de Diseño, o confirma que un complemento instalado admite este ID.</string>
+    <string name="error_state_prefix_no_supported_metadata">Ningún complemento instalado admite metadatos para </string>
+    <string name="error_state_prefix_no_addon_for_id">Ningún complemento instalado pudo proporcionar metadatos para id=</string>
+    <string name="error_state_fix_no_supported_metadata">instala o actualiza un complemento que admita este tipo de contenido, luego reintentar.</string>
+    <string name="error_state_prefix_tried_meta_addons">Complementos de metadatos probados:</string>
+    <string name="error_state_fix_tried_meta_addons">instala un complemento que admita este ID, o reconfigura/actualiza el complemento e intenta de nuevo.</string>
+    <string name="error_state_issue_missing_metadata_for_id">no tiene metadatos para este ID</string>
+    <string name="error_state_fix_missing_metadata_for_id">abre este ID de otro complemento, desactiva \"Preferir complemento de metadatos externo\", o comprueba que el complemento admita este ID.</string>
+    <string name="error_state_issue_addon_unreachable">no se pudo acceder</string>
+    <string name="error_state_fix_addon_unreachable">comprueba tu conexión a internet, verifica que la URL del complemento aún funciona, luego reintentar.</string>
+    <string name="error_state_issue_addon_connection_failed">rechazó la conexión</string>
+    <string name="error_state_fix_addon_connection_failed">asegúrate de que el servidor del complemento esté en línea y accesible, luego reintentar.</string>
+    <string name="error_state_issue_addon_timeout">tardó demasiado en responder</string>
+    <string name="error_state_fix_addon_timeout">reintentar en un momento, o intenta un complemento diferente si esto sigue sucediendo.</string>
+    <string name="error_state_issue_addon_cleartext">utiliza una conexión HTTP insegura que Android bloqueó</string>
+    <string name="error_state_fix_addon_cleartext">cambia la URL del complemento a HTTPS o actualiza la configuración del complemento.</string>
+    <string name="error_state_fix_addon_generic">reintentar, actualizar o reinstalar el complemento, o intenta otro complemento.</string>
+    <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
+    <string name="error_meta_not_found">Metadatos no encontrados</string>
+    <string name="error_meta_no_supported_addon">Ningún complemento instalado admite metadatos para \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">Ningún complemento instalado pudo proporcionar metadatos para id=%1$s (tipo=%2$s).</string>
+    <string name="error_meta_tried_none">Complementos de metadatos probados: %1$s. Ninguno de ellos proporcionó metadatos para id=%2$s (tipo=%3$s).</string>
+    <string name="error_meta_tried_generic">Complementos de metadatos probados: %1$s. No se pudo cargar metadatos para id=%2$s (tipo=%3$s).</string>
+    <string name="error_meta_tried_issues">Complementos de metadatos probados: %1$s. No se pudo cargar metadatos para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Ningún complemento instalado admite transmisiones para \"%1$s\".</string>
+    <string name="error_stream_tried_none">Complementos de transmisión probados: %1$s. Ninguno de ellos devolvió transmisiones para id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_generic">Complementos de transmisión probados: %1$s. No se pudo cargar transmisiones para id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_issues">Complementos de transmisión probados: %1$s. No se pudo cargar transmisiones para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Continuar viendo</string>
     <string name="cw_upcoming">Próximamente</string>
     <string name="cw_next_up">Siguiente</string>
+    <string name="cw_new_episode">Nuevo episodio</string>
+    <string name="cw_new_season">Nueva temporada</string>
     <string name="cw_resume">Reanudar</string>
+    <string name="cw_percent_watched">%1$d%% visto</string>
     <string name="cw_hours_min_left">%1$dh %2$dm restantes</string>
     <string name="cw_min_left">%1$dm restantes</string>
     <string name="cw_almost_done">Casi terminado</string>
@@ -56,6 +95,7 @@
     <string name="episodes_mark_season_unwatched">Marcar temporada como no vista</string>
     <string name="episodes_mark_previous_watched">Marcar anteriores en esta temporada como visto</string>
     <string name="episodes_play">Reproducir</string>
+    <string name="play_manually">Reproducir manualmente</string>
     <string name="episodes_season_actions">Acciones de la temporada</string>
 
     <!-- MetaDetailsViewModel -->
@@ -98,6 +138,11 @@
     <string name="appearance_language_system">Predeterminado del sistema</string>
     <string name="appearance_language_dialog_title">Elige idioma</string>
     <string name="appearance_language_restart_hint">Reinicia la aplicación para aplicar el cambio de idioma.</string>
+
+    <!-- Font -->
+    <string name="appearance_font">Fuente de la aplicación</string>
+    <string name="appearance_font_subtitle">Elige tu fuente preferida</string>
+    <string name="appearance_font_dialog_title">Elige fuente</string>
 
     <!-- ThemeSettingsScreen -->
     <string name="appearance_title">Apariencia</string>
@@ -149,6 +194,7 @@
     <string name="cd_increase">Aumentar</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_none">Ninguno</string>
+    <string name="action_close">Cerrar</string>
 
     <!-- PlaybackSettingsSections -->
     <string name="playback_section_general">General</string>
@@ -843,4 +889,161 @@
     <string name="update_open_settings">Abrir configuración</string>
     <string name="update_install">Instalar</string>
     <string name="update_ignore">Ignorar</string>
+
+
+    <string name="update_checking">Buscando actualizaciones…</string>
+    <string name="update_download_complete">Descarga completada. Listo para instalar.</string>
+    <string name="update_up_to_date">El sistema está actualizado. Últimos cambios:</string>
+    <string name="trakt_comments_title">Comentarios</string>
+    <string name="trakt_comments_subtitle">Mostrar reseñas de Trakt en páginas de metadatos</string>
+    <string name="trakt_comments_dialog_title">Comentarios</string>
+    <string name="trakt_comments_dialog_subtitle">Elige si las páginas de metadatos deben mostrar reseñas de Trakt cuando tu cuenta está conectada.</string>
+    <string name="trakt_comments_now_shown">Las reseñas de Trakt en las páginas de metadatos ahora se muestran</string>
+    <string name="trakt_comments_now_hidden">Las reseñas de Trakt en las páginas de metadatos ahora están ocultas</string>
+    <string name="animeskip_title">Anime Skip</string>
+    <string name="animeskip_subtitle">Configura tu ID de cliente de Anime Skip para saltar introductores/outros de anime</string>
+    <string name="animeskip_enable_title">Habilitar Anime Skip</string>
+    <string name="animeskip_enable_subtitle">Obtener marcas de tiempo de salto de anime-skip.com</string>
+    <string name="animeskip_client_id_title">ID de cliente</string>
+    <string name="animeskip_client_id_subtitle">Requerido para obtener marcas de tiempo de salto de anime-skip.com</string>
+    <string name="animeskip_dialog_title">ID de cliente de Anime Skip</string>
+    <string name="animeskip_dialog_subtitle">Crea tu propio ID de cliente en anime-skip.com/account/settings</string>
+    <string name="animeskip_dialog_placeholder">Introduce ID de cliente</string>
+    <string name="animeskip_invalid_client_id">ID de cliente inválido</string>
+    <string name="mdblist_invalid_api_key">Clave API de MDBList inválida</string>
+    <string name="supporters_contributors_title">Apoyadores y colaboradores</string>
+    <string name="supporters_contributors_subtitle">Las personas que respaldan Nuvio y los colaboradores que lo construyen en TV y móvil.</string>
+    <string name="supporters_contributors_supporters_copy">Los apoyadores y donantes ayudan a mantener el proyecto en movimiento, financiar la infraestructura y dejar espacio para características ambiciosas.</string>
+    <string name="supporters_contributors_donate_copy">Nuvio seguirá siendo gratis y de código abierto. Si deseas respaldar el proyecto, puedes ayudar a cubrir el tiempo e infraestructura detrás.</string>
+    <string name="supporters_contributors_donate_button">Donar a Nuvio</string>
+    <string name="supporters_contributors_qr_title">Escanear para donar</string>
+    <string name="supporters_contributors_qr_subtitle">Abre el enlace en tu teléfono y respalda Nuvio a través de Ko-fi.</string>
+    <string name="supporters_contributors_qr_hint">Apunta tu cámara al código QR o usa el botón de abajo.</string>
+    <string name="supporters_contributors_back_button">Volver a detalles</string>
+    <string name="supporters_tab">Apoyadores</string>
+    <string name="contributors_tab">Colaboradores</string>
+    <string name="supporters_loading">Cargando apoyadores…</string>
+    <string name="supporters_empty">Sin apoyadores encontrados aún.</string>
+    <string name="supporters_error_title">No se pudo cargar apoyadores</string>
+    <string name="supporters_no_message">Ningún mensaje compartido.</string>
+    <string name="supporters_open_donations">Abrir página de donaciones</string>
+    <string name="contributors_loading">Cargando colaboradores de GitHub…</string>
+    <string name="contributors_empty">Sin colaboradores encontrados aún.</string>
+    <string name="contributors_error_title">No se pudo cargar colaboradores</string>
+    <string name="contributors_total_contributions">%1$d aportaciones totales</string>
+    <string name="contributors_open_github">Abrir perfil de GitHub</string>
+    <string name="contributors_show_kofi_qr">Mostrar QR de Ko-fi</string>
+    <string name="contributors_hide_kofi_qr">Ocultar QR de Ko-fi</string>
+    <string name="contributors_profile_unavailable">Enlace de perfil de GitHub no disponible.</string>
+    <string name="profile_manage_button">Administrar perfiles</string>
+    <string name="profile_manage_title">Administrar perfiles</string>
+    <string name="profile_manage_subtitle">Selecciona un perfil para editar, cambiar o crear uno nuevo</string>
+    <string name="profile_manage_hint">Selecciona un perfil para administrar</string>
+    <string name="profile_choose_avatar">Elige avatar</string>
+    <string name="profile_avatar_none_selected">Ningún avatar seleccionado</string>
+    <string name="profile_avatar_focus_hint">Enfoca un avatar para ver su nombre</string>
+    <string name="profile_avatar_category_all">Todo</string>
+    <string name="profile_avatar_category_anime">Anime</string>
+    <string name="profile_avatar_category_animation">Animación</string>
+    <string name="profile_avatar_category_movie">Película</string>
+    <string name="profile_avatar_category_tv">TV</string>
+    <string name="profile_avatar_category_gaming">Juegos</string>
+    <string name="profile_add_new">Añadir perfil</string>
+    <string name="profile_cancel">Cancelar</string>
+    <string name="profile_save">Guardar</string>
+    <string name="profile_pin_title">Bloqueo PIN de perfil</string>
+    <string name="profile_pin_enabled_subtitle">Este perfil requiere un PIN de 4 dígitos antes de cambiar.</string>
+    <string name="profile_pin_disabled_subtitle">Establece un PIN de 4 dígitos para bloquear este perfil.</string>
+    <string name="profile_pin_set">Establecer PIN</string>
+    <string name="profile_pin_change">Cambiar PIN</string>
+    <string name="profile_pin_remove">Eliminar PIN</string>
+    <string name="profile_pin_set_title">Establecer PIN de perfil</string>
+    <string name="profile_pin_set_subtitle">Introduce un PIN de 4 dígitos y confirma.</string>
+    <string name="profile_pin_enter">Introduce PIN de 4 dígitos</string>
+    <string name="profile_pin_confirm">Confirma PIN de 4 dígitos</string>
+    <string name="profile_pin_mismatch">Los valores de PIN no coinciden.</string>
+    <string name="profile_pin_save">Guardar PIN</string>
+    <string name="profile_pin_unlock_title">Desbloquea %1$s</string>
+    <string name="profile_pin_unlock_subtitle">Introduce el PIN de 4 dígitos para continuar.</string>
+    <string name="profile_pin_verifying">Verificando…</string>
+    <string name="profile_pin_unlock_action">Desbloquear</string>
+    <string name="profile_pin_overlay_unlock_heading">Introduce tu PIN para acceder a %1$s.</string>
+    <string name="profile_pin_overlay_set_heading">Crea un PIN de 4 dígitos para %1$s.</string>
+    <string name="profile_pin_overlay_confirm_heading">Confirma tu nuevo PIN.</string>
+    <string name="profile_pin_overlay_unlock_support">Usa tu control remoto o teclado para introducir 4 dígitos.</string>
+    <string name="profile_pin_overlay_change_verify_kicker">Se requiere verificación de seguridad.</string>
+    <string name="profile_pin_overlay_change_verify_heading">Introduce PIN actual para cambiar PIN para %1$s.</string>
+    <string name="profile_pin_overlay_change_verify_support">Introduce el PIN de 4 dígitos actual antes de establecer uno nuevo.</string>
+    <string name="profile_pin_overlay_remove_verify_kicker">Se requiere verificación de seguridad.</string>
+    <string name="profile_pin_overlay_remove_verify_heading">Introduce PIN actual para eliminar bloqueo para %1$s.</string>
+    <string name="profile_pin_overlay_remove_verify_support">Introduce el PIN de 4 dígitos actual para eliminar este bloqueo.</string>
+    <string name="profile_pin_overlay_set_support">Este PIN será requerido antes de abrir este perfil.</string>
+    <string name="profile_pin_overlay_confirm_support">Reintroduce los mismos 4 dígitos para terminar la configuración.</string>
+    <string name="profile_pin_overlay_mismatch">Los PINs no coincidieron. Introduce un nuevo PIN de nuevo.</string>
+    <string name="profile_pin_overlay_forgot_hint">¿Olvidaste el PIN? Restablécelo desde tu cuenta de Nuvio en sitio web de nuvio.</string>
+    <string name="profile_pin_overlay_back_hint">Presiona atrás para cancelar</string>
+    <string name="addon_error_invalid_url">Introduce una URL de complemento válida</string>
+    <string name="addon_error_invalid_scheme">La URL del complemento debe comenzar con http o https</string>
+    <string name="addon_install_success">Instalado %1$s</string>
+    <string name="player_no_external_player">No se encontró reproductor externo</string>
+    <string name="parental_nudity">Desnudez</string>
+    <string name="parental_violence">Violencia</string>
+    <string name="parental_profanity">Lenguaje soez</string>
+    <string name="parental_alcohol">Alcohol/Drogas</string>
+    <string name="parental_frightening">Aterrador</string>
+    <string name="parental_severity_severe">Severo</string>
+    <string name="parental_severity_moderate">Moderado</string>
+    <string name="parental_severity_mild">Leve</string>
+    <string name="stream_info_section_source">FUENTE</string>
+    <string name="stream_info_section_file">ARCHIVO</string>
+    <string name="stream_info_section_video">VÍDEO</string>
+    <string name="stream_info_section_audio">AUDIO</string>
+    <string name="stream_info_section_subtitle">SUBTÍTULO</string>
+    <string name="stream_info_filename">Nombre de archivo</string>
+    <string name="stream_info_size">Tamaño</string>
+    <string name="stream_info_codec">Códec</string>
+    <string name="stream_info_resolution">Resolución</string>
+    <string name="stream_info_frame_rate">Velocidad de fotogramas</string>
+    <string name="stream_info_bitrate">Velocidad de bits</string>
+    <string name="stream_info_channels">Canales</string>
+    <string name="stream_info_sample_rate">Frecuencia de muestreo</string>
+    <string name="stream_info_language">Idioma</string>
+    <string name="stream_info_name">Nombre</string>
+    <string name="stream_info_source">Fuente</string>
+    <string name="stream_info_subtitle_source_addon">Complemento</string>
+    <string name="stream_info_subtitle_source_embedded">Integrado</string>
+    <string name="audio_dialog_tab_tracks">Audio</string>
+    <string name="audio_dialog_tab_mix">Mezcla</string>
+    <string name="audio_mix_label">Amplificación (PCM)</string>
+    <string name="audio_mix_value_db">%1$d dB</string>
+    <string name="audio_mix_persist_on">Persistir entre sesiones: ACTIVADO</string>
+    <string name="audio_mix_persist_off">Persistir entre sesiones: DESACTIVADO</string>
+    <string name="audio_mix_range">Rango: %1$d dB a %2$d dB</string>
+    <string name="audio_mix_range_saved">Rango: %1$d dB a %2$d dB (guardado)</string>
+    <string name="audio_mix_unavailable">La amplificación no está disponible en este dispositivo</string>
+    <string name="subtitle_style_customize">Personalizar</string>
+    <string name="next_episode_not_aired_yet">El siguiente episodio aún no se ha estrenado</string>
+    <string name="search_voice_no_speech">Sin voz detectada. Intenta de nuevo.</string>
+    <string name="search_voice_mic_permission">Se requiere permiso de micrófono para búsqueda por voz.</string>
+    <string name="search_voice_failed">Falló el reconocimiento de voz. Intenta de nuevo.</string>
+    <string name="search_voice_unavailable">La búsqueda por voz no está disponible en este dispositivo.</string>
+    <string name="library_sort_trakt_order">Orden de Trakt</string>
+    <string name="library_sort_added_desc">Añadido ↓</string>
+    <string name="library_sort_added_asc">Añadido ↑</string>
+    <string name="library_sort_title_asc">Título A-Z</string>
+    <string name="library_sort_title_desc">Título Z-A</string>
+    <string name="account_sync_restart_note">La sincronización no es en tiempo real en dispositivos activos. Reinicia este dispositivo después de iniciar sesión o para recopilar cambios realizados en otro lugar.</string>
+    <string name="ratings_load_error">No se pudo cargar calificaciones de episodios.</string>
+    <string name="profile_selection_options_title">Opciones de perfil</string>
+    <string name="profile_delete_confirm_title">¿Eliminar perfil?</string>
+    <string name="profile_delete_confirm_subtitle">Esto eliminará permanentemente este perfil y todos sus datos, incluida la biblioteca, historial de visualización y configuración de complementos. Esto no se puede deshacer.</string>
+    <string name="profile_delete_btn">Eliminar perfil</string>
+    <string name="profile_saving">Guardando…</string>
+    <string name="cast_detail_born">Nacido: %1$s</string>
+    <string name="cast_detail_born_died">Nacido: %1$s — †%2$s</string>
+    <string name="cast_detail_age">edad %1$d</string>
+    <string name="update_download">Descargar</string>
+    <string name="update_downloading_ellipsis">Descargando…</string>
+    <string name="watchlist_added">Añadido a lista de deseos</string>
+    <string name="watchlist_removed">Eliminado de lista de deseos</string>
 </resources>

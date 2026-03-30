@@ -57,12 +57,6 @@ class PlayerRuntimeController(
         internal const val TAG = "PlayerViewModel"
         internal const val TRACK_FRAME_RATE_GRACE_MS = 1500L
         internal const val ADDON_SUBTITLE_TRACK_ID_PREFIX = "nuvio-addon-sub:"
-        internal val PORTUGUESE_BRAZILIAN_TAGS = listOf(
-            "pt-br", "pt_br", "pob", "brazilian", "brazil", "brasil"
-        )
-        internal val PORTUGUESE_EUROPEAN_TAGS = listOf(
-            "pt-pt", "pt_pt", "iberian", "european", "portugal", "europeu"
-        )
     }
 
     internal data class PendingAudioSelection(

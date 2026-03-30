@@ -190,10 +190,14 @@ fun CatalogSeeAllScreen(
                         items = catalogRow.items,
                         key = { index, item -> "${catalogRow.catalogId}_${item.id}_$index" }
                     ) { index, item ->
+                        val isWatched = uiState.movieWatchedStatus[
+                            com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)
+                        ] == true
                         GridContentCard(
                             item = item,
                             posterCardStyle = posterCardStyle,
                             showLabel = uiState.posterLabelsEnabled,
+                            isWatched = isWatched,
                             focusRequester = if (index == focusedItemIndex) restoreFocusRequester else null,
                             onFocused = {
                                 focusedItemIndex = index

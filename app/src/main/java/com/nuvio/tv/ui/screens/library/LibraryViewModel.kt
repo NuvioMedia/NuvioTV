@@ -2,8 +2,11 @@ package com.nuvio.tv.ui.screens.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.data.local.LibraryPreferences
 import com.nuvio.tv.data.repository.TraktLibraryService
+import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.domain.model.LibraryEntry
 import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
@@ -49,6 +52,12 @@ enum class LibrarySortOption(
     }
 }
 
+data class FilterOption(
+    val key: String,
+    val label: String,
+    val count: Int
+)
+
 data class LibraryListEditorState(
     val mode: Mode,
     val listId: String? = null,
@@ -73,6 +82,11 @@ data class LibraryUiState(
     val selectedTypeTab: LibraryTypeTab? = null,
     val selectedSortOption: LibrarySortOption = LibrarySortOption.DEFAULT,
     val sortSelectionVersion: Long = 0L,
+    val availableGenres: List<FilterOption> = emptyList(),
+    val availableYears: List<FilterOption> = emptyList(),
+    val selectedGenre: String? = null,
+    val selectedYear: String? = null,
+    val isNuvioAccount: Boolean = false,
     val posterCardWidthDp: Int = 126,
     val posterCardCornerRadiusDp: Int = 12,
     val isLoading: Boolean = true,
@@ -88,17 +102,29 @@ data class LibraryUiState(
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val libraryRepository: LibraryRepository,
-    private val layoutPreferenceDataStore: LayoutPreferenceDataStore
+    private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
+    private val libraryPreferences: LibraryPreferences,
+    private val authManager: AuthManager,
+    private val watchProgressRepository: com.nuvio.tv.domain.repository.WatchProgressRepository,
+    private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
+
+    private val _watchedMovieIds = MutableStateFlow<Set<String>>(emptySet())
+    val watchedMovieIds: StateFlow<Set<String>> = _watchedMovieIds.asStateFlow()
+    val watchedSeriesIds: StateFlow<Set<String>> = watchedSeriesStateHolder.fullyWatchedSeriesIds
 
     private var messageClearJob: Job? = null
 
     init {
         observeLayoutPreferences()
         observeLibraryData()
+        viewModelScope.launch {
+            watchProgressRepository.observeWatchedMovieIds()
+                .collect { ids -> _watchedMovieIds.value = ids }
+        }
     }
 
     fun onSelectTypeTab(tab: LibraryTypeTab) {
@@ -111,6 +137,20 @@ class LibraryViewModel @Inject constructor(
     fun onSelectListTab(listKey: String) {
         _uiState.update { current ->
             val updated = current.copy(selectedListKey = listKey)
+            updated.withVisibleItems()
+        }
+    }
+
+    fun onSelectGenre(key: String?) {
+        _uiState.update { current ->
+            val updated = current.copy(selectedGenre = key)
+            updated.withVisibleItems()
+        }
+    }
+
+    fun onSelectYear(key: String?) {
+        _uiState.update { current ->
+            val updated = current.copy(selectedYear = key)
             updated.withVisibleItems()
         }
     }
@@ -128,6 +168,7 @@ class LibraryViewModel @Inject constructor(
             )
             updated.withVisibleItems()
         }
+        viewModelScope.launch { libraryPreferences.setSortOption(option.key) }
     }
 
     fun onRefresh() {
@@ -299,15 +340,28 @@ class LibraryViewModel @Inject constructor(
                 libraryRepository.sourceMode,
                 libraryRepository.isSyncing,
                 libraryRepository.libraryItems,
-                libraryRepository.listTabs
-            ) { sourceMode, isSyncing, items, listTabs ->
+                libraryRepository.listTabs,
+                libraryPreferences.sortOption,
+                authManager.authState
+            ) { args ->
+                val sourceMode = args[0] as LibrarySourceMode
+                val isSyncing = args[1] as Boolean
+                @Suppress("UNCHECKED_CAST")
+                val items = args[2] as List<LibraryEntry>
+                @Suppress("UNCHECKED_CAST")
+                val listTabs = args[3] as List<LibraryListTab>
+                val persistedSortKey = args[4] as String?
+                val authState = args[5] as AuthState
                 DataBundle(
                     sourceMode = sourceMode,
                     isSyncing = isSyncing,
                     items = items,
-                    listTabs = listTabs
+                    listTabs = listTabs,
+                    persistedSortKey = persistedSortKey,
+                    authState = authState
                 )
-            }.collectLatest { (sourceMode, isSyncing, items, listTabs) ->
+            }.collectLatest { bundle ->
+                val (sourceMode, isSyncing, items, listTabs, persistedSortKey, authState) = bundle
                 _uiState.update { current ->
                     val nextSelectedList = when {
                         sourceMode == LibrarySourceMode.TRAKT -> {
@@ -326,40 +380,35 @@ class LibraryViewModel @Inject constructor(
                         }
                         ?: listTabs.firstOrNull { it.type == LibraryListTab.Type.PERSONAL }?.key
 
-                    val itemsForTypeTabs = if (sourceMode == LibrarySourceMode.TRAKT) {
-                        val listKey = nextSelectedList
-                        if (listKey.isNullOrBlank()) items else items.filter { it.listKeys.contains(listKey) }
-                    } else {
-                        items
-                    }
-                    val typeTabs = buildTypeTabs(itemsForTypeTabs)
                     val nextSelectedType = current.selectedTypeTab
-                        ?.takeIf { selected -> typeTabs.any { it.key == selected.key } }
                         ?: LibraryTypeTab.All
                     val sortOptions = if (sourceMode == LibrarySourceMode.TRAKT) {
                         LibrarySortOption.TraktOptions
                     } else {
                         LibrarySortOption.LocalOptions
                     }
-                    val nextSelectedSort = current.selectedSortOption
+                    val modeDefault = if (sourceMode == LibrarySourceMode.TRAKT) LibrarySortOption.DEFAULT else LibrarySortOption.ADDED_DESC
+                    val persistedSort = persistedSortKey?.let { key ->
+                        LibrarySortOption.entries.find { it.key == key }
+                    }
+                    val nextSelectedSort = (persistedSort ?: current.selectedSortOption)
                         .takeIf { it in sortOptions }
-                        ?: if (sourceMode == LibrarySourceMode.TRAKT) LibrarySortOption.DEFAULT else LibrarySortOption.ADDED_DESC
+                        ?: modeDefault
+
+                    val isNuvioAccount = sourceMode == LibrarySourceMode.LOCAL && authState is AuthState.FullAccount
 
                     val updated = current.copy(
                         sourceMode = sourceMode,
                         allItems = items,
                         listTabs = listTabs,
-                        availableTypeTabs = typeTabs,
                         availableSortOptions = sortOptions,
                         selectedTypeTab = nextSelectedType,
                         selectedListKey = nextSelectedList,
                         selectedSortOption = nextSelectedSort,
                         manageSelectedListKey = nextManageSelected,
-                        isSyncing = sourceMode == LibrarySourceMode.TRAKT && isSyncing,
-                        isLoading = sourceMode == LibrarySourceMode.TRAKT &&
-                            isSyncing &&
-                            items.isEmpty() &&
-                            listTabs.isEmpty()
+                        isNuvioAccount = isNuvioAccount,
+                        isSyncing = isSyncing,
+                        isLoading = isSyncing && items.isEmpty()
                     )
                     updated.withVisibleItems()
                 }
@@ -395,7 +444,9 @@ class LibraryViewModel @Inject constructor(
         val sourceMode: LibrarySourceMode,
         val isSyncing: Boolean,
         val items: List<LibraryEntry>,
-        val listTabs: List<LibraryListTab>
+        val listTabs: List<LibraryListTab>,
+        val persistedSortKey: String?,
+        val authState: AuthState
     )
 
     private fun reorderSelectedList(moveUp: Boolean) {
@@ -455,19 +506,6 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    private fun buildTypeTabs(items: List<LibraryEntry>): List<LibraryTypeTab> {
-        val byKey = linkedMapOf<String, LibraryTypeTab>()
-        items.forEach { entry ->
-            val key = entry.type.trim().ifBlank { "unknown" }.lowercase(Locale.ROOT)
-            if (byKey.containsKey(key)) return@forEach
-            byKey[key] = LibraryTypeTab(
-                key = key,
-                label = prettifyTypeLabel(key)
-            )
-        }
-        return listOf(LibraryTypeTab.All) + byKey.values
-    }
-
     private fun prettifyTypeLabel(key: String): String {
         return key
             .replace('_', ' ')
@@ -482,52 +520,158 @@ class LibraryViewModel @Inject constructor(
             .ifBlank { "Unknown" }
     }
 
+    private val yearRegex = Regex("""\b(19|20)\d{2}\b""")
+
+    private fun LibraryEntry.extractYear(): String? =
+        releaseInfo?.let { yearRegex.find(it)?.value }
+
     private fun LibraryUiState.withVisibleItems(): LibraryUiState {
+        // Step 1: List filter (Trakt only)
+        val listFiltered = if (sourceMode == LibrarySourceMode.TRAKT) {
+            val listKey = selectedListKey ?: ""
+            allItems.filter { entry -> entry.listKeys.contains(listKey) }
+        } else {
+            allItems
+        }
+
+        // Step 2: Type filter
         val selectedTypeKey = selectedTypeTab?.key
-        val typeFiltered = allItems.filter { entry ->
+        val typeFiltered = listFiltered.filter { entry ->
             selectedTypeKey == null ||
                 selectedTypeKey == LibraryTypeTab.ALL_KEY ||
                 entry.type.trim().lowercase(Locale.ROOT) == selectedTypeKey
         }
 
-        val listFiltered = if (sourceMode == LibrarySourceMode.TRAKT) {
-            val listKey = selectedListKey ?: ""
-            typeFiltered.filter { entry -> entry.listKeys.contains(listKey) }
+        // Step 3: Genre filter
+        val genreFiltered = if (selectedGenre != null) {
+            typeFiltered.filter { entry ->
+                entry.genres.any { it.equals(selectedGenre, ignoreCase = true) }
+            }
         } else {
             typeFiltered
         }
 
+        // Step 4: Year filter
+        val yearFiltered = if (selectedYear != null) {
+            genreFiltered.filter { entry -> entry.extractYear() == selectedYear }
+        } else {
+            genreFiltered
+        }
+
+        // Faceted counts — each filter counts items matching all OTHER active filters
+
+        // Genre counts: from typeFiltered (after list+type), applying year filter but NOT genre filter
+        val itemsForGenreCounts = if (selectedYear != null) {
+            typeFiltered.filter { it.extractYear() == selectedYear }
+        } else {
+            typeFiltered
+        }
+        val genreCounts = mutableMapOf<String, Int>()
+        itemsForGenreCounts.forEach { entry ->
+            entry.genres.forEach { genre ->
+                val normalized = genre.trim()
+                if (normalized.isNotBlank()) {
+                    genreCounts[normalized] = (genreCounts[normalized] ?: 0) + 1
+                }
+            }
+        }
+        val genreOptions = genreCounts.entries
+            .sortedBy { it.key.lowercase(Locale.ROOT) }
+            .map { (genre, count) -> FilterOption(key = genre, label = genre, count = count) }
+
+        // Year counts: from typeFiltered (after list+type), applying genre filter but NOT year filter
+        val itemsForYearCounts = if (selectedGenre != null) {
+            typeFiltered.filter { entry ->
+                entry.genres.any { it.equals(selectedGenre, ignoreCase = true) }
+            }
+        } else {
+            typeFiltered
+        }
+        val yearCounts = mutableMapOf<String, Int>()
+        itemsForYearCounts.forEach { entry ->
+            val year = entry.extractYear() ?: return@forEach
+            yearCounts[year] = (yearCounts[year] ?: 0) + 1
+        }
+        val yearOptions = yearCounts.entries
+            .sortedByDescending { it.key }
+            .map { (year, count) -> FilterOption(key = year, label = year, count = count) }
+
+        // Type tab counts: from listFiltered, applying genre+year filters
+        val itemsForTypeCounts = listFiltered.filter { entry ->
+            val genreMatch = selectedGenre == null || entry.genres.any { it.equals(selectedGenre, ignoreCase = true) }
+            val yearMatch = selectedYear == null || entry.extractYear() == selectedYear
+            genreMatch && yearMatch
+        }
+
+        // Step 5: Sort
         val sorted = when (selectedSortOption) {
             LibrarySortOption.DEFAULT -> if (sourceMode == LibrarySourceMode.TRAKT) {
-                listFiltered.sortedWith(
+                yearFiltered.sortedWith(
                     compareBy<LibraryEntry> { it.traktRank ?: Int.MAX_VALUE }
                         .thenByDescending { it.listedAt }
                         .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
                         .thenBy { it.id }
                 )
             } else {
-                listFiltered
+                yearFiltered
             }
-            LibrarySortOption.ADDED_DESC -> listFiltered.sortedWith(
+            LibrarySortOption.ADDED_DESC -> yearFiltered.sortedWith(
                 compareByDescending<LibraryEntry> { it.listedAt }
                     .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
                     .thenBy { it.id }
             )
-            LibrarySortOption.ADDED_ASC -> listFiltered.sortedWith(
+            LibrarySortOption.ADDED_ASC -> yearFiltered.sortedWith(
                 compareBy<LibraryEntry> { it.listedAt }
                     .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
                     .thenBy { it.id }
             )
-            LibrarySortOption.TITLE_ASC -> listFiltered.sortedWith(
+            LibrarySortOption.TITLE_ASC -> yearFiltered.sortedWith(
                 compareBy<LibraryEntry> { it.name.ifBlank { it.id }.lowercase(Locale.ROOT) }
                     .thenBy { it.id }
             )
-            LibrarySortOption.TITLE_DESC -> listFiltered.sortedWith(
+            LibrarySortOption.TITLE_DESC -> yearFiltered.sortedWith(
                 compareByDescending<LibraryEntry> { it.name.ifBlank { it.id }.lowercase(Locale.ROOT) }
                     .thenBy { it.id }
             )
         }
 
-        return copy(visibleItems = sorted)
+        // Rebuild type tabs with counts
+        val typeTabsWithCounts = buildTypeTabsWithCounts(listFiltered, itemsForTypeCounts)
+
+        // Validate selections — clear if no longer valid
+        val validGenre = selectedGenre?.takeIf { g -> genreOptions.any { it.key.equals(g, ignoreCase = true) } }
+        val validYear = selectedYear?.takeIf { y -> yearOptions.any { it.key == y } }
+
+        return copy(
+            visibleItems = sorted,
+            availableTypeTabs = typeTabsWithCounts,
+            availableGenres = genreOptions,
+            availableYears = yearOptions,
+            selectedGenre = validGenre,
+            selectedYear = validYear
+        )
+    }
+
+    private fun buildTypeTabsWithCounts(
+        allTypeItems: List<LibraryEntry>,
+        filteredItems: List<LibraryEntry>
+    ): List<LibraryTypeTab> {
+        val byKey = linkedMapOf<String, String>()
+        allTypeItems.forEach { entry ->
+            val key = entry.type.trim().ifBlank { "unknown" }.lowercase(Locale.ROOT)
+            if (!byKey.containsKey(key)) {
+                byKey[key] = prettifyTypeLabel(key)
+            }
+        }
+        val countByType = mutableMapOf<String, Int>()
+        filteredItems.forEach { entry ->
+            val key = entry.type.trim().ifBlank { "unknown" }.lowercase(Locale.ROOT)
+            countByType[key] = (countByType[key] ?: 0) + 1
+        }
+        val allCount = filteredItems.size
+        val allTab = LibraryTypeTab(key = LibraryTypeTab.ALL_KEY, label = "All ($allCount)")
+        return listOf(allTab) + byKey.map { (key, label) ->
+            LibraryTypeTab(key = key, label = "$label (${countByType[key] ?: 0})")
+        }
     }
 }
