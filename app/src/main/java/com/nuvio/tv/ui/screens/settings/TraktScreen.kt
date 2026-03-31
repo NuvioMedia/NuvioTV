@@ -2,10 +2,12 @@
 
 package com.nuvio.tv.ui.screens.settings
 
+import android.view.KeyEvent
 import androidx.annotation.RawRes
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -30,8 +32,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -59,6 +64,8 @@ import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchProgressSource
 import com.nuvio.tv.data.repository.TraktProgressService
 import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.components.TraktRatingSelectorContent
+import com.nuvio.tv.ui.components.traktRatingLabel
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
 import java.util.concurrent.TimeUnit
@@ -74,6 +81,9 @@ fun TraktScreen(
     var showDaysCapDialog by remember { mutableStateOf(false) }
     var showUnairedNextUpDialog by remember { mutableStateOf(false) }
     var showCommentsDialog by remember { mutableStateOf(false) }
+    var showMovieRatingsDialog by remember { mutableStateOf(false) }
+    var showEpisodeRatingsDialog by remember { mutableStateOf(false) }
+    var showDefaultRatingDialog by remember { mutableStateOf(false) }
     var showWatchProgressDialog by remember { mutableStateOf(false) }
     val strAllHistory = stringResource(R.string.trakt_all_history)
     val strDaysFormat = stringResource(R.string.trakt_days_format)
@@ -93,6 +103,7 @@ fun TraktScreen(
     val enabledFormatter: (Boolean) -> String = { enabled ->
         if (enabled) strSettingOn else strSettingOff
     }
+    val defaultRatingValue = uiState.defaultRatingPromptValue
     val continueWatchingDayOptions = remember {
         listOf(
             14,
@@ -306,6 +317,28 @@ fun TraktScreen(
                         subtitle = stringResource(R.string.trakt_comments_subtitle),
                         value = enabledFormatter(uiState.showMetaComments),
                         onClick = { showCommentsDialog = true }
+                    )
+                    SettingsActionRow(
+                        title = stringResource(R.string.trakt_movie_ratings_title),
+                        subtitle = stringResource(R.string.trakt_movie_ratings_subtitle),
+                        value = enabledFormatter(uiState.rateMoviesAfterWatching),
+                        onClick = { showMovieRatingsDialog = true }
+                    )
+                    SettingsActionRow(
+                        title = stringResource(R.string.trakt_episode_ratings_title),
+                        subtitle = stringResource(R.string.trakt_episode_ratings_subtitle),
+                        value = enabledFormatter(uiState.rateEpisodesAfterWatching),
+                        onClick = { showEpisodeRatingsDialog = true }
+                    )
+                    SettingsActionRow(
+                        title = stringResource(R.string.trakt_default_rating_title),
+                        subtitle = stringResource(R.string.trakt_default_rating_subtitle),
+                        value = stringResource(
+                            R.string.trakt_default_rating_value,
+                            defaultRatingValue,
+                            traktRatingLabel(defaultRatingValue)
+                        ),
+                        onClick = { showDefaultRatingDialog = true }
                     )
                 }
 
@@ -577,6 +610,180 @@ fun TraktScreen(
                     ) {
                         Text(stringResource(R.string.action_cancel))
                     }
+                }
+            }
+        }
+    }
+
+    if (showMovieRatingsDialog) {
+        NuvioDialog(
+            onDismiss = { showMovieRatingsDialog = false },
+            title = stringResource(R.string.trakt_movie_ratings_dialog_title),
+            subtitle = stringResource(R.string.trakt_movie_ratings_dialog_subtitle),
+            width = 620.dp,
+            suppressFirstKeyUp = false
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = {
+                        viewModel.onRateMoviesAfterWatchingChanged(true)
+                        showMovieRatingsDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = if (uiState.rateMoviesAfterWatching) NuvioColors.Primary else NuvioColors.BackgroundCard,
+                        contentColor = if (uiState.rateMoviesAfterWatching) Color.Black else NuvioColors.TextPrimary
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.trakt_setting_on))
+                }
+                Button(
+                    onClick = {
+                        viewModel.onRateMoviesAfterWatchingChanged(false)
+                        showMovieRatingsDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = if (!uiState.rateMoviesAfterWatching) NuvioColors.Primary else NuvioColors.BackgroundCard,
+                        contentColor = if (!uiState.rateMoviesAfterWatching) Color.Black else NuvioColors.TextPrimary
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.trakt_setting_off))
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(
+                        onClick = { showMovieRatingsDialog = false },
+                        colors = ButtonDefaults.colors(
+                            containerColor = NuvioColors.BackgroundCard,
+                            contentColor = NuvioColors.TextPrimary
+                        )
+                    ) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                }
+            }
+        }
+    }
+
+    if (showEpisodeRatingsDialog) {
+        NuvioDialog(
+            onDismiss = { showEpisodeRatingsDialog = false },
+            title = stringResource(R.string.trakt_episode_ratings_dialog_title),
+            subtitle = stringResource(R.string.trakt_episode_ratings_dialog_subtitle),
+            width = 620.dp,
+            suppressFirstKeyUp = false
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = {
+                        viewModel.onRateEpisodesAfterWatchingChanged(true)
+                        showEpisodeRatingsDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = if (uiState.rateEpisodesAfterWatching) NuvioColors.Primary else NuvioColors.BackgroundCard,
+                        contentColor = if (uiState.rateEpisodesAfterWatching) Color.Black else NuvioColors.TextPrimary
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.trakt_setting_on))
+                }
+                Button(
+                    onClick = {
+                        viewModel.onRateEpisodesAfterWatchingChanged(false)
+                        showEpisodeRatingsDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = if (!uiState.rateEpisodesAfterWatching) NuvioColors.Primary else NuvioColors.BackgroundCard,
+                        contentColor = if (!uiState.rateEpisodesAfterWatching) Color.Black else NuvioColors.TextPrimary
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.trakt_setting_off))
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(
+                        onClick = { showEpisodeRatingsDialog = false },
+                        colors = ButtonDefaults.colors(
+                            containerColor = NuvioColors.BackgroundCard,
+                            contentColor = NuvioColors.TextPrimary
+                        )
+                    ) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                }
+            }
+        }
+    }
+
+    if (showDefaultRatingDialog) {
+        val selectorFocusRequester = remember { FocusRequester() }
+        var selectorFocused by remember { mutableStateOf(false) }
+        var dialogDefaultRating by remember(uiState.defaultRatingPromptValue) {
+            mutableStateOf(uiState.defaultRatingPromptValue)
+        }
+        NuvioDialog(
+            onDismiss = { showDefaultRatingDialog = false },
+            title = stringResource(R.string.trakt_default_rating_dialog_title),
+            subtitle = stringResource(R.string.trakt_default_rating_dialog_subtitle),
+            width = 560.dp,
+            suppressFirstKeyUp = false
+        ) {
+            LaunchedEffect(Unit) {
+                selectorFocusRequester.requestFocus()
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(NuvioColors.BackgroundCard)
+                        .border(
+                            width = if (selectorFocused) 2.dp else 1.dp,
+                            color = if (selectorFocused) NuvioColors.FocusRing else NuvioColors.Border,
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .focusRequester(selectorFocusRequester)
+                        .onFocusChanged { selectorFocused = it.isFocused }
+                        .focusable()
+                        .onPreviewKeyEvent { keyEvent ->
+                            if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) {
+                                return@onPreviewKeyEvent false
+                            }
+                            when (keyEvent.nativeKeyEvent.keyCode) {
+                                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                    dialogDefaultRating = (dialogDefaultRating - 1).coerceAtLeast(1)
+                                    true
+                                }
+                                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                    dialogDefaultRating = (dialogDefaultRating + 1).coerceAtMost(10)
+                                    true
+                                }
+                                KeyEvent.KEYCODE_DPAD_CENTER,
+                                KeyEvent.KEYCODE_ENTER,
+                                KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                                    viewModel.onDefaultRatingPromptValueSelected(dialogDefaultRating)
+                                    showDefaultRatingDialog = false
+                                    true
+                                }
+                                else -> false
+                            }
+                        }
+                        .padding(horizontal = 20.dp, vertical = 18.dp)
+                ) {
+                    TraktRatingSelectorContent(
+                        rating = dialogDefaultRating,
+                        modifier = Modifier.align(Alignment.Center),
+                        starSize = 20.dp,
+                        activeTint = NuvioColors.Secondary,
+                        inactiveTint = NuvioColors.TextDisabled.copy(alpha = 0.55f)
+                    )
                 }
             }
         }

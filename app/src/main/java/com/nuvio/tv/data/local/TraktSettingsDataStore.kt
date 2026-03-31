@@ -36,9 +36,14 @@ class TraktSettingsDataStore @Inject constructor(
         const val DEFAULT_CONTINUE_WATCHING_DAYS_CAP = 60
         const val DEFAULT_SHOW_UNAIRED_NEXT_UP = true
         const val DEFAULT_SHOW_META_COMMENTS = true
+        const val DEFAULT_RATE_MOVIES_AFTER_WATCHING = true
+        const val DEFAULT_RATE_EPISODES_AFTER_WATCHING = true
+        const val DEFAULT_RATING_PROMPT_VALUE = 6
         val DEFAULT_WATCH_PROGRESS_SOURCE = WatchProgressSource.TRAKT
         const val MIN_CONTINUE_WATCHING_DAYS_CAP = 7
         const val MAX_CONTINUE_WATCHING_DAYS_CAP = 365
+        const val MIN_RATING_PROMPT_VALUE = 1
+        const val MAX_RATING_PROMPT_VALUE = 10
     }
 
     private fun store(profileId: Int = profileManager.activeProfileId.value) =
@@ -49,6 +54,9 @@ class TraktSettingsDataStore @Inject constructor(
     private val showUnairedNextUpKey = booleanPreferencesKey("show_unaired_next_up")
     private val showMetaCommentsKey = booleanPreferencesKey("show_meta_comments")
     private val watchProgressSourceKey = stringPreferencesKey("watch_progress_source")
+    private val rateMoviesAfterWatchingKey = booleanPreferencesKey("rate_movies_after_watching")
+    private val rateEpisodesAfterWatchingKey = booleanPreferencesKey("rate_episodes_after_watching")
+    private val defaultRatingPromptValueKey = intPreferencesKey("default_rating_prompt_value")
 
     val continueWatchingDaysCap: Flow<Int> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
@@ -79,6 +87,26 @@ class TraktSettingsDataStore @Inject constructor(
     val watchProgressSource: Flow<WatchProgressSource> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             WatchProgressSource.fromStorage(prefs[watchProgressSourceKey])
+        }
+    }
+
+    val rateMoviesAfterWatching: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            prefs[rateMoviesAfterWatchingKey] ?: DEFAULT_RATE_MOVIES_AFTER_WATCHING
+        }
+    }
+
+    val rateEpisodesAfterWatching: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            prefs[rateEpisodesAfterWatchingKey] ?: DEFAULT_RATE_EPISODES_AFTER_WATCHING
+        }
+    }
+
+    val defaultRatingPromptValue: Flow<Int> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            normalizeRatingPromptValue(
+                prefs[defaultRatingPromptValueKey] ?: DEFAULT_RATING_PROMPT_VALUE
+            )
         }
     }
 
@@ -132,5 +160,27 @@ class TraktSettingsDataStore @Inject constructor(
         store().edit { prefs ->
             prefs[watchProgressSourceKey] = source.name
         }
+    }
+
+    suspend fun setRateMoviesAfterWatching(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[rateMoviesAfterWatchingKey] = enabled
+        }
+    }
+
+    suspend fun setRateEpisodesAfterWatching(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[rateEpisodesAfterWatchingKey] = enabled
+        }
+    }
+
+    suspend fun setDefaultRatingPromptValue(rating: Int) {
+        store().edit { prefs ->
+            prefs[defaultRatingPromptValueKey] = normalizeRatingPromptValue(rating)
+        }
+    }
+
+    private fun normalizeRatingPromptValue(rating: Int): Int {
+        return rating.coerceIn(MIN_RATING_PROMPT_VALUE, MAX_RATING_PROMPT_VALUE)
     }
 }

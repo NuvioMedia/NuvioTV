@@ -273,6 +273,12 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                             it.copy(
                                 isBuffering = isBuffering,
                                 playbackEnded = playbackState == Player.STATE_ENDED,
+                                playbackCompletionReadyToExit = if (playbackState == Player.STATE_ENDED) {
+                                    it.playbackCompletionReadyToExit
+                                } else {
+                                    false
+                                },
+                                exitPlayerReady = false,
                                 duration = playerDuration.coerceAtLeast(0L)
                             )
                         }
@@ -314,6 +320,7 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                             emitCompletionScrobbleStop(progressPercent = 99.5f)
                             saveWatchProgress()
                             resetNextEpisodeCardState(clearEpisode = false)
+                            handlePlaybackEndedForTraktRating()
                         }
                     }
 

@@ -663,6 +663,18 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             _uiState.update { it.copy(showMoreDialog = false) }
             scheduleHideControls()
         }
+        PlayerEvent.OnRequestExitPlayer -> {
+            handleExitRequestWithTraktRating()
+        }
+        is PlayerEvent.OnSelectTraktRating -> {
+            _uiState.update { it.copy(selectedTraktRating = event.rating.coerceIn(1, 10)) }
+        }
+        is PlayerEvent.OnSubmitTraktRating -> {
+            submitTraktRating(ratingOverride = event.rating)
+        }
+        PlayerEvent.OnDismissTraktRatingDialog -> {
+            dismissTraktRatingDialog()
+        }
         PlayerEvent.OnShowEpisodesPanel -> {
             showEpisodesPanel()
         }
@@ -729,9 +741,17 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 state.copy(
                     error = null,
                     showLoadingOverlay = state.loadingOverlayEnabled,
-                    showSubtitleDelayOverlay = false
+                    showSubtitleDelayOverlay = false,
+                    playbackCompletionReadyToExit = false,
+                    exitPlayerReady = false,
+                    showTraktRatingDialog = false,
+                    existingTraktRating = null,
+                    traktRatingSubmitting = false,
+                    traktRatingError = null
                 )
             }
+            pendingCompletionAction = null
+            pendingTraktRatingItem = null
             releasePlayer()
             initializePlayer(currentStreamUrl, currentHeaders)
         }

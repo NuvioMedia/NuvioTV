@@ -18,6 +18,8 @@ data class PlayerUiState(
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = true,
     val playbackEnded: Boolean = false,
+    val playbackCompletionReadyToExit: Boolean = false,
+    val exitPlayerReady: Boolean = false,
     val currentPosition: Long = 0L,
     val duration: Long = 0L,
     val title: String = "",
@@ -53,6 +55,11 @@ data class PlayerUiState(
     val subtitleDelayMs: Int = 0,
     val showSpeedDialog: Boolean = false,
     val showMoreDialog: Boolean = false,
+    val showTraktRatingDialog: Boolean = false,
+    val selectedTraktRating: Int = 6,
+    val existingTraktRating: Int? = null,
+    val traktRatingSubmitting: Boolean = false,
+    val traktRatingError: String? = null,
     // Subtitle style settings
     val subtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(),
     // Addon subtitles
@@ -182,6 +189,10 @@ sealed class PlayerEvent {
     data object OnShowSpeedDialog : PlayerEvent()
     data object OnShowMoreDialog : PlayerEvent()
     data object OnDismissMoreDialog : PlayerEvent()
+    data object OnRequestExitPlayer : PlayerEvent()
+    data class OnSelectTraktRating(val rating: Int) : PlayerEvent()
+    data class OnSubmitTraktRating(val rating: Int? = null) : PlayerEvent()
+    data object OnDismissTraktRatingDialog : PlayerEvent()
     data object OnShowEpisodesPanel : PlayerEvent()
     data object OnDismissEpisodesPanel : PlayerEvent()
     data object OnBackFromEpisodeStreams : PlayerEvent()

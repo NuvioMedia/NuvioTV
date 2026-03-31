@@ -20,6 +20,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -106,6 +107,8 @@ import com.nuvio.tv.R
 import com.nuvio.tv.core.player.ExternalPlayerLauncher
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.NuvioDialog
+import com.nuvio.tv.ui.components.TraktRatingSelectorContent
 import com.nuvio.tv.ui.theme.NuvioColors
 import android.text.format.DateFormat
 import java.util.Date
@@ -143,6 +146,8 @@ fun PlayerScreen(
     val handleBackPress = {
         if (uiState.error != null) {
             exitPlayerFromError()
+        } else if (uiState.showTraktRatingDialog) {
+            viewModel.onEvent(PlayerEvent.OnDismissTraktRatingDialog)
         } else if (uiState.showAudioOverlay || uiState.showSubtitleOverlay) {
             viewModel.onEvent(PlayerEvent.OnDismissTransientOverlay)
         } else if (uiState.showStreamInfoOverlay) {
@@ -171,8 +176,7 @@ fun PlayerScreen(
             // If controls are visible, hide them instead of going back
             viewModel.hideControls()
         } else {
-            // If controls are hidden, go back
-            exitPlayer()
+            viewModel.onEvent(PlayerEvent.OnRequestExitPlayer)
         }
     }
 
@@ -180,8 +184,15 @@ fun PlayerScreen(
         handleBackPress()
     }
 
-    LaunchedEffect(uiState.playbackEnded, uiState.error) {
+    LaunchedEffect(
+        uiState.playbackEnded,
+        uiState.error,
+        uiState.playbackCompletionReadyToExit,
+        uiState.showTraktRatingDialog
+    ) {
         if (uiState.playbackEnded && uiState.error == null &&
+            uiState.playbackCompletionReadyToExit &&
+            !uiState.showTraktRatingDialog &&
             !uiState.nextEpisodeAutoPlaySearching &&
             uiState.nextEpisodeAutoPlayCountdownSec == null
         ) {
@@ -1000,6 +1011,21 @@ fun PlayerScreen(
             )
         }
 
+        if (uiState.showTraktRatingDialog) {
+            TraktRatingDialog(
+                uiState = uiState,
+                onRatingSelected = { viewModel.onEvent(PlayerEvent.OnSelectTraktRating(it)) },
+                onSubmit = { viewModel.onEvent(PlayerEvent.OnSubmitTraktRating(it)) },
+                onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissTraktRatingDialog) }
+            )
+        }
+
+    }
+
+    LaunchedEffect(uiState.exitPlayerReady, uiState.error) {
+        if (uiState.exitPlayerReady && uiState.error == null) {
+            exitPlayer()
+        }
     }
 }
 
@@ -1888,6 +1914,174 @@ private fun MoreActionsDialog(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun TraktRatingDialog(
+    uiState: PlayerUiState,
+    onRatingSelected: (Int) -> Unit,
+    onSubmit: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val selectorFocusRequester = remember { FocusRequester() }
+    var selectorFocused by remember { mutableStateOf(false) }
+    val itemTitle = remember(
+        uiState.contentName,
+        uiState.title,
+        uiState.currentSeason,
+        uiState.currentEpisode
+    ) {
+        if (uiState.currentSeason == null || uiState.currentEpisode == null) {
+            uiState.title
+        } else {
+            uiState.contentName ?: uiState.title
+        }
+    }
+    val itemSubtitle = remember(
+        uiState.currentSeason,
+        uiState.currentEpisode,
+        uiState.currentEpisodeTitle
+    ) {
+        buildTraktRatingItemSubtitle(
+            season = uiState.currentSeason,
+            episode = uiState.currentEpisode,
+            episodeTitle = uiState.currentEpisodeTitle
+        )
+    }
+    val selectedRating = uiState.selectedTraktRating.coerceIn(1, 10)
+    val existingRating = uiState.existingTraktRating?.coerceIn(1, 10)
+    val dialogSubtitleRes = if (existingRating != null) {
+        R.string.trakt_rating_dialog_subtitle_existing
+    } else {
+        R.string.trakt_rating_dialog_subtitle
+    }
+
+    LaunchedEffect(Unit) {
+        selectorFocusRequester.requestFocus()
+    }
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.trakt_rating_dialog_title),
+        subtitle = stringResource(dialogSubtitleRes),
+        width = 560.dp
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = itemTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = NuvioColors.TextPrimary
+                )
+                if (!itemSubtitle.isNullOrBlank()) {
+                    Text(
+                        text = itemSubtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = NuvioColors.TextSecondary
+                    )
+                }
+                if (existingRating != null) {
+                    Text(
+                        text = stringResource(
+                            R.string.trakt_rating_existing_message,
+                            existingRating
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = NuvioColors.Secondary
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(NuvioColors.BackgroundCard)
+                    .border(
+                        width = if (selectorFocused) 2.dp else 1.dp,
+                        color = if (selectorFocused) NuvioColors.FocusRing else NuvioColors.Border,
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    .focusRequester(selectorFocusRequester)
+                    .onFocusChanged { selectorFocused = it.isFocused }
+                    .focusable()
+                    .onPreviewKeyEvent { keyEvent ->
+                        if (uiState.traktRatingSubmitting) {
+                            return@onPreviewKeyEvent true
+                        }
+                        if (keyEvent.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) {
+                            return@onPreviewKeyEvent false
+                        }
+                        when (keyEvent.nativeKeyEvent.keyCode) {
+                            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                onRatingSelected((selectedRating - 1).coerceAtLeast(1))
+                                true
+                            }
+                            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                onRatingSelected((selectedRating + 1).coerceAtMost(10))
+                                true
+                            }
+                            KeyEvent.KEYCODE_DPAD_CENTER,
+                            KeyEvent.KEYCODE_ENTER,
+                            KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                                onSubmit(selectedRating)
+                                true
+                            }
+                            else -> false
+                        }
+                    }
+                    .padding(horizontal = 20.dp, vertical = 18.dp)
+            ) {
+                TraktRatingSelectorContent(
+                    rating = selectedRating,
+                    modifier = Modifier.align(Alignment.Center),
+                    starSize = 20.dp,
+                    activeTint = NuvioColors.Secondary,
+                    inactiveTint = NuvioColors.TextDisabled.copy(alpha = 0.55f)
+                )
+            }
+
+            if (existingRating != null) {
+                Text(
+                    text = stringResource(
+                        R.string.trakt_rating_existing_change_hint,
+                        existingRating
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioColors.TextSecondary
+                )
+            }
+
+            if (uiState.traktRatingSubmitting) {
+                Text(
+                    text = stringResource(R.string.trakt_rating_submitting),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NuvioColors.TextSecondary
+                )
+            } else if (!uiState.traktRatingError.isNullOrBlank()) {
+                Text(
+                    text = uiState.traktRatingError,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NuvioColors.Error
+                )
+            }
+
+        }
+    }
+}
+
+private fun buildTraktRatingItemSubtitle(
+    season: Int?,
+    episode: Int?,
+    episodeTitle: String?
+): String? {
+    if (season == null || episode == null) return null
+    val episodeCode = "S${season}E${episode}"
+    return if (episodeTitle.isNullOrBlank()) {
+        episodeCode
+    } else {
+        "$episodeCode - $episodeTitle"
     }
 }
 

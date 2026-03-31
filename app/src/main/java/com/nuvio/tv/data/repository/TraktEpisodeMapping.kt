@@ -1,10 +1,13 @@
 package com.nuvio.tv.data.repository
 
+import com.nuvio.tv.data.remote.dto.trakt.TraktIdsDto
+
 internal data class EpisodeMappingEntry(
     val season: Int,
     val episode: Int,
     val title: String? = null,
-    val videoId: String? = null
+    val videoId: String? = null,
+    val ids: TraktIdsDto? = null
 )
 
 internal fun remapEpisodeByTitleOrIndex(

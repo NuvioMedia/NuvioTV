@@ -586,6 +586,13 @@ internal fun PlayerRuntimeController.reloadEpisodeStreams() {
 }
 
 internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, forcedTargetVideo: Video? = null) {
+    if (interceptEpisodeSwitchForTraktRating(stream, forcedTargetVideo)) {
+        return
+    }
+    performSwitchToEpisodeStream(stream, forcedTargetVideo)
+}
+
+internal fun PlayerRuntimeController.performSwitchToEpisodeStream(stream: Stream, forcedTargetVideo: Video? = null) {
     val url = stream.getStreamUrl()
     if (url.isNullOrBlank()) {
         _uiState.update { it.copy(episodeStreamsError = "Invalid stream URL") }
@@ -623,6 +630,8 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
     currentEpisodeTitle = targetVideo?.title ?: _uiState.value.episodeStreamsTitle ?: currentEpisodeTitle
     currentTraktEpisodeMapping = null
     currentTraktEpisodeMappingKey = null
+    pendingCompletionAction = null
+    pendingTraktRatingItem = null
     lastSavedPosition = 0L
 
     _uiState.update {
@@ -638,10 +647,17 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
             subtitleTracks = emptyList(),
             selectedAudioTrackIndex = -1,
             selectedSubtitleTrackIndex = -1,
+            playbackEnded = false,
+            playbackCompletionReadyToExit = false,
+            exitPlayerReady = false,
             showEpisodesPanel = false,
             showEpisodeStreams = false,
             isLoadingEpisodeStreams = false,
             episodeStreamsError = null,
+            showTraktRatingDialog = false,
+            existingTraktRating = null,
+            traktRatingSubmitting = false,
+            traktRatingError = null,
             
             parentalWarnings = emptyList(),
             showParentalGuide = false,

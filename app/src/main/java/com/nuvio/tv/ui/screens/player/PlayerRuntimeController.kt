@@ -15,6 +15,8 @@ import com.nuvio.tv.data.repository.SkipIntroRepository
 import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.data.repository.EpisodeMappingEntry
 import com.nuvio.tv.data.repository.TraktEpisodeMappingService
+import com.nuvio.tv.data.repository.TraktRatingItem
+import com.nuvio.tv.data.repository.TraktRatingService
 import com.nuvio.tv.data.repository.TraktScrobbleItem
 import com.nuvio.tv.data.repository.TraktScrobbleService
 import com.nuvio.tv.domain.model.Video
@@ -42,6 +44,7 @@ class PlayerRuntimeController(
     internal val subtitleRepository: com.nuvio.tv.domain.repository.SubtitleRepository,
     internal val parentalGuideRepository: ParentalGuideRepository,
     internal val traktScrobbleService: TraktScrobbleService,
+    internal val traktRatingService: TraktRatingService,
     internal val traktEpisodeMappingService: TraktEpisodeMappingService,
     internal val skipIntroRepository: SkipIntroRepository,
     internal val playerSettingsDataStore: PlayerSettingsDataStore,
@@ -88,6 +91,15 @@ class PlayerRuntimeController(
         val audio: RememberedTrackSelection? = null,
         val subtitle: RememberedSubtitleSelection? = null
     )
+
+    internal sealed interface PendingCompletionAction {
+        data object ExitAfterPlaybackEnded : PendingCompletionAction
+        data object ExitPlayer : PendingCompletionAction
+        data class SwitchToEpisodeStream(
+            val stream: com.nuvio.tv.domain.model.Stream,
+            val forcedTargetVideo: Video?
+        ) : PendingCompletionAction
+    }
 
     internal val navigationArgs = PlayerNavigationArgs.from(savedStateHandle)
     internal val initialStreamUrl: String = navigationArgs.streamUrl
@@ -242,6 +254,8 @@ class PlayerRuntimeController(
     internal var scrobbleStartRequestGeneration: Long = 0L
     internal var playbackPreparationJob: Job? = null
     internal var hasSentCompletionScrobbleForCurrentItem: Boolean = false
+    internal var pendingCompletionAction: PendingCompletionAction? = null
+    internal var pendingTraktRatingItem: TraktRatingItem? = null
     internal var requestedUseLibassByUser: Boolean = false
     internal var libassPipelineOverrideForCurrentStream: Boolean? = null
     internal var activePlayerUsesLibass: Boolean = false
