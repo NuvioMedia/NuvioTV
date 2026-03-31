@@ -7,7 +7,7 @@ import com.nuvio.tv.data.repository.toTraktIds
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private const val TRAKT_RATING_PROMPT_THRESHOLD_PERCENT = 85f
+private const val TRAKT_RATING_PROMPT_THRESHOLD_PERCENT = 80f
 
 internal fun PlayerRuntimeController.handlePlaybackEndedForTraktRating() {
     pendingCompletionAction = PlayerRuntimeController.PendingCompletionAction.ExitAfterPlaybackEnded
@@ -20,6 +20,11 @@ internal fun PlayerRuntimeController.handlePlaybackEndedForTraktRating() {
 
 internal fun PlayerRuntimeController.handleExitRequestWithTraktRating() {
     pendingCompletionAction = PlayerRuntimeController.PendingCompletionAction.ExitPlayer
+    if (currentPlaybackProgressPercent() < TRAKT_RATING_PROMPT_THRESHOLD_PERCENT) {
+        completePendingCompletionAction()
+        return
+    }
+
     scope.launch {
         if (!showTraktRatingDialogIfEligible()) {
             completePendingCompletionAction()
