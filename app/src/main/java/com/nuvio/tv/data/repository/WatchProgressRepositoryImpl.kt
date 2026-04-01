@@ -465,6 +465,24 @@ class WatchProgressRepositoryImpl @Inject constructor(
             .distinctUntilChanged()
     }
 
+    /**
+     * Returns per-show watched episodes from the active source.
+     * For Trakt: from /sync/watched/shows response.
+     * For Nuvio sync: from watchedItemsPreferences.
+     */
+    override suspend fun getWatchedShowEpisodes(): Map<String, Set<Pair<Int, Int>>> {
+        return if (shouldUseTraktProgress()) {
+            traktProgressService.getWatchedShowEpisodes()
+        } else {
+            watchedItemsPreferences.allItems.first()
+                .filter { it.season != null && it.episode != null }
+                .groupBy { it.contentId }
+                .mapValues { (_, items) ->
+                    items.map { it.season!! to it.episode!! }.toSet()
+                }
+        }
+    }
+
     override fun isWatched(contentId: String, videoId: String?, season: Int?, episode: Int?): Flow<Boolean> {
         return useTraktProgressFlow()
             .flatMapLatest { useTraktProgress ->

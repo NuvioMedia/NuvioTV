@@ -140,7 +140,7 @@ internal fun SettingsBrandPanel(
 
         Image(
             painter = painterResource(id = R.drawable.app_logo_wordmark),
-            contentDescription = "NuvioTV",
+            contentDescription = stringResource(R.string.cd_nuvio_logo),
             modifier = Modifier
                 .fillMaxWidth(0.9f)
                 .height(72.dp),

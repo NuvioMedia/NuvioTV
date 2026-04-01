@@ -7,7 +7,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private const val MAX_AUTO_RETRIES = 1
+private const val MAX_AUTO_RETRIES = 2
 private const val RETRY_DELAY_MS = 1_500L
 
 /**
@@ -31,7 +31,13 @@ internal fun isRetryablePlaybackError(error: PlaybackException): Boolean {
         PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
         PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
         PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
-        PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED -> true
+        PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED,
+
+        // --- Decoder errors (often transient after pause/resume on some hardware) ---
+        PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+        PlaybackException.ERROR_CODE_DECODING_FAILED,
+        PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
+        PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED -> true
 
         // --- Behind-the-scenes / unexpected errors (often IllegalStateException / NPE) ---
         PlaybackException.ERROR_CODE_UNSPECIFIED -> {
@@ -70,28 +76,46 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
 
     // Capture the current position so we can resume after re-init.
     val savedPosition = _exoPlayer?.currentPosition?.takeIf { it > 0L } ?: 0L
+    val isFirstAttempt = attempt == 0
 
     errorRetryJob?.cancel()
     errorRetryJob = scope.launch {
         _uiState.update {
             it.copy(
                 error = null,
-                showLoadingOverlay = it.loadingOverlayEnabled,
+                // Only show loading overlay on full teardown (second attempt).
+                showLoadingOverlay = if (isFirstAttempt) false else it.loadingOverlayEnabled,
                 showPauseOverlay = false
             )
         }
 
         delay(RETRY_DELAY_MS)
 
-        // Full teardown — clears any corrupt internal state.
-        releasePlayer(flushPlaybackState = false)
-
-        // Stash position so initializePlayer's STATE_READY handler will seek to it.
-        if (savedPosition > 0L) {
-            _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+        if (isFirstAttempt) {
+            // Lightweight recovery: re-prepare the same source without destroying
+            // the player. Keeps the last frame visible for a seamless experience.
+            val player = _exoPlayer
+            if (player != null) {
+                if (savedPosition > 0L) {
+                    player.seekTo((savedPosition - 1).coerceAtLeast(0L))
+                }
+                player.prepare()
+                player.playWhenReady = true
+            } else {
+                releasePlayer(flushPlaybackState = false)
+                if (savedPosition > 0L) {
+                    _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+                }
+                initializePlayer(currentStreamUrl, currentHeaders)
+            }
+        } else {
+            // Full teardown — clears any corrupt decoder/internal state.
+            releasePlayer(flushPlaybackState = false)
+            if (savedPosition > 0L) {
+                _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+            }
+            initializePlayer(currentStreamUrl, currentHeaders)
         }
-
-        initializePlayer(currentStreamUrl, currentHeaders)
     }
     return true
 }

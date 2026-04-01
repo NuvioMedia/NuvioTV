@@ -50,6 +50,8 @@
     <string name="continue_watching">Continua a guardare</string>
     <string name="cw_upcoming">In arrivo</string>
     <string name="cw_next_up">Prossimo episodio</string>
+    <string name="cw_new_episode">Nuovo Episodio</string>
+    <string name="cw_new_season">Nuova Stagione</string>
     <string name="cw_resume">Riprendi</string>
     <string name="cw_percent_watched">%1$d%% visto</string>
     <string name="cw_hours_min_left">%1$dh %2$dm rimanenti</string>
@@ -122,6 +124,8 @@
     <string name="cast_role_writer">Sceneggiatore</string>
     <string name="detail_tab_ratings">Valutazioni</string>
     <string name="detail_tab_more_like_this">Altro come questo</string>
+    <string name="detail_more_like_this_powered_by_tmdb">Fornito da TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">Fornito da Trakt</string>
     <string name="detail_comments_title">Commenti</string>
     <string name="detail_comments_subtitle">Recensioni da Trakt</string>
     <string name="detail_comments_empty">Non ci sono ancora recensioni Trakt.</string>
@@ -368,8 +372,8 @@
     <string name="sub_startup_mode_preferred">Lingue Preferite</string>
     <string name="sub_startup_mode_all">Tutti i sottotitoli dell\'addon</string>
     <string name="sub_startup_mode_fast_desc">Inizia riproduzione immediatamente. I sottotitoli dell\'addon selezionati potrebbero riavviare una sola volta il lettore.</string>
-    <string name="sub_startup_mode_preferred_desc">Ottieni i sottotitoli dagli addon prima della produzione e unisci al lettore le tracce preferite e secondarie.</string>
-    <string name="sub_startup_mode_all_desc">Ottieni e unisci al lettore tutti i sottotitoli dagli addons. Avvio più lento.</string>
+    <string name="sub_startup_mode_preferred_desc">Ottieni i sottotitoli dagli addon prima della riproduzione e unisci al lettore le tracce preferite e secondarie.</string>
+    <string name="sub_startup_mode_all_desc">Ottieni e unisci al lettore tutti i sottotitoli dagli addon prima della riproduzione. Avvio più lento.</string>
 
     <!-- PlaybackAutoPlaySettings -->
    <string name="autoplay_reuse_last_link">Riutilizza l\'ultimo link</string>
@@ -442,6 +446,8 @@
     <string name="layout_modern_sidebar_sub">Abilita la navigazione con barra laterale fluttuante.</string>
     <string name="layout_modern_sidebar_blur">Sfocatura barra laterale Moderna</string>
     <string name="layout_modern_sidebar_blur_sub">Attiva/disattiva l\'effetto sfocatura per le superfici della barra laterale moderna.</string>
+    <string name="layout_fullscreen_hero_backdrop">Sfondo Hero a schermo intero</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">Espandi lo sfondo hero per riempire tutto lo schermo.</string>
     <string name="layout_show_hero">Mostra sezione Hero</string>
     <string name="layout_show_hero_sub">Visualizza il carosello hero nella parte superiore della home.</string>
     <string name="layout_show_discover">Mostra Scopri nella ricerca</string>
@@ -458,6 +464,8 @@
     <string name="layout_section_detail_desc">Impostazioni per le schermate dei dettagli e degli episodi.</string>
     <string name="layout_blur_unwatched">Sfoca episodi non visti</string>
     <string name="layout_blur_unwatched_sub">Sfoca le miniature degli episodi finché non vengono visti per evitare spoiler.</string>
+    <string name="layout_blur_cw_next_up">Sfoca non visti in Continua a guardare</string>
+    <string name="layout_blur_cw_next_up_sub">Sfoca le miniature del prossimo episodio in Continua a guardare per evitare spoiler.</string>
     <string name="layout_trailer_button">Mostra pulsante Trailer</string>
     <string name="layout_trailer_button_sub">Mostra il pulsante trailer nella pagina dei dettagli (solo quando il trailer è disponibile).</string>
     <string name="layout_prefer_external_meta">Preferisci meta da addon esterni</string>
@@ -549,6 +557,8 @@
     <string name="tmdb_enable_subtitle">Usa TMDB come sorgente di metadati per migliorare i dati degli addon</string>
     <string name="tmdb_modern_home_title">Abilita nella Home moderna</string>
     <string name="tmdb_modern_home_subtitle">Applica l\'arricchimento TMDB anche alla Home moderna e alle schede a fuoco</string>
+    <string name="tmdb_enrich_continue_watching_title">Arricchisci Continua a guardare</string>
+    <string name="tmdb_enrich_continue_watching_subtitle">Applica l\'arricchimento TMDB agli elementi in Continua a guardare</string>
     <string name="tmdb_language_title">Lingua</string>
     <string name="tmdb_language_subtitle">Lingua dei metadati TMDB per titolo, logo e campi abilitati</string>
     <string name="tmdb_artwork_title">Artwork</string>
@@ -681,7 +691,7 @@
     <string name="profile_addons">addon</string>
     <string name="profile_plugins">plugin</string>
     <string name="profile_choose_avatar">Scegli Avatar</string>
-    <string name="profile_avatar_none_selected">Nessuno avatar selezionato</string>
+    <string name="profile_avatar_none_selected">Nessun avatar selezionato</string>
     <string name="profile_avatar_focus_hint">Seleziona un avatar per vedere il suo nome</string>
     <string name="profile_avatar_category_all">Tutto</string>
     <string name="profile_avatar_category_anime">Anime</string>
@@ -723,6 +733,7 @@
     <string name="profile_pin_overlay_mismatch">I PIN non coincidono. Inserisci di nuovo un nuovo PIN.</string>
     <string name="profile_pin_overlay_forgot_hint">PIN dimenticato? Reimpostalo dall\'account Nuvio sul sito.</string>
     <string name="profile_pin_overlay_back_hint">Premi indietro per annullare</string>
+    
 
     <!-- AddonManagerScreen -->
   <string name="addon_title">Addon</string>
@@ -797,6 +808,26 @@
     <string name="player_more_speed">Velocità di riproduzione</string>
     <string name="player_more_aspect_ratio">Proporzioni</string>
     <string name="player_more_open_external">Apri in un player esterno</string>
+
+    <!-- StreamInfoOverlay -->
+    <string name="stream_info_section_source">SORGENTE</string>
+    <string name="stream_info_section_file">FILE</string>
+    <string name="stream_info_section_video">VIDEO</string>
+    <string name="stream_info_section_audio">AUDIO</string>
+    <string name="stream_info_section_subtitle">SOTTOTITOLI</string>
+    <string name="stream_info_filename">Nome file</string>
+    <string name="stream_info_size">Dimensione</string>
+    <string name="stream_info_codec">Codec</string>
+    <string name="stream_info_resolution">Risoluzione</string>
+    <string name="stream_info_frame_rate">Frame Rate</string>
+    <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_channels">Canali</string>
+    <string name="stream_info_sample_rate">Frequenza di campionamento</string>
+    <string name="stream_info_language">Lingua</string>
+    <string name="stream_info_name">Nome</string>
+    <string name="stream_info_source">Sorgente</string>
+    <string name="stream_info_subtitle_source_addon">Addon</string>
+    <string name="stream_info_subtitle_source_embedded">Integrato</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Sorgenti</string>
@@ -908,6 +939,37 @@
     <string name="library_filter_list">Lista</string>
     <string name="library_filter_type">Tipo</string>
     <string name="library_filter_sort">Ordina</string>
+    <string name="library_filter_genre">Genere</string>
+    <string name="library_filter_year">Anno</string>
+    <!-- Genre names (from TMDB movie + TV) -->
+    <string name="genre_action">Azione</string>
+    <string name="genre_adventure">Avventura</string>
+    <string name="genre_animation">Animazione</string>
+    <string name="genre_comedy">Commedia</string>
+    <string name="genre_crime">Crime</string>
+    <string name="genre_documentary">Documentario</string>
+    <string name="genre_drama">Drammatico</string>
+    <string name="genre_family">Per famiglie</string>
+    <string name="genre_fantasy">Fantasy</string>
+    <string name="genre_history">Storico</string>
+    <string name="genre_horror">Horror</string>
+    <string name="genre_music">Musica</string>
+    <string name="genre_mystery">Mistero</string>
+    <string name="genre_romance">Romantico</string>
+    <string name="genre_science_fiction">Fantascienza</string>
+    <string name="genre_tv_movie">Film TV</string>
+    <string name="genre_thriller">Thriller</string>
+    <string name="genre_war">Guerra</string>
+    <string name="genre_western">Western</string>
+    <!-- TV-specific genres -->
+    <string name="genre_action_adventure">Azione &amp; Avventura</string>
+    <string name="genre_kids">Bambini</string>
+    <string name="genre_news">News</string>
+    <string name="genre_reality">Reality</string>
+    <string name="genre_sci_fi_fantasy">Sci-Fi &amp; Fantasy</string>
+    <string name="genre_soap">Soap</string>
+    <string name="genre_talk">Talk</string>
+    <string name="genre_war_politics">Guerra &amp; Politica</string>
     <string name="library_sort_trakt_order">Ordine di Trakt</string>
     <string name="library_sort_added_desc">Aggiunti ↓</string>
     <string name="library_sort_added_asc">Aggiunti ↑</string>
@@ -929,6 +991,9 @@
     <string name="library_delete_subtitle">Questo rimuoverà la lista e tutti gli elementi da Trakt.</string>
     <string name="library_delete_confirm">Elimina</string>
     <string name="library_source_local">LOCALE</string>
+    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_trakt">TRAKT</string>
+    <string name="library_syncing_library">Sincronizzazione libreria\u2026</string>
     <string name="library_type_all">Tutto</string>
     <string name="library_type_items">elementi</string>
     <string name="library_empty_local_title">Ancora nessun %1$s</string>
@@ -1060,7 +1125,7 @@
     <string name="account_unlink">Scollega</string>
 
     <!-- EpisodeRatingsSection -->
-    <string name="ratings_loading">Caricamento valutazioni episodi...</string>
+    <string name="ratings_loading">Caricamento valutazioni episodi\u2026</string>
     <string name="ratings_unavailable">Valutazioni episodi non disponibili.</string>
     <string name="ratings_load_error">Impossibile caricare le valutazioni degli episodi.</string>
     <string name="ratings_season_summary">Stagione %1$d - %2$d episodi</string>

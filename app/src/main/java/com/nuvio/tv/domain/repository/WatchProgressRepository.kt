@@ -59,6 +59,12 @@ interface WatchProgressRepository {
     fun observeWatchedMovieIds(): Flow<Set<String>>
 
     /**
+     * Returns per-show watched episodes from the active source.
+     * Empty map when no data is available.
+     */
+    suspend fun getWatchedShowEpisodes(): Map<String, Set<Pair<Int, Int>>>
+
+    /**
      * Save or update watch progress
      */
     suspend fun saveProgress(progress: WatchProgress, syncRemote: Boolean = true)

@@ -36,8 +36,10 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import com.nuvio.tv.ui.components.LoadingIndicator
+import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.nuvio.tv.R
 
 @Composable
 fun LoadingOverlay(
@@ -108,7 +110,7 @@ fun LoadingOverlay(
             if (backdropRequest != null) {
                 AsyncImage(
                     model = backdropRequest,
-                    contentDescription = "Loading backdrop",
+                    contentDescription = stringResource(R.string.cd_loading_backdrop),
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
@@ -130,7 +132,7 @@ fun LoadingOverlay(
                     if (showLogo) {
                         AsyncImage(
                             model = logoRequest,
-                            contentDescription = "Loading logo",
+                            contentDescription = stringResource(R.string.cd_loading_logo),
                             onError = { logoLoadFailed = true },
                             modifier = Modifier
                                 .width(320.dp)

@@ -96,7 +96,7 @@ class PluginViewModel @Inject constructor(
 
     private fun addRepository(url: String) {
         if (url.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Please enter a valid URL") }
+            _uiState.update { it.copy(errorMessage = context.getString(R.string.plugin_error_invalid_url)) }
             return
         }
 
@@ -118,7 +118,7 @@ class PluginViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isAddingRepo = false,
-                            errorMessage = "Failed to add repository: ${e.message}"
+                            errorMessage = context.getString(R.string.plugin_error_add_repo, e.message ?: "")
                         )
                     }
                 }
@@ -148,7 +148,7 @@ class PluginViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = "Failed to refresh: ${e.message}"
+                            errorMessage = context.getString(R.string.plugin_error_refresh, e.message ?: "")
                         )
                     }
                 }
@@ -181,7 +181,7 @@ class PluginViewModel @Inject constructor(
                         it.copy(
                             isTesting = false,
                             testResults = results,
-                            successMessage = if (results.isEmpty()) "No results found" else "Found ${results.size} streams"
+                            successMessage = if (results.isEmpty()) context.getString(R.string.plugin_test_no_results) else context.getString(R.string.plugin_test_found_streams, results.size)
                         )
                     }
                 },
@@ -190,7 +190,7 @@ class PluginViewModel @Inject constructor(
                         it.copy(
                             isTesting = false,
                             testResults = emptyList(),
-                            errorMessage = "Test failed: ${e.message}"
+                            errorMessage = context.getString(R.string.plugin_error_test, e.message ?: "")
                         )
                     }
                 }
@@ -205,7 +205,7 @@ class PluginViewModel @Inject constructor(
     private fun startQrMode() {
         val ip = DeviceIpAddress.get(context)
         if (ip == null) {
-            _uiState.update { it.copy(errorMessage = "Connect to Wi-Fi or Ethernet to use this feature") }
+            _uiState.update { it.copy(errorMessage = context.getString(R.string.error_network_required)) }
             return
         }
 
@@ -227,7 +227,7 @@ class PluginViewModel @Inject constructor(
 
         val activeServer = repoServer
         if (activeServer == null) {
-            _uiState.update { it.copy(errorMessage = "Could not start server. All ports in use.") }
+            _uiState.update { it.copy(errorMessage = context.getString(R.string.error_server_ports_unavailable)) }
             return
         }
 

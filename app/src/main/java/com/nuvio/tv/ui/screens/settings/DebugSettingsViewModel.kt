@@ -1,13 +1,16 @@
 package com.nuvio.tv.ui.screens.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.R
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.data.local.DebugSettingsDataStore
 import com.nuvio.tv.data.local.LibraryPreferences
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.model.SavedLibraryItem
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +24,8 @@ import kotlin.random.Random
 class DebugSettingsViewModel @Inject constructor(
     private val dataStore: DebugSettingsDataStore,
     private val authManager: AuthManager,
-    private val libraryPreferences: LibraryPreferences
+    private val libraryPreferences: LibraryPreferences,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DebugSettingsUiState())
@@ -63,7 +67,7 @@ class DebugSettingsViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 generateLibraryLoading = false,
-                                generateLibraryResult = "Failed: ${e.message}"
+                                generateLibraryResult = context.getString(R.string.debug_generate_result_failed, e.message ?: "")
                             )
                         }
                     }
@@ -76,7 +80,7 @@ class DebugSettingsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             signInLoading = false,
-                            signInResult = if (result.isSuccess) "Signed in successfully" else "Failed: ${result.exceptionOrNull()?.message}"
+                            signInResult = if (result.isSuccess) context.getString(R.string.debug_signin_success) else context.getString(R.string.debug_generate_result_failed, result.exceptionOrNull()?.message ?: "")
                         )
                     }
                 }
@@ -117,7 +121,7 @@ class DebugSettingsViewModel @Inject constructor(
                 poster = null,
                 posterShape = PosterShape.POSTER,
                 background = null,
-                description = "Debug-generated $type item #$i",
+                description = context.getString(R.string.debug_generate_description, type, i),
                 releaseInfo = years.random().toString(),
                 imdbRating = (Math.round((Random.nextFloat() * 4f + 6f) * 10f) / 10f),
                 genres = genres.shuffled().take(Random.nextInt(1, 4)),

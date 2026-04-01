@@ -150,7 +150,7 @@ class AccountViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             if (!authManager.isAuthenticated) {
-                _uiState.update { it.copy(isLoading = false, error = "Sign in with an account first.") }
+                _uiState.update { it.copy(isLoading = false, error = context.getString(R.string.account_error_signin_required)) }
                 return@launch
             }
             pushLocalDataToRemote()
@@ -183,7 +183,7 @@ class AccountViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             if (!authManager.isAuthenticated) {
-                _uiState.update { it.copy(isLoading = false, error = "Sign in with an account first.") }
+                _uiState.update { it.copy(isLoading = false, error = context.getString(R.string.account_error_signin_required)) }
                 return@launch
             }
             syncRepository.claimSyncCode(code, pin, Build.MODEL).fold(

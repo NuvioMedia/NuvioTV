@@ -12,7 +12,9 @@ import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.TraktListPrivacy
 import com.nuvio.tv.domain.repository.LibraryRepository
+import android.content.Context
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +34,7 @@ data class LibraryTypeTab(
 ) {
     companion object {
         const val ALL_KEY = "__all__"
-        val All = LibraryTypeTab(key = ALL_KEY, label = "All")
+        val All = LibraryTypeTab(key = ALL_KEY, label = "")
     }
 }
 
@@ -106,7 +108,8 @@ class LibraryViewModel @Inject constructor(
     private val libraryPreferences: LibraryPreferences,
     private val authManager: AuthManager,
     private val watchProgressRepository: com.nuvio.tv.domain.repository.WatchProgressRepository,
-    private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder
+    private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -381,7 +384,7 @@ class LibraryViewModel @Inject constructor(
                         ?: listTabs.firstOrNull { it.type == LibraryListTab.Type.PERSONAL }?.key
 
                     val nextSelectedType = current.selectedTypeTab
-                        ?: LibraryTypeTab.All
+                        ?: LibraryTypeTab.All.copy(label = context.getString(R.string.library_type_all))
                     val sortOptions = if (sourceMode == LibrarySourceMode.TRAKT) {
                         LibrarySortOption.TraktOptions
                     } else {
@@ -669,7 +672,7 @@ class LibraryViewModel @Inject constructor(
             countByType[key] = (countByType[key] ?: 0) + 1
         }
         val allCount = filteredItems.size
-        val allTab = LibraryTypeTab(key = LibraryTypeTab.ALL_KEY, label = "All ($allCount)")
+        val allTab = LibraryTypeTab(key = LibraryTypeTab.ALL_KEY, label = "${context.getString(R.string.library_type_all)} ($allCount)")
         return listOf(allTab) + byKey.map { (key, label) ->
             LibraryTypeTab(key = key, label = "$label (${countByType[key] ?: 0})")
         }

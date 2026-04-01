@@ -561,7 +561,7 @@ private fun HeroImdbMeta(
     ) {
         AsyncImage(
             model = imdbLogoModel,
-            contentDescription = "IMDb",
+            contentDescription = stringResource(R.string.cd_imdb),
             modifier = Modifier.size(logoSize),
             contentScale = ContentScale.Fit
         )

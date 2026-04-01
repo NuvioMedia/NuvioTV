@@ -321,7 +321,7 @@ private fun DiscoverDropdownPicker(
                     )
                     Icon(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (expanded) "Collapse $title" else "Expand $title",
+                        contentDescription = if (expanded) stringResource(R.string.cd_collapse, title) else stringResource(R.string.cd_expand, title),
                         modifier = Modifier.size(20.dp),
                         tint = if (isFocused) NuvioColors.FocusRing else NuvioColors.TextSecondary
                     )

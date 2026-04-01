@@ -54,16 +54,31 @@ data class Meta(
 
     /**
      * Returns the list of watchable episodes — non-special (season > 0),
-     * excluding entire seasons where the first episode is not yet available.
+     * excluding entire seasons where the first episode is not yet available
+     * (either via the `available` flag or because its release date is in the future).
      */
     fun watchableEpisodes(): List<Video> {
+        val today = java.time.LocalDate.now()
         val candidates = videos.filter {
             it.season != null && it.episode != null && (it.season ?: 0) > 0
         }
         val unavailableSeasons = candidates.groupBy { it.season }
             .filter { (_, eps) ->
                 val first = eps.minByOrNull { it.episode ?: Int.MAX_VALUE }
-                first?.available == false
+                    ?: return@filter false
+                // Exclude if explicitly marked unavailable
+                if (first.available == false) return@filter true
+                // Exclude if release date is in the future
+                val released = first.released?.substringBefore('T')?.trim()
+                if (!released.isNullOrBlank()) {
+                    try {
+                        return@filter java.time.LocalDate.parse(
+                            released,
+                            java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
+                        ).isAfter(today)
+                    } catch (_: java.time.format.DateTimeParseException) { }
+                }
+                false
             }.keys
         return if (unavailableSeasons.isEmpty()) candidates
         else candidates.filter { it.season !in unavailableSeasons }

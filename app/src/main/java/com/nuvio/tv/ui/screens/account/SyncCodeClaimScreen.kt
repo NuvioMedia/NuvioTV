@@ -188,7 +188,7 @@ fun SyncCodeClaimScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = if (uiState.isLoading) "Linking..." else "Link Device",
+                        text = if (uiState.isLoading) stringResource(R.string.sync_claim_linking) else stringResource(R.string.sync_claim_title),
                         modifier = Modifier.padding(vertical = 4.dp),
                         fontWeight = FontWeight.Medium
                     )

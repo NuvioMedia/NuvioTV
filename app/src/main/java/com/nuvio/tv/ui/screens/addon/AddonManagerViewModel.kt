@@ -188,7 +188,7 @@ class AddonManagerViewModel @Inject constructor(
     fun startQrMode() {
         val ip = DeviceIpAddress.get(context)
         if (ip == null) {
-            _uiState.update { it.copy(error = "Connect to Wi-Fi or Ethernet to use this feature") }
+            _uiState.update { it.copy(error = context.getString(R.string.error_network_required)) }
             return
         }
 
@@ -228,7 +228,7 @@ class AddonManagerViewModel @Inject constructor(
 
         val activeServer = server
         if (activeServer == null) {
-            _uiState.update { it.copy(error = "Could not start server. All ports in use.") }
+            _uiState.update { it.copy(error = context.getString(R.string.error_server_ports_unavailable)) }
             return
         }
 
