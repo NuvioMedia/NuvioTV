@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,9 +57,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
+import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextAlign
@@ -1062,6 +1065,14 @@ internal fun ColorSelectionDialog(
 ) {
     val focusRequester = remember { FocusRequester() }
 
+    // Track which chip is selected (by full ARGB match first, then by RGB match)
+    val initialChip = colors.find { it.toArgb() == selectedColor.toArgb() }
+        ?: colors.find { it.copy(alpha = 1f).toArgb() == selectedColor.copy(alpha = 1f).toArgb() }
+        ?: colors.firstOrNull()
+        ?: selectedColor
+    var currentChipColor by remember { mutableStateOf(initialChip) }
+    var alphaPercent by remember { mutableIntStateOf((selectedColor.alpha * 100f).roundToInt().coerceIn(0, 100)) }
+
     NuvioDialog(
         onDismiss = onDismiss,
         title = title,
@@ -1070,7 +1081,7 @@ internal fun ColorSelectionDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 240.dp)
+                .heightIn(max = 360.dp)
         ) {
             // Color grid using LazyRow for proper TV focus
             LazyRow(
@@ -1084,40 +1095,164 @@ internal fun ColorSelectionDialog(
                     val color = colors[index]
                     ColorOption(
                         color = color,
-                        isSelected = color.toArgb() == selectedColor.toArgb(),
+                        isSelected = color.toArgb() == currentChipColor.toArgb(),
                         isTransparent = color.alpha == 0f,
-                        onClick = { onColorSelected(color) }
+                        onClick = {
+                            currentChipColor = color
+                            // If the chip carries its own alpha (e.g. transparent/semi-transparent), sync slider
+                            if (color.alpha < 1f) {
+                                alphaPercent = (color.alpha * 100f).roundToInt().coerceIn(0, 100)
+                            }
+                        }
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Cancel button
-            Card(
-                onClick = onDismiss,
-                colors = CardDefaults.colors(
-                    containerColor = NuvioColors.BackgroundElevated,
-                    focusedContainerColor = NuvioColors.Primary
-                ),
-                border = CardDefaults.border(
-                    focusedBorder = Border(
-                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                ),
-                shape = CardDefaults.shape(shape = RoundedCornerShape(8.dp)),
+            // Opacity / transparency stepper
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = stringResource(R.string.action_cancel),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = NuvioColors.TextPrimary,
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .fillMaxWidth(),
-                    textAlign = TextAlign.Center
+                    text = stringResource(R.string.sub_opacity),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NuvioColors.TextSecondary,
+                    modifier = Modifier.width(70.dp)
                 )
+                Card(
+                    onClick = { alphaPercent = (alphaPercent - 10).coerceAtLeast(0) },
+                    colors = CardDefaults.colors(
+                        containerColor = NuvioColors.BackgroundElevated,
+                        focusedContainerColor = NuvioColors.Primary
+                    ),
+                    border = CardDefaults.border(
+                        focusedBorder = Border(
+                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            shape = CircleShape
+                        )
+                    ),
+                    shape = CardDefaults.shape(shape = CircleShape),
+                    scale = CardDefaults.scale(focusedScale = 1.1f)
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Remove,
+                            contentDescription = stringResource(R.string.cd_decrease),
+                            tint = NuvioColors.TextPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(0.6f)
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(NuvioColors.BackgroundElevated)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(alphaPercent / 100f)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(NuvioColors.Primary)
+                    )
+                }
+                Text(
+                    text = "$alphaPercent%",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NuvioColors.TextPrimary,
+                    modifier = Modifier.width(52.dp),
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    softWrap = false
+                )
+                Card(
+                    onClick = { alphaPercent = (alphaPercent + 10).coerceAtMost(100) },
+                    colors = CardDefaults.colors(
+                        containerColor = NuvioColors.BackgroundElevated,
+                        focusedContainerColor = NuvioColors.Primary
+                    ),
+                    border = CardDefaults.border(
+                        focusedBorder = Border(
+                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            shape = CircleShape
+                        )
+                    ),
+                    shape = CardDefaults.shape(shape = CircleShape),
+                    scale = CardDefaults.scale(focusedScale = 1.1f)
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = stringResource(R.string.cd_increase),
+                            tint = NuvioColors.TextPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Cancel / Apply buttons
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Card(
+                    onClick = onDismiss,
+                    colors = CardDefaults.colors(
+                        containerColor = NuvioColors.BackgroundElevated,
+                        focusedContainerColor = NuvioColors.Primary
+                    ),
+                    border = CardDefaults.border(
+                        focusedBorder = Border(
+                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                    ),
+                    shape = CardDefaults.shape(shape = RoundedCornerShape(8.dp)),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = stringResource(R.string.action_cancel),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = NuvioColors.TextPrimary,
+                        modifier = Modifier
+                            .padding(12.dp)
+                            .fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                }
+                Card(
+                    onClick = { onColorSelected(currentChipColor.copy(alpha = alphaPercent / 100f)) },
+                    colors = CardDefaults.colors(
+                        containerColor = NuvioColors.Primary,
+                        focusedContainerColor = NuvioColors.Primary
+                    ),
+                    border = CardDefaults.border(
+                        focusedBorder = Border(
+                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                    ),
+                    shape = CardDefaults.shape(shape = RoundedCornerShape(8.dp)),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = stringResource(R.string.action_apply),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = NuvioColors.OnPrimary,
+                        modifier = Modifier
+                            .padding(12.dp)
+                            .fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
     }
