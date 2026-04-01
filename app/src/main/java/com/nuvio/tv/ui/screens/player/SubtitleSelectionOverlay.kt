@@ -48,6 +48,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.res.stringResource
+import kotlin.math.roundToInt
 import androidx.tv.material3.Card
 import androidx.tv.material3.Border
 import androidx.tv.material3.CardDefaults
@@ -840,6 +841,29 @@ private fun SubtitleStyleRail(
                 }
             }
             item {
+                OverlaySectionCard(title = stringResource(R.string.subtitle_style_text_opacity)) {
+                    val currentColor = Color(subtitleStyle.textColor)
+                    val currentAlphaPercent = (currentColor.alpha * 100f).roundToInt().coerceIn(0, 100)
+                    StepperRow(
+                        value = "$currentAlphaPercent%",
+                        onDecrease = {
+                            val newAlpha = (currentAlphaPercent - 10).coerceAtLeast(0) / 100f
+                            onEvent(PlayerEvent.OnSetSubtitleTextColor(currentColor.copy(alpha = newAlpha).toArgb()))
+                        },
+                        onIncrease = {
+                            val newAlpha = (currentAlphaPercent + 10).coerceAtMost(100) / 100f
+                            onEvent(PlayerEvent.OnSetSubtitleTextColor(currentColor.copy(alpha = newAlpha).toArgb()))
+                        },
+                        onMoveLeft = onMoveLeft,
+                        decrementFocusRequester = focusRequesters[StyleFocusKey.OpacityDecrease],
+                        incrementFocusRequester = focusRequesters[StyleFocusKey.OpacityIncrease],
+                        decrementFocusKey = StyleFocusKey.OpacityDecrease,
+                        incrementFocusKey = StyleFocusKey.OpacityIncrease,
+                        onFocusChanged = onStyleFocused
+                    )
+                }
+            }
+            item {
                 OverlaySectionCard(title = stringResource(R.string.subtitle_style_outline)) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         ToggleChip(
@@ -1523,6 +1547,8 @@ private object StyleFocusKey {
     const val DelaySet = "delay_set"
     const val Reset = "reset"
     const val TextColorPrefix = "text_color"
+    const val OpacityDecrease = "opacity_decrease"
+    const val OpacityIncrease = "opacity_increase"
     const val OutlineColorPrefix = "outline_color"
 }
 
@@ -1538,9 +1564,10 @@ private fun styleListIndexForFocusKey(focusKey: String): Int {
         focusKey == StyleFocusKey.FontSizeDecrease || focusKey == StyleFocusKey.FontSizeIncrease -> 1
         focusKey == StyleFocusKey.Bold -> 2
         focusKey.startsWith("${StyleFocusKey.TextColorPrefix}:") -> 3
-        focusKey == StyleFocusKey.OutlineToggle || focusKey.startsWith("${StyleFocusKey.OutlineColorPrefix}:") -> 4
-        focusKey == StyleFocusKey.OffsetDecrease || focusKey == StyleFocusKey.OffsetIncrease -> 5
-        focusKey == StyleFocusKey.Reset -> 6
+        focusKey == StyleFocusKey.OpacityDecrease || focusKey == StyleFocusKey.OpacityIncrease -> 4
+        focusKey == StyleFocusKey.OutlineToggle || focusKey.startsWith("${StyleFocusKey.OutlineColorPrefix}:") -> 5
+        focusKey == StyleFocusKey.OffsetDecrease || focusKey == StyleFocusKey.OffsetIncrease -> 6
+        focusKey == StyleFocusKey.Reset -> 7
         else -> 0
     }
 }
@@ -1557,6 +1584,8 @@ private fun rememberStyleFocusRequesters(): Map<String, FocusRequester> {
             StyleFocusKey.FontSizeDecrease,
             StyleFocusKey.FontSizeIncrease,
             StyleFocusKey.Bold,
+            StyleFocusKey.OpacityDecrease,
+            StyleFocusKey.OpacityIncrease,
             StyleFocusKey.OutlineToggle,
             StyleFocusKey.OffsetDecrease,
             StyleFocusKey.OffsetIncrease,

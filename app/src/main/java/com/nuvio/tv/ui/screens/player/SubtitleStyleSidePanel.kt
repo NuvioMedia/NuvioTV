@@ -163,23 +163,27 @@ internal fun SubtitleStyleSidePanel(
                         .width(StyleCardWidth)
                         .height(140.dp)
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val currentAlphaPercent = (Color(subtitleStyle.textColor).alpha * 100f).roundToInt().coerceIn(0, 100)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             PANEL_TEXT_COLORS.forEach { color ->
                                 SubtitleStyleColorChip(
                                     color = color,
                                     isSelected = Color(subtitleStyle.textColor).copy(alpha = 1f).toArgb() == color.copy(alpha = 1f).toArgb(),
                                     onClick = {
-                                        // Keep current alpha, change base color
                                         val currentAlpha = Color(subtitleStyle.textColor).alpha
                                         onEvent(PlayerEvent.OnSetSubtitleTextColor(color.copy(alpha = currentAlpha).toArgb()))
                                     }
                                 )
                             }
                         }
-                        // Opacity stepper
-                        val currentAlphaPercent = (Color(subtitleStyle.textColor).alpha * 100f).roundToInt().coerceIn(0, 100)
-                        SubtitleStyleSettingRow(label = stringResource(R.string.sub_opacity)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             SubtitleStyleStepperButton(
                                 icon = Icons.Default.Remove,
                                 onClick = {

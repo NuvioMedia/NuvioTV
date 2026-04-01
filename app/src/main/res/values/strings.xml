@@ -899,6 +899,7 @@
     <string name="subtitle_style_font_size">Font Size</string>
     <string name="subtitle_style_bold">Bold</string>
     <string name="subtitle_style_text_color">Text Color</string>
+    <string name="subtitle_style_text_opacity">Text Opacity</string>
     <string name="subtitle_style_outline">Outline</string>
     <string name="subtitle_style_bottom_offset">Bottom Offset</string>
     <string name="subtitle_style_defaults">Defaults</string>
