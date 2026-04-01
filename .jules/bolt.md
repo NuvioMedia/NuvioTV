@@ -1,0 +1,3 @@
+## 2024-05-24 - Compose Lazy List Optimization
+**Learning:** In NuvioTV's `ClassicHomeContent` and `ModernHomeContent` layouts, deep nesting of `LazyRow` inside `LazyColumn` caused excessive recompositions when data was updated or paginated because `itemsIndexed` relied on generic `contentType` strings (like `"content_card"`) and used the `index` variable inside `key` generation.
+**Action:** Use specific `contentType` mapping (like `item.apiType` or `payload.itemType`) to enable accurate view recycling, and ensure `key` generators like `rowItemFocusKey` do not include `index` if unique IDs are available.

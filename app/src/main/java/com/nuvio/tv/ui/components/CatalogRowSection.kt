@@ -82,7 +82,7 @@ fun CatalogRowSection(
     listState: LazyListState = rememberLazyListState(initialFirstVisibleItemIndex = initialScrollIndex)
 ) {
     fun rowItemFocusKey(index: Int, item: MetaPreview): String {
-        return "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}_${item.id}_$index"
+        return "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}_${item.id}"
     }
 
     val seeAllCardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
@@ -197,7 +197,7 @@ fun CatalogRowSection(
                 key = { index, item ->
                     rowItemFocusKey(index, item)
                 },
-                contentType = { _, _ -> "content_card" }
+                contentType = { _, item -> item.apiType } // Group items by apiType for better recycling
             ) { index, item ->
                 ContentCard(
                     item = item,
