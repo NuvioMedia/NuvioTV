@@ -295,7 +295,7 @@ private fun CastDetailView(
         ) {
             Icon(
                 imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Back",
+                contentDescription = stringResource(R.string.cd_back),
                 tint = NuvioColors.TextSecondary,
                 modifier = Modifier.size(24.dp)
             )

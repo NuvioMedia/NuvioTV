@@ -229,7 +229,8 @@ fun EpisodesRow(
     restoreFocusToken: Int = 0,
     onRestoreFocusHandled: () -> Unit = {},
     onEpisodeFocused: (episodeId: String) -> Unit = {},
-    scrollToEpisodeId: String? = null
+    scrollToEpisodeId: String? = null,
+    onScrollToEpisodeHandled: () -> Unit = {}
 ) {
     val dedupedEpisodes = remember(episodes) { episodes.distinctBy { it.id } }
     val restoreTargetRequester = restoreEpisodeId?.let { episodeFocusRequesters[it] }
@@ -269,6 +270,7 @@ fun EpisodesRow(
         if (index < 0) return@LaunchedEffect
         val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
         lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
+        onScrollToEpisodeHandled()
     }
 
     LazyRow(
@@ -437,11 +439,12 @@ private fun EpisodeCard(
     val overlayBrush = remember {
         Brush.verticalGradient(
             colorStops = arrayOf(
-                0.0f to Color.Black.copy(alpha = 0.06f),
-                0.22f to Color.Black.copy(alpha = 0.18f),
-                0.52f to Color.Black.copy(alpha = 0.62f),
-                0.82f to Color.Black.copy(alpha = 0.86f),
-                1.0f to Color.Black.copy(alpha = 0.95f)
+                0.0f to Color.Transparent,
+                0.15f to Color.Black.copy(alpha = 0.08f),
+                0.35f to Color.Black.copy(alpha = 0.28f),
+                0.60f to Color.Black.copy(alpha = 0.72f),
+                0.85f to Color.Black.copy(alpha = 0.90f),
+                1.0f to Color.Black.copy(alpha = 0.96f)
             )
         )
     }
@@ -574,26 +577,42 @@ private fun EpisodeCard(
             modifier = Modifier
                 .width(cardMetrics.cardWidth)
                 .height(cardMetrics.cardHeight)
-                .drawWithCache {
-                    val cr = androidx.compose.ui.geometry.CornerRadius(cardCornerRadius)
-                    onDrawBehind {
-                        drawRoundRect(color = cardBgColor, cornerRadius = cr)
-                    }
-                }
         ) {
+            val bgPainter = remember(cardBgColor) { androidx.compose.ui.graphics.painter.ColorPainter(cardBgColor) }
             AsyncImage(
                 model = thumbnailRequest,
                 contentDescription = episode.title.localizeEpisodeTitle(context),
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                placeholder = bgPainter,
+                error = bgPainter,
+                fallback = bgPainter
             )
 
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .drawWithCache {
+                        val startY = size.height * 0.40f
+                        val localBrush = Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.0f to Color.Transparent,
+                                0.15f to Color.Black.copy(alpha = 0.08f),
+                                0.35f to Color.Black.copy(alpha = 0.28f),
+                                0.60f to Color.Black.copy(alpha = 0.72f),
+                                0.85f to Color.Black.copy(alpha = 0.90f),
+                                1.0f to Color.Black.copy(alpha = 0.96f)
+                            ),
+                            startY = startY,
+                            endY = size.height
+                        )
                         onDrawBehind {
-                            drawRect(brush = overlayBrush, alpha = if (isFocusedState.value) 1f else 0.94f)
+                            drawRect(
+                                brush = localBrush,
+                                topLeft = androidx.compose.ui.geometry.Offset(0f, startY),
+                                size = androidx.compose.ui.geometry.Size(size.width, size.height - startY),
+                                alpha = if (isFocusedState.value) 1f else 0.94f
+                            )
                         }
                     }
             )

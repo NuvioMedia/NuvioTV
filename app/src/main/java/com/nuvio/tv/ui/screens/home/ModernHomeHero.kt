@@ -56,6 +56,37 @@ private data class ModernHeroSecondaryMeta(
 )
 
 @Composable
+internal fun ModernHeroScene(
+    state: ModernHeroSceneState,
+    bgColor: Color,
+    modifier: Modifier,
+    requestWidthPx: Int,
+    requestHeightPx: Int,
+    onTrailerEnded: () -> Unit,
+    onFirstFrameRendered: () -> Unit
+) {
+    ModernHeroMediaLayer(
+        heroBackdrop = state.heroBackdrop,
+        enrichmentActive = state.enrichmentActive,
+        shouldPlayHeroTrailer = state.shouldPlayTrailer,
+        heroTrailerFirstFrameRendered = state.trailerFirstFrameRendered,
+        heroTrailerUrl = state.trailerUrl,
+        heroTrailerAudioUrl = state.trailerAudioUrl,
+        muted = state.trailerMuted,
+        onTrailerEnded = onTrailerEnded,
+        onFirstFrameRendered = onFirstFrameRendered,
+        modifier = modifier,
+        requestWidthPx = requestWidthPx,
+        requestHeightPx = requestHeightPx
+    )
+    ModernHeroGradientLayer(
+        bgColor = bgColor,
+        isFullScreen = state.fullScreenBackdrop,
+        modifier = modifier
+    )
+}
+
+@Composable
 internal fun ModernHeroMediaLayer(
     heroBackdrop: String?,
     enrichmentActive: Boolean,
@@ -96,10 +127,15 @@ internal fun ModernHeroMediaLayer(
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer {
-                    alpha = 1f - transitionProgressState.value
-                    compositingStrategy = CompositingStrategy.Offscreen
-                },
+                .then(
+                    if (transitionProgressState.value > 0f) {
+                        Modifier.graphicsLayer {
+                            alpha = 1f - transitionProgressState.value
+                        }
+                    } else {
+                        Modifier
+                    }
+                ),
             contentScale = ContentScale.Crop,
             alignment = Alignment.TopEnd
         )
@@ -117,9 +153,8 @@ internal fun ModernHeroMediaLayer(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
-                    alpha = transitionProgressState.value
-                    compositingStrategy = CompositingStrategy.Offscreen
-                }
+                        alpha = transitionProgressState.value
+                    }
             )
         }
     }
@@ -128,62 +163,70 @@ internal fun ModernHeroMediaLayer(
 @Composable
 internal fun ModernHeroGradientLayer(
     bgColor: Color,
+    isFullScreen: Boolean = false,
     modifier: Modifier
 ) {
     Box(
         modifier = modifier
-            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithCache {
-                val leftBlendSolidWidth = size.width * 0.018f
-                val horizontalGradientStartX = leftBlendSolidWidth
-                val horizontalFadeEndX = horizontalGradientStartX + (size.width * 0.42f)
+                val horizontalFadeEndX = size.width * if (isFullScreen) 0.65f else 0.45f
                 val horizontalGradient = Brush.horizontalGradient(
-                    colorStops = arrayOf(
-                        0.0f to bgColor,
-                        0.22f to bgColor.copy(alpha = 0.86f),
-                        0.46f to bgColor.copy(alpha = 0.56f),
-                        0.76f to bgColor.copy(alpha = 0.16f),
-                        1.0f to Color.Transparent
-                    ),
-                    startX = horizontalGradientStartX,
+                    colorStops = if (isFullScreen) {
+                        arrayOf(
+                            0.0f to bgColor,
+                            0.22f to bgColor.copy(alpha = 0.90f),
+                            0.46f to bgColor.copy(alpha = 0.80f),
+                            0.76f to bgColor.copy(alpha = 0.42f),
+                            1.0f to Color.Transparent
+                        )
+                    } else {
+                        arrayOf(
+                            0.0f to bgColor,
+                            0.22f to bgColor.copy(alpha = 0.86f),
+                            0.46f to bgColor.copy(alpha = 0.56f),
+                            0.76f to bgColor.copy(alpha = 0.16f),
+                            1.0f to Color.Transparent
+                        )
+                    },
+                    startX = 0f,
                     endX = horizontalFadeEndX
                 )
-                val topContourGradient = Brush.linearGradient(
-                    colorStops = arrayOf(
-                        0.0f to bgColor.copy(alpha = 0.28f),
-                        0.38f to bgColor.copy(alpha = 0.14f),
-                        0.72f to bgColor.copy(alpha = 0.05f),
-                        1.0f to Color.Transparent
-                    ),
-                    start = Offset(0f, 0f),
-                    end = Offset(size.width * 0.24f, size.height * 0.40f)
-                )
-                val bottomContourGradient = Brush.linearGradient(
-                    colorStops = arrayOf(
-                        0.0f to bgColor.copy(alpha = 0.24f),
-                        0.42f to bgColor.copy(alpha = 0.12f),
-                        0.74f to bgColor.copy(alpha = 0.05f),
-                        1.0f to Color.Transparent
-                    ),
-                    start = Offset(0f, size.height),
-                    end = Offset(size.width * 0.24f, size.height * 0.61f)
-                )
+
+                val bottomStripStartY = size.height * if (isFullScreen) 0.64f else 0.82f
                 val verticalGradient = Brush.verticalGradient(
-                    0.89f to Color.Transparent,
-                    0.93f to bgColor.copy(alpha = 0.14f),
-                    0.965f to bgColor.copy(alpha = 0.52f),
-                    0.99f to bgColor.copy(alpha = 0.92f),
-                    1.0f to bgColor
+                    colorStops = if (isFullScreen) {
+                        arrayOf(
+                            0.0f to Color.Transparent,
+                            0.30f to bgColor.copy(alpha = 0.35f),
+                            0.60f to bgColor.copy(alpha = 0.75f),
+                            1.0f to bgColor
+                        )
+                    } else {
+                        arrayOf(
+                            0.0f to Color.Transparent,
+                            0.40f to bgColor.copy(alpha = 0.25f),
+                            0.75f to bgColor.copy(alpha = 0.65f),
+                            1.0f to bgColor
+                        )
+                    },
+                    startY = bottomStripStartY,
+                    endY = size.height
                 )
+
                 onDrawBehind {
+                    // 1. Horizontal fade
                     drawRect(
-                        color = bgColor,
-                        size = Size(leftBlendSolidWidth, size.height)
+                        brush = horizontalGradient,
+                        topLeft = Offset(0f, 0f),
+                        size = Size(horizontalFadeEndX, size.height)
                     )
-                    drawRect(brush = horizontalGradient, size = size)
-                    drawRect(brush = topContourGradient, size = size)
-                    drawRect(brush = bottomContourGradient, size = size)
-                    drawRect(brush = verticalGradient, size = size)
+                    
+                    // 2. Bottom vertical strip
+                    drawRect(
+                        brush = verticalGradient,
+                        topLeft = Offset(0f, bottomStripStartY),
+                        size = Size(size.width, size.height - bottomStripStartY)
+                    )
                 }
             }
     )
@@ -194,6 +237,7 @@ internal fun HeroTitleBlock(
     preview: HeroPreview?,
     enrichmentActive: Boolean = false,
     portraitMode: Boolean,
+    trailerPlaying: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var stablePreview by remember { mutableStateOf<HeroPreview?>(null) }
@@ -206,17 +250,18 @@ internal fun HeroTitleBlock(
         modifier = modifier,
         contentAlignment = Alignment.BottomStart
     ) {
-        HeroTitleContent(preview = stablePreview!!, portraitMode = portraitMode)
+        HeroTitleContent(preview = stablePreview!!, portraitMode = portraitMode, trailerPlaying = trailerPlaying)
     }
 }
 
 @Composable
 private fun HeroTitleContent(
     preview: HeroPreview?,
-    portraitMode: Boolean
+    portraitMode: Boolean,
+    trailerPlaying: Boolean = false
 ) {
     if (preview == null) return
-    val descriptionMaxLines = if (portraitMode) 4 else 5
+    val descriptionMaxLines = 4
     val descriptionScale = if (portraitMode) 0.90f else 1f
     val titleScale = if (portraitMode) 0.92f else 1f
     val metaScale = 1f
@@ -246,6 +291,12 @@ private fun HeroTitleContent(
             .decoderFactory(SvgDecoder.Factory())
             .build()
     }
+
+    val metaAlpha by animateFloatAsState(
+        targetValue = if (trailerPlaying) 0f else 1f,
+        animationSpec = tween(durationMillis = 480),
+        label = "heroMetaFade"
+    )
     val scaledTitleStyle = remember(headlineLarge, titleScale) {
         headlineLarge.copy(
             fontSize = headlineLarge.fontSize * titleScale,
@@ -334,7 +385,7 @@ private fun HeroTitleContent(
             (preview.isSeries || hasSecondaryBadge || secondaryHighlightText != null)
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = metaAlpha },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(metaSpacing)
         ) {
@@ -411,7 +462,7 @@ private fun HeroTitleContent(
 
         if (secondaryHighlightText != null || ageRatingBadge != null || showImdbInSecondary || statusBadge != null || secondaryDetails.isNotEmpty()) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = metaAlpha },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(metaSpacing)
             ) {
@@ -488,7 +539,8 @@ private fun HeroTitleContent(
                 style = scaledDescriptionStyle,
                 color = NuvioColors.TextPrimary,
                 maxLines = descriptionMaxLines,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.graphicsLayer { alpha = metaAlpha }
             )
         }
     }
@@ -509,7 +561,7 @@ private fun HeroImdbMeta(
     ) {
         AsyncImage(
             model = imdbLogoModel,
-            contentDescription = "IMDb",
+            contentDescription = stringResource(R.string.cd_imdb),
             modifier = Modifier.size(logoSize),
             contentScale = ContentScale.Fit
         )

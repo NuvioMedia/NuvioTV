@@ -71,7 +71,6 @@ fun AccountScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioColors.Background)
             .padding(horizontal = 48.dp),
         contentPadding = PaddingValues(vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -113,8 +112,8 @@ fun AccountScreen(
                 item {
                     AccountActionCard(
                         icon = Icons.Default.Person,
-                        title = "Sign In / Create Account",
-                        description = "Use email and password to create or sign into your account.",
+                        title = stringResource(R.string.account_signin_create_title),
+                        description = stringResource(R.string.account_signin_create_desc),
                         onClick = onNavigateToAuthSignIn
                     )
                 }
@@ -137,16 +136,16 @@ fun AccountScreen(
                     item {
                         AccountActionCard(
                             icon = Icons.Default.VpnKey,
-                            title = "Generate Sync Code",
-                            description = "Create a code on this device so other devices can link to it.",
+                            title = stringResource(R.string.sync_generate_title),
+                            description = stringResource(R.string.account_generate_sync_desc),
                             onClick = onNavigateToSyncGenerate
                         )
                     }
                     item {
                         AccountActionCard(
                             icon = Icons.Default.Sync,
-                            title = "Enter Sync Code",
-                            description = "Link this device to another device using a sync code.",
+                            title = stringResource(R.string.sync_claim_title),
+                            description = stringResource(R.string.account_enter_sync_desc),
                             onClick = onNavigateToSyncClaim
                         )
                     }
@@ -156,7 +155,7 @@ fun AccountScreen(
             is AuthState.FullAccount -> {
                 item {
                     AccountInfoCard(
-                        label = "Signed in as",
+                        label = stringResource(R.string.account_signed_in_as),
                         value = authState.email
                     )
                 }
@@ -170,8 +169,8 @@ fun AccountScreen(
                     item {
                         AccountActionCard(
                             icon = Icons.Default.VpnKey,
-                            title = "Generate Sync Code",
-                            description = "Create a code so other devices can sync with this account.",
+                            title = stringResource(R.string.sync_generate_title),
+                            description = stringResource(R.string.account_generate_sync_signed_in_desc),
                             onClick = onNavigateToSyncGenerate
                         )
                     }
@@ -302,7 +301,7 @@ private fun LinkedDevicesSection(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = device.deviceName ?: "Unknown Device",
+                        text = device.deviceName ?: stringResource(R.string.account_unknown_device),
                         style = MaterialTheme.typography.bodyMedium,
                         color = NuvioColors.TextPrimary,
                         modifier = Modifier.weight(1f)
@@ -319,7 +318,7 @@ private fun LinkedDevicesSection(
                     ) {
                         Icon(
                             imageVector = Icons.Default.LinkOff,
-                            contentDescription = "Unlink",
+                            contentDescription = stringResource(R.string.cd_unlink),
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))

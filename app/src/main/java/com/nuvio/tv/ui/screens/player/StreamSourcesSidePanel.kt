@@ -190,6 +190,8 @@ internal fun StreamSourcesSidePanel(
                     val initialFocusStream = uiState.sourceFilteredStreams.getOrNull(currentStreamIndex)
                         ?: uiState.sourceFilteredStreams.firstOrNull()
 
+                    val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
+
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(
@@ -202,6 +204,14 @@ internal fun StreamSourcesSidePanel(
                             .fillMaxHeight()
                             .onKeyEvent { event ->
                                 if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
+
+                                // Throttle rapid key repeats (long-press)
+                                if (event.nativeKeyEvent.repeatCount > 0) {
+                                    val now = android.os.SystemClock.uptimeMillis()
+                                    if (now - lastKeyRepeatDispatchRef.get() < 112L) return@onKeyEvent true
+                                    lastKeyRepeatDispatchRef.set(now)
+                                }
+
                                 val addons = uiState.sourceAvailableAddons
                                 if (addons.isEmpty()) return@onKeyEvent false
                                 val allOptions = listOf<String?>(null) + addons

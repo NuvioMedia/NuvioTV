@@ -341,6 +341,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
     )
     persistSelectedStreamForReuse(stream = stream, url = url, headers = newHeaders)
     hasRetriedCurrentStreamAfter416 = false
+    errorRetryCount = 0
     subtitleDisabledByPersistedPreference = false
     subtitleAddonRestoredByPersistedPreference = false
     pendingRestoredAddonSubtitle = null
@@ -616,6 +617,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
     subtitleAddonRestoredByPersistedPreference = false
     pendingRestoredAddonSubtitle = null
     hasRetriedCurrentStreamAfter416 = false
+    errorRetryCount = 0
     currentVideoId = targetVideo?.id ?: _uiState.value.episodeStreamsForVideoId ?: currentVideoId
     currentSeason = targetVideo?.season ?: _uiState.value.episodeStreamsSeason ?: currentSeason
     currentEpisode = targetVideo?.episode ?: _uiState.value.episodeStreamsEpisode ?: currentEpisode

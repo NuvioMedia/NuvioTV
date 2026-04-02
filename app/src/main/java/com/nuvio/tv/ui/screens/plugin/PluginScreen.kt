@@ -106,7 +106,6 @@ fun PluginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioColors.Background)
             .padding(horizontal = 48.dp, vertical = 24.dp)
     ) {
         PluginScreenContent(
@@ -483,7 +482,7 @@ private fun AddRepositoryInline(
                     } else {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Add",
+                            contentDescription = stringResource(R.string.cd_add),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -593,7 +592,7 @@ private fun QrCodeOverlay(
             if (qrBitmap != null) {
                 Image(
                     bitmap = qrBitmap.asImageBitmap(),
-                    contentDescription = "QR Code",
+                    contentDescription = stringResource(R.string.cd_qr_code),
                     modifier = Modifier.size(220.dp),
                     contentScale = ContentScale.Fit
                 )
@@ -900,7 +899,7 @@ private fun RepositoryCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = "Refresh"
+                        contentDescription = stringResource(R.string.cd_refresh)
                     )
                 }
 
@@ -917,7 +916,7 @@ private fun RepositoryCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Remove"
+                        contentDescription = stringResource(R.string.cd_remove)
                     )
                 }
             }
@@ -979,7 +978,7 @@ private fun ScraperCard(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "Version ${scraper.version}",
+                        text = stringResource(R.string.plugin_version, scraper.version),
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )
@@ -1006,7 +1005,7 @@ private fun ScraperCard(
                         } else {
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "Test",
+                                contentDescription = stringResource(R.string.cd_test),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -1197,5 +1196,6 @@ private fun MessageOverlay(
 }
 
 private fun formatDate(timestamp: Long): String {
-    return SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(timestamp))
+    val locale = Locale.getDefault()
+    return SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMy"), locale).format(Date(timestamp))
 }

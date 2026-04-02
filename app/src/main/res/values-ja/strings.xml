@@ -31,7 +31,7 @@
     <string name="error_state_fix_addon_connection_failed">アドオンサーバーがオンラインで到達可能か確認してから再試行してください</string>
     <string name="error_state_issue_addon_timeout">応答に時間がかかりすぎました</string>
     <string name="error_state_fix_addon_timeout">しばらくしてから再試行するか、この問題が続く場合は別のアドオンを試してください</string>
-    <string name="error_state_issue_addon_cleartext">Androidがブロックした安全でないHTTP接続を使用しています</string>
+    <string name="error_state_issue_addon_cleartext">安全でないHTTP接続のためAndroidにブロックされました</string>
     <string name="error_state_fix_addon_cleartext">アドオンのURLをHTTPSに変更するか、アドオンの設定を更新してください</string>
     <string name="error_state_fix_addon_generic">再試行するか、アドオンを更新・再インストールするか、別のアドオンを試してください</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s。</string>
@@ -41,16 +41,22 @@
     <string name="error_meta_tried_none">試したメタアドオン: %1$s。id=%2$s (type=%3$s) のメタデータを提供したものはありませんでした</string>
     <string name="error_meta_tried_generic">試したメタアドオン: %1$s。id=%2$s (type=%3$s) のメタデータを読み込めませんでした</string>
     <string name="error_meta_tried_issues">試したメタアドオン: %1$s。id=%2$s (type=%3$s) のメタデータを読み込めませんでした。問題: %4$s。</string>
+    <string name="error_stream_no_supported_addon">「%1$s」のストリームに対応したインストール済みアドオンがありません</string>
+    <string name="error_stream_tried_none">試したストリームアドオン: %1$s。id=%2$s (type=%3$s) のストリームを返したものはありませんでした</string>
+    <string name="error_stream_tried_generic">試したストリームアドオン: %1$s。id=%2$s (type=%3$s) のストリームを読み込めませんでした</string>
+    <string name="error_stream_tried_issues">試したストリームアドオン: %1$s。id=%2$s (type=%3$s) のストリームを読み込めませんでした。問題: %4$s。</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">視聴を続ける</string>
     <string name="cw_upcoming">近日公開</string>
     <string name="cw_next_up">次のエピソード</string>
+    <string name="cw_new_episode">新着エピソード</string>
+    <string name="cw_new_season">新シーズン</string>
     <string name="cw_resume">再開</string>
     <string name="cw_percent_watched">%1$d%% 視聴済み</string>
     <string name="cw_hours_min_left">残り%1$d時間%2$d分</string>
     <string name="cw_min_left">残り%1$d分</string>
-    <string name="cw_almost_done">もうすぐ終わり</string>
+    <string name="cw_almost_done">もうすぐ終了</string>
     <string name="cw_airs_date">%1$s 放送予定</string>
     <string name="cw_action_go_to_details">詳細へ</string>
     <string name="cw_action_start_from_beginning">最初から再生</string>
@@ -118,6 +124,27 @@
     <string name="cast_role_writer">脚本</string>
     <string name="detail_tab_ratings">評価</string>
     <string name="detail_tab_more_like_this">関連作品</string>
+    <string name="detail_more_like_this_powered_by_tmdb">Powered by TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">Powered by Trakt</string>
+    <string name="detail_comments_title">コメント</string>
+    <string name="detail_comments_subtitle">Traktのレビュー</string>
+    <string name="detail_comments_empty">Traktのレビューはまだありません</string>
+    <string name="detail_comments_error">Traktのレビューを読み込めませんでした</string>
+    <string name="detail_comments_spoiler_hidden">ネタバレを含むレビューです。OKを押すと表示されます</string>
+    <string name="detail_comments_reveal_spoiler">ネタバレを表示</string>
+    <string name="detail_comments_reveal_spoiler_hint">OKを押してネタバレを表示</string>
+    <string name="detail_comments_back_hint">戻るボタンで閉じる</string>
+    <string name="detail_comments_badge_review">レビュー</string>
+    <string name="detail_comments_badge_spoiler">ネタバレ</string>
+    <string name="detail_comments_badge_rating">%1$d/10</string>
+    <string name="detail_comments_likes">%1$d いいね</string>
+    <string name="tmdb_entity_kind_company">制作会社</string>
+    <string name="tmdb_entity_kind_network">放送局</string>
+    <string name="tmdb_entity_rail_popular">人気</string>
+    <string name="tmdb_entity_rail_top_rated">高評価</string>
+    <string name="tmdb_entity_rail_recent">最新</string>
+    <string name="tmdb_entity_empty_title">タイトルが見つかりません</string>
+    <string name="tmdb_entity_empty_subtitle">このカテゴリに対応するタイトルはTMDBにまだ登録されていません</string>
     <string name="detail_section_network">放送局</string>
     <string name="detail_section_production">制作会社</string>
     <string name="episodes_unavailable">視聴不可</string>
@@ -138,7 +165,7 @@
 
     <!-- AppLanguage -->
     <string name="appearance_language">アプリの言語</string>
-    <string name="appearance_language_subtitle">システム言語を上書き</string>
+    <string name="appearance_language_subtitle">システム言語を変更</string>
     <string name="appearance_language_system">システムのデフォルト</string>
     <string name="appearance_language_dialog_title">言語を選択</string>
     <string name="appearance_language_restart_hint">言語変更を適用するにはアプリを再起動してください</string>
@@ -179,6 +206,23 @@
     <string name="settings_playback_subtitle">プレーヤー、字幕、自動再生</string>
     <string name="settings_trakt_subtitle">Trakt接続画面を開く</string>
     <string name="settings_about_subtitle">バージョンとポリシー</string>
+    <string name="settings_network">通信速度</string>
+    <string name="settings_network_subtitle">レイテンシとダウンロードの診断</string>
+    <string name="settings_advanced">詳細設定</string>
+    <string name="settings_advanced_subtitle">ネットワーク速度診断を実行</string>
+    <string name="network_speed_test_run">速度テストを実行</string>
+    <string name="network_speed_test_running">速度テスト実行中</string>
+    <string name="network_speed_test_subtitle">ダウンロード速度とレイテンシを計測</string>
+    <string name="network_testing_latency">レイテンシを計測中</string>
+    <string name="network_testing_download">ダウンロード速度を計測中</string>
+    <string name="network_results_title">結果</string>
+    <string name="network_latency_label">レイテンシ</string>
+    <string name="network_download_label">ダウンロード</string>
+    <string name="network_error_prefix">エラー: %1$s</string>
+    <string name="network_powered_by_fast">Powered by fast.com</string>
+    <string name="network_connection_wifi">Wi-Fi</string>
+    <string name="network_connection_ethernet">有線LAN</string>
+    <string name="network_connection_offline">オフライン</string>
     <string name="settings_debug">デバッグ</string>
     <string name="settings_debug_subtitle">開発者ツールと機能フラグ</string>
     <string name="settings_plugins_section_subtitle">リポジトリ、プロバイダー、プラグインの状態を管理</string>
@@ -204,9 +248,9 @@
 
     <!-- SupportersContributorsScreen -->
     <string name="supporters_contributors_title">サポーター &amp; 貢献者</string>
-    <string name="supporters_contributors_subtitle">Nuvioを支援する人々とTVおよびモバイルで構築する貢献者たち</string>
-    <string name="supporters_contributors_supporters_copy">サポーターと寄付者はプロジェクトの継続を助け、インフラを支援し、野心的な機能の余地を作ります</string>
-    <string name="supporters_contributors_donate_copy">Nuvioは無料でオープンソースのままです。プロジェクトをサポートしたい場合は、その背後にある時間とインフラをカバーするのに協力できます</string>
+    <string name="supporters_contributors_subtitle">Nuvioを支援するサポーターとTV・モバイルで開発する貢献者</string>
+    <string name="supporters_contributors_supporters_copy">サポーターと寄付者はプロジェクトの継続を支え、インフラを維持し、新機能の実現を後押しします</string>
+    <string name="supporters_contributors_donate_copy">Nuvioは無料のオープンソースプロジェクトです。サポートしたい方は、開発・インフラの維持にご協力いただけます</string>
     <string name="supporters_contributors_donate_button">Nuvioに寄付</string>
     <string name="supporters_contributors_qr_title">QRをスキャンして寄付</string>
     <string name="supporters_contributors_qr_subtitle">スマートフォンでリンクを開き、Ko-fiでNuvioをサポート</string>
@@ -234,8 +278,8 @@
     <string name="playback_loading_overlay">ローディングオーバーレイ</string>
     <string name="playback_loading_overlay_sub">最初のフレームが表示されるまでローディング画面を表示</string>
     <string name="playback_pause_overlay">一時停止オーバーレイ</string>
-    <string name="playback_pause_overlay_sub">一時停止後5秒で詳細オーバーレイを表示</string>
-    <string name="playback_show_clock_sub">コントロール表示中に現在時刻と終了時刻を表示</string>
+    <string name="playback_pause_overlay_sub">一時停止から5秒後に詳細オーバーレイを表示</string>
+    <string name="playback_show_clock_sub">コントロール表示中に現在時刻と終了予定時刻を表示</string>
     <string name="playback_osd_clock">OSD時計</string>
     <string name="playback_skip_intro">イントロスキップ</string>
     <string name="playback_skip_intro_sub">introdb.appを使用してイントロとリキャップを検出</string>
@@ -275,17 +319,17 @@
     <string name="audio_skip_silence">無音スキップ</string>
     <string name="audio_skip_silence_sub">再生中に無音部分をスキップ</string>
     <string name="audio_advanced_section">高度な音声設定</string>
-    <string name="audio_advanced_warning">これらの設定は一部のデバイスで問題を引き起こす可能性があります。内容を理解している場合のみ変更してください</string>
+    <string name="audio_advanced_warning">これらの設定は一部のデバイスで問題が発生する可能性があります。内容を理解した上で変更してください</string>
     <string name="audio_decoder_device_only">デバイスデコーダーのみ</string>
     <string name="audio_decoder_prefer_device">デバイスデコーダーを優先</string>
     <string name="audio_decoder_prefer_app">アプリデコーダーを優先（FFmpeg）</string>
     <string name="audio_decoder_priority">デコーダー優先度</string>
     <string name="audio_tunneled">トンネル再生</string>
     <string name="audio_tunneled_sub">ハードウェアレベルの音声/映像同期。一部のAndroid TVデバイスで再生を改善する可能性があります</string>
-    <string name="audio_dv_sub">DV対応ハードウェアがないデバイス向けにDolby Vision Profile 7を標準HEVCにマッピング</string>
+    <string name="audio_dv_sub">DV非対応デバイス向けにDolby Vision Profile 7を標準HEVCにマッピング</string>
     <string name="audio_decoder_device_only_desc">内蔵ハードウェアデコーダーのみ使用。最も互換性が高いですが、すべての形式に対応していない場合があります</string>
-    <string name="audio_decoder_prefer_device_desc">利用可能な場合はハードウェアデコーダーを使用し、FFmpegにフォールバック。ほとんどのデバイスに推奨</string>
-    <string name="audio_decoder_prefer_app_desc">利用可能な場合はFFmpegデコーダーを使用。形式サポートが向上しますがCPU使用率が高くなります</string>
+    <string name="audio_decoder_prefer_device_desc">利用可能な場合はハードウェアデコーダーを使用し、FFmpegにフォールバック。ほとんどのデバイスで推奨</string>
+    <string name="audio_decoder_prefer_app_desc">利用可能な場合はFFmpegデコーダーを使用。対応形式は増えますがCPU使用率が上がります</string>
     <string name="audio_decoder_controls">音声と動画にハードウェアまたはソフトウェア（FFmpeg）デコーダーを使用するかを制御</string>
 
     <!-- PlaybackSubtitleSettings -->
@@ -306,10 +350,10 @@
     <string name="sub_outline_color">アウトラインの色</string>
     <string name="sub_advanced_section">高度な字幕レンダリング</string>
     <string name="sub_libass">ASS/SSA字幕にlibassを使用</string>
-    <string name="sub_libass_sub">実験的: 高度なASS/SSAレンダリング（スタイル、位置、アニメーション）</string>
+    <string name="sub_libass_sub">実験的: 高度なASS/SSAレンダリング（スタイル・位置・アニメーション）</string>
     <string name="sub_libass_mode">Libassレンダリングモード</string>
     <string name="sub_mode_overlay_gl">オーバーレイ OpenGL（推奨）</string>
-    <string name="sub_mode_overlay_gl_sub">HDRサポート付きの最高品質。別スレッドで字幕をレンダリング</string>
+    <string name="sub_mode_overlay_gl_sub">最高品質でHDRをサポート。別スレッドで字幕をレンダリング</string>
     <string name="sub_mode_overlay_canvas">オーバーレイ Canvas</string>
     <string name="sub_mode_effects_gl">エフェクト OpenGL</string>
     <string name="sub_mode_effects_gl_sub">Media3エフェクトを使用したアニメーションサポート。Canvasより高速</string>
@@ -328,8 +372,8 @@
     <string name="sub_startup_mode_preferred">優先言語</string>
     <string name="sub_startup_mode_all">すべてのアドオン字幕</string>
     <string name="sub_startup_mode_fast_desc">すぐに再生を開始。アドオン字幕の選択時にプレーヤーが一度再読み込みされる場合があります</string>
-    <string name="sub_startup_mode_preferred_desc">再生前にアドオン字幕をプリフェッチして優先/第2言語トラックを添付</string>
-    <string name="sub_startup_mode_all_desc">再生前にすべてのアドオン字幕をプリフェッチして添付。最も起動が遅い</string>
+    <string name="sub_startup_mode_preferred_desc">再生前にアドオン字幕を取得して優先・第2言語トラックを添付</string>
+    <string name="sub_startup_mode_all_desc">再生前にすべてのアドオン字幕を取得して添付。最も起動が遅い</string>
 
     <!-- PlaybackAutoPlaySettings -->
     <string name="autoplay_reuse_last_link">最後のリンクを再利用</string>
@@ -342,7 +386,7 @@
     <string name="autoplay_next_episode">次のエピソードを自動再生</string>
     <string name="autoplay_next_episode_sub">プロンプトが表示されたら自動的に次のエピソードを開始</string>
     <string name="autoplay_prefer_binge_group">一気見グループを優先（次のエピソード）</string>
-    <string name="autoplay_prefer_binge_group_sub">通常の自動再生ルールの前に同じソースプロフィール（同じアドオン/品質グループ）を最初に試みます</string>
+    <string name="autoplay_prefer_binge_group_sub">通常の自動再生ルールより先に、同じアドオン・品質グループのソースを優先します</string>
     <string name="autoplay_threshold_pct">パーセンテージ</string>
     <string name="autoplay_threshold_min">終了前の分数</string>
     <string name="autoplay_threshold_mode">次のエピソードのしきい値モード</string>
@@ -393,7 +437,7 @@
     <string name="layout_preview_row">プレビュー行を表示</string>
     <string name="layout_preview_row_sub">モダンホームレイアウトで下の行のプレビューを部分的に表示</string>
     <string name="layout_hero_catalogs">ヒーローカタログ</string>
-    <string name="layout_hero_catalogs_sub">ヒーローコンテンツ用のカタログを1つ以上選択</string>
+    <string name="layout_hero_catalogs_sub">ヒーローに表示するカタログを1つ以上選択</string>
     <string name="layout_section_content">ホームコンテンツ</string>
     <string name="layout_section_content_desc">ホームと検索に表示するものを制御</string>
     <string name="layout_collapse_sidebar">サイドバーを折りたたむ</string>
@@ -402,30 +446,36 @@
     <string name="layout_modern_sidebar_sub">フローティングサイドバーナビゲーションを有効にする</string>
     <string name="layout_modern_sidebar_blur">モダンサイドバーのぼかし</string>
     <string name="layout_modern_sidebar_blur_sub">モダンサイドバーのぼかしエフェクトを切り替え</string>
+    <string name="layout_fullscreen_hero_backdrop">フルスクリーンヒーローバックドロップ</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">ヒーローの背景画像を画面全体に広げます</string>
     <string name="layout_show_hero">ヒーローセクションを表示</string>
     <string name="layout_show_hero_sub">ホームの上部にヒーローカルーセルを表示</string>
     <string name="layout_show_discover">検索にディスカバーを表示</string>
-    <string name="layout_show_discover_sub">検索が空のときにブラウズセクションを表示</string>
+    <string name="layout_show_discover_sub">検索が空のときにディスカバーセクションを表示</string>
     <string name="layout_poster_labels">ポスターラベルを表示</string>
     <string name="layout_poster_labels_sub">行、グリッド、全表示のポスター下にタイトルを表示</string>
     <string name="layout_addon_name">アドオン名を表示</string>
     <string name="layout_addon_name_sub">カタログタイトルの下にソース名を表示</string>
     <string name="layout_catalog_type">カタログタイプを表示</string>
-    <string name="layout_catalog_type_sub">カタログ名の横にタイプのサフィックスを表示（映画/シリーズ）</string>
+    <string name="layout_catalog_type_sub">カタログ名の横にタイプを表示（映画/シリーズ）</string>
     <string name="layout_hide_unreleased">未公開コンテンツを非表示</string>
     <string name="layout_hide_unreleased_sub">まだ公開されていない映画や番組を非表示にする</string>
     <string name="layout_section_detail">詳細ページ</string>
     <string name="layout_section_detail_desc">詳細画面とエピソード画面の設定</string>
     <string name="layout_blur_unwatched">未視聴エピソードをぼかす</string>
     <string name="layout_blur_unwatched_sub">ネタバレを避けるため、視聴済みになるまでエピソードサムネイルをぼかす</string>
+    <string name="layout_blur_cw_next_up">視聴を続けるの未視聴エピソードをぼかす</string>
+    <string name="layout_blur_cw_next_up_sub">ネタバレを避けるため、視聴を続けるの次エピソードサムネイルをぼかす</string>
     <string name="layout_trailer_button">予告編ボタンを表示</string>
     <string name="layout_trailer_button_sub">詳細ページに予告編ボタンを表示（予告編がある場合のみ）</string>
     <string name="layout_prefer_external_meta">外部アドオンのメタを優先</string>
     <string name="layout_prefer_external_meta_sub">カタログアドオンの代わりに外部アドオンのメタデータを使用</string>
+    <string name="layout_show_full_release_date">公開日をすべて表示</string>
+    <string name="layout_show_full_release_date_sub">映画の場合、年のみでなく完全な公開日を表示</string>
     <string name="layout_section_focused">フォーカス中のポスター</string>
     <string name="layout_section_focused_desc">フォーカス中のポスターカードの高度な動作</string>
     <string name="layout_expand_poster">ポスターを背景に拡大表示</string>
-    <string name="layout_expand_poster_sub">アイドル遅延後にフォーカス中のポスターを拡大</string>
+    <string name="layout_expand_poster_sub">一定時間後にフォーカス中のポスターを拡大</string>
     <string name="layout_expand_delay">バックドロップ拡大の遅延</string>
     <string name="layout_expand_delay_sub">フォーカス中のカードを拡大するまでの待機時間</string>
     <string name="layout_autoplay_trailer">予告編の自動再生</string>
@@ -437,8 +487,8 @@
     <string name="layout_trailer_muted_sub_expanded">拡大カードの予告編音声をミュート</string>
     <string name="layout_section_card_style">ポスターカードスタイル</string>
     <string name="layout_section_card_style_desc">カードの幅と角の丸みを調整</string>
-    <string name="layout_open">開く</string>
-    <string name="layout_closed">閉じる</string>
+    <string name="layout_open">閉じる</string>
+    <string name="layout_closed">開く</string>
     <string name="layout_trailer_location">モダン予告編再生場所</string>
     <string name="layout_trailer_location_sub">モダンホームで予告編プレビューを再生する場所を選択</string>
     <string name="layout_trailer_expanded_card">拡大カード</string>
@@ -458,10 +508,11 @@
     <string name="layout_card_radius">角の丸み</string>
     <string name="layout_reset_default">デフォルトにリセット</string>
     <string name="layout_custom">カスタム</string>
+    
 
     <!-- MDBListSettingsScreen -->
     <string name="mdblist_title">MDBList評価</string>
-    <string name="mdblist_subtitle">詳細ヒーローに表示する外部評価を設定</string>
+    <string name="mdblist_subtitle">詳細画面に表示する外部評価を設定</string>
     <string name="mdblist_enable_title">MDBList評価を有効にする</string>
     <string name="mdblist_enable_subtitle">メタデータ詳細画面で外部プロバイダーから評価を取得</string>
     <string name="mdblist_api_key_title">APIキー</string>
@@ -501,11 +552,15 @@
 
     <!-- TmdbSettingsScreen -->
     <string name="tmdb_title">TMDB補完</string>
-    <string name="tmdb_subtitle">TMDBから取得するメタデータフィールドを選択</string>
+    <string name="tmdb_subtitle">TMDBから取得するメタデータ項目を設定</string>
     <string name="tmdb_enable_title">TMDB補完を有効にする</string>
     <string name="tmdb_enable_subtitle">TMDBをメタデータソースとして使用してアドオンデータを強化</string>
+    <string name="tmdb_modern_home_title">モダンホームで有効にする</string>
+    <string name="tmdb_modern_home_subtitle">モダンホームのヒーローとフォーカスカードにもTMDB補完を適用</string>
+    <string name="tmdb_enrich_continue_watching_title">視聴を続けるを補完</string>
+    <string name="tmdb_enrich_continue_watching_subtitle">視聴を続けるのアイテムにTMDB補完を適用</string>
     <string name="tmdb_language_title">言語</string>
-    <string name="tmdb_language_subtitle">タイトル、ロゴ、有効なフィールドのTMDBメタデータ言語</string>
+    <string name="tmdb_language_subtitle">タイトル・ロゴなどのTMDBメタデータ言語</string>
     <string name="tmdb_artwork_title">アートワーク</string>
     <string name="tmdb_artwork_subtitle">TMDBのロゴとバックドロップ画像</string>
     <string name="tmdb_basic_info_title">基本情報</string>
@@ -521,16 +576,17 @@
     <string name="tmdb_episodes_title">エピソード</string>
     <string name="tmdb_episodes_subtitle">TMDBのエピソードタイトル、概要、サムネイル、上映時間</string>
     <string name="tmdb_more_like_this_title">関連作品</string>
-    <string name="tmdb_more_like_this_subtitle">詳細ページのTMDB推薦バックドロップ</string>
+    <string name="tmdb_more_like_this_subtitle">詳細ページの関連作品バックドロップ</string>
     <string name="tmdb_collections_title">コレクション</string>
-    <string name="tmdb_collections_subtitle">公開順のTMDB映画コレクション</string>
+    <string name="tmdb_collections_subtitle">TMDB映画コレクション（公開順）</string>
+    
     <string name="tmdb_language_dialog_title">TMDB言語</string>
 
     <!-- TraktScreen -->
     <string name="trakt_description">ウォッチリスト、視聴進行状況、視聴を続ける、スクロブル、個人リストをTraktで同期</string>
     <string name="trakt_connected_as">%1$s としてログイン中</string>
     <string name="trakt_account_login">アカウントログイン</string>
-    <string name="trakt_awaiting_instruction">trakt.tv/activate にアクセスしてこのコードを入力:</string>
+    <string name="trakt_awaiting_instruction">trakt.tv/activate にアクセスしてこのコードを入力してください:</string>
     <string name="trakt_waiting_approval">承認待ち…</string>
     <string name="qr_login_approved">ログイン承認済み。サインインを完了中…</string>
     <string name="qr_login_pending">スマートフォンで承認待ち…</string>
@@ -540,21 +596,29 @@
     <string name="trakt_login_instruction">ログインを押してTraktデバイス認証を開始してください。ここにQRコードが表示されます</string>
     <string name="trakt_missing_credentials">local.propertiesにTRAKT_CLIENT_ID / TRAKT_CLIENT_SECRETがありません</string>
     <string name="trakt_watch_progress_title">視聴進行状況</string>
-    <string name="trakt_watch_progress_subtitle">再開と視聴を続けるを管理する進行状況ソースを選択</string>
+    <string name="trakt_watch_progress_subtitle">再開と「視聴を続ける」を管理する進行状況ソースを選択</string>
     <string name="trakt_watch_progress_dialog_title">視聴進行状況</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Traktのスクロブルがアクティブな間、再開と視聴を続けるにTraktとNuvio Syncのどちらを使用するか選択してください</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Traktのスクロブルが有効な間、再開と視聴を続けるにTraktとNuvio Syncのどちらを使用するか選択してください</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_setting_on">オン</string>
+    <string name="trakt_setting_off">オフ</string>
     <string name="trakt_watch_progress_trakt_selected">視聴進行状況ソースをTraktに設定しました</string>
     <string name="trakt_watch_progress_nuvio_selected">視聴進行状況ソースをNuvio Syncに設定しました</string>
     <string name="trakt_continue_watching_window">視聴継続ウィンドウ</string>
-    <string name="trakt_continue_watching_subtitle">視聴継続に考慮するTrakt履歴</string>
+    <string name="trakt_continue_watching_subtitle">「視聴を続ける」に表示するTraktの履歴期間</string>
     <string name="trakt_unaired_next_up">未放送の次のエピソード</string>
-    <string name="trakt_unaired_next_up_subtitle">放送前に次のエピソードを表示</string>
+    <string name="trakt_unaired_next_up_subtitle">放送前のエピソードを「次のエピソード」として表示</string>
     <string name="trakt_unaired_shown">表示</string>
     <string name="trakt_unaired_hidden">非表示</string>
     <string name="trakt_unaired_now_shown">未放送の次のエピソードが表示されるようになりました</string>
     <string name="trakt_unaired_now_hidden">未放送の次のエピソードが非表示になりました</string>
+    <string name="trakt_comments_title">コメント</string>
+    <string name="trakt_comments_subtitle">メタデータページにTraktのレビューを表示</string>
+    <string name="trakt_comments_dialog_title">コメント</string>
+    <string name="trakt_comments_dialog_subtitle">アカウント接続時にメタデータページでTraktのレビューを表示するか選択してください</string>
+    <string name="trakt_comments_now_shown">メタデータページのTraktレビューが表示されるようになりました</string>
+    <string name="trakt_comments_now_hidden">メタデータページのTraktレビューが非表示になりました</string>
     <string name="trakt_cached_label">キャッシュ済み</string>
     <string name="trakt_stat_movies">映画</string>
     <string name="trakt_stat_shows">番組</string>
@@ -567,9 +631,9 @@
     <string name="trakt_retry">再試行</string>
     <string name="trakt_back">戻る</string>
     <string name="trakt_cw_window_title">視聴継続ウィンドウ</string>
-    <string name="trakt_cw_window_subtitle">視聴継続にどのくらいのTraktアクティビティを表示するか選択</string>
+    <string name="trakt_cw_window_subtitle">「視聴を続ける」にどの期間のTrakt履歴を表示するか選択</string>
     <string name="trakt_unaired_dialog_title">未放送の次のエピソード</string>
-    <string name="trakt_unaired_dialog_subtitle">視聴継続に放送前のエピソードを含めるかどうかを選択</string>
+    <string name="trakt_unaired_dialog_subtitle">視聴を続ける」に放送前のエピソードを表示するかどうかを選択</string>
     <string name="trakt_show_unaired">未放送エピソードを表示</string>
     <string name="trakt_hide_unaired">未放送エピソードを非表示</string>
     <string name="trakt_all_history">すべての履歴</string>
@@ -628,7 +692,7 @@
     <string name="profile_plugins">プラグイン</string>
     <string name="profile_choose_avatar">アバターを選択</string>
     <string name="profile_avatar_none_selected">アバターが選択されていません</string>
-    <string name="profile_avatar_focus_hint">アバターにフォーカスして名前を確認</string>
+    <string name="profile_avatar_focus_hint">アバターを選択して名前を確認</string>
     <string name="profile_avatar_category_all">すべて</string>
     <string name="profile_avatar_category_anime">アニメ</string>
     <string name="profile_avatar_category_animation">アニメーション</string>
@@ -638,7 +702,39 @@
     <string name="profile_add_new">プロフィールを追加</string>
     <string name="profile_cancel">キャンセル</string>
     <string name="profile_save">保存</string>
+    <string name="profile_pin_title">プロフィールPINロック</string>
+    <string name="profile_pin_enabled_subtitle">このプロフィールの切り替えには4桁のPINが必要です</string>
+    <string name="profile_pin_disabled_subtitle">4桁のPINを設定してこのプロフィールをロックします</string>
+    <string name="profile_pin_set">PINを設定</string>
+    <string name="profile_pin_change">PINを変更</string>
+    <string name="profile_pin_remove">PINを削除</string>
+    <string name="profile_pin_set_title">プロフィールPINを設定</string>
+    <string name="profile_pin_set_subtitle">4桁のPINを入力して確認してください</string>
+    <string name="profile_pin_enter">4桁のPINを入力</string>
+    <string name="profile_pin_confirm">4桁のPINを確認</string>
+    <string name="profile_pin_mismatch">PINが一致しません</string>
+    <string name="profile_pin_save">PINを保存</string>
+    <string name="profile_pin_unlock_title">%1$sのロックを解除</string>
+    <string name="profile_pin_unlock_subtitle">続けるには4桁のPINを入力してください</string>
+    <string name="profile_pin_verifying">確認中…</string>
+    <string name="profile_pin_unlock_action">ロック解除</string>
+    <string name="profile_pin_overlay_unlock_heading">%1$sにアクセスするにはPINを入力してください</string>
+    <string name="profile_pin_overlay_set_heading">%1$s用の4桁のPINを作成してください</string>
+    <string name="profile_pin_overlay_confirm_heading">新しいPINを確認してください</string>
+    <string name="profile_pin_overlay_unlock_support">リモコンまたはキーボードで4桁を入力してください</string>
+    <string name="profile_pin_overlay_change_verify_kicker">セキュリティ確認が必要です</string>
+    <string name="profile_pin_overlay_change_verify_heading">%1$sのPINを変更するには現在のPINを入力してください</string>
+    <string name="profile_pin_overlay_change_verify_support">新しいPINを設定する前に現在の4桁のPINを入力してください</string>
+    <string name="profile_pin_overlay_remove_verify_kicker">セキュリティ確認が必要です</string>
+    <string name="profile_pin_overlay_remove_verify_heading">%1$sのロックを解除するには現在のPINを入力してください</string>
+    <string name="profile_pin_overlay_remove_verify_support">このロックを削除するには現在の4桁のPINを入力してください</string>
+    <string name="profile_pin_overlay_set_support">このプロフィールを開く前にPINの入力が必要になります</string>
+    <string name="profile_pin_overlay_confirm_support">設定を完了するには同じ4桁を再入力してください</string>
+    <string name="profile_pin_overlay_mismatch">PINが一致しませんでした。もう一度新しいPINを入力してください</string>
+    <string name="profile_pin_overlay_forgot_hint">PINを忘れた場合はNuvioウェブサイトのアカウントページからリセットできます</string>
+    <string name="profile_pin_overlay_back_hint">戻るボタンでキャンセル</string>
 
+    
     <!-- AddonManagerScreen -->
     <string name="addon_title">アドオン</string>
     <string name="addon_readonly_notice">プライマリプロフィールのアドオンを使用しており、変更できません</string>
@@ -677,6 +773,7 @@
     <string name="catalog_order_enable">有効にする</string>
     <string name="catalog_order_disable">無効にする</string>
 
+    
     <!-- StreamScreen -->
     <string name="stream_retry">再試行</string>
     <string name="stream_no_streams">ストリームが見つかりません</string>
@@ -702,7 +799,7 @@
     <string name="parental_severity_moderate">中程度</string>
     <string name="parental_severity_mild">軽度</string>
     <string name="player_ends_at">%1$sに終了</string>
-    <string name="player_via">%1$s 経由</string>
+    <string name="player_via">%1$s</string>
     <string name="player_subtitle_delay">字幕の遅延</string>
     <string name="player_error_title">再生エラー</string>
     <string name="player_go_back">戻る</string>
@@ -711,6 +808,26 @@
     <string name="player_more_speed">再生速度</string>
     <string name="player_more_aspect_ratio">アスペクト比</string>
     <string name="player_more_open_external">外部プレーヤーで開く</string>
+
+    <!-- StreamInfoOverlay -->
+    <string name="stream_info_section_source">SOURCE</string>
+    <string name="stream_info_section_file">FILE</string>
+    <string name="stream_info_section_video">VIDEO</string>
+    <string name="stream_info_section_audio">AUDIO</string>
+    <string name="stream_info_section_subtitle">SUBTITLE</string>
+    <string name="stream_info_filename">Filename</string>
+    <string name="stream_info_size">Size</string>
+    <string name="stream_info_codec">Codec</string>
+    <string name="stream_info_resolution">Resolution</string>
+    <string name="stream_info_frame_rate">Frame Rate</string>
+    <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_channels">Channels</string>
+    <string name="stream_info_sample_rate">Sample Rate</string>
+    <string name="stream_info_language">Language</string>
+    <string name="stream_info_name">Name</string>
+    <string name="stream_info_source">Source</string>
+    <string name="stream_info_subtitle_source_addon">Addon</string>
+    <string name="stream_info_subtitle_source_embedded">Embedded</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">ソース</string>
@@ -740,8 +857,8 @@
     <string name="audio_dialog_tab_mix">ミックス</string>
     <string name="audio_mix_label">増幅（PCM）</string>
     <string name="audio_mix_value_db">%1$d dB</string>
-    <string name="audio_mix_persist_on">セッション間で維持: オン</string>
-    <string name="audio_mix_persist_off">セッション間で維持: オフ</string>
+    <string name="audio_mix_persist_on">設定を保持: オン</string>
+    <string name="audio_mix_persist_off">設定を保持: オフ</string>
     <string name="audio_mix_range">範囲: %1$d dB から %2$d dB</string>
     <string name="audio_mix_range_saved">範囲: %1$d dB から %2$d dB（保存済み）</string>
     <string name="audio_mix_unavailable">このデバイスでは増幅は利用できません</string>
@@ -749,7 +866,7 @@
     <!-- SubtitleDialog / SubtitleStyleSidePanel -->
     <string name="subtitle_dialog_title">字幕</string>
     <string name="subtitle_no_builtin">内蔵字幕はありません</string>
-    <string name="subtitle_loading_addon">アドオンから字幕を読み込み中\u2026</string>
+    <string name="subtitle_loading_addon">アドオンの字幕を読み込み中\u2026</string>
     <string name="subtitle_no_addon">アドオン字幕はありません</string>
     <string name="subtitle_text_color">文字色</string>
     <string name="subtitle_outline_color">アウトラインの色</string>
@@ -804,6 +921,7 @@
     <string name="display_mode_refresh">更新</string>
     <string name="display_mode_resolution">解像度</string>
 
+    
     <!-- SearchScreen -->
     <string name="search_keyboard_hint">検索するにはキーボードの完了を押してください</string>
     <string name="search_placeholder">映画とシリーズを検索</string>
@@ -821,6 +939,37 @@
     <string name="library_filter_list">リスト</string>
     <string name="library_filter_type">タイプ</string>
     <string name="library_filter_sort">並び替え</string>
+    <string name="library_filter_genre">ジャンル</string>
+    <string name="library_filter_year">年</string>
+    <!-- Genre names (from TMDB movie + TV) -->
+    <string name="genre_action">アクション</string>
+    <string name="genre_adventure">アドベンチャー</string>
+    <string name="genre_animation">アニメーション</string>
+    <string name="genre_comedy">コメディ</string>
+    <string name="genre_crime">犯罪</string>
+    <string name="genre_documentary">ドキュメンタリー</string>
+    <string name="genre_drama">ドラマ</string>
+    <string name="genre_family">ファミリー</string>
+    <string name="genre_fantasy">ファンタジー</string>
+    <string name="genre_history">歴史</string>
+    <string name="genre_horror">ホラー</string>
+    <string name="genre_music">音楽</string>
+    <string name="genre_mystery">ミステリー</string>
+    <string name="genre_romance">ロマンス</string>
+    <string name="genre_science_fiction">SF</string>
+    <string name="genre_tv_movie">TVムービー</string>
+    <string name="genre_thriller">スリラー</string>
+    <string name="genre_war">戦争</string>
+    <string name="genre_western">西部劇</string>
+    <!-- TV-specific genres -->
+    <string name="genre_action_adventure">アクション &amp; アドベンチャー</string>
+    <string name="genre_kids">キッズ</string>
+    <string name="genre_news">ニュース</string>
+    <string name="genre_reality">リアリティ</string>
+    <string name="genre_sci_fi_fantasy">SF &amp; ファンタジー</string>
+    <string name="genre_soap">ソープ</string>
+    <string name="genre_talk">トーク</string>
+    <string name="genre_war_politics">戦争 &amp; 政治</string>
     <string name="library_sort_trakt_order">Trakt順</string>
     <string name="library_sort_added_desc">追加日 ↓</string>
     <string name="library_sort_added_asc">追加日 ↑</string>
@@ -842,17 +991,20 @@
     <string name="library_delete_subtitle">Traktからリストとすべてのリストアイテムが削除されます</string>
     <string name="library_delete_confirm">削除</string>
     <string name="library_source_local">ローカル</string>
+    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_trakt">TRAKT</string>
+    <string name="library_syncing_library">ライブラリを同期中\u2026</string>
     <string name="library_type_all">すべて</string>
     <string name="library_type_items">アイテム</string>
     <string name="library_empty_local_title">%1$sはまだありません</string>
     <string name="library_empty_trakt_title">このリストに%1$sはありません</string>
     <string name="library_empty_local_subtitle">お気に入りを保存するとここに表示されます</string>
-    <string name="library_empty_trakt_subtitle">詳細の+を使ってウォッチリストやリストにアイテムを追加</string>
+    <string name="library_empty_trakt_subtitle">作品の詳細ページの「+」からウォッチリストやリストに追加</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">読み込み中\u2026</string>
     <string name="account_sync_description">デバイス間でライブラリ、視聴進行状況、アドオン、プラグインを同期</string>
-    <string name="account_sync_restart_note">同期はアクティブなデバイス間でリアルタイムではありません。サインイン後またはelsewhere で行われた変更を取得するには、このデバイスを再起動してください</string>
+    <string name="account_sync_restart_note">同期はリアルタイムではありません。サインイン後、または他のデバイスでの変更を反映するにはアプリを再起動してください</string>
     <string name="account_signin_qr_title">QRでサインイン</string>
     <string name="account_signin_qr_subtitle">QRコードをスキャンしてスマートフォンでメールログインを完了</string>
     <string name="account_signed_in_label">サインイン済み</string>
@@ -871,7 +1023,7 @@
     <string name="auth_qr_finishing">サインインを完了中\u2026</string>
     <string name="auth_qr_code_label">コード: %1$s</string>
     <string name="auth_qr_expires">有効期限: %1$s</string>
-    <string name="auth_qr_phone_hint">スマートフォンを使ってメール/パスワードでサインイン。TVはより速いログインのためQRのみ</string>
+    <string name="auth_qr_phone_hint">スマートフォンを使ってメール/パスワードでサインイン。TVはQRからのログインのみ対応</string>
     <string name="auth_qr_scan_instruction">QRをスキャンし、ブラウザで承認してからここに戻ってください</string>
     <string name="auth_qr_code_display">コード: %1$s</string>
     <string name="auth_qr_refresh">QRを更新</string>
@@ -935,19 +1087,22 @@
     <string name="profile_selection_primary_badge">プライマリ</string>
     <string name="profile_selection_options_title">プロフィールオプション</string>
     <string name="profile_delete_confirm_title">プロフィールを削除しますか？</string>
-    <string name="profile_delete_confirm_subtitle">このプロフィールとライブラリ、視聴履歴、アドオン設定を含むすべてのデータが完全に削除されます。この操作は元に戻せません</string>
+    <string name="profile_delete_confirm_subtitle">このプロフィールとすべてのデータ（ライブラリ・視聴履歴・アドオン設定）が完全に削除されます。この操作は取り消せません</string>
     <string name="profile_delete_btn">プロフィールを削除</string>
     <string name="profile_saving">保存中\u2026</string>
 
     <!-- CastDetailScreen -->
     <string name="cast_detail_error">エラーが発生しました</string>
     <string name="cast_detail_retry">再試行</string>
-    <string name="cast_detail_filmography">フィルモグラフィー</string>
+    <string name="cast_detail_filmography">出演作品</string>
+    <string name="cast_detail_born">生年月日: %1$s</string>
+    <string name="cast_detail_born_died">生年月日: %1$s — †%2$s</string>
+    <string name="cast_detail_age">%1$d歳</string>
 
     <!-- CatalogSeeAllScreen -->
     <string name="catalog_see_all_from">%1$s より</string>
     <string name="catalog_see_all_empty_title">利用可能なアイテムがありません</string>
-    <string name="catalog_see_all_empty_subtitle">別のカタログを試すか、後で確認してください</string>
+    <string name="catalog_see_all_empty_subtitle">別のカタログを試すか、後でもう一度ご確認ください</string>
 
     <!-- LayoutSelectionScreen -->
     <string name="layout_selection_welcome">Nuvioへようこそ</string>
@@ -960,7 +1115,6 @@
     <string name="update_download">ダウンロード</string>
     <string name="update_downloading_ellipsis">ダウンロード中…</string>
     <string name="update_unknown_sources">続けるには不明なソースからのインストールを許可してください</string>
-
     <!-- AccountScreen -->
     <string name="account_title">アカウント</string>
     <string name="account_sign_in_description">サインインしてデバイス間でライブラリ、視聴進行状況、アドオン、プラグインを同期。ライブラリ同期はTraktが接続されていない場合はNuvio Syncを使用し、視聴進行状況はTraktまたはNuvio Syncのどちらかを使用できます</string>
@@ -973,12 +1127,12 @@
     <!-- EpisodeRatingsSection -->
     <string name="ratings_loading">エピソード評価を読み込み中...</string>
     <string name="ratings_unavailable">エピソード評価は利用できません</string>
-    <string name="ratings_load_error">エピソード評価を読み込めません</string>
+    <string name="ratings_load_error">エピソード評価を読み込めませんでした</string>
     <string name="ratings_season_summary">シーズン%1$d - %2$dエピソード</string>
 
     <!-- SearchDiscoverSection -->
     <string name="discover_title">ディスカバー</string>
-    <string name="discover_load_more">もっと読み込む</string>
+    <string name="discover_load_more">さらに読み込む</string>
     <string name="discover_loading">読み込み中...</string>
     <string name="discover_filter_type">タイプ</string>
     <string name="discover_filter_catalog">カタログ</string>
@@ -1006,7 +1160,7 @@
     <string name="profile_edit_title_id">プロフィール%1$dを編集</string>
 
     <!-- PlaybackAudioSettings -->
-    <string name="audio_passthrough_info">音声パススルー（TrueHD、DTS、AC-3など）は自動です。HDMI経由で対応するAVレシーバーやサウンドバーに接続している場合、ロスレスオーディオはデコードされずにそのまま送信されます</string>
+    <string name="audio_passthrough_info">音声パススルー（TrueHD・DTS・AC-3など）は自動で有効になります。対応AVレシーバーやサウンドバーにHDMI接続している場合、ロスレスオーディオはデコードなしでそのまま出力されます</string>
     <string name="audio_dv_title">DV7 - HEVCフォールバック</string>
 
     <!-- SidebarNavigation / MainActivity -->
@@ -1019,6 +1173,9 @@
     <string name="settings_rounded_ui">丸みのあるUI</string>
     <string name="cd_expand_sidebar">サイドバーを展開</string>
 
+    <string name="update_checking">アップデートを確認中…</string>
+    <string name="update_download_complete">ダウンロード完了。インストールの準備ができました</string>
+    <string name="update_up_to_date">最新バージョンです。最新の変更内容:</string>
     <string name="update_close">閉じる</string>
     <string name="update_open_settings">設定を開く</string>
     <string name="update_install">インストール</string>

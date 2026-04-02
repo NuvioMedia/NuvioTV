@@ -63,12 +63,15 @@ import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
+import com.nuvio.tv.ui.util.localizedGenreLabel
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 internal fun DiscoverSection(
     uiState: SearchUiState,
     posterCardStyle: PosterCardStyle,
+    watchedMovieIds: Set<String> = emptySet(),
+    watchedSeriesIds: Set<String> = emptySet(),
     focusResults: Boolean,
     firstItemFocusRequester: FocusRequester,
     focusedItemIndex: Int,
@@ -100,7 +103,7 @@ internal fun DiscoverSection(
     }
     val selectedTypeLabel = localizedTypeLabel(uiState.selectedDiscoverType)
     val selectedCatalogLabel = selectedCatalog?.catalogName ?: stringResource(R.string.discover_select_catalog)
-    val selectedGenreLabel = uiState.selectedDiscoverGenre ?: stringResource(R.string.discover_genre_default)
+    val selectedGenreLabel = uiState.selectedDiscoverGenre?.let { localizedGenreLabel(it) } ?: stringResource(R.string.discover_genre_default)
 
     Column(
         modifier = modifier
@@ -161,7 +164,7 @@ internal fun DiscoverSection(
                 expanded = expandedPicker == "genre",
                 options = buildList {
                     add(DiscoverOption(stringResource(R.string.discover_genre_default), "__default__"))
-                    addAll(genres.map { DiscoverOption(it, it) })
+                    addAll(genres.map { DiscoverOption(localizedGenreLabel(it), it) })
                 },
                 onExpandedChange = { shouldExpand ->
                     expandedPicker = if (shouldExpand) "genre" else null
@@ -181,7 +184,7 @@ internal fun DiscoverSection(
                         .takeIf { it.isNotEmpty() }
                         ?.let(::add)
                 }
-                uiState.selectedDiscoverGenre?.let(::add)
+                uiState.selectedDiscoverGenre?.let { add(localizedGenreLabel(it)) }
             }
             Text(
                 text = metadataSegments.joinToString(" • "),
@@ -206,6 +209,8 @@ internal fun DiscoverSection(
                 DiscoverGrid(
                     items = uiState.discoverResults,
                     posterCardStyle = posterCardStyle,
+                    watchedMovieIds = watchedMovieIds,
+                    watchedSeriesIds = watchedSeriesIds,
                     focusResults = focusResults,
                     firstItemFocusRequester = firstItemFocusRequester,
                     focusedItemIndex = focusedItemIndex,
@@ -316,7 +321,7 @@ private fun DiscoverDropdownPicker(
                     )
                     Icon(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (expanded) "Collapse $title" else "Expand $title",
+                        contentDescription = if (expanded) stringResource(R.string.cd_collapse, title) else stringResource(R.string.cd_expand, title),
                         modifier = Modifier.size(20.dp),
                         tint = if (isFocused) NuvioColors.FocusRing else NuvioColors.TextSecondary
                     )
@@ -396,6 +401,8 @@ private data class DiscoverOption(
 internal fun DiscoverGrid(
     items: List<MetaPreview>,
     posterCardStyle: PosterCardStyle,
+    watchedMovieIds: Set<String> = emptySet(),
+    watchedSeriesIds: Set<String> = emptySet(),
     focusResults: Boolean,
     firstItemFocusRequester: FocusRequester,
     focusedItemIndex: Int,
@@ -494,6 +501,10 @@ internal fun DiscoverGrid(
                 item = item,
                 onClick = { onItemClick(index, item) },
                 posterCardStyle = adaptiveStyle,
+                isWatched = run {
+                    val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
+                    if (isSeries) item.id in watchedSeriesIds else item.id in watchedMovieIds
+                },
                 modifier = Modifier.width(adaptiveStyle.width),
                 focusRequester = focusReq,
                 onFocused = { onItemFocused(index) }

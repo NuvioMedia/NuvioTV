@@ -224,6 +224,9 @@ fun ContentCard(
         var logoLoadFailed by remember(item.logo) { mutableStateOf(false) }
         val showExpandedLogo = !item.logo.isNullOrBlank() && !logoLoadFailed
 
+        val bgCardColor = NuvioColors.BackgroundCard
+        val backgroundPainter = remember(bgCardColor) { androidx.compose.ui.graphics.painter.ColorPainter(bgCardColor) }
+
         Card(
             onClick = {
                 if (longPressTriggered) {
@@ -287,8 +290,8 @@ fun ContentCard(
                 ),
             shape = CardDefaults.shape(shape = cardShape),
             colors = CardDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                focusedContainerColor = NuvioColors.BackgroundCard
+                containerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent
             ),
             border = CardDefaults.border(
                 focusedBorder = Border(
@@ -309,6 +312,9 @@ fun ContentCard(
                         model = imageModel,
                         contentDescription = item.name,
                         modifier = Modifier.fillMaxSize(),
+                        placeholder = backgroundPainter,
+                        error = backgroundPainter,
+                        fallback = backgroundPainter,
                         contentScale = ContentScale.Crop
                     )
                 } else {

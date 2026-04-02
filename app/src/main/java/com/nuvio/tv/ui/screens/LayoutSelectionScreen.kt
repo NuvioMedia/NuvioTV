@@ -72,7 +72,6 @@ fun LayoutSelectionScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioColors.Background)
     ) {
         Column(
             modifier = Modifier
@@ -248,7 +247,7 @@ private fun LayoutOptionCard(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.cd_selected),
                     tint = NuvioColors.FocusRing,
                     modifier = Modifier
                         .align(Alignment.TopEnd)

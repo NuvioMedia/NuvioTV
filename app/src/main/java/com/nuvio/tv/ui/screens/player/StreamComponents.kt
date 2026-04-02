@@ -238,6 +238,7 @@ internal fun AddonFilterChips(
     }
 
     var chipRowHasFocus by remember { mutableStateOf(false) }
+    val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
 
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -246,6 +247,14 @@ internal fun AddonFilterChips(
             .onFocusChanged { chipRowHasFocus = it.hasFocus }
             .onKeyEvent { event ->
                 if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) return@onKeyEvent false
+
+                // Throttle rapid key repeats (long-press)
+                if (event.nativeKeyEvent.repeatCount > 0) {
+                    val now = android.os.SystemClock.uptimeMillis()
+                    if (now - lastKeyRepeatDispatchRef.get() < 112L) return@onKeyEvent true
+                    lastKeyRepeatDispatchRef.set(now)
+                }
+
                 val allOptions = listOf<String?>(null) + orderedNames
                 val currentIdx = allOptions.indexOf(selectedAddon)
                 when (event.key) {

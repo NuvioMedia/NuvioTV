@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import com.nuvio.tv.domain.model.Subtitle
@@ -41,6 +42,42 @@ internal fun PlayerRuntimeController.showSeekOverlayTemporarily() {
     }
 }
 
+internal fun PlayerRuntimeController.selectedAudioRequiresPcmForSpeed(player: Player): Boolean {
+    player.currentTracks.groups.forEach { trackGroup ->
+        if (trackGroup.type != C.TRACK_TYPE_AUDIO) return@forEach
+        for (i in 0 until trackGroup.length) {
+            if (!trackGroup.isTrackSelected(i)) continue
+            val format = trackGroup.getTrackFormat(i)
+            val mimeType = format.sampleMimeType
+            if (mimeType != null && (
+                mimeType == MimeTypes.AUDIO_E_AC3 ||
+                mimeType == MimeTypes.AUDIO_E_AC3_JOC ||
+                mimeType == MimeTypes.AUDIO_AC3 ||
+                mimeType == MimeTypes.AUDIO_AC4 ||
+                mimeType == MimeTypes.AUDIO_TRUEHD ||
+                mimeType == MimeTypes.AUDIO_DTS ||
+                mimeType == MimeTypes.AUDIO_DTS_HD ||
+                mimeType == MimeTypes.AUDIO_DTS_EXPRESS ||
+                mimeType.startsWith("audio/vnd.dts")
+            )) {
+                return true
+            }
+            val codecs = format.codecs
+            if (codecs != null) {
+                if (codecs.contains("ac-3", ignoreCase = true) ||
+                    codecs.contains("ac-4", ignoreCase = true) ||
+                    codecs.contains("ec-3", ignoreCase = true) ||
+                    codecs.contains("dts", ignoreCase = true) ||
+                    codecs.contains("truehd", ignoreCase = true) ||
+                    codecs.contains("dtshd", ignoreCase = true)) {
+                    return true
+                }
+            }
+        }
+    }
+    return false
+}
+
 internal fun PlayerRuntimeController.selectAudioTrack(trackIndex: Int) {
     _exoPlayer?.let { player ->
         val tracks = player.currentTracks
@@ -55,6 +92,10 @@ internal fun PlayerRuntimeController.selectAudioTrack(trackIndex: Int) {
                             .buildUpon()
                             .setOverrideForType(override)
                             .build()
+                        // Nudge the player to avoid infinite buffering after audio track switch
+                        // where the new track requires a different segment.
+                        val pos = player.currentPosition
+                        if (pos > 0) player.seekTo((pos - 1).coerceAtLeast(0))
                         return
                     }
                     currentAudioIndex++
@@ -92,7 +133,11 @@ internal fun PlayerRuntimeController.applyAddonSubtitleOverride(addonTrackId: St
                     .setOverrideForType(override)
                     .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
                     .build()
-                Log.d(PlayerRuntimeController.TAG, "applyAddonSubtitleOverride: found id=${format.id} at group/track $i")
+                Log.d(
+                    PlayerRuntimeController.TAG,
+                    "applyAddonSubtitleOverride: found id=${format.id} at group/track $i " +
+                        "mime=${format.sampleMimeType} codecs=${format.codecs} label=${format.label} lang=${format.language}"
+                )
                 return true
             }
         }
@@ -232,9 +277,15 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         if (currentlySelected?.id == subtitle.id && currentlySelected.url == subtitle.url) {
             return@let
         }
-        Log.d(PlayerRuntimeController.TAG, "Selecting ADDON subtitle lang=${subtitle.lang} id=${subtitle.id}")
-
         val normalizedLang = PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)
+        val inferredMime = PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url)
+        Log.d(
+            PlayerRuntimeController.TAG,
+            "Selecting ADDON subtitle addon=${subtitle.addonName} lang=${subtitle.lang} normalizedLang=$normalizedLang " +
+                "id=${subtitle.id} inferredMime=$inferredMime " +
+                "url=${subtitle.url}"
+        )
+
         val addonTrackId = buildAddonSubtitleTrackId(subtitle)
         val preAttachedByStartup = attachedAddonSubtitleKeys.contains(addonSubtitleKey(subtitle))
         val appliedWithoutReload = applyAddonSubtitleOverride(addonTrackId) ||
@@ -243,7 +294,8 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         if (appliedWithoutReload) {
             Log.d(
                 PlayerRuntimeController.TAG,
-                "Switching ADDON subtitle without media reload id=${subtitle.id}"
+                "Switching ADDON subtitle without media reload addon=${subtitle.addonName} id=${subtitle.id} " +
+                    "trackId=$addonTrackId"
             )
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
@@ -265,6 +317,11 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         val subtitleConfigurations = (_uiState.value.addonSubtitles + subtitle)
             .distinctBy { "${it.id}|${it.url}" }
             .map(::toSubtitleConfiguration)
+        Log.d(
+            PlayerRuntimeController.TAG,
+            "Selecting ADDON subtitle with media refresh addon=${subtitle.addonName} id=${subtitle.id} " +
+                "attachedConfigs=${subtitleConfigurations.size}"
+        )
         attachedAddonSubtitleKeys = (_uiState.value.addonSubtitles + subtitle)
             .distinctBy { addonSubtitleKey(it) }
             .map(::addonSubtitleKey)
@@ -301,6 +358,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         }
     }
 }
+
 
 internal fun PlayerRuntimeController.rememberAddonSubtitleSelection(subtitle: Subtitle) {
     persistedTrackPreference = null

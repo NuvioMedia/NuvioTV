@@ -63,7 +63,7 @@ class CatalogRepositoryImpl @Inject constructor(
 
         when (val result = safeApiCall { api.getCatalog(url) }) {
             is NetworkResult.Success -> {
-                val items = result.data.metas.map { it.toDomain() }
+                val items = result.data.metas.map { it.toDomain() }.distinctBy { it.id }
                 Log.d(
                     TAG,
                     "Catalog fetch success addonId=$addonId type=$type catalogId=$catalogId items=${items.size}"
@@ -158,6 +158,6 @@ class CatalogRepositoryImpl @Inject constructor(
             .sortedBy { it.key }
             .joinToString("&") { "${it.key}=${it.value}" }
         val normalizedBaseUrl = addonBaseUrl.trim().trimEnd('/').lowercase()
-        return "${normalizedBaseUrl}_${addonId}_${type}_${catalogId}_${skip}_${skipStep}_${normalizedArgs}"
+        return "${normalizedBaseUrl}_${addonId}_${type}_${catalogId}_${skip}_${normalizedArgs}"
     }
 }

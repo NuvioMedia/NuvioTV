@@ -57,12 +57,6 @@ class PlayerRuntimeController(
         internal const val TAG = "PlayerViewModel"
         internal const val TRACK_FRAME_RATE_GRACE_MS = 1500L
         internal const val ADDON_SUBTITLE_TRACK_ID_PREFIX = "nuvio-addon-sub:"
-        internal val PORTUGUESE_BRAZILIAN_TAGS = listOf(
-            "pt-br", "pt_br", "pob", "brazilian", "brazil", "brasil"
-        )
-        internal val PORTUGUESE_EUROPEAN_TAGS = listOf(
-            "pt-pt", "pt_pt", "iberian", "european", "portugal", "europeu"
-        )
     }
 
     internal data class PendingAudioSelection(
@@ -167,6 +161,8 @@ class PlayerRuntimeController(
     internal var _exoPlayer: ExoPlayer? = null
     val exoPlayer: ExoPlayer?
         get() = _exoPlayer
+    internal var playbackSpeedAwareAudioOutputProvider: PlaybackSpeedAwareAudioOutputProvider? = null
+    internal var isReleasingPlayer: Boolean = false
 
     internal var progressJob: Job? = null
     internal var hideControlsJob: Job? = null
@@ -238,6 +234,8 @@ class PlayerRuntimeController(
     internal var pendingPreviewSeekPosition: Long? = null
     internal var pendingResumeProgress: WatchProgress? = null
     internal var hasRetriedCurrentStreamAfter416: Boolean = false
+    internal var errorRetryCount: Int = 0
+    internal var errorRetryJob: Job? = null
     internal var currentScrobbleItem: TraktScrobbleItem? = null
     internal var currentTraktEpisodeMapping: EpisodeMappingEntry? = null
     internal var currentTraktEpisodeMappingKey: String? = null

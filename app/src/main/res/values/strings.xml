@@ -4,6 +4,44 @@
     <string name="type_series">Series</string>
     <string name="type_unknown">Unknown</string>
 
+    <!-- WebConfigServers -->
+    <string name="web_manage_addons_title">Manage Addons</string>
+    <string name="web_manage_addons_subtitle">Manage addons and home catalogs</string>
+    <string name="web_add_addon_url">Add addon by URL</string>
+    <string name="web_placeholder_url">https://example.com/manifest.json</string>
+    <string name="web_btn_add">Add</string>
+    <string name="web_installed_addons">Installed Addons</string>
+    <string name="web_no_addons">No addons installed</string>
+    <string name="web_home_catalogs">Home Catalogs</string>
+    <string name="web_no_catalogs">No home catalogs available</string>
+    <string name="web_btn_save">Save Changes</string>
+    <string name="web_connection_lost">Connection to TV lost</string>
+    <string name="web_btn_remove">Remove</string>
+    <string name="web_badge_new">New</string>
+    <string name="web_badge_disabled">Disabled</string>
+    <string name="web_btn_enable">Enable</string>
+    <string name="web_btn_disable">Disable</string>
+    <string name="web_error_addon_exists">This addon is already in the list</string>
+    <string name="web_status_waiting_tv">Waiting for TV</string>
+    <string name="web_status_msg_waiting_tv">Please confirm the changes on your TV to apply them.</string>
+    <string name="web_status_changes_applied">Changes Applied</string>
+    <string name="web_status_msg_addon_updated">Your addon configuration has been updated on the TV.</string>
+    <string name="web_status_msg_repo_updated">Your repository configuration has been updated on the TV.</string>
+    <string name="web_status_changes_rejected">Changes Rejected</string>
+    <string name="web_status_msg_changes_rejected">The changes were declined on the TV. Your list has been reverted.</string>
+    <string name="web_status_error">Something Went Wrong</string>
+    <string name="web_error_failed_save">Failed to save. Check your connection to the TV.</string>
+    <string name="web_btn_dismiss">Dismiss</string>
+    <string name="web_status_timeout">Timed Out</string>
+    <string name="web_status_msg_timeout">No response from the TV. Please try again.</string>
+    <string name="web_status_msg_connection_lost">The TV server is no longer reachable. The changes may have been applied.</string>
+    <string name="web_manage_repos_title">Manage Repositories</string>
+    <string name="web_manage_repos_subtitle">Manage your repositories</string>
+    <string name="web_add_repo_url">Add repository by URL</string>
+    <string name="web_installed">Installed</string>
+    <string name="web_no_repos">No repositories installed</string>
+    <string name="web_error_repo_exists">This repository is already in the list</string>
+
     <!-- HomeScreen -->
     <string name="home_no_addons">No addons installed. Add one to get started.</string>
     <string name="home_no_catalog_addons">No catalog addons installed. Install a catalog addon to see content.</string>
@@ -50,6 +88,8 @@
     <string name="continue_watching">Continue Watching</string>
     <string name="cw_upcoming">Upcoming</string>
     <string name="cw_next_up">Next Up</string>
+    <string name="cw_new_episode">New Episode</string>
+    <string name="cw_new_season">New Season</string>
     <string name="cw_resume">Resume</string>
     <string name="cw_percent_watched">%1$d%% watched</string>
     <string name="cw_hours_min_left">%1$dh %2$dm left</string>
@@ -122,8 +162,29 @@
     <string name="cast_role_writer">Writer</string>
     <string name="detail_tab_ratings">Ratings</string>
     <string name="detail_tab_more_like_this">More like this</string>
+    <string name="detail_more_like_this_powered_by_tmdb">Powered by TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">Powered by Trakt</string>
+    <string name="detail_comments_title">Comments</string>
+    <string name="detail_comments_subtitle">Reviews from Trakt</string>
     <string name="detail_section_network">Network</string>
     <string name="detail_section_production">Production</string>
+    <string name="detail_comments_empty">No Trakt reviews available yet.</string>
+    <string name="detail_comments_error">Couldn\'t load Trakt reviews right now.</string>
+    <string name="detail_comments_spoiler_hidden">Spoiler review. Press OK to reveal.</string>
+    <string name="detail_comments_reveal_spoiler">Reveal spoiler</string>
+    <string name="detail_comments_reveal_spoiler_hint">Press OK to reveal spoiler.</string>
+    <string name="detail_comments_back_hint">Click back to close</string>
+    <string name="detail_comments_badge_review">Review</string>
+    <string name="detail_comments_badge_spoiler">Spoiler</string>
+    <string name="detail_comments_badge_rating">%1$d/10</string>
+    <string name="detail_comments_likes">%1$d likes</string>
+    <string name="tmdb_entity_kind_company">Production Company</string>
+    <string name="tmdb_entity_kind_network">Network</string>
+    <string name="tmdb_entity_rail_popular">Popular</string>
+    <string name="tmdb_entity_rail_top_rated">Top Rated</string>
+    <string name="tmdb_entity_rail_recent">Recent</string>
+    <string name="tmdb_entity_empty_title">No titles found</string>
+    <string name="tmdb_entity_empty_subtitle">TMDB does not currently have browseable titles for this selection.</string>
     <string name="episodes_unavailable">Unavailable</string>
     <string name="series_status_ended">Ended</string>
     <string name="series_status_continuing">Ongoing</string>
@@ -426,6 +487,8 @@
     <string name="layout_modern_sidebar_sub">Enable floating sidebar navigation.</string>
     <string name="layout_modern_sidebar_blur">Modern Sidebar Blur</string>
     <string name="layout_modern_sidebar_blur_sub">Toggle blur effect for modern sidebar surfaces.</string>
+    <string name="layout_fullscreen_hero_backdrop">Fullscreen Hero Backdrop</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">Expand the hero backdrop to fill the entire screen.</string>
     <string name="layout_show_hero">Show Hero Section</string>
     <string name="layout_show_hero_sub">Display hero carousel at top of home.</string>
     <string name="layout_show_discover">Show Discover in Search</string>
@@ -442,10 +505,14 @@
     <string name="layout_section_detail_desc">Settings for the detail and episode screens.</string>
     <string name="layout_blur_unwatched">Blur Unwatched Episodes</string>
     <string name="layout_blur_unwatched_sub">Blur episode thumbnails until watched to avoid spoilers.</string>
+    <string name="layout_blur_cw_next_up">Blur Unwatched in Continue Watching</string>
+    <string name="layout_blur_cw_next_up_sub">Blur next episode thumbnails in Continue Watching to avoid spoilers.</string>
     <string name="layout_trailer_button">Show Trailer Button</string>
     <string name="layout_trailer_button_sub">Show trailer button on detail page (only when trailer is available).</string>
     <string name="layout_prefer_external_meta">Prefer meta from external addon</string>
     <string name="layout_prefer_external_meta_sub">Use metadata from external addon instead of catalog addon.</string>
+    <string name="layout_show_full_release_date">Show full release date</string>
+    <string name="layout_show_full_release_date_sub">For movies, show full release date instead of year only.</string>
     <string name="layout_section_focused">Focused Poster</string>
     <string name="layout_section_focused_desc">Advanced behavior for focused poster cards.</string>
     <string name="layout_expand_poster">Expand Focused Poster to Backdrop</string>
@@ -529,6 +596,10 @@
     <string name="tmdb_subtitle">Choose which metadata fields should come from TMDB</string>
     <string name="tmdb_enable_title">Enable TMDB Enrichment</string>
     <string name="tmdb_enable_subtitle">Use TMDB as a metadata source to enhance addon data</string>
+    <string name="tmdb_modern_home_title">Enable on Modern Home</string>
+    <string name="tmdb_modern_home_subtitle">Also apply TMDB enrichment to Modern Home hero and focused cards</string>
+    <string name="tmdb_enrich_continue_watching_title">Enrich Continue Watching</string>
+    <string name="tmdb_enrich_continue_watching_subtitle">Apply TMDB enrichment to Continue Watching items</string>
     <string name="tmdb_language_title">Language</string>
     <string name="tmdb_language_subtitle">TMDB metadata language for title, logo, and enabled fields</string>
     <string name="tmdb_artwork_title">Artwork</string>
@@ -536,7 +607,9 @@
     <string name="tmdb_basic_info_title">Basic Info</string>
     <string name="tmdb_basic_info_subtitle">Description, genres, and rating from TMDB</string>
     <string name="tmdb_details_title">Details</string>
-    <string name="tmdb_details_subtitle">Runtime, release date, country, and language from TMDB</string>
+    <string name="tmdb_details_subtitle">Runtime, status, country, and language from TMDB</string>
+    <string name="tmdb_release_dates_title">Release Dates</string>
+    <string name="tmdb_release_dates_subtitle">Release and air dates from TMDB</string>
     <string name="tmdb_credits_title">Credits</string>
     <string name="tmdb_credits_subtitle">Cast with photos, director, and writer from TMDB</string>
     <string name="tmdb_productions_title">Productions</string>
@@ -571,6 +644,8 @@
     <string name="trakt_watch_progress_dialog_subtitle">Choose whether resume and continue watching should use Trakt or Nuvio Sync while Trakt scrobbling stays active.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_setting_on">On</string>
+    <string name="trakt_setting_off">Off</string>
     <string name="trakt_watch_progress_trakt_selected">Watch progress source set to Trakt</string>
     <string name="trakt_watch_progress_nuvio_selected">Watch progress source set to Nuvio Sync</string>
     <string name="trakt_continue_watching_window">Continue Watching Window</string>
@@ -581,6 +656,12 @@
     <string name="trakt_unaired_hidden">Hidden</string>
     <string name="trakt_unaired_now_shown">Unaired Next Up episodes are now shown</string>
     <string name="trakt_unaired_now_hidden">Unaired Next Up episodes are now hidden</string>
+    <string name="trakt_comments_title">Comments</string>
+    <string name="trakt_comments_subtitle">Show Trakt reviews on metadata pages</string>
+    <string name="trakt_comments_dialog_title">Comments</string>
+    <string name="trakt_comments_dialog_subtitle">Choose whether metadata pages should show Trakt reviews when your account is connected.</string>
+    <string name="trakt_comments_now_shown">Trakt reviews on metadata pages are now shown</string>
+    <string name="trakt_comments_now_hidden">Trakt reviews on metadata pages are now hidden</string>
     <string name="trakt_cached_label">Cached</string>
     <string name="trakt_stat_movies">Movies</string>
     <string name="trakt_stat_shows">Shows</string>
@@ -639,6 +720,7 @@
     <string name="profile_primary_label">Primary</string>
     <string name="profile_shares_primary">Shares primary\'s %1$s</string>
     <string name="profile_edit_label">Edit</string>
+    <string name="profile_edit_header">Edit Profile</string>
     <string name="profile_add">Add Profile</string>
     <string name="profile_create_title">Create Profile</string>
     <string name="profile_edit_title">Edit Profile %1$s</string>
@@ -664,6 +746,37 @@
     <string name="profile_add_new">Add Profile</string>
     <string name="profile_cancel">Cancel</string>
     <string name="profile_save">Save</string>
+    <string name="profile_pin_title">Profile PIN lock</string>
+    <string name="profile_pin_enabled_subtitle">This profile requires a 4-digit PIN before switching.</string>
+    <string name="profile_pin_disabled_subtitle">Set a 4-digit PIN to lock this profile.</string>
+    <string name="profile_pin_set">Set PIN</string>
+    <string name="profile_pin_change">Change PIN</string>
+    <string name="profile_pin_remove">Remove PIN</string>
+    <string name="profile_pin_set_title">Set profile PIN</string>
+    <string name="profile_pin_set_subtitle">Enter a 4-digit PIN and confirm it.</string>
+    <string name="profile_pin_enter">Enter 4-digit PIN</string>
+    <string name="profile_pin_confirm">Confirm 4-digit PIN</string>
+    <string name="profile_pin_mismatch">PIN values do not match.</string>
+    <string name="profile_pin_save">Save PIN</string>
+    <string name="profile_pin_unlock_title">Unlock %1$s</string>
+    <string name="profile_pin_unlock_subtitle">Enter the 4-digit PIN to continue.</string>
+    <string name="profile_pin_verifying">Verifying…</string>
+    <string name="profile_pin_unlock_action">Unlock</string>
+    <string name="profile_pin_overlay_unlock_heading">Enter your PIN to access %1$s.</string>
+    <string name="profile_pin_overlay_set_heading">Create a 4-digit PIN for %1$s.</string>
+    <string name="profile_pin_overlay_confirm_heading">Confirm your new PIN.</string>
+    <string name="profile_pin_overlay_unlock_support">Use your remote or keyboard to enter 4 digits.</string>
+    <string name="profile_pin_overlay_change_verify_kicker">Security check required.</string>
+    <string name="profile_pin_overlay_change_verify_heading">Enter current PIN to change PIN for %1$s.</string>
+    <string name="profile_pin_overlay_change_verify_support">Enter the current 4-digit PIN before setting a new one.</string>
+    <string name="profile_pin_overlay_remove_verify_kicker">Security check required.</string>
+    <string name="profile_pin_overlay_remove_verify_heading">Enter current PIN to remove lock for %1$s.</string>
+    <string name="profile_pin_overlay_remove_verify_support">Enter the current 4-digit PIN to remove this lock.</string>
+    <string name="profile_pin_overlay_set_support">This PIN will be required before opening this profile.</string>
+    <string name="profile_pin_overlay_confirm_support">Re-enter the same 4 digits to finish setup.</string>
+    <string name="profile_pin_overlay_mismatch">PINs did not match. Enter a new PIN again.</string>
+    <string name="profile_pin_overlay_forgot_hint">Forgot PIN? Reset it from your Nuvio account on nuvio website.</string>
+    <string name="profile_pin_overlay_back_hint">Press back to cancel</string>
 
 
     <!-- AddonManagerScreen -->
@@ -719,6 +832,17 @@
 
     <!-- PlayerScreen -->
     <string name="player_no_external_player">No external player found</string>
+    <string name="player_loading_preparing">Preparing stream…</string>
+    <string name="player_loading_detecting_format">Detecting stream format…</string>
+    <string name="player_loading_subtitles">Fetching subtitles…</string>
+    <string name="player_loading_subtitles_from">Fetching subtitles from %1$d addons…</string>
+    <string name="player_loading_subtitles_progress">Fetching subtitles… (%1$d / %2$d)</string>
+    <string name="player_loading_subtitles_addon">Subtitles: %1$s (%2$d / %3$d)</string>
+    <string name="player_loading_building">Building player…</string>
+    <string name="player_loading_starting">Starting stream…</string>
+    <string name="player_loading_buffering">Buffering…</string>
+    <string name="playback_show_loading_status">Show loading status</string>
+    <string name="playback_show_loading_status_sub">Display step-by-step progress while the player is initializing.</string>
 
     <!-- ParentalGuideOverlay -->
     <string name="parental_nudity">Nudity</string>
@@ -739,6 +863,26 @@
     <string name="player_more_speed">Playback Speed</string>
     <string name="player_more_aspect_ratio">Aspect Ratio</string>
     <string name="player_more_open_external">Open in External Player</string>
+
+    <!-- StreamInfoOverlay -->
+    <string name="stream_info_section_source">SOURCE</string>
+    <string name="stream_info_section_file">FILE</string>
+    <string name="stream_info_section_video">VIDEO</string>
+    <string name="stream_info_section_audio">AUDIO</string>
+    <string name="stream_info_section_subtitle">SUBTITLE</string>
+    <string name="stream_info_filename">Filename</string>
+    <string name="stream_info_size">Size</string>
+    <string name="stream_info_codec">Codec</string>
+    <string name="stream_info_resolution">Resolution</string>
+    <string name="stream_info_frame_rate">Frame Rate</string>
+    <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_channels">Channels</string>
+    <string name="stream_info_sample_rate">Sample Rate</string>
+    <string name="stream_info_language">Language</string>
+    <string name="stream_info_name">Name</string>
+    <string name="stream_info_source">Source</string>
+    <string name="stream_info_subtitle_source_addon">Addon</string>
+    <string name="stream_info_subtitle_source_embedded">Embedded</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Sources</string>
@@ -761,6 +905,9 @@
     <string name="player_aspect_fit_width">Fit Width</string>
     <string name="player_aspect_fit_height">Fit Height</string>
     <string name="player_aspect_crop">Crop</string>
+    <string name="player_aspect_tunneling_unavailable">Unavailable during tunneled playback</string>
+    <string name="player_aspect_mode_slight_zoom">Slight Zoom</string>
+    <string name="player_aspect_mode_cinema_zoom">Cinema Zoom</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
@@ -788,6 +935,7 @@
     <string name="subtitle_tab_style">Style</string>
     <string name="subtitle_tab_delay">Delay</string>
     <string name="subtitle_none">None</string>
+    <string name="subtitle_built_in">Built in</string>
     <string name="subtitle_all">All</string>
     <string name="subtitle_section_core">Core</string>
     <string name="subtitle_section_advanced">Advanced</string>
@@ -850,6 +998,37 @@
     <string name="library_filter_list">List</string>
     <string name="library_filter_type">Type</string>
     <string name="library_filter_sort">Sort</string>
+    <string name="library_filter_genre">Genre</string>
+    <string name="library_filter_year">Year</string>
+    <!-- Genre names (from TMDB movie + TV) -->
+    <string name="genre_action">Action</string>
+    <string name="genre_adventure">Adventure</string>
+    <string name="genre_animation">Animation</string>
+    <string name="genre_comedy">Comedy</string>
+    <string name="genre_crime">Crime</string>
+    <string name="genre_documentary">Documentary</string>
+    <string name="genre_drama">Drama</string>
+    <string name="genre_family">Family</string>
+    <string name="genre_fantasy">Fantasy</string>
+    <string name="genre_history">History</string>
+    <string name="genre_horror">Horror</string>
+    <string name="genre_music">Music</string>
+    <string name="genre_mystery">Mystery</string>
+    <string name="genre_romance">Romance</string>
+    <string name="genre_science_fiction">Science Fiction</string>
+    <string name="genre_tv_movie">TV Movie</string>
+    <string name="genre_thriller">Thriller</string>
+    <string name="genre_war">War</string>
+    <string name="genre_western">Western</string>
+    <!-- TV-specific genres -->
+    <string name="genre_action_adventure">Action &amp; Adventure</string>
+    <string name="genre_kids">Kids</string>
+    <string name="genre_news">News</string>
+    <string name="genre_reality">Reality</string>
+    <string name="genre_sci_fi_fantasy">Sci-Fi &amp; Fantasy</string>
+    <string name="genre_soap">Soap</string>
+    <string name="genre_talk">Talk</string>
+    <string name="genre_war_politics">War &amp; Politics</string>
     <string name="library_sort_trakt_order">Trakt Order</string>
     <string name="library_sort_added_desc">Added ↓</string>
     <string name="library_sort_added_asc">Added ↑</string>
@@ -871,6 +1050,9 @@
     <string name="library_delete_subtitle">This removes the list and all list items from Trakt.</string>
     <string name="library_delete_confirm">Delete</string>
     <string name="library_source_local">LOCAL</string>
+    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_trakt">TRAKT</string>
+    <string name="library_syncing_library">Syncing library\u2026</string>
     <string name="library_type_all">All</string>
     <string name="library_type_items">items</string>
     <string name="library_empty_local_title">No %1$s yet</string>
@@ -1059,4 +1241,126 @@
     <string name="update_ignore">Ignore</string>
     <string name="watchlist_added">Added to watchlist</string>
     <string name="watchlist_removed">Removed from watchlist</string>
+
+    <!-- Profile PIN errors -->
+    <string name="profile_pin_save_error">Could not save PIN. Try again.</string>
+    <string name="profile_pin_locked">Profile is locked. Try again in %1$ds.</string>
+    <string name="profile_pin_invalid">Invalid PIN. Try again.</string>
+    <string name="profile_pin_verify_error">Could not verify PIN. Try again.</string>
+    <string name="profile_pin_incorrect">Current PIN is incorrect.</string>
+
+    <!-- Account Screen -->
+    <string name="account_signin_create_title">Sign In / Create Account</string>
+    <string name="account_signin_create_desc">Use email and password to create or sign into your account.</string>
+    <string name="account_generate_sync_desc">Create a code on this device so other devices can link to it.</string>
+    <string name="account_enter_sync_desc">Link this device to another device using a sync code.</string>
+    <string name="account_signed_in_as">Signed in as</string>
+    <string name="account_generate_sync_signed_in_desc">Create a code so other devices can sync with this account.</string>
+    <string name="account_unknown_device">Unknown Device</string>
+
+    <!-- Sync screens -->
+    <string name="sync_claim_linking">Linking\u2026</string>
+    <string name="sync_generate_generating">Generating\u2026</string>
+    <string name="sync_generate_code_btn">Generate Code</string>
+
+    <!-- Search -->
+    <string name="search_no_results_title">No Results</string>
+    <string name="search_no_results_subtitle">Try searching with different keywords</string>
+    <string name="discover_disabled_title">Discover is disabled</string>
+    <string name="discover_disabled_subtitle">Enable Search Discover in settings</string>
+
+    <!-- Library -->
+    <string name="library_list_create_dialog_title">Create List</string>
+    <string name="library_list_edit_dialog_title">Edit List</string>
+    <string name="library_sync_btn">Sync</string>
+    <string name="library_syncing_btn">Syncing\u2026</string>
+
+    <!-- Error messages (shared) -->
+    <string name="error_network_required">Connect to Wi-Fi or Ethernet to use this feature</string>
+    <string name="error_server_ports_unavailable">Could not start server. All ports in use.</string>
+
+    <!-- Plugin errors -->
+    <string name="plugin_error_invalid_url">Please enter a valid URL</string>
+    <string name="plugin_error_add_repo">Failed to add repository: %1$s</string>
+    <string name="plugin_error_refresh">Failed to refresh: %1$s</string>
+    <string name="plugin_error_test">Test failed: %1$s</string>
+    <string name="plugin_test_no_results">No results found</string>
+    <string name="plugin_test_found_streams">Found %1$d streams</string>
+
+    <!-- Trakt errors -->
+    <string name="trakt_error_code_expired">Device code expired. Start again.</string>
+    <string name="trakt_error_code_used">Device code already used. Start again.</string>
+    <string name="trakt_error_denied">Authorization denied on Trakt.</string>
+
+    <!-- Account errors -->
+    <string name="account_error_signin_required">Sign in with an account first.</string>
+
+    <!-- Search errors -->
+    <string name="search_error_no_catalogs">No searchable catalogs found in installed addons</string>
+
+    <!-- Home errors -->
+    <string name="home_error_no_addons">No addons installed</string>
+    <string name="home_error_no_catalog_addons">No catalog addons installed</string>
+
+    <!-- Player errors -->
+    <string name="player_error_no_stream_url">No stream URL provided</string>
+
+    <!-- Playback subtitle settings -->
+    <string name="sub_mode_overlay_canvas_sub">HDR support with canvas rendering. May block UI thread.</string>
+    <string name="subtitle_style_weight">Weight</string>
+
+    <!-- Plugin screen -->
+    <string name="plugin_version">Version %1$s</string>
+
+    <!-- Stream screen -->
+    <string name="stream_episode_label">S%1$d E%2$d</string>
+
+    <!-- Episode ratings -->
+    <string name="ratings_season_label">S%1$d</string>
+    <string name="ratings_episode_label">E%1$d</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_play">Play</string>
+    <string name="cd_pause">Pause</string>
+    <string name="cd_subtitles">Subtitles</string>
+    <string name="cd_audio_tracks">Audio tracks</string>
+    <string name="cd_sources">Sources</string>
+    <string name="cd_episodes">Episodes</string>
+    <string name="cd_playback_speed">Playback speed</string>
+    <string name="cd_aspect_ratio">Aspect ratio</string>
+    <string name="cd_open_external_player">Open in external player</string>
+    <string name="cd_stream_info">Stream info</string>
+    <string name="cd_more_actions">More actions</string>
+    <string name="cd_close_more_actions">Close more actions</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_next_episode_thumbnail">Next episode thumbnail</string>
+    <string name="cd_current">Current</string>
+    <string name="cd_loading_backdrop">Loading backdrop</string>
+    <string name="cd_loading_logo">Loading logo</string>
+    <string name="cd_move_up">Move up</string>
+    <string name="cd_move_down">Move down</string>
+    <string name="cd_qr_code">QR Code</string>
+    <string name="cd_add">Add</string>
+    <string name="cd_refresh">Refresh</string>
+    <string name="cd_remove">Remove</string>
+    <string name="cd_test">Test</string>
+    <string name="cd_unlink">Unlink</string>
+    <string name="cd_nuvio_logo">NuvioTV</string>
+    <string name="cd_trakt_logo">Trakt Logo</string>
+    <string name="cd_trakt_qr">Trakt activation QR</string>
+    <string name="cd_imdb">IMDb</string>
+    <string name="cd_open_discover">Open discover</string>
+    <string name="cd_voice_search">Voice search</string>
+    <string name="cd_donation_qr">Donation QR code</string>
+    <string name="cd_contributor_qr">Contributor support QR code</string>
+    <string name="cd_expand">Expand %1$s</string>
+    <string name="cd_collapse">Collapse %1$s</string>
+    <string name="cd_qr_login">QR login code</string>
+    <string name="cd_nuvio">Nuvio</string>
+
+    <!-- Debug -->
+    <string name="debug_signin_success">Signed in successfully</string>
+    <string name="debug_generate_description">Debug-generated %1$s item #%2$d</string>
+    <string name="debug_generate_result_failed">Failed: %1$s</string>
+
 </resources>

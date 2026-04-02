@@ -1,0 +1,1185 @@
+<resources>
+    <string name="app_name">Nuvio</string>
+    <string name="type_movie">Ταινία</string>
+    <string name="type_series">Σειρά</string>
+    <string name="type_unknown">Άγνωστο</string>
+
+    <!-- HomeScreen -->
+    <string name="home_no_addons">Δεν έχετε εγκαταστήσει πρόσθετα. Προσθέστε ένα για να ξεκινήσετε.</string>
+    <string name="home_no_catalog_addons">Δεν έχετε εγκαταστήσει πρόσθετα καταλόγου. Εγκαταστήστε ένα πρόσθετο καταλόγου για να δείτε περιεχόμενο.</string>
+    <string name="auth_notice_nuvio_logged_out">Έχετε αποσυνδεθεί από το Nuvio. Συνδεθείτε ξανά.</string>
+    <string name="auth_notice_trakt_logged_out">Έχετε αποσυνδεθεί από το Trakt. Συνδεθείτε ξανά.</string>
+    <string name="error_generic">Προέκυψε σφάλμα</string>
+
+    <!-- ErrorState -->
+    <string name="action_retry">Δοκιμάστε ξανά</string>
+    <string name="error_state_generic_issue">Κάτι πήγε στραβά.</string>
+    <string name="error_state_possible_fix">Πιθανή λύση: %1$s</string>
+    <string name="error_state_fix_retry_soon">δοκιμάστε ξανά σε λίγο.</string>
+    <string name="error_state_issue_no_metadata_any_addon">Αυτό το ID δεν μπόρεσε να φορτώσει λεπτομέρειες επειδή κανένα από τα εγκατεστημένα πρόσθετα δεν επέστρεψε μεταδεδομένα.</string>
+    <string name="error_state_fix_no_metadata_any_addon">δοκιμάστε άλλο πρόσθετο, απενεργοποιήστε το «Προτίμηση εξωτερικού πρόσθετου μεταδεδομένων» στις Ρυθμίσεις διάταξης ή επιβεβαιώστε ότι κάποιο εγκατεστημένο πρόσθετο υποστηρίζει αυτό το ID.</string>
+    <string name="error_state_prefix_no_supported_metadata">Κανένα εγκατεστημένο πρόσθετο δεν υποστηρίζει μεταδεδομένα για </string>
+    <string name="error_state_prefix_no_addon_for_id">Κανένα εγκατεστημένο πρόσθετο δεν μπόρεσε να παρέχει μεταδεδομένα για το ID=</string>
+    <string name="error_state_fix_no_supported_metadata">εγκαταστήστε ή ενημερώστε ένα πρόσθετο που υποστηρίζει αυτόν τον τύπο περιεχομένου και δοκιμάστε ξανά.</string>
+    <string name="error_state_prefix_tried_meta_addons">Δοκιμάστηκαν πρόσθετα μεταδεδομένων:</string>
+    <string name="error_state_fix_tried_meta_addons">εγκαταστήστε ένα πρόσθετο που υποστηρίζει αυτό το ID ή επαναδιαμορφώστε/ενημερώστε το πρόσθετο και δοκιμάστε ξανά.</string>
+    <string name="error_state_issue_missing_metadata_for_id">δεν έχει μεταδεδομένα για αυτό το ID</string>
+    <string name="error_state_fix_missing_metadata_for_id">ανοίξτε αυτό το ID από διαφορετικό πρόσθετο, απενεργοποιήστε το «Προτίμηση εξωτερικού πρόσθετου μεταδεδομένων» ή ελέγξτε ότι το πρόσθετο υποστηρίζει αυτό το ID.</string>
+    <string name="error_state_issue_addon_unreachable">δεν ήταν προσβάσιμο</string>
+    <string name="error_state_fix_addon_unreachable">ελέγξτε τη σύνδεσή σας στο διαδίκτυο, επιβεβαιώστε ότι το URL του πρόσθετου εξακολουθεί να λειτουργεί και δοκιμάστε ξανά.</string>
+    <string name="error_state_issue_addon_connection_failed">απέρριψε τη σύνδεση</string>
+    <string name="error_state_fix_addon_connection_failed">βεβαιωθείτε ότι ο διακομιστής του πρόσθετου είναι ενεργός και προσβάσιμος και δοκιμάστε ξανά.</string>
+    <string name="error_state_issue_addon_timeout">άργησε πολύ να απαντήσει</string>
+    <string name="error_state_fix_addon_timeout">δοκιμάστε ξανά σε λίγο ή δοκιμάστε διαφορετικό πρόσθετο αν συνεχίζεται.</string>
+    <string name="error_state_issue_addon_cleartext">χρησιμοποιεί μη ασφαλή σύνδεση HTTP που μπλόκαρε το Android</string>
+    <string name="error_state_fix_addon_cleartext">αλλάξτε το URL του πρόσθετου σε HTTPS ή ενημερώστε τη διαμόρφωση του πρόσθετου.</string>
+    <string name="error_state_fix_addon_generic">δοκιμάστε ξανά, ενημερώστε ή επανεγκαταστήστε το πρόσθετο ή δοκιμάστε διαφορετικό πρόσθετο.</string>
+    <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
+    <string name="error_meta_not_found">Δεν βρέθηκαν μεταδεδομένα</string>
+    <string name="error_meta_no_supported_addon">Κανένα εγκατεστημένο πρόσθετο δεν υποστηρίζει μεταδεδομένα για «%1$s».</string>
+    <string name="error_meta_no_addon_for_id">Κανένα εγκατεστημένο πρόσθετο δεν μπόρεσε να παρέχει μεταδεδομένα για το ID=%1$s (τύπος=%2$s).</string>
+    <string name="error_meta_tried_none">Δοκιμάστηκαν πρόσθετα μεταδεδομένων: %1$s. Κανένα δεν παρείχε μεταδεδομένα για το ID=%2$s (τύπος=%3$s).</string>
+    <string name="error_meta_tried_generic">Δοκιμάστηκαν πρόσθετα μεταδεδομένων: %1$s. Δεν μπόρεσαν να φορτωθούν μεταδεδομένα για το ID=%2$s (τύπος=%3$s).</string>
+    <string name="error_meta_tried_issues">Δοκιμάστηκαν πρόσθετα μεταδεδομένων: %1$s. Δεν μπόρεσαν να φορτωθούν μεταδεδομένα για το ID=%2$s (τύπος=%3$s). Προβλήματα: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Κανένα εγκατεστημένο πρόσθετο δεν υποστηρίζει ροές για «%1$s».</string>
+    <string name="error_stream_tried_none">Δοκιμάστηκαν πρόσθετα ροών: %1$s. Κανένα δεν επέστρεψε ροές για το ID=%2$s (τύπος=%3$s).</string>
+    <string name="error_stream_tried_generic">Δοκιμάστηκαν πρόσθετα ροών: %1$s. Δεν μπόρεσαν να φορτωθούν ροές για το ID=%2$s (τύπος=%3$s).</string>
+    <string name="error_stream_tried_issues">Δοκιμάστηκαν πρόσθετα ροών: %1$s. Δεν μπόρεσαν να φορτωθούν ροές για το ID=%2$s (τύπος=%3$s). Προβλήματα: %4$s.</string>
+
+    <!-- ContinueWatchingSection -->
+    <string name="continue_watching">Συνέχεια παρακολούθησης</string>
+    <string name="cw_upcoming">Επόμενα</string>
+    <string name="cw_next_up">Επόμενο</string>
+    <string name="cw_new_episode">Νέο επεισόδιο</string>
+    <string name="cw_new_season">Νέα σεζόν</string>
+    <string name="cw_resume">Συνέχεια</string>
+    <string name="cw_percent_watched">%1$d%% προβλήθηκε</string>
+    <string name="cw_hours_min_left">%1$d ώρ. %2$d λεπ. απομένουν</string>
+    <string name="cw_min_left">%1$d λεπ. απομένουν</string>
+    <string name="cw_almost_done">Σχεδόν τελείωσε</string>
+    <string name="cw_airs_date">Πρεμιέρα %1$s</string>
+    <string name="cw_action_go_to_details">Μετάβαση σε λεπτομέρειες</string>
+    <string name="cw_action_start_from_beginning">Έναρξη από την αρχή</string>
+    <string name="cw_action_remove">Αφαίρεση</string>
+    <string name="cw_dialog_subtitle">Επιλέξτε τι θέλετε να κάνετε με αυτό το στοιχείο.</string>
+    <string name="home_poster_dialog_subtitle">Ενέργειες τίτλου</string>
+
+    <!-- CatalogRowSection -->
+    <string name="catalog_from_addon">από %1$s</string>
+    <string name="action_see_all">Προβολή όλων</string>
+
+    <!-- HeroSection -->
+    <string name="hero_creator">Δημιουργός: %1$s</string>
+    <string name="hero_director">Σκηνοθέτης: %1$s</string>
+    <string name="hero_writer">Σεναριογράφος: %1$s</string>
+    <string name="hero_play">Αναπαραγωγή</string>
+    <string name="hero_play_episode">Αναπαραγωγή S%1$d, E%2$d</string>
+    <string name="hero_add_to_library">Προσθήκη στη βιβλιοθήκη</string>
+    <string name="hero_remove_from_library">Αφαίρεση από τη βιβλιοθήκη</string>
+    <string name="hero_mark_watched">Επισήμανση ως προβληθέν</string>
+    <string name="hero_mark_unwatched">Επισήμανση ως μη προβληθέν</string>
+    <string name="hero_play_trailer">Αναπαραγωγή τρέιλερ</string>
+    <string name="hero_press_back_trailer">Πατήστε πίσω για έξοδο από το τρέιλερ</string>
+    <string name="cd_rating">Βαθμολογία</string>
+
+    <!-- EpisodesSection -->
+    <string name="episodes_season">Σεζόν %1$d</string>
+    <string name="episodes_specials">Ειδικά</string>
+    <string name="episodes_episode">Επεισόδιο</string>
+    <string name="episodes_cd_watched">Προβλήθηκε</string>
+    <string name="episodes_dialog_subtitle">Ενέργειες επεισοδίου</string>
+    <string name="episodes_mark_watched">Επισήμανση ως προβληθέν</string>
+    <string name="episodes_mark_unwatched">Επισήμανση ως μη προβληθέν</string>
+    <string name="episodes_mark_season_watched">Επισήμανση σεζόν ως προβληθείσα</string>
+    <string name="episodes_mark_season_unwatched">Επισήμανση σεζόν ως μη προβληθείσα</string>
+    <string name="episodes_mark_previous_watched">Επισήμανση προηγούμενων αυτής της σεζόν ως προβληθέντα</string>
+    <string name="episodes_play">Αναπαραγωγή</string>
+    <string name="play_manually">Αναπαραγωγή χειροκίνητα</string>
+    <string name="episodes_season_actions">Ενέργειες σεζόν</string>
+
+    <!-- MetaDetailsViewModel -->
+    <string name="detail_added_to_library">Προστέθηκε στη βιβλιοθήκη</string>
+    <string name="detail_removed_from_library">Αφαιρέθηκε από τη βιβλιοθήκη</string>
+    <string name="detail_episode_marked_watched">Το επεισόδιο επισημάνθηκε ως προβληθέν</string>
+    <string name="detail_episode_marked_unwatched">Το επεισόδιο επισημάνθηκε ως μη προβληθέν</string>
+    <string name="detail_lists_updated">Οι λίστες ενημερώθηκαν</string>
+    <string name="detail_movie_marked_watched">Επισημάνθηκε ως προβληθέν</string>
+    <string name="detail_movie_marked_unwatched">Επισημάνθηκε ως μη προβληθέν</string>
+    <string name="detail_all_episodes_watched">Όλα τα επεισόδια έχουν ήδη προβληθεί</string>
+    <string name="detail_no_watched_episodes">Δεν υπάρχουν προβληθέντα επεισόδια σε αυτή τη σεζόν</string>
+    <string name="detail_all_previous_watched">Όλα τα προηγούμενα επεισόδια έχουν ήδη προβληθεί</string>
+    <string name="detail_marked_episodes_watched">Επισημάνθηκαν ως προβληθέντα επεισόδια: %1$d</string>
+    <string name="detail_marked_episodes_unwatched">Επισημάνθηκαν ως μη προβληθέντα επεισόδια: %1$d</string>
+    <string name="detail_marked_previous_watched">Επισημάνθηκαν ως προβληθέντα προηγούμενα επεισόδια: %1$d</string>
+
+    <!-- MetaDetailsScreen -->
+    <string name="detail_btn_play">Αναπαραγωγή</string>
+    <string name="detail_btn_resume">Συνέχεια</string>
+    <string name="detail_btn_play_episode">Αναπαραγωγή S%1$dE%2$d</string>
+    <string name="detail_btn_resume_episode">Συνέχεια S%1$dE%2$d</string>
+    <string name="detail_btn_next_episode">Επόμενο S%1$dE%2$d</string>
+    <string name="detail_tab_cast">Δημιουργοί και ηθοποιοί</string>
+    <string name="cast_role_creator">Δημιουργός</string>
+    <string name="cast_role_director">Σκηνοθέτης</string>
+    <string name="cast_role_writer">Σεναριογράφος</string>
+    <string name="detail_tab_ratings">Βαθμολογίες</string>
+    <string name="detail_tab_more_like_this">Παρόμοια</string>
+    <string name="detail_more_like_this_powered_by_tmdb">Με την υποστήριξη του TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">Με την υποστήριξη του Trakt</string>
+    <string name="detail_comments_title">Σχόλια</string>
+    <string name="detail_comments_subtitle">Κριτικές από το Trakt</string>
+    <string name="detail_section_network">Δίκτυο</string>
+    <string name="detail_section_production">Παραγωγή</string>
+    <string name="detail_comments_empty">Δεν υπάρχουν ακόμα κριτικές από το Trakt.</string>
+    <string name="detail_comments_error">Δεν ήταν δυνατή η φόρτωση κριτικών από το Trakt αυτή τη στιγμή.</string>
+    <string name="detail_comments_spoiler_hidden">Κριτική με spoiler. Πατήστε OK για αποκάλυψη.</string>
+    <string name="detail_comments_reveal_spoiler">Αποκάλυψη spoiler</string>
+    <string name="detail_comments_reveal_spoiler_hint">Πατήστε OK για αποκάλυψη spoiler.</string>
+    <string name="detail_comments_back_hint">Πατήστε πίσω για κλείσιμο</string>
+    <string name="detail_comments_badge_review">Κριτική</string>
+    <string name="detail_comments_badge_spoiler">Spoiler</string>
+    <string name="detail_comments_badge_rating">%1$d/10</string>
+    <string name="detail_comments_likes">%1$d likes</string>
+    <string name="tmdb_entity_kind_company">Εταιρεία παραγωγής</string>
+    <string name="tmdb_entity_kind_network">Δίκτυο</string>
+    <string name="tmdb_entity_rail_popular">Δημοφιλή</string>
+    <string name="tmdb_entity_rail_top_rated">Κορυφαία βαθμολογία</string>
+    <string name="tmdb_entity_rail_recent">Πρόσφατα</string>
+    <string name="tmdb_entity_empty_title">Δεν βρέθηκαν τίτλοι</string>
+    <string name="tmdb_entity_empty_subtitle">Το TMDB δεν έχει προς το παρόν διαθέσιμους τίτλους για αυτή την επιλογή.</string>
+    <string name="episodes_unavailable">Μη διαθέσιμο</string>
+    <string name="series_status_ended">Τελείωσε</string>
+    <string name="series_status_continuing">Ανανεώθηκε</string>
+    <string name="series_status_current">Τρέχον</string>
+    <string name="series_status_cancelled">Ακυρώθηκε</string>
+    <string name="series_status_released">Κυκλοφόρησε</string>
+    <string name="series_status_planned">Σχεδιαζόμενο</string>
+    <string name="series_status_rumored">Φημολογούμενο</string>
+    <string name="series_status_in_production">Σε παραγωγή</string>
+    <string name="series_status_post_production">Μετά την παραγωγή</string>
+    <string name="detail_lists_fallback">Λίστες</string>
+    <string name="detail_lists_subtitle">Επιλέξτε ποιες λίστες θα περιλαμβάνουν αυτόν τον τίτλο.</string>
+    <string name="action_save">Αποθήκευση</string>
+    <string name="action_saving">Αποθήκευση…</string>
+
+    <!-- AppLanguage -->
+    <string name="appearance_language">Γλώσσα εφαρμογής</string>
+    <string name="appearance_language_subtitle">Παράκαμψη γλώσσας συστήματος</string>
+    <string name="appearance_language_system">Προεπιλογή συστήματος</string>
+    <string name="appearance_language_dialog_title">Επιλογή γλώσσας</string>
+    <string name="appearance_language_restart_hint">Επανεκκινήστε την εφαρμογή για να εφαρμοστεί η αλλαγή γλώσσας.</string>
+
+    <!-- Font -->
+    <string name="appearance_font">Γραμματοσειρά εφαρμογής</string>
+    <string name="appearance_font_subtitle">Επιλέξτε την αγαπημένη σας γραμματοσειρά</string>
+    <string name="appearance_font_dialog_title">Επιλογή γραμματοσειράς</string>
+
+    <!-- ThemeSettingsScreen -->
+    <string name="appearance_title">Εμφάνιση</string>
+    <string name="appearance_subtitle">Επιλέξτε χρωματικό θέμα, γραμματοσειρά και γλώσσα</string>
+    <string name="cd_selected">Επιλεγμένο</string>
+
+    <!-- AboutScreen -->
+    <string name="about_title">Σχετικά</string>
+    <string name="about_subtitle">Πληροφορίες εφαρμογής, ενημερώσεις και νομικοί σύνδεσμοι</string>
+    <string name="about_made_with_love">Δημιουργήθηκε με ❤️ από την Tapframe και φίλους</string>
+    <string name="about_version">Έκδοση %1$s</string>
+    <string name="about_check_updates">Έλεγχος ενημερώσεων</string>
+    <string name="about_check_updates_subtitle">Λήψη τελευταίας έκδοσης</string>
+    <string name="about_privacy_policy">Πολιτική απορρήτου</string>
+    <string name="about_privacy_policy_subtitle">Δείτε την πολιτική απορρήτου μας</string>
+    <string name="about_supporters_contributors">Υποστηρικτές &amp; Συνεισφέροντες</string>
+    <string name="about_supporters_contributors_subtitle">Αναγνώριση και συντελεστές έργου</string>
+
+    <!-- SettingsScreen categories -->
+    <string name="settings_account">Λογαριασμός</string>
+    <string name="settings_account_subtitle">Κατάσταση λογαριασμού και συγχρονισμού.</string>
+    <string name="settings_profiles">Προφίλ</string>
+    <string name="settings_profiles_subtitle">Διαχείριση προφίλ χρηστών.</string>
+    <string name="settings_layout">Διάταξη</string>
+    <string name="settings_layout_subtitle">Δομή αρχικής οθόνης και στυλ αφισών.</string>
+    <string name="settings_plugins">Πρόσθετα</string>
+    <string name="settings_plugins_subtitle">Αποθετήρια και πάροχοι.</string>
+    <string name="settings_integration">Ενσωμάτωση</string>
+    <string name="settings_playback">Αναπαραγωγή</string>
+    <string name="settings_playback_subtitle">Πρόγραμμα αναπαραγωγής, υπότιτλοι και αυτόματη αναπαραγωγή.</string>
+    <string name="settings_trakt_subtitle">Άνοιγμα οθόνης σύνδεσης Trakt.</string>
+    <string name="settings_about_subtitle">Έκδοση και πολιτικές.</string>
+    <string name="settings_network">Ταχύτητα δικτύου</string>
+    <string name="settings_network_subtitle">Διαγνωστικά καθυστέρησης και λήψης</string>
+    <string name="settings_advanced">Για προχωρημένους</string>
+    <string name="settings_advanced_subtitle">Εκτέλεση διαγνωστικών ταχύτητας δικτύου</string>
+    <string name="network_speed_test_run">Εκτέλεση τεστ ταχύτητας</string>
+    <string name="network_speed_test_running">Εκτέλεση τεστ ταχύτητας</string>
+    <string name="network_speed_test_subtitle">Μέτρηση ταχύτητας λήψης και καθυστέρησης</string>
+    <string name="network_testing_latency">Μέτρηση καθυστέρησης</string>
+    <string name="network_testing_download">Μέτρηση ταχύτητας λήψης</string>
+    <string name="network_results_title">Αποτελέσματα</string>
+    <string name="network_latency_label">Καθυστέρηση</string>
+    <string name="network_download_label">Λήψη</string>
+    <string name="network_error_prefix">Σφάλμα: %1$s</string>
+    <string name="network_powered_by_fast">Με την υποστήριξη του fast.com</string>
+    <string name="network_connection_wifi">Wi-Fi</string>
+    <string name="network_connection_ethernet">Ethernet</string>
+    <string name="network_connection_offline">Εκτός σύνδεσης</string>
+    <string name="settings_debug">Debug</string>
+    <string name="settings_debug_subtitle">Εργαλεία προγραμματιστή και σημαίες χαρακτηριστικών.</string>
+    <string name="settings_plugins_section_subtitle">Διαχείριση αποθετηρίων, παρόχων και καταστάσεων πρόσθετων.</string>
+    <string name="settings_account_section_subtitle">Κατάσταση λογαριασμού και συγχρονισμού.</string>
+    <string name="account_stat_addons">πρόσθετα</string>
+    <string name="account_stat_plugins">πρόσθετα</string>
+    <string name="account_stat_library">βιβλιοθήκη</string>
+    <string name="account_stat_progress">πρόοδος</string>
+    <string name="account_stat_watched">προβληθέντα</string>
+    <string name="settings_integrations_section">Ενσωματώσεις</string>
+    <string name="settings_integrations_section_subtitle">Επιλέξτε TMDB ή MDBList</string>
+    <string name="settings_tmdb_subtitle">Έλεγχοι εμπλουτισμού μεταδεδομένων</string>
+    <string name="settings_mdblist_subtitle">Εξωτερικοί πάροχοι βαθμολογιών</string>
+    <string name="settings_animeskip_subtitle">Χρονοσήμανση παράλειψης intro/outro anime</string>
+
+    <!-- PlaybackSettingsScreen -->
+    <string name="playback_title">Ρυθμίσεις αναπαραγωγής</string>
+    <string name="playback_subtitle">Διαμόρφωση αναπαραγωγής βίντεο και επιλογών υπότιτλων</string>
+    <string name="cd_decrease">Μείωση</string>
+    <string name="cd_increase">Αύξηση</string>
+    <string name="action_cancel">Ακύρωση</string>
+    <string name="action_none">Κανένα</string>
+    <string name="action_close">Κλείσιμο</string>
+
+    <!-- SupportersContributorsScreen -->
+    <string name="supporters_contributors_title">Υποστηρικτές &amp; Συνεισφέροντες</string>
+    <string name="supporters_contributors_subtitle">Οι άνθρωποι που υποστηρίζουν το Nuvio και οι συνεισφέροντες που το χτίζουν σε TV και κινητά.</string>
+    <string name="supporters_contributors_supporters_copy">Οι υποστηρικτές και δωρητές βοηθούν να συνεχίζεται το έργο, χρηματοδοτούν την υποδομή και ανοίγουν χώρο για φιλόδοξα χαρακτηριστικά.</string>
+    <string name="supporters_contributors_donate_copy">Το Nuvio θα παραμείνει δωρεάν και ανοιχτού κώδικα. Αν θέλετε να υποστηρίξετε το έργο, μπορείτε να βοηθήσετε στην κάλυψη του χρόνου και της υποδομής πίσω από αυτό.</string>
+    <string name="supporters_contributors_donate_button">Δωρεά στο Nuvio</string>
+    <string name="supporters_contributors_qr_title">Σάρωση για δωρεά</string>
+    <string name="supporters_contributors_qr_subtitle">Ανοίξτε τον σύνδεσμο στο κινητό σας και υποστηρίξτε το Nuvio μέσω Ko-fi.</string>
+    <string name="supporters_contributors_qr_hint">Στρέψτε την κάμερα στο QR code ή χρησιμοποιήστε το κουμπί παρακάτω.</string>
+    <string name="supporters_contributors_back_button">Επιστροφή σε λεπτομέρειες</string>
+    <string name="supporters_tab">Υποστηρικτές</string>
+    <string name="contributors_tab">Συνεισφέροντες</string>
+    <string name="supporters_loading">Φόρτωση υποστηρικτών…</string>
+    <string name="supporters_empty">Δεν βρέθηκαν ακόμα υποστηρικτές.</string>
+    <string name="supporters_error_title">Δεν ήταν δυνατή η φόρτωση υποστηρικτών</string>
+    <string name="supporters_no_message">Δεν έχει κοινοποιηθεί μήνυμα.</string>
+    <string name="supporters_open_donations">Άνοιγμα σελίδας δωρεών</string>
+    <string name="contributors_loading">Φόρτωση συνεισφερόντων από GitHub…</string>
+    <string name="contributors_empty">Δεν βρέθηκαν ακόμα συνεισφέροντες.</string>
+    <string name="contributors_error_title">Δεν ήταν δυνατή η φόρτωση συνεισφερόντων</string>
+    <string name="contributors_total_contributions">%1$d συνολικές συνεισφορές</string>
+    <string name="contributors_open_github">Άνοιγμα προφίλ GitHub</string>
+    <string name="contributors_show_kofi_qr">Εμφάνιση QR Ko-fi</string>
+    <string name="contributors_hide_kofi_qr">Απόκρυψη QR Ko-fi</string>
+    <string name="contributors_profile_unavailable">Ο σύνδεσμος προφίλ GitHub δεν είναι διαθέσιμος.</string>
+
+    <!-- PlaybackSettingsSections -->
+    <string name="playback_section_general">Γενικά</string>
+    <string name="playback_section_general_desc">Βασική συμπεριφορά αναπαραγωγής.</string>
+    <string name="playback_loading_overlay">Οθόνη φόρτωσης</string>
+    <string name="playback_loading_overlay_sub">Εμφάνιση οθόνης φόρτωσης μέχρι να εμφανιστεί το πρώτο καρέ βίντεο.</string>
+    <string name="playback_pause_overlay">Οθόνη παύσης</string>
+    <string name="playback_pause_overlay_sub">Εμφάνιση οθόνης λεπτομερειών μετά από 5 δευτερόλεπτα παύσης.</string>
+    <string name="playback_show_clock_sub">Εμφάνιση τρέχουσας ώρας και ώρας λήξης ενώ είναι ορατά τα χειριστήρια.</string>
+    <string name="playback_osd_clock">Ρολόι OSD</string>
+    <string name="playback_skip_intro">Παράλειψη intro</string>
+    <string name="playback_skip_intro_sub">Χρήση του introdb.app για ανίχνευση intro και recap.</string>
+    <string name="playback_auto_frame_rate">Αυτόματο frame rate</string>
+    <string name="playback_section_player">Πρόγραμμα αναπαραγωγής &amp; Επιλογή ροής</string>
+    <string name="playback_section_player_desc">Προτίμηση προγράμματος αναπαραγωγής, αυτόματη αναπαραγωγή και φιλτράρισμα πηγών.</string>
+    <string name="playback_player">Πρόγραμμα αναπαραγωγής</string>
+    <string name="playback_player_internal">Εσωτερικό</string>
+    <string name="playback_player_external">Εξωτερικό</string>
+    <string name="playback_player_ask">Ερώτηση κάθε φορά</string>
+    <string name="playback_section_audio">Ήχος &amp; Τρέιλερ</string>
+    <string name="playback_section_audio_desc">Συμπεριφορά τρέιλερ και χειριστήρια ήχου.</string>
+    <string name="playback_section_subtitles">Υπότιτλοι</string>
+    <string name="playback_section_subtitles_desc">Γλώσσα, στυλ και τρόπος απόδοσης.</string>
+    <string name="playback_afr_open">Ανοιχτό</string>
+    <string name="playback_afr_closed">Κλειστό</string>
+    <string name="playback_afr_off">Απενεργοποιημένο</string>
+    <string name="playback_afr_off_sub">Να μην αλλάζει ο ρυθμός ανανέωσης οθόνης.</string>
+    <string name="playback_afr_on_start">Κατά την έναρξη</string>
+    <string name="playback_afr_on_start_sub">Αλλαγή όταν ξεκινά η αναπαραγωγή.</string>
+    <string name="playback_afr_on_start_stop">Κατά την έναρξη/λήξη</string>
+    <string name="playback_afr_on_start_stop_sub">Αλλαγή κατά την έναρξη και επαναφορά κατά τη λήξη.</string>
+    <string name="playback_resolution_matching">Ταίριασμα ανάλυσης</string>
+    <string name="playback_resolution_matching_sub">Επιτρέψτε αλλαγές λειτουργίας οθόνης για ταίριασμα με την ανάλυση βίντεο.</string>
+    <string name="playback_player_external_desc">Πάντα άνοιγμα ροών σε εξωτερική εφαρμογή</string>
+    <string name="playback_player_ask_desc">Επιλογή προγράμματος αναπαραγωγής κάθε φορά</string>
+
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_trailer_section">Τρέιλερ</string>
+    <string name="audio_autoplay_trailers">Αυτόματη αναπαραγωγή τρέιλερ</string>
+    <string name="audio_autoplay_trailers_sub">Αυτόματη αναπαραγωγή τρέιλερ στην οθόνη λεπτομερειών μετά από περίοδο αδράνειας</string>
+    <string name="audio_trailer_delay">Καθυστέρηση τρέιλερ</string>
+    <string name="audio_section">Ήχος</string>
+    <string name="audio_lang_default">Προεπιλογή (αρχείο πολυμέσου)</string>
+    <string name="audio_lang_device">Γλώσσα συσκευής</string>
+    <string name="audio_preferred_lang">Προτιμώμενη γλώσσα ήχου</string>
+    <string name="audio_skip_silence">Παράλειψη σιγής</string>
+    <string name="audio_skip_silence_sub">Παράλειψη σιωπηλών τμημάτων ήχου κατά την αναπαραγωγή</string>
+    <string name="audio_advanced_section">Για προχωρημένους ήχος</string>
+    <string name="audio_advanced_warning">Αυτές οι ρυθμίσεις μπορεί να προκαλέσουν προβλήματα σε ορισμένες συσκευές. Αλλάξτε μόνο αν ξέρετε τι κάνετε.</string>
+    <string name="audio_decoder_device_only">Μόνο αποκωδικοποιητές συσκευής</string>
+    <string name="audio_decoder_prefer_device">Προτίμηση αποκωδικοποιητών συσκευής</string>
+    <string name="audio_decoder_prefer_app">Προτίμηση αποκωδικοποιητών εφαρμογής (FFmpeg)</string>
+    <string name="audio_decoder_priority">Προτεραιότητα αποκωδικοποιητή</string>
+    <string name="audio_tunneled">Tunneled Playback</string>
+    <string name="audio_tunneled_sub">Συγχρονισμός ήχου/βίντεο σε επίπεδο υλικού. Μπορεί να βελτιώσει την αναπαραγωγή σε ορισμένες συσκευές Android TV</string>
+    <string name="audio_dv_sub">Αντιστοίχιση Dolby Vision Profile 7 σε standard HEVC για συσκευές χωρίς υποστήριξη υλικού DV</string>
+    <string name="audio_decoder_device_only_desc">Χρήση μόνο ενσωματωμένων αποκωδικοποιητών υλικού. Πιο συμβατό αλλά μπορεί να μην υποστηρίζει όλα τα φορμά.</string>
+    <string name="audio_decoder_prefer_device_desc">Χρήση αποκωδικοποιητών υλικού όταν είναι διαθέσιμοι, εναλλακτικά FFmpeg. Προτεινόμενο για τις περισσότερες συσκευές.</string>
+    <string name="audio_decoder_prefer_app_desc">Χρήση αποκωδικοποιητών FFmpeg όταν είναι διαθέσιμοι. Καλύτερη υποστήριξη φορμά αλλά υψηλότερη χρήση CPU.</string>
+    <string name="audio_decoder_controls">Ελέγχει αν χρησιμοποιούνται αποκωδικοποιητές υλικού ή λογισμικού (FFmpeg) για ήχο και βίντεο</string>
+
+    <!-- PlaybackSubtitleSettings -->
+    <string name="sub_section">Υπότιτλοι</string>
+    <string name="sub_not_set">Δεν ορίστηκε</string>
+    <string name="sub_forced_lang">Εξαναγκασμένος</string>
+    <string name="sub_preferred_lang">Προτιμώμενη γλώσσα</string>
+    <string name="sub_secondary_lang">Δευτερεύουσα προτιμώμενη γλώσσα</string>
+    <string name="sub_organization">Οργάνωση υπότιτλων</string>
+    <string name="sub_size">Μέγεθος</string>
+    <string name="sub_vertical_offset">Κάθετη μετατόπιση</string>
+    <string name="sub_bold">Έντονα</string>
+    <string name="sub_bold_sub">Χρήση έντονης γραμματοσειράς για υπότιτλους</string>
+    <string name="sub_text_color">Χρώμα κειμένου</string>
+    <string name="sub_bg_color">Χρώμα φόντου</string>
+    <string name="sub_outline">Περίγραμμα</string>
+    <string name="sub_outline_sub">Προσθήκη περιγράμματος γύρω από το κείμενο υπότιτλων για καλύτερη ορατότητα</string>
+    <string name="sub_outline_color">Χρώμα περιγράμματος</string>
+    <string name="sub_advanced_section">Για προχωρημένους απόδοση υπότιτλων</string>
+    <string name="sub_libass">Χρήση libass για υπότιτλους ASS/SSA</string>
+    <string name="sub_libass_sub">Πειραματικό: προχωρημένη απόδοση ASS/SSA (στυλ, τοποθέτηση, κινούμενα σχέδια)</string>
+    <string name="sub_libass_mode">Λειτουργία απόδοσης Libass</string>
+    <string name="sub_mode_overlay_gl">Overlay OpenGL (Συνιστάται)</string>
+    <string name="sub_mode_overlay_gl_sub">Καλύτερη ποιότητα με υποστήριξη HDR. Απόδοση υπότιτλων σε ξεχωριστό νήμα.</string>
+    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
+    <string name="sub_mode_effects_gl">Effects OpenGL</string>
+    <string name="sub_mode_effects_gl_sub">Υποστήριξη κινούμενων σχεδίων με Media3 effects. Ταχύτερο από Canvas.</string>
+    <string name="sub_mode_effects_canvas">Effects Canvas</string>
+    <string name="sub_mode_effects_canvas_sub">Υποστήριξη κινούμενων σχεδίων με Media3 effects και απόδοση Canvas.</string>
+    <string name="sub_mode_standard">Standard Cues</string>
+    <string name="sub_mode_standard_sub">Βασική απόδοση υπότιτλων χωρίς υποστήριξη κινούμενων σχεδίων. Πιο συμβατό.</string>
+    <string name="sub_org_none">Κανένα (προεπιλεγμένη σειρά)</string>
+    <string name="sub_org_by_lang">Ανά γλώσσα</string>
+    <string name="sub_org_by_addon">Ανά πρόσθετο</string>
+    <string name="sub_org_none_desc">Εμφάνιση υπότιτλων με την προεπιλεγμένη σειρά αποτελεσμάτων πρόσθετου.</string>
+    <string name="sub_org_by_lang_desc">Ομαδοποίηση υπότιτλων ανά γλώσσα.</string>
+    <string name="sub_org_by_addon_desc">Ομαδοποίηση υπότιτλων ανά πηγή πρόσθετου.</string>
+    <string name="sub_startup_mode_title">Φόρτωση υπότιτλων πρόσθετου</string>
+    <string name="sub_startup_mode_fast">Γρήγορη εκκίνηση</string>
+    <string name="sub_startup_mode_preferred">Προτιμώμενες γλώσσες</string>
+    <string name="sub_startup_mode_all">Όλοι οι υπότιτλοι πρόσθετου</string>
+    <string name="sub_startup_mode_fast_desc">Άμεση έναρξη αναπαραγωγής. Η επιλογή υπότιτλων πρόσθετου μπορεί να επαναφορτώσει το πρόγραμμα αναπαραγωγής μία φορά.</string>
+    <string name="sub_startup_mode_preferred_desc">Προφόρτωση υπότιτλων πρόσθετου πριν την αναπαραγωγή και επισύναψη κομματιών προτιμώμενης/δευτερεύουσας γλώσσας.</string>
+    <string name="sub_startup_mode_all_desc">Προφόρτωση και επισύναψη όλων των υπότιτλων πρόσθετου πριν την αναπαραγωγή. Πιο αργή εκκίνηση.</string>
+
+    <!-- PlaybackAutoPlaySettings -->
+    <string name="autoplay_reuse_last_link">Επαναχρησιμοποίηση τελευταίας σύνδεσης</string>
+    <string name="autoplay_reuse_last_link_sub">Αυτόματη αναπαραγωγή της τελευταίας λειτουργικής ροής για την ίδια ταινία/επεισόδιο όταν η cache είναι ακόμα έγκυρη</string>
+    <string name="autoplay_last_link_cache">Διάρκεια cache τελευταίας σύνδεσης</string>
+    <string name="autoplay_mode_manual">Χειροκίνητη (επιλογή ροής)</string>
+    <string name="autoplay_mode_first">Αυτόματη αναπαραγωγή πρώτης πηγής</string>
+    <string name="autoplay_mode_regex">Αυτόματη αναπαραγωγή με αντιστοίχιση regex</string>
+    <string name="autoplay_stream_selection">Αυτόματη επιλογή ροής</string>
+    <string name="autoplay_next_episode">Αυτόματη αναπαραγωγή επόμενου επεισοδίου</string>
+    <string name="autoplay_next_episode_sub">Αυτόματη έναρξη επόμενου επεισοδίου όταν εμφανιστεί η προτροπή.</string>
+    <string name="autoplay_prefer_binge_group">Προτίμηση ομάδας binge (επόμενο επεισόδιο)</string>
+    <string name="autoplay_prefer_binge_group_sub">Δοκιμή πρώτα του ίδιου προφίλ πηγής (ίδιο πρόσθετο/ομάδα ποιότητας) πριν από τους κανονικούς κανόνες αυτόματης αναπαραγωγής.</string>
+    <string name="autoplay_threshold_pct">Ποσοστό</string>
+    <string name="autoplay_threshold_min">Λεπτά πριν το τέλος</string>
+    <string name="autoplay_threshold_mode">Λειτουργία κατωφλίου επόμενου επεισοδίου</string>
+    <string name="autoplay_threshold_pct_title">Ποσοστό κατωφλίου</string>
+    <string name="autoplay_threshold_pct_sub">Εναλλακτική όταν δεν υπάρχει χρονοσήμανση outro.</string>
+    <string name="autoplay_threshold_min_title">Λεπτά κατωφλίου</string>
+    <string name="autoplay_threshold_min_sub">Εναλλακτική όταν δεν υπάρχει χρονοσήμανση outro.</string>
+    <string name="autoplay_scope_all">Όλες οι πηγές</string>
+    <string name="autoplay_scope_addons">Μόνο εγκατεστημένα πρόσθετα</string>
+    <string name="autoplay_scope_plugins">Μόνο ενεργοποιημένα πρόσθετα</string>
+    <string name="autoplay_scope">Εύρος πηγών αυτόματης αναπαραγωγής</string>
+    <string name="autoplay_timeout_title">Χρονικό όριο επιλογής ροής</string>
+    <string name="autoplay_timeout_sub">Χρόνος αναμονής για πρόσθετα πριν την επιλογή.</string>
+    <string name="autoplay_timeout_instant">Άμεσα</string>
+    <string name="autoplay_timeout_unlimited">Απεριόριστο</string>
+    <string name="autoplay_allowed_addons">Επιτρεπόμενα πρόσθετα</string>
+    <string name="autoplay_all_addons">Όλα τα εγκατεστημένα πρόσθετα</string>
+    <string name="autoplay_allowed_plugins">Επιτρεπόμενα πρόσθετα</string>
+    <string name="autoplay_all_plugins">Όλα τα ενεργοποιημένα πρόσθετα</string>
+    <string name="autoplay_regex_placeholder">Δεν έχει οριστεί μοτίβο. Παράδειγμα: 4K|2160p|Remux</string>
+    <string name="autoplay_regex_title">Μοτίβο Regex</string>
+    <string name="autoplay_no_items">Δεν υπάρχουν διαθέσιμα στοιχεία</string>
+    <string name="autoplay_mode_manual_desc">Πάντα εμφάνιση λίστας πηγών και επιλογή από εμένα.</string>
+    <string name="autoplay_mode_first_desc">Αυτόματη αναπαραγωγή της πρώτης διαθέσιμης πηγής.</string>
+    <string name="autoplay_mode_regex_desc">Αυτόματη αναπαραγωγή της πρώτης πηγής που ταιριάζει στο μοτίβο regex σας.</string>
+    <string name="autoplay_scope_all_desc">Η αυτόματη αναπαραγωγή μπορεί να χρησιμοποιεί τόσο εγκατεστημένα πρόσθετα όσο και ενεργοποιημένα πρόσθετα.</string>
+    <string name="autoplay_scope_addons_desc">Η αυτόματη αναπαραγωγή λαμβάνει υπόψη μόνο ροές από εγκατεστημένα πρόσθετα.</string>
+    <string name="autoplay_scope_plugins_desc">Η αυτόματη αναπαραγωγή λαμβάνει υπόψη μόνο ροές από ενεργοποιημένα πρόσθετα.</string>
+    <string name="autoplay_threshold_pct_desc">Εμφάνιση βάσει ποσοστού αναπαραγωγής όταν δεν υπάρχει χρονοσήμανση outro.</string>
+    <string name="autoplay_threshold_min_desc">Εμφάνιση τόσων λεπτών πριν το τέλος επεισοδίου όταν δεν υπάρχει χρονοσήμανση outro.</string>
+    <string name="autoplay_regex_matches">Αντιστοιχία με όνομα/τίτλο/περιγραφή/πρόσθετο/url ροής. Παράδειγμα: 4K|2160p|Remux</string>
+    <string name="autoplay_regex_presets">Προκαθορισμένα</string>
+    <string name="autoplay_invalid_regex">Μη έγκυρο μοτίβο regex</string>
+
+    <!-- LayoutSettingsScreen -->
+    <string name="layout_title">Ρυθμίσεις διάταξης</string>
+    <string name="layout_subtitle">Προσαρμογή διάταξης αρχικής οθόνης, ορατότητας περιεχομένου και συμπεριφοράς αφισών</string>
+    <string name="layout_classic">Κλασική προβολή</string>
+    <string name="layout_grid">Πλέγμα προβολή</string>
+    <string name="layout_modern">Μοντέρνα προβολή</string>
+    <string name="layout_classic_desc">Κύλιση κατηγοριών οριζόντια</string>
+    <string name="layout_grid_desc">Περιήγηση σε κάθετα πλέγμα με ηρωική ενότητα</string>
+    <string name="layout_modern_desc">Σταθερή ηρωική ενότητα με μία ενεργή σειρά για γρηγορότερη περιήγηση</string>
+    <string name="layout_section_home">Διάταξη αρχικής οθόνης</string>
+    <string name="layout_section_home_desc">Επιλογή δομής και πηγής ηρωικής ενότητας.</string>
+    <string name="layout_landscape_posters">Οριζόντιες αφίσες</string>
+    <string name="layout_landscape_posters_sub">Εναλλαγή μεταξύ πορτρέτου και οριζόντιων καρτών για τη μοντέρνα προβολή.</string>
+    <string name="layout_preview_row">Εμφάνιση σειράς προεπισκόπησης</string>
+    <string name="layout_preview_row_sub">Εμφάνιση μερικής προεπισκόπησης της σειράς από κάτω στη μοντέρνα διάταξη αρχικής οθόνης.</string>
+    <string name="layout_hero_catalogs">Καταλόγοι ηρωικής ενότητας</string>
+    <string name="layout_hero_catalogs_sub">Επιλογή ενός ή περισσότερων καταλόγων για περιεχόμενο ηρωικής ενότητας.</string>
+    <string name="layout_section_content">Περιεχόμενο αρχικής οθόνης</string>
+    <string name="layout_section_content_desc">Έλεγχος τι εμφανίζεται στην αρχική οθόνη και στην αναζήτηση.</string>
+    <string name="layout_collapse_sidebar">Σύμπτυξη πλευρικής μπάρας</string>
+    <string name="layout_collapse_sidebar_sub">Απόκρυψη πλευρικής μπάρας από προεπιλογή, εμφάνιση όταν εστιάζεται.</string>
+    <string name="layout_modern_sidebar">Μοντέρνα πλευρική μπάρα</string>
+    <string name="layout_modern_sidebar_sub">Ενεργοποίηση πλευρικής πλοήγησης που αιωρείται.</string>
+    <string name="layout_modern_sidebar_blur">Θόλωμα μοντέρνας πλευρικής μπάρας</string>
+    <string name="layout_modern_sidebar_blur_sub">Εναλλαγή εφέ θολώματος για τις επιφάνειες μοντέρνας πλευρικής μπάρας.</string>
+    <string name="layout_fullscreen_hero_backdrop">Πλήρης οθόνη φόντου ηρωικής ενότητας</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">Επέκταση του φόντου της ηρωικής ενότητας σε πλήρη οθόνη</string>
+    <string name="layout_show_hero">Εμφάνιση ηρωικής ενότητας</string>
+    <string name="layout_show_hero_sub">Εμφάνιση καρουζέλ ηρωικής ενότητας στην κορυφή της αρχικής οθόνης.</string>
+    <string name="layout_show_discover">Εμφάνιση Discover στην Αναζήτηση</string>
+    <string name="layout_show_discover_sub">Εμφάνιση ενότητας περιήγησης όταν η αναζήτηση είναι κενή.</string>
+    <string name="layout_poster_labels">Εμφάνιση ετικετών αφισών</string>
+    <string name="layout_poster_labels_sub">Εμφάνιση τίτλων κάτω από τις αφίσες σε σειρές, πλέγμα και «Προβολή όλων».</string>
+    <string name="layout_addon_name">Εμφάνιση ονόματος πρόσθετου</string>
+    <string name="layout_addon_name_sub">Εμφάνιση ονόματος πηγής κάτω από τους τίτλους καταλόγων.</string>
+    <string name="layout_catalog_type">Εμφάνιση τύπου καταλόγου</string>
+    <string name="layout_catalog_type_sub">Εμφάνιση επιθέματος τύπου δίπλα στο όνομα καταλόγου (Ταινία/Σειρά).</string>
+    <string name="layout_hide_unreleased">Απόκρυψη μη κυκλοφορημένου περιεχομένου</string>
+    <string name="layout_hide_unreleased_sub">Απόκρυψη ταινιών και σειρών που δεν έχουν κυκλοφορήσει ακόμα.</string>
+    <string name="layout_section_detail">Σελίδα λεπτομερειών</string>
+    <string name="layout_section_detail_desc">Ρυθμίσεις για την οθόνη λεπτομερειών και επεισοδίων.</string>
+    <string name="layout_blur_unwatched">Θόλωμα μη προβληθέντων επεισοδίων</string>
+    <string name="layout_blur_unwatched_sub">Θόλωμα μικρογραφιών επεισοδίων μέχρι να προβληθούν για αποφυγή spoilers.</string>
+    <string name="layout_blur_cw_next_up">Θόλωμα μη προβληθέντων στο Συνέχεια παρακολούθησης</string>
+    <string name="layout_blur_cw_next_up_sub">Θόλωμα μικρογραφιών επόμενου επεισοδίου στο Συνέχεια παρακολούθησης για αποφυγή spoilers.</string>
+    <string name="layout_trailer_button">Εμφάνιση κουμπιού τρέιλερ</string>
+    <string name="layout_trailer_button_sub">Εμφάνιση κουμπιού τρέιλερ στην οθόνη λεπτομερειών (μόνο όταν υπάρχει τρέιλερ).</string>
+    <string name="layout_prefer_external_meta">Προτίμηση μεταδεδομένων από εξωτερικό πρόσθετο</string>
+    <string name="layout_prefer_external_meta_sub">Χρήση μεταδεδομένων από εξωτερικό πρόσθετο αντί για πρόσθετο καταλόγου.</string>
+    <string name="layout_show_full_release_date">Εμφάνιση πλήρους ημερομηνίας κυκλοφορίας</string>
+    <string name="layout_show_full_release_date_sub">Για ταινίες, εμφάνιση πλήρους ημερομηνίας αντί μόνο του έτους.</string>
+    <string name="layout_section_focused">Εστιασμένη αφίσα</string>
+    <string name="layout_section_focused_desc">Προχωρημένη συμπεριφορά για εστιασμένες κάρτες αφισών.</string>
+    <string name="layout_expand_poster">Επέκταση εστιασμένης αφίσας σε backdrop</string>
+    <string name="layout_expand_poster_sub">Επέκταση εστιασμένης αφίσας μετά από καθυστέρηση αδράνειας.</string>
+    <string name="layout_expand_delay">Καθυστέρηση επέκτασης backdrop</string>
+    <string name="layout_expand_delay_sub">Πόσο να περιμένουμε πριν επεκταθούν οι εστιασμένες κάρτες.</string>
+    <string name="layout_autoplay_trailer">Αυτόματη αναπαραγωγή τρέιλερ</string>
+    <string name="layout_autoplay_trailer_expanded">Αυτόματη αναπαραγωγή τρέιλερ σε επεκταμένη κάρτα</string>
+    <string name="layout_autoplay_trailer_sub">Αναπαραγωγή προεπισκόπησης τρέιλερ για εστιασμένο περιεχόμενο όταν είναι διαθέσιμο.</string>
+    <string name="layout_autoplay_trailer_expanded_sub">Αναπαραγωγή τρέιλερ μέσα στην επεκταμένη backdrop όταν είναι διαθέσιμο.</string>
+    <string name="layout_trailer_muted">Αναπαραγωγή τρέιλερ χωρίς ήχο</string>
+    <string name="layout_trailer_muted_sub_preview">Σίγαση ήχου τρέιλερ κατά την προεπισκόπηση αυτόματης αναπαραγωγής.</string>
+    <string name="layout_trailer_muted_sub_expanded">Σίγαση ήχου τρέιλερ σε επεκταμένες κάρτες.</string>
+    <string name="layout_section_card_style">Στυλ κάρτας αφίσας</string>
+    <string name="layout_section_card_style_desc">Ρύθμιση πλάτους κάρτας και ακτίνας γωνιών.</string>
+    <string name="layout_open">Ανοιχτό</string>
+    <string name="layout_closed">Κλειστό</string>
+    <string name="layout_trailer_location">Τοποθεσία αναπαραγωγής τρέιλερ στη μοντέρνα αρχική οθόνη</string>
+    <string name="layout_trailer_location_sub">Επιλογή τοποθεσίας προεπισκόπησης τρέιλερ στη μοντέρνα αρχική οθόνη.</string>
+    <string name="layout_trailer_expanded_card">Επεκταμένη κάρτα</string>
+    <string name="layout_trailer_hero_media">Ηρωικό μέσο</string>
+    <string name="layout_preset_compact">Συμπαγές</string>
+    <string name="layout_preset_dense">Πυκνό</string>
+    <string name="layout_preset_standard">Βασικό</string>
+    <string name="layout_preset_balanced">Ισορροπημένο</string>
+    <string name="layout_preset_comfort">Άνετο</string>
+    <string name="layout_preset_large">Μεγάλο</string>
+    <string name="layout_preset_sharp">Έντονο</string>
+    <string name="layout_preset_subtle">Διακριτικό</string>
+    <string name="layout_preset_classic">Κλασικό</string>
+    <string name="layout_preset_rounded">Στρογγυλεμένο</string>
+    <string name="layout_preset_pill">Οβάλ</string>
+    <string name="layout_card_width">Πλάτος</string>
+    <string name="layout_card_radius">Ακτίνα γωνιών</string>
+    <string name="layout_reset_default">Επαναφορά σε προεπιλογή</string>
+    <string name="layout_custom">Προσαρμοσμένο</string>
+
+  
+    <!-- MDBListSettingsScreen -->
+    <string name="mdblist_title">Βαθμολογίες MDBList</string>
+    <string name="mdblist_subtitle">Διαμόρφωση εξωτερικών βαθμολογιών που εμφανίζονται στην ηρωική ενότητα λεπτομερειών</string>
+    <string name="mdblist_enable_title">Ενεργοποίηση βαθμολογιών MDBList</string>
+    <string name="mdblist_enable_subtitle">Λήψη βαθμολογιών από εξωτερικούς παρόχους στην οθόνη λεπτομερειών μεταδεδομένων</string>
+    <string name="mdblist_api_key_title">Κλειδί API</string>
+    <string name="mdblist_api_key_subtitle">Απαιτείται για λήψη βαθμολογιών από το MDBList</string>
+    <string name="mdblist_trakt_title">Trakt</string>
+    <string name="mdblist_trakt_subtitle">Εμφάνιση βαθμολογίας Trakt</string>
+    <string name="mdblist_imdb_title">IMDb</string>
+    <string name="mdblist_imdb_subtitle">Εμφάνιση βαθμολογίας IMDb (και απόκρυψη προεπιλεγμένης γραμμής IMDb όταν υπάρχει)</string>
+    <string name="mdblist_tmdb_title">TMDB</string>
+    <string name="mdblist_tmdb_subtitle">Εμφάνιση βαθμολογίας TMDB</string>
+    <string name="mdblist_letterboxd_title">Letterboxd</string>
+    <string name="mdblist_letterboxd_subtitle">Εμφάνιση βαθμολογίας Letterboxd</string>
+    <string name="mdblist_tomatoes_title">Rotten Tomatoes</string>
+    <string name="mdblist_tomatoes_subtitle">Εμφάνιση βαθμολογίας κριτικών</string>
+    <string name="mdblist_audience_title">Βαθμολογία κοινού</string>
+    <string name="mdblist_audience_subtitle">Εμφάνιση βαθμολογίας κοινού</string>
+    <string name="mdblist_metacritic_title">Metacritic</string>
+    <string name="mdblist_metacritic_subtitle">Εμφάνιση βαθμολογίας Metacritic</string>
+    <string name="mdblist_dialog_title">Κλειδί API MDBList</string>
+    <string name="mdblist_dialog_subtitle">Εισάγετε το κλειδί API σας για λήψη εξωτερικών βαθμολογιών</string>
+    <string name="mdblist_dialog_placeholder">Εισάγετε κλειδί API MDBList</string>
+    <string name="mdblist_not_set">Δεν έχει οριστεί</string>
+    <string name="mdblist_invalid_api_key">Μη έγκυρο κλειδί API MDBList</string>
+
+    <!-- Anime-Skip -->
+    <string name="animeskip_title">Anime Skip</string>
+    <string name="animeskip_subtitle">Διαμόρφωση Client ID για Anime Skip (παράλειψη intro/outro anime)</string>
+    <string name="animeskip_enable_title">Ενεργοποίηση Anime Skip</string>
+    <string name="animeskip_enable_subtitle">Λήψη χρονοσημάνσεων παράλειψης από το anime-skip.com</string>
+    <string name="animeskip_client_id_title">Client ID</string>
+    <string name="animeskip_client_id_subtitle">Απαιτείται για λήψη χρονοσημάνσεων από το anime-skip.com</string>
+    <string name="animeskip_dialog_title">Client ID Anime Skip</string>
+    <string name="animeskip_dialog_subtitle">Δημιουργήστε το δικό σας Client ID στο anime-skip.com/account/settings</string>
+    <string name="animeskip_dialog_placeholder">Εισάγετε Client ID</string>
+    <string name="animeskip_invalid_client_id">Μη έγκυρο Client ID</string>
+    <string name="action_clear">Καθαρισμός</string>
+
+    <!-- TmdbSettingsScreen -->
+    <string name="tmdb_title">Εμπλουτισμός TMDB</string>
+    <string name="tmdb_subtitle">Επιλέξτε ποια πεδία μεταδεδομένων θα προέρχονται από το TMDB</string>
+    <string name="tmdb_enable_title">Ενεργοποίηση εμπλουτισμού TMDB</string>
+    <string name="tmdb_enable_subtitle">Χρήση TMDB ως πηγή μεταδεδομένων για βελτίωση των δεδομένων από τα πρόσθετα</string>
+    <string name="tmdb_modern_home_title">Ενεργοποίηση στη Μοντέρνα Αρχική</string>
+    <string name="tmdb_modern_home_subtitle">Εφαρμογή εμπλουτισμού TMDB και στην ηρωική ενότητα και στις εστιασμένες κάρτες της Μοντέρνας Αρχικής</string>
+    <string name="tmdb_enrich_continue_watching_title">Εμπλουτισμός Συνέχεια παρακολούθησης</string>
+    <string name="tmdb_enrich_continue_watching_subtitle">Εφαρμογή εμπλουτισμού TMDB στα στοιχεία Συνέχεια παρακολούθησης</string>
+    <string name="tmdb_language_title">Γλώσσα</string>
+    <string name="tmdb_language_subtitle">Γλώσσα μεταδεδομένων TMDB για τίτλο, λογότυπο και ενεργοποιημένα πεδία</string>
+    <string name="tmdb_artwork_title">Εικόνες</string>
+    <string name="tmdb_artwork_subtitle">Λογότυπα και backdrop από το TMDB</string>
+    <string name="tmdb_basic_info_title">Βασικές πληροφορίες</string>
+    <string name="tmdb_basic_info_subtitle">Περιγραφή, είδη και βαθμολογία από το TMDB</string>
+    <string name="tmdb_details_title">Λεπτομέρειες</string>
+    <string name="tmdb_details_subtitle">Διάρκεια, ημερομηνία κυκλοφορίας, χώρα και γλώσσα από το TMDB</string>
+    <string name="tmdb_credits_title">Συντελεστές</string>
+    <string name="tmdb_credits_subtitle">Ηθοποιοί με φωτογραφίες, σκηνοθέτης και σεναριογράφος από το TMDB</string>
+    <string name="tmdb_productions_title">Παραγωγές</string>
+    <string name="tmdb_productions_subtitle">Εταιρείες παραγωγής από το TMDB</string>
+    <string name="tmdb_networks_title">Δίκτυα</string>
+    <string name="tmdb_networks_subtitle">Δίκτυα με λογότυπα από το TMDB</string>
+    <string name="tmdb_episodes_title">Επεισόδια</string>
+    <string name="tmdb_episodes_subtitle">Τίτλοι επεισοδίων, περιγραφές, μικρογραφίες και διάρκεια από το TMDB</string>
+    <string name="tmdb_more_like_this_title">Παρόμοια</string>
+    <string name="tmdb_more_like_this_subtitle">Backdrop προτάσεων TMDB στην οθόνη λεπτομερειών</string>
+    <string name="tmdb_collections_title">Συλλογές</string>
+    <string name="tmdb_collections_subtitle">Συλλογές ταινιών TMDB με σειρά κυκλοφορίας</string>
+
+    <string name="tmdb_language_dialog_title">Γλώσσα TMDB</string>
+
+    <!-- TraktScreen -->
+    <string name="trakt_description">Συγχρονίστε τη λίστα παρακολούθησης, την πρόοδο, τη Συνέχεια παρακολούθησης, τα scrobbles και τις προσωπικές σας λίστες με το Trakt.</string>
+    <string name="trakt_connected_as">Συνδεδεμένος ως %1$s</string>
+    <string name="trakt_account_login">Σύνδεση λογαριασμού</string>
+    <string name="trakt_awaiting_instruction">Μεταβείτε στο trakt.tv/activate και εισάγετε αυτόν τον κωδικό:</string>
+    <string name="trakt_waiting_approval">Αναμονή έγκρισης…</string>
+    <string name="qr_login_approved">Η σύνδεση εγκρίθηκε. Ολοκλήρωση σύνδεσης…</string>
+    <string name="qr_login_pending">Αναμονή έγκρισης στο κινητό σας…</string>
+    <string name="qr_login_expired">Η σύνδεση QR έληξε. Δημιουργήστε νέο κωδικό.</string>
+    <string name="trakt_code_expires">Ο κωδικός λήγει σε %1$s</string>
+    <string name="trakt_token_refreshes">Το token πρόσβασης Trakt ανανεώνεται σε %1$s</string>
+    <string name="trakt_login_instruction">Πατήστε Σύνδεση για να ξεκινήσει η πιστοποίηση Trakt. Θα εμφανιστεί QR code εδώ.</string>
+    <string name="trakt_missing_credentials">Λείπουν TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET στο local.properties.</string>
+    <string name="trakt_watch_progress_title">Πρόοδος παρακολούθησης</string>
+    <string name="trakt_watch_progress_subtitle">Επιλέξτε ποια πηγή θα τροφοδοτεί την επανάληψη και τη Συνέχεια παρακολούθησης</string>
+    <string name="trakt_watch_progress_dialog_title">Πρόοδος παρακολούθησης</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Επιλέξτε αν η επανάληψη και η Συνέχεια παρακολούθησης θα χρησιμοποιούν Trakt ή Nuvio Sync ενώ το scrobbling Trakt παραμένει ενεργό.</string>
+    <string name="trakt_watch_progress_source_trakt">Trakt</string>
+    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_setting_on">Ενεργό</string>
+    <string name="trakt_setting_off">Απενεργοποιημένο</string>
+    <string name="trakt_watch_progress_trakt_selected">Η πηγή προόδου ορίστηκε σε Trakt</string>
+    <string name="trakt_watch_progress_nuvio_selected">Η πηγή προόδου ορίστηκε σε Nuvio Sync</string>
+    <string name="trakt_continue_watching_window">Παράθυρο Συνέχεια παρακολούθησης</string>
+    <string name="trakt_continue_watching_subtitle">Ιστορικό Trakt που λαμβάνεται υπόψη για Συνέχεια παρακολούθησης</string>
+    <string name="trakt_unaired_next_up">Επόμενα επεισόδια που δεν έχουν προβληθεί</string>
+    <string name="trakt_unaired_next_up_subtitle">Εμφάνιση επεισοδίων πριν την προβολή τους</string>
+    <string name="trakt_unaired_shown">Εμφανίζονται</string>
+    <string name="trakt_unaired_hidden">Απόκρυψη</string>
+    <string name="trakt_unaired_now_shown">Τα επεισόδια που δεν έχουν προβληθεί εμφανίζονται πλέον</string>
+    <string name="trakt_unaired_now_hidden">Τα επεισόδια που δεν έχουν προβληθεί είναι πλέον κρυφά</string>
+    <string name="trakt_comments_title">Σχόλια</string>
+    <string name="trakt_comments_subtitle">Εμφάνιση κριτικών Trakt στις σελίδες μεταδεδομένων</string>
+    <string name="trakt_comments_dialog_title">Σχόλια</string>
+    <string name="trakt_comments_dialog_subtitle">Επιλέξτε αν οι σελίδες μεταδεδομένων θα εμφανίζουν κριτικές Trakt όταν ο λογαριασμός σας είναι συνδεδεμένος.</string>
+    <string name="trakt_comments_now_shown">Οι κριτικές Trakt εμφανίζονται πλέον στις σελίδες μεταδεδομένων</string>
+    <string name="trakt_comments_now_hidden">Οι κριτικές Trakt είναι πλέον κρυφές στις σελίδες μεταδεδομένων</string>
+    <string name="trakt_cached_label">Αποθηκευμένο</string>
+    <string name="trakt_stat_movies">Ταινίες</string>
+    <string name="trakt_stat_shows">Σειρές</string>
+    <string name="trakt_stat_episodes">Επεισόδια</string>
+    <string name="trakt_stat_watched_hours">Ώρες παρακολούθησης</string>
+    <string name="trakt_disconnect">Αποσύνδεση</string>
+    <string name="trakt_disconnect_title">Αποσύνδεση Trakt;</string>
+    <string name="trakt_disconnect_subtitle">Αυτό θα αποσυνδέσει τον λογαριασμό σας Trakt από το Nuvio.</string>
+    <string name="trakt_login">Σύνδεση</string>
+    <string name="trakt_retry">Δοκιμή ξανά</string>
+    <string name="trakt_back">Πίσω</string>
+    <string name="trakt_cw_window_title">Παράθυρο Συνέχεια παρακολούθησης</string>
+    <string name="trakt_cw_window_subtitle">Επιλέξτε πόση δραστηριότητα Trakt θα εμφανίζεται στη Συνέχεια παρακολούθησης.</string>
+    <string name="trakt_unaired_dialog_title">Επόμενα επεισόδια που δεν έχουν προβληθεί</string>
+    <string name="trakt_unaired_dialog_subtitle">Επιλέξτε αν η Συνέχεια παρακολούθησης θα περιλαμβάνει επεισόδια πριν την κυκλοφορία τους.</string>
+    <string name="trakt_show_unaired">Εμφάνιση επεισοδίων που δεν έχουν προβληθεί</string>
+    <string name="trakt_hide_unaired">Απόκρυψη επεισοδίων που δεν έχουν προβληθεί</string>
+    <string name="trakt_all_history">Όλο το ιστορικό</string>
+    <string name="trakt_days_format">%1$d ημέρες</string>
+
+    <!-- DebugSettingsScreen -->
+    <string name="debug_title">Debug</string>
+    <string name="debug_subtitle">Εργαλεία προγραμματιστή και σημαίες χαρακτηριστικών (μόνο σε debug builds)</string>
+    <string name="debug_section_popup">Δοκιμές Popup / Διαλόγων</string>
+    <string name="debug_playback_error_title">Οθόνη σφάλματος αναπαραγωγής</string>
+    <string name="debug_playback_error_subtitle">Εμφάνιση προσομοιωμένου popup σφάλματος αναπαραγωγής</string>
+    <string name="debug_section_features">Εναλλαγές χαρακτηριστικών</string>
+    <string name="debug_account_tab_title">Καρτέλα Λογαριασμός</string>
+    <string name="debug_account_tab_subtitle">Εμφάνιση καρτέλας Λογαριασμός στην πλοήγηση Ρυθμίσεων</string>
+    <string name="debug_sync_code_title">Λειτουργίες Sync Code</string>
+    <string name="debug_sync_code_subtitle">Εμφάνιση κουμπιών Generate/Enter Sync Code στις Ρυθμίσεις λογαριασμού</string>
+    <string name="debug_section_account">Λογαριασμός</string>
+    <string name="debug_manual_signin_title">Χειροκίνητη σύνδεση</string>
+    <string name="debug_manual_signin_subtitle">Σύνδεση με email και κωδικό πρόσβασης (Supabase auth)</string>
+    <string name="debug_email_placeholder">Email</string>
+    <string name="debug_password_placeholder">Κωδικός πρόσβασης</string>
+    <string name="debug_signing_in">Σύνδεση…</string>
+    <string name="debug_sign_in">Σύνδεση</string>
+    <string name="debug_error_dialog_title">Σφάλμα αναπαραγωγής</string>
+    <string name="debug_error_dialog_subtitle">Προέκυψε σφάλμα κατά την αναπαραγωγή.\n\nΣφάλμα: Προσομοιωμένο σφάλμα δοκιμής – δεν είναι πραγματικό σφάλμα. Η πηγή επέστρεψε HTTP 503 (Service Unavailable).</string>
+    <string name="debug_dismiss">Κλείσιμο</string>
+    <string name="debug_section_library">Βιβλιοθήκη</string>
+    <string name="debug_generate_library_title">Δημιουργία στοιχείων βιβλιοθήκης</string>
+    <string name="debug_generate_library_subtitle">Προσθήκη τυχαίων ταινιών/σειρών στη βιβλιοθήκη για δοκιμές</string>
+    <string name="debug_generate_library_placeholder">Αριθμός στοιχείων</string>
+    <string name="debug_generate_library_button">Δημιουργία</string>
+    <string name="debug_generating_library">Δημιουργία…</string>
+
+    <!-- ProfileSettingsContent -->
+    <string name="profile_title">Προφίλ</string>
+    <string name="profile_subtitle">Διαχείριση προφίλ χρηστών για αυτόν τον λογαριασμό.</string>
+    <string name="profile_manage_button">Διαχείριση προφίλ</string>
+    <string name="profile_manage_title">Διαχείριση προφίλ</string>
+    <string name="profile_manage_subtitle">Επιλέξτε προφίλ για επεξεργασία, εναλλαγή ή δημιουργία νέου</string>
+    <string name="profile_manage_hint">Επιλέξτε προφίλ για διαχείριση</string>
+    <string name="profile_primary_label">Κύριο</string>
+    <string name="profile_shares_primary">Μοιράζεται το %1$s του κύριου προφίλ</string>
+    <string name="profile_edit_label">Επεξεργασία</string>
+    <string name="profile_add">Προσθήκη προφίλ</string>
+    <string name="profile_create_title">Δημιουργία προφίλ</string>
+    <string name="profile_edit_title">Επεξεργασία προφίλ %1$s</string>
+    <string name="profile_name_placeholder">Όνομα προφίλ</string>
+    <string name="profile_avatar_color">Χρώμα avatar</string>
+    <string name="profile_use_primary_addons">Χρήση πρόσθετων του κύριου προφίλ</string>
+    <string name="profile_use_primary_plugins">Χρήση πρόσθετων του κύριου προφίλ</string>
+    <string name="profile_creating">Δημιουργία…</string>
+    <string name="profile_create_btn">Δημιουργία</string>
+    <string name="profile_confirm">Επιβεβαίωση</string>
+    <string name="profile_delete">Διαγραφή</string>
+    <string name="profile_addons">πρόσθετα</string>
+    <string name="profile_plugins">πρόσθετα</string>
+    <string name="profile_choose_avatar">Επιλογή avatar</string>
+    <string name="profile_avatar_none_selected">Δεν επιλέχθηκε avatar</string>
+    <string name="profile_avatar_focus_hint">Εστιάστε σε ένα avatar για να δείτε το όνομά του</string>
+    <string name="profile_avatar_category_all">Όλα</string>
+    <string name="profile_avatar_category_anime">Anime</string>
+    <string name="profile_avatar_category_animation">Animation</string>
+    <string name="profile_avatar_category_movie">Ταινία</string>
+    <string name="profile_avatar_category_tv">TV</string>
+    <string name="profile_avatar_category_gaming">Gaming</string>
+    <string name="profile_add_new">Προσθήκη προφίλ</string>
+    <string name="profile_cancel">Ακύρωση</string>
+    <string name="profile_save">Αποθήκευση</string>
+    <string name="profile_pin_title">Κλείδωμα προφίλ με PIN</string>
+    <string name="profile_pin_enabled_subtitle">Αυτό το προφίλ απαιτεί 4-ψήφιο PIN πριν την εναλλαγή.</string>
+    <string name="profile_pin_disabled_subtitle">Ορίστε 4-ψήφιο PIN για κλείδωμα αυτού του προφίλ.</string>
+    <string name="profile_pin_set">Ορισμός PIN</string>
+    <string name="profile_pin_change">Αλλαγή PIN</string>
+    <string name="profile_pin_remove">Αφαίρεση PIN</string>
+    <string name="profile_pin_set_title">Ορισμός PIN προφίλ</string>
+    <string name="profile_pin_set_subtitle">Εισάγετε 4-ψήφιο PIN και επιβεβαιώστε το.</string>
+    <string name="profile_pin_enter">Εισάγετε 4-ψήφιο PIN</string>
+    <string name="profile_pin_confirm">Επιβεβαίωση 4-ψήφιου PIN</string>
+    <string name="profile_pin_mismatch">Τα PIN δεν ταιριάζουν.</string>
+    <string name="profile_pin_save">Αποθήκευση PIN</string>
+    <string name="profile_pin_unlock_title">Ξεκλείδωμα %1$s</string>
+    <string name="profile_pin_unlock_subtitle">Εισάγετε το 4-ψήφιο PIN για να συνεχίσετε.</string>
+    <string name="profile_pin_verifying">Επαλήθευση…</string>
+    <string name="profile_pin_unlock_action">Ξεκλείδωμα</string>
+    <string name="profile_pin_overlay_unlock_heading">Εισάγετε το PIN σας για πρόσβαση στο %1$s.</string>
+    <string name="profile_pin_overlay_set_heading">Δημιουργήστε 4-ψήφιο PIN για το %1$s.</string>
+    <string name="profile_pin_overlay_confirm_heading">Επιβεβαιώστε το νέο σας PIN.</string>
+    <string name="profile_pin_overlay_unlock_support">Χρησιμοποιήστε το τηλεχειριστήριο ή το πληκτρολόγιο για να εισάγετε 4 ψηφία.</string>
+    <string name="profile_pin_overlay_change_verify_kicker">Απαιτείται έλεγχος ασφαλείας.</string>
+    <string name="profile_pin_overlay_change_verify_heading">Εισάγετε το τρέχον PIN για αλλαγή PIN του %1$s.</string>
+    <string name="profile_pin_overlay_change_verify_support">Εισάγετε το τρέχον 4-ψήφιο PIN πριν ορίσετε νέο.</string>
+    <string name="profile_pin_overlay_remove_verify_kicker">Απαιτείται έλεγχος ασφαλείας.</string>
+    <string name="profile_pin_overlay_remove_verify_heading">Εισάγετε το τρέχον PIN για αφαίρεση κλειδώματος του %1$s.</string>
+    <string name="profile_pin_overlay_remove_verify_support">Εισάγετε το τρέχον 4-ψήφιο PIN για αφαίρεση του κλειδώματος.</string>
+    <string name="profile_pin_overlay_set_support">Αυτό το PIN θα απαιτείται πριν το άνοιγμα του προφίλ.</string>
+    <string name="profile_pin_overlay_confirm_support">Εισάγετε ξανά τα ίδια 4 ψηφία για ολοκλήρωση.</string>
+    <string name="profile_pin_overlay_mismatch">Τα PIN δεν ταιριάζουν. Εισάγετε νέο PIN ξανά.</string>
+    <string name="profile_pin_overlay_forgot_hint">Ξεχάσατε το PIN; Επαναφέρετέ το από τον λογαριασμό Nuvio στην ιστοσελίδα nuvio.</string>
+    <string name="profile_pin_overlay_back_hint">Πατήστε πίσω για ακύρωση</string>
+
+  
+    <!-- AddonManagerScreen -->
+    <string name="addon_title">Πρόσθετα</string>
+    <string name="addon_readonly_notice">Χρησιμοποιείτε τα πρόσθετα του κύριου προφίλ και δεν μπορούν να αλλάξουν</string>
+    <string name="addon_install_title">Εγκατάσταση πρόσθετου</string>
+    <string name="addon_install_placeholder">https://example.com</string>
+    <string name="addon_installing">Εγκατάσταση</string>
+    <string name="addon_install_btn">Εγκατάσταση</string>
+    <string name="addon_install_success">Εγκαταστάθηκε το %1$s</string>
+    <string name="addon_error_invalid_url">Εισάγετε έγκυρο URL πρόσθετου</string>
+    <string name="addon_error_invalid_scheme">Το URL του πρόσθετου πρέπει να ξεκινά με http ή https</string>
+    <string name="addon_installed_section">Εγκατεστημένα</string>
+    <string name="addon_empty">Δεν έχετε εγκαταστήσει πρόσθετα. Προσθέστε ένα για να ξεκινήσετε.</string>
+    <string name="addon_remove">Αφαίρεση</string>
+    <string name="addon_manage_from_phone_title">Διαχείριση από κινητό</string>
+    <string name="addon_manage_from_phone_subtitle">Σαρώστε QR code για να διαχειριστείτε πρόσθετα και καταλόγους αρχικής οθόνης από το κινητό σας</string>
+    <string name="addon_reorder_title">Αναδιάταξη καταλόγων αρχικής οθόνης</string>
+    <string name="addon_reorder_subtitle">Ελέγχει τη σειρά των γραμμών καταλόγων στην Αρχική (Classic + Modern + Grid)</string>
+    <string name="addon_qr_scan_instruction">Σαρώστε με το κινητό σας για διαχείριση πρόσθετων και καταλόγων</string>
+    <string name="addon_qr_close">Κλείσιμο</string>
+    <string name="addon_confirm_title">Επιβεβαίωση αλλαγών πρόσθετων &amp; καταλόγων</string>
+    <string name="addon_confirm_subtitle">Έγιναν οι ακόλουθες αλλαγές από το κινητό σας:</string>
+    <string name="addon_confirm_added">Προστέθηκαν:</string>
+    <string name="addon_confirm_removed">Αφαιρέθηκαν:</string>
+    <string name="addon_confirm_catalog_reordered">Η σειρά των καταλόγων άλλαξε</string>
+    <string name="addon_confirm_catalogs_disabled">Καταλόγοι απενεργοποιημένοι στην Αρχική:</string>
+    <string name="addon_confirm_catalogs_enabled">Καταλόγοι ενεργοποιημένοι στην Αρχική:</string>
+    <string name="addon_confirm_no_changes">Δεν εντοπίστηκαν ορατές αλλαγές</string>
+    <string name="addon_confirm_reject">Απόρριψη</string>
+    <string name="addon_confirm_confirm">Επιβεβαίωση</string>
+
+    <!-- CatalogOrderScreen -->
+    <string name="catalog_order_title">Αναδιάταξη καταλόγων αρχικής οθόνης</string>
+    <string name="catalog_order_subtitle">Ελέγχει τη σειρά των γραμμών καταλόγων στην Αρχική (Classic + Modern + Grid).</string>
+    <string name="catalog_order_empty">Δεν υπάρχουν ακόμα διαθέσιμοι κατάλογοι αρχικής οθόνης.</string>
+    <string name="catalog_order_disabled_on_home">Απενεργοποιημένο στην Αρχική</string>
+    <string name="catalog_order_enable">Ενεργοποίηση</string>
+    <string name="catalog_order_disable">Απενεργοποίηση</string>
+
+
+    <!-- StreamScreen -->
+    <string name="stream_retry">Δοκιμάστε ξανά</string>
+    <string name="stream_no_streams">Δεν βρέθηκαν ροές</string>
+    <string name="stream_no_streams_hint">Δοκιμάστε να εγκαταστήσετε περισσότερα πρόσθετα για να βρείτε ροές</string>
+    <string name="stream_finding_source">Αναζήτηση πηγής ροής</string>
+    <string name="stream_type_torrent">Torrent</string>
+    <string name="stream_type_youtube">YouTube</string>
+    <string name="stream_type_external">Εξωτερικό</string>
+    <string name="stream_player_picker_title">Ποιο πρόγραμμα αναπαραγωγής να χρησιμοποιηθεί;</string>
+    <string name="stream_player_internal">Εσωτερικό</string>
+    <string name="stream_player_external">Εξωτερικό</string>
+
+    <!-- PlayerScreen -->
+    <string name="player_no_external_player">Δεν βρέθηκε εξωτερικό πρόγραμμα αναπαραγωγής</string>
+
+    <!-- ParentalGuideOverlay -->
+    <string name="parental_nudity">Γυμνό</string>
+    <string name="parental_violence">Βία</string>
+    <string name="parental_profanity">Χυδαία γλώσσα</string>
+    <string name="parental_alcohol">Αλκοόλ/Ναρκωτικά</string>
+    <string name="parental_frightening">Τρομακτικό</string>
+    <string name="parental_severity_severe">Σοβαρό</string>
+    <string name="parental_severity_moderate">Μέτριο</string>
+    <string name="parental_severity_mild">Ήπιο</string>
+    <string name="player_ends_at">Τελειώνει στις %1$s</string>
+    <string name="player_via">μέσω %1$s</string>
+    <string name="player_subtitle_delay">Καθυστέρηση υπότιτλων</string>
+    <string name="player_error_title">Σφάλμα αναπαραγωγής</string>
+    <string name="player_go_back">Επιστροφή</string>
+    <string name="player_speed_title">Ταχύτητα αναπαραγωγής</string>
+    <string name="player_more_actions_title">Περισσότερες ενέργειες</string>
+    <string name="player_more_speed">Ταχύτητα αναπαραγωγής</string>
+    <string name="player_more_aspect_ratio">Αναλογία εικόνας</string>
+    <string name="player_more_open_external">Άνοιγμα σε εξωτερικό πρόγραμμα</string>
+
+    <!-- StreamInfoOverlay -->
+    <string name="stream_info_section_source">ΠΗΓΗ</string>
+    <string name="stream_info_section_file">ΑΡΧΕΙΟ</string>
+    <string name="stream_info_section_video">ΒΙΝΤΕΟ</string>
+    <string name="stream_info_section_audio">ΗΧΟΣ</string>
+    <string name="stream_info_section_subtitle">ΥΠΟΤΙΤΛΟΣ</string>
+    <string name="stream_info_filename">Όνομα αρχείου</string>
+    <string name="stream_info_size">Μέγεθος</string>
+    <string name="stream_info_codec">Κωδικοποιητής</string>
+    <string name="stream_info_resolution">Ανάλυση</string>
+    <string name="stream_info_frame_rate">Frame Rate</string>
+    <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_channels">Κανάλια</string>
+    <string name="stream_info_sample_rate">Ρυθμός δειγματοληψίας</string>
+    <string name="stream_info_language">Γλώσσα</string>
+    <string name="stream_info_name">Όνομα</string>
+    <string name="stream_info_source">Πηγή</string>
+    <string name="stream_info_subtitle_source_addon">Πρόσθετο</string>
+    <string name="stream_info_subtitle_source_embedded">Ενσωματωμένο</string>
+
+    <!-- StreamSourcesSidePanel -->
+    <string name="sources_title">Πηγές</string>
+    <string name="sources_reload">Επαναφόρτωση</string>
+    <string name="sources_close">Κλείσιμο</string>
+    <string name="sources_playing">Παίζει</string>
+    <string name="sources_no_streams">Δεν βρέθηκαν ροές</string>
+
+    <!-- EpisodesSidePanel -->
+    <string name="episodes_panel_close">Κλείσιμο</string>
+    <string name="episodes_panel_back">Πίσω</string>
+    <string name="episodes_panel_reload">Επαναφόρτωση</string>
+    <string name="episodes_panel_no_streams">Δεν βρέθηκαν ροές</string>
+    <string name="episodes_panel_no_episodes">Δεν υπάρχουν διαθέσιμα επεισόδια</string>
+    <string name="episodes_panel_title">Επεισόδια</string>
+    <string name="episodes_panel_streams_title">Ροές</string>
+    <string name="player_speed_normal">Κανονική</string>
+    <string name="player_aspect_fit">Προσαρμογή (Αρχική)</string>
+    <string name="player_aspect_stretch">Τέντωμα</string>
+    <string name="player_aspect_fit_width">Προσαρμογή πλάτους</string>
+    <string name="player_aspect_fit_height">Προσαρμογή ύψους</string>
+    <string name="player_aspect_crop">Περικοπή</string>
+
+    <!-- AudioDialog -->
+    <string name="audio_dialog_title">Ήχος</string>
+    <string name="audio_dialog_tab_tracks">Ήχος</string>
+    <string name="audio_dialog_tab_mix">Mix</string>
+    <string name="audio_mix_label">Ενίσχυση (PCM)</string>
+    <string name="audio_mix_value_db">%1$d dB</string>
+    <string name="audio_mix_persist_on">Διατήρηση μεταξύ συνεδριών: ΕΝΕΡΓΟ</string>
+    <string name="audio_mix_persist_off">Διατήρηση μεταξύ συνεδριών: ΑΠΕΝΕΡΓΟ</string>
+    <string name="audio_mix_range">Εύρος: %1$d dB έως %2$d dB</string>
+    <string name="audio_mix_range_saved">Εύρος: %1$d dB έως %2$d dB (αποθηκευμένο)</string>
+    <string name="audio_mix_unavailable">Η ενίσχυση δεν είναι διαθέσιμη σε αυτή τη συσκευή</string>
+
+    <!-- SubtitleDialog / SubtitleStyleSidePanel -->
+    <string name="subtitle_dialog_title">Υπότιτλοι</string>
+    <string name="subtitle_no_builtin">Δεν υπάρχουν ενσωματωμένοι υπότιτλοι</string>
+    <string name="subtitle_loading_addon">Φόρτωση υπότιτλων από πρόσθετα…</string>
+    <string name="subtitle_no_addon">Δεν υπάρχουν υπότιτλοι από πρόσθετα</string>
+    <string name="subtitle_text_color">Χρώμα κειμένου</string>
+    <string name="subtitle_outline_color">Χρώμα περιγράμματος</string>
+    <string name="subtitle_reset_defaults">Επαναφορά προεπιλογών</string>
+    <string name="subtitle_tab_builtin">Ενσωματωμένοι</string>
+    <string name="subtitle_tab_addons">Πρόσθετα</string>
+    <string name="subtitle_tab_languages">Γλώσσες</string>
+    <string name="subtitle_tab_style">Στυλ</string>
+    <string name="subtitle_tab_delay">Καθυστέρηση</string>
+    <string name="subtitle_none">Κανένας</string>
+    <string name="subtitle_all">Όλοι</string>
+    <string name="subtitle_section_core">Βασικά</string>
+    <string name="subtitle_section_advanced">Προχωρημένα</string>
+    <string name="subtitle_font_size">Μέγεθος γραμματοσειράς</string>
+    <string name="subtitle_bold">Έντονα</string>
+    <string name="subtitle_outline">Περίγραμμα</string>
+    <string name="subtitle_bottom_offset">Μετατόπιση κάτω</string>
+    <string name="subtitle_on">Ενεργό</string>
+    <string name="subtitle_off">Απενεργοποιημένο</string>
+    <string name="subtitle_style_title">Στυλ υπότιτλων</string>
+    <string name="subtitle_style_customize">Προσαρμογή</string>
+    <string name="subtitle_style_color">Χρώμα</string>
+    <string name="subtitle_style_reset">Επαναφορά</string>
+    <string name="subtitle_style_font_size">Μέγεθος γραμματοσειράς</string>
+    <string name="subtitle_style_bold">Έντονα</string>
+    <string name="subtitle_style_text_color">Χρώμα κειμένου</string>
+    <string name="subtitle_style_outline">Περίγραμμα</string>
+    <string name="subtitle_style_bottom_offset">Μετατόπιση κάτω</string>
+    <string name="subtitle_style_defaults">Προεπιλογές</string>
+    <string name="subtitle_style_on">Ενεργό</string>
+    <string name="subtitle_style_off">Απενεργοποιημένο</string>
+    <string name="panel_failed_load_streams">Αποτυχία φόρτωσης ροών</string>
+    <string name="panel_failed_load_episodes">Αποτυχία φόρτωσης επεισοδίων</string>
+
+    <!-- PauseOverlay -->
+    <string name="pause_you_are_watching">Παρακολουθείτε</string>
+    <string name="pause_cast_label">Ηθοποιοί</string>
+    <string name="pause_back_to_details">Επιστροφή σε λεπτομέρειες</string>
+    <string name="pause_as_character">ως %1$s</string>
+
+    <!-- NextEpisodeCardOverlay -->
+    <string name="next_episode_label">Επόμενο επεισόδιο</string>
+    <string name="next_episode_finding_source">Αναζήτηση πηγής…</string>
+    <string name="next_episode_playing_via">Παίζει μέσω %1$s σε %2$d δευτ.</string>
+    <string name="next_episode_play">Αναπαραγωγή</string>
+    <string name="next_episode_unaired">Δεν έχει προβληθεί</string>
+    <string name="next_episode_not_aired_yet">Το επόμενο επεισόδιο δεν έχει προβληθεί ακόμα</string>
+    <string name="skip_intro">Παράλειψη αρχής</string>
+    <string name="skip_ending">Παράλειψη τέλους</string>
+    <string name="skip_recap">Παράλειψη ανασκόπισης</string>
+    <string name="skip_generic">Παράλειψη</string>
+    <string name="display_mode_refresh">Ανανέωση</string>
+    <string name="display_mode_resolution">Ανάλυση</string>
+
+  
+    <!-- SearchScreen -->
+    <string name="search_keyboard_hint">Πατήστε Τέλος στο πληκτρολόγιο για αναζήτηση</string>
+    <string name="search_placeholder">Αναζήτηση ταινιών &amp; σειρών</string>
+    <string name="search_start_title">Ξεκινήστε την αναζήτηση</string>
+    <string name="search_start_subtitle">Εισάγετε τουλάχιστον 2 χαρακτήρες</string>
+    <string name="search_start_subtitle_no_discover">Το Discover είναι απενεργοποιημένο. Εισάγετε τουλάχιστον 2 χαρακτήρες</string>
+    <string name="search_voice_no_speech">Δεν ανιχνεύτηκε ομιλία. Δοκιμάστε ξανά.</string>
+    <string name="search_voice_mic_permission">Απαιτείται άδεια μικροφώνου για φωνητική αναζήτηση.</string>
+    <string name="search_voice_failed">Η αναγνώριση φωνής απέτυχε. Δοκιμάστε ξανά.</string>
+    <string name="search_voice_unavailable">Η φωνητική αναζήτηση δεν είναι διαθέσιμη σε αυτή τη συσκευή.</string>
+
+    <!-- LibraryScreen -->
+    <string name="library_syncing">Συγχρονισμός βιβλιοθήκης Trakt…</string>
+    <string name="library_title">Βιβλιοθήκη</string>
+    <string name="library_filter_list">Λίστα</string>
+    <string name="library_filter_type">Τύπος</string>
+    <string name="library_filter_sort">Ταξινόμηση</string>
+    <string name="library_filter_genre">Είδος</string>
+    <string name="library_filter_year">Έτος</string>
+    <!-- Genre names (from TMDB movie + TV) -->
+    <string name="genre_action">Δράση</string>
+    <string name="genre_adventure">Περιπέτεια</string>
+    <string name="genre_animation">Κινουμένων σχεδίων</string>
+    <string name="genre_comedy">Κωμωδία</string>
+    <string name="genre_crime">Έγκλημα</string>
+    <string name="genre_documentary">Ντοκιμαντέρ</string>
+    <string name="genre_drama">Δράμα</string>
+    <string name="genre_family">Οικογένεια</string>
+    <string name="genre_fantasy">Φαντασία</string>
+    <string name="genre_history">Ιστορία</string>
+    <string name="genre_horror">Τρόμου</string>
+    <string name="genre_music">Μουσική</string>
+    <string name="genre_mystery">Μυστήριο</string>
+    <string name="genre_romance">Ρομαντική</string>
+    <string name="genre_science_fiction">Επιστημονική Φαντασία</string>
+    <string name="genre_tv_movie">Τηλεταινία</string>
+    <string name="genre_thriller">Θρίλερ</string>
+    <string name="genre_war">Πόλεμος</string>
+    <string name="genre_western">Γουέστερν</string>
+    <!-- TV-specific genres -->
+    <string name="genre_action_adventure">Δράση &amp; Περιπέτεια</string>
+    <string name="genre_kids">Παιδικά</string>
+    <string name="genre_news">Ειδήσεις</string>
+    <string name="genre_reality">Reality</string>
+    <string name="genre_sci_fi_fantasy">Sci-Fi &amp; Φαντασία</string>
+    <string name="genre_soap">Σαπουνόπερα</string>
+    <string name="genre_talk">Συζήτηση</string>
+    <string name="genre_war_politics">Πόλεμος &amp; Πολιτική</string>
+    <string name="library_sort_trakt_order">Σειρά Trakt</string>
+    <string name="library_sort_added_desc">Προστέθηκε ↓</string>
+    <string name="library_sort_added_asc">Προστέθηκε ↑</string>
+    <string name="library_sort_title_asc">Τίτλος Α-Ω</string>
+    <string name="library_sort_title_desc">Τίτλος Ω-Α</string>
+    <string name="library_manage_lists">Διαχείριση λιστών</string>
+    <string name="library_manage_trakt_lists">Διαχείριση λιστών Trakt</string>
+    <string name="library_no_lists">Δεν υπάρχουν ακόμα προσωπικές λίστες.</string>
+    <string name="library_list_create">Δημιουργία</string>
+    <string name="library_list_edit">Επεξεργασία</string>
+    <string name="library_list_move_up">Μετακίνηση πάνω</string>
+    <string name="library_list_move_down">Μετακίνηση κάτω</string>
+    <string name="library_list_delete">Διαγραφή</string>
+    <string name="library_list_close">Κλείσιμο</string>
+    <string name="library_list_name_label">Όνομα</string>
+    <string name="library_list_description_label">Περιγραφή</string>
+    <string name="library_list_privacy">Απόρρητο</string>
+    <string name="library_delete_title">Διαγραφή αυτής της λίστας;</string>
+    <string name="library_delete_subtitle">Αυτό θα διαγράψει τη λίστα και όλα τα στοιχεία της από το Trakt.</string>
+    <string name="library_delete_confirm">Διαγραφή</string>
+    <string name="library_source_local">LOCAL</string>
+    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_trakt">TRAKT</string>
+    <string name="library_syncing_library">Συγχρονισμός βιβλιοθήκης…</string>
+    <string name="library_type_all">Όλα</string>
+    <string name="library_type_items">στοιχεία</string>
+    <string name="library_empty_local_title">Δεν υπάρχουν ακόμα %1$s</string>
+    <string name="library_empty_trakt_title">Δεν υπάρχουν %1$s σε αυτή τη λίστα</string>
+    <string name="library_empty_local_subtitle">Αποθηκεύστε τα αγαπημένα σας για να τα δείτε εδώ</string>
+    <string name="library_empty_trakt_subtitle">Χρησιμοποιήστε το + στις λεπτομέρειες για προσθήκη στη watchlist ή σε λίστες</string>
+  
+    <!-- AccountSettingsContent -->
+    <string name="account_loading">Φόρτωση…</string>
+    <string name="account_sync_description">Συγχρονίστε τη βιβλιοθήκη, την πρόοδο παρακολούθησης, τα πρόσθετα και τα πρόσθετα σε όλες τις συσκευές.</string>
+    <string name="account_sync_restart_note">Ο συγχρονισμός δεν είναι πραγματικού χρόνου σε ενεργές συσκευές. Επανεκκινήστε αυτή τη συσκευή μετά τη σύνδεση ή για να λάβετε αλλαγές που έγιναν αλλού.</string>
+    <string name="account_signin_qr_title">Σύνδεση με QR</string>
+    <string name="account_signin_qr_subtitle">Σαρώστε QR code και ολοκληρώστε τη σύνδεση με email στο κινητό σας</string>
+    <string name="account_signed_in_label">Συνδεδεμένος</string>
+    <string name="account_total_label">Σύνολο</string>
+    <string name="account_loading_sync">Φόρτωση δεδομένων συγχρονισμού…</string>
+    <string name="account_sign_out">Αποσύνδεση</string>
+
+    <!-- AuthSignInScreen -->
+    <string name="auth_signin_title">Σύνδεση</string>
+    <string name="auth_signin_tv_disabled">Η εισαγωγή email/κωδικού στην TV είναι απενεργοποιημένη. Συνεχίστε με QR σύνδεση.</string>
+    <string name="auth_signin_qr_btn">Συνέχεια με QR</string>
+
+    <!-- AuthQrSignInScreen -->
+    <string name="auth_qr_title">Σύνδεση με QR</string>
+    <string name="auth_qr_account_login">Σύνδεση λογαριασμού</string>
+    <string name="auth_qr_finishing">Ολοκλήρωση σύνδεσης…</string>
+    <string name="auth_qr_code_label">Κωδικός: %1$s</string>
+    <string name="auth_qr_expires">Λήγει σε %1$s</string>
+    <string name="auth_qr_phone_hint">Χρησιμοποιήστε το κινητό σας για σύνδεση με email/κωδικό. Η TV παραμένει μόνο με QR για γρηγορότερη σύνδεση.</string>
+    <string name="auth_qr_scan_instruction">Σαρώστε QR, εγκρίνετε στον browser και επιστρέψτε εδώ.</string>
+    <string name="auth_qr_code_display">Κωδικός: %1$s</string>
+    <string name="auth_qr_refresh">Ανανέωση QR</string>
+    <string name="auth_qr_continue_without_account">Συνέχεια χωρίς λογαριασμό</string>
+    <string name="auth_qr_connected">Ο λογαριασμός σας είναι συνδεδεμένος σε αυτή την TV.</string>
+    <string name="auth_qr_synced_data">Τα συγχρονισμένα σας δεδομένα</string>
+    <string name="auth_qr_generating">Δημιουργία QR…</string>
+    <string name="auth_qr_unavailable">Το QR δεν είναι διαθέσιμο. Ανανεώστε για επανάληψη.</string>
+    <string name="auth_qr_please_wait">Παρακαλώ περιμένετε…</string>
+    <string name="auth_qr_continue">Συνέχεια</string>
+    <string name="auth_qr_back">Πίσω</string>
+
+    <!-- SyncCodeGenerateScreen -->
+    <string name="sync_generate_title">Δημιουργία κωδικού συγχρονισμού</string>
+    <string name="sync_generate_subtitle">Δημιουργήστε PIN για προστασία του κωδικού συγχρονισμού. Μοιραστείτε τον κωδικό με τις άλλες συσκευές σας.</string>
+    <string name="sync_generate_code_label">Ο κωδικός συγχρονισμού σας</string>
+    <string name="sync_generate_instruction">Εισάγετε αυτόν τον κωδικό και το PIN σας σε άλλη συσκευή για σύνδεση.</string>
+    <string name="sync_generate_done">Έτοιμο</string>
+    <string name="sync_generate_pin_label">Επιλέξτε PIN (4-8 χαρακτήρες)</string>
+    <string name="sync_generate_pin_placeholder">Εισάγετε PIN</string>
+
+    <!-- SyncCodeClaimScreen -->
+    <string name="sync_claim_title">Σύνδεση συσκευής</string>
+    <string name="sync_claim_subtitle">Εισάγετε τον κωδικό συγχρονισμού και το PIN από την άλλη συσκευή σας για σύνδεση αυτής της συσκευής.</string>
+    <string name="sync_claim_success">Η συσκευή συνδέθηκε επιτυχώς! Τα πρόσθετα και τα πρόσθετα σας θα συγχρονίζονται πλέον.</string>
+    <string name="sync_claim_done">Έτοιμο</string>
+    <string name="sync_claim_code_label">Κωδικός συγχρονισμού</string>
+    <string name="sync_claim_code_placeholder">XXXX-XXXX-XXXX-XXXX-XXXX</string>
+    <string name="sync_claim_pin_label">PIN</string>
+    <string name="sync_claim_pin_placeholder">Εισάγετε PIN</string>
+
+    <!-- PluginScreen -->
+    <string name="plugin_readonly_notice">Χρησιμοποιείτε τα πρόσθετα του κύριου προφίλ και δεν μπορούν να αλλάξουν</string>
+    <string name="plugin_repositories_section">Αποθετήρια (%1$d)</string>
+    <string name="plugin_providers_section">Πάροχοι (%1$d)</string>
+    <string name="plugin_title">Πρόσθετα</string>
+    <string name="plugin_subtitle">Διαχείριση τοπικών scrapers και παρόχων</string>
+    <string name="plugin_add_repository">Προσθήκη αποθετηρίου</string>
+    <string name="plugin_add_btn">Προσθήκη</string>
+    <string name="plugin_manage_from_phone_title">Διαχείριση από κινητό</string>
+    <string name="plugin_manage_from_phone_subtitle">Σαρώστε QR code για προσθήκη ή αφαίρεση αποθετηρίων από το κινητό σας</string>
+    <string name="plugin_qr_instruction">Σαρώστε με το κινητό σας για διαχείριση αποθετηρίων</string>
+    <string name="plugin_qr_close">Κλείσιμο</string>
+    <string name="plugin_confirm_title">Επιβεβαίωση αλλαγών αποθετηρίων</string>
+    <string name="plugin_confirm_subtitle">Έγιναν οι ακόλουθες αλλαγές από το κινητό σας:</string>
+    <string name="plugin_confirm_added">Προστέθηκαν:</string>
+    <string name="plugin_confirm_removed">Αφαιρέθηκαν:</string>
+    <string name="plugin_confirm_no_changes">Δεν εντοπίστηκαν αλλαγές</string>
+    <string name="plugin_confirm_total">Σύνολο αποθετηρίων: %1$d</string>
+    <string name="plugin_confirm_reject">Απόρριψη</string>
+    <string name="plugin_confirm_confirm">Επιβεβαίωση</string>
+    <string name="plugin_updated_format">Ενημερώθηκε: %1$s</string>
+    <string name="plugin_test_btn">Δοκιμή</string>
+    <string name="plugin_test_results">Αποτελέσματα δοκιμής (%1$d ροές)</string>
+
+    <!-- ProfileSelectionScreen -->
+    <string name="profile_selection_title">Ποιος παρακολουθεί;</string>
+    <string name="profile_selection_subtitle">Επιλέξτε προφίλ για να συνεχίσετε</string>
+    <string name="profile_selection_hint">Κρατήστε πατημένο για διαχείριση προφίλ</string>
+    <string name="profile_selection_empty">Δεν βρέθηκαν προφίλ</string>
+    <string name="profile_selection_primary_badge">ΚΥΡΙΟ</string>
+    <string name="profile_selection_options_title">Επιλογές προφίλ</string>
+    <string name="profile_delete_confirm_title">Διαγραφή προφίλ;</string>
+    <string name="profile_delete_confirm_subtitle">Αυτό θα διαγράψει μόνιμα αυτό το προφίλ και όλα τα δεδομένα του (βιβλιοθήκη, ιστορικό παρακολούθησης, ρυθμίσεις πρόσθετων). Δεν μπορεί να αναιρεθεί.</string>
+    <string name="profile_delete_btn">Διαγραφή προφίλ</string>
+    <string name="profile_saving">Αποθήκευση…</string>
+
+    <!-- CastDetailScreen -->
+    <string name="cast_detail_error">Κάτι πήγε στραβά</string>
+    <string name="cast_detail_retry">Δοκιμάστε ξανά</string>
+    <string name="cast_detail_filmography">Φιλμογραφία</string>
+    <string name="cast_detail_born">Γεννήθηκε: %1$s</string>
+    <string name="cast_detail_born_died">Γεννήθηκε: %1$s — †%2$s</string>
+    <string name="cast_detail_age">ηλικία %1$d</string>
+
+    <!-- CatalogSeeAllScreen -->
+    <string name="catalog_see_all_from">από %1$s</string>
+    <string name="catalog_see_all_empty_title">Δεν υπάρχουν διαθέσιμα στοιχεία</string>
+    <string name="catalog_see_all_empty_subtitle">Δοκιμάστε διαφορετικό κατάλογο ή ελέγξτε αργότερα</string>
+
+    <!-- LayoutSelectionScreen -->
+    <string name="layout_selection_welcome">Καλώς ήρθατε στο Nuvio</string>
+    <string name="layout_selection_subtitle">Επιλέξτε τη διάταξη αρχικής οθόνης</string>
+    <string name="layout_selection_continue">Συνέχεια</string>
+
+    <!-- UpdatePromptDialog -->
+    <string name="update_title">Ενημέρωση εφαρμογής</string>
+    <string name="update_downloading">Λήψη ενημέρωσης</string>
+    <string name="update_download">Λήψη</string>
+    <string name="update_downloading_ellipsis">Λήψη…</string>
+    <string name="update_unknown_sources">Επιτρέψτε εγκαταστάσεις από άγνωστες πηγές για να συνεχίσετε.</string>
+    <!-- AccountScreen -->
+    <string name="account_title">Λογαριασμός</string>
+    <string name="account_sign_in_description">Συνδεθείτε για να συγχρονίσετε τη βιβλιοθήκη, την πρόοδο, τα πρόσθετα και τα πρόσθετα σε όλες τις συσκευές. Ο συγχρονισμός βιβλιοθήκης χρησιμοποιεί Nuvio Sync όταν δεν είναι συνδεδεμένο το Trakt, ενώ η πρόοδος μπορεί να χρησιμοποιεί είτε Trakt είτε Nuvio Sync.</string>
+    <string name="account_sync_code_title">Κωδικός συγχρονισμού</string>
+    <string name="account_sync_code_description">Συγχρονισμός συσκευών χωρίς δημιουργία λογαριασμού.</string>
+    <string name="account_linked_devices">Συνδεδεμένες συσκευές (%1$d)</string>
+    <string name="account_no_linked_devices">Δεν υπάρχουν συνδεδεμένες συσκευές</string>
+    <string name="account_unlink">Αποσύνδεση</string>
+
+    <!-- EpisodeRatingsSection -->
+    <string name="ratings_loading">Φόρτωση βαθμολογιών επεισοδίου…</string>
+    <string name="ratings_unavailable">Οι βαθμολογίες επεισοδίου δεν είναι διαθέσιμες.</string>
+    <string name="ratings_load_error">Δεν ήταν δυνατή η φόρτωση βαθμολογιών επεισοδίου.</string>
+    <string name="ratings_season_summary">Σεζόν %1$d - %2$d επεισόδια</string>
+
+    <!-- SearchDiscoverSection -->
+    <string name="discover_title">Discover</string>
+    <string name="discover_load_more">Φόρτωση περισσότερων</string>
+    <string name="discover_loading">Φόρτωση…</string>
+    <string name="discover_filter_type">Τύπος</string>
+    <string name="discover_filter_catalog">Κατάλογος</string>
+    <string name="discover_filter_genre">Είδος</string>
+    <string name="discover_select_catalog">Επιλογή</string>
+    <string name="discover_genre_default">Προεπιλογή</string>
+    <string name="discover_empty_no_catalog_title">Επιλέξτε κατάλογο</string>
+    <string name="discover_empty_no_catalog_subtitle">Επιλέξτε κατάλογο Discover για περιήγηση</string>
+    <string name="discover_empty_no_content_title">Δεν βρέθηκε περιεχόμενο</string>
+    <string name="discover_empty_no_content_subtitle">Δοκιμάστε διαφορετικό είδος ή κατάλογο</string>
+
+    <!-- AddonManagerScreen -->
+    <string name="addon_confirm_total_addons">Σύνολο πρόσθετων: %1$d</string>
+    <string name="addon_confirm_total_catalogs">Σύνολο καταλόγων: %1$d</string>
+    <string name="addon_catalogs_types">Κατάλογοι: %1$d - Τύποι: %2$s</string>
+
+    <!-- PluginScreen -->
+    <string name="plugin_and_more">… και %1$d ακόμα</string>
+    <string name="plugin_providers_count">%1$d πάροχοι</string>
+    <string name="plugin_enabled">Ενεργό</string>
+    <string name="plugin_disabled">Απενεργοποιημένο</string>
+    <string name="plugin_no_repos">Δεν έχουν προστεθεί ακόμα αποθετήρια.\nΠροσθέστε ένα αποθετήριο για να ξεκινήσετε.</string>
+
+    <!-- ProfileSettingsContent -->
+    <string name="profile_edit_title_id">Επεξεργασία προφίλ %1$d</string>
+
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_passthrough_info">Το passthrough ήχου (TrueHD, DTS, AC-3 κ.λπ.) είναι αυτόματο. Όταν συνδέεστε σε συμβατό AV receiver ή soundbar μέσω HDMI, ο lossless ήχος αποστέλλεται ως έχει χωρίς αποκωδικοποίηση.</string>
+    <string name="audio_dv_title">DV7 - HEVC Fallback</string>
+
+    <!-- SidebarNavigation / MainActivity -->
+    <string name="nav_home">Αρχική</string>
+    <string name="nav_discover">Discover</string>
+    <string name="nav_search">Αναζήτηση</string>
+    <string name="nav_library">Βιβλιοθήκη</string>
+    <string name="nav_addons">Πρόσθετα</string>
+    <string name="nav_settings">Ρυθμίσεις</string>
+    <string name="settings_rounded_ui">Στρογγυλεμένο UI</string>
+    <string name="cd_expand_sidebar">Επέκταση πλευρικής μπάρας</string>
+
+    <string name="update_checking">Έλεγχος ενημερώσεων…</string>
+    <string name="update_download_complete">Η λήψη ολοκληρώθηκε. Έτοιμο για εγκατάσταση.</string>
+    <string name="update_up_to_date">Το σύστημα είναι ενημερωμένο. Τελευταίες αλλαγές:</string>
+    <string name="update_close">Κλείσιμο</string>
+    <string name="update_open_settings">Άνοιγμα Ρυθμίσεων</string>
+    <string name="update_install">Εγκατάσταση</string>
+    <string name="update_ignore">Αγνόηση</string>
+    <string name="watchlist_added">Προστέθηκε στη watchlist</string>
+    <string name="watchlist_removed">Αφαιρέθηκε από τη watchlist</string>
+</resources>

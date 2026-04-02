@@ -133,4 +133,10 @@ class WatchedItemsPreferences @Inject constructor(
                 .toSet()
         }
     }
+
+    suspend fun clearAll() {
+        store().edit { preferences ->
+            preferences.remove(watchedItemsKey)
+        }
+    }
 }

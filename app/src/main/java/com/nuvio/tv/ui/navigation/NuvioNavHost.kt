@@ -40,6 +40,8 @@ import com.nuvio.tv.ui.screens.account.AuthQrSignInScreen
 import com.nuvio.tv.ui.screens.cast.CastDetailScreen
 import com.nuvio.tv.ui.screens.profile.ProfileSelectionMode
 import com.nuvio.tv.ui.screens.profile.ProfileSelectionScreen
+import com.nuvio.tv.ui.screens.tmdb.TmdbEntityBrowseScreen
+import com.nuvio.tv.ui.screens.home.HeroBackdropState
 
 @Composable
 fun NuvioNavHost(
@@ -169,7 +171,15 @@ fun NuvioNavHost(
 
             HomeScreen(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
-                    navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
+                    val heroBackdrop = HeroBackdropState.currentHeroBackdropUrl
+                    navController.navigate(
+                        Screen.Detail.createRoute(
+                            itemId = itemId,
+                            itemType = itemType,
+                            addonBaseUrl = addonBaseUrl,
+                            heroBackdropUrl = heroBackdrop
+                        )
+                    )
                 },
                 onContinueWatchingClick = { item ->
                     navController.navigate(createContinueWatchingRoute(item))
@@ -214,6 +224,11 @@ fun NuvioNavHost(
                     type = NavType.StringType
                     nullable = true
                     defaultValue = "false"
+                },
+                navArgument("heroBackdropUrl") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
                 }
             )
         ) { backStackEntry ->
@@ -228,9 +243,11 @@ fun NuvioNavHost(
             val returnFocusEpisode by savedState.getStateFlow(
                 "returnFocusEpisode", detailArgs?.getString("returnFocusEpisode")?.toIntOrNull()
             ).collectAsState()
+            val heroBackdropUrl = detailArgs?.getString("heroBackdropUrl")?.takeIf { it.isNotBlank() }
             MetaDetailsScreen(
                 returnFocusSeason = returnFocusSeason,
                 returnFocusEpisode = returnFocusEpisode,
+                heroBackdropUrl = heroBackdropUrl,
                 onBackPress = {
                     if (returnToHomeOnBack) {
                         val popped = navController.popBackStack(Screen.Home.route, inclusive = false)
@@ -245,6 +262,16 @@ fun NuvioNavHost(
                 },
                 onNavigateToCastDetail = { personId, personName, preferCrew ->
                     navController.navigate(Screen.CastDetail.createRoute(personId, personName, preferCrew))
+                },
+                onNavigateToTmdbEntityBrowse = { entityKind, entityId, entityName, sourceType ->
+                    navController.navigate(
+                        Screen.TmdbEntityBrowse.createRoute(
+                            entityKind = entityKind,
+                            entityId = entityId,
+                            entityName = entityName,
+                            sourceType = sourceType
+                        )
+                    )
                 },
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
@@ -681,6 +708,7 @@ fun NuvioNavHost(
                                         year = args?.getString("year"),
                                         contentId = contentId.takeIf { it.isNotBlank() },
                                         contentName = args?.getString("contentName"),
+                                        manualSelection = true,
                                         returnToDetailOnBack = returnToDetailOnBack,
                                         returnToHomeOnBack = returnToHomeOnBack
                                     )
@@ -973,6 +1001,26 @@ fun NuvioNavHost(
             )
         ) {
             CastDetailScreen(
+                onBackPress = { navController.popBackStack() },
+                onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
+                    navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.TmdbEntityBrowse.route,
+            arguments = listOf(
+                navArgument("entityKind") { type = NavType.StringType },
+                navArgument("entityId") { type = NavType.IntType },
+                navArgument("entityName") { type = NavType.StringType },
+                navArgument("sourceType") {
+                    type = NavType.StringType
+                    defaultValue = "tv"
+                }
+            )
+        ) {
+            TmdbEntityBrowseScreen(
                 onBackPress = { navController.popBackStack() },
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))

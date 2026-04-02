@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 
-private const val AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS = 60000L
+private const val AFR_PREFLIGHT_NEXTLIB_TIMEOUT_MS = 30000L
 private const val AFR_PREFLIGHT_FALLBACK_TIMEOUT_MS = 5500L
 
 internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(

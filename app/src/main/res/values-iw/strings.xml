@@ -1,0 +1,1037 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Nuvio</string>
+    <string name="type_movie">סרט</string>
+    <string name="type_series">סדרה</string>
+    <string name="type_unknown">לא ידוע</string>
+
+    <!-- HomeScreen -->
+    <string name="home_no_addons">אין תוספים מותקנים. הוסף אחד כדי להתחיל.</string>
+    <string name="home_no_catalog_addons">אין תוספי קטלוג מותקנים. התקן תוסף קטלוג כדי לראות תוכן.</string>
+    <string name="auth_notice_nuvio_logged_out">יצאת מחשבון Nuvio. אנא התחבר מחדש.</string>
+    <string name="auth_notice_trakt_logged_out">יצאת מחשבון Trakt. אנא התחבר מחדש.</string>
+    <string name="error_generic">אירעה שגיאה</string>
+
+    <!-- ErrorState -->
+    <string name="action_retry">נסה שוב</string>
+    <string name="error_state_generic_issue">משהו השתבש.</string>
+    <string name="error_state_possible_fix">תיקון אפשרי: %1$s</string>
+    <string name="error_state_fix_retry_soon">נסה שוב בעוד רגע.</string>
+    <string name="error_state_issue_no_metadata_any_addon">לא ניתן לטעון פרטים עבור מזהה זה מכיוון שאף תוסף מותקן לא החזיר מטה-דאטה.</string>
+    <string name="error_state_fix_no_metadata_any_addon">נסה תוסף אחר, בטל את \"העדף תוסף מטה חיצוני\" בהגדרות פריסה, או ודא שתוסף מותקן תומך במזהה זה.</string>
+    <string name="error_state_prefix_no_supported_metadata">אף תוסף מותקן אינו תומך במטה-דאטה עבור </string>
+    <string name="error_state_prefix_no_addon_for_id">אף תוסף מותקן לא הצליח לספק מטה-דאטה עבור id=</string>
+    <string name="error_state_fix_no_supported_metadata">התקן או עדכן תוסף שתומך בסוג תוכן זה, ואז נסה שוב.</string>
+    <string name="error_state_prefix_tried_meta_addons">תוספי מטה שנוסו:</string>
+    <string name="error_state_fix_tried_meta_addons">התקן תוסף שתומך במזהה זה, או הגדר מחדש/עדכן את התוסף ונסה שוב.</string>
+    <string name="error_state_issue_missing_metadata_for_id">אין מטה-דאטה עבור מזהה זה</string>
+    <string name="error_state_fix_missing_metadata_for_id">פתח מזהה זה מתוסף אחר, בטל \"העדף תוסף מטה חיצוני\", או בדוק שהתוסף תומך במזהה זה.</string>
+    <string name="error_state_issue_addon_unreachable">לא ניתן להגיע אליו</string>
+    <string name="error_state_fix_addon_unreachable">בדוק את חיבור האינטרנט, ודא שכתובת ה-URL של התוסף עדיין פעילה, ואז נסה שוב.</string>
+    <string name="error_state_issue_addon_connection_failed">דחה את החיבור</string>
+    <string name="error_state_fix_addon_connection_failed">ודא שהשרת של התוסף פעיל ונגיש, ואז נסה שוב.</string>
+    <string name="error_state_issue_addon_timeout">לקח יותר מדי זמן להגיב</string>
+    <string name="error_state_fix_addon_timeout">נסה שוב בעוד רגע, או נסה תוסף אחר אם זה ממשיך לקרות.</string>
+    <string name="error_state_issue_addon_cleartext">משתמש בחיבור HTTP לא מאובטח שאנדרואיד חסם</string>
+    <string name="error_state_fix_addon_cleartext">שנה את כתובת ה-URL של התוסף ל-HTTPS או עדכן את הגדרות התוסף.</string>
+    <string name="error_state_fix_addon_generic">נסה שוב, עדכן או התקן מחדש את התוסף, או נסה תוסף אחר.</string>
+    <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
+    <string name="error_meta_not_found">מטה-דאטה לא נמצא</string>
+    <string name="error_meta_no_supported_addon">אף תוסף מותקן אינו תומך במטה-דאטה עבור \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">אף תוסף מותקן לא הצליח לספק מטה-דאטה עבור id=%1$s (type=%2$s).</string>
+    <string name="error_meta_tried_none">תוספי מטה שנוסו: %1$s. אף אחד לא סיפק מטה-דאטה עבור id=%2$s (type=%3$s).</string>
+    <string name="error_meta_tried_generic">תוספי מטה שנוסו: %1$s. לא ניתן לטעון מטה-דאטה עבור id=%2$s (type=%3$s).</string>
+    <string name="error_meta_tried_issues">תוספי מטה שנוסו: %1$s. לא ניתן לטעון מטה-דאטה עבור id=%2$s (type=%3$s). בעיות: %4$s.</string>
+
+    <!-- ContinueWatchingSection -->
+    <string name="continue_watching">המשך צפייה</string>
+    <string name="cw_upcoming">בקרוב</string>
+    <string name="cw_next_up">הפרק הבא</string>
+    <string name="cw_resume">המשך</string>
+    <string name="cw_percent_watched">%1$d%% נצפה</string>
+    <string name="cw_hours_min_left">נותרו %1$dש׳ %2$dד׳</string>
+    <string name="cw_min_left">נותרו %1$dד׳</string>
+    <string name="cw_almost_done">כמעט סיום</string>
+    <string name="cw_airs_date">שידור ב-%1$s</string>
+    <string name="cw_action_go_to_details">עבור לפרטים</string>
+    <string name="cw_action_start_from_beginning">התחל מהתחלה</string>
+    <string name="cw_action_remove">הסר</string>
+    <string name="cw_dialog_subtitle">בחר מה ברצונך לעשות עם פריט זה.</string>
+    <string name="home_poster_dialog_subtitle">פעולות כותרת</string>
+
+    <!-- CatalogRowSection -->
+    <string name="catalog_from_addon">מ-%1$s</string>
+    <string name="action_see_all">ראה הכל</string>
+
+    <!-- HeroSection -->
+    <string name="hero_creator">יוצר: %1$s</string>
+    <string name="hero_director">במאי: %1$s</string>
+    <string name="hero_writer">כותב: %1$s</string>
+    <string name="hero_play">הפעל</string>
+    <string name="hero_play_episode">הפעל ע%1$d, פ%2$d</string>
+    <string name="hero_add_to_library">הוסף לספרייה</string>
+    <string name="hero_remove_from_library">הסר מהספרייה</string>
+    <string name="hero_mark_watched">סמן כנצפה</string>
+    <string name="hero_mark_unwatched">סמן כלא נצפה</string>
+    <string name="hero_play_trailer">הפעל טריילר</string>
+    <string name="hero_press_back_trailer">לחץ חזרה ליציאה מהטריילר</string>
+    <string name="cd_rating">דירוג</string>
+
+    <!-- EpisodesSection -->
+    <string name="episodes_season">עונה %1$d</string>
+    <string name="episodes_specials">מיוחדים</string>
+    <string name="episodes_episode">פרק</string>
+    <string name="episodes_cd_watched">נצפה</string>
+    <string name="episodes_dialog_subtitle">פעולות פרק</string>
+    <string name="episodes_mark_watched">סמן כנצפה</string>
+    <string name="episodes_mark_unwatched">סמן כלא נצפה</string>
+    <string name="episodes_mark_season_watched">סמן עונה כנצפית</string>
+    <string name="episodes_mark_season_unwatched">סמן עונה כלא נצפית</string>
+    <string name="episodes_mark_previous_watched">סמן קודמים בעונה זו כנצפים</string>
+    <string name="episodes_play">הפעל</string>
+    <string name="play_manually">הפעל ידנית</string>
+    <string name="episodes_season_actions">פעולות עונה</string>
+
+    <!-- MetaDetailsViewModel -->
+    <string name="detail_added_to_library">נוסף לספרייה</string>
+    <string name="detail_removed_from_library">הוסר מהספרייה</string>
+    <string name="detail_episode_marked_watched">הפרק סומן כנצפה</string>
+    <string name="detail_episode_marked_unwatched">הפרק סומן כלא נצפה</string>
+    <string name="detail_lists_updated">רשימות עודכנו</string>
+    <string name="detail_movie_marked_watched">סומן כנצפה</string>
+    <string name="detail_movie_marked_unwatched">סומן כלא נצפה</string>
+    <string name="detail_all_episodes_watched">כל הפרקים כבר נצפו</string>
+    <string name="detail_no_watched_episodes">אין פרקים שנצפו בעונה זו</string>
+    <string name="detail_all_previous_watched">כל הפרקים הקודמים כבר נצפו</string>
+    <string name="detail_marked_episodes_watched">פרקים שסומנו כנצפים: %1$d</string>
+    <string name="detail_marked_episodes_unwatched">פרקים שסומנו כלא נצפים: %1$d</string>
+    <string name="detail_marked_previous_watched">פרקים קודמים שסומנו כנצפים: %1$d</string>
+
+    <!-- MetaDetailsScreen -->
+    <string name="detail_btn_play">הפעל</string>
+    <string name="detail_btn_resume">המשך</string>
+    <string name="detail_btn_play_episode">הפעל ע%1$dפ%2$d</string>
+    <string name="detail_btn_resume_episode">המשך ע%1$dפ%2$d</string>
+    <string name="detail_btn_next_episode">הבא ע%1$dפ%2$d</string>
+    <string name="detail_tab_cast">יוצרים ושחקנים</string>
+    <string name="cast_role_creator">יוצר</string>
+    <string name="cast_role_director">במאי</string>
+    <string name="cast_role_writer">כותב</string>
+    <string name="detail_tab_ratings">דירוגים</string>
+    <string name="detail_tab_more_like_this">עוד כזה</string>
+    <string name="detail_section_network">רשת</string>
+    <string name="detail_section_production">הפקה</string>
+    <string name="episodes_unavailable">לא זמין</string>
+    <string name="series_status_ended">הסתיים</string>
+    <string name="series_status_continuing">מתמשך</string>
+    <string name="series_status_current">שוטף</string>
+    <string name="series_status_cancelled">בוטל</string>
+    <string name="series_status_released">יצא לאקרנים</string>
+    <string name="series_status_planned">מתוכנן</string>
+    <string name="series_status_rumored">שמועה</string>
+    <string name="series_status_in_production">בהפקה</string>
+    <string name="series_status_post_production">בעריכה</string>
+    <string name="detail_lists_fallback">רשימות</string>
+    <string name="detail_lists_subtitle">בחר אילו רשימות יכללו כותרת זו.</string>
+    <string name="action_save">שמור</string>
+    <string name="action_saving">שומר…</string>
+
+    <!-- AppLanguage -->
+    <string name="appearance_language">שפת האפליקציה</string>
+    <string name="appearance_language_subtitle">דרוס שפת מערכת</string>
+    <string name="appearance_language_system">ברירת מחדל של המערכת</string>
+    <string name="appearance_language_dialog_title">בחר שפה</string>
+    <string name="appearance_language_restart_hint">הפעל מחדש את האפליקציה כדי להחיל את שינוי השפה.</string>
+
+    <!-- Font -->
+    <string name="appearance_font">גופן האפליקציה</string>
+    <string name="appearance_font_subtitle">בחר את הגופן המועדף עליך</string>
+    <string name="appearance_font_dialog_title">בחר גופן</string>
+
+    <!-- ThemeSettingsScreen -->
+    <string name="appearance_title">מראה</string>
+    <string name="appearance_subtitle">בחר ערכת צבעים, גופן ושפה</string>
+    <string name="cd_selected">נבחר</string>
+
+    <!-- AboutScreen -->
+    <string name="about_title">אודות</string>
+    <string name="about_subtitle">מידע על האפליקציה, עדכונים וקישורים משפטיים</string>
+    <string name="about_made_with_love">נוצר באהבה ❤️ על ידי Tapframe וחברים</string>
+    <string name="about_version">גרסה %1$s</string>
+    <string name="about_check_updates">בדוק עדכונים</string>
+    <string name="about_check_updates_subtitle">הורד את הגרסה האחרונה</string>
+    <string name="about_privacy_policy">מדיניות פרטיות</string>
+    <string name="about_privacy_policy_subtitle">צפה במדיניות הפרטיות שלנו</string>
+    <string name="about_supporters_contributors">תומכים ותורמים</string>
+    <string name="about_supporters_contributors_subtitle">הכרה ציבורית וקרדיטים לפרויקט</string>
+
+    <!-- SettingsScreen categories -->
+    <string name="settings_account">חשבון</string>
+    <string name="settings_account_subtitle">מצב חשבון וסנכרון.</string>
+    <string name="settings_profiles">פרופילים</string>
+    <string name="settings_profiles_subtitle">ניהול פרופילי משתמש.</string>
+    <string name="settings_layout">פריסה</string>
+    <string name="settings_layout_subtitle">מבנה בית וסגנונות פוסטרים.</string>
+    <string name="settings_plugins">תוספים</string>
+    <string name="settings_plugins_subtitle">מאגרים וספקים.</string>
+    <string name="settings_integration">שילוב</string>
+    <string name="settings_playback">הפעלה</string>
+    <string name="settings_playback_subtitle">נגן, כתוביות והפעלה אוטומטית.</string>
+    <string name="settings_trakt_subtitle">פתח מסך חיבור Trakt.</string>
+    <string name="settings_about_subtitle">גרסה ומדיניות.</string>
+    <string name="settings_network">מהירות רשת</string>
+    <string name="settings_network_subtitle">אבחון השהייה והורדה</string>
+    <string name="settings_advanced">מתקדם</string>
+    <string name="settings_advanced_subtitle">הפעל אבחון מהירות רשת</string>
+    <string name="network_speed_test_run">הפעל בדיקת מהירות</string>
+    <string name="network_speed_test_running">בודק מהירות…</string>
+    <string name="network_speed_test_subtitle">מדוד מהירות הורדה והשהייה</string>
+    <string name="network_testing_latency">מודד השהייה</string>
+    <string name="network_testing_download">מודד מהירות הורדה</string>
+    <string name="network_results_title">תוצאות</string>
+    <string name="network_latency_label">השהייה</string>
+    <string name="network_download_label">הורדה</string>
+    <string name="network_error_prefix">שגיאה: %1$s</string>
+    <string name="network_powered_by_fast">מופעל על ידי fast.com</string>
+    <string name="network_connection_wifi">Wi-Fi</string>
+    <string name="network_connection_ethernet">Ethernet</string>
+    <string name="network_connection_offline">אין חיבור</string>
+    <string name="settings_debug">ניפוי שגיאות</string>
+    <string name="settings_debug_subtitle">כלי מפתחים ודגלי פיצ׳רים.</string>
+    <string name="settings_plugins_section_subtitle">ניהול מאגרים, ספקים ומצבי תוספים.</string>
+    <string name="settings_account_section_subtitle">מצב חשבון וסנכרון.</string>
+    <string name="account_stat_addons">תוספים</string>
+    <string name="account_stat_plugins">פלאגינים</string>
+    <string name="account_stat_library">ספרייה</string>
+    <string name="account_stat_progress">התקדמות</string>
+    <string name="account_stat_watched">נצפה</string>
+    <string name="settings_integrations_section">שילובים</string>
+    <string name="settings_integrations_section_subtitle">בחר TMDB או MDBList</string>
+    <string name="settings_tmdb_subtitle">בקרות העשרת מטה-דאטה</string>
+    <string name="settings_mdblist_subtitle">ספקי דירוג חיצוניים</string>
+    <string name="settings_animeskip_subtitle">חותמות זמן לדילוג על הקדמות/סיומות אנימה</string>
+
+    <!-- PlaybackSettingsScreen -->
+    <string name="playback_title">הגדרות הפעלה</string>
+    <string name="playback_subtitle">הגדר אפשרויות הפעלת וידאו וכתוביות</string>
+    <string name="cd_decrease">הפחת</string>
+    <string name="cd_increase">הגדל</string>
+    <string name="action_cancel">ביטול</string>
+    <string name="action_none">ללא</string>
+    <string name="action_close">סגור</string>
+
+    <!-- SupportersContributorsScreen -->
+    <string name="supporters_contributors_title">תומכים ותורמים</string>
+    <string name="supporters_contributors_subtitle">האנשים שתומכים ב-Nuvio והתורמים הבונים אותו בטלוויזיה ובנייד.</string>
+    <string name="supporters_contributors_supporters_copy">תומכים ותורמים עוזרים לשמור את הפרויקט בתנועה, מממנים תשתיות ומאפשרים פיצ׳רים שאפתניים.</string>
+    <string name="supporters_contributors_donate_copy">Nuvio ישאר חינמי וקוד פתוח. אם ברצונך לתמוך בפרויקט, תוכל לעזור לכסות את הזמן והתשתית שמאחוריו.</string>
+    <string name="supporters_contributors_donate_button">תרום ל-Nuvio</string>
+    <string name="supporters_contributors_qr_title">סרוק לתרומה</string>
+    <string name="supporters_contributors_qr_subtitle">פתח את הקישור בטלפון שלך ותמוך ב-Nuvio דרך Ko-fi.</string>
+    <string name="supporters_contributors_qr_hint">כוון את המצלמה לקוד ה-QR או השתמש בכפתור למטה.</string>
+    <string name="supporters_contributors_back_button">חזור לפרטים</string>
+    <string name="supporters_tab">תומכים</string>
+    <string name="contributors_tab">תורמים</string>
+    <string name="supporters_loading">טוען תומכים…</string>
+    <string name="supporters_empty">עדיין לא נמצאו תומכים.</string>
+    <string name="supporters_error_title">לא ניתן לטעון תומכים</string>
+    <string name="supporters_no_message">לא שותפה הודעה.</string>
+    <string name="supporters_open_donations">פתח דף תרומות</string>
+    <string name="contributors_loading">טוען תורמי GitHub…</string>
+    <string name="contributors_empty">עדיין לא נמצאו תורמים.</string>
+    <string name="contributors_error_title">לא ניתן לטעון תורמים</string>
+    <string name="contributors_total_contributions">%1$d תרומות סה״כ</string>
+    <string name="contributors_open_github">פתח פרופיל GitHub</string>
+    <string name="contributors_show_kofi_qr">הצג QR Ko-fi</string>
+    <string name="contributors_hide_kofi_qr">הסתר QR Ko-fi</string>
+    <string name="contributors_profile_unavailable">קישור פרופיל GitHub אינו זמין.</string>
+
+    <!-- PlaybackSettingsSections -->
+    <string name="playback_section_general">כללי</string>
+    <string name="playback_section_general_desc">התנהגות הפעלה בסיסית.</string>
+    <string name="playback_loading_overlay">שכבת טעינה</string>
+    <string name="playback_loading_overlay_sub">הצג מסך טעינה עד להופעת הפריים הראשון.</string>
+    <string name="playback_pause_overlay">שכבת השהייה</string>
+    <string name="playback_pause_overlay_sub">הצג שכבת פרטים לאחר 5 שניות בהשהייה.</string>
+    <string name="playback_show_clock_sub">הצג שעה נוכחית ושעת סיום כשהפקדים גלויים.</string>
+    <string name="playback_osd_clock">שעון OSD</string>
+    <string name="playback_skip_intro">דלג על הקדמה</string>
+    <string name="playback_skip_intro_sub">השתמש ב-introdb.app לזיהוי הקדמות וחזרות.</string>
+    <string name="playback_auto_frame_rate">קצב פריימים אוטומטי</string>
+    <string name="playback_section_player">נגן ובחירת זרם</string>
+    <string name="playback_section_player_desc">העדפת נגן, הפעלה אוטומטית וסינון מקורות.</string>
+    <string name="playback_player">נגן</string>
+    <string name="playback_player_internal">פנימי</string>
+    <string name="playback_player_external">חיצוני</string>
+    <string name="playback_player_ask">שאל בכל פעם</string>
+    <string name="playback_section_audio">שמע וטריילר</string>
+
+    <!-- LayoutSettingsScreen -->
+    <string name="layout_title">הגדרות פריסה</string>
+    <string name="layout_subtitle">הגדר את מבנה הבית ואפשרויות הפוסטרים</string>
+    <string name="layout_section_home">מסך הבית</string>
+    <string name="layout_section_home_desc">הגדרות מסך הבית הכללי.</string>
+    <string name="layout_classic">קלאסי</string>
+    <string name="layout_modern">מודרני</string>
+    <string name="layout_grid">רשת</string>
+    <string name="layout_collapse_sidebar">כווץ סרגל צד</string>
+    <string name="layout_collapse_sidebar_sub">הסתר את סרגל הצד כברירת מחדל; הצג בעת פוקוס.</string>
+    <string name="layout_modern_sidebar">סרגל צד מודרני</string>
+    <string name="layout_modern_sidebar_sub">אפשר ניווט בסרגל צד צף.</string>
+    <string name="layout_modern_sidebar_blur">טשטוש סרגל צד מודרני</string>
+    <string name="layout_modern_sidebar_blur_sub">הפעל אפקט טשטוש לשטחי סרגל הצד המודרני.</string>
+    <string name="layout_show_hero">הצג אזור הירו</string>
+    <string name="layout_show_hero_sub">הצג קרוסלת הירו בראש הבית.</string>
+    <string name="layout_show_discover">הצג גלה בחיפוש</string>
+    <string name="layout_show_discover_sub">הצג אזור גלישה כשהחיפוש ריק.</string>
+    <string name="layout_poster_labels">הצג תוויות פוסטרים</string>
+    <string name="layout_poster_labels_sub">הצג כותרות מתחת לפוסטרים בשורות, רשת וראה הכל.</string>
+    <string name="layout_addon_name">הצג שם תוסף</string>
+    <string name="layout_addon_name_sub">הצג שם מקור מתחת לכותרות קטלוג.</string>
+    <string name="layout_catalog_type">הצג סוג קטלוג</string>
+    <string name="layout_catalog_type_sub">הצג סיומת סוג ליד שם הקטלוג (סרט/סדרה).</string>
+    <string name="layout_hide_unreleased">הסתר תוכן שלא יצא</string>
+    <string name="layout_hide_unreleased_sub">הסתר סרטים וסדרות שטרם יצאו.</string>
+    <string name="layout_section_detail">עמוד פרטים</string>
+    <string name="layout_section_detail_desc">הגדרות למסכי פרטים ופרקים.</string>
+    <string name="layout_blur_unwatched">טשטש פרקים שלא נצפו</string>
+    <string name="layout_blur_unwatched_sub">טשטש תמונות ממוזערות של פרקים עד שנצפו למניעת ספוילרים.</string>
+    <string name="layout_trailer_button">הצג כפתור טריילר</string>
+    <string name="layout_trailer_button_sub">הצג כפתור טריילר בעמוד הפרטים (רק כשטריילר זמין).</string>
+    <string name="layout_prefer_external_meta">העדף מטה מתוסף חיצוני</string>
+    <string name="layout_prefer_external_meta_sub">השתמש במטה-דאטה מתוסף חיצוני במקום תוסף הקטלוג.</string>
+    <string name="layout_section_focused">פוסטר ממוקד</string>
+    <string name="layout_section_focused_desc">התנהגות מתקדמת לכרטיסי פוסטר ממוקדים.</string>
+    <string name="layout_expand_poster">הרחב פוסטר ממוקד לרקע</string>
+    <string name="layout_expand_poster_sub">הרחב פוסטר ממוקד לאחר השהייה.</string>
+    <string name="layout_expand_delay">עיכוב הרחבת רקע</string>
+    <string name="layout_expand_delay_sub">כמה זמן להמתין לפני הרחבת כרטיסים ממוקדים.</string>
+    <string name="layout_autoplay_trailer">הפעלה אוטומטית של טריילר</string>
+    <string name="layout_autoplay_trailer_expanded">הפעלה אוטומטית של טריילר בכרטיס מורחב</string>
+    <string name="layout_autoplay_trailer_sub">הפעל תצוגה מקדימה של טריילר לתוכן ממוקד כשזמין.</string>
+    <string name="layout_autoplay_trailer_expanded_sub">הפעל טריילר בתוך רקע מורחב כשזמין.</string>
+    <string name="layout_trailer_muted">הפעל טריילר בשקט</string>
+    <string name="layout_trailer_muted_sub_preview">השתק שמע טריילר בתצוגה מקדימה אוטומטית.</string>
+    <string name="layout_trailer_muted_sub_expanded">השתק שמע טריילר בכרטיסים מורחבים.</string>
+    <string name="layout_section_card_style">סגנון כרטיס פוסטר</string>
+    <string name="layout_section_card_style_desc">כוונן רוחב כרטיס ורדיוס פינה.</string>
+    <string name="layout_open">פתוח</string>
+    <string name="layout_closed">סגור</string>
+    <string name="layout_trailer_location">מיקום הפעלת טריילר מודרני</string>
+    <string name="layout_trailer_location_sub">בחר היכן תצוגת הטריילר מופעלת בבית המודרני.</string>
+    <string name="layout_trailer_expanded_card">כרטיס מורחב</string>
+    <string name="layout_trailer_hero_media">מדיה הירו</string>
+    <string name="layout_preset_compact">קומפקטי</string>
+    <string name="layout_preset_dense">צפוף</string>
+    <string name="layout_preset_standard">סטנדרטי</string>
+    <string name="layout_preset_balanced">מאוזן</string>
+    <string name="layout_preset_comfort">נוח</string>
+    <string name="layout_preset_large">גדול</string>
+    <string name="layout_preset_sharp">חד</string>
+    <string name="layout_preset_subtle">עדין</string>
+    <string name="layout_preset_classic">קלאסי</string>
+    <string name="layout_preset_rounded">מעוגל</string>
+    <string name="layout_preset_pill">גלולה</string>
+    <string name="layout_card_width">רוחב</string>
+    <string name="layout_card_radius">רדיוס פינה</string>
+    <string name="layout_reset_default">אפס לברירת מחדל</string>
+    <string name="layout_custom">מותאם אישית</string>
+
+    <!-- MDBListSettingsScreen -->
+    <string name="mdblist_title">דירוגי MDBList</string>
+    <string name="mdblist_subtitle">הגדר דירוגים חיצוניים המוצגים בהירו של פרטים</string>
+    <string name="mdblist_enable_title">אפשר דירוגי MDBList</string>
+    <string name="mdblist_enable_subtitle">אחזר דירוגים מספקים חיצוניים במסך פרטי מטה</string>
+    <string name="mdblist_api_key_title">מפתח API</string>
+    <string name="mdblist_api_key_subtitle">נדרש לאחזור דירוגים מ-MDBList</string>
+    <string name="mdblist_trakt_title">Trakt</string>
+    <string name="mdblist_trakt_subtitle">הצג ציון Trakt</string>
+    <string name="mdblist_imdb_title">IMDb</string>
+    <string name="mdblist_imdb_subtitle">הצג ציון IMDb (והסתר את שורת IMDb הברירת מחדל כשזמין)</string>
+    <string name="mdblist_tmdb_title">TMDB</string>
+    <string name="mdblist_tmdb_subtitle">הצג ציון TMDB</string>
+    <string name="mdblist_letterboxd_title">Letterboxd</string>
+    <string name="mdblist_letterboxd_subtitle">הצג ציון Letterboxd</string>
+    <string name="mdblist_tomatoes_title">Rotten Tomatoes</string>
+    <string name="mdblist_tomatoes_subtitle">הצג ציון מבקרים</string>
+    <string name="mdblist_audience_title">ציון קהל</string>
+    <string name="mdblist_audience_subtitle">הצג ציון קהל</string>
+    <string name="mdblist_metacritic_title">Metacritic</string>
+    <string name="mdblist_metacritic_subtitle">הצג ציון Metacritic</string>
+    <string name="mdblist_dialog_title">מפתח API של MDBList</string>
+    <string name="mdblist_dialog_subtitle">הזן את מפתח ה-API שלך לאחזור דירוגים חיצוניים</string>
+    <string name="mdblist_dialog_placeholder">הזן מפתח API של MDBList</string>
+    <string name="mdblist_not_set">לא הוגדר</string>
+    <string name="mdblist_invalid_api_key">מפתח API של MDBList לא תקין</string>
+
+    <!-- Anime-Skip -->
+    <string name="animeskip_title">Anime Skip</string>
+    <string name="animeskip_subtitle">הגדר את מזהה לקוח Anime Skip לדילוג על הקדמות/סיומות אנימה</string>
+    <string name="animeskip_enable_title">אפשר Anime Skip</string>
+    <string name="animeskip_enable_subtitle">אחזר חותמות זמן דילוג מ-anime-skip.com</string>
+    <string name="animeskip_client_id_title">מזהה לקוח</string>
+    <string name="animeskip_client_id_subtitle">נדרש לאחזור חותמות זמן דילוג מ-anime-skip.com</string>
+    <string name="animeskip_dialog_title">מזהה לקוח Anime Skip</string>
+    <string name="animeskip_dialog_subtitle">צור מזהה לקוח משלך ב-anime-skip.com/account/settings</string>
+    <string name="animeskip_dialog_placeholder">הזן מזהה לקוח</string>
+    <string name="animeskip_invalid_client_id">מזהה לקוח לא תקין</string>
+    <string name="action_clear">נקה</string>
+
+    <!-- TmdbSettingsScreen -->
+    <string name="tmdb_title">העשרת TMDB</string>
+    <string name="tmdb_subtitle">בחר אילו שדות מטה-דאטה יגיעו מ-TMDB</string>
+    <string name="tmdb_enable_title">אפשר העשרת TMDB</string>
+    <string name="tmdb_enable_subtitle">השתמש ב-TMDB כמקור מטה-דאטה לשיפור נתוני תוסף</string>
+    <string name="tmdb_language_title">שפה</string>
+    <string name="tmdb_language_subtitle">שפת מטה-דאטה TMDB לכותרת, לוגו ושדות מופעלים</string>
+    <string name="tmdb_artwork_title">עיצוב</string>
+    <string name="tmdb_artwork_subtitle">לוגו ותמונות רקע מ-TMDB</string>
+    <string name="tmdb_basic_info_title">מידע בסיסי</string>
+    <string name="tmdb_basic_info_subtitle">תיאור, ז׳אנרים ודירוג מ-TMDB</string>
+    <string name="tmdb_details_title">פרטים</string>
+    <string name="tmdb_details_subtitle">משך, תאריך יציאה, מדינה ושפה מ-TMDB</string>
+    <string name="tmdb_credits_title">קרדיטים</string>
+    <string name="tmdb_credits_subtitle">שחקנים עם תמונות, במאי וכותב מ-TMDB</string>
+    <string name="tmdb_productions_title">הפקות</string>
+    <string name="tmdb_productions_subtitle">חברות הפקה מ-TMDB</string>
+    <string name="tmdb_networks_title">רשתות</string>
+    <string name="tmdb_networks_subtitle">רשתות עם לוגואים מ-TMDB</string>
+    <string name="tmdb_episodes_title">פרקים</string>
+    <string name="tmdb_episodes_subtitle">כותרות פרקים, סקירות, תמונות ממוזערות ומשך מ-TMDB</string>
+    <string name="tmdb_more_like_this_title">עוד כזה</string>
+    <string name="tmdb_more_like_this_subtitle">תמונות רקע המלצות TMDB בעמוד הפרטים</string>
+    <string name="tmdb_collections_title">אוספים</string>
+    <string name="tmdb_collections_subtitle">אוספי סרטים TMDB לפי סדר יציאה</string>
+    <string name="tmdb_language_dialog_title">שפת TMDB</string>
+
+    <!-- TraktScreen -->
+    <string name="trakt_description">סנכרן את רשימת הצפייה, התקדמות, המשך צפייה, סקרובלינג ורשימות אישיות עם Trakt.</string>
+    <string name="trakt_connected_as">מחובר כ-%1$s</string>
+    <string name="trakt_account_login">התחברות לחשבון</string>
+    <string name="trakt_awaiting_instruction">עבור אל trakt.tv/activate והזן את הקוד:</string>
+    <string name="trakt_waiting_approval">ממתין לאישור…</string>
+    <string name="qr_login_approved">ההתחברות אושרה. מסיים כניסה…</string>
+    <string name="qr_login_pending">ממתין לאישור בטלפון שלך…</string>
+    <string name="qr_login_expired">QR פג תוקף. צור קוד חדש.</string>
+    <string name="trakt_code_expires">הקוד יפוג בעוד %1$s</string>
+    <string name="trakt_token_refreshes">אסימון גישה Trakt יתחדש בעוד %1$s</string>
+    <string name="trakt_login_instruction">לחץ התחבר להתחלת אימות מכשיר Trakt. כאן יופיע קוד QR.</string>
+    <string name="trakt_missing_credentials">חסר TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET ב-local.properties.</string>
+    <string name="trakt_watch_progress_title">התקדמות צפייה</string>
+    <string name="trakt_watch_progress_subtitle">בחר מקור התקדמות שמניע המשך וצפייה מתמשכת</string>
+    <string name="trakt_watch_progress_dialog_title">התקדמות צפייה</string>
+    <string name="trakt_watch_progress_dialog_subtitle">בחר אם המשך וצפייה מתמשכת ישתמשו ב-Trakt או ב-Nuvio Sync כאשר סקרובלינג Trakt פעיל.</string>
+    <string name="trakt_watch_progress_source_trakt">Trakt</string>
+    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_trakt_selected">מקור התקדמות צפייה הוגדר ל-Trakt</string>
+    <string name="trakt_watch_progress_nuvio_selected">מקור התקדמות צפייה הוגדר ל-Nuvio Sync</string>
+    <string name="trakt_continue_watching_window">חלון המשך צפייה</string>
+    <string name="trakt_continue_watching_subtitle">היסטוריית Trakt הנחשבת להמשך צפייה</string>
+    <string name="trakt_unaired_next_up">פרקים הבאים שטרם שודרו</string>
+    <string name="trakt_unaired_next_up_subtitle">הצג פרקים קרובים לפני שידורם</string>
+    <string name="trakt_unaired_shown">מוצג</string>
+    <string name="trakt_unaired_hidden">מוסתר</string>
+    <string name="trakt_unaired_now_shown">פרקי הבא שטרם שודרו מוצגים עכשיו</string>
+    <string name="trakt_unaired_now_hidden">פרקי הבא שטרם שודרו מוסתרים עכשיו</string>
+    <string name="trakt_cached_label">שמור במטמון</string>
+    <string name="trakt_stat_movies">סרטים</string>
+    <string name="trakt_stat_shows">סדרות</string>
+    <string name="trakt_stat_episodes">פרקים</string>
+    <string name="trakt_stat_watched_hours">שעות צפייה</string>
+    <string name="trakt_disconnect">נתק</string>
+    <string name="trakt_disconnect_title">לנתק Trakt?</string>
+    <string name="trakt_disconnect_subtitle">פעולה זו תנתק את חשבון Trakt שלך מ-Nuvio.</string>
+    <string name="trakt_login">התחבר</string>
+    <string name="trakt_retry">נסה שוב</string>
+    <string name="trakt_back">חזרה</string>
+    <string name="trakt_cw_window_title">חלון המשך צפייה</string>
+    <string name="trakt_cw_window_subtitle">בחר כמה מפעילות Trakt תופיע בהמשך צפייה.</string>
+    <string name="trakt_unaired_dialog_title">פרקים הבאים שטרם שודרו</string>
+    <string name="trakt_unaired_dialog_subtitle">בחר אם המשך צפייה יכלול פרקים קרובים לפני יציאתם.</string>
+    <string name="trakt_show_unaired">הצג פרקים שטרם שודרו</string>
+    <string name="trakt_hide_unaired">הסתר פרקים שטרם שודרו</string>
+    <string name="trakt_all_history">כל ההיסטוריה</string>
+    <string name="trakt_days_format">%1$d ימים</string>
+
+    <!-- DebugSettingsScreen -->
+    <string name="debug_title">ניפוי שגיאות</string>
+    <string name="debug_subtitle">כלי מפתחים ודגלי פיצ׳רים (גרסאות debug בלבד)</string>
+    <string name="debug_section_popup">בדיקת Popup / Dialog</string>
+    <string name="debug_playback_error_title">מסך שגיאת הפעלה</string>
+    <string name="debug_playback_error_subtitle">הצג חלון שגיאת הפעלה מדומה</string>
+    <string name="debug_section_features">הפעלת פיצ׳רים</string>
+    <string name="debug_account_tab_title">לשונית חשבון</string>
+    <string name="debug_account_tab_subtitle">הצג את לשונית החשבון בניווט הגדרות</string>
+    <string name="debug_sync_code_title">פיצ׳רי קוד סנכרון</string>
+    <string name="debug_sync_code_subtitle">הצג כפתורי יצירה/הזנת קוד סנכרון בהגדרות חשבון</string>
+    <string name="debug_section_account">חשבון</string>
+    <string name="debug_manual_signin_title">כניסה ידנית</string>
+    <string name="debug_manual_signin_subtitle">התחבר עם אימייל וסיסמה (Supabase auth)</string>
+    <string name="debug_email_placeholder">אימייל</string>
+    <string name="debug_password_placeholder">סיסמה</string>
+    <string name="debug_signing_in">מתחבר\u2026</string>
+    <string name="debug_sign_in">התחבר</string>
+    <string name="debug_error_dialog_title">שגיאת הפעלה</string>
+    <string name="debug_error_dialog_subtitle">אירעה שגיאה במהלך ההפעלה.\n\nשגיאה: שגיאה מדומה לבדיקה - זו אינה כשל אמיתי. המקור החזיר HTTP 503 (Service Unavailable).</string>
+    <string name="debug_dismiss">סגור</string>
+
+    <!-- ProfileSettingsContent -->
+    <string name="profile_title">פרופילים</string>
+    <string name="profile_subtitle">ניהול פרופילי משתמש עבור חשבון זה.</string>
+    <string name="profile_manage_button">נהל פרופילים</string>
+    <string name="profile_manage_title">נהל פרופילים</string>
+    <string name="profile_manage_subtitle">בחר פרופיל לעריכה, החלפה, או צור חדש</string>
+    <string name="profile_manage_hint">בחר פרופיל לניהול</string>
+    <string name="profile_primary_label">ראשי</string>
+    <string name="profile_shares_primary">משתף את %1$s של הראשי</string>
+    <string name="profile_edit_label">ערוך</string>
+    <string name="profile_add">הוסף פרופיל</string>
+    <string name="profile_create_title">צור פרופיל</string>
+    <string name="profile_edit_title">ערוך פרופיל %1$s</string>
+    <string name="profile_name_placeholder">שם פרופיל</string>
+    <string name="profile_avatar_color">צבע אווטאר</string>
+    <string name="profile_use_primary_addons">השתמש בתוספים של הפרופיל הראשי</string>
+    <string name="profile_use_primary_plugins">השתמש בפלאגינים של הפרופיל הראשי</string>
+    <string name="profile_creating">יוצר\u2026</string>
+    <string name="profile_create_btn">צור</string>
+    <string name="profile_confirm">אשר</string>
+    <string name="profile_delete">מחק</string>
+    <string name="profile_addons">תוספים</string>
+    <string name="profile_plugins">פלאגינים</string>
+    <string name="profile_choose_avatar">בחר אווטאר</string>
+    <string name="profile_avatar_none_selected">לא נבחר אווטאר</string>
+    <string name="profile_avatar_focus_hint">התמקד באווטאר כדי לראות את שמו</string>
+    <string name="profile_avatar_category_all">הכל</string>
+    <string name="profile_avatar_category_anime">אנימה</string>
+    <string name="profile_avatar_category_animation">אנימציה</string>
+    <string name="profile_avatar_category_movie">סרט</string>
+    <string name="profile_avatar_category_tv">טלוויזיה</string>
+    <string name="profile_avatar_category_gaming">גיימינג</string>
+    <string name="profile_add_new">הוסף פרופיל</string>
+    <string name="profile_cancel">ביטול</string>
+    <string name="profile_save">שמור</string>
+
+    <!-- AddonManagerScreen -->
+    <string name="addon_title">תוספים</string>
+    <string name="addon_readonly_notice">משתמש בתוספים של הפרופיל הראשי ולא ניתן לשנות</string>
+    <string name="addon_install_title">התקן תוסף</string>
+    <string name="addon_install_placeholder">https://example.com</string>
+    <string name="addon_installing">מתקין</string>
+    <string name="addon_install_btn">התקן</string>
+    <string name="addon_installed_section">מותקן</string>
+    <string name="addon_empty">אין תוספים מותקנים. הוסף אחד כדי להתחיל.</string>
+    <string name="addon_remove">הסר</string>
+    <string name="addon_manage_from_phone_title">נהל מהטלפון</string>
+    <string name="addon_manage_from_phone_subtitle">סרוק קוד QR לניהול תוספים וקטלוגי בית מהטלפון שלך</string>
+    <string name="addon_reorder_title">סדר מחדש קטלוגי בית</string>
+    <string name="addon_reorder_subtitle">שולט על סדר שורות הקטלוג בבית (קלאסי + מודרני + רשת)</string>
+    <string name="addon_qr_scan_instruction">סרוק עם הטלפון לניהול תוספים וקטלוגים</string>
+    <string name="addon_qr_close">סגור</string>
+    <string name="addon_confirm_title">אשר שינויי תוסף וקטלוג</string>
+    <string name="addon_confirm_subtitle">השינויים הבאים נעשו מהטלפון שלך:</string>
+    <string name="addon_confirm_added">נוסף:</string>
+    <string name="addon_confirm_removed">הוסר:</string>
+    <string name="addon_confirm_catalog_reordered">סדר הקטלוג שונה</string>
+    <string name="addon_confirm_catalogs_disabled">קטלוגים שהושבתו בבית:</string>
+    <string name="addon_confirm_catalogs_enabled">קטלוגים שהופעלו בבית:</string>
+    <string name="addon_confirm_no_changes">לא זוהו שינויים גלויים</string>
+    <string name="addon_confirm_reject">דחה</string>
+    <string name="addon_confirm_confirm">אשר</string>
+
+    <!-- CatalogOrderScreen -->
+    <string name="catalog_order_title">סדר מחדש קטלוגי בית</string>
+    <string name="catalog_order_subtitle">זה שולט על סדר שורות הקטלוג בבית (קלאסי + מודרני + רשת).</string>
+    <string name="catalog_order_empty">אין קטלוגי בית זמינים עדיין.</string>
+    <string name="catalog_order_disabled_on_home">מושבת בבית</string>
+    <string name="catalog_order_enable">הפעל</string>
+    <string name="catalog_order_disable">השבת</string>
+
+    <!-- StreamScreen -->
+    <string name="stream_retry">נסה שוב</string>
+    <string name="stream_no_streams">לא נמצאו זרמים</string>
+    <string name="stream_no_streams_hint">נסה להתקין תוספים נוספים למציאת זרמים</string>
+    <string name="stream_finding_source">מחפש מקור זרם</string>
+    <string name="stream_type_torrent">טורנט</string>
+    <string name="stream_type_youtube">YouTube</string>
+    <string name="stream_type_external">חיצוני</string>
+    <string name="stream_player_picker_title">איזה נגן להשתמש?</string>
+    <string name="stream_player_internal">פנימי</string>
+    <string name="stream_player_external">חיצוני</string>
+
+    <!-- PlayerScreen -->
+    <string name="player_no_external_player">לא נמצא נגן חיצוני</string>
+
+    <!-- ParentalGuideOverlay -->
+    <string name="parental_nudity">עירום</string>
+    <string name="parental_violence">אלימות</string>
+    <string name="parental_profanity">גסות רוח</string>
+    <string name="parental_alcohol">אלכוהול/סמים</string>
+    <string name="parental_frightening">מפחיד</string>
+    <string name="parental_severity_severe">חמור</string>
+    <string name="parental_severity_moderate">בינוני</string>
+    <string name="parental_severity_mild">קל</string>
+    <string name="player_ends_at">מסתיים ב-%1$s</string>
+    <string name="player_via">דרך %1$s</string>
+    <string name="player_subtitle_delay">עיכוב כתוביות</string>
+    <string name="player_error_title">שגיאת הפעלה</string>
+    <string name="player_go_back">חזרה</string>
+    <string name="player_speed_title">מהירות הפעלה</string>
+    <string name="player_more_actions_title">פעולות נוספות</string>
+    <string name="player_more_speed">מהירות הפעלה</string>
+    <string name="player_more_aspect_ratio">יחס גובה-רוחב</string>
+    <string name="player_more_open_external">פתח בנגן חיצוני</string>
+
+    <!-- StreamSourcesSidePanel -->
+    <string name="sources_title">מקורות</string>
+    <string name="sources_reload">טען מחדש</string>
+    <string name="sources_close">סגור</string>
+    <string name="sources_playing">מנגן</string>
+    <string name="sources_no_streams">לא נמצאו זרמים</string>
+
+    <!-- EpisodesSidePanel -->
+    <string name="episodes_panel_close">סגור</string>
+    <string name="episodes_panel_back">חזרה</string>
+    <string name="episodes_panel_reload">טען מחדש</string>
+    <string name="episodes_panel_no_streams">לא נמצאו זרמים</string>
+    <string name="episodes_panel_no_episodes">אין פרקים זמינים</string>
+    <string name="episodes_panel_title">פרקים</string>
+    <string name="episodes_panel_streams_title">זרמים</string>
+    <string name="player_speed_normal">רגיל</string>
+    <string name="player_aspect_fit">התאם (מקורי)</string>
+    <string name="player_aspect_stretch">מתח</string>
+    <string name="player_aspect_fit_width">התאם לרוחב</string>
+    <string name="player_aspect_fit_height">התאם לגובה</string>
+    <string name="player_aspect_crop">חתוך</string>
+
+    <!-- AudioDialog -->
+    <string name="audio_dialog_title">שמע</string>
+    <string name="audio_dialog_tab_tracks">שמע</string>
+    <string name="audio_dialog_tab_mix">מיקס</string>
+    <string name="audio_mix_label">הגברה (PCM)</string>
+    <string name="audio_mix_value_db">%1$d dB</string>
+    <string name="audio_mix_persist_on">שמור בין סשנים: פועל</string>
+    <string name="audio_mix_persist_off">שמור בין סשנים: כבוי</string>
+    <string name="audio_mix_range">טווח: %1$d dB עד %2$d dB</string>
+    <string name="audio_mix_range_saved">טווח: %1$d dB עד %2$d dB (שמור)</string>
+    <string name="audio_mix_unavailable">הגברה אינה זמינה במכשיר זה</string>
+
+    <!-- SubtitleDialog / SubtitleStyleSidePanel -->
+    <string name="subtitle_dialog_title">כתוביות</string>
+    <string name="subtitle_no_builtin">אין כתוביות מובנות זמינות</string>
+    <string name="subtitle_loading_addon">טוען כתוביות מתוספים\u2026</string>
+    <string name="subtitle_no_addon">אין כתוביות תוסף זמינות</string>
+    <string name="subtitle_text_color">צבע טקסט</string>
+    <string name="subtitle_outline_color">צבע מתאר</string>
+    <string name="subtitle_reset_defaults">אפס ברירות מחדל</string>
+    <string name="subtitle_tab_builtin">מובנות</string>
+    <string name="subtitle_tab_addons">תוספים</string>
+    <string name="subtitle_tab_languages">שפות</string>
+    <string name="subtitle_tab_style">סגנון</string>
+    <string name="subtitle_tab_delay">עיכוב</string>
+    <string name="subtitle_none">ללא</string>
+    <string name="subtitle_all">הכל</string>
+    <string name="subtitle_section_core">בסיסי</string>
+    <string name="subtitle_section_advanced">מתקדם</string>
+    <string name="subtitle_font_size">גודל גופן</string>
+    <string name="subtitle_bold">מודגש</string>
+    <string name="subtitle_outline">מתאר</string>
+    <string name="subtitle_bottom_offset">היסט תחתון</string>
+    <string name="subtitle_on">פועל</string>
+    <string name="subtitle_off">כבוי</string>
+    <string name="subtitle_style_title">סגנון כתוביות</string>
+    <string name="subtitle_style_customize">התאם אישית</string>
+    <string name="subtitle_style_color">צבע</string>
+    <string name="subtitle_style_reset">אפס</string>
+    <string name="subtitle_style_font_size">גודל גופן</string>
+    <string name="subtitle_style_bold">מודגש</string>
+    <string name="subtitle_style_text_color">צבע טקסט</string>
+    <string name="subtitle_style_outline">מתאר</string>
+    <string name="subtitle_style_bottom_offset">היסט תחתון</string>
+    <string name="subtitle_style_defaults">ברירות מחדל</string>
+    <string name="subtitle_style_on">פועל</string>
+    <string name="subtitle_style_off">כבוי</string>
+    <string name="panel_failed_load_streams">טעינת זרמים נכשלה</string>
+    <string name="panel_failed_load_episodes">טעינת פרקים נכשלה</string>
+
+    <!-- PauseOverlay -->
+    <string name="pause_you_are_watching">אתה צופה ב</string>
+    <string name="pause_cast_label">שחקנים</string>
+    <string name="pause_back_to_details">חזור לפרטים</string>
+    <string name="pause_as_character">בתפקיד %1$s</string>
+
+    <!-- NextEpisodeCardOverlay -->
+    <string name="next_episode_label">פרק הבא</string>
+    <string name="next_episode_finding_source">מחפש מקור…</string>
+    <string name="next_episode_playing_via">מנגן דרך %1$s בעוד %2$dש׳</string>
+    <string name="next_episode_play">הפעל</string>
+    <string name="next_episode_unaired">טרם שודר</string>
+    <string name="next_episode_not_aired_yet">הפרק הבא טרם שודר</string>
+    <string name="skip_intro">דלג על הקדמה</string>
+    <string name="skip_ending">דלג על הסיום</string>
+    <string name="skip_recap">דלג על תקציר</string>
+    <string name="skip_generic">דלג</string>
+    <string name="display_mode_refresh">רענן</string>
+    <string name="display_mode_resolution">רזולוציה</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">בית</string>
+    <string name="nav_discover">גלה</string>
+    <string name="nav_search">חיפוש</string>
+    <string name="nav_library">ספרייה</string>
+    <string name="nav_addons">תוספים</string>
+    <string name="nav_settings">הגדרות</string>
+    <string name="cd_expand_sidebar">הרחב סרגל צד</string>
+    <string name="settings_rounded_ui">ממשק מעוגל</string>
+
+    <!-- LibraryScreen -->
+    <string name="library_syncing">מסנכרן ספריית Trakt\u2026</string>
+    <string name="library_title">ספרייה</string>
+    <string name="library_filter_list">רשימה</string>
+    <string name="library_filter_type">סוג</string>
+    <string name="library_filter_sort">מיון</string>
+    <string name="library_sort_trakt_order">סדר Trakt</string>
+    <string name="library_sort_added_desc">נוסף ↓</string>
+    <string name="library_sort_added_asc">נוסף ↑</string>
+    <string name="library_sort_title_asc">כותרת א-ת</string>
+    <string name="library_sort_title_desc">כותרת ת-א</string>
+    <string name="library_manage_lists">נהל רשימות</string>
+    <string name="library_manage_trakt_lists">נהל רשימות Trakt</string>
+    <string name="library_no_lists">אין רשימות אישיות עדיין.</string>
+    <string name="library_list_create">צור</string>
+    <string name="library_list_edit">ערוך</string>
+    <string name="library_list_move_up">הזז למעלה</string>
+    <string name="library_list_move_down">הזז למטה</string>
+    <string name="library_list_delete">מחק</string>
+    <string name="library_list_close">סגור</string>
+    <string name="library_list_name_label">שם</string>
+    <string name="library_list_description_label">תיאור</string>
+    <string name="library_list_privacy">פרטיות</string>
+    <string name="library_delete_title">למחוק רשימה זו?</string>
+    <string name="library_delete_subtitle">פעולה זו מסירה את הרשימה וכל הפריטים שבה מ-Trakt.</string>
+    <string name="library_delete_confirm">מחק</string>
+    <string name="library_source_local">מקומי</string>
+    <string name="library_type_all">הכל</string>
+    <string name="library_type_items">פריטים</string>
+    <string name="library_empty_local_title">אין %1$s עדיין</string>
+    <string name="library_empty_trakt_title">אין %1$s ברשימה זו</string>
+    <string name="library_empty_local_subtitle">התחל לשמור מועדפים כדי לראותם כאן</string>
+    <string name="library_empty_trakt_subtitle">השתמש ב-+ בפרטים להוספת פריטים לרשימת צפייה</string>
+
+    <!-- AccountSettingsContent -->
+    <string name="account_title">חשבון</string>
+    <string name="account_loading">טוען\u2026</string>
+    <string name="account_loading_sync">טוען נתוני סנכרון\u2026</string>
+    <string name="account_sync_description">סנכרן את הספרייה, התקדמות הצפייה, התוספים והפלאגינים שלך בין מכשירים.</string>
+    <string name="account_sync_restart_note">הסנכרון אינו בזמן אמת בין מכשירים פעילים. הפעל מחדש מכשיר זה לאחר הכניסה כדי לקבל שינויים שנעשו במקום אחר.</string>
+    <string name="account_signin_qr_title">התחבר עם QR</string>
+    <string name="account_signin_qr_subtitle">סרוק קוד QR והשלם כניסה באימייל בטלפון שלך</string>
+    <string name="account_signed_in_label">מחובר</string>
+    <string name="account_total_label">סה״כ</string>
+    <string name="account_sign_out">התנתק</string>
+    <string name="account_sign_in_description">התחבר לסנכרון הספרייה, התקדמות הצפייה, התוספים והפלאגינים בין מכשירים. סנכרון הספרייה משתמש ב-Nuvio Sync כאשר Trakt לא מחובר, והתקדמות הצפייה יכולה להשתמש ב-Trakt או ב-Nuvio Sync.</string>
+    <string name="account_sync_code_title">קוד סנכרון</string>
+    <string name="account_sync_code_description">סנכרן בין מכשירים ללא יצירת חשבון.</string>
+    <string name="account_linked_devices">מכשירים מקושרים (%1$d)</string>
+    <string name="account_no_linked_devices">אין מכשירים מקושרים</string>
+    <string name="account_unlink">בטל קישור</string>
+
+    <!-- AuthSignInScreen -->
+    <string name="auth_signin_title">התחברות</string>
+    <string name="auth_signin_tv_disabled">הזנת אימייל/סיסמה בטלוויזיה מושבתת. המשך עם כניסת QR.</string>
+    <string name="auth_signin_qr_btn">המשך עם QR</string>
+
+    <!-- AuthQrSignInScreen -->
+    <string name="auth_qr_title">התחבר עם QR</string>
+    <string name="auth_qr_account_login">כניסה לחשבון</string>
+    <string name="auth_qr_finishing">מסיים כניסה\u2026</string>
+    <string name="auth_qr_code_label">קוד: %1$s</string>
+    <string name="auth_qr_code_display">קוד: %1$s</string>
+    <string name="auth_qr_expires">יפוג בעוד %1$s</string>
+    <string name="auth_qr_phone_hint">השתמש בטלפון שלך להתחברות עם אימייל/סיסמה. הטלוויזיה נשארת עם QR בלבד לכניסה מהירה.</string>
+    <string name="auth_qr_scan_instruction">סרוק QR, אשר בדפדפן, ואז חזור לכאן.</string>
+    <string name="auth_qr_refresh">רענן QR</string>
+    <string name="auth_qr_continue_without_account">המשך ללא חשבון</string>
+    <string name="auth_qr_connected">החשבון שלך מחובר בטלוויזיה זו.</string>
+    <string name="auth_qr_synced_data">הנתונים המסונכרנים שלך</string>
+    <string name="auth_qr_generating">מייצר QR\u2026</string>
+    <string name="auth_qr_unavailable">QR לא זמין. רענן לניסיון חוזר.</string>
+    <string name="auth_qr_please_wait">אנא המתן\u2026</string>
+    <string name="auth_qr_continue">המשך</string>
+    <string name="auth_qr_back">חזרה</string>
+
+    <!-- SyncCodeGenerateScreen -->
+    <string name="sync_generate_title">צור קוד סנכרון</string>
+    <string name="sync_generate_subtitle">צור PIN להגנה על קוד הסנכרון שלך. שתף את הקוד עם מכשיריך האחרים.</string>
+    <string name="sync_generate_code_label">קוד הסנכרון שלך</string>
+    <string name="sync_generate_instruction">הזן קוד זה ואת ה-PIN שלך במכשיר האחר שלך כדי לקשר אותם.</string>
+    <string name="sync_generate_done">סיום</string>
+    <string name="sync_generate_pin_label">בחר PIN (4-8 תווים)</string>
+    <string name="sync_generate_pin_placeholder">הזן PIN</string>
+
+    <!-- SyncCodeClaimScreen -->
+    <string name="sync_claim_title">קשר מכשיר</string>
+    <string name="sync_claim_subtitle">הזן את קוד הסנכרון וה-PIN מהמכשיר האחר שלך לקישור מכשיר זה.</string>
+    <string name="sync_claim_success">המכשיר קושר בהצלחה! התוספים והפלאגינים שלך יסונכרנו עכשיו.</string>
+    <string name="sync_claim_done">סיום</string>
+    <string name="sync_claim_code_label">קוד סנכרון</string>
+    <string name="sync_claim_code_placeholder">XXXX-XXXX-XXXX-XXXX-XXXX</string>
+    <string name="sync_claim_pin_label">PIN</string>
+    <string name="sync_claim_pin_placeholder">הזן PIN</string>
+
+    <!-- PluginScreen -->
+    <string name="plugin_title">פלאגינים</string>
+    <string name="plugin_subtitle">ניהול scrapers וספקים מקומיים</string>
+    <string name="plugin_readonly_notice">משתמש בפלאגינים של הפרופיל הראשי ולא ניתן לשנות</string>
+    <string name="plugin_repositories_section">מאגרים (%1$d)</string>
+    <string name="plugin_providers_section">ספקים (%1$d)</string>
+    <string name="plugin_add_repository">הוסף מאגר</string>
+    <string name="plugin_add_btn">הוסף</string>
+    <string name="plugin_manage_from_phone_title">נהל מהטלפון</string>
+    <string name="plugin_manage_from_phone_subtitle">סרוק קוד QR להוספה או הסרה של מאגרים מהטלפון שלך</string>
+    <string name="plugin_qr_instruction">סרוק עם הטלפון לניהול מאגרים</string>
+    <string name="plugin_qr_close">סגור</string>
+    <string name="plugin_confirm_title">אשר שינויי מאגר</string>
+    <string name="plugin_confirm_subtitle">השינויים הבאים נעשו מהטלפון שלך:</string>
+    <string name="plugin_confirm_added">נוסף:</string>
+    <string name="plugin_confirm_removed">הוסר:</string>
+    <string name="plugin_confirm_no_changes">לא זוהו שינויים</string>
+    <string name="plugin_confirm_total">סה״כ מאגרים: %1$d</string>
+    <string name="plugin_confirm_reject">דחה</string>
+    <string name="plugin_confirm_confirm">אשר</string>
+    <string name="plugin_updated_format">עודכן: %1$s</string>
+    <string name="plugin_test_btn">בדוק</string>
+    <string name="plugin_test_results">תוצאות בדיקה (%1$d זרמים)</string>
+    <string name="plugin_and_more">... ועוד %1$d</string>
+    <string name="plugin_providers_count">%1$d ספקים</string>
+    <string name="plugin_enabled">מופעל</string>
+    <string name="plugin_disabled">מושבת</string>
+    <string name="plugin_no_repos">לא נוספו מאגרים עדיין.\nהוסף מאגר כדי להתחיל.</string>
+
+    <!-- ProfileSelectionScreen -->
+    <string name="profile_selection_title">מי צופה?</string>
+    <string name="profile_selection_subtitle">בחר פרופיל להמשך</string>
+    <string name="profile_selection_hint">לחץ לחיצה ממושכת לניהול הפרופיל</string>
+    <string name="profile_selection_empty">לא נמצאו פרופילים</string>
+    <string name="profile_selection_primary_badge">ראשי</string>
+    <string name="profile_selection_options_title">אפשרויות פרופיל</string>
+    <string name="profile_delete_confirm_title">למחוק פרופיל?</string>
+    <string name="profile_delete_confirm_subtitle">פעולה זו תמחק לצמיתות את הפרופיל וכל הנתונים שלו כולל ספרייה, היסטוריית צפייה והגדרות תוסף. לא ניתן לבטל פעולה זו.</string>
+    <string name="profile_delete_btn">מחק פרופיל</string>
+    <string name="profile_saving">שומר\u2026</string>
+    <string name="profile_edit_title_id">ערוך פרופיל %1$d</string>
+
+    <!-- CastDetailScreen -->
+    <string name="cast_detail_error">משהו השתבש</string>
+    <string name="cast_detail_retry">נסה שוב</string>
+    <string name="cast_detail_filmography">פילמוגרפיה</string>
+
+    <!-- CatalogSeeAllScreen -->
+    <string name="catalog_see_all_from">מ-%1$s</string>
+    <string name="catalog_see_all_empty_title">אין פריטים זמינים</string>
+    <string name="catalog_see_all_empty_subtitle">נסה קטלוג אחר או חזור מאוחר יותר</string>
+
+    <!-- LayoutSelectionScreen -->
+    <string name="layout_selection_welcome">ברוך הבא ל-Nuvio</string>
+    <string name="layout_selection_subtitle">בחר את פריסת מסך הבית שלך</string>
+    <string name="layout_selection_continue">המשך</string>
+
+    <!-- LayoutSettingsScreen (additional) -->
+    <string name="layout_section_content">תוכן הבית</string>
+    <string name="layout_section_content_desc">שלוט במה שמופיע בבית ובחיפוש.</string>
+    <string name="layout_classic_desc">גלול בין קטגוריות אופקית</string>
+    <string name="layout_modern_desc">הירו קבוע עם שורה פעילה אחת לגלישה מהירה</string>
+    <string name="layout_grid_desc">עיין בהכל ברשת אנכית עם אזור הירו</string>
+    <string name="layout_hero_catalogs">קטלוגי הירו</string>
+    <string name="layout_hero_catalogs_sub">בחר קטלוג אחד או יותר לתוכן ההירו.</string>
+    <string name="layout_landscape_posters">פוסטרים לרוחב</string>
+    <string name="layout_landscape_posters_sub">עבור בין כרטיסים לאורך ולרוחב בתצוגה המודרנית.</string>
+    <string name="layout_preview_row">הצג שורת תצוגה מקדימה</string>
+    <string name="layout_preview_row_sub">הצג תצוגה מקדימה חלקית של השורה הבאה בפריסת הבית המודרני.</string>
+
+    <!-- UpdatePromptDialog -->
+    <string name="update_title">עדכון אפליקציה</string>
+    <string name="update_downloading">מוריד עדכון</string>
+    <string name="update_download">הורד</string>
+    <string name="update_downloading_ellipsis">מוריד…</string>
+    <string name="update_unknown_sources">אפשר התקנות ממקורות לא ידועים להמשך.</string>
+    <string name="update_up_to_date">אתה מעודכן.</string>
+    <string name="update_checking">בודק עדכונים…</string>
+    <string name="update_download_complete">ההורדה הושלמה. מוכן להתקנה.</string>
+    <string name="update_close">סגור</string>
+    <string name="update_open_settings">פתח הגדרות</string>
+    <string name="update_install">התקן</string>
+    <string name="update_ignore">התעלם</string>
+
+    <!-- SearchScreen -->
+    <string name="search_placeholder">חפש סרטים וסדרות</string>
+    <string name="search_start_title">התחל לחפש</string>
+    <string name="search_start_subtitle">הזן לפחות 2 תווים</string>
+    <string name="search_start_subtitle_no_discover">גלה מושבת. הזן לפחות 2 תווים</string>
+    <string name="search_keyboard_hint">לחץ סיום במקלדת לחיפוש</string>
+    <string name="search_voice_failed">זיהוי קול נכשל. נסה שוב.</string>
+    <string name="search_voice_mic_permission">נדרשת הרשאת מיקרופון לחיפוש קולי.</string>
+    <string name="search_voice_no_speech">לא זוהתה דיבור. נסה שוב.</string>
+    <string name="search_voice_unavailable">חיפוש קולי אינו זמין במכשיר זה.</string>
+
+    <!-- SearchDiscoverSection -->
+    <string name="discover_title">גלה</string>
+    <string name="discover_load_more">טען עוד</string>
+    <string name="discover_loading">טוען...</string>
+    <string name="discover_filter_type">סוג</string>
+    <string name="discover_filter_catalog">קטלוג</string>
+    <string name="discover_filter_genre">ז׳אנר</string>
+    <string name="discover_select_catalog">בחר</string>
+    <string name="discover_genre_default">ברירת מחדל</string>
+    <string name="discover_empty_no_catalog_title">בחר קטלוג</string>
+    <string name="discover_empty_no_catalog_subtitle">בחר קטלוג גלה לגלישה</string>
+    <string name="discover_empty_no_content_title">לא נמצא תוכן</string>
+    <string name="discover_empty_no_content_subtitle">נסה ז׳אנר או קטלוג אחר</string>
+
+    <!-- EpisodeRatingsSection -->
+    <string name="ratings_loading">טוען דירוגי פרקים...</string>
+    <string name="ratings_unavailable">דירוגי פרקים אינם זמינים.</string>
+    <string name="ratings_load_error">לא ניתן לטעון דירוגי פרקים.</string>
+    <string name="ratings_season_summary">עונה %1$d - %2$d פרקים</string>
+
+    <!-- AddonManagerScreen (additional) -->
+    <string name="addon_confirm_total_addons">סה״כ תוספים: %1$d</string>
+    <string name="addon_confirm_total_catalogs">סה״כ קטלוגים: %1$d</string>
+    <string name="addon_catalogs_types">קטלוגים: %1$d - סוגים: %2$s</string>
+
+    <!-- Watchlist -->
+    <string name="watchlist_added">נוסף לרשימת צפייה</string>
+    <string name="watchlist_removed">הוסר מרשימת צפייה</string>
+
+    <!-- Autoplay -->
+    <string name="autoplay_stream_selection">בחירת זרם אוטומטית</string>
+    <string name="autoplay_mode_first">הפעל מקור ראשון אוטומטית</string>
+    <string name="autoplay_mode_first_desc">הפעל את המקור הזמין הראשון אוטומטית.</string>
+    <string name="autoplay_mode_manual">ידני (בחר זרם)</string>
+    <string name="autoplay_mode_manual_desc">הצג תמיד את רשימת המקורות ואפשר לי לבחור.</string>
+    <string name="autoplay_mode_regex">הפעל לפי תבנית regex</string>
+    <string name="autoplay_mode_regex_desc">הפעל את המקור הראשון שהטקסט שלו תואם לתבנית ה-regex שלך.</string>
+    <string name="autoplay_scope">היקף בחירת זרם אוטומטית</string>
+    <string name="autoplay_scope_all">כל המקורות</string>
+    <string name="autoplay_scope_all_desc">הבחירה האוטומטית יכולה להשתמש בתוספים מותקנים ופלאגינים מופעלים.</string>
+    <string name="autoplay_scope_addons">תוספים מותקנים בלבד</string>
+    <string name="autoplay_scope_addons_desc">הבחירה האוטומטית שוקלת רק זרמים מתוספים מותקנים.</string>
+    <string name="autoplay_scope_plugins">פלאגינים מופעלים בלבד</string>
+    <string name="autoplay_scope_plugins_desc">הבחירה האוטומטית שוקלת רק זרמים מפלאגינים מופעלים.</string>
+    <string name="autoplay_regex_title">תבנית Regex</string>
+    <string name="autoplay_regex_placeholder">אין תבנית. דוגמה: 4K|2160p|Remux</string>
+    <string name="autoplay_regex_matches">תואם לשם/כותרת/תיאור/תוסף/URL של הזרם. דוגמה: 4K|2160p|Remux</string>
+    <string name="autoplay_regex_presets">הגדרות מוכנות</string>
+    <string name="autoplay_reuse_last_link">השתמש שוב בקישור האחרון</string>
+    <string name="autoplay_reuse_last_link_sub">הפעל אוטומטית את הזרם האחרון שעבד עבור אותו סרט/פרק כשהמטמון עדיין תקף</string>
+    <string name="autoplay_last_link_cache">משך מטמון קישור אחרון</string>
+    <string name="autoplay_prefer_binge_group">העדף קבוצת Binge (פרק הבא)</string>
+    <string name="autoplay_prefer_binge_group_sub">נסה קודם את אותו פרופיל מקור (אותו תוסף/קבוצת איכות) לפני כללי הבחירה האוטומטית הרגילים.</string>
+    <string name="autoplay_next_episode">הפעל פרק הבא אוטומטית</string>
+    <string name="autoplay_next_episode_sub">התחל פרק הבא אוטומטית כשמופיע ההנחיה.</string>
+    <string name="autoplay_threshold_mode">מצב סף פרק הבא</string>
+    <string name="autoplay_threshold_pct">אחוז</string>
+    <string name="autoplay_threshold_pct_title">אחוז סף</string>
+    <string name="autoplay_threshold_pct_sub">חלופה כאשר אין חותמת זמן outro.</string>
+    <string name="autoplay_threshold_pct_desc">הצג לפי אחוז הפעלה כשאין חותמת זמן outro זמינה.</string>
+    <string name="autoplay_threshold_min">דקות לפני הסיום</string>
+    <string name="autoplay_threshold_min_title">דקות סף</string>
+    <string name="autoplay_threshold_min_sub">חלופה כאשר אין חותמת זמן outro.</string>
+    <string name="autoplay_threshold_min_desc">הצג מספר דקות זה לפני סיום הפרק כשאין חותמת זמן outro זמינה.</string>
+    <string name="autoplay_timeout_title">זמן קצוב לבחירת זרם</string>
+    <string name="autoplay_timeout_sub">זמן המתנה לתוספים לפני הבחירה.</string>
+    <string name="autoplay_timeout_instant">מיידי</string>
+    <string name="autoplay_timeout_unlimited">ללא הגבלה</string>
+    <string name="autoplay_allowed_addons">תוספים מורשים</string>
+    <string name="autoplay_allowed_plugins">פלאגינים מורשים</string>
+    <string name="autoplay_all_addons">כל התוספים המותקנים</string>
+    <string name="autoplay_all_plugins">כל הפלאגינים המופעלים</string>
+    <string name="autoplay_no_items">אין פריטים זמינים</string>
+    <string name="autoplay_invalid_regex">תבנית regex לא תקינה</string>
+
+    <!-- Playback (additional) -->
+    <string name="playback_section_audio_desc">התנהגות טריילר ופקדי שמע.</string>
+    <string name="playback_section_subtitles">כתוביות</string>
+    <string name="playback_section_subtitles_desc">שפה, סגנון ומצב רינדור.</string>
+    <string name="playback_resolution_matching">התאמת רזולוציה</string>
+    <string name="playback_resolution_matching_sub">אפשר שינויי מצב תצוגה להתאמת רזולוציית הוידאו.</string>
+    <string name="playback_player_ask_desc">בחר נגן בכל פעם</string>
+    <string name="playback_player_external_desc">פתח תמיד זרמים באפליקציה חיצונית</string>
+    <string name="playback_afr_off">כבוי</string>
+    <string name="playback_afr_off_sub">אל תשנה קצב רענון תצוגה.</string>
+    <string name="playback_afr_on_start">בהתחלה</string>
+    <string name="playback_afr_on_start_sub">החלף בעת התחלת הפעלה.</string>
+    <string name="playback_afr_on_start_stop">בהתחלה/סיום</string>
+    <string name="playback_afr_on_start_stop_sub">החלף בהתחלה ושחזר בסיום.</string>
+    <string name="playback_afr_open">פתוח</string>
+    <string name="playback_afr_closed">סגור</string>
+
+    <!-- Audio (additional) -->
+    <string name="audio_section">שמע</string>
+    <string name="audio_preferred_lang">שפת שמע מועדפת</string>
+    <string name="audio_lang_default">ברירת מחדל (קובץ מדיה)</string>
+    <string name="audio_lang_device">שפת המכשיר</string>
+    <string name="audio_trailer_section">טריילר</string>
+    <string name="audio_trailer_delay">עיכוב טריילר</string>
+    <string name="audio_autoplay_trailers">הפעלה אוטומטית של טריילרים</string>
+    <string name="audio_autoplay_trailers_sub">הפעל טריילרים אוטומטית במסך הפרטים לאחר תקופת חוסר פעילות</string>
+    <string name="audio_skip_silence">דלג על שקט</string>
+    <string name="audio_skip_silence_sub">דלג על חלקים שקטים בשמע במהלך ההפעלה</string>
+    <string name="audio_tunneled">הפעלה ממונרת</string>
+    <string name="audio_tunneled_sub">סנכרון שמע/וידאו ברמת חומרה. עשוי לשפר הפעלה בחלק ממכשירי Android TV</string>
+    <string name="audio_decoder_priority">עדיפות מפענח</string>
+    <string name="audio_decoder_controls">שולט אם מפענחי חומרה או תוכנה (FFmpeg) משמשים לשמע ווידאו</string>
+    <string name="audio_decoder_prefer_device">העדף מפענחי מכשיר</string>
+    <string name="audio_decoder_prefer_device_desc">השתמש במפענחי חומרה כשזמינים, עבור ל-FFmpeg. מומלץ לרוב המכשירים.</string>
+    <string name="audio_decoder_prefer_app">העדף מפענחי אפליקציה (FFmpeg)</string>
+    <string name="audio_decoder_prefer_app_desc">השתמש במפענחי FFmpeg כשזמינים. תמיכה טובה יותר בפורמטים אך שימוש גבוה יותר במעבד.</string>
+    <string name="audio_decoder_device_only">מפענחי מכשיר בלבד</string>
+    <string name="audio_decoder_device_only_desc">השתמש רק במפענחי חומרה מובנים. הכי תואם אך עלול לא לתמוך בכל הפורמטים.</string>
+    <string name="audio_advanced_section">שמע מתקדם</string>
+    <string name="audio_advanced_warning">הגדרות אלה עלולות לגרום לבעיות בחלק מהמכשירים. שנה רק אם אתה יודע מה אתה עושה.</string>
+    <string name="audio_passthrough_info">מעבר שמע (TrueHD, DTS, AC-3 וכו׳) הוא אוטומטי. כשמחובר למקלט AV תואם או soundbar דרך HDMI, שמע ללא אובדן נשלח כמות שהוא ללא פענוח.</string>
+    <string name="audio_dv_title">DV7 - נפילה ל-HEVC</string>
+    <string name="audio_dv_sub">ממפה Dolby Vision Profile 7 ל-HEVC סטנדרטי למכשירים ללא תמיכת DV חומרתית</string>
+
+    <!-- Subtitles (advanced) -->
+    <string name="sub_section">כתוביות</string>
+    <string name="sub_preferred_lang">שפה מועדפת</string>
+    <string name="sub_secondary_lang">שפה מועדפת משנית</string>
+    <string name="sub_forced_lang">מאולץ</string>
+    <string name="sub_not_set">לא הוגדר</string>
+    <string name="sub_organization">ארגון כתוביות</string>
+    <string name="sub_org_none">ללא (סדר ברירת מחדל)</string>
+    <string name="sub_org_none_desc">הצג כתוביות בסדר ברירת המחדל של התוסף.</string>
+    <string name="sub_org_by_lang">לפי שפה</string>
+    <string name="sub_org_by_lang_desc">קבץ כתוביות לפי שפה.</string>
+    <string name="sub_org_by_addon">לפי תוסף</string>
+    <string name="sub_org_by_addon_desc">קבץ כתוביות לפי מקור התוסף.</string>
+    <string name="sub_startup_mode_title">טעינת כתוביות תוסף</string>
+    <string name="sub_startup_mode_fast">הפעלה מהירה</string>
+    <string name="sub_startup_mode_fast_desc">התחל הפעלה מיד. בחירת כתוביות תוסף עלולה לטעון מחדש את הנגן פעם אחת.</string>
+    <string name="sub_startup_mode_preferred">שפות מועדפות</string>
+    <string name="sub_startup_mode_preferred_desc">אחזר כתוביות תוסף מראש לפני ההפעלה וצרף רצועות שפה מועדפת/משנית.</string>
+    <string name="sub_startup_mode_all">כל כתוביות התוסף</string>
+    <string name="sub_startup_mode_all_desc">אחזר וצרף את כל כתוביות התוסף לפני ההפעלה. הפעלה איטית ביותר.</string>
+    <string name="sub_size">גודל</string>
+    <string name="sub_bold">מודגש</string>
+    <string name="sub_bold_sub">השתמש בעיצוב גופן מודגש לכתוביות</string>
+    <string name="sub_outline">מתאר</string>
+    <string name="sub_outline_sub">הוסף מתאר סביב טקסט הכתוביות לנראות טובה יותר</string>
+    <string name="sub_text_color">צבע טקסט</string>
+    <string name="sub_bg_color">צבע רקע</string>
+    <string name="sub_outline_color">צבע מתאר</string>
+    <string name="sub_vertical_offset">היסט אנכי</string>
+    <string name="sub_libass">השתמש ב-libass לכתוביות ASS/SSA</string>
+    <string name="sub_libass_mode">מצב רינדור Libass</string>
+    <string name="sub_libass_sub">ניסיוני: רינדור ASS/SSA מתקדם (סגנונות, מיקום, אנימציות)</string>
+    <string name="sub_mode_standard">כתובי רגיל</string>
+    <string name="sub_mode_standard_sub">רינדור כתוביות בסיסי ללא תמיכת אנימציה. הכי תואם.</string>
+    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
+    <string name="sub_mode_overlay_gl">Overlay OpenGL (מומלץ)</string>
+    <string name="sub_mode_overlay_gl_sub">איכות הטובה ביותר עם תמיכת HDR. מרנדר כתוביות ב-thread נפרד.</string>
+    <string name="sub_mode_effects_canvas">Effects Canvas</string>
+    <string name="sub_mode_effects_canvas_sub">תמיכת אנימציה באמצעות אפקטי Media3 עם רינדור Canvas.</string>
+    <string name="sub_mode_effects_gl">Effects OpenGL</string>
+    <string name="sub_mode_effects_gl_sub">תמיכת אנימציה באמצעות אפקטי Media3. מהיר יותר מ-Canvas.</string>
+    <string name="sub_advanced_section">רינדור כתוביות מתקדם</string>
+</resources>

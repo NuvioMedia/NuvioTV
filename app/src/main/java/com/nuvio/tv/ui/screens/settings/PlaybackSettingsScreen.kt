@@ -198,6 +198,7 @@ fun PlaybackSettingsContent(
                 },
                 onSetReuseLastLinkEnabled = { enabled -> coroutineScope.launch { viewModel.setStreamReuseLastLinkEnabled(enabled) } },
                 onSetStreamCacheEnabled = { enabled -> coroutineScope.launch { viewModel.setStreamCacheEnabled(enabled) } },
+                onSetShowPlayerLoadingStatus = { enabled -> coroutineScope.launch { viewModel.setShowPlayerLoadingStatus(enabled) } },
                 onSetLoadingOverlayEnabled = { enabled -> coroutineScope.launch { viewModel.setLoadingOverlayEnabled(enabled) } },
                 onSetPauseOverlayEnabled = { enabled -> coroutineScope.launch { viewModel.setPauseOverlayEnabled(enabled) } },
                 onSetOsdClockEnabled = { enabled -> coroutineScope.launch { viewModel.setOsdClockEnabled(enabled) } },

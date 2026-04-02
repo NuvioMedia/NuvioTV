@@ -52,6 +52,8 @@ import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
@@ -311,7 +313,7 @@ private fun HeroCarouselSlide(
                         }
                         AsyncImage(
                             model = imdbModel,
-                            contentDescription = "IMDB",
+                            contentDescription = stringResource(R.string.cd_imdb),
                             modifier = Modifier.size(30.dp),
                             contentScale = ContentScale.Fit
                         )

@@ -51,9 +51,7 @@ fun SyncCodeGenerateScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(NuvioColors.Background),
+            modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -183,7 +181,7 @@ fun SyncCodeGenerateScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = if (uiState.isLoading) "Generating..." else "Generate Code",
+                        text = if (uiState.isLoading) stringResource(R.string.sync_generate_generating) else stringResource(R.string.sync_generate_code_btn),
                         modifier = Modifier.padding(vertical = 4.dp),
                         fontWeight = FontWeight.Medium
                     )

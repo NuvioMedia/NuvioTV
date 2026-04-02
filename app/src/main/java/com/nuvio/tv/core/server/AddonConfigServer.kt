@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.server
 
+import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import fi.iki.elonen.NanoHTTPD
@@ -8,6 +9,7 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 class AddonConfigServer(
+    private val context: Context,
     private val currentPageStateProvider: () -> PageState,
     private val onChangeProposed: (PendingAddonChange) -> Unit,
     private val logoProvider: (() -> ByteArray?)? = null,
@@ -71,7 +73,7 @@ class AddonConfigServer(
     }
 
     private fun serveWebPage(): Response {
-        return newFixedLengthResponse(Response.Status.OK, "text/html", AddonWebPage.getHtml())
+        return newFixedLengthResponse(Response.Status.OK, "text/html", AddonWebPage.getHtml(context))
     }
 
     private fun serveLogo(): Response {
@@ -156,6 +158,7 @@ class AddonConfigServer(
 
     companion object {
         fun startOnAvailablePort(
+            context: Context,
             currentPageStateProvider: () -> PageState,
             onChangeProposed: (PendingAddonChange) -> Unit,
             logoProvider: (() -> ByteArray?)? = null,
@@ -164,7 +167,7 @@ class AddonConfigServer(
         ): AddonConfigServer? {
             for (port in startPort until startPort + maxAttempts) {
                 try {
-                    val server = AddonConfigServer(currentPageStateProvider, onChangeProposed, logoProvider, port)
+                    val server = AddonConfigServer(context, currentPageStateProvider, onChangeProposed, logoProvider, port)
                     server.start(SOCKET_READ_TIMEOUT, false)
                     return server
                 } catch (e: Exception) {

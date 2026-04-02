@@ -88,7 +88,7 @@ fun AboutSettingsContent(
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.app_logo_wordmark),
-                    contentDescription = "NuvioTV",
+                    contentDescription = stringResource(R.string.cd_nuvio_logo),
                     modifier = Modifier
                         .width(180.dp)
                         .height(50.dp),

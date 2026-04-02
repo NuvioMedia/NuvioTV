@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
@@ -98,14 +99,23 @@ fun StreamCardSkeleton(
 }
 
 @Composable
-fun MetaDetailsSkeleton() {
-    val shimmerBrush = rememberShimmerBrush()
+fun MetaDetailsSkeleton(backdropAware: Boolean = false) {
+    val shimmerBrush = rememberShimmerBrush(backdropAware = backdropAware)
+    val episodeCardColor = if (backdropAware) {
+        NuvioColors.BackgroundCard.copy(alpha = 0.40f)
+    } else {
+        NuvioColors.BackgroundCard
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioColors.Background)
+            .background(if (backdropAware) Color.Transparent else NuvioColors.Background)
     ) {
+        if (backdropAware) {
+            BackdropLoadingScrim()
+        }
+
         LazyColumn(
             modifier = Modifier.fillMaxSize()
         ) {
@@ -118,7 +128,10 @@ fun MetaDetailsSkeleton() {
             }
 
             item {
-                EpisodesRowSkeleton(shimmerBrush = shimmerBrush)
+                EpisodesRowSkeleton(
+                    shimmerBrush = shimmerBrush,
+                    cardColor = episodeCardColor
+                )
             }
 
             item {
@@ -134,6 +147,61 @@ fun MetaDetailsSkeleton() {
             }
         }
     }
+}
+
+@Composable
+private fun BackdropLoadingScrim() {
+    val backgroundColor = NuvioColors.Background
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundColor.copy(alpha = 0.20f))
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        backgroundColor.copy(alpha = 0.96f),
+                        backgroundColor.copy(alpha = 0.84f),
+                        backgroundColor.copy(alpha = 0.56f),
+                        Color.Transparent
+                    )
+                )
+            )
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        backgroundColor.copy(alpha = 0.08f),
+                        Color.Transparent,
+                        backgroundColor.copy(alpha = 0.90f)
+                    )
+                )
+            )
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(540.dp)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        backgroundColor.copy(alpha = 0.12f),
+                        Color.Transparent,
+                        backgroundColor.copy(alpha = 0.42f)
+                    )
+                )
+            )
+    )
 }
 
 @Composable
@@ -213,7 +281,10 @@ private fun SeasonTabsSkeleton(shimmerBrush: Brush) {
 }
 
 @Composable
-private fun EpisodesRowSkeleton(shimmerBrush: Brush) {
+private fun EpisodesRowSkeleton(
+    shimmerBrush: Brush,
+    cardColor: Color
+) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 16.dp),
@@ -224,7 +295,7 @@ private fun EpisodesRowSkeleton(shimmerBrush: Brush) {
                 modifier = Modifier
                     .width(280.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(NuvioColors.BackgroundCard)
+                    .background(cardColor)
             ) {
                 Box(
                     modifier = Modifier
@@ -362,12 +433,20 @@ fun SkeletonPill(
 }
 
 @Composable
-fun rememberShimmerBrush(): Brush {
-    val shimmerColors = listOf(
-        NuvioColors.SurfaceVariant.copy(alpha = 0.30f),
-        NuvioColors.SurfaceVariant.copy(alpha = 0.60f),
-        NuvioColors.SurfaceVariant.copy(alpha = 0.30f)
-    )
+fun rememberShimmerBrush(backdropAware: Boolean = false): Brush {
+    val shimmerColors = if (backdropAware) {
+        listOf(
+            NuvioColors.TextPrimary.copy(alpha = 0.08f),
+            NuvioColors.TextPrimary.copy(alpha = 0.20f),
+            NuvioColors.TextPrimary.copy(alpha = 0.08f)
+        )
+    } else {
+        listOf(
+            NuvioColors.SurfaceVariant.copy(alpha = 0.30f),
+            NuvioColors.SurfaceVariant.copy(alpha = 0.60f),
+            NuvioColors.SurfaceVariant.copy(alpha = 0.30f)
+        )
+    }
     val transition = rememberInfiniteTransition(label = "shimmer")
     val translate by transition.animateFloat(
         initialValue = 0f,

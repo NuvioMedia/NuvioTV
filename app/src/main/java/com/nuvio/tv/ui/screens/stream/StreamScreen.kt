@@ -169,7 +169,8 @@ fun StreamScreen(
     LaunchedEffect(uiState.autoPlayPlaybackInfo) {
         val playbackInfo = uiState.autoPlayPlaybackInfo ?: return@LaunchedEffect
         if (playbackInfo.url != null) {
-            routeAutoPlay(playbackInfo)
+            onAutoPlayResolved(playbackInfo)
+            viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
         }
     }
 
@@ -187,9 +188,7 @@ fun StreamScreen(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(NuvioColors.Background)
+        modifier = Modifier.fillMaxSize()
     ) {
         // Full screen backdrop
         StreamBackdrop(
@@ -312,10 +311,10 @@ private fun StreamBackdrop(
                 .build()
         }
     }
-    val alpha by animateFloatAsState(
-        targetValue = if (isLoading) 0.3f else 0.5f,
+    val imageAlpha by animateFloatAsState(
+        targetValue = if (isLoading) 0.7f else 0.5f,
         animationSpec = tween(500),
-        label = "backdrop_alpha"
+        label = "backdrop_image_alpha"
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -324,17 +323,12 @@ private fun StreamBackdrop(
             AsyncImage(
                 model = backdropModel,
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = imageAlpha },
                 contentScale = ContentScale.Crop
             )
         }
-
-        // Dark overlay
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(NuvioColors.Background.copy(alpha = alpha))
-        )
 
         StreamGradientLayer(
             bgColor = backgroundColor,
@@ -350,39 +344,22 @@ private fun StreamGradientLayer(
 ) {
     Box(
         modifier = modifier
-            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithCache {
-                val leftGradient = Brush.horizontalGradient(
+                val combinedGradient = Brush.horizontalGradient(
                     colorStops = arrayOf(
                         0.0f to bgColor,
-                        0.12f to bgColor.copy(alpha = 0.92f),
-                        0.26f to bgColor.copy(alpha = 0.78f),
-                        0.44f to bgColor.copy(alpha = 0.58f),
-                        0.62f to bgColor.copy(alpha = 0.36f),
-                        0.78f to bgColor.copy(alpha = 0.16f),
-                        0.90f to bgColor.copy(alpha = 0.05f),
-                        1.0f to Color.Transparent
-                    ),
-                    startX = 0f,
-                    endX = size.width * 0.65f
-                )
-                val rightGradient = Brush.horizontalGradient(
-                    colorStops = arrayOf(
-                        0.0f to Color.Transparent,
-                        0.10f to bgColor.copy(alpha = 0.05f),
-                        0.22f to bgColor.copy(alpha = 0.16f),
-                        0.38f to bgColor.copy(alpha = 0.36f),
-                        0.56f to bgColor.copy(alpha = 0.58f),
-                        0.74f to bgColor.copy(alpha = 0.78f),
-                        0.88f to bgColor.copy(alpha = 0.92f),
+                        0.15f to bgColor.copy(alpha = 0.85f),
+                        0.30f to bgColor.copy(alpha = 0.40f),
+                        0.50f to bgColor.copy(alpha = 0.15f),
+                        0.70f to bgColor.copy(alpha = 0.40f),
+                        0.85f to bgColor.copy(alpha = 0.85f),
                         1.0f to bgColor
                     ),
-                    startX = size.width * 0.35f,
+                    startX = 0f,
                     endX = size.width
                 )
                 onDrawBehind {
-                    drawRect(brush = leftGradient)
-                    drawRect(brush = rightGradient)
+                    drawRect(brush = combinedGradient)
                 }
             }
     )
@@ -452,7 +429,7 @@ private fun LeftContentSection(
                 // Episode info
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "S$season E$episode",
+                    text = stringResource(R.string.stream_episode_label, season, episode),
                     style = MaterialTheme.typography.titleLarge,
                     color = NuvioTheme.extendedColors.textSecondary,
                     textAlign = TextAlign.Center
@@ -517,6 +494,7 @@ private fun RightStreamSection(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     var enter by remember { mutableStateOf(false) }
     var shouldFocusFirstStream by remember { mutableStateOf(false) }
     var wasLoading by remember { mutableStateOf(true) }
@@ -643,23 +621,53 @@ private fun AddonFilterChips(
     focusRequesters: List<FocusRequester>,
     orderedNames: List<String>
 ) {
+    val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     val chipMap = sourceChips.associateBy { it.name }
     var chipRowHasFocus by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
         modifier = Modifier
-            .onFocusChanged { chipRowHasFocus = it.hasFocus }
+            .onFocusChanged { focusState ->
+                val hasFocus = focusState.hasFocus
+                if (hasFocus && !chipRowHasFocus && isRtl) {
+                    val selectedIdx = if (selectedAddon == null) 0
+                        else (orderedNames.indexOf(selectedAddon) + 1).coerceAtLeast(0)
+                    scope.coroutineLaunch {
+                        withFrameNanos {}
+                        focusRequesters.getOrNull(selectedIdx)?.requestFocus()
+                    }
+                }
+                chipRowHasFocus = hasFocus
+            }
             .onKeyEvent { event ->
                 if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) return@onKeyEvent false
+
+                // Throttle rapid key repeats (long-press)
+                if (event.nativeKeyEvent.repeatCount > 0) {
+                    val now = android.os.SystemClock.uptimeMillis()
+                    if (now - lastKeyRepeatDispatchRef.get() < 112L) return@onKeyEvent true
+                    lastKeyRepeatDispatchRef.set(now)
+                }
+
                 val allOptions = listOf<String?>(null) + orderedNames
                 val currentIdx = allOptions.indexOf(selectedAddon)
                 when (event.key) {
                     androidx.compose.ui.input.key.Key.DirectionLeft -> {
-                        if (currentIdx > 0) { onAddonSelected(allOptions[currentIdx - 1]); true } else false
+                        if (isRtl) {
+                            if (currentIdx < allOptions.lastIndex) { onAddonSelected(allOptions[currentIdx + 1]); true } else false
+                        } else {
+                            if (currentIdx > 0) { onAddonSelected(allOptions[currentIdx - 1]); true } else false
+                        }
                     }
                     androidx.compose.ui.input.key.Key.DirectionRight -> {
-                        if (currentIdx < allOptions.lastIndex) { onAddonSelected(allOptions[currentIdx + 1]); true } else false
+                        if (isRtl) {
+                            if (currentIdx > 0) { onAddonSelected(allOptions[currentIdx - 1]); true } else false
+                        } else {
+                            if (currentIdx < allOptions.lastIndex) { onAddonSelected(allOptions[currentIdx + 1]); true } else false
+                        }
                     }
                     else -> false
                 }
@@ -797,7 +805,9 @@ private fun StreamsList(
     orderedAddonNames: List<String> = emptyList(),
     onFocusChanged: (Boolean) -> Unit = {}
 ) {
+    val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     val firstCardFocusRequester = remember { FocusRequester() }
+    val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
     val restoreFocusRequester = remember { FocusRequester() }
     val firstStreamKey = streams.firstOrNull()?.let { first ->
         "${first.addonName}_${first.url ?: first.infoHash ?: first.ytId ?: "unknown"}"
@@ -834,15 +844,30 @@ private fun StreamsList(
             .onFocusChanged { onFocusChanged(it.hasFocus) }
             .onKeyEvent { event ->
                 if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
+
+                // Throttle rapid key repeats (long-press)
+                if (event.nativeKeyEvent.repeatCount > 0) {
+                    val now = android.os.SystemClock.uptimeMillis()
+                    if (now - lastKeyRepeatDispatchRef.get() < 112L) return@onKeyEvent true
+                    lastKeyRepeatDispatchRef.set(now)
+                }
                 if (availableAddons.isEmpty()) return@onKeyEvent false
                 val allOptions = listOf<String?>(null) + availableAddons
                 val currentIdx = allOptions.indexOf(selectedAddonFilter)
                 when (event.key) {
                     Key.DirectionLeft -> {
-                        if (currentIdx > 0) { onAddonFilterSelected(allOptions[currentIdx - 1]); true } else false
+                        if (isRtl) {
+                            if (currentIdx < allOptions.lastIndex) { onAddonFilterSelected(allOptions[currentIdx + 1]); true } else false
+                        } else {
+                            if (currentIdx > 0) { onAddonFilterSelected(allOptions[currentIdx - 1]); true } else false
+                        }
                     }
                     Key.DirectionRight -> {
-                        if (currentIdx < allOptions.lastIndex) { onAddonFilterSelected(allOptions[currentIdx + 1]); true } else false
+                        if (isRtl) {
+                            if (currentIdx > 0) { onAddonFilterSelected(allOptions[currentIdx - 1]); true } else false
+                        } else {
+                            if (currentIdx < allOptions.lastIndex) { onAddonFilterSelected(allOptions[currentIdx + 1]); true } else false
+                        }
                     }
                     else -> false
                 }

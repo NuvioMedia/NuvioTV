@@ -24,10 +24,13 @@ class TmdbSettingsDataStore @Inject constructor(
         factory.get(profileId, FEATURE)
 
     private val enabledKey = booleanPreferencesKey("tmdb_enabled")
+    private val modernHomeEnabledKey = booleanPreferencesKey("tmdb_modern_home_enabled")
+    private val enrichContinueWatchingKey = booleanPreferencesKey("tmdb_enrich_continue_watching")
     private val languageKey = stringPreferencesKey("tmdb_language")
     private val useArtworkKey = booleanPreferencesKey("tmdb_use_artwork")
     private val useBasicInfoKey = booleanPreferencesKey("tmdb_use_basic_info")
     private val useDetailsKey = booleanPreferencesKey("tmdb_use_details")
+    private val useReleaseDatesKey = booleanPreferencesKey("tmdb_use_release_dates")
     private val useCreditsKey = booleanPreferencesKey("tmdb_use_credits")
     private val useProductionsKey = booleanPreferencesKey("tmdb_use_productions")
     private val useNetworksKey = booleanPreferencesKey("tmdb_use_networks")
@@ -39,10 +42,13 @@ class TmdbSettingsDataStore @Inject constructor(
         factory.get(pid, FEATURE).data.map { prefs ->
             TmdbSettings(
                 enabled = prefs[enabledKey] ?: false,
+                modernHomeEnabled = prefs[modernHomeEnabledKey] ?: false,
+                enrichContinueWatching = prefs[enrichContinueWatchingKey] ?: true,
                 language = prefs[languageKey] ?: "en",
                 useArtwork = prefs[useArtworkKey] ?: true,
                 useBasicInfo = prefs[useBasicInfoKey] ?: true,
                 useDetails = prefs[useDetailsKey] ?: true,
+                useReleaseDates = prefs[useReleaseDatesKey] ?: true,
                 useCredits = prefs[useCreditsKey] ?: true,
                 useProductions = prefs[useProductionsKey] ?: true,
                 useNetworks = prefs[useNetworksKey] ?: true,
@@ -55,6 +61,14 @@ class TmdbSettingsDataStore @Inject constructor(
 
     suspend fun setEnabled(enabled: Boolean) {
         store().edit { it[enabledKey] = enabled }
+    }
+
+    suspend fun setModernHomeEnabled(enabled: Boolean) {
+        store().edit { it[modernHomeEnabledKey] = enabled }
+    }
+
+    suspend fun setEnrichContinueWatching(enabled: Boolean) {
+        store().edit { it[enrichContinueWatchingKey] = enabled }
     }
 
     suspend fun setLanguage(language: String) {
@@ -71,6 +85,10 @@ class TmdbSettingsDataStore @Inject constructor(
 
     suspend fun setUseDetails(enabled: Boolean) {
         store().edit { it[useDetailsKey] = enabled }
+    }
+
+    suspend fun setUseReleaseDates(enabled: Boolean) {
+        store().edit { it[useReleaseDatesKey] = enabled }
     }
 
     suspend fun setUseCredits(enabled: Boolean) {

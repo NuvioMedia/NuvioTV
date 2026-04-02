@@ -61,7 +61,6 @@ fun CatalogOrderScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioColors.Background)
             .padding(horizontal = 48.dp, vertical = 24.dp)
     ) {
         LazyColumn(
@@ -202,7 +201,7 @@ private fun CatalogOrderCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowUpward,
-                        contentDescription = "Move up"
+                        contentDescription = stringResource(R.string.cd_move_up)
                     )
                 }
 
@@ -225,7 +224,7 @@ private fun CatalogOrderCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowDownward,
-                        contentDescription = "Move down"
+                        contentDescription = stringResource(R.string.cd_move_down)
                     )
                 }
 

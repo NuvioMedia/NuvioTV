@@ -129,8 +129,8 @@
     <string name="series_status_continuing">Em curso</string>
     <string name="series_status_current">Atual</string>
     <string name="series_status_cancelled">Cancelada</string>
-    <string name="series_status_released">Lançada</string>
-    <string name="series_status_planned">Planeada</string>
+    <string name="series_status_released">Exibido</string>
+    <string name="series_status_planned">Planeado</string>
     <string name="series_status_rumored">Rumores</string>
     <string name="series_status_in_production">Em Produção</string>
     <string name="series_status_post_production">Pós-Produção</string>
@@ -162,7 +162,7 @@
     <string name="about_made_with_love">Feito com ❤️ pela Tapframe e amigos</string>
     <string name="about_version">Versão %1$s</string>
     <string name="about_check_updates">Procurar atualizações</string>
-    <string name="about_check_updates_subtitle">Descarregar a versão mais recente</string>
+    <string name="about_check_updates_subtitle">Transferir a versão mais recente</string>
     <string name="about_privacy_policy">Política de Privacidade</string>
     <string name="about_privacy_policy_subtitle">Ver a nossa política de privacidade</string>
     <string name="about_supporters_contributors">Apoiantes e Colaboradores</string>
@@ -443,6 +443,8 @@
     <string name="layout_trailer_button_sub">Mostrar botão de trailer na página de detalhes (apenas quando disponível).</string>
     <string name="layout_prefer_external_meta">Preferir metadados de addon externo</string>
     <string name="layout_prefer_external_meta_sub">Usar metadados de addon externo em vez do addon do catálogo.</string>
+    <string name="layout_show_full_release_date">Mostrar data de exibição completa</string>
+    <string name="layout_show_full_release_date_sub">Nos filmes, mostra a data de exibição completa e não apenas o ano.</string>
     <string name="layout_section_focused">Poster Focado</string>
     <string name="layout_section_focused_desc">Comportamento avançado para cartões de posters focados.</string>
     <string name="layout_expand_poster">Expandir Poster Focado para Fundo</string>
@@ -526,6 +528,8 @@
     <string name="tmdb_subtitle">Escolhe quais campos de metadados devem vir do TMDB</string>
     <string name="tmdb_enable_title">Ativar Enriquecimento TMDB</string>
     <string name="tmdb_enable_subtitle">Usar o TMDB como fonte de metadados para melhorar os dados dos addons</string>
+    <string name="tmdb_modern_home_title">Ativar na Vista Moderna</string>
+    <string name="tmdb_modern_home_subtitle">Também aplica o Enriquecimento TMDB na Vista Moderna</string>
     <string name="tmdb_language_title">Idioma</string>
     <string name="tmdb_language_subtitle">Idioma dos metadados TMDB para título, logótipo e campos ativos</string>
     <string name="tmdb_artwork_title">Arte Visual</string>
@@ -842,7 +846,7 @@
     <string name="search_voice_unavailable">Pesquisa por voz indisponível neste dispositivo.</string>
     
     <!-- LibraryScreen -->
-    <string name="library_syncing">A sincronizar biblioteca Trakt\u2026</string>
+    <string name="library_syncing">A sincronizar a biblioteca Trakt\u2026</string>
     <string name="library_title">Biblioteca</string>
     <string name="library_filter_list">Lista</string>
     <string name="library_filter_type">Tipo</string>
@@ -982,9 +986,9 @@
 
     <!-- UpdatePromptDialog -->
     <string name="update_title">Atualização da App</string>
-    <string name="update_downloading">A descarregar atualização</string>
-    <string name="update_download">Descarregar</string>
-    <string name="update_downloading_ellipsis">A descarregar…</string>
+    <string name="update_downloading">A transferir atualização</string>
+    <string name="update_download">Transferir</string>
+    <string name="update_downloading_ellipsis">A transferir…</string>
     <string name="update_unknown_sources">Permite a instalação de fontes desconhecidas para continuar.</string>
     
     <!-- AccountScreen -->

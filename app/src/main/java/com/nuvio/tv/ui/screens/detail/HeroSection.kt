@@ -97,6 +97,7 @@ fun HeroContentSection(
     hideLogoDuringTrailer: Boolean = false,
     mdbListRatings: MDBListRatings? = null,
     hideMetaInfoImdb: Boolean = false,
+    showFullReleaseDate: Boolean = true,
     isTrailerPlaying: Boolean = false,
     playButtonFocusRequester: FocusRequester? = null,
     restorePlayFocusToken: Int = 0,
@@ -320,7 +321,7 @@ fun HeroContentSection(
                         )
                     }
 
-                    MetaInfoRow(meta = meta, hideImdbRating = hideMetaInfoImdb)
+                    MetaInfoRow(meta = meta, hideImdbRating = hideMetaInfoImdb, showFullReleaseDate = showFullReleaseDate)
                 }
             }
         }
@@ -570,16 +571,17 @@ private fun ActionIconButton(
 @Composable
 private fun MetaInfoRow(
     meta: Meta,
-    hideImdbRating: Boolean
+    hideImdbRating: Boolean,
+    showFullReleaseDate: Boolean = true
 ) {
     val context = LocalContext.current
     val genresText = remember(meta.genres) { meta.genres.joinToString(" • ") }
     val runtimeText = remember(meta.runtime) { meta.runtime?.let { formatRuntime(it) } }
-    val yearText = remember(meta.releaseInfo, meta.released, meta.type) {
-        if (meta.type == ContentType.MOVIE) {
+    val yearText = remember(meta.releaseInfo, meta.released, meta.type, showFullReleaseDate) {
+        if (showFullReleaseDate && meta.type == ContentType.MOVIE) {
             meta.released
                 ?.let { runCatching { java.time.OffsetDateTime.parse(it).toLocalDate() }.getOrNull() }
-                ?.let { java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.getDefault()).format(it) }
+                ?.let { val locale = java.util.Locale.getDefault(); java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMMy"), locale).format(java.util.Date(it.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli())) }
                 ?: meta.releaseInfo?.split("-")?.firstOrNull() ?: meta.releaseInfo
         } else {
             meta.releaseInfo?.split("-")?.firstOrNull() ?: meta.releaseInfo
