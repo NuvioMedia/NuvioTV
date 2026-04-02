@@ -8,6 +8,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
+import com.nuvio.tv.data.repository.EmbyMediaService
+import com.nuvio.tv.data.repository.EmbySessionService
 import com.nuvio.tv.data.repository.ParentalGuideRepository
 import com.nuvio.tv.data.repository.SkipIntroRepository
 import com.nuvio.tv.data.repository.TraktEpisodeMappingService
@@ -39,6 +41,8 @@ class PlayerViewModel @Inject constructor(
     private val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     private val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
     private val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
+    private val embyMediaService: EmbyMediaService,
+    private val embySessionService: EmbySessionService,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -59,6 +63,8 @@ class PlayerViewModel @Inject constructor(
         layoutPreferenceDataStore = layoutPreferenceDataStore,
         watchedItemsPreferences = watchedItemsPreferences,
         trackPreferenceDataStore = trackPreferenceDataStore,
+        embyMediaService = embyMediaService,
+        embySessionService = embySessionService,
         savedStateHandle = savedStateHandle,
         scope = viewModelScope
     )

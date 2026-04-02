@@ -3,11 +3,13 @@ package com.nuvio.tv.core.di
 import android.content.Context
 import android.util.Log
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.data.local.EmbyAuthDataStore
 import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.data.remote.api.AniSkipApi
 import com.nuvio.tv.data.remote.api.AnimeSkipApi
 import com.nuvio.tv.data.remote.api.ArmApi
 import com.nuvio.tv.data.remote.api.DonationsApi
+import com.nuvio.tv.data.remote.api.EmbyApi
 import com.nuvio.tv.data.remote.api.GitHubReleaseApi
 import com.nuvio.tv.data.remote.api.TraktApi
 import com.nuvio.tv.data.remote.api.TrailerApi
@@ -30,6 +32,8 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import com.nuvio.tv.core.network.IPv4FirstDns
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
@@ -382,4 +386,61 @@ object NetworkModule {
     @Singleton
     fun provideImdbTapframeApi(@Named("imdbTapframe") retrofit: Retrofit): ImdbTapframeApi =
         retrofit.create(ImdbTapframeApi::class.java)
+
+    @Provides
+    @Singleton
+    @Named("emby")
+    fun provideEmbyOkHttpClient(
+        embyAuthDataStore: EmbyAuthDataStore,
+        moshi: Moshi
+    ): OkHttpClient = OkHttpClient.Builder()
+        .addInterceptor { chain ->
+            val state = runBlocking { embyAuthDataStore.state.first() }
+            var request = chain.request()
+
+            val serverUrl = state.serverUrl?.trimEnd('/')
+            if (!serverUrl.isNullOrBlank()) {
+                val originalUrl = request.url.toString()
+                if (originalUrl.startsWith("http://localhost/")) {
+                    val rewrittenUrl = originalUrl.replaceFirst("http://localhost", serverUrl)
+                    request = request.newBuilder()
+                        .url(rewrittenUrl)
+                        .build()
+                }
+            }
+
+            val authHeader = "MediaBrowser Client=\"NuvioTV\", Device=\"Android TV\", DeviceId=\"${state.deviceId.orEmpty()}\", Version=\"1.0.0\", Token=\"${state.apiKey.orEmpty()}\""
+            request = request.newBuilder()
+                .header("X-Emby-Authorization", authHeader)
+                .build()
+
+            chain.proceed(request)
+        }
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .apply {
+            if (BuildConfig.DEBUG) {
+                addInterceptor(HttpLoggingInterceptor().apply {
+                    level = HttpLoggingInterceptor.Level.BASIC
+                })
+            }
+        }
+        .build()
+
+    @Provides
+    @Singleton
+    @Named("emby")
+    fun provideEmbyRetrofit(
+        @Named("emby") okHttpClient: OkHttpClient,
+        moshi: Moshi
+    ): Retrofit = Retrofit.Builder()
+        .baseUrl("http://localhost/")
+        .client(okHttpClient)
+        .addConverterFactory(MoshiConverterFactory.create(moshi))
+        .build()
+
+    @Provides
+    @Singleton
+    fun provideEmbyApi(@Named("emby") retrofit: Retrofit): EmbyApi =
+        retrofit.create(EmbyApi::class.java)
 }

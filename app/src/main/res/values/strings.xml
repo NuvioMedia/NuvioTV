@@ -1385,4 +1385,15 @@
     <string name="debug_generate_description">Debug-generated %1$s item #%2$d</string>
     <string name="debug_generate_result_failed">Failed: %1$s</string>
 
+    <string name="settings_emby_title">Emby Server</string>
+    <string name="settings_emby_subtitle">Connect to Emby for direct playback and Now Playing</string>
+    <string name="settings_emby_server_url">Server URL</string>
+    <string name="settings_emby_api_key">API Key</string>
+    <string name="settings_emby_test_connection">Test Connection</string>
+    <string name="settings_emby_testing">Testing connection…</string>
+    <string name="settings_emby_disconnect">Disconnect</string>
+    <string name="settings_emby_connected">Connected</string>
+    <string name="settings_emby_not_connected">Not Connected</string>
+    <string name="settings_emby_header">Emby Server</string>
+    <string name="settings_emby_header_subtitle">Connect to an Emby server for direct media playback and Now Playing reporting</string>
 </resources>

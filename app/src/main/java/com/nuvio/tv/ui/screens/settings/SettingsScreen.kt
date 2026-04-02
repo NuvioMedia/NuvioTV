@@ -76,7 +76,8 @@ private enum class IntegrationSettingsSection {
     Hub,
     Tmdb,
     MdbList,
-    AnimeSkip
+    AnimeSkip,
+    EmbyServer
 }
 
 internal enum class SettingsSectionDestination {
@@ -414,6 +415,7 @@ fun SettingsScreen(
                             tmdbFocusRequester = integrationTmdbFocusRequester,
                             mdbListFocusRequester = integrationMdbListFocusRequester,
                             animeSkipFocusRequester = integrationAnimeSkipFocusRequester,
+                            embyServerFocusRequester = remember { FocusRequester() },
                             autoFocusEnabled = allowDetailAutofocus
                         )
                         SettingsCategory.ABOUT -> AboutSettingsContent(
@@ -501,6 +503,7 @@ private fun IntegrationSettingsContent(
     tmdbFocusRequester: FocusRequester,
     mdbListFocusRequester: FocusRequester,
     animeSkipFocusRequester: FocusRequester,
+    embyServerFocusRequester: FocusRequester,
     autoFocusEnabled: Boolean
 ) {
     BackHandler(enabled = selectedSection != IntegrationSettingsSection.Hub) {
@@ -515,6 +518,7 @@ private fun IntegrationSettingsContent(
             IntegrationSettingsSection.Tmdb -> tmdbFocusRequester
             IntegrationSettingsSection.MdbList -> mdbListFocusRequester
             IntegrationSettingsSection.AnimeSkip -> animeSkipFocusRequester
+            IntegrationSettingsSection.EmbyServer -> embyServerFocusRequester
         }
         runCatching { requester.requestFocus() }
     }
@@ -560,6 +564,13 @@ private fun IntegrationSettingsContent(
                                 onClick = { onSelectSection(IntegrationSettingsSection.AnimeSkip) }
                             )
                         }
+                        item(key = "integration_hub_emby") {
+                            SettingsActionRow(
+                                title = stringResource(R.string.settings_emby_title),
+                                subtitle = stringResource(R.string.settings_emby_subtitle),
+                                onClick = { onSelectSection(IntegrationSettingsSection.EmbyServer) }
+                            )
+                        }
                     }
                 }
             }
@@ -580,6 +591,12 @@ private fun IntegrationSettingsContent(
         IntegrationSettingsSection.AnimeSkip -> {
             AnimeSkipSettingsContent(
                 initialFocusRequester = animeSkipFocusRequester
+            )
+        }
+
+        IntegrationSettingsSection.EmbyServer -> {
+            EmbySettingsContent(
+                initialFocusRequester = embyServerFocusRequester
             )
         }
     }

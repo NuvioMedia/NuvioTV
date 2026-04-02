@@ -35,7 +35,8 @@ class StreamRepositoryImpl @Inject constructor(
     private val api: AddonApi,
     private val addonRepository: AddonRepository,
     private val pluginManager: PluginManager,
-    private val tmdbService: TmdbService
+    private val tmdbService: TmdbService,
+    private val embyMediaService: EmbyMediaService
 ) : StreamRepository {
     private enum class StreamFailureKind {
         MISSING,
@@ -78,10 +79,57 @@ class StreamRepositoryImpl @Inject constructor(
             coroutineScope {
                 // Channel to receive results as they complete
                 val resultChannel = Channel<AddonStreams>(Channel.UNLIMITED)
+
+                val embyJob = async {
+                    try {
+                        embyMediaService.findEmbyStream(
+                            contentId = videoId,
+                            contentType = type,
+                            season = season,
+                            episode = episode
+                        )
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.d(TAG, "Emby stream lookup failed: ${e.message}")
+                        null
+                    }
+                }
                 
                 // Track number of pending jobs
                 val totalJobs = streamAddons.size + (if (tmdbId != null) 1 else 0)
                 var completedJobs = 0
+
+                launch {
+                    try {
+                        val embyResult = embyJob.await()
+                        if (embyResult != null) {
+                            val (streamUrl, displayName) = embyResult
+                            val embyStream = Stream(
+                                name = displayName,
+                                title = displayName,
+                                url = streamUrl,
+                                addonName = "Emby",
+                                addonLogo = null,
+                                description = "Direct play from Emby server",
+                                behaviorHints = null,
+                                infoHash = null,
+                                fileIdx = null,
+                                ytId = null,
+                                externalUrl = null
+                            )
+                            resultChannel.send(
+                                AddonStreams(
+                                    addonName = "Emby",
+                                    addonLogo = null,
+                                    streams = listOf(embyStream)
+                                )
+                            )
+                        }
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.d(TAG, "Emby stream send failed (channel closed): ${e.message}")
+                    }
+                }
 
                 // Launch addon jobs
                 streamAddons.forEach { addon ->

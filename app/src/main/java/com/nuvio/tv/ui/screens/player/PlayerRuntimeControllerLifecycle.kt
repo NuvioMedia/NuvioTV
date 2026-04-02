@@ -32,6 +32,7 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     playbackPreparationJob?.cancel()
     playbackPreparationJob = null
     delayMpvResumeSeekUntilVideoTrack = false
+    resetEmbySession()
     nextEpisodeAutoPlayJob?.cancel()
     nextEpisodeAutoPlayJob = null
     errorRetryJob?.cancel()

@@ -13,6 +13,8 @@ import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
 import com.nuvio.tv.data.local.StreamAutoPlayMode
+import com.nuvio.tv.data.repository.EmbyMediaService
+import com.nuvio.tv.data.repository.EmbySessionService
 import com.nuvio.tv.data.repository.ParentalGuideRepository
 import com.nuvio.tv.data.repository.SkipIntroRepository
 import com.nuvio.tv.data.repository.SkipInterval
@@ -53,7 +55,9 @@ class PlayerRuntimeController(
     internal val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
     internal val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
     savedStateHandle: SavedStateHandle,
-    internal val scope: CoroutineScope
+    internal val scope: CoroutineScope,
+    internal val embyMediaService: EmbyMediaService,
+    internal val embySessionService: EmbySessionService
 ) {
 
     companion object {
@@ -289,6 +293,9 @@ class PlayerRuntimeController(
     internal var libassPipelineDecisionStreamUrl: String? = null
     internal var episodeStreamsJob: Job? = null
     internal var episodeStreamsCacheRequestKey: String? = null
+    internal var currentEmbyItemId: String? = null
+    internal var currentEmbyMediaSourceId: String? = null
+    internal var embyProgressJob: Job? = null
     internal val streamCacheKey: String? by lazy {
         val type = contentType?.lowercase()
         val vid = currentVideoId
