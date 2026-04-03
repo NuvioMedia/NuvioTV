@@ -8,6 +8,8 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/vcs.xml
 .DS_Store
 /build
 **/build/
@@ -46,3 +48,4 @@ HOME_UI_OPTIMIZATION_NOTES.local.md
 bugs/
 avatars/
 logs
+.sisyphus/

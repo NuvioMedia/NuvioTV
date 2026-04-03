@@ -15,8 +15,17 @@ internal fun PlayerRuntimeController.initEmbyItemId() {
         currentEmbyMediaSourceId = metadata.mediaSourceId
         Log.d(EMBY_TAG, "Emby item resolved: ${metadata.embyItemId} for stream $currentStreamUrl")
     } else {
-        currentEmbyItemId = null
-        currentEmbyMediaSourceId = null
+        // Exact match failed — try fallback lookup (URL may differ due to encoding round-trip)
+        val fallback = embyMediaService.findMetadataByItemUrlPattern(currentStreamUrl)
+        if (fallback != null) {
+            currentEmbyItemId = fallback.embyItemId
+            currentEmbyMediaSourceId = fallback.mediaSourceId
+            Log.d(EMBY_TAG, "Emby item resolved via fallback: ${fallback.embyItemId} for stream $currentStreamUrl")
+        } else {
+            currentEmbyItemId = null
+            currentEmbyMediaSourceId = null
+            Log.d(EMBY_TAG, "No Emby metadata for stream: $currentStreamUrl (map has ${embyMediaService.metadataMapSize()} entries)")
+        }
     }
 }
 

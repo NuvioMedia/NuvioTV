@@ -34,6 +34,16 @@ class EmbyMediaService @Inject constructor(
 
     fun getMetadataForStream(streamUrl: String): EmbyStreamMetadata? = streamMetadataMap[streamUrl]
 
+    fun metadataMapSize(): Int = streamMetadataMap.size
+
+    fun findMetadataByItemUrlPattern(streamUrl: String): EmbyStreamMetadata? {
+        if (streamMetadataMap.isEmpty()) return null
+        val videosPattern = Regex("""/Videos/([^/]+)/stream""")
+        val match = videosPattern.find(streamUrl) ?: return null
+        val itemId = match.groupValues[1]
+        return streamMetadataMap.values.firstOrNull { it.embyItemId == itemId }
+    }
+
     fun clearMetadata() {
         streamMetadataMap.clear()
     }

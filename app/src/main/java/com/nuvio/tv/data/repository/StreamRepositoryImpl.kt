@@ -95,8 +95,8 @@ class StreamRepositoryImpl @Inject constructor(
                     }
                 }
                 
-                // Track number of pending jobs
-                val totalJobs = streamAddons.size + (if (tmdbId != null) 1 else 0)
+                // Track number of pending jobs (Emby + addons + plugins)
+                val totalJobs = 1 + streamAddons.size + (if (tmdbId != null) 1 else 0)
                 var completedJobs = 0
 
                 launch {
@@ -127,7 +127,12 @@ class StreamRepositoryImpl @Inject constructor(
                         }
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
-                        Log.d(TAG, "Emby stream send failed (channel closed): ${e.message}")
+                        Log.d(TAG, "Emby stream send failed: ${e.message}")
+                    } finally {
+                        completedJobs++
+                        if (completedJobs >= totalJobs) {
+                            resultChannel.close()
+                        }
                     }
                 }
 
@@ -195,11 +200,6 @@ class StreamRepositoryImpl @Inject constructor(
                             }
                         }
                     }
-                }
-
-                // Handle case where there are no jobs
-                if (totalJobs == 0) {
-                    resultChannel.close()
                 }
 
                 // Emit results as they arrive
