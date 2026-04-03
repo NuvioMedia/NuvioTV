@@ -1,0 +1,1185 @@
+<resources>
+    <string name="app_name">Nuvio</string>
+    <string name="type_movie">فيلم</string>
+    <string name="type_series">مسلسل</string>
+    <string name="type_unknown">غير معروف</string>
+
+    <!-- HomeScreen -->
+    <string name="home_no_addons">لا توجد إضافات مثبتة. أضف إضافة واحدة للبدء.</string>
+    <string name="home_no_catalog_addons">لا توجد إضافات قوائم عرض مثبتة. ثبت واحدة لعرض المحتوى.</string>
+    <string name="auth_notice_nuvio_logged_out">تم تسجيل خروجك من Nuvio. يرجى تسجيل الدخول مرة أخرى.</string>
+    <string name="auth_notice_trakt_logged_out">تم تسجيل خروجك من Trakt. يرجى إعادة الاتصال.</string>
+    <string name="error_generic">حدث خطأ</string>
+
+    <!-- ErrorState -->
+    <string name="action_retry">إعادة المحاولة</string>
+    <string name="error_state_generic_issue">حدث خطأ ما.</string>
+    <string name="error_state_possible_fix">حل محتمل: %1$s</string>
+    <string name="error_state_fix_retry_soon">حاول مجدداً بعد قليل.</string>
+    <string name="error_state_issue_no_metadata_any_addon">تعذر تحميل تفاصيل هذا المعرف لأن أياً من الإضافات المثبتة لم توفر بيانات وصفية.</string>
+    <string name="error_state_fix_no_metadata_any_addon">جرب إضافة أخرى، أو عطل "تفضيل جلب بيانات الإضافات الخارجية" في إعدادات الواجهة، أو تأكد أن هناك إضافة مثبتة تدعم هذا المعرف.</string>
+    <string name="error_state_prefix_no_supported_metadata">لا توجد إضافة مثبتة تدعم البيانات الوصفية لـ </string>
+    <string name="error_state_prefix_no_addon_for_id">لا توجد إضافة مثبتة قادرة على توفير بيانات وصفية للمعرف=</string>
+    <string name="error_state_fix_no_supported_metadata">ثبت أو حدث إضافة تدعم هذا النوع من المحتوى، ثم أعد المحاولة.</string>
+    <string name="error_state_prefix_tried_meta_addons">تمت تجربة إضافات البيانات الوصفية:</string>
+    <string name="error_state_fix_tried_meta_addons">ثبت إضافة تدعم هذا المعرف، أو أعد تكوين/تحديث الإضافة وأعد المحاولة.</string>
+    <string name="error_state_issue_missing_metadata_for_id">لا تملك بيانات وصفية لهذا المعرف</string>
+    <string name="error_state_fix_missing_metadata_for_id">افتح هذا المعرف من إضافة مختلفة، أو عطل "تفضيل جلب بيانات الإضافات الخارجية"، أو تأكد من أن الإضافة تدعم هذا المعرف.</string>
+    <string name="error_state_issue_addon_unreachable">تعذر الوصول إليها</string>
+    <string name="error_state_fix_addon_unreachable">تحقق من اتصالك بالإنترنت، وتأكد من أن رابط الإضافة لا يزال يعمل، ثم أعد المحاولة.</string>
+    <string name="error_state_issue_addon_connection_failed">رفضت الاتصال</string>
+    <string name="error_state_fix_addon_connection_failed">تأكد من أن خادم الإضافة متصل ويمكن الوصول إليه، ثم أعد المحاولة.</string>
+    <string name="error_state_issue_addon_timeout">استغرقت وقتاً طويلاً للاستجابة</string>
+    <string name="error_state_fix_addon_timeout">حاول مجدداً بعد قليل، أو جرب إضافة مختلفة إذا استمرت المشكلة.</string>
+    <string name="error_state_issue_addon_cleartext">تستخدم اتصال HTTP غير آمن تم حظره بواسطة نظام أندرويد</string>
+    <string name="error_state_fix_addon_cleartext">قم بتغيير رابط الإضافة إلى HTTPS أو حدث إعدادات الإضافة.</string>
+    <string name="error_state_fix_addon_generic">أعد المحاولة، حدث أو أعد تثبيت الإضافة، أو جرب إضافة مختلفة.</string>
+    <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
+    <string name="error_meta_not_found">لم يتم العثور على البيانات الوصفية</string>
+    <string name="error_meta_no_supported_addon">لا توجد إضافة مثبتة تدعم البيانات الوصفية لـ \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">لا توجد إضافة مثبتة قادرة على توفير بيانات وصفية للمعرف=%1$s (النوع=%2$s).</string>
+    <string name="error_meta_tried_none">تمت تجربة إضافات البيانات الوصفية: %1$s. لم توفر أي منها بيانات وصفية للمعرف=%2$s (النوع=%3$s).</string>
+    <string name="error_meta_tried_generic">تمت تجربة إضافات البيانات الوصفية: %1$s. تعذر تحميل البيانات الوصفية للمعرف=%2$s (النوع=%3$s).</string>
+    <string name="error_meta_tried_issues">تمت تجربة إضافات البيانات الوصفية: %1$s. تعذر تحميل البيانات للمعرف=%2$s (النوع=%3$s). المشاكل: %4$s.</string>
+    <string name="error_stream_no_supported_addon">لا توجد إضافة مثبتة تدعم المصادر لـ \"%1$s\".</string>
+    <string name="error_stream_tried_none">تمت تجربة إضافات المصادر: %1$s. لم تُرجع أي منها مصادر للمعرف=%2$s (النوع=%3$s).</string>
+    <string name="error_stream_tried_generic">تمت تجربة إضافات المصادر: %1$s. تعذر تحميل المصادر للمعرف=%2$s (النوع=%3$s).</string>
+    <string name="error_stream_tried_issues">تمت تجربة إضافات المصادر: %1$s. تعذر تحميل المصادر للمعرف=%2$s (النوع=%3$s). المشاكل: %4$s.</string>
+
+    <!-- ContinueWatchingSection -->
+    <string name="continue_watching">متابعة المشاهدة</string>
+    <string name="cw_upcoming">يعرض قريباً</string>
+    <string name="cw_next_up">التالي</string>
+    <string name="cw_new_episode">حلقة جديدة</string>
+    <string name="cw_new_season">موسم جديد</string>
+    <string name="cw_resume">استئناف</string>
+    <string name="cw_percent_watched">تمت مشاهدة %1$d%%</string>
+    <string name="cw_hours_min_left">متبقي %1$d س %2$d د</string>
+    <string name="cw_min_left">متبقي %1$d د</string>
+    <string name="cw_almost_done">على وشك الانتهاء</string>
+    <string name="cw_airs_date">يُعرض في %1$s</string>
+    <string name="cw_action_go_to_details">التفاصيل</string>
+    <string name="cw_action_start_from_beginning">البدء من البداية</string>
+    <string name="cw_action_remove">إزالة</string>
+    <string name="cw_dialog_subtitle">حدد الاجراء المطلوب.</string>
+    <string name="home_poster_dialog_subtitle">خيارات العمل</string>
+
+    <!-- CatalogRowSection -->
+    <string name="catalog_from_addon">من %1$s</string>
+    <string name="action_see_all">عرض الكل</string>
+
+    <!-- HeroSection -->
+    <string name="hero_creator">المؤلف: %1$s</string>
+    <string name="hero_director">المخرج: %1$s</string>
+    <string name="hero_writer">الكاتب: %1$s</string>
+    <string name="hero_play">تشغيل</string>
+    <string name="hero_play_episode">تشغيل S%1$d, E%2$d</string>
+    <string name="hero_add_to_library">إضافة للمكتبة</string>
+    <string name="hero_remove_from_library">إزالة من المكتبة</string>
+    <string name="hero_mark_watched">تحديد كمشاهد</string>
+    <string name="hero_mark_unwatched">تحديد كغير مشاهد</string>
+    <string name="hero_play_trailer">تشغيل الإعلان</string>
+    <string name="hero_press_back_trailer">اضغط "رجوع" للخروج من الإعلان</string>
+    <string name="cd_rating">التقييم</string>
+
+    <!-- EpisodesSection -->
+    <string name="episodes_season">الموسم %1$d</string>
+    <string name="episodes_specials">الحلقات الخاصة</string>
+    <string name="episodes_episode">الحلقة</string>
+    <string name="episodes_cd_watched">تمت المشاهدة</string>
+    <string name="episodes_dialog_subtitle">اجراءات الحلقة</string>
+    <string name="episodes_mark_watched">تحديد كمشاهد</string>
+    <string name="episodes_mark_unwatched">تحديد كغير مشاهد</string>
+    <string name="episodes_mark_season_watched">تحديد الموسم كمشاهد</string>
+    <string name="episodes_mark_season_unwatched">تحديد الموسم كغير مشاهد</string>
+    <string name="episodes_mark_previous_watched">تحديد الحلقات السابقة في هذا الموسم كمشاهدة</string>
+    <string name="episodes_play">تشغيل</string>
+    <string name="play_manually">تشغيل يدوي</string>
+    <string name="episodes_season_actions">إجراءات الموسم</string>
+
+    <!-- MetaDetailsViewModel -->
+    <string name="detail_added_to_library">تمت الإضافة للمكتبة</string>
+    <string name="detail_removed_from_library">تمت الإزالة من المكتبة</string>
+    <string name="detail_episode_marked_watched">تم تحديد الحلقة كمشاهدة</string>
+    <string name="detail_episode_marked_unwatched">تم تحديد الحلقة كغير مشاهدة</string>
+    <string name="detail_lists_updated">تم تحديث القوائم</string>
+    <string name="detail_movie_marked_watched">تم التحديد كمشاهد</string>
+    <string name="detail_movie_marked_unwatched">تم التحديد كغير مشاهد</string>
+    <string name="detail_all_episodes_watched">جميع الحلقات تمت مشاهدتها بالفعل</string>
+    <string name="detail_no_watched_episodes">لا توجد حلقات مشاهدة في هذا الموسم</string>
+    <string name="detail_all_previous_watched">جميع الحلقات السابقة تمت مشاهدتها بالفعل</string>
+    <string name="detail_marked_episodes_watched">الحلقات المحددة كمشاهدة: %1$d</string>
+    <string name="detail_marked_episodes_unwatched">الحلقات المحددة كغير مشاهدة: %1$d</string>
+    <string name="detail_marked_previous_watched">الحلقات السابقة المحددة كمشاهدة: %1$d</string>
+
+    <!-- MetaDetailsScreen -->
+    <string name="detail_btn_play">تشغيل</string>
+    <string name="detail_btn_resume">استئناف</string>
+    <string name="detail_btn_play_episode">تشغيل S%1$dE%2$d</string>
+    <string name="detail_btn_resume_episode">استئناف S%1$dE%2$d</string>
+    <string name="detail_btn_next_episode">التالي S%1$dE%2$d</string>
+    <string name="detail_tab_cast">المؤلف وطاقم العمل</string>
+    <string name="cast_role_creator">المؤلف</string>
+    <string name="cast_role_director">المخرج</string>
+    <string name="cast_role_writer">الكاتب</string>
+    <string name="detail_tab_ratings">التقييمات</string>
+    <string name="detail_tab_more_like_this">مقترحات مشابهة</string>
+    <string name="detail_more_like_this_powered_by_tmdb">بدعم من TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">بدعم من Trakt</string>
+    <string name="detail_comments_title">التعليقات</string>
+    <string name="detail_comments_subtitle">المراجعات من Trakt</string>
+    <string name="detail_section_network">شبكة العرض</string>
+    <string name="detail_section_production">جهة الإنتاج</string>
+    <string name="detail_comments_empty">لا توجد مراجعات من Trakt متاحة بعد.</string>
+    <string name="detail_comments_error">تعذر تحميل مراجعات Trakt في الوقت الحالي.</string>
+    <string name="detail_comments_spoiler_hidden">مراجعة تحتوي على حرق للأحداث. اضغط موافق للإظهار.</string>
+    <string name="detail_comments_reveal_spoiler">إظهار الحرق</string>
+    <string name="detail_comments_reveal_spoiler_hint">اضغط موافق لإظهار حرق الأحداث.</string>
+    <string name="detail_comments_back_hint">اضغط رجوع للإغلاق</string>
+    <string name="detail_comments_badge_review">مراجعة</string>
+    <string name="detail_comments_badge_spoiler">حرق أحداث</string>
+    <string name="detail_comments_badge_rating">%1$d/10</string>
+    <string name="detail_comments_likes">%1$d إعجاب</string>
+    <string name="tmdb_entity_kind_company">شركة الإنتاج</string>
+    <string name="tmdb_entity_kind_network">شبكة العرض</string>
+    <string name="tmdb_entity_rail_popular">رائج</string>
+    <string name="tmdb_entity_rail_top_rated">الأعلى تقييماً</string>
+    <string name="tmdb_entity_rail_recent">مضاف حديثاً</string>
+    <string name="tmdb_entity_empty_title">لم يتم العثور على عناوين</string>
+    <string name="tmdb_entity_empty_subtitle">لا يملك TMDB حالياً عناوين قابلة للتصفح لهذا التحديد.</string>
+    <string name="episodes_unavailable">غير متاح</string>
+    <string name="series_status_ended">مكتمل</string>
+    <string name="series_status_continuing">مستمر</string>
+    <string name="series_status_current">الحالي</string>
+    <string name="series_status_cancelled">ملغى</string>
+    <string name="series_status_released">تم الإصدار</string>
+    <string name="series_status_planned">مخطط له</string>
+    <string name="series_status_rumored">إشاعة</string>
+    <string name="series_status_in_production">قيد الإنتاج</string>
+    <string name="series_status_post_production">مراحل ما بعد الإنتاج</string>
+    <string name="detail_lists_fallback">القوائم</string>
+    <string name="detail_lists_subtitle">اختر القوائم المراد إدراج هذا العمل بها.</string>
+    <string name="action_save">حفظ</string>
+    <string name="action_saving">جاري الحفظ…</string>
+
+    <!-- AppLanguage -->
+    <string name="appearance_language">لغة التطبيق</string>
+    <string name="appearance_language_subtitle">تجاوز لغة النظام</string>
+    <string name="appearance_language_system">تلقائي (حسب لغة الجهاز)</string>
+    <string name="appearance_language_dialog_title">اختيار اللغة</string>
+    <string name="appearance_language_restart_hint">أعد تشغيل التطبيق لتطبيق تغيير اللغة.</string>
+
+    <!-- Font -->
+    <string name="appearance_font">خط التطبيق</string>
+    <string name="appearance_font_subtitle">اختر خطك المفضل</string>
+    <string name="appearance_font_dialog_title">اختيار الخط</string>
+
+    <!-- ThemeSettingsScreen -->
+    <string name="appearance_title">المظهر</string>
+    <string name="appearance_subtitle">اختر مظهر الألوان واللغة والخط</string>
+    <string name="cd_selected">محدد</string>
+
+    <!-- AboutScreen -->
+    <string name="about_title">حول</string>
+    <string name="about_subtitle">معلومات التطبيق، التحديثات، والروابط القانونية</string>
+    <string name="about_made_with_love">صنع بكل ❤️ بواسطة Tapframe والأصدقاء</string>
+    <string name="about_version">الإصدار %1$s</string>
+    <string name="about_check_updates">التحقق من التحديثات</string>
+    <string name="about_check_updates_subtitle">تحميل أحدث إصدار</string>
+    <string name="about_privacy_policy">سياسة الخصوصية</string>
+    <string name="about_privacy_policy_subtitle">الاطلاع على بيان الخصوصية</string>
+    <string name="about_supporters_contributors">الداعمون والمساهمون</string>
+    <string name="about_supporters_contributors_subtitle">تقدير مفتوح وشكر للمساهمين في المشروع</string>
+
+    <!-- SettingsScreen categories -->
+    <string name="settings_account">الحساب</string>
+    <string name="settings_account_subtitle">الحساب وحالة المزامنة.</string>
+    <string name="settings_profiles">المستخدمين</string>
+    <string name="settings_profiles_subtitle">إدارة ملفات المستخدمين.</string>
+    <string name="settings_layout">واجهة العرض</string>
+    <string name="settings_layout_subtitle">تنظيم الواجهة الرئيسية وشكل البطاقات.</string>
+    <string name="settings_plugins">الملحقات</string>
+    <string name="settings_plugins_subtitle">المستودعات والمصادر.</string>
+    <string name="settings_integration">الخدمات المرتبطة</string>
+    <string name="settings_playback">وسائط التشغيل</string>
+    <string name="settings_playback_subtitle">المشغل، الترجمة، والتشغيل التلقائي.</string>
+    <string name="settings_trakt_subtitle">الانتقال إلى صفحة ربط Trakt.</string>
+    <string name="settings_about_subtitle">الإصدار والبنود القانونية.</string>
+    <string name="settings_network">سرعة الشبكة</string>
+    <string name="settings_network_subtitle">تشخيصات زمن الوصول وسرعة التنزيل</string>
+    <string name="settings_advanced">متقدم</string>
+    <string name="settings_advanced_subtitle">تشغيل تشخيصات سرعة الشبكة</string>
+    <string name="network_speed_test_run">تشغيل اختبار السرعة</string>
+    <string name="network_speed_test_running">جاري اختبار السرعة</string>
+    <string name="network_speed_test_subtitle">قياس سرعة التنزيل وزمن الوصول</string>
+    <string name="network_testing_latency">جاري قياس زمن الوصول</string>
+    <string name="network_testing_download">جاري قياس سرعة التنزيل</string>
+    <string name="network_results_title">النتائج</string>
+    <string name="network_latency_label">زمن الوصول</string>
+    <string name="network_download_label">التنزيل</string>
+    <string name="network_error_prefix">خطأ: %1$s</string>
+    <string name="network_powered_by_fast">من fast.com</string>
+    <string name="network_connection_wifi">واي فاي</string>
+    <string name="network_connection_ethernet">إيثرنت</string>
+    <string name="network_connection_offline">غير متصل</string>
+    <string name="settings_debug">معالجة الأخطاء</string>
+    <string name="settings_debug_subtitle">أدوات المطورين والميزات التجريبية.</string>
+    <string name="settings_plugins_section_subtitle">إدارة المستودعات، المصادر، والملحقات.</string>
+    <string name="settings_account_section_subtitle">الحساب وحالة المزامنة.</string>
+    <string name="account_stat_addons">إضافات</string>
+    <string name="account_stat_plugins">ملحقات</string>
+    <string name="account_stat_library">مكتبة</string>
+    <string name="account_stat_progress">مستوى المشاهدة</string>
+    <string name="account_stat_watched">تمت المشاهدة</string>
+    <string name="settings_integrations_section">الخدمات المرتبطة</string>
+    <string name="settings_integrations_section_subtitle">ضبط إعدادات TMDB أو MDBList</string>
+    <string name="settings_tmdb_subtitle">عناصر التحكم في إثراء البيانات الوصفية</string>
+    <string name="settings_mdblist_subtitle">مصادر التقييمات الخارجية</string>
+    <string name="settings_animeskip_subtitle">مواقيت تخطي مقدمة/نهاية الأنمي</string>
+
+    <!-- PlaybackSettingsScreen -->
+    <string name="playback_title">إعدادات التشغيل</string>
+    <string name="playback_subtitle">ضبط خيارات تشغيل الفيديو والترجمة</string>
+    <string name="cd_decrease">تقليل</string>
+    <string name="cd_increase">زيادة</string>
+    <string name="action_cancel">إلغاء</string>
+    <string name="action_none">بدون</string>
+    <string name="action_close">إغلاق</string>
+
+    <!-- SupportersContributorsScreen -->
+    <string name="supporters_contributors_title">الداعمون &amp; المساهمون</string>
+    <string name="supporters_contributors_subtitle">الأشخاص الداعمون لـ Nuvio والمساهمون في بنائه عبر التلفاز والهاتف.</string>
+    <string name="supporters_contributors_supporters_copy">يساعد الداعمون والمتبرعون في استمرار المشروع وتمويل البنية التحتية وإفساح المجال للميزات الطموحة.</string>
+    <string name="supporters_contributors_donate_copy">سيبقى Nuvio مجانياً ومفتوح المصدر. إذا كنت ترغب في دعم المشروع، يمكنك المساعدة في تغطية تكاليف الوقت والبنية التحتية.</string>
+    <string name="supporters_contributors_donate_button">التبرع لـ Nuvio</string>
+    <string name="supporters_contributors_qr_title">امسح للتبرع</string>
+    <string name="supporters_contributors_qr_subtitle">افتح الرابط على هاتفك وادعم Nuvio عبر Ko-fi.</string>
+    <string name="supporters_contributors_qr_hint">وجه كاميرتك نحو رمز QR أو استخدم الزر أدناه.</string>
+    <string name="supporters_contributors_back_button">العودة للتفاصيل</string>
+    <string name="supporters_tab">الداعمون</string>
+    <string name="contributors_tab">المساهمون</string>
+    <string name="supporters_loading">جاري تحميل الداعمين…</string>
+    <string name="supporters_empty">لم يتم العثور على داعمين بعد.</string>
+    <string name="supporters_error_title">تعذر تحميل قائمة الداعمين</string>
+    <string name="supporters_no_message">لا توجد رسالة مرفقة.</string>
+    <string name="supporters_open_donations">فتح صفحة التبرعات</string>
+    <string name="contributors_loading">جاري تحميل مساهمي GitHub…</string>
+    <string name="contributors_empty">لم يتم العثور على مساهمين بعد.</string>
+    <string name="contributors_error_title">تعذر تحميل قائمة المساهمين</string>
+    <string name="contributors_total_contributions">إجمالي المساهمات %1$d</string>
+    <string name="contributors_open_github">فتح الملف الشخصي على GitHub</string>
+    <string name="contributors_show_kofi_qr">إظهار رمز QR لـ Ko-fi</string>
+    <string name="contributors_hide_kofi_qr">إخفاء رمز QR لـ Ko-fi</string>
+    <string name="contributors_profile_unavailable">رابط ملف GitHub غير متاح.</string>
+
+    <!-- PlaybackSettingsSections -->
+    <string name="playback_section_general">عام</string>
+    <string name="playback_section_general_desc">الأداء الرئيسي للتشغيل.</string>
+    <string name="playback_loading_overlay">واجهة التحميل</string>
+    <string name="playback_loading_overlay_sub">إظهار شاشة التحميل حتى يظهر أول إطار للفيديو.</string>
+    <string name="playback_pause_overlay">واجهة ايقاف التشغيل</string>
+    <string name="playback_pause_overlay_sub">إظهار تفاصيل المحتوى بعد 5 ثوانٍ من ايقاف التشغيل.</string>
+    <string name="playback_show_clock_sub">عرض الوقت الحالي ووقت انتهاء العرض مع ظهور اعدادات التحكم.</string>
+    <string name="playback_osd_clock">ساعة واجهة العرض (OSD)</string>
+    <string name="playback_skip_intro">تخطي المقدمة</string>
+    <string name="playback_skip_intro_sub">استخدام introdb.app لرصد المقدمات والملخصات.</string>
+    <string name="playback_auto_frame_rate">معدل الفريمات التلقائي (AFR)</string>
+    <string name="playback_section_player">المشغل &amp; اختيار المصدر</string>
+    <string name="playback_section_player_desc">تفضيلات المشغل، التشغيل التلقائي، وتصفية المصادر.</string>
+    <string name="playback_player">نوع المشغل</string>
+    <string name="playback_player_internal">داخلي</string>
+    <string name="playback_player_external">خارجي</string>
+    <string name="playback_player_ask">السؤال في كل مرة</string>
+    <string name="playback_section_audio">الصوت &amp; الاعلان</string>
+    <string name="playback_section_audio_desc">إعدادات الاعلان وضبط الصوت.</string>
+    <string name="playback_section_subtitles">الترجمة</string>
+    <string name="playback_section_subtitles_desc">تحديد اللغة والمظهر وطريقة المعالجة.</string>
+    <string name="playback_afr_open">مفتوح</string>
+    <string name="playback_afr_closed">مغلق</string>
+    <string name="playback_afr_off">معطل</string>
+    <string name="playback_afr_off_sub">عدم تغيير معدل تحديث الشاشة.</string>
+    <string name="playback_afr_on_start">عند البدء</string>
+    <string name="playback_afr_on_start_sub">التغيير التلقائي مع بداية العرض.</string>
+    <string name="playback_afr_on_start_stop">عند البدء/التوقف</string>
+    <string name="playback_afr_on_start_stop_sub">التغيير عند البدء والرجوع للوضع الأصلي عند التوقف.</string>
+    <string name="playback_resolution_matching">مطابقة الدقة</string>
+    <string name="playback_resolution_matching_sub">السماح بتغيير وضع العرض ليتطابق مع دقة الفيديو.</string>
+    <string name="playback_player_external_desc">التشغيل دائمة في مشغل خارجي</string>
+    <string name="playback_player_ask_desc">اختيار المشغل في كل مرة</string>
+
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_trailer_section">الإعلان</string>
+    <string name="audio_autoplay_trailers">تشغيل الإعلان تلقائياً</string>
+    <string name="audio_autoplay_trailers_sub">تشغيل الإعلان تلقائياً في شاشة التفاصيل بعد فترة من الخمول</string>
+    <string name="audio_trailer_delay">تأخير بدء الإعلان</string>
+    <string name="audio_section">الصوت</string>
+    <string name="audio_lang_default">تلقائي (داخل الملف)</string>
+    <string name="audio_lang_device">لغة الجهاز</string>
+    <string name="audio_preferred_lang">لغة الصوت المفضلة</string>
+    <string name="audio_skip_silence">تخطي الصمت</string>
+    <string name="audio_skip_silence_sub">تخطي الأجزاء الصامتة من الصوت أثناء التشغيل</string>
+    <string name="audio_advanced_section">إعدادات صوتية متقدمة</string>
+    <string name="audio_advanced_warning">هذه الإعدادات قد تسبب مشاكل في بعض الأجهزة. غيرها فقط إذا كنت تعرف ما تفعله.</string>
+    <string name="audio_decoder_device_only">فك التشفير عبر الجهاز</string>
+    <string name="audio_decoder_prefer_device">الأولوية لفك التشفير عبر الجهاز</string>
+    <string name="audio_decoder_prefer_app">الأولوية لفك التشفير عبر التطبيق (FFmpeg)</string>
+    <string name="audio_decoder_priority">أولوية فك التشفير</string>
+    <string name="audio_tunneled">Tunneled Playback</string>
+    <string name="audio_tunneled_sub">Hardware-level audio/video sync. May improve playback on some Android TV devices</string>
+    <string name="audio_dv_sub">Map Dolby Vision Profile 7 to standard HEVC for devices without DV hardware support</string>
+    <string name="audio_decoder_device_only_desc">Only use built-in hardware decoders. Most compatible but may not support all formats.</string>
+    <string name="audio_decoder_prefer_device_desc">Use hardware decoders when available, fall back to FFmpeg. Recommended for most devices.</string>
+    <string name="audio_decoder_prefer_app_desc">Use FFmpeg decoders when available. Better format support but higher CPU usage.</string>
+    <string name="audio_decoder_controls">Controls whether hardware or software (FFmpeg) decoders are used for audio and video</string>
+
+    <!-- PlaybackSubtitleSettings -->
+    <string name="sub_section">الترجمة</string>
+    <string name="sub_not_set">غير محدد</string>
+    <string name="sub_forced_lang">إجبارية</string>
+    <string name="sub_preferred_lang">اللغة المفضلة</string>
+    <string name="sub_secondary_lang">اللغة المفضلة الثانوية</string>
+    <string name="sub_organization">تنظيم الترجمة</string>
+    <string name="sub_size">الحجم</string>
+    <string name="sub_vertical_offset">الارتفاع</string>
+    <string name="sub_bold">خط عريض</string>
+    <string name="sub_bold_sub">استخدام وزن خط عريض للترجمة</string>
+    <string name="sub_text_color">لون النص</string>
+    <string name="sub_bg_color">لون الخلفية</string>
+    <string name="sub_outline">الاطار الخارجي</string>
+    <string name="sub_outline_sub">إضافة اطار حول نص الترجمة لرؤية أفضل</string>
+    <string name="sub_outline_color">لون الاطار</string>
+    <string name="sub_advanced_section">معالجة ترجمة متقدمة</string>
+    <string name="sub_libass">Use libass for ASS/SSA subtitles</string>
+    <string name="sub_libass_sub">Experimental: advanced ASS/SSA rendering (styles, positioning, animations)</string>
+    <string name="sub_libass_mode">Libass Render Mode</string>
+    <string name="sub_mode_overlay_gl">Overlay OpenGL (Recommended)</string>
+    <string name="sub_mode_overlay_gl_sub">Best quality with HDR support. Renders subtitles on a separate thread.</string>
+    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
+    <string name="sub_mode_effects_gl">Effects OpenGL</string>
+    <string name="sub_mode_effects_gl_sub">Animation support using Media3 effects. Faster than Canvas.</string>
+    <string name="sub_mode_effects_canvas">Effects Canvas</string>
+    <string name="sub_mode_effects_canvas_sub">Animation support using Media3 effects with Canvas rendering.</string>
+    <string name="sub_mode_standard">Standard Cues</string>
+    <string name="sub_mode_standard_sub">Basic subtitle rendering without animation support. Most compatible.</string>
+    <string name="sub_org_none">بدون (الترتيب الافتراضي)</string>
+    <string name="sub_org_by_lang">حسب اللغة</string>
+    <string name="sub_org_by_addon">حسب الإضافة</string>
+    <string name="sub_org_none_desc">اعتماد الترتيب التلقائي المقدم من الإضافات.</string>
+    <string name="sub_org_by_lang_desc">تجميع الترجمات حسب اللغة.</string>
+    <string name="sub_org_by_addon_desc">تجميع الترجمات حسب مصدر الإضافة.</string>
+    <string name="sub_startup_mode_title">تحميل ترجمات الإضافات</string>
+    <string name="sub_startup_mode_fast">بدء سريع</string>
+    <string name="sub_startup_mode_preferred">اللغات المفضلة</string>
+    <string name="sub_startup_mode_all">جميع ترجمات الإضافات</string>
+    <string name="sub_startup_mode_fast_desc">بدء التشغيل فوراً. اختيار ترجمات الإضافات قد يعيد تحميل المشغل مرة واحدة.</string>
+    <string name="sub_startup_mode_preferred_desc">تجهيز ترجمات الإضافات قبل التشغيل وإرفاق مسارات اللغات المفضلة/الثانوية.</string>
+    <string name="sub_startup_mode_all_desc">تجهيز وإرفاق جميع ترجمات الإضافات قبل التشغيل. أبطأ بدء للتشغيل.</string>
+
+    <!-- PlaybackAutoPlaySettings -->
+    <string name="autoplay_reuse_last_link">إعادة استخدام الرابط الأخير</string>
+    <string name="autoplay_reuse_last_link_sub">تشغيل آخر رابط عمل لنفس الفيلم/الحلقة تلقائياً عندما توفر الذاكرة المؤقتة</string>
+    <string name="autoplay_last_link_cache">فترة حفظ الرابط</string>
+    <string name="autoplay_mode_manual">يدوي (اختيار المصدر)</string>
+    <string name="autoplay_mode_first">تشغيل أول مصدر تلقائياً</string>
+    <string name="autoplay_mode_regex">تشغيل تلقائي عند مطابقة Regex</string>
+    <string name="autoplay_stream_selection">اختيار المصدر التلقائي</string>
+    <string name="autoplay_next_episode">تشغيل الحلقة التالية تلقائياً</string>
+    <string name="autoplay_next_episode_sub">بدء الحلقة التالية تلقائياً عند ظهور الإشعار.</string>
+    <string name="autoplay_prefer_binge_group">تفضيل مجموعة المشاهدة المتتالية (الحلقة التالية)</string>
+    <string name="autoplay_prefer_binge_group_sub">تجربة نفس ملف المصدر أولاً (نفس الإضافة/مجموعة الجودة) قبل قواعد التشغيل التلقائي العادية.</string>
+    <string name="autoplay_threshold_pct">بالنسبة المئوية</string>
+    <string name="autoplay_threshold_min">عدد دقائق قبل النهاية</string>
+    <string name="autoplay_threshold_mode">نمط بدء الحلقة التالية</string>
+    <string name="autoplay_threshold_pct_title">النسبة</string>
+    <string name="autoplay_threshold_pct_sub">يُستخدم كبديل عند عدم توفر توقيت نهاية الحلقة.</string>
+    <string name="autoplay_threshold_min_title">حد الدقائق</string>
+    <string name="autoplay_threshold_min_sub">يُستخدم كبديل عند عدم توفر توقيت نهاية الحلقة.</string>
+    <string name="autoplay_scope_all">كل المصادر</string>
+    <string name="autoplay_scope_addons">الإضافات المثبتة فقط</string>
+    <string name="autoplay_scope_plugins">الملحقات المفعلة فقط</string>
+    <string name="autoplay_scope">نطاق التشغيل التلقائي</string>
+    <string name="autoplay_timeout_title">مهلة اختيار المصدر</string>
+    <string name="autoplay_timeout_sub">وقت الانتظار للإضافات قبل الاختيار.</string>
+    <string name="autoplay_timeout_instant">فوري</string>
+    <string name="autoplay_timeout_unlimited">غير محدود</string>
+    <string name="autoplay_allowed_addons">الإضافات المسموح بها</string>
+    <string name="autoplay_all_addons">كل الإضافات المثبتة</string>
+    <string name="autoplay_allowed_plugins">الملحقات المسموح بها</string>
+    <string name="autoplay_all_plugins">كل الملحقات المفعلة</string>
+    <string name="autoplay_regex_placeholder">لم يتم ضبط نمط. مثال: 4K|2160p|Remux</string>
+    <string name="autoplay_regex_title">نمط Regex</string>
+    <string name="autoplay_no_items">لا توجد عناصر متاحة</string>
+    <string name="autoplay_mode_manual_desc">عرض قائمة روابط المصادر دوماً للاختيار يدوياً.</string>
+    <string name="autoplay_mode_first_desc">تشغيل أول مصدر متاح تلقائياً.</string>
+    <string name="autoplay_mode_regex_desc">تشغيل أول مصدر يطابق نصه نمط Regex الخاص بك.</string>
+    <string name="autoplay_scope_all_desc">التشغيل التلقائي يمكنه استخدام الإضافات المثبتة والبرمجية معاً.</string>
+    <string name="autoplay_scope_addons_desc">التشغيل التلقائي يأخذ في الاعتبار روابط الإضافات المثبتة فقط.</string>
+    <string name="autoplay_scope_plugins_desc">التشغيل التلقائي يأخذ في الاعتبار روابط الملحقات فقط.</string>
+    <string name="autoplay_threshold_pct_desc">العرض حسب نسبة التشغيل عند عدم توفر توقيت نهاية المحتوى.</string>
+    <string name="autoplay_threshold_min_desc">العرض قبل نهاية الحلقة بعدد الدقائق هذا عند عدم توفر توقيت نهاية المحتوى.</string>
+    <string name="autoplay_regex_matches">يطابق اسم الرابط/العنوان/الوصف/الإضافة. مثال: 4K|2160p|Remux</string>
+    <string name="autoplay_regex_presets">النماذج الجاهزة</string>
+    <string name="autoplay_invalid_regex">نمط Regex غير صالح</string>
+
+    <!-- LayoutSettingsScreen -->
+    <string name="layout_title">إعدادات التنسيق</string>
+    <string name="layout_subtitle">ضبط تنسيق الصفحة الرئيسية، وظهور المحتوى، وسلوك البطاقات</string>
+    <string name="layout_classic">عرض كلاسيكي</string>
+    <string name="layout_grid">عرض شبكي</string>
+    <string name="layout_modern">عرض حديث</string>
+    <string name="layout_classic_desc">تصفح القوائم بشكل أفقي</string>
+    <string name="layout_grid_desc">تصفح كل شيء في شبكة رأسية مع قسم محتوى مميز</string>
+    <string name="layout_modern_desc">قسم مميز ثابت مع صف نشط واحد لتصفح أسرع</string>
+    <string name="layout_section_home">تنسيق الواجهة الرئيسية</string>
+    <string name="layout_section_home_desc">اختر تصميم القسم ومصدر المحتوى المميز.</string>
+    <string name="layout_landscape_posters">بطاقات أفقية</string>
+    <string name="layout_landscape_posters_sub">إظهار جزء من الصف السفلي في العرض الحديث.</string>
+    <string name="layout_preview_row">إظهار صف المعاينة</string>
+    <string name="layout_preview_row_sub">إظهار معاينة جزئية للصف السفلي في التنسيق الحديث.</string>
+    <string name="layout_hero_catalogs">قوائم القسم المميز</string>
+    <string name="layout_hero_catalogs_sub">اختر قائمة واحدة أو أكثر لمحتوى القسم المميز.</string>
+    <string name="layout_section_content">محتوى الرئيسية</string>
+    <string name="layout_section_content_desc">التحكم في ما يظهر في الرئيسية والبحث.</string>
+    <string name="layout_collapse_sidebar">طي الشريط الجانبي</string>
+    <string name="layout_collapse_sidebar_sub">إخفاء الشريط الجانبي تلقائياً؛ وإظهاره عند التركيز.</string>
+    <string name="layout_modern_sidebar">شريط جانبي حديث</string>
+    <string name="layout_modern_sidebar_sub">تفعيل التنقل عبر شريط جانبي عائم.</string>
+    <string name="layout_modern_sidebar_blur">تعتيم الشريط الحديث</string>
+    <string name="layout_modern_sidebar_blur_sub">تفعيل تأثير التعتيم لأسطح الشريط الجانبي الحديث.</string>
+    <string name="layout_fullscreen_hero_backdrop">خلفية القسم المميز بملء الشاشة</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">توسيع خلفية القسم المميز لتملأ الشاشة بأكملها.</string>
+    <string name="layout_show_hero">إظهار القسم المميز</string>
+    <string name="layout_show_hero_sub">عرض شريط القسم المميز في أعلى الرئيسية.</string>
+    <string name="layout_show_discover">إظهار "استكشاف" في البحث</string>
+    <string name="layout_show_discover_sub">إظهار قسم "استكشاف" عندما يكون حقل البحث فارغاً.</string>
+    <string name="layout_poster_labels">إظهار عناوين البطاقات</string>
+    <string name="layout_poster_labels_sub">إظهار العناوين تحت البطاقات في الصفوف والشبكة, و"عرض الكل".</string>
+    <string name="layout_addon_name">إظهار اسم الإضافة</string>
+    <string name="layout_addon_name_sub">إظهار اسم المصدر تحت عناوين القوائم.</string>
+    <string name="layout_catalog_type">إظهار نوع القوائم</string>
+    <string name="layout_catalog_type_sub">إظهار النوع بجانب اسم القوائم (أفلام/مسلسلات).</string>
+    <string name="layout_hide_unreleased">إخفاء المحتوى الذي لم يصدر بعد</string>
+    <string name="layout_hide_unreleased_sub">إخفاء الأفلام والمسلسلات التي لم يتم تصدر بعد.</string>
+    <string name="layout_section_detail">صفحة التفاصيل</string>
+    <string name="layout_section_detail_desc">إعدادات شاشات التفاصيل والحلقات.</string>
+    <string name="layout_blur_unwatched">تعتيم الحلقات غير المشاهدة</string>
+    <string name="layout_blur_unwatched_sub">تعتيم صور الحلقات حتى تشاهدها لتجنب حرق الأحداث.</string>
+    <string name="layout_blur_cw_next_up">تعتيم غير المشاهد في متابعة المشاهدة</string>
+    <string name="layout_blur_cw_next_up_sub">تعتيم صور الحلقات التالية في متابعة المشاهدة لتجنب حرق الأحداث.</string>
+    <string name="layout_trailer_button">إظهار زر الإعلان</string>
+    <string name="layout_trailer_button_sub">إظهار زر الإعلان في صفحة التفاصيل (عند توفره فقط).</string>
+    <string name="layout_prefer_external_meta">تفضيل جلب بيانات الإضافات الخارجية</string>
+    <string name="layout_prefer_external_meta_sub">استخدام البيانات الوصفية من إضافة خارجية بدلاً من إضافة القوائم.</string>
+    <string name="layout_show_full_release_date">إظهار تاريخ الإصدار الكامل</string>
+    <string name="layout_show_full_release_date_sub">للأفلام، إظهار تاريخ الإصدار الكامل بدلاً من السنة فقط.</string>
+    <string name="layout_section_focused">البطاقة المحددة</string>
+    <string name="layout_section_focused_desc">إعدادات متقدمة لسلوك البطاقة المحددة.</string>
+    <string name="layout_expand_poster">تكبير البطاقة المحددة لتصبح خلفية</string>
+    <string name="layout_expand_poster_sub">تكبير البطاقة المحددة تلقائياً عند التوقف عليه.</string>
+    <string name="layout_expand_delay">مدة انتظار تكبير الصور الخلفية</string>
+    <string name="layout_expand_delay_sub">الوقت المطلوب للانتظار قبل تكبير البطاقة المحددة.</string>
+    <string name="layout_autoplay_trailer">تشغيل الإعلان تلقائياً</string>
+    <string name="layout_autoplay_trailer_expanded">تشغيل الإعلان في الخلفية الممتدة</string>
+    <string name="layout_autoplay_trailer_sub">تشغيل الإعلان تلقائيًا للمحتوى المحدد عند توفره.</string>
+    <string name="layout_autoplay_trailer_expanded_sub">تشغيل الإعلان داخل الخلفية الممتدة عند توفره.</string>
+    <string name="layout_trailer_muted">تشغيل الإعلان بدون صوت</string>
+    <string name="layout_trailer_muted_sub_preview">كتم صوت الإعلان أثناء المعاينة التلقائية.</string>
+    <string name="layout_trailer_muted_sub_expanded">كتم صوت الإعلان في البطاقات الممتدة.</string>
+    <string name="layout_section_card_style">نمط البطاقات</string>
+    <string name="layout_section_card_style_desc">ضبط عرض البطاقة وزوايا الانحناء.</string>
+    <string name="layout_open">مفتوح</string>
+    <string name="layout_closed">مغلق</string>
+    <string name="layout_trailer_location">موقع تشغيل الإعلان في العرض الحديث</string>
+    <string name="layout_trailer_location_sub">اختر أين يتم تشغيل معاينة الإعلان في الواجهة الحديثة.</string>
+    <string name="layout_trailer_expanded_card">البطاقة الممتدة</string>
+    <string name="layout_trailer_hero_media">القسم المميز</string>
+    <string name="layout_preset_compact">مدمج</string>
+    <string name="layout_preset_dense">كثيف</string>
+    <string name="layout_preset_standard">قياسي</string>
+    <string name="layout_preset_balanced">متوازن</string>
+    <string name="layout_preset_comfort">مريح</string>
+    <string name="layout_preset_large">كبير</string>
+    <string name="layout_preset_sharp">حاد</string>
+    <string name="layout_preset_subtle">لطيف</string>
+    <string name="layout_preset_classic">كلاسيكي</string>
+    <string name="layout_preset_rounded">مستدير</string>
+    <string name="layout_preset_pill">كبسولة</string>
+    <string name="layout_card_width">العرض</string>
+    <string name="layout_card_radius">نصف قطر الزاوية</string>
+    <string name="layout_reset_default">استعادة الافتراضي</string>
+    <string name="layout_custom">مخصص</string>
+
+
+    <!-- MDBListSettingsScreen -->
+    <string name="mdblist_title">تقييمات MDBList</string>
+    <string name="mdblist_subtitle">ضبط التقييمات الخارجية المعروضة في تفاصيل العمل</string>
+    <string name="mdblist_enable_title">تفعيل تقييمات MDBList</string>
+    <string name="mdblist_enable_subtitle">جلب التقييمات من مصادر خارجية في شاشة التفاصيل</string>
+    <string name="mdblist_api_key_title">مفتاح API</string>
+    <string name="mdblist_api_key_subtitle">مطلوب لجلب التقييمات من MDBList</string>
+    <string name="mdblist_trakt_title">Trakt</string>
+    <string name="mdblist_trakt_subtitle">عرض تقييم Trakt</string>
+    <string name="mdblist_imdb_title">IMDb</string>
+    <string name="mdblist_imdb_subtitle">عرض تقييم IMDb (وإخفاء سطر IMDb الافتراضي عند توفره)</string>
+    <string name="mdblist_tmdb_title">TMDB</string>
+    <string name="mdblist_tmdb_subtitle">عرض تقييم TMDB</string>
+    <string name="mdblist_letterboxd_title">Letterboxd</string>
+    <string name="mdblist_letterboxd_subtitle">عرض تقييم Letterboxd</string>
+    <string name="mdblist_tomatoes_title">Rotten Tomatoes</string>
+    <string name="mdblist_tomatoes_subtitle">عرض تقييم النقاد</string>
+    <string name="mdblist_audience_title">درجة الجمهور</string>
+    <string name="mdblist_audience_subtitle">عرض تقييم الجمهور</string>
+    <string name="mdblist_metacritic_title">Metacritic</string>
+    <string name="mdblist_metacritic_subtitle">عرض تقييم Metacritic</string>
+    <string name="mdblist_dialog_title">مفتاح MDBList API</string>
+    <string name="mdblist_dialog_subtitle">أدخل مفتاح API الخاص بك لجلب التقييمات الخارجية</string>
+    <string name="mdblist_dialog_placeholder">أدخل مفتاح MDBList API</string>
+    <string name="mdblist_not_set">غير محدد</string>
+    <string name="mdblist_invalid_api_key">مفتاح MDBList API غير صالح</string>
+
+    <!-- Anime-Skip -->
+    <string name="animeskip_title">تخطي الأنمي</string>
+    <string name="animeskip_subtitle">قم بضبط معرف العميل لخدمة Anime Skip لتخطي مقدمات/نهايات الأنمي</string>
+    <string name="animeskip_enable_title">تفعيل Anime Skip</string>
+    <string name="animeskip_enable_subtitle">جلب مواقيت التخطي من anime-skip.com</string>
+    <string name="animeskip_client_id_title">معرف العميل</string>
+    <string name="animeskip_client_id_subtitle">مطلوب لجلب مواقيت التخطي من anime-skip.com</string>
+    <string name="animeskip_dialog_title">معرف عميل Anime Skip</string>
+    <string name="animeskip_dialog_subtitle">أنشئ معرف العميل الخاص بك في anime-skip.com/account/settings</string>
+    <string name="animeskip_dialog_placeholder">أدخل معرف العميل</string>
+    <string name="animeskip_invalid_client_id">معرف العميل غير صالح</string>
+    <string name="action_clear">مسح</string>
+
+    <!-- TmdbSettingsScreen -->
+    <string name="tmdb_title">اثراء بيانات TMDB</string>
+    <string name="tmdb_subtitle">اختر حقول البيانات الوصفية التي ستأتي من TMDB</string>
+    <string name="tmdb_enable_title">تفعيل تحسين TMDB</string>
+    <string name="tmdb_enable_subtitle">استخدام TMDB كمصدر بيانات لتحسين معلومات الإضافات</string>
+    <string name="tmdb_modern_home_title">تفعيل في الواجهة الحديثة</string>
+    <string name="tmdb_modern_home_subtitle">تطبيق تحسين TMDB أيضاً على القسم الرئيسي والبطاقات المحددة في الواجهة الحديثة</string>
+    <string name="tmdb_enrich_continue_watching_title">تحسين متابعة المشاهدة</string>
+    <string name="tmdb_enrich_continue_watching_subtitle">تطبيق تحسين TMDB على عناصر متابعة المشاهدة</string>
+    <string name="tmdb_language_title">اللغة</string>
+    <string name="tmdb_language_subtitle">لغة بيانات TMDB للعناوين والشعارات والحقول المفعلة</string>
+    <string name="tmdb_artwork_title">الصور الفنية</string>
+    <string name="tmdb_artwork_subtitle">الشعارات وصور الخلفية من TMDB</string>
+    <string name="tmdb_basic_info_title">معلومات أساسية</string>
+    <string name="tmdb_basic_info_subtitle">الوصف، التصنيفات، والتقييم من TMDB</string>
+    <string name="tmdb_details_title">التفاصيل</string>
+    <string name="tmdb_details_subtitle">مدة العرض، تاريخ الإصدار، الدولة، واللغة من TMDB</string>
+    <string name="tmdb_credits_title">طاقم العمل</string>
+    <string name="tmdb_credits_subtitle">الممثلون مع الصور، المخرج، والكاتب من TMDB</string>
+    <string name="tmdb_productions_title">شركات الإنتاج</string>
+    <string name="tmdb_productions_subtitle">شركات الإنتاج من TMDB</string>
+    <string name="tmdb_networks_title">الشبكات</string>
+    <string name="tmdb_networks_subtitle">الشبكات مع الشعارات من TMDB</string>
+    <string name="tmdb_episodes_title">الحلقات</string>
+    <string name="tmdb_episodes_subtitle">عناوين الحلقات، الملخصات، الصور، ومدة العرض من TMDB</string>
+    <string name="tmdb_more_like_this_title">مقترحات مشابهة</string>
+    <string name="tmdb_more_like_this_subtitle">خلفيات توصيات TMDB في صفحة التفاصيل</string>
+    <string name="tmdb_collections_title">سلاسل الأفلام</string>
+    <string name="tmdb_collections_subtitle">سلاسل أفلام TMDB بترتيب الإصدار</string>
+
+    <string name="tmdb_language_dialog_title">لغة TMDB</string>
+
+    <!-- TraktScreen -->
+    <string name="trakt_description">مزامنة قائمة المشاهدة، مستوى المشاهدة، استكمال، السجلات، وقوائمك الشخصية مع Trakt.</string>
+    <string name="trakt_connected_as">متصل باسم %1$s</string>
+    <string name="trakt_account_login">تسجيل دخول الحساب</string>
+    <string name="trakt_awaiting_instruction">اذهب إلى trakt.tv/activate وأدخل هذا الرمز:</string>
+    <string name="trakt_waiting_approval">بانتظار الموافقة…</string>
+    <string name="qr_login_approved">تمت الموافقة على الدخول. جاري إنهاء تسجيل الدخول…</string>
+    <string name="qr_login_pending">بانتظار الموافقة على هاتفك…</string>
+    <string name="qr_login_expired">انتهت صلاحية تسجيل الدخول عبر QR. قم بإنشاء رمز جديد.</string>
+    <string name="trakt_code_expires">تنتهي صلاحية الرمز خلال %1$s</string>
+    <string name="trakt_token_refreshes">يتجدد رمز وصول Trakt خلال %1$s</string>
+    <string name="trakt_login_instruction">اضغط تسجيل دخول لبدء مصادقة جهاز Trakt. سيظهر رمز QR هنا.</string>
+    <string name="trakt_missing_credentials">بيانات TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET مفقودة في local.properties.</string>
+    <string name="trakt_watch_progress_title">مستوى المشاهدة</string>
+    <string name="trakt_watch_progress_subtitle">اختر مصدر مستوى المشاهدة الذي يتحكم في الاستئناف ومتابعة المشاهدة</string>
+    <string name="trakt_watch_progress_dialog_title">مستوى المشاهدة</string>
+    <string name="trakt_watch_progress_dialog_subtitle">اختر ما إذا كان الاستئناف ومتابعة المشاهدة سيستخدم Trakt أم مزامنة Nuvio، بينما تظل سجلات Trakt مفعلة.</string>
+    <string name="trakt_watch_progress_source_trakt">Trakt</string>
+    <string name="trakt_watch_progress_source_nuvio">مزامنة Nuvio</string>
+    <string name="trakt_setting_on">مفعل</string>
+    <string name="trakt_setting_off">معطل</string>
+    <string name="trakt_watch_progress_trakt_selected">تم تعيين مصدر مستوى المشاهدة إلى Trakt</string>
+    <string name="trakt_watch_progress_nuvio_selected">تم تعيين مصدر مستوى المشاهدة إلى مزامنة Nuvio</string>
+    <string name="trakt_continue_watching_window">نافذة متابعة المشاهدة</string>
+    <string name="trakt_continue_watching_subtitle">تاريخ Trakt المعتمد لمتابعة المشاهدة</string>
+    <string name="trakt_unaired_next_up">الحلقات التالية التي لم تعرض بعد</string>
+    <string name="trakt_unaired_next_up_subtitle">إظهار الحلقات القادمة قبل موعد عرضها</string>
+    <string name="trakt_unaired_shown">معروضة</string>
+    <string name="trakt_unaired_hidden">مخفية</string>
+    <string name="trakt_unaired_now_shown">الحلقات التي لم تعرض بعد أصبحت الآن ظاهرة في متابعة المشاهدة</string>
+    <string name="trakt_unaired_now_hidden">الحلقات التي لم تعرض بعد أصبحت الآن مخفية في متابعة المشاهدة</string>
+    <string name="trakt_comments_title">التعليقات</string>
+    <string name="trakt_comments_subtitle">إظهار مراجعات Trakt في صفحات التفاصيل</string>
+    <string name="trakt_comments_dialog_title">التعليقات</string>
+    <string name="trakt_comments_dialog_subtitle">اختر ما إذا كانت صفحات التفاصيل ستعرض مراجعات Trakt عند اتصال حسابك.</string>
+    <string name="trakt_comments_now_shown">يتم الآن عرض مراجعات Trakt في صفحات التفاصيل</string>
+    <string name="trakt_comments_now_hidden">تم الآن إخفاء مراجعات Trakt في صفحات التفاصيل</string>
+    <string name="trakt_cached_label">مخزن مؤقتاً</string>
+    <string name="trakt_stat_movies">أفلام</string>
+    <string name="trakt_stat_shows">مسلسلات</string>
+    <string name="trakt_stat_episodes">حلقات</string>
+    <string name="trakt_stat_watched_hours">ساعات المشاهدة</string>
+    <string name="trakt_disconnect">قطع الاتصال</string>
+    <string name="trakt_disconnect_title">قطع اتصال Trakt؟</string>
+    <string name="trakt_disconnect_subtitle">سيؤدي هذا لقطع اتصال حساب Trakt عن Nuvio.</string>
+    <string name="trakt_login">تسجيل الدخول</string>
+    <string name="trakt_retry">إعادة المحاولة</string>
+    <string name="trakt_back">رجوع</string>
+    <string name="trakt_cw_window_title">نافذة متابعة المشاهدة</string>
+    <string name="trakt_cw_window_subtitle">اختر كمية نشاط Trakt التي تظهر في متابعة المشاهدة.</string>
+    <string name="trakt_unaired_dialog_title">الحلقات التالية التي لم تعرض بعد</string>
+    <string name="trakt_unaired_dialog_subtitle">اختر ما إذا كان يجب تضمين الحلقات القادمة قبل إصدارها في متابعة المشاهدة.</string>
+    <string name="trakt_show_unaired">إظهار الحلقات التي لم تعرض</string>
+    <string name="trakt_hide_unaired">إخفاء الحلقات التي لم تعرض</string>
+    <string name="trakt_all_history">كل السجل</string>
+    <string name="trakt_days_format">%1$d أيام</string>
+
+    <!-- DebugSettingsScreen -->
+    <string name="debug_title">معالجة الأخطاء</string>
+    <string name="debug_subtitle">أدوات المطورين وميزات الاختبار (لإصدارات التصحيح فقط)</string>
+    <string name="debug_section_popup">اختبار النوافذ المنبثقة</string>
+    <string name="debug_playback_error_title">شاشة خطأ التشغيل</string>
+    <string name="debug_playback_error_subtitle">إظهار نافذة خطأ تشغيل وهمية</string>
+    <string name="debug_section_features">مفاتيح الميزات</string>
+    <string name="debug_account_tab_title">نافذة الحساب</string>
+    <string name="debug_account_tab_subtitle">إظهار نافذة الحساب في تنقل الإعدادات</string>
+    <string name="debug_sync_code_title">ميزات رمز المزامنة</string>
+    <string name="debug_sync_code_subtitle">إظهار أزرار إنشاء/إدخال رمز المزامنة في إعدادات الحساب</string>
+    <string name="debug_section_account">الحساب</string>
+    <string name="debug_manual_signin_title">تسجيل دخول يدوي</string>
+    <string name="debug_manual_signin_subtitle">تسجيل الدخول بالبريد وكلمة السر (Supabase auth)</string>
+    <string name="debug_email_placeholder">البريد الإلكتروني</string>
+    <string name="debug_password_placeholder">كلمة المرور</string>
+    <string name="debug_signing_in">جاري تسجيل الدخول\u2026</string>
+    <string name="debug_sign_in">تسجيل الدخول</string>
+    <string name="debug_error_dialog_title">خطأ في التشغيل</string>
+    <string name="debug_error_dialog_subtitle">حدث خطأ أثناء التشغيل.\n\nخطأ: خطأ تجريبي محاكى - هذا ليس فشلاً حقيقياً. المصدر أعاد رمز HTTP 503 (الخدمة غير متوفرة).</string>
+    <string name="debug_dismiss">إغلاق</string>
+    <string name="debug_section_library">المكتبة</string>
+    <string name="debug_generate_library_title">إنشاء عناصر للمكتبة</string>
+    <string name="debug_generate_library_subtitle">إضافة أفلام/مسلسلات عشوائية للمكتبة للاختبار</string>
+    <string name="debug_generate_library_placeholder">عدد العناصر</string>
+    <string name="debug_generate_library_button">إنشاء</string>
+    <string name="debug_generating_library">جاري الإنشاء\u2026</string>
+
+    <!-- ProfileSettingsContent -->
+    <string name="profile_title">الملفات الشخصية</string>
+    <string name="profile_subtitle">إدارة ملفات المستخدمين لهذا الحساب.</string>
+    <string name="profile_manage_button">إدارة الملفات الشخصية</string>
+    <string name="profile_manage_title">إدارة الملفات الشخصية</string>
+    <string name="profile_manage_subtitle">حدد ملفاً شخصياً لتعديله أو التبديل إليه أو إنشاء ملف جديد</string>
+    <string name="profile_manage_hint">حدد ملفاً شخصياً لإدارته</string>
+    <string name="profile_primary_label">أساسي</string>
+    <string name="profile_shares_primary">يشارك الملف الرئيسي %1$s</string>
+    <string name="profile_edit_label">تعديل</string>
+    <string name="profile_add">إضافة ملف شخصي</string>
+    <string name="profile_create_title">إنشاء ملف شخصي</string>
+    <string name="profile_edit_title">تعديل الملف الشخصي %1$s</string>
+    <string name="profile_name_placeholder">اسم الملف الشخصي</string>
+    <string name="profile_avatar_color">لون الصورة الرمزية</string>
+    <string name="profile_use_primary_addons">استخدام إضافات الملف الأساسي</string>
+    <string name="profile_use_primary_plugins">استخدام ملحقات الملف الأساسي</string>
+    <string name="profile_creating">جاري الإنشاء\u2026</string>
+    <string name="profile_create_btn">إنشاء</string>
+    <string name="profile_confirm">تأكيد</string>
+    <string name="profile_delete">حذف</string>
+    <string name="profile_addons">الإضافات</string>
+    <string name="profile_plugins">الملحقات</string>
+    <string name="profile_choose_avatar">اختيار الصورة الرمزية</string>
+    <string name="profile_avatar_none_selected">لم يتم تحديد رمز تعبيري</string>
+    <string name="profile_avatar_focus_hint">قف على الصورة الرمزية لعرض الاسم</string>
+    <string name="profile_avatar_category_all">الكل</string>
+    <string name="profile_avatar_category_anime">أنمي</string>
+    <string name="profile_avatar_category_animation">رسوم متحركة</string>
+    <string name="profile_avatar_category_movie">أفلام</string>
+    <string name="profile_avatar_category_tv">مسلسلات</string>
+    <string name="profile_avatar_category_gaming">ألعاب</string>
+    <string name="profile_add_new">إضافة ملف شخصي</string>
+    <string name="profile_cancel">إلغاء</string>
+    <string name="profile_save">حفظ</string>
+    <string name="profile_pin_title">قفل الملف برمز PIN</string>
+    <string name="profile_pin_enabled_subtitle">يتطلب هذا الملف الشخصي إدخال رمز PIN مكون من 4 أرقام قبل التبديل إليه.</string>
+    <string name="profile_pin_disabled_subtitle">قم بتعيين رمز PIN مكون من 4 أرقام لقفل هذا الملف الشخصي.</string>
+    <string name="profile_pin_set">تعيين رمز PIN</string>
+    <string name="profile_pin_change">تغيير رمز PIN</string>
+    <string name="profile_pin_remove">إزالة رمز PIN</string>
+    <string name="profile_pin_set_title">تعيين رمز PIN للملف الشخصي</string>
+    <string name="profile_pin_set_subtitle">أدخل رمز PIN من 4 أرقام وقم بتأكيده.</string>
+    <string name="profile_pin_enter">أدخل رمز PIN من 4 أرقام</string>
+    <string name="profile_pin_confirm">تأكيد رمز PIN من 4 أرقام</string>
+    <string name="profile_pin_mismatch">رموز PIN غير متطابقة.</string>
+    <string name="profile_pin_save">حفظ رمز PIN</string>
+    <string name="profile_pin_unlock_title">إلغاء قفل %1$s</string>
+    <string name="profile_pin_unlock_subtitle">أدخل رمز PIN المكون من 4 أرقام للمتابعة.</string>
+    <string name="profile_pin_verifying">جاري التحقق…</string>
+    <string name="profile_pin_unlock_action">إلغاء القفل</string>
+    <string name="profile_pin_overlay_unlock_heading">أدخل رمز PIN للوصول إلى %1$s.</string>
+    <string name="profile_pin_overlay_set_heading">أنشئ رمز PIN من 4 أرقام لـ %1$s.</string>
+    <string name="profile_pin_overlay_confirm_heading">قم بتأكيد رمز PIN الجديد.</string>
+    <string name="profile_pin_overlay_unlock_support">استخدم جهاز التحكم عن بُعد أو لوحة المفاتيح لإدخال 4 أرقام.</string>
+    <string name="profile_pin_overlay_change_verify_kicker">مطلوب فحص أمني.</string>
+    <string name="profile_pin_overlay_change_verify_heading">أدخل رمز PIN الحالي لتغيير الرمز لـ %1$s.</string>
+    <string name="profile_pin_overlay_change_verify_support">أدخل رمز PIN الحالي المكون من 4 أرقام قبل تعيين واحد جديد.</string>
+    <string name="profile_pin_overlay_remove_verify_kicker">مطلوب فحص أمني.</string>
+    <string name="profile_pin_overlay_remove_verify_heading">أدخل رمز PIN الحالي لإزالة القفل عن %1$s.</string>
+    <string name="profile_pin_overlay_remove_verify_support">أدخل رمز PIN الحالي المكون من 4 أرقام لإزالة هذا القفل.</string>
+    <string name="profile_pin_overlay_set_support">سيكون هذا الرمز مطلوباً قبل فتح هذا الملف الشخصي.</string>
+    <string name="profile_pin_overlay_confirm_support">أعد إدخال نفس الـ 4 أرقام لإنهاء الإعداد.</string>
+    <string name="profile_pin_overlay_mismatch">رموز PIN غير متطابقة. أدخل رمزاً جديداً مرة أخرى.</string>
+    <string name="profile_pin_overlay_forgot_hint">نسيت رمز PIN؟ أعد تعيينه من حساب Nuvio الخاص بك على موقع nuvio.</string>
+    <string name="profile_pin_overlay_back_hint">اضغط رجوع للإلغاء</string>
+
+
+    <!-- AddonManagerScreen -->
+    <string name="addon_title">الإضافات</string>
+    <string name="addon_readonly_notice">يتم استخدام إضافات الملف الأساسي ولا يمكن تغييرها</string>
+    <string name="addon_install_title">تثبيت إضافة</string>
+    <string name="addon_install_placeholder">https://example.com</string>
+    <string name="addon_installing">جاري التثبيت</string>
+    <string name="addon_install_btn">تثبيت</string>
+    <string name="addon_install_success">تم تثبيت %1$s</string>
+    <string name="addon_error_invalid_url">أدخل رابط إضافة صالح</string>
+    <string name="addon_error_invalid_scheme">يجب أن يبدأ رابط الإضافة بـ http أو https</string>
+    <string name="addon_installed_section">مثبتة</string>
+    <string name="addon_empty">لا توجد إضافات مثبتة. أضف واحدة للبدء.</string>
+    <string name="addon_remove">إزالة</string>
+    <string name="addon_manage_from_phone_title">الإدارة من الهاتف</string>
+    <string name="addon_manage_from_phone_subtitle">امسح رمز QR لإدارة الإضافات والقوائم الرئيسية من هاتفك</string>
+    <string name="addon_reorder_title">إعادة ترتيب القوائم الرئيسية</string>
+    <string name="addon_reorder_subtitle">يتحكم في ترتيب صفوف القوائم في الواجهة (كلاسيكي + حديث + شبكي)</string>
+    <string name="addon_qr_scan_instruction">امسح بهاتفك لإدارة الإضافات والقوائم</string>
+    <string name="addon_qr_close">إغلاق</string>
+    <string name="addon_confirm_title">تأكيد تغييرات &amp; الإضافات والقوائم</string>
+    <string name="addon_confirm_subtitle">تم إجراء التغييرات التالية من هاتفك:</string>
+    <string name="addon_confirm_added">تمت الإضافة:</string>
+    <string name="addon_confirm_removed">تمت الإزالة:</string>
+    <string name="addon_confirm_catalog_reordered">تم تغيير ترتيب القوائم</string>
+    <string name="addon_confirm_catalogs_disabled">قوائم تم تعطيلها في الرئيسية:</string>
+    <string name="addon_confirm_catalogs_enabled">قوائم تم تفعيلها في الرئيسية:</string>
+    <string name="addon_confirm_no_changes">لم يتم رصد تغييرات</string>
+    <string name="addon_confirm_reject">رفض</string>
+    <string name="addon_confirm_confirm">تأكيد</string>
+
+    <!-- CatalogOrderScreen -->
+    <string name="catalog_order_title">إعادة ترتيب القوائم الرئيسية</string>
+    <string name="catalog_order_subtitle">يتحكم هذا في ترتيب صفوف الفهارس على الصفحة الرئيسية (الكلاسيكية + الحديثة + الشبكية).</string>
+    <string name="catalog_order_empty">لا توجد قوائم رئيسية متاحة بعد.</string>
+    <string name="catalog_order_disabled_on_home">معطل في الرئيسية</string>
+    <string name="catalog_order_enable">تفعيل</string>
+    <string name="catalog_order_disable">تعطيل</string>
+
+
+    <!-- StreamScreen -->
+    <string name="stream_retry">إعادة المحاولة</string>
+    <string name="stream_no_streams">لم يتم العثور على مصادر</string>
+    <string name="stream_no_streams_hint">حاول تثبيت المزيد من الإضافات للعثور على مصادر</string>
+    <string name="stream_finding_source">جاري البحث عن مصدر</string>
+    <string name="stream_type_torrent">تورنت</string>
+    <string name="stream_type_youtube">يوتيوب</string>
+    <string name="stream_type_external">خارجي</string>
+    <string name="stream_player_picker_title">ما هو المشغل الذي تود استخدامه؟</string>
+    <string name="stream_player_internal">داخلي</string>
+    <string name="stream_player_external">خارجي</string>
+
+    <!-- PlayerScreen -->
+    <string name="player_no_external_player">لم يتم العثور على مشغل خارجي</string>
+
+    <!-- ParentalGuideOverlay -->
+    <string name="parental_nudity">عري</string>
+    <string name="parental_violence">عنف</string>
+    <string name="parental_profanity">ألفاظ بذيئة</string>
+    <string name="parental_alcohol">كحول/مخدرات</string>
+    <string name="parental_frightening">رعب</string>
+    <string name="parental_severity_severe">شديد</string>
+    <string name="parental_severity_moderate">متوسط</string>
+    <string name="parental_severity_mild">خفيف</string>
+    <string name="player_ends_at">ينتهي في: %1$s</string>
+    <string name="player_via">بواسطة %1$s</string>
+    <string name="player_subtitle_delay">تأخير الترجمة</string>
+    <string name="player_error_title">خطأ في التشغيل</string>
+    <string name="player_go_back">رجوع</string>
+    <string name="player_speed_title">سرعة التشغيل</string>
+    <string name="player_more_actions_title">إجراءات إضافية</string>
+    <string name="player_more_speed">سرعة التشغيل</string>
+    <string name="player_more_aspect_ratio">نسبة العرض إلى الارتفاع</string>
+    <string name="player_more_open_external">فتح في مشغل خارجي</string>
+
+    <!-- StreamInfoOverlay -->
+    <string name="stream_info_section_source">المصدر</string>
+    <string name="stream_info_section_file">الملف</string>
+    <string name="stream_info_section_video">الفيديو</string>
+    <string name="stream_info_section_audio">الصوت</string>
+    <string name="stream_info_section_subtitle">الترجمة</string>
+    <string name="stream_info_filename">اسم الملف</string>
+    <string name="stream_info_size">الحجم</string>
+    <string name="stream_info_codec">الترميز</string>
+    <string name="stream_info_resolution">الدقة</string>
+    <string name="stream_info_frame_rate">معدل الإطارات</string>
+    <string name="stream_info_bitrate">معدل البت</string>
+    <string name="stream_info_channels">القنوات</string>
+    <string name="stream_info_sample_rate">معدل العينة</string>
+    <string name="stream_info_language">اللغة</string>
+    <string name="stream_info_name">الاسم</string>
+    <string name="stream_info_source">المصدر</string>
+    <string name="stream_info_subtitle_source_addon">إضافة</string>
+    <string name="stream_info_subtitle_source_embedded">مدمج</string>
+
+    <!-- StreamSourcesSidePanel -->
+    <string name="sources_title">المصادر</string>
+    <string name="sources_reload">إعادة تحميل</string>
+    <string name="sources_close">إغلاق</string>
+    <string name="sources_playing">قيد التشغيل</string>
+    <string name="sources_no_streams">لم يتم العثور على نتائج</string>
+
+    <!-- EpisodesSidePanel -->
+    <string name="episodes_panel_close">إغلاق</string>
+    <string name="episodes_panel_back">رجوع</string>
+    <string name="episodes_panel_reload">إعادة تحميل</string>
+    <string name="episodes_panel_no_streams">لم يتم العثور على نتائج</string>
+    <string name="episodes_panel_no_episodes">لا توجد حلقات متاحة</string>
+    <string name="episodes_panel_title">الحلقات</string>
+    <string name="episodes_panel_streams_title">المصادر</string>
+    <string name="player_speed_normal">عادي</string>
+    <string name="player_aspect_fit">ملائمة (الأصلي)</string>
+    <string name="player_aspect_stretch">تمدد</string>
+    <string name="player_aspect_fit_width">ملائمة العرض</string>
+    <string name="player_aspect_fit_height">ملائمة الارتفاع</string>
+    <string name="player_aspect_crop">مقصوص</string>
+
+    <!-- AudioDialog -->
+    <string name="audio_dialog_title">الصوت</string>
+    <string name="audio_dialog_tab_tracks">الصوت</string>
+    <string name="audio_dialog_tab_mix">المزج</string>
+    <string name="audio_mix_label">تضخيم (PCM)</string>
+    <string name="audio_mix_value_db">%1$d ديسيبل</string>
+    <string name="audio_mix_persist_on">الحفظ بين الجلسات: مفعل</string>
+    <string name="audio_mix_persist_off">الحفظ بين الجلسات: معطل</string>
+    <string name="audio_mix_range">النطاق: %1$d ديسيبل إلى %2$d ديسيبل</string>
+    <string name="audio_mix_range_saved">النطاق: %1$d ديسيبل إلى %2$d ديسيبل (محفوظ)</string>
+    <string name="audio_mix_unavailable">التضخيم غير متاح على هذا الجهاز</string>
+
+    <!-- SubtitleDialog / SubtitleStyleSidePanel -->
+    <string name="subtitle_dialog_title">الترجمة</string>
+    <string name="subtitle_no_builtin">لا توجد ترجمات مدمجة متاحة</string>
+    <string name="subtitle_loading_addon">جاري تحميل الترجمات من الإضافات\u2026</string>
+    <string name="subtitle_no_addon">لا توجد ترجمات متاحة من الإضافات</string>
+    <string name="subtitle_text_color">لون النص</string>
+    <string name="subtitle_outline_color">لون الاطار</string>
+    <string name="subtitle_reset_defaults">استعادة الافتراضيات</string>
+    <string name="subtitle_tab_builtin">مدمج</string>
+    <string name="subtitle_tab_addons">إضافات</string>
+    <string name="subtitle_tab_languages">اللغات</string>
+    <string name="subtitle_tab_style">النمط</string>
+    <string name="subtitle_tab_delay">التأخير</string>
+    <string name="subtitle_none">بدون</string>
+    <string name="subtitle_all">الكل</string>
+    <string name="subtitle_section_core">الأساس</string>
+    <string name="subtitle_section_advanced">متقدم</string>
+    <string name="subtitle_font_size">حجم الخط</string>
+    <string name="subtitle_bold">عريض</string>
+    <string name="subtitle_outline">اطار خارجي</string>
+    <string name="subtitle_bottom_offset">إزاحة السفلية</string>
+    <string name="subtitle_on">مفعل</string>
+    <string name="subtitle_off">معطل</string>
+    <string name="subtitle_style_title">نمط الترجمة</string>
+    <string name="subtitle_style_customize">تخصيص</string>
+    <string name="subtitle_style_color">اللون</string>
+    <string name="subtitle_style_reset">إعادة ضبط</string>
+    <string name="subtitle_style_font_size">حجم الخط</string>
+    <string name="subtitle_style_bold">عريض</string>
+    <string name="subtitle_style_text_color">لون النص</string>
+    <string name="subtitle_style_outline">اطار خارجي</string>
+    <string name="subtitle_style_bottom_offset">إزاحة السفلية</string>
+    <string name="subtitle_style_defaults">الافتراضيات</string>
+    <string name="subtitle_style_on">مفعل</string>
+    <string name="subtitle_style_off">معطل</string>
+    <string name="panel_failed_load_streams">فشل تحميل المصادر</string>
+    <string name="panel_failed_load_episodes">فشل تحميل الحلقات</string>
+
+    <!-- PauseOverlay -->
+    <string name="pause_you_are_watching">أنت تشاهد</string>
+    <string name="pause_cast_label">طاقم العمل</string>
+    <string name="pause_back_to_details">العودة للتفاصيل</string>
+    <string name="pause_as_character">بدور %1$s</string>
+
+    <!-- NextEpisodeCardOverlay -->
+    <string name="next_episode_label">الحلقة التالية</string>
+    <string name="next_episode_finding_source">جاري البحث عن مصدر…</string>
+    <string name="next_episode_playing_via">سيتم التشغيل بواسطة %1$s خلال %2$dث</string>
+    <string name="next_episode_play">تشغيل</string>
+    <string name="next_episode_unaired">لم يعرض بعد</string>
+    <string name="next_episode_not_aired_yet">الحلقة التالية لم تُعرض بعد</string>
+    <string name="skip_intro">تخطي المقدمة</string>
+    <string name="skip_ending">تخطي النهاية</string>
+    <string name="skip_recap">تخطي الملخص</string>
+    <string name="skip_generic">تخطي</string>
+    <string name="display_mode_refresh">تحديث</string>
+    <string name="display_mode_resolution">الدقة</string>
+
+
+    <!-- SearchScreen -->
+    <string name="search_keyboard_hint">اضغط على "تم" في لوحة المفاتيح للبحث</string>
+    <string name="search_placeholder">أبحث عن أفلام &amp; مسلسلات</string>
+    <string name="search_start_title">ابدأ البحث</string>
+    <string name="search_start_subtitle">أدخل حرفين على الأقل</string>
+    <string name="search_start_subtitle_no_discover">ميزة "استكشاف" معطلة. أدخل حرفين على الأقل</string>
+    <string name="search_voice_no_speech">لم يتم رصد صوت. حاول مجدداً.</string>
+    <string name="search_voice_mic_permission">إذن الميكروفون مطلوب للبحث الصوتي.</string>
+    <string name="search_voice_failed">فشل التعرف على الصوت. حاول مجدداً.</string>
+    <string name="search_voice_unavailable">البحث الصوتي غير متاح على هذا الجهاز.</string>
+
+    <!-- LibraryScreen -->
+    <string name="library_syncing">جاري مزامنة مكتبة Trakt\u2026</string>
+    <string name="library_title">المكتبة</string>
+    <string name="library_filter_list">القائمة</string>
+    <string name="library_filter_type">النوع</string>
+    <string name="library_filter_sort">الترتيب</string>
+    <string name="library_filter_genre">التصنيف</string>
+    <string name="library_filter_year">السنة</string>
+    <!-- Genre names (from TMDB movie + TV) -->
+    <string name="genre_action">أكشن</string>
+    <string name="genre_adventure">مغامرة</string>
+    <string name="genre_animation">رسوم متحركة</string>
+    <string name="genre_comedy">كوميديا</string>
+    <string name="genre_crime">جريمة</string>
+    <string name="genre_documentary">وثائقي</string>
+    <string name="genre_drama">دراما</string>
+    <string name="genre_family">عائلي</string>
+    <string name="genre_fantasy">فانتازيا</string>
+    <string name="genre_history">تاريخ</string>
+    <string name="genre_horror">رعب</string>
+    <string name="genre_music">موسيقى</string>
+    <string name="genre_mystery">غموض</string>
+    <string name="genre_romance">رومانسي</string>
+    <string name="genre_science_fiction">خيال علمي</string>
+    <string name="genre_tv_movie">فيلم تلفزيوني</string>
+    <string name="genre_thriller">إثارة</string>
+    <string name="genre_war">حرب</string>
+    <string name="genre_western">غرب أمريكي</string>
+    <!-- TV-specific genres -->
+    <string name="genre_action_adventure">اكشن &amp; مغامرات</string>
+    <string name="genre_kids">أطفال</string>
+    <string name="genre_news">أخبار</string>
+    <string name="genre_reality">واقعي</string>
+    <string name="genre_sci_fi_fantasy">خيال علمي وفانتازيا</string>
+    <string name="genre_soap">مسلسل تلفزيوني</string>
+    <string name="genre_talk">برامج حوارية</string>
+    <string name="genre_war_politics">حرب وسياسة</string>
+    <string name="library_sort_trakt_order">ترتيب Trakt</string>
+    <string name="library_sort_added_desc">أُضيف حديثاً ↓</string>
+    <string name="library_sort_added_asc">أُضيف قديماً ↑</string>
+    <string name="library_sort_title_asc">العنوان (أ-ي)</string>
+    <string name="library_sort_title_desc">العنوان (ي-أ)</string>
+    <string name="library_manage_lists">إدارة القوائم</string>
+    <string name="library_manage_trakt_lists">إدارة قوائم Trakt</string>
+    <string name="library_no_lists">لا توجد قوائم شخصية بعد.</string>
+    <string name="library_list_create">أنشئ</string>
+    <string name="library_list_edit">تعديل</string>
+    <string name="library_list_move_up">تحريك للأعلى</string>
+    <string name="library_list_move_down">تحريك للأسفل</string>
+    <string name="library_list_delete">حذف</string>
+    <string name="library_list_close">إغلاق</string>
+    <string name="library_list_name_label">الاسم</string>
+    <string name="library_list_description_label">الوصف</string>
+    <string name="library_list_privacy">الخصوصية</string>
+    <string name="library_delete_title">حذف هذه القائمة؟</string>
+    <string name="library_delete_subtitle">سيؤدي هذا لحذف القائمة وجميع عناصرها من Trakt.</string>
+    <string name="library_delete_confirm">حذف</string>
+    <string name="library_source_local">محلي</string>
+    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_trakt">TRAKT</string>
+    <string name="library_syncing_library">جاري مزامنة المكتبة\u2026</string>
+    <string name="library_type_all">الكل</string>
+    <string name="library_type_items">عناصر</string>
+    <string name="library_empty_local_title">لا يوجد %1$s بعد</string>
+    <string name="library_empty_trakt_title">لا يوجد %1$s في هذه القائمة</string>
+    <string name="library_empty_local_subtitle">ابدأ بحفظ مفضلاتك لتراها هنا</string>
+    <string name="library_empty_trakt_subtitle">استخدم + في التفاصيل لإضافة عناصر لقائمة المشاهدة أو القوائم</string>
+
+    <!-- AccountSettingsContent -->
+    <string name="account_loading">جاري التحميل\u2026</string>
+    <string name="account_sync_description">زامن مكتبتك، تقدم المشاهدة، الإضافات، والملحقات عبر أجهزتك.</string>
+    <string name="account_sync_restart_note">المزامنة ليست فورية عبر الأجهزة النشطة. أعد تشغيل هذا الجهاز بعد تسجيل الدخول أو لالتقاط التغييرات التي تمت في مكان آخر.</string>
+    <string name="account_signin_qr_title">الدخول برمز QR</string>
+    <string name="account_signin_qr_subtitle">امسح رمز QR وأكمل تسجيل الدخول ببريدك من هاتفك</string>
+    <string name="account_signed_in_label">تم تسجيل الدخول</string>
+    <string name="account_total_label">الإجمالي</string>
+    <string name="account_loading_sync">جاري تحميل بيانات المزامنة\u2026</string>
+    <string name="account_sign_out">تسجيل الخروج</string>
+
+    <!-- AuthSignInScreen -->
+    <string name="auth_signin_title">تسجيل الدخول</string>
+    <string name="auth_signin_tv_disabled">إدخال البريد/كلمة السر على التلفاز معطل. تابع عبر رمز QR.</string>
+    <string name="auth_signin_qr_btn">المتابعة عبر QR</string>
+
+    <!-- AuthQrSignInScreen -->
+    <string name="auth_qr_title">الدخول برمز QR</string>
+    <string name="auth_qr_account_login">تسجيل دخول الحساب</string>
+    <string name="auth_qr_finishing">جاري إنهاء تسجيل الدخول\u2026</string>
+    <string name="auth_qr_code_label">الرمز: %1$s</string>
+    <string name="auth_qr_expires">ينتهي خلال %1$s</string>
+    <string name="auth_qr_phone_hint">استخدم هاتفك لتسجيل الدخول بالبريد/كلمة المرور. يبقى التلفاز عبر QR فقط لتسجيل دخول أسرع.</string>
+    <string name="auth_qr_scan_instruction">امسح رمز QR، وافق من المتصفح، ثم عُد إلى هنا.</string>
+    <string name="auth_qr_code_display">الرمز: %1$s</string>
+    <string name="auth_qr_refresh">تحديث الرمز</string>
+    <string name="auth_qr_continue_without_account">المتابعة بدون حساب</string>
+    <string name="auth_qr_connected">حسابك متصل على هذا التلفاز.</string>
+    <string name="auth_qr_synced_data">بياناتك المتزامنة</string>
+    <string name="auth_qr_generating">جاري إنشاء رمز QR\u2026</string>
+    <string name="auth_qr_unavailable">رمز QR غير متاح. حدث للمحاولة مرة أخرى.</string>
+    <string name="auth_qr_please_wait">يرجى الانتظار\u2026</string>
+    <string name="auth_qr_continue">متابعة</string>
+    <string name="auth_qr_back">رجوع</string>
+
+    <!-- SyncCodeGenerateScreen -->
+    <string name="sync_generate_title">إنشاء رمز مزامنة</string>
+    <string name="sync_generate_subtitle">أنشئ رمز سري لحماية رمز المزامنة الخاص بك. شارك الرمز مع أجهزتك الأخرى.</string>
+    <string name="sync_generate_code_label">رمز المزامنة الخاص بك</string>
+    <string name="sync_generate_instruction">أدخل هذا الرمز ورمز الحماية الخاص بك على جهازك الآخر لربطهما.</string>
+    <string name="sync_generate_done">تم</string>
+    <string name="sync_generate_pin_label">اختر رمز حماية (من 4 إلى 8 خانات)</string>
+    <string name="sync_generate_pin_placeholder">أدخل رمز الحماية</string>
+
+    <!-- SyncCodeClaimScreen -->
+    <string name="sync_claim_title">ربط الجهاز</string>
+    <string name="sync_claim_subtitle">أدخل رمز المزامنة ورمز الحماية من جهازك الآخر لربط هذا الجهاز.</string>
+    <string name="sync_claim_success">تم ربط الجهاز بنجاح! ستتم مزامنة إضافاتك الآن.</string>
+    <string name="sync_claim_done">تم</string>
+    <string name="sync_claim_code_label">رمز المزامنة</string>
+    <string name="sync_claim_code_placeholder">XXXX-XXXX-XXXX-XXXX-XXXX</string>
+    <string name="sync_claim_pin_label">رمز حماية</string>
+    <string name="sync_claim_pin_placeholder">أدخل رمز حماية</string>
+
+    <!-- PluginScreen -->
+    <string name="plugin_readonly_notice">يتم استخدام ملحقات الملف الأساسي ولا يمكن تغييرها</string>
+    <string name="plugin_repositories_section">المستودعات (%1$d)</string>
+    <string name="plugin_providers_section">المصادر (%1$d)</string>
+    <string name="plugin_title">الملحقات</string>
+    <string name="plugin_subtitle">إدارة أدوات البحث والمصادر المحلية</string>
+    <string name="plugin_add_repository">إضافة مستودع</string>
+    <string name="plugin_add_btn">إضافة</string>
+    <string name="plugin_manage_from_phone_title">الإدارة من الهاتف</string>
+    <string name="plugin_manage_from_phone_subtitle">امسح رمز QR لإضافة أو إزالة المستودعات من هاتفك</string>
+    <string name="plugin_qr_instruction">امسح بهاتفك لإدارة المستودعات</string>
+    <string name="plugin_qr_close">إغلاق</string>
+    <string name="plugin_confirm_title">تأكيد تغييرات المستودعات</string>
+    <string name="plugin_confirm_subtitle">تم إجراء التغييرات التالية من هاتفك:</string>
+    <string name="plugin_confirm_added">تمت الإضافة:</string>
+    <string name="plugin_confirm_removed">تمت الإزالة:</string>
+    <string name="plugin_confirm_no_changes">لم يتم رصد تغييرات</string>
+    <string name="plugin_confirm_total">إجمالي المستودعات: %1$d</string>
+    <string name="plugin_confirm_reject">رفض</string>
+    <string name="plugin_confirm_confirm">تأكيد</string>
+    <string name="plugin_updated_format">تاريخ التحديث: %1$s</string>
+    <string name="plugin_test_btn">اختبار</string>
+    <string name="plugin_test_results">نتائج الاختبار (%1$d مصدر بث)</string>
+
+    <!-- ProfileSelectionScreen -->
+    <string name="profile_selection_title">من المشاهد؟</string>
+    <string name="profile_selection_subtitle">اختر ملفاً شخصياً للمتابعة</string>
+    <string name="profile_selection_hint">استخدم أزرار الاتجاهات لاختيار ملف</string>
+    <string name="profile_selection_empty">لم يتم العثور على ملفات شخصية</string>
+    <string name="profile_selection_primary_badge">أساسي</string>
+    <string name="profile_selection_options_title">خيارات الملف الشخصي</string>
+    <string name="profile_delete_confirm_title">حذف الملف الشخصي؟</string>
+    <string name="profile_delete_confirm_subtitle">سيؤدي هذا إلى حذف هذا الملف الشخصي وبياناته نهائياً بما في ذلك المكتبة وسجل المشاهدة وإعدادات الإضافات. لا يمكن التراجع عن هذا الإجراء.</string>
+    <string name="profile_delete_btn">حذف الملف الشخصي</string>
+    <string name="profile_saving">جاري الحفظ\u2026</string>
+
+    <!-- CastDetailScreen -->
+    <string name="cast_detail_error">حدث خطأ ما</string>
+    <string name="cast_detail_retry">إعادة المحاولة</string>
+    <string name="cast_detail_filmography">قائمة الأعمال</string>
+    <string name="cast_detail_born">تاريخ الميلاد: %1$s</string>
+    <string name="cast_detail_born_died">تاريخ الميلاد: %1$s — الوفاة: %2$s</string>
+    <string name="cast_detail_age">العمر %1$d</string>
+
+    <!-- CatalogSeeAllScreen -->
+    <string name="catalog_see_all_from">من %1$s</string>
+    <string name="catalog_see_all_empty_title">لا توجد عناصر متاحة</string>
+    <string name="catalog_see_all_empty_subtitle">جرب فئة أخرى أو تفقدها لاحقاً</string>
+
+    <!-- LayoutSelectionScreen -->
+    <string name="layout_selection_welcome">مرحباً بك في Nuvio</string>
+    <string name="layout_selection_subtitle">اختر تنسيق شاشتك الرئيسية</string>
+    <string name="layout_selection_continue">متابعة</string>
+
+    <!-- UpdatePromptDialog -->
+    <string name="update_title">تحديث التطبيق</string>
+    <string name="update_downloading">جاري تحميل التحديث</string>
+    <string name="update_download">تنزيل</string>
+    <string name="update_downloading_ellipsis">جاري التحميل…</string>
+    <string name="update_unknown_sources">اسمح بتثبيت التطبيقات من مصادر غير معروفة للمتابعة.</string>
+    <!-- AccountScreen -->
+    <string name="account_title">الحساب</string>
+    <string name="account_sign_in_description">سجل دخولك لمزامنة مكتبتك، وتقدم المشاهدة، والإضافات، والملحقات عبر أجهزتك. تستخدم مزامنة المكتبة Nuvio Sync عندما يكون Trakt غير متصل، ويمكن لمستوى المشاهدة استخدام Trakt أو مزامنة Nuvio.</string>
+    <string name="account_sync_code_title">رمز المزامنة</string>
+    <string name="account_sync_code_description">المزامنة عبر الأجهزة دون إنشاء حساب.</string>
+    <string name="account_linked_devices">الأجهزة المرتبطة (%1$d)</string>
+    <string name="account_no_linked_devices">لا توجد أجهزة مرتبطة</string>
+    <string name="account_unlink">إلغاء الارتباط</string>
+
+    <!-- EpisodeRatingsSection -->
+    <string name="ratings_loading">جاري تحميل تقييمات الحلقة...</string>
+    <string name="ratings_unavailable">تقييمات الحلقة غير متوفرة.</string>
+    <string name="ratings_load_error">تعذر تحميل تقييمات الحلقة.</string>
+    <string name="ratings_season_summary">الموسم %1$d - %2$d حلقة</string>
+
+    <!-- SearchDiscoverSection -->
+    <string name="discover_title">استكشاف</string>
+    <string name="discover_load_more">تحميل المزيد</string>
+    <string name="discover_loading">جاري التحميل...</string>
+    <string name="discover_filter_type">النوع</string>
+    <string name="discover_filter_catalog">القائمة</string>
+    <string name="discover_filter_genre">التصنيف</string>
+    <string name="discover_select_catalog">اختر</string>
+    <string name="discover_genre_default">افتراضي</string>
+    <string name="discover_empty_no_catalog_title">اختر قائمة</string>
+    <string name="discover_empty_no_catalog_subtitle">اختر قائمة للتصفح</string>
+    <string name="discover_empty_no_content_title">لم يتم العثور على محتوى</string>
+    <string name="discover_empty_no_content_subtitle">جرب تصنيفاً أو فئة أخرى</string>
+
+    <!-- AddonManagerScreen -->
+    <string name="addon_confirm_total_addons">إجمالي الإضافات: %1$d</string>
+    <string name="addon_confirm_total_catalogs">إجمالي القوائم: %1$d</string>
+    <string name="addon_catalogs_types">القوائم: %1$d - الانواع: %2$s</string>
+
+    <!-- PluginScreen -->
+    <string name="plugin_and_more">... و %1$d غيرها</string>
+    <string name="plugin_providers_count">%1$d مصدر</string>
+    <string name="plugin_enabled">مفعل</string>
+    <string name="plugin_disabled">معطل</string>
+    <string name="plugin_no_repos">لم يتم إضافة مستودعات بعد.\nأضف مستودعاً للبدء.</string>
+
+    <!-- ProfileSettingsContent -->
+    <string name="profile_edit_title_id">تعديل الملف الشخصي %1$d</string>
+
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_passthrough_info">تمرير الصوت (TrueHD, DTS, AC-3، إلخ) تلقائي. عند التوصيل بمستقبل AV أو مكبر صوت متوافق عبر HDMI، يتم إرسال الصوت دون فك تشفيره.</string>
+    <string name="audio_dv_title">DV7 - تراجع لـ HEVC</string>
+
+    <!-- SidebarNavigation / MainActivity -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_discover">استكشاف</string>
+    <string name="nav_search">البحث</string>
+    <string name="nav_library">المكتبة</string>
+    <string name="nav_addons">الإضافات</string>
+    <string name="nav_settings">الإعدادات</string>
+    <string name="settings_rounded_ui">واجهة مستديرة</string>
+    <string name="cd_expand_sidebar">توسيع الشريط الجانبي</string>
+
+    <string name="update_checking">جاري التحقق من التحديثات…</string>
+    <string name="update_download_complete">اكتمل التحميل. جاهز للتثبيت.</string>
+    <string name="update_up_to_date">النظام محدث. أحدث التغييرات:</string>
+    <string name="update_close">إغلاق</string>
+    <string name="update_open_settings">فتح الإعدادات</string>
+    <string name="update_install">تثبيت</string>
+    <string name="update_ignore">تجاهل</string>
+    <string name="watchlist_added">تمت الإضافة لقائمة المشاهدة</string>
+    <string name="watchlist_removed">تمت الإزالة من قائمة المشاهدة</string>
+</resources>

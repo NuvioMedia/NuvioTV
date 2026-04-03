@@ -544,7 +544,9 @@ class MetaDetailsViewModel @Inject constructor(
             .toIntOrNull()
             ?: return raw
 
-        return tmdbService.tmdbToImdb(tmdbNumericId, itemType) ?: raw
+        return tmdbService.tmdbToImdb(tmdbNumericId, itemType)
+            ?.takeIf { it.isNotBlank() }
+            ?: raw
     }
 
     private fun applyMeta(meta: Meta) {
@@ -1090,11 +1092,16 @@ class MetaDetailsViewModel @Inject constructor(
         if (enrichment != null && settings.useDetails) {
             updated = updated.copy(
                 runtime = enrichment.runtimeMinutes?.toString() ?: updated.runtime,
-                releaseInfo = enrichment.releaseInfo ?: updated.releaseInfo,
                 status = enrichment.status ?: updated.status,
                 ageRating = enrichment.ageRating ?: updated.ageRating,
                 country = enrichment.countries?.joinToString(", ") ?: updated.country,
                 language = enrichment.language ?: updated.language
+            )
+        }
+
+        if (enrichment != null && settings.useReleaseDates) {
+            updated = updated.copy(
+                releaseInfo = enrichment.releaseInfo ?: updated.releaseInfo
             )
         }
 
@@ -1201,6 +1208,7 @@ class MetaDetailsViewModel @Inject constructor(
 
         val watchedEpisodes = _uiState.value.watchedEpisodes
         val progressMap = _uiState.value.episodeProgressMap
+
         val allWatched = episodes.all { video ->
             val key = video.season!! to video.episode!!
             key in watchedEpisodes || progressMap[key]?.isCompleted() == true
@@ -1216,7 +1224,7 @@ class MetaDetailsViewModel @Inject constructor(
         }
         val updated = if (allWatched) current + allIds else current - allIds
         if (updated != current) {
-            watchedSeriesStateHolder.update(updated)
+            watchedSeriesStateHolder.updateWithValidation(updated, allIds)
         }
     }
 

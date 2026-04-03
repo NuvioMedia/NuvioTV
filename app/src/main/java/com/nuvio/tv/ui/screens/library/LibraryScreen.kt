@@ -613,7 +613,7 @@ private fun LibraryDropdownPicker(
                     )
                     Icon(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (expanded) "Collapse $title" else "Expand $title",
+                        contentDescription = if (expanded) stringResource(R.string.cd_collapse, title) else stringResource(R.string.cd_expand, title),
                         tint = if (isFocused) NuvioColors.FocusRing else NuvioColors.TextSecondary
                     )
                 }
@@ -718,7 +718,7 @@ private fun LibraryActionsRow(
                 contentColor = NuvioColors.TextPrimary
             )
         ) {
-            Text(if (isSyncing) "Syncing..." else "Sync")
+            Text(if (isSyncing) stringResource(R.string.library_syncing_btn) else stringResource(R.string.library_sync_btn))
         }
     }
 }
@@ -901,7 +901,7 @@ private fun ListEditorDialog(
 
     NuvioDialog(
         onDismiss = onCancel,
-        title = if (state.mode == LibraryListEditorState.Mode.CREATE) "Create List" else "Edit List",
+        title = if (state.mode == LibraryListEditorState.Mode.CREATE) stringResource(R.string.library_list_create_dialog_title) else stringResource(R.string.library_list_edit_dialog_title),
         width = 560.dp
     ) {
         androidx.compose.material3.OutlinedTextField(
@@ -1018,7 +1018,7 @@ private fun ListEditorDialog(
                 contentColor = NuvioColors.TextPrimary
             )
         ) {
-            Text(if (pending) "Saving..." else "Save")
+            Text(if (pending) stringResource(R.string.action_saving) else stringResource(R.string.action_save))
         }
     }
 }

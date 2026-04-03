@@ -142,7 +142,7 @@ fun NextEpisodeCardOverlay(
                 ) {
                     AsyncImage(
                         model = nextEpisode.thumbnail,
-                        contentDescription = "Next episode thumbnail",
+                        contentDescription = stringResource(R.string.cd_next_episode_thumbnail),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )

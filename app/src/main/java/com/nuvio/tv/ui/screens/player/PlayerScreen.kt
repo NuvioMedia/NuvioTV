@@ -88,6 +88,7 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -114,6 +115,9 @@ import android.text.format.DateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.coroutines.delay
 
 @Composable
@@ -124,6 +128,8 @@ fun PlayerScreen(
     onPlaybackEnded: ((nextVideoId: String?, nextSeason: Int?, nextEpisode: Int?) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val layoutDirection = LocalLayoutDirection.current
+    val isRtl = layoutDirection == LayoutDirection.Rtl
     val lifecycleOwner = LocalLifecycleOwner.current
     val containerFocusRequester = remember { FocusRequester() }
     val playPauseFocusRequester = remember { FocusRequester() }
@@ -428,11 +434,8 @@ fun PlayerScreen(
                                     repeatCount >= 3 -> 20_000L
                                     else -> 10_000L
                                 }
-                                val deltaMs = if (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-                                    -stepMs
-                                } else {
-                                    stepMs
-                                }
+                                val isLeft = keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                                val deltaMs = if (isLeft xor isRtl) -stepMs else stepMs
                                 viewModel.onEvent(PlayerEvent.OnPreviewSeekBy(deltaMs))
                                 true
                             } else {
@@ -500,7 +503,7 @@ fun PlayerScreen(
         // Video Player
         viewModel.exoPlayer?.let { player ->
             val subtitleStyle = uiState.subtitleStyle
-            val resizeMode = uiState.resizeMode
+            val aspectMode = uiState.aspectMode
             
             AndroidView(
                 factory = { context ->
@@ -514,8 +517,8 @@ fun PlayerScreen(
                 update = { playerView ->
                     // Keep device awake only while playback is active (or buffering), not when paused.
                     playerView.keepScreenOn = uiState.isPlaying || uiState.isBuffering
-                    Log.d("PlayerScreen", "Applying resizeMode: $resizeMode")
-                    playerView.resizeMode = resizeMode
+                    playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    applyAspectMode(playerView, aspectMode)
                     playerView.subtitleView?.apply {
                         // Calculate font size based on percentage (100% = 24sp base)
                         val baseFontSize = 24f
@@ -568,6 +571,7 @@ fun PlayerScreen(
             backdropUrl = uiState.backdrop,
             logoUrl = uiState.logo,
             title = uiState.title,
+            message = uiState.loadingMessage,
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(2f)
@@ -1055,6 +1059,7 @@ private fun PlayerControlsOverlay(
     onBack: () -> Unit,
     skipButtonVisible: Boolean = false
 ) {
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val customPlayPainter = rememberRawSvgPainter(R.raw.ic_player_play)
     val customPausePainter = rememberRawSvgPainter(R.raw.ic_player_pause)
     val customSubtitlePainter = rememberRawSvgPainter(R.raw.ic_player_subtitles)
@@ -1178,12 +1183,13 @@ private fun PlayerControlsOverlay(
             ProgressBar(
                 currentPosition = uiState.pendingPreviewSeekPosition ?: uiState.currentPosition,
                 duration = uiState.duration,
-                onSeekPreview = { delta -> 
+                onSeekPreview = { delta ->
                     viewModel.onEvent(PlayerEvent.OnPreviewSeekBy(delta))
                 },
-                onSeekCommit = { 
+                onSeekCommit = {
                     viewModel.onEvent(PlayerEvent.OnCommitPreviewSeek)
                 },
+                isRtl = isRtl,
                 focusRequester = progressBarFocusRequester,
                 upFocusRequester = progressBarUpFocusRequester,
                 downFocusRequester = playPauseFocusRequester,
@@ -1212,7 +1218,7 @@ private fun PlayerControlsOverlay(
                     ControlButton(
                         icon = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         iconPainter = if (uiState.isPlaying) customPausePainter else customPlayPainter,
-                        contentDescription = if (uiState.isPlaying) "Pause" else "Play",
+                        contentDescription = if (uiState.isPlaying) stringResource(R.string.cd_pause) else stringResource(R.string.cd_play),
                         onClick = onPlayPause,
                         focusRequester = playPauseFocusRequester,
                         upFocusRequester = progressBarFocusRequester,
@@ -1235,7 +1241,7 @@ private fun PlayerControlsOverlay(
                         ControlButton(
                             icon = Icons.Default.ClosedCaption,
                             iconPainter = customSubtitlePainter,
-                            contentDescription = "Subtitles",
+                            contentDescription = stringResource(R.string.cd_subtitles),
                             onClick = onShowSubtitleDialog,
                             upFocusRequester = progressBarFocusRequester,
                             onDownKey = onHideControls,
@@ -1247,7 +1253,7 @@ private fun PlayerControlsOverlay(
                         ControlButton(
                             icon = Icons.AutoMirrored.Filled.VolumeUp,
                             iconPainter = customAudioPainter,
-                            contentDescription = "Audio tracks",
+                            contentDescription = stringResource(R.string.cd_audio_tracks),
                             onClick = onShowAudioDialog,
                             upFocusRequester = progressBarFocusRequester,
                             onDownKey = onHideControls,
@@ -1258,7 +1264,7 @@ private fun PlayerControlsOverlay(
                     ControlButton(
                         icon = Icons.Default.SwapHoriz,
                         iconPainter = customSourcePainter,
-                        contentDescription = "Sources",
+                        contentDescription = stringResource(R.string.cd_sources),
                         onClick = onShowSourcesPanel,
                         upFocusRequester = progressBarFocusRequester,
                         onDownKey = onHideControls,
@@ -1269,7 +1275,7 @@ private fun PlayerControlsOverlay(
                         ControlButton(
                             icon = Icons.AutoMirrored.Filled.List,
                             iconPainter = customEpisodesPainter,
-                            contentDescription = "Episodes",
+                            contentDescription = stringResource(R.string.cd_episodes),
                             onClick = onShowEpisodesPanel,
                             upFocusRequester = progressBarFocusRequester,
                             onDownKey = onHideControls,
@@ -1294,7 +1300,7 @@ private fun PlayerControlsOverlay(
                         ) {
                             ControlButton(
                                 icon = Icons.Default.Speed,
-                                contentDescription = "Playback speed",
+                                contentDescription = stringResource(R.string.cd_playback_speed),
                                 onClick = {
                                     onShowSpeedDialog()
                                 },
@@ -1305,7 +1311,7 @@ private fun PlayerControlsOverlay(
                             ControlButton(
                                 icon = Icons.Default.AspectRatio,
                                 iconPainter = customAspectPainter,
-                                contentDescription = "Aspect ratio",
+                                contentDescription = stringResource(R.string.cd_aspect_ratio),
                                 onClick = {
                                     onToggleAspectRatio()
                                 },
@@ -1315,7 +1321,7 @@ private fun PlayerControlsOverlay(
                             )
                             ControlButton(
                                 icon = Icons.AutoMirrored.Filled.OpenInNew,
-                                contentDescription = "Open in external player",
+                                contentDescription = stringResource(R.string.cd_open_external_player),
                                 onClick = {
                                     onOpenInExternalPlayer()
                                 },
@@ -1325,7 +1331,7 @@ private fun PlayerControlsOverlay(
                             )
                             ControlButton(
                                 icon = Icons.Default.Info,
-                                contentDescription = "Stream info",
+                                contentDescription = stringResource(R.string.cd_stream_info),
                                 onClick = {
                                     onShowStreamInfo()
                                 },
@@ -1342,7 +1348,7 @@ private fun PlayerControlsOverlay(
                         } else {
                             Icons.AutoMirrored.Filled.KeyboardArrowRight
                         },
-                        contentDescription = if (uiState.showMoreDialog) "Close more actions" else "More actions",
+                        contentDescription = if (uiState.showMoreDialog) stringResource(R.string.cd_close_more_actions) else stringResource(R.string.cd_more_actions),
                         onClick = onToggleMoreActions,
                         upFocusRequester = progressBarFocusRequester,
                         onDownKey = onHideControls,
@@ -1440,8 +1446,9 @@ private fun ControlButton(
 private fun ProgressBar(
     currentPosition: Long,
     duration: Long,
-    onSeekPreview: (Long) -> Unit, 
-    onSeekCommit: () -> Unit,      
+    onSeekPreview: (Long) -> Unit,
+    onSeekCommit: () -> Unit,
+    isRtl: Boolean = false,
     focusRequester: FocusRequester? = null,
     upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
@@ -1519,11 +1526,11 @@ private fun ProgressBar(
                             }
                         }
                         KeyEvent.KEYCODE_DPAD_LEFT -> {
-                            onSeekPreview(-10_000L)
+                            onSeekPreview(if (isRtl) 10_000L else -10_000L)
                             true
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                            onSeekPreview(10_000L)
+                            onSeekPreview(if (isRtl) -10_000L else 10_000L)
                             true
                         }
                         else -> false
@@ -2147,7 +2154,7 @@ private fun SpeedItem(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.cd_selected),
                     tint = NuvioColors.Secondary,
                     modifier = Modifier.size(24.dp)
                 )

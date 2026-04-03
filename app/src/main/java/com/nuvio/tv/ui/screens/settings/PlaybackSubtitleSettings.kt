@@ -276,7 +276,7 @@ internal fun LazyListScope.subtitleSettingsItems(
         item(key = "subtitle_libass_overlay_canvas") {
             RenderTypeSettingsItem(
                 title = stringResource(R.string.sub_mode_overlay_canvas),
-                subtitle = "HDR support with canvas rendering. May block UI thread.",
+                subtitle = stringResource(R.string.sub_mode_overlay_canvas_sub),
                 isSelected = playerSettings.libassRenderType == LibassRenderType.OVERLAY_CANVAS,
                 onClick = { onSetLibassRenderType(LibassRenderType.OVERLAY_CANVAS) },
                 onFocused = onItemFocused

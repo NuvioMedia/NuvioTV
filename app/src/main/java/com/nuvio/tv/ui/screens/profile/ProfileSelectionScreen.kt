@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
@@ -161,6 +162,7 @@ fun ProfileSelectionScreen(
     onBackPress: (() -> Unit)? = null,
     viewModel: ProfileSelectionViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val profiles by viewModel.profiles.collectAsState()
     val activeProfileId by viewModel.activeProfileId.collectAsState()
     val avatarCatalog by viewModel.avatarCatalog.collectAsState()
@@ -299,7 +301,7 @@ fun ProfileSelectionScreen(
                                         pinOverlayError = null
                                         pinActionMessage = "PIN saved for ${activePinOverlay.profile.name}."
                                     } else {
-                                        pinOverlayError = "Could not save PIN. Try again."
+                                        pinOverlayError = context.getString(R.string.profile_pin_save_error)
                                     }
                                 }
                             }
@@ -316,13 +318,13 @@ fun ProfileSelectionScreen(
                                             )
                                         } else {
                                             pinOverlayError = if (verify.retryAfterSeconds > 0) {
-                                                "Profile is locked. Try again in ${verify.retryAfterSeconds}s."
+                                                context.getString(R.string.profile_pin_locked, verify.retryAfterSeconds)
                                             } else {
-                                                "Invalid PIN. Try again."
+                                                context.getString(R.string.profile_pin_invalid)
                                             }
                                         }
                                     }.onFailure {
-                                        pinOverlayError = "Could not verify PIN. Try again."
+                                        pinOverlayError = context.getString(R.string.profile_pin_verify_error)
                                     }
                                 }
                             }
@@ -338,13 +340,13 @@ fun ProfileSelectionScreen(
                                             )
                                         } else {
                                             pinOverlayError = if (verify.retryAfterSeconds > 0) {
-                                                "Profile is locked. Try again in ${verify.retryAfterSeconds}s."
+                                                context.getString(R.string.profile_pin_locked, verify.retryAfterSeconds)
                                             } else {
-                                                "Current PIN is incorrect."
+                                                context.getString(R.string.profile_pin_incorrect)
                                             }
                                         }
                                     }.onFailure {
-                                        pinOverlayError = "Could not verify PIN. Try again."
+                                        pinOverlayError = context.getString(R.string.profile_pin_verify_error)
                                     }
                                 }
                             }
@@ -359,7 +361,7 @@ fun ProfileSelectionScreen(
                                         pinOverlayState = null
                                         pinActionMessage = "PIN lock removed for ${activePinOverlay.profile.name}."
                                     } else {
-                                        pinOverlayError = "Current PIN is incorrect."
+                                        pinOverlayError = context.getString(R.string.profile_pin_incorrect)
                                     }
                                 }
                             }
@@ -626,7 +628,7 @@ private fun ProfileSelectionMainContent(
     ) {
         Image(
             painter = painterResource(id = R.drawable.app_logo_wordmark),
-            contentDescription = "NuvioTV",
+            contentDescription = stringResource(R.string.cd_nuvio_logo),
             modifier = Modifier
                 .width(ProfileSelectionSpacing.LogoWidth)
                 .height(ProfileSelectionSpacing.LogoHeight),
@@ -1374,7 +1376,7 @@ private fun EditProfileOverlay(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = "Edit Profile",
+                        text = stringResource(R.string.profile_edit_header),
                         color = NuvioColors.TextSecondary,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold

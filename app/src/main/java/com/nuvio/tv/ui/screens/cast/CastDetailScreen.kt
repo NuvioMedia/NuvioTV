@@ -60,6 +60,7 @@ import com.nuvio.tv.domain.model.PersonDetail
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.PosterCardDefaults
+import com.nuvio.tv.ui.components.rememberShimmerBrush
 import com.nuvio.tv.ui.theme.NuvioColors
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -411,6 +412,7 @@ private fun FilmographyRow(
 private fun CastDetailSkeleton(personName: String) {
     val backgroundColor = NuvioColors.Background
     val accentColor = NuvioColors.Secondary
+    val shimmerBrush = rememberShimmerBrush()
 
     Box(modifier = Modifier.fillMaxSize()) {
         val accentGradient = remember(accentColor, backgroundColor) {
@@ -440,7 +442,7 @@ private fun CastDetailSkeleton(personName: String) {
                         .width(160.dp)
                         .height(240.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(NuvioColors.SurfaceVariant)
+                        .background(shimmerBrush)
                 )
 
                 Spacer(modifier = Modifier.width(24.dp))
@@ -466,7 +468,7 @@ private fun CastDetailSkeleton(personName: String) {
                                 .fillMaxWidth(if (it == 0) 0.60f else if (it == 1) 0.48f else 0.72f)
                                 .height(14.dp)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(NuvioColors.SurfaceVariant)
+                                .background(shimmerBrush)
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                     }
@@ -476,7 +478,7 @@ private fun CastDetailSkeleton(personName: String) {
                             .fillMaxWidth(0.86f)
                             .height(14.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(NuvioColors.SurfaceVariant)
+                            .background(shimmerBrush)
                     )
                 }
             }
@@ -493,7 +495,7 @@ private fun CastDetailSkeleton(personName: String) {
                         .width(140.dp)
                         .height(20.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(NuvioColors.SurfaceVariant)
+                        .background(shimmerBrush)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Box(
@@ -501,7 +503,7 @@ private fun CastDetailSkeleton(personName: String) {
                         .width(36.dp)
                         .height(18.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(NuvioColors.SurfaceVariant)
+                        .background(shimmerBrush)
                 )
             }
 
@@ -519,7 +521,7 @@ private fun CastDetailSkeleton(personName: String) {
                                 .width(112.dp)
                                 .height(168.dp)
                                 .clip(RoundedCornerShape(PosterCardDefaults.Style.cornerRadius))
-                                .background(NuvioColors.SurfaceVariant)
+                                .background(shimmerBrush)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Box(
@@ -527,7 +529,7 @@ private fun CastDetailSkeleton(personName: String) {
                                 .fillMaxWidth()
                                 .height(16.dp)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(NuvioColors.SurfaceVariant)
+                                .background(shimmerBrush)
                         )
                     }
                 }

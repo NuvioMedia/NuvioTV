@@ -38,6 +38,7 @@ data class PlayerUiState(
     val playbackSpeed: Float = 1f,
     val loadingOverlayEnabled: Boolean = true,
     val showLoadingOverlay: Boolean = true,
+    val loadingMessage: String? = null,
     val pauseOverlayEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
     val showPauseOverlay: Boolean = false,
@@ -132,6 +133,8 @@ data class PlayerUiState(
     val showDisplayModeInfo: Boolean = false,
     // Aspect ratio / resize mode
     val resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
+    val aspectMode: AspectMode = AspectMode.ORIGINAL,
+    val tunnelingEnabled: Boolean = false,
     val showAspectRatioIndicator: Boolean = false,
     val aspectRatioIndicatorText: String = "",
     // Stream info overlay

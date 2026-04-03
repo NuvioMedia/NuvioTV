@@ -30,6 +30,7 @@ class TmdbSettingsDataStore @Inject constructor(
     private val useArtworkKey = booleanPreferencesKey("tmdb_use_artwork")
     private val useBasicInfoKey = booleanPreferencesKey("tmdb_use_basic_info")
     private val useDetailsKey = booleanPreferencesKey("tmdb_use_details")
+    private val useReleaseDatesKey = booleanPreferencesKey("tmdb_use_release_dates")
     private val useCreditsKey = booleanPreferencesKey("tmdb_use_credits")
     private val useProductionsKey = booleanPreferencesKey("tmdb_use_productions")
     private val useNetworksKey = booleanPreferencesKey("tmdb_use_networks")
@@ -47,6 +48,7 @@ class TmdbSettingsDataStore @Inject constructor(
                 useArtwork = prefs[useArtworkKey] ?: true,
                 useBasicInfo = prefs[useBasicInfoKey] ?: true,
                 useDetails = prefs[useDetailsKey] ?: true,
+                useReleaseDates = prefs[useReleaseDatesKey] ?: true,
                 useCredits = prefs[useCreditsKey] ?: true,
                 useProductions = prefs[useProductionsKey] ?: true,
                 useNetworks = prefs[useNetworksKey] ?: true,
@@ -83,6 +85,10 @@ class TmdbSettingsDataStore @Inject constructor(
 
     suspend fun setUseDetails(enabled: Boolean) {
         store().edit { it[useDetailsKey] = enabled }
+    }
+
+    suspend fun setUseReleaseDates(enabled: Boolean) {
+        store().edit { it[useReleaseDatesKey] = enabled }
     }
 
     suspend fun setUseCredits(enabled: Boolean) {

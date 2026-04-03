@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import com.nuvio.tv.domain.model.Subtitle
@@ -39,6 +40,42 @@ internal fun PlayerRuntimeController.showSeekOverlayTemporarily() {
         delay(1500)
         _uiState.update { it.copy(showSeekOverlay = false) }
     }
+}
+
+internal fun PlayerRuntimeController.selectedAudioRequiresPcmForSpeed(player: Player): Boolean {
+    player.currentTracks.groups.forEach { trackGroup ->
+        if (trackGroup.type != C.TRACK_TYPE_AUDIO) return@forEach
+        for (i in 0 until trackGroup.length) {
+            if (!trackGroup.isTrackSelected(i)) continue
+            val format = trackGroup.getTrackFormat(i)
+            val mimeType = format.sampleMimeType
+            if (mimeType != null && (
+                mimeType == MimeTypes.AUDIO_E_AC3 ||
+                mimeType == MimeTypes.AUDIO_E_AC3_JOC ||
+                mimeType == MimeTypes.AUDIO_AC3 ||
+                mimeType == MimeTypes.AUDIO_AC4 ||
+                mimeType == MimeTypes.AUDIO_TRUEHD ||
+                mimeType == MimeTypes.AUDIO_DTS ||
+                mimeType == MimeTypes.AUDIO_DTS_HD ||
+                mimeType == MimeTypes.AUDIO_DTS_EXPRESS ||
+                mimeType.startsWith("audio/vnd.dts")
+            )) {
+                return true
+            }
+            val codecs = format.codecs
+            if (codecs != null) {
+                if (codecs.contains("ac-3", ignoreCase = true) ||
+                    codecs.contains("ac-4", ignoreCase = true) ||
+                    codecs.contains("ec-3", ignoreCase = true) ||
+                    codecs.contains("dts", ignoreCase = true) ||
+                    codecs.contains("truehd", ignoreCase = true) ||
+                    codecs.contains("dtshd", ignoreCase = true)) {
+                    return true
+                }
+            }
+        }
+    }
+    return false
 }
 
 internal fun PlayerRuntimeController.selectAudioTrack(trackIndex: Int) {

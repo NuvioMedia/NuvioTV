@@ -4,6 +4,44 @@
     <string name="type_series">Series</string>
     <string name="type_unknown">Unknown</string>
 
+    <!-- WebConfigServers -->
+    <string name="web_manage_addons_title">Manage Addons</string>
+    <string name="web_manage_addons_subtitle">Manage addons and home catalogs</string>
+    <string name="web_add_addon_url">Add addon by URL</string>
+    <string name="web_placeholder_url">https://example.com/manifest.json</string>
+    <string name="web_btn_add">Add</string>
+    <string name="web_installed_addons">Installed Addons</string>
+    <string name="web_no_addons">No addons installed</string>
+    <string name="web_home_catalogs">Home Catalogs</string>
+    <string name="web_no_catalogs">No home catalogs available</string>
+    <string name="web_btn_save">Save Changes</string>
+    <string name="web_connection_lost">Connection to TV lost</string>
+    <string name="web_btn_remove">Remove</string>
+    <string name="web_badge_new">New</string>
+    <string name="web_badge_disabled">Disabled</string>
+    <string name="web_btn_enable">Enable</string>
+    <string name="web_btn_disable">Disable</string>
+    <string name="web_error_addon_exists">This addon is already in the list</string>
+    <string name="web_status_waiting_tv">Waiting for TV</string>
+    <string name="web_status_msg_waiting_tv">Please confirm the changes on your TV to apply them.</string>
+    <string name="web_status_changes_applied">Changes Applied</string>
+    <string name="web_status_msg_addon_updated">Your addon configuration has been updated on the TV.</string>
+    <string name="web_status_msg_repo_updated">Your repository configuration has been updated on the TV.</string>
+    <string name="web_status_changes_rejected">Changes Rejected</string>
+    <string name="web_status_msg_changes_rejected">The changes were declined on the TV. Your list has been reverted.</string>
+    <string name="web_status_error">Something Went Wrong</string>
+    <string name="web_error_failed_save">Failed to save. Check your connection to the TV.</string>
+    <string name="web_btn_dismiss">Dismiss</string>
+    <string name="web_status_timeout">Timed Out</string>
+    <string name="web_status_msg_timeout">No response from the TV. Please try again.</string>
+    <string name="web_status_msg_connection_lost">The TV server is no longer reachable. The changes may have been applied.</string>
+    <string name="web_manage_repos_title">Manage Repositories</string>
+    <string name="web_manage_repos_subtitle">Manage your repositories</string>
+    <string name="web_add_repo_url">Add repository by URL</string>
+    <string name="web_installed">Installed</string>
+    <string name="web_no_repos">No repositories installed</string>
+    <string name="web_error_repo_exists">This repository is already in the list</string>
+
     <!-- HomeScreen -->
     <string name="home_no_addons">No addons installed. Add one to get started.</string>
     <string name="home_no_catalog_addons">No catalog addons installed. Install a catalog addon to see content.</string>
@@ -566,7 +604,9 @@
     <string name="tmdb_basic_info_title">Basic Info</string>
     <string name="tmdb_basic_info_subtitle">Description, genres, and rating from TMDB</string>
     <string name="tmdb_details_title">Details</string>
-    <string name="tmdb_details_subtitle">Runtime, release date, country, and language from TMDB</string>
+    <string name="tmdb_details_subtitle">Runtime, status, country, and language from TMDB</string>
+    <string name="tmdb_release_dates_title">Release Dates</string>
+    <string name="tmdb_release_dates_subtitle">Release and air dates from TMDB</string>
     <string name="tmdb_credits_title">Credits</string>
     <string name="tmdb_credits_subtitle">Cast with photos, director, and writer from TMDB</string>
     <string name="tmdb_productions_title">Productions</string>
@@ -715,6 +755,7 @@
     <string name="profile_primary_label">Primary</string>
     <string name="profile_shares_primary">Shares primary\'s %1$s</string>
     <string name="profile_edit_label">Edit</string>
+    <string name="profile_edit_header">Edit Profile</string>
     <string name="profile_add">Add Profile</string>
     <string name="profile_create_title">Create Profile</string>
     <string name="profile_edit_title">Edit Profile %1$s</string>
@@ -826,6 +867,17 @@
 
     <!-- PlayerScreen -->
     <string name="player_no_external_player">No external player found</string>
+    <string name="player_loading_preparing">Preparing stream…</string>
+    <string name="player_loading_detecting_format">Detecting stream format…</string>
+    <string name="player_loading_subtitles">Fetching subtitles…</string>
+    <string name="player_loading_subtitles_from">Fetching subtitles from %1$d addons…</string>
+    <string name="player_loading_subtitles_progress">Fetching subtitles… (%1$d / %2$d)</string>
+    <string name="player_loading_subtitles_addon">Subtitles: %1$s (%2$d / %3$d)</string>
+    <string name="player_loading_building">Building player…</string>
+    <string name="player_loading_starting">Starting stream…</string>
+    <string name="player_loading_buffering">Buffering…</string>
+    <string name="playback_show_loading_status">Show loading status</string>
+    <string name="playback_show_loading_status_sub">Display step-by-step progress while the player is initializing.</string>
 
     <!-- ParentalGuideOverlay -->
     <string name="parental_nudity">Nudity</string>
@@ -888,6 +940,9 @@
     <string name="player_aspect_fit_width">Fit Width</string>
     <string name="player_aspect_fit_height">Fit Height</string>
     <string name="player_aspect_crop">Crop</string>
+    <string name="player_aspect_tunneling_unavailable">Unavailable during tunneled playback</string>
+    <string name="player_aspect_mode_slight_zoom">Slight Zoom</string>
+    <string name="player_aspect_mode_cinema_zoom">Cinema Zoom</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
@@ -915,6 +970,7 @@
     <string name="subtitle_tab_style">Style</string>
     <string name="subtitle_tab_delay">Delay</string>
     <string name="subtitle_none">None</string>
+    <string name="subtitle_built_in">Built in</string>
     <string name="subtitle_all">All</string>
     <string name="subtitle_section_core">Core</string>
     <string name="subtitle_section_advanced">Advanced</string>
@@ -1220,4 +1276,126 @@
     <string name="update_ignore">Ignore</string>
     <string name="watchlist_added">Added to watchlist</string>
     <string name="watchlist_removed">Removed from watchlist</string>
+
+    <!-- Profile PIN errors -->
+    <string name="profile_pin_save_error">Could not save PIN. Try again.</string>
+    <string name="profile_pin_locked">Profile is locked. Try again in %1$ds.</string>
+    <string name="profile_pin_invalid">Invalid PIN. Try again.</string>
+    <string name="profile_pin_verify_error">Could not verify PIN. Try again.</string>
+    <string name="profile_pin_incorrect">Current PIN is incorrect.</string>
+
+    <!-- Account Screen -->
+    <string name="account_signin_create_title">Sign In / Create Account</string>
+    <string name="account_signin_create_desc">Use email and password to create or sign into your account.</string>
+    <string name="account_generate_sync_desc">Create a code on this device so other devices can link to it.</string>
+    <string name="account_enter_sync_desc">Link this device to another device using a sync code.</string>
+    <string name="account_signed_in_as">Signed in as</string>
+    <string name="account_generate_sync_signed_in_desc">Create a code so other devices can sync with this account.</string>
+    <string name="account_unknown_device">Unknown Device</string>
+
+    <!-- Sync screens -->
+    <string name="sync_claim_linking">Linking\u2026</string>
+    <string name="sync_generate_generating">Generating\u2026</string>
+    <string name="sync_generate_code_btn">Generate Code</string>
+
+    <!-- Search -->
+    <string name="search_no_results_title">No Results</string>
+    <string name="search_no_results_subtitle">Try searching with different keywords</string>
+    <string name="discover_disabled_title">Discover is disabled</string>
+    <string name="discover_disabled_subtitle">Enable Search Discover in settings</string>
+
+    <!-- Library -->
+    <string name="library_list_create_dialog_title">Create List</string>
+    <string name="library_list_edit_dialog_title">Edit List</string>
+    <string name="library_sync_btn">Sync</string>
+    <string name="library_syncing_btn">Syncing\u2026</string>
+
+    <!-- Error messages (shared) -->
+    <string name="error_network_required">Connect to Wi-Fi or Ethernet to use this feature</string>
+    <string name="error_server_ports_unavailable">Could not start server. All ports in use.</string>
+
+    <!-- Plugin errors -->
+    <string name="plugin_error_invalid_url">Please enter a valid URL</string>
+    <string name="plugin_error_add_repo">Failed to add repository: %1$s</string>
+    <string name="plugin_error_refresh">Failed to refresh: %1$s</string>
+    <string name="plugin_error_test">Test failed: %1$s</string>
+    <string name="plugin_test_no_results">No results found</string>
+    <string name="plugin_test_found_streams">Found %1$d streams</string>
+
+    <!-- Trakt errors -->
+    <string name="trakt_error_code_expired">Device code expired. Start again.</string>
+    <string name="trakt_error_code_used">Device code already used. Start again.</string>
+    <string name="trakt_error_denied">Authorization denied on Trakt.</string>
+
+    <!-- Account errors -->
+    <string name="account_error_signin_required">Sign in with an account first.</string>
+
+    <!-- Search errors -->
+    <string name="search_error_no_catalogs">No searchable catalogs found in installed addons</string>
+
+    <!-- Home errors -->
+    <string name="home_error_no_addons">No addons installed</string>
+    <string name="home_error_no_catalog_addons">No catalog addons installed</string>
+
+    <!-- Player errors -->
+    <string name="player_error_no_stream_url">No stream URL provided</string>
+
+    <!-- Playback subtitle settings -->
+    <string name="sub_mode_overlay_canvas_sub">HDR support with canvas rendering. May block UI thread.</string>
+    <string name="subtitle_style_weight">Weight</string>
+
+    <!-- Plugin screen -->
+    <string name="plugin_version">Version %1$s</string>
+
+    <!-- Stream screen -->
+    <string name="stream_episode_label">S%1$d E%2$d</string>
+
+    <!-- Episode ratings -->
+    <string name="ratings_season_label">S%1$d</string>
+    <string name="ratings_episode_label">E%1$d</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_play">Play</string>
+    <string name="cd_pause">Pause</string>
+    <string name="cd_subtitles">Subtitles</string>
+    <string name="cd_audio_tracks">Audio tracks</string>
+    <string name="cd_sources">Sources</string>
+    <string name="cd_episodes">Episodes</string>
+    <string name="cd_playback_speed">Playback speed</string>
+    <string name="cd_aspect_ratio">Aspect ratio</string>
+    <string name="cd_open_external_player">Open in external player</string>
+    <string name="cd_stream_info">Stream info</string>
+    <string name="cd_more_actions">More actions</string>
+    <string name="cd_close_more_actions">Close more actions</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_next_episode_thumbnail">Next episode thumbnail</string>
+    <string name="cd_current">Current</string>
+    <string name="cd_loading_backdrop">Loading backdrop</string>
+    <string name="cd_loading_logo">Loading logo</string>
+    <string name="cd_move_up">Move up</string>
+    <string name="cd_move_down">Move down</string>
+    <string name="cd_qr_code">QR Code</string>
+    <string name="cd_add">Add</string>
+    <string name="cd_refresh">Refresh</string>
+    <string name="cd_remove">Remove</string>
+    <string name="cd_test">Test</string>
+    <string name="cd_unlink">Unlink</string>
+    <string name="cd_nuvio_logo">NuvioTV</string>
+    <string name="cd_trakt_logo">Trakt Logo</string>
+    <string name="cd_trakt_qr">Trakt activation QR</string>
+    <string name="cd_imdb">IMDb</string>
+    <string name="cd_open_discover">Open discover</string>
+    <string name="cd_voice_search">Voice search</string>
+    <string name="cd_donation_qr">Donation QR code</string>
+    <string name="cd_contributor_qr">Contributor support QR code</string>
+    <string name="cd_expand">Expand %1$s</string>
+    <string name="cd_collapse">Collapse %1$s</string>
+    <string name="cd_qr_login">QR login code</string>
+    <string name="cd_nuvio">Nuvio</string>
+
+    <!-- Debug -->
+    <string name="debug_signin_success">Signed in successfully</string>
+    <string name="debug_generate_description">Debug-generated %1$s item #%2$d</string>
+    <string name="debug_generate_result_failed">Failed: %1$s</string>
+
 </resources>

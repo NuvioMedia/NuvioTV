@@ -509,8 +509,8 @@ fun SearchScreen(
                     uiState.catalogRows.isEmpty() || uiState.catalogRows.none { it.items.isNotEmpty() } -> {
                         item {
                             EmptyScreenState(
-                                title = "No Results",
-                                subtitle = "Try searching with different keywords",
+                                title = stringResource(R.string.search_no_results_title),
+                                subtitle = stringResource(R.string.search_no_results_subtitle),
                                 icon = Icons.Default.Search
                             )
                         }
@@ -603,7 +603,7 @@ private fun SearchInputField(
         ) {
             Icon(
                 imageVector = Icons.Default.Explore,
-                contentDescription = "Open discover",
+                contentDescription = stringResource(R.string.cd_open_discover),
                 tint = NuvioColors.TextPrimary
             )
         }
@@ -635,7 +635,7 @@ private fun SearchInputField(
             ) {
                 Icon(
                     imageVector = Icons.Default.Mic,
-                    contentDescription = "Voice search",
+                    contentDescription = stringResource(R.string.cd_voice_search),
                     tint = if (isVoiceListening) NuvioColors.Primary else NuvioColors.TextPrimary
                 )
             }

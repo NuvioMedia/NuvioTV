@@ -151,7 +151,7 @@ fun TraktScreen(
         ) {
             Image(
                 painter = traktLogoPainter,
-                contentDescription = "Trakt Logo",
+                contentDescription = stringResource(R.string.cd_trakt_logo),
                 modifier = Modifier.size(96.dp),
                 contentScale = ContentScale.Fit
             )
@@ -234,7 +234,7 @@ fun TraktScreen(
                     if (qrBitmap != null) {
                         Image(
                             bitmap = qrBitmap.asImageBitmap(),
-                            contentDescription = "Trakt activation QR",
+                            contentDescription = stringResource(R.string.cd_trakt_qr),
                             modifier = Modifier.size(180.dp),
                             contentScale = ContentScale.Fit
                         )

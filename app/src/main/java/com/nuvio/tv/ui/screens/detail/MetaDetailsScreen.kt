@@ -57,6 +57,8 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
@@ -1185,6 +1187,7 @@ private fun MetaDetailsContent(
     val configuration = LocalConfiguration.current
     val localContext = LocalContext.current
     val localDensity = LocalDensity.current
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val screenWidthDp = remember(configuration) { configuration.screenWidthDp.dp }
     val screenHeightDp = remember(configuration) { configuration.screenHeightDp.dp }
     val backdropWidthPx = remember(screenWidthDp, localDensity) {
@@ -1232,28 +1235,48 @@ private fun MetaDetailsContent(
         }
     }
 
-    val leftGradientBitmap = remember(backgroundColor, backdropWidthPx, backdropHeightPx) {
+    val leftGradientBitmap = remember(backgroundColor, backdropWidthPx, backdropHeightPx, isRtl) {
         val w = backdropWidthPx.coerceAtLeast(1)
         val h = backdropHeightPx.coerceAtLeast(1)
         val transparent = backgroundColor.copy(alpha = 0f).toArgb()
         val bmp = android.graphics.Bitmap.createBitmap(w, 2, android.graphics.Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bmp)
-        val shader = android.graphics.LinearGradient(
-            0f, 0f, w * 0.78f, 0f,
-            intArrayOf(
-                backgroundColor.copy(alpha = 1f).toArgb(),
-                backgroundColor.copy(alpha = 0.95f).toArgb(),
-                backgroundColor.copy(alpha = 0.84f).toArgb(),
-                backgroundColor.copy(alpha = 0.70f).toArgb(),
-                backgroundColor.copy(alpha = 0.52f).toArgb(),
-                backgroundColor.copy(alpha = 0.34f).toArgb(),
-                backgroundColor.copy(alpha = 0.18f).toArgb(),
-                backgroundColor.copy(alpha = 0.07f).toArgb(),
-                transparent
-            ),
-            floatArrayOf(0f, 0.10f, 0.22f, 0.36f, 0.52f, 0.66f, 0.78f, 0.90f, 1f),
-            android.graphics.Shader.TileMode.CLAMP
-        )
+        val fadeWidth = w * 0.78f
+        val shader = if (isRtl) {
+            android.graphics.LinearGradient(
+                w.toFloat(), 0f, w - fadeWidth, 0f,
+                intArrayOf(
+                    backgroundColor.copy(alpha = 1f).toArgb(),
+                    backgroundColor.copy(alpha = 0.95f).toArgb(),
+                    backgroundColor.copy(alpha = 0.84f).toArgb(),
+                    backgroundColor.copy(alpha = 0.70f).toArgb(),
+                    backgroundColor.copy(alpha = 0.52f).toArgb(),
+                    backgroundColor.copy(alpha = 0.34f).toArgb(),
+                    backgroundColor.copy(alpha = 0.18f).toArgb(),
+                    backgroundColor.copy(alpha = 0.07f).toArgb(),
+                    transparent
+                ),
+                floatArrayOf(0f, 0.10f, 0.22f, 0.36f, 0.52f, 0.66f, 0.78f, 0.90f, 1f),
+                android.graphics.Shader.TileMode.CLAMP
+            )
+        } else {
+            android.graphics.LinearGradient(
+                0f, 0f, fadeWidth, 0f,
+                intArrayOf(
+                    backgroundColor.copy(alpha = 1f).toArgb(),
+                    backgroundColor.copy(alpha = 0.95f).toArgb(),
+                    backgroundColor.copy(alpha = 0.84f).toArgb(),
+                    backgroundColor.copy(alpha = 0.70f).toArgb(),
+                    backgroundColor.copy(alpha = 0.52f).toArgb(),
+                    backgroundColor.copy(alpha = 0.34f).toArgb(),
+                    backgroundColor.copy(alpha = 0.18f).toArgb(),
+                    backgroundColor.copy(alpha = 0.07f).toArgb(),
+                    transparent
+                ),
+                floatArrayOf(0f, 0.10f, 0.22f, 0.36f, 0.52f, 0.66f, 0.78f, 0.90f, 1f),
+                android.graphics.Shader.TileMode.CLAMP
+            )
+        }
         canvas.drawRect(0f, 0f, w.toFloat(), 2f, android.graphics.Paint().apply {
             this.shader = shader
         })
@@ -1735,6 +1758,9 @@ private fun BackdropLayer(
     leftGradient: ImageBitmap,
     bottomGradient: ImageBitmap,
 ) {
+    var showHeroBackdropUnderlay by remember(heroBackdropRequest, backdropRequest) {
+        mutableStateOf(heroBackdropRequest != null)
+    }
     val backdropAlphaState = animateFloatAsState(
         targetValue = if (isTrailerPlaying) 0f else if (isScrolledPastHero) 0.15f else 1f,
         animationSpec = tween(durationMillis = if (isScrolledPastHero) 300 else 800),
@@ -1748,7 +1774,7 @@ private fun BackdropLayer(
     Box(modifier = Modifier.fillMaxSize()) {
         // Show hero backdrop from previous screen as persistent underlay
         // to prevent flash/re-render during navigation transition
-        if (heroBackdropRequest != null) {
+        if (showHeroBackdropUnderlay && heroBackdropRequest != null) {
             AsyncImage(
                 model = heroBackdropRequest,
                 contentDescription = null,
@@ -1763,6 +1789,7 @@ private fun BackdropLayer(
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             alpha = backdropAlphaState.value,
+            onSuccess = { showHeroBackdropUnderlay = false },
             contentScale = ContentScale.Crop,
             alignment = Alignment.TopEnd
         )

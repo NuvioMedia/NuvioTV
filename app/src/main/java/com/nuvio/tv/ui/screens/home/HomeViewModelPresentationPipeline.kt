@@ -375,7 +375,8 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
 
     val tmdbEnabledForCurrentLayout = currentTmdbSettings.enabled &&
         (_uiState.value.homeLayout != HomeLayout.MODERN || currentTmdbSettings.modernHomeEnabled)
-    val willEnrich = tmdbEnabledForCurrentLayout || externalMetaPrefetchEnabled
+    val mdbListEnabledForHome = currentMdbListSettings.enabled && currentMdbListSettings.apiKey.isNotBlank()
+    val willEnrich = tmdbEnabledForCurrentLayout || externalMetaPrefetchEnabled || mdbListEnabledForHome
 
     if (willEnrich) setEnrichingItemId(item.id)
 
@@ -394,20 +395,46 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
 
         try {
             var tmdbEnriched = false
+            val mdbSettings = currentMdbListSettings
+            val mdbEnabled = mdbSettings.enabled && mdbSettings.apiKey.isNotBlank()
+
+            // Start MDBList fetch immediately, independent of TMDB
+            val mdbRatingDeferred = if (mdbEnabled) async {
+                runCatching {
+                    mdbListRepository.getImdbRatingForItem(item.id, item.apiType)
+                }.getOrNull()
+            } else null
+
             if (tmdbEnabledForCurrentLayout) {
                 val tmdbId = runCatching { tmdbService.ensureTmdbId(item.id, item.apiType) }.getOrNull()
-                val enrichment = if (tmdbId != null) runCatching {
-                    tmdbMetadataService.fetchEnrichment(
-                        tmdbId = tmdbId,
-                        contentType = item.type,
-                        language = currentTmdbSettings.language
-                    )
-                }.getOrNull() else null
+
+                val enrichmentDeferred = if (tmdbId != null) async {
+                    runCatching {
+                        tmdbMetadataService.fetchEnrichment(
+                            tmdbId = tmdbId,
+                            contentType = item.type,
+                            language = currentTmdbSettings.language
+                        )
+                    }.getOrNull()
+                } else null
+
+                val enrichment = enrichmentDeferred?.await()
+                val mdbImdbRating = mdbRatingDeferred?.await()
+
                 if (enrichment != null) {
                     prefetchedTmdbIds.add(item.id)
                     prefetchedExternalMetaIds.add(item.id)
-                    updateCatalogItemWithTmdb(item.id, enrichment)
+                    val finalEnrichment = if (mdbImdbRating != null) enrichment.copy(rating = mdbImdbRating) else enrichment
+                    updateCatalogItemWithTmdb(item.id, finalEnrichment)
                     tmdbEnriched = true
+                } else if (mdbImdbRating != null) {
+                    updateCatalogItemImdbRating(item.id, mdbImdbRating.toFloat())
+                }
+            } else {
+                // TMDB disabled - apply MDBList rating alone if available
+                val mdbImdbRating = mdbRatingDeferred?.await()
+                if (mdbImdbRating != null) {
+                    updateCatalogItemImdbRating(item.id, mdbImdbRating.toFloat())
                 }
             }
             if (!tmdbEnriched && externalMetaPrefetchEnabled &&
@@ -510,6 +537,11 @@ private fun HomeViewModel.updateCatalogItemWithTmdb(itemId: String, enrichment: 
                 status = enrichment.status ?: merged.status
             )
         }
+        if (currentTmdbSettings.useReleaseDates) {
+            merged = merged.copy(
+                releaseInfo = enrichment.releaseInfo ?: merged.releaseInfo
+            )
+        }
         return merged
     }
 
@@ -538,6 +570,39 @@ private fun HomeViewModel.updateCatalogItemWithTmdb(itemId: String, enrichment: 
                     changed = true
                     val mutableItems = row.items.toMutableList()
                     mutableItems[idx] = mergedItem
+                    row.copy(items = mutableItems)
+                }
+            }
+        }
+        if (changed) state.copy(catalogRows = updatedRows) else state
+    }
+}
+
+internal fun HomeViewModel.updateCatalogItemImdbRating(itemId: String, rating: Float) {
+    catalogsMap.forEach { (key, row) ->
+        val idx = row.items.indexOfFirst { it.id == itemId }
+        if (idx >= 0) {
+            val updated = row.items[idx].copy(imdbRating = rating)
+            if (updated != row.items[idx]) {
+                val mutableItems = row.items.toMutableList()
+                mutableItems[idx] = updated
+                catalogsMap[key] = row.copy(items = mutableItems)
+                truncatedRowCache.remove(key)
+            }
+        }
+    }
+    _uiState.update { state ->
+        var changed = false
+        val updatedRows = state.catalogRows.map { row ->
+            val idx = row.items.indexOfFirst { it.id == itemId }
+            if (idx < 0) row
+            else {
+                val updated = row.items[idx].copy(imdbRating = rating)
+                if (updated == row.items[idx]) row
+                else {
+                    changed = true
+                    val mutableItems = row.items.toMutableList()
+                    mutableItems[idx] = updated
                     row.copy(items = mutableItems)
                 }
             }
@@ -618,23 +683,30 @@ internal suspend fun HomeViewModel.enrichHeroItemsPipeline(
     settings: TmdbSettings
 ): List<MetaPreview> {
     if (items.isEmpty()) return items
+    val mdbSettings = currentMdbListSettings
+    val mdbEnabled = mdbSettings.enabled && mdbSettings.apiKey.isNotBlank()
 
     return coroutineScope {
         items.map { item ->
             async(Dispatchers.IO) {
                 try {
-                    val tmdbId = tmdbService.ensureTmdbId(item.id, item.apiType) ?: return@async item
-
-                    //Pre-warm resolveMetaLookupId returns instantly from cache.
-                    tmdbId.toIntOrNull()?.let { numericId ->
-                        runCatching { tmdbService.tmdbToImdb(numericId, item.apiType) }
+                    val tmdbDeferred = async {
+                        val tmdbId = tmdbService.ensureTmdbId(item.id, item.apiType) ?: return@async null
+                        tmdbId.toIntOrNull()?.let { numericId ->
+                            runCatching { tmdbService.tmdbToImdb(numericId, item.apiType) }
+                        }
+                        tmdbMetadataService.fetchEnrichment(
+                            tmdbId = tmdbId,
+                            contentType = item.type,
+                            language = settings.language
+                        )
                     }
+                    val mdbDeferred = if (mdbEnabled) async {
+                        runCatching { mdbListRepository.getImdbRatingForItem(item.id, item.apiType) }.getOrNull()
+                    } else null
 
-                    val enrichment = tmdbMetadataService.fetchEnrichment(
-                        tmdbId = tmdbId,
-                        contentType = item.type,
-                        language = settings.language
-                    ) ?: return@async item
+                    val enrichment = tmdbDeferred.await() ?: return@async item
+                    val mdbImdbRating = mdbDeferred?.await()
 
                     var enriched = item
 
@@ -651,18 +723,23 @@ internal suspend fun HomeViewModel.enrichHeroItemsPipeline(
                             name = enrichment.localizedTitle ?: enriched.name,
                             description = enrichment.description ?: enriched.description,
                             genres = if (enrichment.genres.isNotEmpty()) enrichment.genres else enriched.genres,
-                            imdbRating = enrichment.rating?.toFloat() ?: enriched.imdbRating
+                            imdbRating = mdbImdbRating?.toFloat() ?: enrichment.rating?.toFloat() ?: enriched.imdbRating
                         )
                     }
 
                     if (settings.useDetails) {
                         enriched = enriched.copy(
                             runtime = enrichment.runtimeMinutes?.toString() ?: enriched.runtime,
-                            releaseInfo = enrichment.releaseInfo ?: enriched.releaseInfo,
                             status = enrichment.status ?: enriched.status,
                             ageRating = enrichment.ageRating ?: enriched.ageRating,
                             country = enrichment.countries?.joinToString(", ") ?: enriched.country,
                             language = enrichment.language ?: enriched.language
+                        )
+                    }
+
+                    if (settings.useReleaseDates) {
+                        enriched = enriched.copy(
+                            releaseInfo = enrichment.releaseInfo ?: enriched.releaseInfo
                         )
                     }
 

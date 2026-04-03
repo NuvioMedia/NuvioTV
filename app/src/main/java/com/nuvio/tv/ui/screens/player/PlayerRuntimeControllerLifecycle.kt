@@ -8,6 +8,7 @@ internal fun PlayerRuntimeController.releasePlayer() {
 }
 
 internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) {
+    isReleasingPlayer = true
     if (flushPlaybackState) {
         flushPlaybackSnapshotForSwitchOrExit()
     }
@@ -33,8 +34,16 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     nextEpisodeAutoPlayJob = null
     errorRetryJob?.cancel()
     errorRetryJob = null
-    _exoPlayer?.release()
+    _exoPlayer?.let { player ->
+        runCatching { player.playWhenReady = false }
+        runCatching { player.pause() }
+        runCatching { player.clearVideoSurface() }
+        runCatching { player.stop() }
+        runCatching { player.release() }
+    }
     _exoPlayer = null
+    playbackSpeedAwareAudioOutputProvider = null
+    isReleasingPlayer = false
 }
 
 internal fun PlayerRuntimeController.notifyAudioSessionUpdate(active: Boolean) {

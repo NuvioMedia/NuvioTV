@@ -208,7 +208,7 @@ class TraktViewModel @Inject constructor(
         if (!traktAuthService.hasRequiredCredentials()) {
             _uiState.update {
                 it.copy(
-                    errorMessage = "Missing TRAKT_CLIENT_ID or TRAKT_CLIENT_SECRET in local.properties",
+                    errorMessage = context.getString(R.string.trakt_missing_credentials),
                     credentialsConfigured = false
                 )
             }
@@ -478,7 +478,7 @@ class TraktViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isPolling = false,
-                            errorMessage = "Device code expired. Start again.",
+                            errorMessage = context.getString(R.string.trakt_error_code_expired),
                             statusMessage = null
                         )
                     }
@@ -500,7 +500,7 @@ class TraktViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isPolling = false,
-                                errorMessage = "Device code already used. Start again.",
+                                errorMessage = context.getString(R.string.trakt_error_code_used),
                                 statusMessage = null
                             )
                         }
@@ -511,7 +511,7 @@ class TraktViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isPolling = false,
-                                errorMessage = "Device code expired. Start again.",
+                                errorMessage = context.getString(R.string.trakt_error_code_expired),
                                 statusMessage = null
                             )
                         }
@@ -522,7 +522,7 @@ class TraktViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isPolling = false,
-                                errorMessage = "Authorization denied on Trakt.",
+                                errorMessage = context.getString(R.string.trakt_error_denied),
                                 statusMessage = null
                             )
                         }

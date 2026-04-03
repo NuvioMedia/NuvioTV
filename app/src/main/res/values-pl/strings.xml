@@ -162,6 +162,8 @@
     <string name="playback_section_general_desc">Podstawowe zachowanie odtwarzacza.</string>
     <string name="playback_loading_overlay">Ekan ładowania</string>
     <string name="playback_loading_overlay_sub">Pokaż ekran ładowania do pojawienia się pierwszej klatki.</string>
+    <string name="playback_show_loading_status">Pokaż status ładowania</string>
+    <string name="playback_show_loading_status_sub">Wyświetlaj postęp krok po kroku podczas inicjalizacji odtwarzacza.</string>
     <string name="playback_pause_overlay">Ekran pauzy</string>
     <string name="playback_pause_overlay_sub">Pokaż ekran ze szczegółami po 5 sekundach pauzy.</string>
     <string name="playback_show_clock_sub">Pokaż aktualny czas i czas zakończenia podczas wyświetlania kontrolek.</string>
@@ -448,7 +450,9 @@
     <string name="tmdb_basic_info_title">Podstawowe informacje</string>
     <string name="tmdb_basic_info_subtitle">Opis, gatunki i ocena z TMDB</string>
     <string name="tmdb_details_title">Szczegóły</string>
-    <string name="tmdb_details_subtitle">Czas trwania, data premiery, kraj i język z TMDB</string>
+    <string name="tmdb_details_subtitle">Czas trwania, status, kraj i język z TMDB</string>
+    <string name="tmdb_release_dates_title">Daty premier</string>
+    <string name="tmdb_release_dates_subtitle">Daty premiery i emisji z TMDB</string>
     <string name="tmdb_credits_title">Obsada</string>
     <string name="tmdb_credits_subtitle">Obsada ze zdjęciami, reżyser i scenarzysta z TMDB</string>
     <string name="tmdb_productions_title">Produkcje</string>
@@ -631,6 +635,15 @@
     <string name="parental_severity_mild">Łagodne</string>
     <string name="player_via">przez %1$s</string>
     <string name="player_subtitle_delay">Opóźnienie napisów</string>
+    <string name="player_loading_preparing">Przygotowywanie strumienia…</string>
+    <string name="player_loading_detecting_format">Wykrywanie formatu strumienia…</string>
+    <string name="player_loading_subtitles">Pobieranie napisów…</string>
+    <string name="player_loading_subtitles_from">Pobieranie napisów z %1$d dodatków…</string>
+    <string name="player_loading_subtitles_progress">Pobieranie napisów… (%1$d / %2$d)</string>
+    <string name="player_loading_subtitles_addon">Napisy: %1$s (%2$d / %3$d)</string>
+    <string name="player_loading_building">Budowanie odtwarzacza…</string>
+    <string name="player_loading_starting">Uruchamianie strumienia…</string>
+    <string name="player_loading_buffering">Buforowanie…</string>
     <string name="player_error_title">Błąd odtwarzania</string>
     <string name="player_go_back">Wróć</string>
     <string name="player_speed_title">Prędkość odtwarzania</string>
@@ -698,6 +711,7 @@
     <string name="subtitle_tab_style">Styl</string>
     <string name="subtitle_tab_delay">Opóźnienie</string>
     <string name="subtitle_none">Brak</string>
+    <string name="subtitle_built_in">Wbudowane</string>
     <string name="subtitle_all">Wszystkie</string>
     <string name="subtitle_section_core">Podstawowe</string>
     <string name="subtitle_section_advanced">Zaawansowane</string>
@@ -975,7 +989,7 @@
     <string name="contributors_empty">Nie znaleziono jeszcze współtwórców.</string>
     <string name="contributors_error_title">Nie można załadować współtwórców</string>
     <string name="contributors_total_contributions">%1$d łącznych wkładów</string>
-    <string name="contributors_open_github">Otwórz profil GitHub</string>
+    <string name="contributors_open_github">Otwórz GitHub</string>
     <string name="contributors_show_kofi_qr">Pokaż QR Ko-fi</string>
     <string name="contributors_hide_kofi_qr">Ukryj QR Ko-fi</string>
     <string name="contributors_profile_unavailable">Link do profilu GitHub niedostępny.</string>
@@ -1190,4 +1204,149 @@
     <string name="genre_war">Wojenny</string>
     <string name="genre_war_politics">Wojna i polityka</string>
     <string name="genre_western">Western</string>
+
+    <string name="app_name">Nuvio</string>
+    <string name="type_unknown">Nieznany</string>
+
+    <string name="cd_play">Odtwórz</string>
+    <string name="cd_pause">Pauza</string>
+    <string name="cd_subtitles">Napisy</string>
+    <string name="cd_audio_tracks">Ścieżki audio</string>
+    <string name="cd_sources">Źródła</string>
+    <string name="cd_episodes">Odcinki</string>
+    <string name="cd_playback_speed">Prędkość odtwarzania</string>
+    <string name="cd_aspect_ratio">Proporcje obrazu</string>
+    <string name="cd_open_external_player">Otwórz w zewnętrznym odtwarzaczu</string>
+    <string name="cd_stream_info">Informacje o strumieniu</string>
+    <string name="cd_more_actions">Więcej akcji</string>
+    <string name="cd_close_more_actions">Zamknij więcej akcji</string>
+    <string name="cd_back">Wstecz</string>
+    <string name="cd_next_episode_thumbnail">Miniatura następnego odcinka</string>
+    <string name="cd_current">Bieżący</string>
+    <string name="cd_loading_backdrop">Ładowanie tła</string>
+    <string name="cd_loading_logo">Ładowanie logo</string>
+    <string name="cd_move_up">Przesuń w górę</string>
+    <string name="cd_move_down">Przesuń w dół</string>
+    <string name="cd_qr_code">Kod QR</string>
+    <string name="cd_add">Dodaj</string>
+    <string name="cd_refresh">Odśwież</string>
+    <string name="cd_remove">Usuń</string>
+    <string name="cd_test">Test</string>
+    <string name="cd_unlink">Odłącz</string>
+    <string name="cd_nuvio_logo">NuvioTV</string>
+    <string name="cd_trakt_logo">Logo Trakt</string>
+    <string name="cd_trakt_qr">Kod QR aktywacji Trakt</string>
+    <string name="cd_imdb">IMDb</string>
+    <string name="cd_open_discover">Otwórz odkrywaj</string>
+    <string name="cd_voice_search">Wyszukiwanie głosowe</string>
+    <string name="cd_donation_qr">Kod QR darowizny</string>
+    <string name="cd_contributor_qr">Kod QR wsparcia współtwórcy</string>
+    <string name="cd_expand">Rozwiń %1$s</string>
+    <string name="cd_collapse">Zwiń %1$s</string>
+    <string name="cd_qr_login">Kod QR logowania</string>
+    <string name="cd_nuvio">Nuvio</string>
+
+    <string name="account_signin_create_title">Zaloguj się / Utwórz konto</string>
+    <string name="account_signin_create_desc">Użyj adresu e-mail i hasła, aby utworzyć lub zalogować się na konto.</string>
+    <string name="account_generate_sync_desc">Utwórz kod na tym urządzeniu, aby inne urządzenia mogły się z nim połączyć.</string>
+    <string name="account_enter_sync_desc">Połącz to urządzenie z innym urządzeniem za pomocą kodu synchronizacji.</string>
+    <string name="account_signed_in_as">Zalogowano jako</string>
+    <string name="account_generate_sync_signed_in_desc">Utwórz kod, aby inne urządzenia mogły synchronizować się z tym kontem.</string>
+    <string name="account_unknown_device">Nieznane urządzenie</string>
+    <string name="account_error_signin_required">Najpierw zaloguj się na konto.</string>
+
+    <string name="debug_signin_success">Zalogowano pomyślnie</string>
+    <string name="debug_generate_description">Element wygenerowany przez debug %1$s nr %2$d</string>
+    <string name="debug_generate_result_failed">Błąd: %1$s</string>
+
+    <string name="discover_disabled_title">Odkrywaj jest wyłączone</string>
+    <string name="discover_disabled_subtitle">Włącz Odkrywaj w wyszukiwarce w ustawieniach</string>
+
+    <string name="error_network_required">Połącz się z Wi-Fi lub Ethernet, aby użyć tej funkcji</string>
+    <string name="error_server_ports_unavailable">Nie można uruchomić serwera. Wszystkie porty są zajęte.</string>
+
+    <string name="home_error_no_addons">Brak zainstalowanych dodatków</string>
+    <string name="home_error_no_catalog_addons">Brak zainstalowanych dodatków katalogowych</string>
+
+    <string name="library_list_create_dialog_title">Utwórz listę</string>
+    <string name="library_list_edit_dialog_title">Edytuj listę</string>
+    <string name="library_sync_btn">Synchronizuj</string>
+    <string name="library_syncing_btn">Synchronizowanie…</string>
+
+    <string name="player_aspect_tunneling_unavailable">Niedostępne podczas tunelowanego odtwarzania</string>
+    <string name="player_aspect_mode_slight_zoom">Lekkie powiększenie</string>
+    <string name="player_aspect_mode_cinema_zoom">Powiększenie kinowe</string>
+    <string name="player_error_no_stream_url">Nie podano adresu URL strumienia</string>
+
+    <string name="plugin_error_invalid_url">Podaj prawidłowy adres URL</string>
+    <string name="plugin_error_add_repo">Nie udało się dodać repozytorium: %1$s</string>
+    <string name="plugin_error_refresh">Nie udało się odświeżyć: %1$s</string>
+    <string name="plugin_error_test">Test nieudany: %1$s</string>
+    <string name="plugin_test_no_results">Nie znaleziono wyników</string>
+    <string name="plugin_test_found_streams">Znaleziono %1$d strumieni</string>
+    <string name="plugin_version">Wersja %1$s</string>
+
+    <string name="profile_edit_header">Edytuj profil</string>
+    <string name="profile_pin_save_error">Nie można zapisać PIN-u. Spróbuj ponownie.</string>
+    <string name="profile_pin_locked">Profil jest zablokowany. Spróbuj ponownie za %1$ds.</string>
+    <string name="profile_pin_invalid">Nieprawidłowy PIN. Spróbuj ponownie.</string>
+    <string name="profile_pin_verify_error">Nie można zweryfikować PIN-u. Spróbuj ponownie.</string>
+    <string name="profile_pin_incorrect">Bieżący PIN jest nieprawidłowy.</string>
+
+    <string name="ratings_season_label">S%1$d</string>
+    <string name="ratings_episode_label">E%1$d</string>
+
+    <string name="search_no_results_title">Brak wyników</string>
+    <string name="search_no_results_subtitle">Spróbuj wyszukać z innymi słowami kluczowymi</string>
+    <string name="search_error_no_catalogs">Nie znaleziono katalogów z możliwością wyszukiwania w zainstalowanych dodatkach</string>
+
+    <string name="stream_episode_label">S%1$d E%2$d</string>
+
+    <string name="sub_mode_overlay_canvas_sub">Obsługa HDR z renderowaniem Canvas. Może blokować wątek UI.</string>
+    <string name="subtitle_style_weight">Grubość</string>
+
+    <string name="sync_claim_linking">Łączenie\u2026</string>
+    <string name="sync_generate_generating">Generowanie\u2026</string>
+    <string name="sync_generate_code_btn">Generuj kod</string>
+
+    <string name="trakt_error_code_expired">Kod urządzenia wygasł. Zacznij od nowa.</string>
+    <string name="trakt_error_code_used">Kod urządzenia już użyty. Zacznij od nowa.</string>
+    <string name="trakt_error_denied">Autoryzacja odrzucona w Trakt.</string>
+
+    <string name="web_manage_addons_title">Zarządzaj dodatkami</string>
+    <string name="web_manage_addons_subtitle">Zarządzaj dodatkami i katalogami strony głównej</string>
+    <string name="web_add_addon_url">Dodaj dodatek przez URL</string>
+    <string name="web_placeholder_url">https://example.com/manifest.json</string>
+    <string name="web_btn_add">Dodaj</string>
+    <string name="web_installed_addons">Zainstalowane dodatki</string>
+    <string name="web_no_addons">Brak zainstalowanych dodatków</string>
+    <string name="web_home_catalogs">Katalogi strony głównej</string>
+    <string name="web_no_catalogs">Brak dostępnych katalogów</string>
+    <string name="web_btn_save">Zapisz zmiany</string>
+    <string name="web_connection_lost">Utracono połączenie z TV</string>
+    <string name="web_btn_remove">Usuń</string>
+    <string name="web_badge_new">Nowy</string>
+    <string name="web_badge_disabled">Wyłączony</string>
+    <string name="web_btn_enable">Włącz</string>
+    <string name="web_btn_disable">Wyłącz</string>
+    <string name="web_btn_dismiss">Zamknij</string>
+    <string name="web_installed">Zainstalowany</string>
+    <string name="web_error_addon_exists">Ten dodatek jest już na liście</string>
+    <string name="web_error_repo_exists">To repozytorium jest już na liście</string>
+    <string name="web_error_failed_save">Nie udało się zapisać. Sprawdź połączenie z TV.</string>
+    <string name="web_no_repos">Brak zainstalowanych repozytoriów</string>
+    <string name="web_manage_repos_title">Zarządzaj repozytoriami</string>
+    <string name="web_manage_repos_subtitle">Zarządzaj swoimi repozytoriami</string>
+    <string name="web_add_repo_url">Dodaj repozytorium przez URL</string>
+    <string name="web_status_waiting_tv">Oczekiwanie na TV</string>
+    <string name="web_status_msg_waiting_tv">Potwierdź zmiany na TV, aby je zastosować.</string>
+    <string name="web_status_changes_applied">Zmiany zastosowane</string>
+    <string name="web_status_msg_addon_updated">Konfiguracja dodatków została zaktualizowana na TV.</string>
+    <string name="web_status_msg_repo_updated">Konfiguracja repozytoriów została zaktualizowana na TV.</string>
+    <string name="web_status_changes_rejected">Zmiany odrzucone</string>
+    <string name="web_status_msg_changes_rejected">Zmiany zostały odrzucone na TV. Lista została przywrócona.</string>
+    <string name="web_status_error">Coś poszło nie tak</string>
+    <string name="web_status_timeout">Przekroczono czas</string>
+    <string name="web_status_msg_timeout">Brak odpowiedzi z TV. Spróbuj ponownie.</string>
+    <string name="web_status_msg_connection_lost">Serwer TV jest nieosiągalny. Zmiany mogły zostać zastosowane.</string>
 </resources>

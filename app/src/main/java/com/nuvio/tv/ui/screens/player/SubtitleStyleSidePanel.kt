@@ -144,7 +144,7 @@ internal fun SubtitleStyleSidePanel(
                         .width(StyleCardWidth)
                         .height(StyleCardHeight)
                 ) {
-                    SubtitleStyleSettingRow(label = "Weight") {
+                    SubtitleStyleSettingRow(label = stringResource(R.string.subtitle_style_weight)) {
                         SubtitleStyleToggleButton(
                             isEnabled = subtitleStyle.bold,
                             onClick = { onEvent(PlayerEvent.OnSetSubtitleBold(!subtitleStyle.bold)) }
@@ -387,7 +387,7 @@ private fun SubtitleStyleColorChip(
         shape = IconButtonDefaults.shape(shape = CircleShape)
     ) {
         if (isSelected) {
-            Icon(Icons.Default.Check, contentDescription = "Selected", modifier = Modifier.size(15.dp))
+            Icon(Icons.Default.Check, contentDescription = stringResource(R.string.cd_selected), modifier = Modifier.size(15.dp))
         }
     }
 }

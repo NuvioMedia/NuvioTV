@@ -22,6 +22,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 import com.nuvio.tv.ui.components.EmptyScreenState
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
@@ -71,8 +73,8 @@ fun DiscoverScreen(
     ) {
         if (!uiState.discoverEnabled) {
             EmptyScreenState(
-                title = "Discover is disabled",
-                subtitle = "Enable Search Discover in settings",
+                title = stringResource(R.string.discover_disabled_title),
+                subtitle = stringResource(R.string.discover_disabled_subtitle),
                 icon = Icons.Default.Search
             )
         } else {

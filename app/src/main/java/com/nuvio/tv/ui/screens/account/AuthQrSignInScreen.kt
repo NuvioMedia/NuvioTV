@@ -135,7 +135,7 @@ fun AuthQrSignInScreen(
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.app_logo_wordmark),
-                    contentDescription = "Nuvio",
+                    contentDescription = stringResource(R.string.cd_nuvio),
                     modifier = Modifier
                         .fillMaxWidth(0.85f)
                         .height(60.dp),
@@ -221,7 +221,7 @@ fun AuthQrSignInScreen(
                     if (uiState.qrLoginBitmap != null) {
                         Image(
                             bitmap = uiState.qrLoginBitmap!!.asImageBitmap(),
-                            contentDescription = "QR login code",
+                            contentDescription = stringResource(R.string.cd_qr_login),
                             modifier = Modifier
                                 .size(200.dp)
                                 .background(Color.White, RoundedCornerShape(12.dp))

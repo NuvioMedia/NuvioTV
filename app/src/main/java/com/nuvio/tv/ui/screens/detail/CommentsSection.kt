@@ -126,7 +126,7 @@ fun CommentsSection(
         ) {
             Image(
                 painter = painterResource(id = R.drawable.trakt_logo_wordmark),
-                contentDescription = "Trakt",
+                contentDescription = stringResource(R.string.cd_trakt_logo),
                 modifier = Modifier
                     .offset(y = (-1).dp)
                     .width(47.dp)
@@ -441,7 +441,7 @@ fun CommentOverlay(
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.trakt_logo_wordmark),
-                    contentDescription = "Trakt",
+                    contentDescription = stringResource(R.string.cd_trakt_logo),
                     modifier = Modifier.width(168.dp),
                     colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.92f))
                 )

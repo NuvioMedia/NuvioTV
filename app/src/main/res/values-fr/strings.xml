@@ -677,6 +677,7 @@
     <string name="profile_primary_label">Principal</string>
     <string name="profile_shares_primary">Partage les %1$s du profil principal</string>
     <string name="profile_edit_label">Modifier</string>
+    <string name="profile_edit_header">Modifier le profil</string>
     <string name="profile_add">Ajouter un profil</string>
     <string name="profile_create_title">Créer un profil</string>
     <string name="profile_edit_title">Modifier le profil %1$s</string>
@@ -1183,4 +1184,126 @@
     <string name="update_ignore">Ignorer</string>
     <string name="watchlist_added">Ajouté à ma liste</string>
     <string name="watchlist_removed">Retiré de ma liste</string>
+
+    <!-- Profile PIN errors -->
+    <string name="profile_pin_save_error">Impossible d\'enregistrer le code PIN. Réessaie.</string>
+    <string name="profile_pin_locked">Profil verrouillé. Réessaie dans %1$ds.</string>
+    <string name="profile_pin_invalid">Code PIN invalide. Réessaie.</string>
+    <string name="profile_pin_verify_error">Impossible de vérifier le code PIN. Réessaie.</string>
+    <string name="profile_pin_incorrect">Le code PIN actuel est incorrect.</string>
+
+    <!-- Account Screen -->
+    <string name="account_signin_create_title">Connexion / Créer un compte</string>
+    <string name="account_signin_create_desc">Utilise ton e-mail et mot de passe pour créer ou te connecter à ton compte.</string>
+    <string name="account_generate_sync_desc">Crée un code sur cet appareil pour que d\'autres appareils puissent s\'y lier.</string>
+    <string name="account_enter_sync_desc">Lie cet appareil à un autre en utilisant un code de synchronisation.</string>
+    <string name="account_signed_in_as">Connecté en tant que</string>
+    <string name="account_generate_sync_signed_in_desc">Crée un code pour que d\'autres appareils puissent se synchroniser avec ce compte.</string>
+    <string name="account_unknown_device">Appareil inconnu</string>
+
+    <!-- Sync screens -->
+    <string name="sync_claim_linking">Liaison en cours\u2026</string>
+    <string name="sync_generate_generating">Génération en cours\u2026</string>
+    <string name="sync_generate_code_btn">Générer le code</string>
+
+    <!-- Search -->
+    <string name="search_no_results_title">Aucun résultat</string>
+    <string name="search_no_results_subtitle">Essaie avec d\'autres mots-clés</string>
+    <string name="discover_disabled_title">Découvrir est désactivé</string>
+    <string name="discover_disabled_subtitle">Active Découvrir dans les paramètres</string>
+
+    <!-- Library -->
+    <string name="library_list_create_dialog_title">Créer une liste</string>
+    <string name="library_list_edit_dialog_title">Modifier la liste</string>
+    <string name="library_sync_btn">Synchroniser</string>
+    <string name="library_syncing_btn">Synchronisation\u2026</string>
+
+    <!-- Error messages (shared) -->
+    <string name="error_network_required">Connecte-toi au Wi-Fi ou à l\'Ethernet pour utiliser cette fonctionnalité</string>
+    <string name="error_server_ports_unavailable">Impossible de démarrer le serveur. Tous les ports sont utilisés.</string>
+
+    <!-- Plugin errors -->
+    <string name="plugin_error_invalid_url">Entre une URL valide</string>
+    <string name="plugin_error_add_repo">Échec de l\'ajout du dépôt : %1$s</string>
+    <string name="plugin_error_refresh">Échec de l\'actualisation : %1$s</string>
+    <string name="plugin_error_test">Échec du test : %1$s</string>
+    <string name="plugin_test_no_results">Aucun résultat trouvé</string>
+    <string name="plugin_test_found_streams">%1$d flux trouvés</string>
+
+    <!-- Trakt errors -->
+    <string name="trakt_error_code_expired">Le code a expiré. Recommence.</string>
+    <string name="trakt_error_code_used">Le code a déjà été utilisé. Recommence.</string>
+    <string name="trakt_error_denied">Autorisation refusée par Trakt.</string>
+
+    <!-- Account errors -->
+    <string name="account_error_signin_required">Connecte-toi d\'abord avec un compte.</string>
+
+    <!-- Search errors -->
+    <string name="search_error_no_catalogs">Aucun catalogue de recherche trouvé dans les addons installés</string>
+
+    <!-- Home errors -->
+    <string name="home_error_no_addons">Aucun addon installé</string>
+    <string name="home_error_no_catalog_addons">Aucun addon de catalogue installé</string>
+
+    <!-- Player errors -->
+    <string name="player_error_no_stream_url">Aucune URL de flux fournie</string>
+
+    <!-- Playback subtitle settings -->
+    <string name="sub_mode_overlay_canvas_sub">Support HDR avec rendu Canvas. Peut bloquer le thread UI.</string>
+    <string name="subtitle_style_weight">Épaisseur</string>
+
+    <!-- Plugin screen -->
+    <string name="plugin_version">Version %1$s</string>
+
+    <!-- Stream screen -->
+    <string name="stream_episode_label">S%1$d E%2$d</string>
+
+    <!-- Episode ratings -->
+    <string name="ratings_season_label">S%1$d</string>
+    <string name="ratings_episode_label">E%1$d</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_play">Lecture</string>
+    <string name="cd_pause">Pause</string>
+    <string name="cd_subtitles">Sous-titres</string>
+    <string name="cd_audio_tracks">Pistes audio</string>
+    <string name="cd_sources">Sources</string>
+    <string name="cd_episodes">Épisodes</string>
+    <string name="cd_playback_speed">Vitesse de lecture</string>
+    <string name="cd_aspect_ratio">Format d\'image</string>
+    <string name="cd_open_external_player">Ouvrir dans un lecteur externe</string>
+    <string name="cd_stream_info">Infos du flux</string>
+    <string name="cd_more_actions">Plus d\'actions</string>
+    <string name="cd_close_more_actions">Fermer les actions</string>
+    <string name="cd_back">Retour</string>
+    <string name="cd_next_episode_thumbnail">Miniature de l\'épisode suivant</string>
+    <string name="cd_current">En cours</string>
+    <string name="cd_loading_backdrop">Chargement de l\'arrière-plan</string>
+    <string name="cd_loading_logo">Chargement du logo</string>
+    <string name="cd_move_up">Monter</string>
+    <string name="cd_move_down">Descendre</string>
+    <string name="cd_qr_code">Code QR</string>
+    <string name="cd_add">Ajouter</string>
+    <string name="cd_refresh">Actualiser</string>
+    <string name="cd_remove">Supprimer</string>
+    <string name="cd_test">Tester</string>
+    <string name="cd_unlink">Délier</string>
+    <string name="cd_nuvio_logo">NuvioTV</string>
+    <string name="cd_trakt_logo">Logo Trakt</string>
+    <string name="cd_trakt_qr">Code QR d\'activation Trakt</string>
+    <string name="cd_imdb">IMDb</string>
+    <string name="cd_open_discover">Ouvrir Découvrir</string>
+    <string name="cd_voice_search">Recherche vocale</string>
+    <string name="cd_donation_qr">Code QR de don</string>
+    <string name="cd_contributor_qr">Code QR de soutien au contributeur</string>
+    <string name="cd_expand">Développer %1$s</string>
+    <string name="cd_collapse">Réduire %1$s</string>
+    <string name="cd_qr_login">Code QR de connexion</string>
+    <string name="cd_nuvio">Nuvio</string>
+
+    <!-- Debug -->
+    <string name="debug_signin_success">Connexion réussie</string>
+    <string name="debug_generate_description">Élément de test %1$s n°%2$d</string>
+    <string name="debug_generate_result_failed">Échec : %1$s</string>
+
 </resources>

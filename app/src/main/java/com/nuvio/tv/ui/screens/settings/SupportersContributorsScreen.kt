@@ -288,7 +288,7 @@ private fun SupportersBrandFront(
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Image(
                 painter = painterResource(id = R.drawable.app_logo_wordmark),
-                contentDescription = "NuvioTV",
+                contentDescription = stringResource(R.string.cd_nuvio_logo),
                 modifier = Modifier
                     .fillMaxWidth(0.78f)
                     .height(86.dp),
@@ -383,7 +383,7 @@ private fun SupportersBrandBack(
         if (qrBitmap != null) {
             Image(
                 bitmap = qrBitmap.asImageBitmap(),
-                contentDescription = "Donation QR code",
+                contentDescription = stringResource(R.string.cd_donation_qr),
                 modifier = Modifier
                     .size(220.dp)
                     .clip(RoundedCornerShape(24.dp))
@@ -1164,7 +1164,7 @@ private fun ContributorDetailsDialog(
             ) {
                 Image(
                     bitmap = supportQrBitmap.asImageBitmap(),
-                    contentDescription = "Contributor support QR code",
+                    contentDescription = stringResource(R.string.cd_contributor_qr),
                     modifier = Modifier
                         .size(188.dp)
                         .clip(RoundedCornerShape(20.dp))

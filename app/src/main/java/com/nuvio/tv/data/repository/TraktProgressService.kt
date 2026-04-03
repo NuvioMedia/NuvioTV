@@ -67,6 +67,7 @@ class TraktProgressService @Inject constructor(
     private val traktApi: TraktApi,
     private val traktAuthService: TraktAuthService,
     private val metaRepository: MetaRepository,
+    private val tmdbService: com.nuvio.tv.core.tmdb.TmdbService,
     private val traktSettingsDataStore: TraktSettingsDataStore,
     private val traktEpisodeMappingService: TraktEpisodeMappingService
 ) {
@@ -147,6 +148,12 @@ class TraktProgressService @Inject constructor(
     private val metadataState = MutableStateFlow<Map<String, ContentMetadata>>(emptyMap())
     private val watchedMoviesState = MutableStateFlow<Set<String>>(emptySet())
     private val watchedShowSeedsState = MutableStateFlow<List<WatchProgress>>(emptyList())
+    /** Per-show set of watched (season, episode) pairs from /sync/watched/shows. */
+    @Volatile
+    private var watchedShowEpisodesMap: Map<String, Set<Pair<Int, Int>>> = emptyMap()
+    /** Maps any content key (tmdb:X, trakt:X, imdb) to a Trakt-accepted path ID (slug or trakt numeric). */
+    @Volatile
+    private var showIdToTraktPathId: Map<String, String> = emptyMap()
     private val episodeProgressState = MutableStateFlow<Map<String, EpisodeProgressCacheEntry>>(emptyMap())
     private val hasLoadedRemoteProgress = MutableStateFlow(false)
     private val cacheMutex = Mutex()
@@ -359,6 +366,12 @@ class TraktProgressService @Inject constructor(
             }
             .distinctUntilChanged()
     }
+
+    /**
+     * Returns the per-show watched episodes from the last /sync/watched/shows fetch.
+     * Keys are content IDs, values are sets of (season, episode) pairs.
+     */
+    fun getWatchedShowEpisodes(): Map<String, Set<Pair<Int, Int>>> = watchedShowEpisodesMap
 
     fun observeEpisodeProgress(contentId: String): Flow<Map<Pair<Int, Int>, WatchProgress>> {
         val cacheKey = canonicalLookupKey(contentId)
@@ -998,9 +1011,51 @@ class TraktProgressService @Inject constructor(
                 return@withLock watchedShowSeedsState.value
             }
 
-            val watchedShowSeeds = response.body().orEmpty()
+            val items = response.body().orEmpty()
+            val watchedShowSeeds = items
                 .mapNotNull(::mapWatchedShowSeed)
                 .sortedByDescending { it.lastWatched }
+
+            // Build per-show watched episodes map from the same response.
+            // Store under ALL available IDs (IMDB, TMDB, Trakt) so badge evaluation
+            // matches regardless of which ID the catalog or addon uses.
+            val episodesMap = mutableMapOf<String, MutableSet<Pair<Int, Int>>>()
+            val idLookup = mutableMapOf<String, String>()
+            items.forEach { item ->
+                val show = item.show ?: return@forEach
+                val ids = show.ids ?: return@forEach
+                val keys = buildList {
+                    ids.imdb?.takeIf { it.isNotBlank() }?.let { add(it) }
+                    ids.tmdb?.let { add("tmdb:$it") }
+                    ids.trakt?.let { add("trakt:$it") }
+                }
+                if (keys.isEmpty()) return@forEach
+                // Resolve a Trakt-accepted path ID: prefer slug, then trakt numeric
+                val traktAccepted = ids.slug?.takeIf { it.isNotBlank() }
+                    ?: ids.trakt?.toString()
+                if (traktAccepted != null) {
+                    keys.forEach { key -> idLookup[key] = traktAccepted }
+                }
+                val episodes = mutableSetOf<Pair<Int, Int>>()
+                item.seasons.orEmpty()
+                    .filter { (it.number ?: 0) > 0 }
+                    .forEach { season ->
+                        val seasonNumber = season.number ?: return@forEach
+                        season.episodes.orEmpty()
+                            .filter { (it.number ?: 0) > 0 && (it.plays ?: 1) > 0 }
+                            .forEach { episode ->
+                                val episodeNumber = episode.number ?: return@forEach
+                                episodes.add(seasonNumber to episodeNumber)
+                            }
+                    }
+                if (episodes.isNotEmpty()) {
+                    keys.forEach { key ->
+                        episodesMap.getOrPut(key) { mutableSetOf() }.addAll(episodes)
+                    }
+                }
+            }
+            watchedShowEpisodesMap = episodesMap
+            showIdToTraktPathId = idLookup
 
             watchedShowSeedsState.value = watchedShowSeeds
             watchedShowSeedsUpdatedAtMs = System.currentTimeMillis()
@@ -1169,6 +1224,52 @@ class TraktProgressService @Inject constructor(
         return if (canonical.isNotBlank()) canonical else contentId.trim()
     }
 
+    /**
+     * Resolves a content ID to a format accepted by Trakt path endpoints.
+     * Trakt path segments accept: IMDB ID, Trakt numeric ID, or Trakt slug.
+     * They do NOT accept tmdb:X format. When the content ID is tmdb-only,
+     * we use /search/tmdb/{id} to resolve it to a Trakt slug.
+     */
+    private suspend fun resolveToTraktAcceptedId(contentId: String): String {
+        val parsed = parseContentIds(contentId)
+        // IMDB ID - accepted directly
+        if (!parsed.imdb.isNullOrBlank()) return parsed.imdb
+        // Trakt numeric ID - accepted directly
+        if (parsed.trakt != null) return parsed.trakt.toString()
+        // TMDB ID - need to resolve
+        if (parsed.tmdb != null) {
+            // 1) Check local watched shows cache (instant, no network)
+            val fromWatchedShows = showIdToTraktPathId["tmdb:${parsed.tmdb}"]
+            if (fromWatchedShows != null) return fromWatchedShows
+            // 2) Try TMDB → IMDB lookup (cached, may hit network on first call)
+            try {
+                val imdbFromTmdb = tmdbService.tmdbToImdb(parsed.tmdb, "series")
+                    ?: tmdbService.tmdbToImdb(parsed.tmdb, "movie")
+                if (!imdbFromTmdb.isNullOrBlank()) return imdbFromTmdb
+            } catch (_: Exception) { }
+            // 3) Try Trakt search API (network call)
+            try {
+                val response = traktAuthService.executeAuthorizedRequest { authHeader ->
+                    traktApi.searchById(
+                        authorization = authHeader,
+                        idType = "tmdb",
+                        id = parsed.tmdb.toString(),
+                        type = "show"
+                    )
+                }
+                val result = response?.body()?.firstOrNull()
+                val slug = result?.show?.ids?.slug?.takeIf { it.isNotBlank() }
+                val traktId = result?.show?.ids?.trakt
+                val imdbId = result?.show?.ids?.imdb?.takeIf { it.isNotBlank() }
+                val resolved = imdbId ?: slug ?: traktId?.toString()
+                if (resolved != null) return resolved
+            } catch (_: Exception) { }
+            // Last resort - try tmdb:X anyway
+            return "tmdb:${parsed.tmdb}"
+        }
+        return contentId
+    }
+
     private fun buildLightweightEpisodeVideoId(contentId: String, season: Int, episode: Int): String {
         return "$contentId:$season:$episode"
     }
@@ -1311,7 +1412,7 @@ class TraktProgressService @Inject constructor(
     private suspend fun fetchEpisodeProgressSnapshot(
         contentId: String
     ): EpisodeProgressFetchResult {
-        val pathId = toTraktPathId(contentId)
+        val pathId = resolveToTraktAcceptedId(contentId)
         val completed = mutableMapOf<Pair<Int, Int>, WatchProgress>()
         var airedEpisodes = emptyList<Pair<Int, Int>>()
         var hasCompletedSnapshot = false
@@ -1325,7 +1426,8 @@ class TraktProgressService @Inject constructor(
 
         if (response?.isSuccessful == true) {
             hasCompletedSnapshot = true
-            val seasons = response.body()?.seasons.orEmpty()
+            val responseBody = response.body()
+            val seasons = responseBody?.seasons.orEmpty()
             airedEpisodes = seasons
                 .asSequence()
                 .filter { (it.number ?: 0) > 0 }

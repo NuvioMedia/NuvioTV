@@ -117,10 +117,10 @@ internal object PlayerSubtitleUtils {
     }
 
     internal val BRAZILIAN_TAGS = listOf(
-        "pt-br", "pt_br", "pob", "brazilian", "brazil", "brasil", "brasileiro"
+        "pt-br", "pt_br", "pob", "brazilian", "brazil", "brasil", "brasileiro", " br", "(br)"
     )
     internal val EUROPEAN_PT_TAGS = listOf(
-        "pt-pt", "pt_pt", "iberian", "european", "portugal", "europeu"
+        "pt-pt", "pt_pt", "iberian", "european", "portugal", "europeu", " eu", "(eu)"
     )
     internal val LATINO_TAGS = listOf(
         "es-419", "es_419", "es-la", "es-lat", "latino", "latinoamerica",
