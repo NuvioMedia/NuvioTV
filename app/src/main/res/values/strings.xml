@@ -330,6 +330,8 @@
     <string name="playback_player_ask">Ask every time</string>
     <string name="playback_section_audio">Audio &amp; Trailer</string>
     <string name="playback_section_audio_desc">Trailer behavior and audio controls.</string>
+    <string name="playback_section_advanced">Audio &amp; Video Advanced</string>
+    <string name="playback_section_advanced_desc">Decoder, tunneling, and compatibility settings. Change only if needed.</string>
     <string name="playback_section_subtitles">Subtitles</string>
     <string name="playback_section_subtitles_desc">Language, style, and render mode.</string>
     <string name="playback_afr_open">Open</string>
@@ -1218,7 +1220,6 @@
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Audio passthrough (TrueHD, DTS, AC-3, etc.) is automatic. When connected to a compatible AV receiver or soundbar via HDMI, lossless audio is sent as-is without decoding.</string>
     <string name="audio_dv_title">DV7 - HEVC Fallback</string>
-    <string name="playback_advanced_section">Advanced</string>
 
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Home</string>

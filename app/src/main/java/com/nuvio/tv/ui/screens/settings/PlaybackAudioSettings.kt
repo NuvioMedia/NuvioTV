@@ -170,7 +170,6 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             enabled = enabled
         )
     }
-
 }
 
 @Composable

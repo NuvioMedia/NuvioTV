@@ -68,6 +68,7 @@ private enum class PlaybackSection {
     GENERAL,
     STREAM_SELECTION,
     AUDIO_TRAILER,
+    ADVANCED,
     SUBTITLES
 }
 
@@ -138,15 +139,15 @@ internal fun PlaybackSettingsSections(
     var generalExpanded by rememberSaveable { mutableStateOf(false) }
     var afrExpanded by rememberSaveable { mutableStateOf(false) }
     var streamExpanded by rememberSaveable { mutableStateOf(false) }
-    var playerAdvancedExpanded by rememberSaveable { mutableStateOf(false) }
     var audioTrailerExpanded by rememberSaveable { mutableStateOf(false) }
+    var advancedExpanded by rememberSaveable { mutableStateOf(false) }
     var subtitlesExpanded by rememberSaveable { mutableStateOf(false) }
 
     val defaultGeneralHeaderFocus = remember { FocusRequester() }
     val afrHeaderFocus = remember { FocusRequester() }
     val streamHeaderFocus = remember { FocusRequester() }
-    val playerAdvancedHeaderFocus = remember { FocusRequester() }
     val audioTrailerHeaderFocus = remember { FocusRequester() }
+    val advancedHeaderFocus = remember { FocusRequester() }
     val subtitlesHeaderFocus = remember { FocusRequester() }
     val generalHeaderFocus = initialFocusRequester ?: defaultGeneralHeaderFocus
 
@@ -161,6 +162,8 @@ internal fun PlaybackSettingsSections(
     val strSectionPlayerDesc = stringResource(R.string.playback_section_player_desc)
     val strSectionAudio = stringResource(R.string.playback_section_audio)
     val strSectionAudioDesc = stringResource(R.string.playback_section_audio_desc)
+    val strSectionAdvanced = stringResource(R.string.playback_section_advanced)
+    val strSectionAdvancedDesc = stringResource(R.string.playback_section_advanced_desc)
     val strSectionSubtitles = stringResource(R.string.playback_section_subtitles)
     val strSectionSubtitlesDesc = stringResource(R.string.playback_section_subtitles_desc)
     val generalUi = PlaybackGeneralUi(
@@ -190,14 +193,14 @@ internal fun PlaybackSettingsSections(
             streamHeaderFocus.requestFocus()
         }
     }
-    LaunchedEffect(playerAdvancedExpanded, focusedSection) {
-        if (!playerAdvancedExpanded && focusedSection == PlaybackSection.STREAM_SELECTION) {
-            playerAdvancedHeaderFocus.requestFocus()
-        }
-    }
     LaunchedEffect(audioTrailerExpanded, focusedSection) {
         if (!audioTrailerExpanded && focusedSection == PlaybackSection.AUDIO_TRAILER) {
             audioTrailerHeaderFocus.requestFocus()
+        }
+    }
+    LaunchedEffect(advancedExpanded, focusedSection) {
+        if (!advancedExpanded && focusedSection == PlaybackSection.ADVANCED) {
+            advancedHeaderFocus.requestFocus()
         }
     }
     LaunchedEffect(subtitlesExpanded, focusedSection) {
@@ -342,61 +345,6 @@ internal fun PlaybackSettingsSections(
                 )
             }
 
-            item(key = "stream_player_advanced_header") {
-                PlaybackSectionHeader(
-                    title = stringResource(R.string.playback_advanced_section),
-                    description = stringResource(R.string.audio_advanced_warning),
-                    expanded = playerAdvancedExpanded,
-                    onToggle = { playerAdvancedExpanded = !playerAdvancedExpanded },
-                    focusRequester = playerAdvancedHeaderFocus,
-                    onFocused = { focusedSection = PlaybackSection.STREAM_SELECTION },
-                    enabled = !generalUi.isExternalPlayer
-                )
-            }
-
-            if (playerAdvancedExpanded) {
-                item(key = "stream_decoder_priority") {
-                    val decoderName = when (playerSettings.decoderPriority) {
-                        0 -> stringResource(R.string.audio_decoder_device_only)
-                        1 -> stringResource(R.string.audio_decoder_prefer_device)
-                        2 -> stringResource(R.string.audio_decoder_prefer_app)
-                        else -> stringResource(R.string.audio_decoder_prefer_device)
-                    }
-
-                    NavigationSettingsItem(
-                        icon = Icons.Default.Tune,
-                        title = stringResource(R.string.audio_decoder_priority),
-                        subtitle = decoderName,
-                        onClick = onShowDecoderPriorityDialog,
-                        onFocused = { focusedSection = PlaybackSection.STREAM_SELECTION },
-                        enabled = !generalUi.isExternalPlayer
-                    )
-                }
-
-                item(key = "stream_tunneled_playback") {
-                    ToggleSettingsItem(
-                        icon = Icons.Default.VolumeUp,
-                        title = stringResource(R.string.audio_tunneled),
-                        subtitle = stringResource(R.string.audio_tunneled_sub),
-                        isChecked = playerSettings.tunnelingEnabled,
-                        onCheckedChange = onSetTunnelingEnabled,
-                        onFocused = { focusedSection = PlaybackSection.STREAM_SELECTION },
-                        enabled = !generalUi.isExternalPlayer
-                    )
-                }
-
-                item(key = "stream_strip_dolby_vision") {
-                    ToggleSettingsItem(
-                        icon = Icons.Default.Image,
-                        title = stringResource(R.string.audio_dv_title),
-                        subtitle = stringResource(R.string.audio_dv_sub),
-                        isChecked = playerSettings.mapDV7ToHevc,
-                        onCheckedChange = onSetMapDV7ToHevc,
-                        onFocused = { focusedSection = PlaybackSection.STREAM_SELECTION },
-                        enabled = !generalUi.isExternalPlayer
-                    )
-                }
-            }
         }
 
         playbackCollapsibleSection(
@@ -419,6 +367,58 @@ internal fun PlaybackSettingsSections(
                 onItemFocused = { focusedSection = PlaybackSection.AUDIO_TRAILER },
                 enabled = !generalUi.isExternalPlayer
             )
+        }
+
+        playbackCollapsibleSection(
+            keyPrefix = "advanced",
+            title = strSectionAdvanced,
+            description = strSectionAdvancedDesc,
+            expanded = advancedExpanded,
+            onToggle = { advancedExpanded = !advancedExpanded },
+            focusRequester = advancedHeaderFocus,
+            onHeaderFocused = { focusedSection = PlaybackSection.ADVANCED }
+        ) {
+            item(key = "advanced_decoder_priority") {
+                val decoderName = when (playerSettings.decoderPriority) {
+                    0 -> stringResource(R.string.audio_decoder_device_only)
+                    1 -> stringResource(R.string.audio_decoder_prefer_device)
+                    2 -> stringResource(R.string.audio_decoder_prefer_app)
+                    else -> stringResource(R.string.audio_decoder_prefer_device)
+                }
+
+                NavigationSettingsItem(
+                    icon = Icons.Default.Tune,
+                    title = stringResource(R.string.audio_decoder_priority),
+                    subtitle = decoderName,
+                    onClick = onShowDecoderPriorityDialog,
+                    onFocused = { focusedSection = PlaybackSection.ADVANCED },
+                    enabled = !generalUi.isExternalPlayer
+                )
+            }
+
+            item(key = "advanced_tunneled_playback") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.VolumeUp,
+                    title = stringResource(R.string.audio_tunneled),
+                    subtitle = stringResource(R.string.audio_tunneled_sub),
+                    isChecked = playerSettings.tunnelingEnabled,
+                    onCheckedChange = onSetTunnelingEnabled,
+                    onFocused = { focusedSection = PlaybackSection.ADVANCED },
+                    enabled = !generalUi.isExternalPlayer
+                )
+            }
+
+            item(key = "advanced_dv7_hevc_fallback") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.Tune,
+                    title = stringResource(R.string.audio_dv_title),
+                    subtitle = stringResource(R.string.audio_dv_sub),
+                    isChecked = playerSettings.mapDV7ToHevc,
+                    onCheckedChange = onSetMapDV7ToHevc,
+                    onFocused = { focusedSection = PlaybackSection.ADVANCED },
+                    enabled = !generalUi.isExternalPlayer
+                )
+            }
         }
 
         playbackCollapsibleSection(
