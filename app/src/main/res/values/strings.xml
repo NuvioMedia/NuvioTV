@@ -364,7 +364,7 @@
     <string name="audio_decoder_priority">Decoder Priority</string>
     <string name="audio_tunneled">Tunneled Playback</string>
     <string name="audio_tunneled_sub">Hardware-level audio/video sync. May improve playback on some Android TV devices</string>
-    <string name="audio_dv_sub">Map Dolby Vision Profile 7 to standard HEVC for devices without DV hardware support</string>
+    <string name="audio_dv_sub">Strip Dolby Vision from the internal player input by falling back DV Profile 7 to HEVC for TVs and boxes without DV support</string>
     <string name="audio_decoder_device_only_desc">Only use built-in hardware decoders. Most compatible but may not support all formats.</string>
     <string name="audio_decoder_prefer_device_desc">Use hardware decoders when available, fall back to FFmpeg. Recommended for most devices.</string>
     <string name="audio_decoder_prefer_app_desc">Use FFmpeg decoders when available. Better format support but higher CPU usage.</string>
@@ -1217,7 +1217,7 @@
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_passthrough_info">Audio passthrough (TrueHD, DTS, AC-3, etc.) is automatic. When connected to a compatible AV receiver or soundbar via HDMI, lossless audio is sent as-is without decoding.</string>
-    <string name="audio_dv_title">DV7 - HEVC Fallback</string>
+    <string name="audio_dv_title">Strip Dolby Vision For Internal Player</string>
 
     <!-- SidebarNavigation / MainActivity -->
     <string name="nav_home">Home</string>

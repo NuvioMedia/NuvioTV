@@ -67,7 +67,6 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onSetTrailerDelaySeconds: (Int) -> Unit,
     onSetSkipSilence: (Boolean) -> Unit,
     onSetTunnelingEnabled: (Boolean) -> Unit,
-    onSetMapDV7ToHevc: (Boolean) -> Unit,
     onItemFocused: () -> Unit = {},
     enabled: Boolean = true
 ) {
@@ -223,17 +222,6 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
         )
     }
 
-    item(key = "audio_dv7_hevc_fallback") {
-        ToggleSettingsItem(
-            icon = Icons.Default.Tune,
-            title = stringResource(R.string.audio_dv_title),
-            subtitle = stringResource(R.string.audio_dv_sub),
-            isChecked = playerSettings.mapDV7ToHevc,
-            onCheckedChange = onSetMapDV7ToHevc,
-            onFocused = onItemFocused,
-            enabled = enabled
-        )
-    }
 }
 
 @Composable

@@ -304,6 +304,18 @@ internal fun PlaybackSettingsSections(
                 )
             }
 
+            item(key = "stream_strip_dolby_vision") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.Image,
+                    title = stringResource(R.string.audio_dv_title),
+                    subtitle = stringResource(R.string.audio_dv_sub),
+                    isChecked = playerSettings.mapDV7ToHevc,
+                    onCheckedChange = onSetMapDV7ToHevc,
+                    onFocused = { focusedSection = PlaybackSection.STREAM_SELECTION },
+                    enabled = !generalUi.isExternalPlayer
+                )
+            }
+
             autoPlaySettingsItems(
                 playerSettings = playerSettings,
                 onShowModeDialog = onShowStreamAutoPlayModeDialog,
@@ -353,7 +365,6 @@ internal fun PlaybackSettingsSections(
                 onSetTrailerDelaySeconds = onSetTrailerDelaySeconds,
                 onSetSkipSilence = onSetSkipSilence,
                 onSetTunnelingEnabled = onSetTunnelingEnabled,
-                onSetMapDV7ToHevc = onSetMapDV7ToHevc,
                 onItemFocused = { focusedSection = PlaybackSection.AUDIO_TRAILER },
                 enabled = !generalUi.isExternalPlayer
             )
