@@ -62,11 +62,9 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     trailerSettings: TrailerSettings,
     onShowAudioLanguageDialog: () -> Unit,
     onShowSecondaryAudioLanguageDialog: () -> Unit,
-    onShowDecoderPriorityDialog: () -> Unit,
     onSetTrailerEnabled: (Boolean) -> Unit,
     onSetTrailerDelaySeconds: (Int) -> Unit,
     onSetSkipSilence: (Boolean) -> Unit,
-    onSetTunnelingEnabled: (Boolean) -> Unit,
     onItemFocused: () -> Unit = {},
     enabled: Boolean = true
 ) {
@@ -168,55 +166,6 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             subtitle = stringResource(R.string.audio_skip_silence_sub),
             isChecked = playerSettings.skipSilence,
             onCheckedChange = onSetSkipSilence,
-            onFocused = onItemFocused,
-            enabled = enabled
-        )
-    }
-
-    item(key = "audio_advanced_header") {
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.audio_advanced_section),
-            style = MaterialTheme.typography.titleMedium,
-            color = NuvioColors.TextSecondary,
-            modifier = Modifier.padding(vertical = 8.dp)
-        )
-    }
-
-    item(key = "audio_advanced_warning") {
-        Text(
-            text = stringResource(R.string.audio_advanced_warning),
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFFFF9800),
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-    }
-
-    item(key = "audio_decoder_priority") {
-        val decoderName = when (playerSettings.decoderPriority) {
-            0 -> stringResource(R.string.audio_decoder_device_only)
-            1 -> stringResource(R.string.audio_decoder_prefer_device)
-            2 -> stringResource(R.string.audio_decoder_prefer_app)
-            else -> stringResource(R.string.audio_decoder_prefer_device)
-        }
-
-        NavigationSettingsItem(
-            icon = Icons.Default.Tune,
-            title = stringResource(R.string.audio_decoder_priority),
-            subtitle = decoderName,
-            onClick = onShowDecoderPriorityDialog,
-            onFocused = onItemFocused,
-            enabled = enabled
-        )
-    }
-
-    item(key = "audio_tunneled_playback") {
-        ToggleSettingsItem(
-            icon = Icons.Default.VolumeUp,
-            title = stringResource(R.string.audio_tunneled),
-            subtitle = stringResource(R.string.audio_tunneled_sub),
-            isChecked = playerSettings.tunnelingEnabled,
-            onCheckedChange = onSetTunnelingEnabled,
             onFocused = onItemFocused,
             enabled = enabled
         )
