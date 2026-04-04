@@ -244,6 +244,7 @@ class StreamRepositoryImpl @Inject constructor(
                                 name = displayName,
                                 title = displayTitle,
                                 url = result.url,
+                                sources = null,
                                 addonName = scraperName,
                                 addonLogo = null,
                                 description = buildDescription(result),

@@ -11,6 +11,7 @@ data class Stream(
     val title: String?,
     val description: String?,
     val url: String?,
+    val sources: List<String>?,
     val ytId: String?,
     val infoHash: String?,
     val fileIdx: Int?,
@@ -22,7 +23,20 @@ data class Stream(
     /**
      * Returns the primary stream source URL
      */
-    fun getStreamUrl(): String? = url ?: externalUrl
+    fun getStreamUrl(): String? = getStreamUrls().firstOrNull() ?: externalUrl
+
+    /**
+     * Returns all playable URLs for the stream in priority order.
+     */
+    fun getStreamUrls(): List<String> = buildList {
+        url?.takeIf { it.isNotBlank() }?.let(::add)
+        sources.orEmpty()
+            .map(String::trim)
+            .filter(String::isNotBlank)
+            .forEach { candidate ->
+                if (candidate !in this) add(candidate)
+            }
+    }
 
     /**
      * Returns true if this is a torrent stream
@@ -37,7 +51,7 @@ data class Stream(
     /**
      * Returns true if this is an external URL (opens in browser)
      */
-    fun isExternal(): Boolean = externalUrl != null && url == null
+    fun isExternal(): Boolean = externalUrl != null && getStreamUrls().isEmpty()
 
     /**
      * Returns a display name for the stream

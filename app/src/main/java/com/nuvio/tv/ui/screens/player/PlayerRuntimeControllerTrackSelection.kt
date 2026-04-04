@@ -408,6 +408,8 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
                 url = currentStreamUrl,
                 headers = currentHeaders,
                 subtitleConfigurations = subtitleConfigurations,
+                filename = currentFilename,
+                responseHeaders = currentStreamResponseHeaders,
                 mimeTypeOverride = currentStreamMimeType
             ),
             currentPosition

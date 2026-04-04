@@ -15,6 +15,7 @@ data class CachedStreamLink(
     val streamName: String,
     val headers: Map<String, String>,
     val cachedAtMs: Long,
+    val sourceUrls: List<String> = emptyList(),
     val filename: String? = null,
     val videoHash: String? = null,
     val videoSize: Long? = null
@@ -37,6 +38,7 @@ class StreamLinkCacheDataStore @Inject constructor(
         url: String,
         streamName: String,
         headers: Map<String, String>?,
+        sourceUrls: List<String> = emptyList(),
         filename: String? = null,
         videoHash: String? = null,
         videoSize: Long? = null
@@ -46,6 +48,7 @@ class StreamLinkCacheDataStore @Inject constructor(
             put("streamName", streamName)
             put("cachedAtMs", System.currentTimeMillis())
             put("headers", JSONObject(headers ?: emptyMap<String, String>()))
+            put("sourceUrls", org.json.JSONArray(sourceUrls))
             put("filename", filename)
             put("videoHash", videoHash)
             videoSize?.let { put("videoSize", it) }
@@ -84,6 +87,16 @@ class StreamLinkCacheDataStore @Inject constructor(
                 streamName = streamName,
                 headers = headers,
                 cachedAtMs = cachedAtMs,
+                sourceUrls = buildList {
+                    val sourcesJson = json.optJSONArray("sourceUrls")
+                    if (sourcesJson != null) {
+                        for (index in 0 until sourcesJson.length()) {
+                            sourcesJson.optString(index, "")
+                                .takeIf { it.isNotBlank() }
+                                ?.let(::add)
+                        }
+                    }
+                }.distinct(),
                 filename = json.optString("filename", "").ifBlank { null },
                 videoHash = json.optString("videoHash", "").ifBlank { null },
                 videoSize = json.optLong("videoSize", -1L).takeIf { it >= 0L }

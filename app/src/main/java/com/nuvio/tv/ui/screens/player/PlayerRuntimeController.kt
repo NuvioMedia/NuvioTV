@@ -120,11 +120,19 @@ class PlayerRuntimeController(
     internal var currentVideoWidth: Int? = null
     internal var currentVideoHeight: Int? = null
     internal var currentVideoBitrate: Int? = null
+    internal var currentStreamSourceUrls: List<String> =
+        (listOf(initialStreamUrl) + navigationArgs.sourceUrls)
+            .map(String::trim)
+            .filter(String::isNotBlank)
+            .distinct()
     internal var currentStreamUrl: String = initialStreamUrl
+    internal var currentStreamSourceIndex: Int = currentStreamSourceUrls.indexOf(initialStreamUrl).coerceAtLeast(0)
+    internal var currentStreamResponseHeaders: Map<String, String> = emptyMap()
     internal var currentStreamMimeType: String? =
         PlayerMediaSourceFactory.inferMimeType(
             url = initialStreamUrl,
-            filename = currentFilename
+            filename = currentFilename,
+            responseHeaders = currentStreamResponseHeaders
         )
     internal var currentHeaders: Map<String, String> =
         PlayerMediaSourceFactory.sanitizeHeaders(PlayerMediaSourceFactory.parseHeaders(headersJson))
@@ -246,6 +254,7 @@ class PlayerRuntimeController(
     internal var pendingPreviewSeekPosition: Long? = null
     internal var pendingResumeProgress: WatchProgress? = null
     internal var hasRetriedCurrentStreamAfter416: Boolean = false
+    internal var isReleasingPlayer: Boolean = false
     internal var errorRetryCount: Int = 0
     internal var errorRetryJob: Job? = null
     internal var currentScrobbleItem: TraktScrobbleItem? = null

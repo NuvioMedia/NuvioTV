@@ -61,7 +61,8 @@ private suspend fun PlayerRuntimeController.resolveCurrentStreamMimeType(
     currentStreamMimeType = PlayerMediaSourceFactory.probeMimeType(
         url = url,
         headers = headers,
-        filename = currentFilename
+        filename = currentFilename,
+        responseHeaders = currentStreamResponseHeaders
     )
     Log.d(
         PlayerRuntimeController.TAG,
@@ -306,6 +307,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                         url = url,
                         headers = headers,
                         subtitleConfigurations = startupSubtitleConfigurations,
+                        filename = currentFilename,
+                        responseHeaders = currentStreamResponseHeaders,
                         mimeTypeOverride = currentStreamMimeType
                     )
                 )
@@ -414,18 +417,11 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if (isReleasingPlayer && error.errorCode == PlaybackException.ERROR_CODE_TIMEOUT) {
                             return
                         }
-                        val detailedError = buildString {
-                            append(error.message ?: "Playback error")
-                            val cause = error.cause
-                            if (cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) {
-                                append(" (HTTP ${cause.responseCode})")
-                            } else if (cause != null) {
-                                append(": ${cause.message}")
-                            }
-                            append(" [${error.errorCode}]")
+                        val detailedError = error.toDisplayMessage()
+                        val responseCode = error.findInvalidResponseCodeException()?.responseCode
+                        if (tryFallbackToNextSource(error, detailedError)) {
+                            return
                         }
-                        val responseCode =
-                            (error.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode
                         if (responseCode == 416 && !hasRetriedCurrentStreamAfter416) {
                             retryCurrentStreamFromStartAfter416()
                             return
@@ -465,7 +461,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             }
             _uiState.update {
                 it.copy(
-                    error = e.message ?: "Failed to initialize player",
+                    error = e.toDisplayMessage("Failed to initialize player"),
                     showLoadingOverlay = false
                 )
             }

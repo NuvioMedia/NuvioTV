@@ -9,6 +9,7 @@ internal data class PlayerNavigationArgs(
     val streamName: String?,
     val year: String?,
     val headersJson: String?,
+    val sourceUrls: List<String>,
     val contentId: String?,
     val contentType: String?,
     val contentName: String?,
@@ -35,12 +36,22 @@ internal data class PlayerNavigationArgs(
                 return if (value.isNotEmpty()) URLDecoder.decode(value, "UTF-8") else null
             }
 
+            fun decodedList(key: String): List<String> {
+                val value = decodedOrNull(key)?.takeIf { it.isNotBlank() } ?: return emptyList()
+                return value.split('\n')
+                    .mapNotNull { encoded ->
+                        encoded.takeIf { it.isNotBlank() }?.let { URLDecoder.decode(it, "UTF-8") }
+                    }
+                    .distinct()
+            }
+
             return PlayerNavigationArgs(
                 streamUrl = savedStateHandle.get<String>("streamUrl") ?: "",
                 title = decodedOrNull("title") ?: "",
                 streamName = decodedOrNull("streamName"),
                 year = decodedOrNull("year"),
                 headersJson = decodedOrNull("headers"),
+                sourceUrls = decodedList("sources"),
                 // NavController already decodes these IDs.
                 contentId = savedStateHandle.get<String>("contentId")?.takeIf { it.isNotEmpty() },
                 contentType = savedStateHandle.get<String>("contentType")?.takeIf { it.isNotEmpty() },

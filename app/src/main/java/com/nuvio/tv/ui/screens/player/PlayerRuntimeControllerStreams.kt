@@ -271,12 +271,17 @@ private fun PlayerRuntimeController.applySelectedStreamState(
     url: String,
     headers: Map<String, String>
 ) {
+    val candidateUrls = buildCandidateStreamUrls(stream = stream, selectedUrl = url)
     currentStreamUrl = url
+    currentStreamSourceUrls = candidateUrls
+    currentStreamSourceIndex = candidateUrls.indexOf(url).coerceAtLeast(0)
     currentHeaders = headers
     currentFilename = stream.behaviorHints?.filename ?: navigationArgs.filename
+    currentStreamResponseHeaders = stream.behaviorHints?.proxyHeaders?.response.orEmpty()
     currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
         url = url,
-        filename = currentFilename
+        filename = currentFilename,
+        responseHeaders = currentStreamResponseHeaders
     )
     currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
     currentVideoHash = stream.behaviorHints?.videoHash
@@ -288,6 +293,16 @@ private fun PlayerRuntimeController.applySelectedStreamState(
     currentVideoWidth = null
     currentVideoHeight = null
     currentVideoBitrate = null
+}
+
+private fun PlayerRuntimeController.buildCandidateStreamUrls(
+    stream: Stream,
+    selectedUrl: String
+): List<String> {
+    return (listOf(selectedUrl) + stream.getStreamUrls())
+        .map(String::trim)
+        .filter(String::isNotBlank)
+        .distinct()
 }
 
 private fun PlayerRuntimeController.persistSelectedStreamForReuse(
@@ -307,6 +322,7 @@ private fun PlayerRuntimeController.persistSelectedStreamForReuse(
             url = url,
             streamName = streamName,
             headers = headers,
+            sourceUrls = currentStreamSourceUrls,
             filename = currentFilename,
             videoHash = currentVideoHash,
             videoSize = currentVideoSize

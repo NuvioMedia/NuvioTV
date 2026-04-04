@@ -52,6 +52,7 @@ internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(
                     url = url,
                     streamName = state.currentStreamName ?: title,
                     headers = currentHeaders,
+                    sourceUrls = currentStreamSourceUrls,
                     filename = currentFilename,
                     videoHash = currentVideoHash,
                     videoSize = currentVideoSize
@@ -406,6 +407,8 @@ internal fun PlayerRuntimeController.retryCurrentStreamFromStartAfter416() {
                 mediaSourceFactory.createMediaSource(
                     url = currentStreamUrl,
                     headers = currentHeaders,
+                    filename = currentFilename,
+                    responseHeaders = currentStreamResponseHeaders,
                     mimeTypeOverride = currentStreamMimeType
                 )
             )
@@ -415,7 +418,7 @@ internal fun PlayerRuntimeController.retryCurrentStreamFromStartAfter416() {
         }.onFailure { e ->
             _uiState.update {
                 it.copy(
-                    error = e.message ?: "Playback error",
+                    error = e.toDisplayMessage(),
                     showLoadingOverlay = false,
                     showPauseOverlay = false
                 )
