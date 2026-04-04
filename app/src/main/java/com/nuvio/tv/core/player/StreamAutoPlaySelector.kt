@@ -12,9 +12,11 @@ object StreamAutoPlaySelector {
     ): List<AddonStreams> {
         if (streams.isEmpty()) return streams
 
-        val (addonEntries, pluginEntries) = streams.partition { it.addonName in installedOrder }
+        val embyEntries = streams.filter { it.addonName == "Emby" }
+        val nonEmby = streams.filter { it.addonName != "Emby" }
+        val (addonEntries, pluginEntries) = nonEmby.partition { it.addonName in installedOrder }
         val orderedAddons = addonEntries.sortedBy { installedOrder.indexOf(it.addonName) }
-        return orderedAddons + pluginEntries
+        return embyEntries + orderedAddons + pluginEntries
     }
 
     private fun resolvePlayableUrl(stream: Stream): String? {
