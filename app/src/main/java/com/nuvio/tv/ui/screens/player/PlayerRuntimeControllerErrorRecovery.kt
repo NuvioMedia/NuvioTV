@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
 import kotlinx.coroutines.delay
@@ -234,4 +235,51 @@ internal fun PlayerRuntimeController.resetErrorRetryState() {
     errorRetryCount = 0
     errorRetryJob?.cancel()
     errorRetryJob = null
+}
+
+/**
+ * Silent PCM audio fallback for ERROR_CODE_AUDIO_TRACK_INIT_FAILED (5001).
+ *
+ * When the decoder is set to EXTENSION_RENDERER_MODE_ON (decoderPriority == 1,
+ * the default) and tunneling is NOT active, audio passthrough may fail on certain devices/formats.
+ * Instead of tearing down and re-building the entire player, we apply an
+ * imperceptible speed change (1.00001×) which forces ExoPlayer to decode audio
+ * through the software PCM pipeline — identical to what happens when the user
+ * manually changes playback speed.
+ *
+ * This is a one-shot attempt per stream; if it fails again the normal retry
+ * logic takes over.
+ */
+@androidx.annotation.OptIn(UnstableApi::class)
+internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
+    error: PlaybackException
+): Boolean {
+    if (error.errorCode != PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED) return false
+    if (hasTriedAudioPcmFallback) return false
+    if (cachedDecoderPriority != 1) return false // Only for EXTENSION_RENDERER_MODE_ON
+    if (_uiState.value.tunnelingEnabled) return false
+
+    hasTriedAudioPcmFallback = true
+
+    val player = _exoPlayer ?: return false
+    val savedPosition = player.currentPosition.takeIf { it > 0L } ?: 0L
+
+    Log.d(
+        PlayerRuntimeController.TAG,
+        "Audio track init failed (5001) — forcing PCM via speed trick, position=${savedPosition}ms"
+    )
+
+    // An imperceptible speed offset disables audio passthrough and forces
+    // software PCM decoding through the GainAudioProcessor pipeline.
+    val currentSpeed = _uiState.value.playbackSpeed
+    val pcmSpeed = if (currentSpeed == 1f) 1.00001f else currentSpeed
+    player.playbackParameters = PlaybackParameters(pcmSpeed)
+
+    if (savedPosition > 0L) {
+        player.seekTo(savedPosition)
+    }
+    player.prepare()
+    player.playWhenReady = true
+
+    return true
 }

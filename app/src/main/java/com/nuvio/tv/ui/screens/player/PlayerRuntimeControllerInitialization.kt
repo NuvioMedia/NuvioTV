@@ -10,6 +10,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.text.Cue
@@ -88,6 +89,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 startupEngineFailoverTriggered = false
             }
             resetLoadingOverlayForNewStream()
+<<<<<<< HEAD
             mpvDelayStartAfterAfrSwitch = false
             val playerSettings = playerSettingsDataStore.playerSettings.first()
             val preferredAudioLanguages = resolvePreferredAudioLanguages(
@@ -99,6 +101,11 @@ internal fun PlayerRuntimeController.initializePlayer(
             val effectiveInternalPlayerEngine = overrideInternalPlayerEngine ?: playerSettings.internalPlayerEngine
             runtimeInternalPlayerEngineOverride = overrideInternalPlayerEngine
             currentInternalPlayerEngine = effectiveInternalPlayerEngine
+=======
+            hasTriedAudioPcmFallback = false
+            val playerSettings = playerSettingsDataStore.playerSettings.first()
+            cachedDecoderPriority = playerSettings.decoderPriority
+>>>>>>> 2535c119 (feat: silent PCM audio fallback for error 5001 (audio track init failed))
             val showLoadingStatus = playerSettings.showPlayerLoadingStatus
             _uiState.update {
                 it.copy(
@@ -404,6 +411,11 @@ internal fun PlayerRuntimeController.initializePlayer(
                     override fun onRenderedFirstFrame() {
                         hasRenderedFirstFrame = true
                         resetErrorRetryState()
+                        // Restore speed after PCM fallback — audio sink is already
+                        // configured in PCM mode and won't revert to passthrough.
+                        if (hasTriedAudioPcmFallback) {
+                            _exoPlayer?.playbackParameters = PlaybackParameters(1f)
+                        }
                         _uiState.update {
                             it.copy(
                                 showLoadingOverlay = false,
@@ -434,6 +446,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                             return
                         }
                         // Attempt automatic recovery for transient errors.
+                        if (tryAudioTrackPcmFallback(error)) {
+                            return
+                        }
                         if (attemptAutoRetry(error, detailedError)) {
                             return
                         }
