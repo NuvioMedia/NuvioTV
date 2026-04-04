@@ -103,6 +103,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             currentInternalPlayerEngine = effectiveInternalPlayerEngine
 =======
             hasTriedAudioPcmFallback = false
+            hasTriedDv7HevcFallback = false
             val playerSettings = playerSettingsDataStore.playerSettings.first()
             cachedDecoderPriority = playerSettings.decoderPriority
 >>>>>>> 2535c119 (feat: silent PCM audio fallback for error 5001 (audio track init failed))
@@ -232,7 +233,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 playbackSpeedProvider = { _uiState.value.playbackSpeed },
                 onPlaybackSpeedAwareAudioOutputProviderCreated = { playbackSpeedAwareAudioOutputProvider = it }
             ).setExtensionRendererMode(playerSettings.decoderPriority)
-                .setMapDV7ToHevc(playerSettings.mapDV7ToHevc)
+                .setMapDV7ToHevc(playerSettings.mapDV7ToHevc || forceDv7ToHevc)
 
             if (showLoadingStatus) _uiState.update { it.copy(loadingMessage = context.getString(R.string.player_loading_building)) }
             val buildDefaultPlayer = {
@@ -447,6 +448,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                         }
                         // Attempt automatic recovery for transient errors.
                         if (tryAudioTrackPcmFallback(error)) {
+                            return
+                        }
+                        if (tryDv7HevcFallback(error)) {
                             return
                         }
                         if (attemptAutoRetry(error, detailedError)) {

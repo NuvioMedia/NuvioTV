@@ -257,6 +257,8 @@ class PlayerRuntimeController(
     internal var isReleasingPlayer: Boolean = false
     internal var cachedDecoderPriority: Int = 1
     internal var hasTriedAudioPcmFallback: Boolean = false
+    internal var hasTriedDv7HevcFallback: Boolean = false
+    internal var forceDv7ToHevc: Boolean = false
     internal var errorRetryCount: Int = 0
     internal var errorRetryJob: Job? = null
     internal var currentScrobbleItem: TraktScrobbleItem? = null

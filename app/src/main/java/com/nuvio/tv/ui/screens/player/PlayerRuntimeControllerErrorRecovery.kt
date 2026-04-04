@@ -269,6 +269,17 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
         "Audio track init failed (5001) — forcing PCM via speed trick, position=${savedPosition}ms"
     )
 
+    // Show loading overlay with fallback info instead of error screen.
+    val fallbackMessage = "Audio track init failed — Switching to PCM audio…"
+    _uiState.update {
+        it.copy(
+            error = null,
+            showLoadingOverlay = true,
+            loadingMessage = fallbackMessage,
+            showPauseOverlay = false
+        )
+    }
+
     // An imperceptible speed offset disables audio passthrough and forces
     // software PCM decoding through the GainAudioProcessor pipeline.
     val currentSpeed = _uiState.value.playbackSpeed
@@ -281,5 +292,60 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
     player.prepare()
     player.playWhenReady = true
 
+    return true
+}
+
+/**
+ * DV7-to-HEVC decoder fallback for ERROR_CODE_DECODER_INIT_FAILED (4003).
+ *
+ * When decoderPriority == 1 (EXTENSION_RENDERER_MODE_ON) and the decoder
+ * fails to initialise, this is often caused by Dolby Vision profile 7
+ * content on devices without a DV decoder.  Enabling the DV7-to-HEVC
+ * mapping allows the HEVC decoder to handle the stream instead.
+ *
+ * Unlike the PCM fallback this requires a full player rebuild because
+ * the mapping is baked into the renderers factory at build time.
+ * Tunneling state does not matter for this fallback.
+ */
+@androidx.annotation.OptIn(UnstableApi::class)
+internal fun PlayerRuntimeController.tryDv7HevcFallback(
+    error: PlaybackException
+): Boolean {
+    if (error.errorCode != PlaybackException.ERROR_CODE_DECODER_INIT_FAILED) return false
+    if (hasTriedDv7HevcFallback) return false
+    if (cachedDecoderPriority != 1) return false
+    // Skip if DV7-to-HEVC is already active — nothing more we can do.
+    if (forceDv7ToHevc) return false
+
+    hasTriedDv7HevcFallback = true
+    forceDv7ToHevc = true
+
+    val savedPosition = _exoPlayer?.currentPosition?.takeIf { it > 0L } ?: 0L
+
+    Log.d(
+        PlayerRuntimeController.TAG,
+        "Decoder init failed (4003) — retrying with DV7-to-HEVC mapping, position=${savedPosition}ms"
+    )
+
+    resetErrorRetryState()
+
+    // Show loading overlay with fallback info instead of error screen.
+    val fallbackMessage = "Decoder init failed — Switching to HEVC decoder…"
+    errorRetryJob = scope.launch {
+        _uiState.update {
+            it.copy(
+                error = null,
+                showLoadingOverlay = true,
+                loadingMessage = fallbackMessage,
+                showPauseOverlay = false
+            )
+        }
+
+        releasePlayer(flushPlaybackState = false)
+        if (savedPosition > 0L) {
+            _uiState.update { it.copy(pendingSeekPosition = savedPosition) }
+        }
+        initializePlayer(currentStreamUrl, currentHeaders)
+    }
     return true
 }
