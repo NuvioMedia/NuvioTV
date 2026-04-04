@@ -60,6 +60,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
             return@onFailure
         }
         _uiState.update { state ->
+            activeRecoveryLoadingMessage = null
             state.copy(
                 error = detailedError,
                 showLoadingOverlay = false
@@ -144,6 +145,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
             return@onFailure
         }
         _uiState.update {
+            activeRecoveryLoadingMessage = null
             it.copy(
                 error = detailedError,
                 showLoadingOverlay = false,

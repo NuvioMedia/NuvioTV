@@ -17,6 +17,139 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+internal data class RecoverySourceCandidate(
+    val url: String,
+    val streamName: String?,
+    val headers: Map<String, String>,
+    val filename: String?,
+    val responseHeaders: Map<String, String>,
+    val bingeGroup: String?,
+    val videoHash: String?,
+    val videoSize: Long?,
+    val addonName: String?,
+    val addonLogo: String?,
+    val streamDescription: String?
+)
+
+private fun Stream.toRecoverySourceCandidates(
+    selectedUrl: String? = null,
+    fallbackFilename: String?
+): List<RecoverySourceCandidate> {
+    val orderedUrls = (listOfNotNull(selectedUrl) + getStreamUrls())
+        .map(String::trim)
+        .filter(String::isNotBlank)
+        .distinct()
+    val headers = PlayerMediaSourceFactory.sanitizeHeaders(behaviorHints?.proxyHeaders?.request)
+    val responseHeaders = behaviorHints?.proxyHeaders?.response.orEmpty()
+    val filename = behaviorHints?.filename ?: fallbackFilename
+    val streamName = name ?: addonName
+
+    return orderedUrls.map { url ->
+        RecoverySourceCandidate(
+            url = url,
+            streamName = streamName,
+            headers = headers,
+            filename = filename,
+            responseHeaders = responseHeaders,
+            bingeGroup = behaviorHints?.bingeGroup,
+            videoHash = behaviorHints?.videoHash,
+            videoSize = behaviorHints?.videoSize,
+            addonName = addonName,
+            addonLogo = addonLogo,
+            streamDescription = description
+        )
+    }
+}
+
+internal fun buildCandidateStreamSources(
+    stream: Stream,
+    selectedUrl: String,
+    allStreamsContext: List<Stream>,
+    fallbackFilename: String?
+): List<RecoverySourceCandidate> {
+    val sameAddonStreams = allStreamsContext.filter { it.addonName == stream.addonName }
+    val currentIndex = sameAddonStreams.indexOfFirst { it === stream }
+    val orderedFallbackStreams = when {
+        currentIndex >= 0 -> sameAddonStreams.drop(currentIndex + 1) + sameAddonStreams.take(currentIndex)
+        else -> sameAddonStreams.filterNot { it === stream }
+    }
+
+    return (
+        stream.toRecoverySourceCandidates(
+            selectedUrl = selectedUrl,
+            fallbackFilename = fallbackFilename
+        ) + orderedFallbackStreams.flatMap { fallbackStream ->
+            fallbackStream.toRecoverySourceCandidates(fallbackFilename = fallbackFilename)
+        }
+        ).distinctBy { it.url }
+}
+
+private fun PlayerRuntimeController.findCurrentStreamForRecovery(
+    allStreamsContext: List<Stream>
+): Stream? {
+    if (allStreamsContext.isEmpty()) return null
+
+    val currentUrlSet = (currentStreamSourceUrls + currentStreamUrl)
+        .map(String::trim)
+        .filter(String::isNotBlank)
+        .toSet()
+    val currentName = _uiState.value.currentStreamName?.trim()?.takeIf { it.isNotBlank() }
+    val currentAddon = currentAddonName?.takeIf { it.isNotBlank() }
+    val addonScoped = if (currentAddon == null) {
+        allStreamsContext
+    } else {
+        allStreamsContext.filter { it.addonName == currentAddon }
+    }
+
+    fun List<Stream>.matchByUrl(): Stream? = firstOrNull { stream ->
+        stream.getStreamUrls().any { candidate -> candidate in currentUrlSet }
+    }
+
+    fun List<Stream>.matchByName(): Stream? = firstOrNull { stream ->
+        currentName != null && listOf(stream.name, stream.title, stream.description)
+            .any { value -> value?.trim()?.equals(currentName, ignoreCase = true) == true }
+    }
+
+    return addonScoped.matchByUrl()
+        ?: addonScoped.matchByName()
+        ?: allStreamsContext.matchByUrl()
+        ?: allStreamsContext.matchByName()
+}
+
+internal fun PlayerRuntimeController.refreshRecoverySourceCandidatesFromSourcePool(
+    allStreamsContext: List<Stream> = _uiState.value.sourceAllStreams
+): Boolean {
+    val currentStream = findCurrentStreamForRecovery(allStreamsContext) ?: return false
+    val candidateSources = buildCandidateStreamSources(
+        stream = currentStream,
+        selectedUrl = currentStreamUrl,
+        allStreamsContext = allStreamsContext,
+        fallbackFilename = currentFilename ?: navigationArgs.filename
+    )
+    val candidateUrls = candidateSources.map { it.url }
+
+    currentStreamSourceCandidates = candidateSources
+    currentStreamSourceUrls = candidateUrls
+    currentStreamSourceIndex = candidateUrls.indexOf(currentStreamUrl).coerceAtLeast(0)
+
+    return candidateUrls.getOrNull(currentStreamSourceIndex + 1) != null
+}
+
+internal fun PlayerRuntimeController.prefetchSourceStreamsForRecoveryIfNeeded() {
+    if (_uiState.value.sourceAllStreams.isNotEmpty()) return
+    if (sourceStreamsJob?.isActive == true) return
+    if (sourceStreamsCacheRequestKey != null) return
+
+    val hasSeriesEpisodeContext = contentType in listOf("series", "tv") &&
+        currentSeason != null &&
+        currentEpisode != null &&
+        (currentVideoId ?: contentId) != null
+    val hasMovieContext = contentType !in listOf("series", "tv") && contentId != null
+    if (!hasSeriesEpisodeContext && !hasMovieContext) return
+
+    loadSourceStreams(forceRefresh = false)
+}
+
 internal fun PlayerRuntimeController.showEpisodesPanel() {
     _uiState.update {
         it.copy(
@@ -120,6 +253,7 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
                     val addonStreams = StreamAutoPlaySelector.orderAddonStreams(result.data, installedAddonOrder)
                     val allStreams = addonStreams.flatMap { it.streams }
                     val availableAddons = addonStreams.map { it.addonName }
+                    refreshRecoverySourceCandidatesFromSourcePool(allStreams)
                     _uiState.update {
                         it.copy(
                             isLoadingSourceStreams = false,
@@ -269,10 +403,18 @@ private fun com.nuvio.tv.domain.model.Addon.supportsStreamResourceForChip(type: 
 private fun PlayerRuntimeController.applySelectedStreamState(
     stream: Stream,
     url: String,
-    headers: Map<String, String>
+    headers: Map<String, String>,
+    allStreamsContext: List<Stream>
 ) {
-    val candidateUrls = buildCandidateStreamUrls(stream = stream, selectedUrl = url)
+    val candidateSources = buildCandidateStreamSources(
+        stream = stream,
+        selectedUrl = url,
+        allStreamsContext = allStreamsContext,
+        fallbackFilename = navigationArgs.filename
+    )
+    val candidateUrls = candidateSources.map { it.url }
     currentStreamUrl = url
+    currentStreamSourceCandidates = candidateSources
     currentStreamSourceUrls = candidateUrls
     currentStreamSourceIndex = candidateUrls.indexOf(url).coerceAtLeast(0)
     currentHeaders = headers
@@ -293,16 +435,6 @@ private fun PlayerRuntimeController.applySelectedStreamState(
     currentVideoWidth = null
     currentVideoHeight = null
     currentVideoBitrate = null
-}
-
-private fun PlayerRuntimeController.buildCandidateStreamUrls(
-    stream: Stream,
-    selectedUrl: String
-): List<String> {
-    return (listOf(selectedUrl) + stream.getStreamUrls())
-        .map(String::trim)
-        .filter(String::isNotBlank)
-        .distinct()
 }
 
 private fun PlayerRuntimeController.persistSelectedStreamForReuse(
@@ -331,7 +463,10 @@ private fun PlayerRuntimeController.persistSelectedStreamForReuse(
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)
-internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
+internal fun PlayerRuntimeController.switchToSourceStream(
+    stream: Stream,
+    allStreamsContext: List<Stream> = _uiState.value.sourceAllStreams
+) {
     val url = stream.getStreamUrl()
     if (url.isNullOrBlank()) {
         _uiState.update { it.copy(sourceStreamsError = "Invalid stream URL") }
@@ -341,6 +476,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
     nextEpisodeAutoPlayJob = null
 
     flushPlaybackSnapshotForSwitchOrExit()
+    activeRecoveryLoadingMessage = null
 
     val newHeaders = PlayerMediaSourceFactory.sanitizeHeaders(
         stream.behaviorHints?.proxyHeaders?.request
@@ -352,7 +488,8 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
     applySelectedStreamState(
         stream = stream,
         url = url,
-        headers = newHeaders
+        headers = newHeaders,
+        allStreamsContext = allStreamsContext
     )
     persistSelectedStreamForReuse(stream = stream, url = url, headers = newHeaders)
     hasRetriedCurrentStreamAfter416 = false
@@ -601,7 +738,11 @@ internal fun PlayerRuntimeController.reloadEpisodeStreams() {
     }
 }
 
-internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, forcedTargetVideo: Video? = null) {
+internal fun PlayerRuntimeController.switchToEpisodeStream(
+    stream: Stream,
+    forcedTargetVideo: Video? = null,
+    allStreamsContext: List<Stream> = _uiState.value.episodeAllStreams
+) {
     val url = stream.getStreamUrl()
     if (url.isNullOrBlank()) {
         _uiState.update { it.copy(episodeStreamsError = "Invalid stream URL") }
@@ -611,6 +752,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
     nextEpisodeAutoPlayJob = null
 
     flushPlaybackSnapshotForSwitchOrExit()
+    activeRecoveryLoadingMessage = null
 
     val newHeaders = PlayerMediaSourceFactory.sanitizeHeaders(
         stream.behaviorHints?.proxyHeaders?.request
@@ -624,7 +766,8 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
     applySelectedStreamState(
         stream = stream,
         url = url,
-        headers = newHeaders
+        headers = newHeaders,
+        allStreamsContext = allStreamsContext
     )
     persistSelectedStreamForReuse(stream = stream, url = url, headers = newHeaders)
     persistedTrackPreference = null
@@ -880,7 +1023,15 @@ internal fun PlayerRuntimeController.playNextEpisode() {
                         nextEpisodeAutoPlayCountdownSec = null
                     )
                 }
-                switchToEpisodeStream(stream = streamToPlay, forcedTargetVideo = nextVideo)
+                val fetchedStreams = lastSuccessData?.let { data ->
+                    StreamAutoPlaySelector.orderAddonStreams(data, installedAddonOrder).flatMap { it.streams }
+                } ?: _uiState.value.episodeAllStreams
+
+                switchToEpisodeStream(
+                    stream = streamToPlay,
+                    forcedTargetVideo = nextVideo,
+                    allStreamsContext = fetchedStreams
+                )
             } else {
                 _uiState.update {
                     it.copy(

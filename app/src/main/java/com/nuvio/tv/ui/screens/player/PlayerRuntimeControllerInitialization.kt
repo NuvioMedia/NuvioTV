@@ -62,6 +62,7 @@ private fun PlayerRuntimeController.resolveLoadingStatusMessage(
     resId: Int,
     vararg formatArgs: Any
 ): String? {
+    activeRecoveryLoadingMessage?.let { return it }
     return if (showLoadingStatus) {
         context.getString(resId, *formatArgs)
     } else {
@@ -104,6 +105,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             hasTriedAudioPcmFallback = false
             hasTriedDv7HevcFallback = false
             mpvDelayStartAfterAfrSwitch = false
+            prefetchSourceStreamsForRecoveryIfNeeded()
             val playerSettings = playerSettingsDataStore.playerSettings.first()
             cachedDecoderPriority = playerSettings.decoderPriority
             seamlessPlaybackModeSetting = playerSettings.seamlessPlaybackMode
@@ -501,6 +503,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                             return
                         }
                         _uiState.update {
+                            activeRecoveryLoadingMessage = null
                             it.copy(
                                 error = detailedError,
                                 showLoadingOverlay = false,
@@ -522,6 +525,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 return@launch
             }
             _uiState.update {
+                activeRecoveryLoadingMessage = null
                 it.copy(
                     error = e.toDisplayMessage("Failed to initialize player"),
                     showLoadingOverlay = false

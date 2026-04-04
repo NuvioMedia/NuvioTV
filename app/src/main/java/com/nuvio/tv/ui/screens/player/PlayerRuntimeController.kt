@@ -121,11 +121,29 @@ class PlayerRuntimeController(
     internal var currentVideoWidth: Int? = null
     internal var currentVideoHeight: Int? = null
     internal var currentVideoBitrate: Int? = null
+    internal var currentHeaders: Map<String, String> =
+        PlayerMediaSourceFactory.sanitizeHeaders(PlayerMediaSourceFactory.parseHeaders(headersJson))
     internal var currentStreamSourceUrls: List<String> =
         (listOf(initialStreamUrl) + navigationArgs.sourceUrls)
             .map(String::trim)
             .filter(String::isNotBlank)
             .distinct()
+    internal var currentStreamSourceCandidates: List<RecoverySourceCandidate> =
+        currentStreamSourceUrls.map { url ->
+            RecoverySourceCandidate(
+                url = url,
+                streamName = streamName,
+                headers = currentHeaders,
+                filename = currentFilename,
+                responseHeaders = emptyMap(),
+                bingeGroup = navigationArgs.bingeGroup,
+                videoHash = currentVideoHash,
+                videoSize = currentVideoSize,
+                addonName = currentAddonName,
+                addonLogo = currentAddonLogo,
+                streamDescription = currentStreamDescription
+            )
+        }
     internal var currentStreamUrl: String = initialStreamUrl
     internal var currentStreamSourceIndex: Int = currentStreamSourceUrls.indexOf(initialStreamUrl).coerceAtLeast(0)
     internal var currentStreamResponseHeaders: Map<String, String> = emptyMap()
@@ -135,8 +153,6 @@ class PlayerRuntimeController(
             filename = currentFilename,
             responseHeaders = currentStreamResponseHeaders
         )
-    internal var currentHeaders: Map<String, String> =
-        PlayerMediaSourceFactory.sanitizeHeaders(PlayerMediaSourceFactory.parseHeaders(headersJson))
 
     fun getCurrentStreamUrl(): String = currentStreamUrl
     fun getCurrentHeaders(): Map<String, String> = currentHeaders
@@ -229,6 +245,7 @@ class PlayerRuntimeController(
     internal var currentInternalPlayerEngine: InternalPlayerEngine = InternalPlayerEngine.EXOPLAYER
     internal var seamlessPlaybackModeSetting: SeamlessPlaybackMode = SeamlessPlaybackMode.STREAM_ONLY
     internal var seamlessRecoveryEngineSwitchUsed: Boolean = false
+    internal var activeRecoveryLoadingMessage: String? = null
     internal var streamAutoPlayModeSetting: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL
     internal var streamAutoPlayNextEpisodeEnabledSetting: Boolean = false
     internal var streamAutoPlayPreferBingeGroupForNextEpisodeSetting: Boolean = false

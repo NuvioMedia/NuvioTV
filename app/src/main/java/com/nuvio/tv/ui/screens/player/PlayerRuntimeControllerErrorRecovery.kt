@@ -16,6 +16,7 @@ private const val RETRY_DELAY_MS = 1_500L
 private val SOURCE_FALLBACK_HTTP_CODES = setOf(403, 404, 410, 416, 500, 503)
 
 private fun PlayerRuntimeController.showRecoveryLoadingOverlay(message: String) {
+    activeRecoveryLoadingMessage = message
     _uiState.update {
         it.copy(
             error = null,
@@ -40,11 +41,23 @@ private fun PlayerRuntimeController.resetSourceRecoveryFlags() {
     resetErrorRetryState()
 }
 
-private fun PlayerRuntimeController.updateCurrentStreamTracking(url: String, index: Int) {
-    currentStreamUrl = url
+private fun PlayerRuntimeController.updateCurrentStreamTracking(
+    candidate: RecoverySourceCandidate,
+    index: Int
+) {
+    currentStreamUrl = candidate.url
     currentStreamSourceIndex = index
+    currentHeaders = candidate.headers
+    currentFilename = candidate.filename
+    currentStreamResponseHeaders = candidate.responseHeaders
+    currentStreamBingeGroup = candidate.bingeGroup
+    currentVideoHash = candidate.videoHash
+    currentVideoSize = candidate.videoSize
+    currentAddonName = candidate.addonName
+    currentAddonLogo = candidate.addonLogo
+    currentStreamDescription = candidate.streamDescription
     currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
-        url = url,
+        url = candidate.url,
         filename = currentFilename,
         responseHeaders = currentStreamResponseHeaders
     )
@@ -61,7 +74,21 @@ private fun PlayerRuntimeController.scheduleRecoveryRestart(
 ) {
     val targetEngine = overrideInternalPlayerEngine ?: currentInternalPlayerEngine
     val switchingToMpv = targetEngine == InternalPlayerEngine.MVP_PLAYER
-    updateCurrentStreamTracking(url = targetUrl, index = targetIndex)
+    val targetCandidate = currentStreamSourceCandidates.getOrNull(targetIndex)
+        ?: RecoverySourceCandidate(
+            url = targetUrl,
+            streamName = _uiState.value.currentStreamName,
+            headers = currentHeaders,
+            filename = currentFilename,
+            responseHeaders = currentStreamResponseHeaders,
+            bingeGroup = currentStreamBingeGroup,
+            videoHash = currentVideoHash,
+            videoSize = currentVideoSize,
+            addonName = currentAddonName,
+            addonLogo = currentAddonLogo,
+            streamDescription = currentStreamDescription
+        )
+    updateCurrentStreamTracking(candidate = targetCandidate, index = targetIndex)
     errorRetryJob?.cancel()
     errorRetryJob = scope.launch {
         showRecoveryLoadingOverlay(message)
@@ -69,17 +96,13 @@ private fun PlayerRuntimeController.scheduleRecoveryRestart(
         _uiState.update {
             it.copy(
                 currentStreamUrl = targetUrl,
+                currentStreamName = targetCandidate.streamName,
                 internalPlayerEngine = targetEngine,
                 showPlayerEngineSwitchInfo = showEngineSwitchInfo,
                 playerEngineSwitchInfoText = if (showEngineSwitchInfo) engineSwitchInfoText else it.playerEngineSwitchInfoText
             )
         }
-        if (showEngineSwitchInfo) {
-            hidePlayerEngineSwitchInfoJob = scope.launch {
-                delay(2200)
-                _uiState.update { state -> state.copy(showPlayerEngineSwitchInfo = false) }
-            }
-        }
+        // Moved to bottom
         pendingMpvHardRestartOnNextAttach = switchingToMpv
         delayMpvResumeSeekUntilVideoTrack = switchingToMpv
         currentInternalPlayerEngine = targetEngine
@@ -94,6 +117,12 @@ private fun PlayerRuntimeController.scheduleRecoveryRestart(
             allowEngineFailover = false,
             resetSeamlessRecoveryPlan = false
         )
+        if (showEngineSwitchInfo) {
+            hidePlayerEngineSwitchInfoJob = scope.launch {
+                delay(2200)
+                _uiState.update { state -> state.copy(showPlayerEngineSwitchInfo = false) }
+            }
+        }
     }
 }
 
@@ -103,15 +132,21 @@ private fun PlayerRuntimeController.switchToNextSource(
     resumePosition: Long,
     preferInPlayerSourceSwap: Boolean
 ): Boolean {
-    val nextUrl = currentStreamSourceUrls.getOrNull(nextIndex) ?: return false
+    val nextCandidate = currentStreamSourceCandidates.getOrNull(nextIndex) ?: return false
+    val nextUrl = nextCandidate.url
     Log.w(
         PlayerRuntimeController.TAG,
         "Source recovery: switching to source ${nextIndex + 1}/${currentStreamSourceUrls.size}, position=${resumePosition}ms"
     )
     resetSourceRecoveryFlags()
-    updateCurrentStreamTracking(url = nextUrl, index = nextIndex)
+    updateCurrentStreamTracking(candidate = nextCandidate, index = nextIndex)
     showRecoveryLoadingOverlay(message)
-    _uiState.update { it.copy(currentStreamUrl = nextUrl) }
+    _uiState.update {
+        it.copy(
+            currentStreamUrl = nextUrl,
+            currentStreamName = nextCandidate.streamName
+        )
+    }
 
     val player = _exoPlayer
     if (preferInPlayerSourceSwap && player != null && !isUsingMpvEngine()) {
@@ -287,6 +322,13 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
     if (!isRetryablePlaybackError(error)) return false
     if (errorRetryCount >= MAX_AUTO_RETRIES) return false
 
+    // Skip auto-retry for startup failures if we have alternative streams to fall back to.
+    // This prevents the user from being stuck staring at "Auto-retry 1/2" for every dead stream proxy.
+    val hasMoreStreams = currentStreamSourceUrls.getOrNull(currentStreamSourceIndex + 1) != null
+    if (!hasRenderedFirstFrame && cachedAutoSourceFallback && hasMoreStreams) {
+        return false // Let tryAutoSourceFallback take over immediately
+    }
+
     val attempt = errorRetryCount
     errorRetryCount++
 
@@ -347,6 +389,7 @@ internal fun PlayerRuntimeController.resetErrorRetryState() {
     errorRetryCount = 0
     errorRetryJob?.cancel()
     errorRetryJob = null
+    activeRecoveryLoadingMessage = null
 }
 
 /**
@@ -464,7 +507,10 @@ internal fun PlayerRuntimeController.tryAutoSourceFallback(
 ): Boolean {
     if (!cachedAutoSourceFallback) return false
 
-    val nextIndex = currentStreamSourceIndex + 1
+    var nextIndex = currentStreamSourceIndex + 1
+    if (currentStreamSourceUrls.getOrNull(nextIndex) == null && refreshRecoverySourceCandidatesFromSourcePool()) {
+        nextIndex = currentStreamSourceIndex + 1
+    }
     if (currentStreamSourceUrls.getOrNull(nextIndex) == null) return false
 
     val savedPosition = currentPlaybackPositionMs()?.takeIf { it > 0L } ?: 0L
@@ -559,7 +605,10 @@ internal fun PlayerRuntimeController.attemptSeamlessStartupRecovery(
     allowEngineFailover: Boolean
 ): Boolean {
     if (cachedAutoSourceFallback) {
-        val nextIndex = currentStreamSourceIndex + 1
+        var nextIndex = currentStreamSourceIndex + 1
+        if (currentStreamSourceUrls.getOrNull(nextIndex) == null && refreshRecoverySourceCandidatesFromSourcePool()) {
+            nextIndex = currentStreamSourceIndex + 1
+        }
         if (currentStreamSourceUrls.getOrNull(nextIndex) != null) {
             Log.w(
                 PlayerRuntimeController.TAG,
