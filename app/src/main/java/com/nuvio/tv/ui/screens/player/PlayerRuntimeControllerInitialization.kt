@@ -89,9 +89,12 @@ internal fun PlayerRuntimeController.initializePlayer(
                 startupEngineFailoverTriggered = false
             }
             resetLoadingOverlayForNewStream()
-<<<<<<< HEAD
+            hasTriedAudioPcmFallback = false
+            hasTriedDv7HevcFallback = false
             mpvDelayStartAfterAfrSwitch = false
             val playerSettings = playerSettingsDataStore.playerSettings.first()
+            cachedDecoderPriority = playerSettings.decoderPriority
+            cachedAutoSourceFallback = playerSettings.autoSourceFallbackEnabled
             val preferredAudioLanguages = resolvePreferredAudioLanguages(
                 preferredAudioLanguage = playerSettings.preferredAudioLanguage,
                 secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
@@ -101,12 +104,6 @@ internal fun PlayerRuntimeController.initializePlayer(
             val effectiveInternalPlayerEngine = overrideInternalPlayerEngine ?: playerSettings.internalPlayerEngine
             runtimeInternalPlayerEngineOverride = overrideInternalPlayerEngine
             currentInternalPlayerEngine = effectiveInternalPlayerEngine
-=======
-            hasTriedAudioPcmFallback = false
-            hasTriedDv7HevcFallback = false
-            val playerSettings = playerSettingsDataStore.playerSettings.first()
-            cachedDecoderPriority = playerSettings.decoderPriority
->>>>>>> 2535c119 (feat: silent PCM audio fallback for error 5001 (audio track init failed))
             val showLoadingStatus = playerSettings.showPlayerLoadingStatus
             _uiState.update {
                 it.copy(
@@ -454,6 +451,9 @@ internal fun PlayerRuntimeController.initializePlayer(
                             return
                         }
                         if (attemptAutoRetry(error, detailedError)) {
+                            return
+                        }
+                        if (tryAutoSourceFallback(error)) {
                             return
                         }
                         _uiState.update {

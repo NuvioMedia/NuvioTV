@@ -352,8 +352,13 @@ internal class PlayerMediaSourceFactory {
             val connection = openConnection(url = url, headers = headers, method = "HEAD")
             return try {
                 connection.responseCode
+                val responseHeaders = readResponseHeaders(connection)
                 normalizeMimeType(connection.contentType)
-                    ?: inferMimeType(url = connection.url?.toString().orEmpty(), filename = null)
+                    ?: inferMimeType(
+                        url = connection.url?.toString().orEmpty(),
+                        filename = null,
+                        responseHeaders = responseHeaders
+                    )
             } catch (_: Exception) {
                 null
             } finally {
@@ -370,8 +375,13 @@ internal class PlayerMediaSourceFactory {
             )
             return try {
                 connection.responseCode
+                val responseHeaders = readResponseHeaders(connection)
                 normalizeMimeType(connection.contentType)
-                    ?: inferMimeType(url = connection.url?.toString().orEmpty(), filename = null)
+                    ?: inferMimeType(
+                        url = connection.url?.toString().orEmpty(),
+                        filename = null,
+                        responseHeaders = responseHeaders
+                    )
                     ?: sniffManifestMimeType(readProbeSnippet(connection.inputStream))
             } catch (_: Exception) {
                 null
@@ -407,6 +417,19 @@ internal class PlayerMediaSourceFactory {
             val read = inputStream.read(buffer)
             if (read <= 0) return null
             return String(buffer, 0, read, Charsets.UTF_8)
+        }
+
+        private fun readResponseHeaders(connection: HttpURLConnection): Map<String, String> {
+            return buildMap {
+                connection.headerFields.forEach { (key, values) ->
+                    if (key.isNullOrBlank()) return@forEach
+                    val value = values
+                        ?.firstOrNull { it.isNotBlank() }
+                        ?.trim()
+                        ?: return@forEach
+                    put(key, value)
+                }
+            }
         }
 
 

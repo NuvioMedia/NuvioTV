@@ -171,7 +171,6 @@ class PlayerRuntimeController(
     val exoPlayer: ExoPlayer?
         get() = _exoPlayer
     internal var playbackSpeedAwareAudioOutputProvider: PlaybackSpeedAwareAudioOutputProvider? = null
-    internal var isReleasingPlayer: Boolean = false
 
     internal var progressJob: Job? = null
     internal var hideControlsJob: Job? = null
@@ -259,6 +258,8 @@ class PlayerRuntimeController(
     internal var hasTriedAudioPcmFallback: Boolean = false
     internal var hasTriedDv7HevcFallback: Boolean = false
     internal var forceDv7ToHevc: Boolean = false
+    internal var cachedAutoSourceFallback: Boolean = false
+    internal var sourceFallbackIndex: Int = -1
     internal var errorRetryCount: Int = 0
     internal var errorRetryJob: Job? = null
     internal var currentScrobbleItem: TraktScrobbleItem? = null

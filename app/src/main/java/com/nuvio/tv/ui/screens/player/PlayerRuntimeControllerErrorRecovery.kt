@@ -5,6 +5,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
+import com.nuvio.tv.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -270,7 +271,7 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
     )
 
     // Show loading overlay with fallback info instead of error screen.
-    val fallbackMessage = "Audio track init failed — Switching to PCM audio…"
+    val fallbackMessage = context.getString(R.string.player_loading_fallback_pcm_audio)
     _uiState.update {
         it.copy(
             error = null,
@@ -330,7 +331,7 @@ internal fun PlayerRuntimeController.tryDv7HevcFallback(
     resetErrorRetryState()
 
     // Show loading overlay with fallback info instead of error screen.
-    val fallbackMessage = "Decoder init failed — Switching to HEVC decoder…"
+    val fallbackMessage = context.getString(R.string.player_loading_fallback_hevc_decoder)
     errorRetryJob = scope.launch {
         _uiState.update {
             it.copy(
@@ -347,5 +348,87 @@ internal fun PlayerRuntimeController.tryDv7HevcFallback(
         }
         initializePlayer(currentStreamUrl, currentHeaders)
     }
+    return true
+}
+
+/**
+ * Last-resort source fallback for any unrecoverable error.
+ *
+ * When [cachedAutoSourceFallback] is enabled and there are remaining source
+ * URLs in [currentStreamSourceUrls], this switches to the next source
+ * WITHOUT rebuilding the player — using [setMediaSource] + [prepare].
+ *
+ * All decoder fallback flags (PCM, DV7-HEVC) are reset so they can
+ * re-attempt on the new source.
+ */
+@androidx.annotation.OptIn(UnstableApi::class)
+internal fun PlayerRuntimeController.tryAutoSourceFallback(
+    error: PlaybackException
+): Boolean {
+    if (!cachedAutoSourceFallback) return false
+
+    val nextIndex = currentStreamSourceIndex + 1
+    val nextUrl = currentStreamSourceUrls.getOrNull(nextIndex) ?: return false
+
+    val player = _exoPlayer ?: return false
+    val savedPosition = player.currentPosition.takeIf { it > 0L } ?: 0L
+
+    Log.w(
+        PlayerRuntimeController.TAG,
+        "Auto source fallback: switching to source ${nextIndex + 1}/${currentStreamSourceUrls.size}" +
+            " after error ${error.errorCode}, position=${savedPosition}ms"
+    )
+
+    // Update source tracking
+    currentStreamUrl = nextUrl
+    currentStreamSourceIndex = nextIndex
+    currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
+        url = nextUrl,
+        filename = currentFilename,
+        responseHeaders = currentStreamResponseHeaders
+    )
+
+    // Reset all fallback flags so they can re-attempt on the new source
+    hasTriedAudioPcmFallback = false
+    hasTriedDv7HevcFallback = false
+    forceDv7ToHevc = false
+    hasRetriedCurrentStreamAfter416 = false
+    resetErrorRetryState()
+
+    // Show loading overlay with fallback message
+    val fallbackMessage = context.getString(
+        R.string.player_loading_fallback_next_source,
+        nextIndex + 1,
+        currentStreamSourceUrls.size
+    )
+    _uiState.update {
+        it.copy(
+            currentStreamUrl = nextUrl,
+            error = null,
+            showLoadingOverlay = true,
+            loadingMessage = fallbackMessage,
+            showPauseOverlay = false
+        )
+    }
+
+    // Switch source without rebuilding the player
+    val subtitleConfigurations = _uiState.value.addonSubtitles
+        .distinctBy { "${it.id}|${it.url}" }
+        .map(::toSubtitleConfiguration)
+
+    player.setMediaSource(
+        mediaSourceFactory.createMediaSource(
+            url = nextUrl,
+            headers = currentHeaders,
+            subtitleConfigurations = subtitleConfigurations,
+            filename = currentFilename,
+            responseHeaders = currentStreamResponseHeaders,
+            mimeTypeOverride = currentStreamMimeType
+        ),
+        savedPosition
+    )
+    player.prepare()
+    player.playWhenReady = true
+
     return true
 }

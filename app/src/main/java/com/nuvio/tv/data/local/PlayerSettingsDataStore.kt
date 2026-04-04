@@ -197,7 +197,9 @@ data class PlayerSettings(
     val streamReuseLastLinkCacheHours: Int = 24,
     val subtitleOrganizationMode: SubtitleOrganizationMode = SubtitleOrganizationMode.NONE,
     val addonSubtitleStartupMode: AddonSubtitleStartupMode = AddonSubtitleStartupMode.ALL_SUBTITLES,
-    val resizeMode: Int = 0 
+    val resizeMode: Int = 0,
+    // Auto source fallback: switch to next source on unrecoverable errors
+    val autoSourceFallbackEnabled: Boolean = true
 )
 
 enum class StreamAutoPlayMode {
@@ -319,6 +321,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val subtitleOrganizationModeKey = stringPreferencesKey("subtitle_organization_mode")
     private val addonSubtitleStartupModeKey = stringPreferencesKey("addon_subtitle_startup_mode")
     private val resizeModeKey = intPreferencesKey("resize_mode")
+    private val autoSourceFallbackEnabledKey = booleanPreferencesKey("auto_source_fallback_enabled")
 
     // Subtitle style settings keys
     private val subtitlePreferredLanguageKey = stringPreferencesKey("subtitle_preferred_language")
@@ -490,6 +493,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 subtitleOrganizationMode = parseSubtitleOrganizationMode(prefs[subtitleOrganizationModeKey]),
                 addonSubtitleStartupMode = parseAddonSubtitleStartupMode(prefs[addonSubtitleStartupModeKey]),
                 resizeMode = (prefs[resizeModeKey] ?: 0).coerceIn(0, 4),
+                autoSourceFallbackEnabled = prefs[autoSourceFallbackEnabledKey] ?: true,
                 subtitleStyle = SubtitleStyleSettings(
                     preferredLanguage = normalizeSelectableLanguageCode(
                         prefs[subtitlePreferredLanguageKey] ?: "en"
@@ -819,6 +823,12 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setMapDV7ToHevc(enabled: Boolean) {
         store().edit { prefs ->
             prefs[mapDV7ToHevcKey] = enabled
+        }
+    }
+
+    suspend fun setAutoSourceFallbackEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[autoSourceFallbackEnabledKey] = enabled
         }
     }
 

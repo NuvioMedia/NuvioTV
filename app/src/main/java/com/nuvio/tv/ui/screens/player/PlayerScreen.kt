@@ -87,6 +87,7 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -513,7 +514,7 @@ fun PlayerScreen(
         } else {
             viewModel.exoPlayer?.let { player ->
                 val subtitleStyle = uiState.subtitleStyle
-                val resizeMode = uiState.resizeMode
+                val aspectMode = uiState.aspectMode
 
                 AndroidView(
                     factory = { context ->
@@ -527,8 +528,8 @@ fun PlayerScreen(
                     update = { playerView ->
                         // Keep device awake only while playback is active (or buffering), not when paused.
                         playerView.keepScreenOn = uiState.isPlaying || uiState.isBuffering
-                        Log.d("PlayerScreen", "Applying resizeMode: $resizeMode")
-                        playerView.resizeMode = resizeMode
+                        playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        applyAspectMode(playerView, aspectMode)
                         playerView.subtitleView?.apply {
                             // Calculate font size based on percentage (100% = 24sp base)
                             val baseFontSize = 24f
