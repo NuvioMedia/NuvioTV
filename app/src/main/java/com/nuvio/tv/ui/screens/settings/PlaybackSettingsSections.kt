@@ -60,6 +60,7 @@ import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
+import com.nuvio.tv.data.local.SeamlessPlaybackMode
 import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
@@ -78,8 +79,18 @@ private data class PlaybackGeneralUi(
 
 private data class PlaybackStreamSelectionUi(
     val playerPreferenceLabel: String,
-    val internalEngineLabel: String
+    val internalEngineLabel: String,
+    val seamlessPlaybackLabel: String
 )
+
+private fun seamlessPlaybackModeLabel(mode: SeamlessPlaybackMode, off: String, streamOnly: String, playerOnly: String, both: String): String {
+    return when (mode) {
+        SeamlessPlaybackMode.OFF -> off
+        SeamlessPlaybackMode.STREAM_ONLY -> streamOnly
+        SeamlessPlaybackMode.PLAYER_ONLY -> playerOnly
+        SeamlessPlaybackMode.STREAM_THEN_PLAYER -> both
+    }
+}
 
 private fun frameRateMatchingModeLabel(mode: FrameRateMatchingMode, off: String, onStart: String, onStartStop: String): String {
     return when (mode) {
@@ -96,6 +107,7 @@ internal fun PlaybackSettingsSections(
     trailerSettings: TrailerSettings,
     onShowPlayerPreferenceDialog: () -> Unit,
     onShowInternalPlayerEngineDialog: () -> Unit,
+    onShowSeamlessPlaybackModeDialog: () -> Unit,
     onShowAudioLanguageDialog: () -> Unit,
     onShowSecondaryAudioLanguageDialog: () -> Unit,
     onShowDecoderPriorityDialog: () -> Unit,
@@ -114,8 +126,6 @@ internal fun PlaybackSettingsSections(
     onShowReuseLastLinkCacheDialog: () -> Unit,
     onSetStreamAutoPlayNextEpisodeEnabled: (Boolean) -> Unit,
     onSetStreamAutoPlayPreferBingeGroupForNextEpisode: (Boolean) -> Unit,
-    onSetAutoSwitchInternalPlayerOnError: (Boolean) -> Unit,
-    onSetAutoSourceFallbackEnabled: (Boolean) -> Unit,
     onSetNextEpisodeThresholdPercent: (Float) -> Unit,
     onSetNextEpisodeThresholdMinutesBeforeEnd: (Float) -> Unit,
     onSetStreamAutoPlayTimeoutSeconds: (Int) -> Unit,
@@ -165,6 +175,10 @@ internal fun PlaybackSettingsSections(
     val strSectionAudioDesc = stringResource(R.string.playback_section_audio_desc)
     val strSectionSubtitles = stringResource(R.string.playback_section_subtitles)
     val strSectionSubtitlesDesc = stringResource(R.string.playback_section_subtitles_desc)
+    val strSeamlessOff = stringResource(R.string.playback_seamless_mode_off)
+    val strSeamlessStreamOnly = stringResource(R.string.playback_seamless_mode_stream_only)
+    val strSeamlessPlayerOnly = stringResource(R.string.playback_seamless_mode_player_only)
+    val strSeamlessBoth = stringResource(R.string.playback_seamless_mode_stream_then_player)
     val generalUi = PlaybackGeneralUi(
         isExternalPlayer = playerSettings.playerPreference == PlayerPreference.EXTERNAL,
         frameRateMatchingLabel = frameRateMatchingModeLabel(
@@ -183,7 +197,14 @@ internal fun PlaybackSettingsSections(
         internalEngineLabel = when (playerSettings.internalPlayerEngine) {
             InternalPlayerEngine.EXOPLAYER -> stringResource(R.string.playback_engine_exoplayer)
             InternalPlayerEngine.MVP_PLAYER -> stringResource(R.string.playback_engine_mvplayer)
-        }
+        },
+        seamlessPlaybackLabel = seamlessPlaybackModeLabel(
+            mode = playerSettings.seamlessPlaybackMode,
+            off = strSeamlessOff,
+            streamOnly = strSeamlessStreamOnly,
+            playerOnly = strSeamlessPlayerOnly,
+            both = strSeamlessBoth
+        )
     )
 
     LaunchedEffect(generalExpanded, focusedSection) {
@@ -325,25 +346,12 @@ internal fun PlaybackSettingsSections(
                 )
             }
 
-            item(key = "stream_auto_switch_internal_player_on_error") {
-                ToggleSettingsItem(
+            item(key = "stream_seamless_playback_mode") {
+                NavigationSettingsItem(
                     icon = Icons.Default.SwapHoriz,
-                    title = stringResource(R.string.playback_auto_switch_internal_player_on_error),
-                    subtitle = stringResource(R.string.playback_auto_switch_internal_player_on_error_sub),
-                    isChecked = playerSettings.autoSwitchInternalPlayerOnError,
-                    onCheckedChange = onSetAutoSwitchInternalPlayerOnError,
-                    onFocused = { focusedSection = PlaybackSection.STREAM_SELECTION },
-                    enabled = playerSettings.playerPreference != PlayerPreference.EXTERNAL
-                )
-            }
-
-            item(key = "stream_auto_source_fallback") {
-                ToggleSettingsItem(
-                    icon = Icons.Default.SwapHoriz,
-                    title = stringResource(R.string.playback_auto_source_fallback),
-                    subtitle = stringResource(R.string.playback_auto_source_fallback_sub),
-                    isChecked = playerSettings.autoSourceFallbackEnabled,
-                    onCheckedChange = onSetAutoSourceFallbackEnabled,
+                    title = stringResource(R.string.playback_seamless_mode),
+                    subtitle = streamSelectionUi.seamlessPlaybackLabel,
+                    onClick = onShowSeamlessPlaybackModeDialog,
                     onFocused = { focusedSection = PlaybackSection.STREAM_SELECTION },
                     enabled = playerSettings.playerPreference != PlayerPreference.EXTERNAL
                 )
@@ -555,6 +563,7 @@ internal fun PlaybackSettingsDialogsHost(
     enabledPluginNames: List<String>,
     showPlayerPreferenceDialog: Boolean,
     showInternalPlayerEngineDialog: Boolean,
+    showSeamlessPlaybackModeDialog: Boolean,
     showLanguageDialog: Boolean,
     showSecondaryLanguageDialog: Boolean,
     showSubtitleStartupModeDialog: Boolean,
@@ -575,6 +584,8 @@ internal fun PlaybackSettingsDialogsHost(
     onDismissPlayerPreferenceDialog: () -> Unit,
     onSetInternalPlayerEngine: (InternalPlayerEngine) -> Unit,
     onDismissInternalPlayerEngineDialog: () -> Unit,
+    onSetSeamlessPlaybackMode: (SeamlessPlaybackMode) -> Unit,
+    onDismissSeamlessPlaybackModeDialog: () -> Unit,
     onSetSubtitlePreferredLanguage: (String?) -> Unit,
     onSetSubtitleSecondaryLanguage: (String?) -> Unit,
     onSetAddonSubtitleStartupMode: (AddonSubtitleStartupMode) -> Unit,
@@ -627,6 +638,17 @@ internal fun PlaybackSettingsDialogsHost(
                 onDismissInternalPlayerEngineDialog()
             },
             onDismiss = onDismissInternalPlayerEngineDialog
+        )
+    }
+
+    if (showSeamlessPlaybackModeDialog) {
+        SeamlessPlaybackModeDialog(
+            currentMode = playerSettings.seamlessPlaybackMode,
+            onModeSelected = { mode ->
+                onSetSeamlessPlaybackMode(mode)
+                onDismissSeamlessPlaybackModeDialog()
+            },
+            onDismiss = onDismissSeamlessPlaybackModeDialog
         )
     }
 
@@ -832,6 +854,111 @@ private fun InternalPlayerEngineDialog(
 
                     Card(
                         onClick = { onEngineSelected(engine) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
+                        colors = CardDefaults.colors(
+                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
+                            focusedContainerColor = NuvioColors.FocusBackground
+                        ),
+                        shape = CardDefaults.shape(shape = RoundedCornerShape(10.dp)),
+                        scale = CardDefaults.scale(focusedScale = 1f)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = title,
+                                    color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = description,
+                                    color = NuvioColors.TextSecondary,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            if (isSelected) {
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = stringResource(R.string.cd_selected),
+                                    tint = NuvioColors.Primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeamlessPlaybackModeDialog(
+    currentMode: SeamlessPlaybackMode,
+    onModeSelected: (SeamlessPlaybackMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    val options = listOf(
+        Triple(
+            SeamlessPlaybackMode.OFF,
+            stringResource(R.string.playback_seamless_mode_off),
+            stringResource(R.string.playback_seamless_mode_off_sub)
+        ),
+        Triple(
+            SeamlessPlaybackMode.STREAM_ONLY,
+            stringResource(R.string.playback_seamless_mode_stream_only),
+            stringResource(R.string.playback_seamless_mode_stream_only_sub)
+        ),
+        Triple(
+            SeamlessPlaybackMode.PLAYER_ONLY,
+            stringResource(R.string.playback_seamless_mode_player_only),
+            stringResource(R.string.playback_seamless_mode_player_only_sub)
+        ),
+        Triple(
+            SeamlessPlaybackMode.STREAM_THEN_PLAYER,
+            stringResource(R.string.playback_seamless_mode_stream_then_player),
+            stringResource(R.string.playback_seamless_mode_stream_then_player_sub)
+        )
+    )
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.playback_seamless_mode),
+        width = 460.dp,
+        suppressFirstKeyUp = false
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 360.dp)
+        ) {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                items(
+                    count = options.size,
+                    key = { index -> options[index].first.name }
+                ) { index ->
+                    val (mode, title, description) = options[index]
+                    val isSelected = mode == currentMode
+
+                    Card(
+                        onClick = { onModeSelected(mode) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),

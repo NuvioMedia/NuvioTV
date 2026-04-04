@@ -52,7 +52,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
     }.onFailure {
         val detailedError = it.message ?: "Failed to initialize libmpv surface"
         if (
-            maybeAutoSwitchInternalPlayerOnStartupError(
+            attemptSeamlessStartupRecovery(
                 detailedError = detailedError,
                 allowEngineFailover = true
             )
@@ -136,7 +136,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
         Log.e(PlayerRuntimeController.TAG, "libmpv initialize failed: ${error.message}", error)
         val detailedError = error.message ?: "Failed to initialize libmpv playback"
         if (
-            maybeAutoSwitchInternalPlayerOnStartupError(
+            attemptSeamlessStartupRecovery(
                 detailedError = detailedError,
                 allowEngineFailover = allowEngineFailover
             )

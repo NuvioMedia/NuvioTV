@@ -837,7 +837,11 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 )
             }
             releasePlayer()
-            initializePlayer(currentStreamUrl, currentHeaders)
+            initializePlayer(
+                url = currentStreamUrl,
+                headers = currentHeaders,
+                resetSeamlessRecoveryPlan = true
+            )
         }
         PlayerEvent.OnParentalGuideHide -> {
             _uiState.update { it.copy(showParentalGuide = false) }

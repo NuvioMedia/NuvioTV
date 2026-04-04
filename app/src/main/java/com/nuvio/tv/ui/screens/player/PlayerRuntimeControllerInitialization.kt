@@ -37,6 +37,8 @@ import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.PlayerSettings
+import com.nuvio.tv.data.local.allowsAutomaticPlayerRecovery
+import com.nuvio.tv.data.local.allowsAutomaticStreamRecovery
 import com.nuvio.tv.domain.model.Subtitle
 import io.github.peerless2012.ass.media.type.AssRenderType
 import kotlinx.coroutines.async
@@ -54,6 +56,18 @@ internal data class StartupSubtitlePreparation(
     val attachedSubtitles: List<Subtitle>,
     val fetchCompleted: Boolean
 )
+
+private fun PlayerRuntimeController.resolveLoadingStatusMessage(
+    showLoadingStatus: Boolean,
+    resId: Int,
+    vararg formatArgs: Any
+): String? {
+    return if (showLoadingStatus) {
+        context.getString(resId, *formatArgs)
+    } else {
+        _uiState.value.loadingMessage
+    }
+}
 
 private suspend fun PlayerRuntimeController.resolveCurrentStreamMimeType(
     url: String,
@@ -76,7 +90,8 @@ internal fun PlayerRuntimeController.initializePlayer(
     url: String,
     headers: Map<String, String>,
     overrideInternalPlayerEngine: InternalPlayerEngine? = null,
-    allowEngineFailover: Boolean = true
+    allowEngineFailover: Boolean = true,
+    resetSeamlessRecoveryPlan: Boolean = false
 ) {
     if (url.isEmpty()) {
         _uiState.update { it.copy(error = context.getString(R.string.player_error_no_stream_url), showLoadingOverlay = false) }
@@ -85,16 +100,15 @@ internal fun PlayerRuntimeController.initializePlayer(
 
     scope.launch {
         try {
-            if (allowEngineFailover) {
-                startupEngineFailoverTriggered = false
-            }
             resetLoadingOverlayForNewStream()
             hasTriedAudioPcmFallback = false
             hasTriedDv7HevcFallback = false
             mpvDelayStartAfterAfrSwitch = false
             val playerSettings = playerSettingsDataStore.playerSettings.first()
             cachedDecoderPriority = playerSettings.decoderPriority
-            cachedAutoSourceFallback = playerSettings.autoSourceFallbackEnabled
+            seamlessPlaybackModeSetting = playerSettings.seamlessPlaybackMode
+            autoSwitchInternalPlayerOnErrorEnabled = playerSettings.seamlessPlaybackMode.allowsAutomaticPlayerRecovery()
+            cachedAutoSourceFallback = playerSettings.seamlessPlaybackMode.allowsAutomaticStreamRecovery()
             val preferredAudioLanguages = resolvePreferredAudioLanguages(
                 preferredAudioLanguage = playerSettings.preferredAudioLanguage,
                 secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
@@ -104,6 +118,9 @@ internal fun PlayerRuntimeController.initializePlayer(
             val effectiveInternalPlayerEngine = overrideInternalPlayerEngine ?: playerSettings.internalPlayerEngine
             runtimeInternalPlayerEngineOverride = overrideInternalPlayerEngine
             currentInternalPlayerEngine = effectiveInternalPlayerEngine
+            if (resetSeamlessRecoveryPlan) {
+                resetSeamlessRecoveryState()
+            }
             val showLoadingStatus = playerSettings.showPlayerLoadingStatus
             _uiState.update {
                 it.copy(
@@ -111,7 +128,10 @@ internal fun PlayerRuntimeController.initializePlayer(
                     frameRateMatchingMode = playerSettings.frameRateMatchingMode,
                     resizeMode = playerSettings.resizeMode,
                     tunnelingEnabled = playerSettings.tunnelingEnabled,
-                    loadingMessage = if (showLoadingStatus) context.getString(R.string.player_loading_detecting_format) else null
+                    loadingMessage = resolveLoadingStatusMessage(
+                        showLoadingStatus = showLoadingStatus,
+                        resId = R.string.player_loading_detecting_format
+                    )
                 )
             }
             val afrJob = async {
@@ -232,7 +252,14 @@ internal fun PlayerRuntimeController.initializePlayer(
             ).setExtensionRendererMode(playerSettings.decoderPriority)
                 .setMapDV7ToHevc(playerSettings.mapDV7ToHevc || forceDv7ToHevc)
 
-            if (showLoadingStatus) _uiState.update { it.copy(loadingMessage = context.getString(R.string.player_loading_building)) }
+            _uiState.update {
+                it.copy(
+                    loadingMessage = resolveLoadingStatusMessage(
+                        showLoadingStatus = showLoadingStatus,
+                        resId = R.string.player_loading_building
+                    )
+                )
+            }
             val buildDefaultPlayer = {
                 mediaSourceFactory.configureSubtitleParsing(
                     extractorsFactory = null,
@@ -317,7 +344,14 @@ internal fun PlayerRuntimeController.initializePlayer(
                         mimeTypeOverride = currentStreamMimeType
                     )
                 )
-                if (showLoadingStatus) _uiState.update { it.copy(loadingMessage = context.getString(R.string.player_loading_starting)) }
+                _uiState.update {
+                    it.copy(
+                        loadingMessage = resolveLoadingStatusMessage(
+                            showLoadingStatus = showLoadingStatus,
+                            resId = R.string.player_loading_starting
+                        )
+                    )
+                }
                 playWhenReady = true
                 prepare()
 
@@ -339,9 +373,21 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if (playbackState == Player.STATE_BUFFERING && !hasRenderedFirstFrame) {
                             _uiState.update { state ->
                                 if (state.loadingOverlayEnabled && !state.showLoadingOverlay) {
-                                    state.copy(showLoadingOverlay = true, showControls = false, loadingMessage = if (showLoadingStatus) context.getString(R.string.player_loading_buffering) else null)
+                                    state.copy(
+                                        showLoadingOverlay = true,
+                                        showControls = false,
+                                        loadingMessage = resolveLoadingStatusMessage(
+                                            showLoadingStatus = showLoadingStatus,
+                                            resId = R.string.player_loading_buffering
+                                        )
+                                    )
                                 } else {
-                                    state.copy(loadingMessage = if (showLoadingStatus) context.getString(R.string.player_loading_buffering) else null)
+                                    state.copy(
+                                        loadingMessage = resolveLoadingStatusMessage(
+                                            showLoadingStatus = showLoadingStatus,
+                                            resId = R.string.player_loading_buffering
+                                        )
+                                    )
                                 }
                             }
                         }
@@ -436,13 +482,6 @@ internal fun PlayerRuntimeController.initializePlayer(
                             retryCurrentStreamFromStartAfter416()
                             return
                         }
-                        if (maybeAutoSwitchInternalPlayerOnStartupError(
-                                detailedError = detailedError,
-                                allowEngineFailover = allowEngineFailover
-                            )
-                        ) {
-                            return
-                        }
                         // Attempt automatic recovery for transient errors.
                         if (tryAudioTrackPcmFallback(error)) {
                             return
@@ -453,7 +492,12 @@ internal fun PlayerRuntimeController.initializePlayer(
                         if (attemptAutoRetry(error, detailedError)) {
                             return
                         }
-                        if (tryAutoSourceFallback(error)) {
+                        if (attemptSeamlessPlaybackRecovery(
+                                error = error,
+                                detailedError = detailedError,
+                                allowEngineFailover = allowEngineFailover
+                            )
+                        ) {
                             return
                         }
                         _uiState.update {
@@ -470,8 +514,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 fetchAddonSubtitles()
             }
         } catch (e: Exception) {
-            if (
-                maybeAutoSwitchInternalPlayerOnStartupError(
+            if (attemptSeamlessStartupRecovery(
                     detailedError = e.message ?: "Failed to initialize player",
                     allowEngineFailover = allowEngineFailover
                 )

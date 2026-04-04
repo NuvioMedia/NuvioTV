@@ -6,6 +6,7 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
 import com.nuvio.tv.R
+import com.nuvio.tv.data.local.InternalPlayerEngine
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -13,6 +14,134 @@ import kotlinx.coroutines.launch
 private const val MAX_AUTO_RETRIES = 2
 private const val RETRY_DELAY_MS = 1_500L
 private val SOURCE_FALLBACK_HTTP_CODES = setOf(403, 404, 410, 416, 500, 503)
+
+private fun PlayerRuntimeController.showRecoveryLoadingOverlay(message: String) {
+    _uiState.update {
+        it.copy(
+            error = null,
+            showLoadingOverlay = true,
+            loadingMessage = message,
+            showPauseOverlay = false,
+            showControls = false
+        )
+    }
+}
+
+internal fun PlayerRuntimeController.resetSeamlessRecoveryState() {
+    seamlessRecoveryEngineSwitchUsed = false
+    startupEngineFailoverTriggered = false
+}
+
+private fun PlayerRuntimeController.resetSourceRecoveryFlags() {
+    hasTriedAudioPcmFallback = false
+    hasTriedDv7HevcFallback = false
+    forceDv7ToHevc = false
+    hasRetriedCurrentStreamAfter416 = false
+    resetErrorRetryState()
+}
+
+private fun PlayerRuntimeController.updateCurrentStreamTracking(url: String, index: Int) {
+    currentStreamUrl = url
+    currentStreamSourceIndex = index
+    currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
+        url = url,
+        filename = currentFilename,
+        responseHeaders = currentStreamResponseHeaders
+    )
+}
+
+private fun PlayerRuntimeController.scheduleRecoveryRestart(
+    targetUrl: String,
+    targetIndex: Int,
+    message: String,
+    resumePosition: Long,
+    overrideInternalPlayerEngine: InternalPlayerEngine? = null,
+    showEngineSwitchInfo: Boolean = false,
+    engineSwitchInfoText: String = message
+) {
+    val targetEngine = overrideInternalPlayerEngine ?: currentInternalPlayerEngine
+    val switchingToMpv = targetEngine == InternalPlayerEngine.MVP_PLAYER
+    updateCurrentStreamTracking(url = targetUrl, index = targetIndex)
+    errorRetryJob?.cancel()
+    errorRetryJob = scope.launch {
+        showRecoveryLoadingOverlay(message)
+        hidePlayerEngineSwitchInfoJob?.cancel()
+        _uiState.update {
+            it.copy(
+                currentStreamUrl = targetUrl,
+                internalPlayerEngine = targetEngine,
+                showPlayerEngineSwitchInfo = showEngineSwitchInfo,
+                playerEngineSwitchInfoText = if (showEngineSwitchInfo) engineSwitchInfoText else it.playerEngineSwitchInfoText
+            )
+        }
+        if (showEngineSwitchInfo) {
+            hidePlayerEngineSwitchInfoJob = scope.launch {
+                delay(2200)
+                _uiState.update { state -> state.copy(showPlayerEngineSwitchInfo = false) }
+            }
+        }
+        pendingMpvHardRestartOnNextAttach = switchingToMpv
+        delayMpvResumeSeekUntilVideoTrack = switchingToMpv
+        currentInternalPlayerEngine = targetEngine
+        releasePlayer(flushPlaybackState = false)
+        if (resumePosition > 0L) {
+            _uiState.update { it.copy(pendingSeekPosition = resumePosition) }
+        }
+        initializePlayer(
+            url = targetUrl,
+            headers = currentHeaders,
+            overrideInternalPlayerEngine = overrideInternalPlayerEngine,
+            allowEngineFailover = false,
+            resetSeamlessRecoveryPlan = false
+        )
+    }
+}
+
+private fun PlayerRuntimeController.switchToNextSource(
+    nextIndex: Int,
+    message: String,
+    resumePosition: Long,
+    preferInPlayerSourceSwap: Boolean
+): Boolean {
+    val nextUrl = currentStreamSourceUrls.getOrNull(nextIndex) ?: return false
+    Log.w(
+        PlayerRuntimeController.TAG,
+        "Source recovery: switching to source ${nextIndex + 1}/${currentStreamSourceUrls.size}, position=${resumePosition}ms"
+    )
+    resetSourceRecoveryFlags()
+    updateCurrentStreamTracking(url = nextUrl, index = nextIndex)
+    showRecoveryLoadingOverlay(message)
+    _uiState.update { it.copy(currentStreamUrl = nextUrl) }
+
+    val player = _exoPlayer
+    if (preferInPlayerSourceSwap && player != null && !isUsingMpvEngine()) {
+        val subtitleConfigurations = _uiState.value.addonSubtitles
+            .distinctBy { "${it.id}|${it.url}" }
+            .map(::toSubtitleConfiguration)
+        player.setMediaSource(
+            mediaSourceFactory.createMediaSource(
+                url = nextUrl,
+                headers = currentHeaders,
+                subtitleConfigurations = subtitleConfigurations,
+                filename = currentFilename,
+                responseHeaders = currentStreamResponseHeaders,
+                mimeTypeOverride = currentStreamMimeType
+            ),
+            resumePosition
+        )
+        player.prepare()
+        player.playWhenReady = true
+        return true
+    }
+
+    scheduleRecoveryRestart(
+        targetUrl = nextUrl,
+        targetIndex = nextIndex,
+        message = message,
+        resumePosition = resumePosition
+    )
+    return true
+}
 
 /**
  * Determines whether the given [PlaybackException] is transient and worth retrying.
@@ -115,46 +244,30 @@ internal fun PlayerRuntimeController.tryFallbackToNextSource(
     error: PlaybackException,
     detailedError: String
 ): Boolean {
+    if (!cachedAutoSourceFallback) return false
     val responseException = error.findInvalidResponseCodeException() ?: return false
     if (responseException.responseCode !in SOURCE_FALLBACK_HTTP_CODES) return false
 
     val nextIndex = currentStreamSourceIndex + 1
-    val nextUrl = currentStreamSourceUrls.getOrNull(nextIndex) ?: return false
-    val resumePosition = _exoPlayer?.currentPosition?.takeIf { it > 0L } ?: 0L
+    if (currentStreamSourceUrls.getOrNull(nextIndex) == null) return false
+    val resumePosition = currentPlaybackPositionMs()?.takeIf { it > 0L } ?: 0L
 
     Log.w(
         PlayerRuntimeController.TAG,
         "Switching to fallback source ${nextIndex + 1}/${currentStreamSourceUrls.size} after HTTP ${responseException.responseCode}: $detailedError"
     )
 
-    resetErrorRetryState()
-    hasRetriedCurrentStreamAfter416 = false
-    currentStreamUrl = nextUrl
-    currentStreamSourceIndex = nextIndex
-    currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
-        url = nextUrl,
-        filename = currentFilename,
-        responseHeaders = currentStreamResponseHeaders
+    return switchToNextSource(
+        nextIndex = nextIndex,
+        message = context.getString(
+            R.string.player_loading_fallback_http_next_source,
+            responseException.responseCode,
+            nextIndex + 1,
+            currentStreamSourceUrls.size
+        ),
+        resumePosition = resumePosition,
+        preferInPlayerSourceSwap = true
     )
-
-    errorRetryJob?.cancel()
-    errorRetryJob = scope.launch {
-        _uiState.update {
-            it.copy(
-                currentStreamUrl = nextUrl,
-                error = null,
-                showLoadingOverlay = it.loadingOverlayEnabled,
-                showPauseOverlay = false
-            )
-        }
-
-        releasePlayer(flushPlaybackState = false)
-        if (resumePosition > 0L) {
-            _uiState.update { it.copy(pendingSeekPosition = resumePosition) }
-        }
-        initializePlayer(nextUrl, currentHeaders)
-    }
-    return true
 }
 
 /**
@@ -188,14 +301,12 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
 
     errorRetryJob?.cancel()
     errorRetryJob = scope.launch {
-        _uiState.update {
-            it.copy(
-                error = null,
-                // Only show loading overlay on full teardown (second attempt).
-                showLoadingOverlay = if (isFirstAttempt) false else it.loadingOverlayEnabled,
-                showPauseOverlay = false
-            )
-        }
+        val retryMessage = context.getString(
+            if (isFirstAttempt) R.string.player_loading_retry_stream else R.string.player_loading_retry_stream_rebuild,
+            attempt + 1,
+            MAX_AUTO_RETRIES
+        )
+        showRecoveryLoadingOverlay(retryMessage)
 
         delay(RETRY_DELAY_MS)
 
@@ -272,14 +383,7 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
 
     // Show loading overlay with fallback info instead of error screen.
     val fallbackMessage = context.getString(R.string.player_loading_fallback_pcm_audio)
-    _uiState.update {
-        it.copy(
-            error = null,
-            showLoadingOverlay = true,
-            loadingMessage = fallbackMessage,
-            showPauseOverlay = false
-        )
-    }
+    showRecoveryLoadingOverlay(fallbackMessage)
 
     // An imperceptible speed offset disables audio passthrough and forces
     // software PCM decoding through the GainAudioProcessor pipeline.
@@ -333,14 +437,7 @@ internal fun PlayerRuntimeController.tryDv7HevcFallback(
     // Show loading overlay with fallback info instead of error screen.
     val fallbackMessage = context.getString(R.string.player_loading_fallback_hevc_decoder)
     errorRetryJob = scope.launch {
-        _uiState.update {
-            it.copy(
-                error = null,
-                showLoadingOverlay = true,
-                loadingMessage = fallbackMessage,
-                showPauseOverlay = false
-            )
-        }
+        showRecoveryLoadingOverlay(fallbackMessage)
 
         releasePlayer(flushPlaybackState = false)
         if (savedPosition > 0L) {
@@ -355,8 +452,8 @@ internal fun PlayerRuntimeController.tryDv7HevcFallback(
  * Last-resort source fallback for any unrecoverable error.
  *
  * When [cachedAutoSourceFallback] is enabled and there are remaining source
- * URLs in [currentStreamSourceUrls], this switches to the next source
- * WITHOUT rebuilding the player — using [setMediaSource] + [prepare].
+ * URLs in [currentStreamSourceUrls], this switches to the next source.
+ * ExoPlayer keeps the fast in-player swap path; mpv falls back to a rebuild.
  *
  * All decoder fallback flags (PCM, DV7-HEVC) are reset so they can
  * re-attempt on the new source.
@@ -368,10 +465,9 @@ internal fun PlayerRuntimeController.tryAutoSourceFallback(
     if (!cachedAutoSourceFallback) return false
 
     val nextIndex = currentStreamSourceIndex + 1
-    val nextUrl = currentStreamSourceUrls.getOrNull(nextIndex) ?: return false
+    if (currentStreamSourceUrls.getOrNull(nextIndex) == null) return false
 
-    val player = _exoPlayer ?: return false
-    val savedPosition = player.currentPosition.takeIf { it > 0L } ?: 0L
+    val savedPosition = currentPlaybackPositionMs()?.takeIf { it > 0L } ?: 0L
 
     Log.w(
         PlayerRuntimeController.TAG,
@@ -379,56 +475,111 @@ internal fun PlayerRuntimeController.tryAutoSourceFallback(
             " after error ${error.errorCode}, position=${savedPosition}ms"
     )
 
-    // Update source tracking
-    currentStreamUrl = nextUrl
-    currentStreamSourceIndex = nextIndex
-    currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
-        url = nextUrl,
-        filename = currentFilename,
-        responseHeaders = currentStreamResponseHeaders
-    )
-
-    // Reset all fallback flags so they can re-attempt on the new source
-    hasTriedAudioPcmFallback = false
-    hasTriedDv7HevcFallback = false
-    forceDv7ToHevc = false
-    hasRetriedCurrentStreamAfter416 = false
-    resetErrorRetryState()
-
-    // Show loading overlay with fallback message
-    val fallbackMessage = context.getString(
-        R.string.player_loading_fallback_next_source,
-        nextIndex + 1,
-        currentStreamSourceUrls.size
-    )
-    _uiState.update {
-        it.copy(
-            currentStreamUrl = nextUrl,
-            error = null,
-            showLoadingOverlay = true,
-            loadingMessage = fallbackMessage,
-            showPauseOverlay = false
-        )
-    }
-
-    // Switch source without rebuilding the player
-    val subtitleConfigurations = _uiState.value.addonSubtitles
-        .distinctBy { "${it.id}|${it.url}" }
-        .map(::toSubtitleConfiguration)
-
-    player.setMediaSource(
-        mediaSourceFactory.createMediaSource(
-            url = nextUrl,
-            headers = currentHeaders,
-            subtitleConfigurations = subtitleConfigurations,
-            filename = currentFilename,
-            responseHeaders = currentStreamResponseHeaders,
-            mimeTypeOverride = currentStreamMimeType
+    return switchToNextSource(
+        nextIndex = nextIndex,
+        message = context.getString(
+            R.string.player_loading_fallback_next_source,
+            nextIndex + 1,
+            currentStreamSourceUrls.size
         ),
-        savedPosition
+        resumePosition = savedPosition,
+        preferInPlayerSourceSwap = !isUsingMpvEngine()
     )
-    player.prepare()
-    player.playWhenReady = true
+}
 
+private fun PlayerRuntimeController.nextRecoveryEngineOrNull(allowEngineFailover: Boolean): InternalPlayerEngine? {
+    if (!allowEngineFailover) return null
+    if (!autoSwitchInternalPlayerOnErrorEnabled) return null
+    if (seamlessRecoveryEngineSwitchUsed) return null
+    return when (currentInternalPlayerEngine) {
+        InternalPlayerEngine.EXOPLAYER -> InternalPlayerEngine.MVP_PLAYER
+        InternalPlayerEngine.MVP_PLAYER -> InternalPlayerEngine.EXOPLAYER
+    }
+}
+
+private fun PlayerRuntimeController.switchRecoveryEngineAndRestartSources(
+    detailedError: String,
+    allowEngineFailover: Boolean,
+    resumePosition: Long
+): Boolean {
+    val targetEngine = nextRecoveryEngineOrNull(allowEngineFailover) ?: return false
+    val restartSourcesFromBeginning = seamlessPlaybackModeSetting == com.nuvio.tv.data.local.SeamlessPlaybackMode.STREAM_THEN_PLAYER
+    val targetIndex = if (restartSourcesFromBeginning) 0 else currentStreamSourceIndex
+    val targetUrl = currentStreamSourceUrls.getOrNull(targetIndex)?.takeIf { it.isNotBlank() } ?: currentStreamUrl
+    val targetEngineLabel = when (targetEngine) {
+        InternalPlayerEngine.EXOPLAYER -> context.getString(R.string.playback_engine_exoplayer)
+        InternalPlayerEngine.MVP_PLAYER -> context.getString(R.string.playback_engine_mvplayer)
+    }
+    val switchInfoText = context.getString(R.string.player_engine_switching_message, targetEngineLabel)
+    Log.w(
+        PlayerRuntimeController.TAG,
+        "Engine recovery: switching to $targetEngine after: $detailedError"
+    )
+    seamlessRecoveryEngineSwitchUsed = true
+    startupEngineFailoverTriggered = true
+    resetSourceRecoveryFlags()
+    scheduleRecoveryRestart(
+        targetUrl = targetUrl,
+        targetIndex = targetIndex,
+        message = if (restartSourcesFromBeginning) {
+            context.getString(
+                R.string.player_loading_switch_engine_restart_sources,
+                targetEngineLabel,
+                currentStreamSourceUrls.size
+            )
+        } else {
+            context.getString(R.string.player_loading_switch_engine_same_source, targetEngineLabel)
+        },
+        resumePosition = resumePosition,
+        overrideInternalPlayerEngine = targetEngine,
+        showEngineSwitchInfo = true,
+        engineSwitchInfoText = switchInfoText
+    )
     return true
+}
+
+internal fun PlayerRuntimeController.attemptSeamlessPlaybackRecovery(
+    error: PlaybackException,
+    detailedError: String,
+    allowEngineFailover: Boolean
+): Boolean {
+    if (tryAutoSourceFallback(error)) {
+        return true
+    }
+    val savedPosition = currentPlaybackPositionMs()?.takeIf { it > 0L } ?: 0L
+    return switchRecoveryEngineAndRestartSources(
+        detailedError = detailedError,
+        allowEngineFailover = allowEngineFailover,
+        resumePosition = savedPosition
+    )
+}
+
+internal fun PlayerRuntimeController.attemptSeamlessStartupRecovery(
+    detailedError: String,
+    allowEngineFailover: Boolean
+): Boolean {
+    if (cachedAutoSourceFallback) {
+        val nextIndex = currentStreamSourceIndex + 1
+        if (currentStreamSourceUrls.getOrNull(nextIndex) != null) {
+            Log.w(
+                PlayerRuntimeController.TAG,
+                "Startup recovery: switching to source ${nextIndex + 1}/${currentStreamSourceUrls.size} after: $detailedError"
+            )
+            return switchToNextSource(
+                nextIndex = nextIndex,
+                message = context.getString(
+                    R.string.player_loading_fallback_next_source_startup,
+                    nextIndex + 1,
+                    currentStreamSourceUrls.size
+                ),
+                resumePosition = 0L,
+                preferInPlayerSourceSwap = false
+            )
+        }
+    }
+    return switchRecoveryEngineAndRestartSources(
+        detailedError = detailedError,
+        allowEngineFailover = allowEngineFailover,
+        resumePosition = 0L
+    )
 }

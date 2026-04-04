@@ -154,6 +154,7 @@ fun PlaybackSettingsContent(
     var showReuseLastLinkCacheDialog by remember { mutableStateOf(false) }
     var showPlayerPreferenceDialog by remember { mutableStateOf(false) }
     var showInternalPlayerEngineDialog by remember { mutableStateOf(false) }
+    var showSeamlessPlaybackModeDialog by remember { mutableStateOf(false) }
 
     fun dismissAllDialogs() {
         showLanguageDialog = false
@@ -174,6 +175,7 @@ fun PlaybackSettingsContent(
         showReuseLastLinkCacheDialog = false
         showPlayerPreferenceDialog = false
         showInternalPlayerEngineDialog = false
+        showSeamlessPlaybackModeDialog = false
     }
 
     fun openDialog(setter: () -> Unit) {
@@ -201,6 +203,7 @@ fun PlaybackSettingsContent(
                 trailerSettings = trailerSettings,
                 onShowPlayerPreferenceDialog = { openDialog { showPlayerPreferenceDialog = true } },
                 onShowInternalPlayerEngineDialog = { openDialog { showInternalPlayerEngineDialog = true } },
+                onShowSeamlessPlaybackModeDialog = { openDialog { showSeamlessPlaybackModeDialog = true } },
                 onShowAudioLanguageDialog = { openDialog { showAudioLanguageDialog = true } },
                 onShowSecondaryAudioLanguageDialog = { openDialog { showSecondaryAudioLanguageDialog = true } },
                 onShowDecoderPriorityDialog = { openDialog { showDecoderPriorityDialog = true } },
@@ -224,12 +227,6 @@ fun PlaybackSettingsContent(
                     coroutineScope.launch {
                         viewModel.setStreamAutoPlayPreferBingeGroupForNextEpisode(enabled)
                     }
-                },
-                onSetAutoSwitchInternalPlayerOnError = { enabled ->
-                    coroutineScope.launch { viewModel.setAutoSwitchInternalPlayerOnError(enabled) }
-                },
-                onSetAutoSourceFallbackEnabled = { enabled ->
-                    coroutineScope.launch { viewModel.setAutoSourceFallbackEnabled(enabled) }
                 },
                 onSetNextEpisodeThresholdPercent = { percent ->
                     coroutineScope.launch { viewModel.setNextEpisodeThresholdPercent(percent) }
@@ -271,6 +268,7 @@ fun PlaybackSettingsContent(
         enabledPluginNames = enabledPluginNames,
         showPlayerPreferenceDialog = showPlayerPreferenceDialog,
         showInternalPlayerEngineDialog = showInternalPlayerEngineDialog,
+        showSeamlessPlaybackModeDialog = showSeamlessPlaybackModeDialog,
         showLanguageDialog = showLanguageDialog,
         showSecondaryLanguageDialog = showSecondaryLanguageDialog,
         showSubtitleStartupModeDialog = showSubtitleStartupModeDialog,
@@ -295,6 +293,10 @@ fun PlaybackSettingsContent(
             coroutineScope.launch { viewModel.setInternalPlayerEngine(engine) }
         },
         onDismissInternalPlayerEngineDialog = ::dismissAllDialogs,
+        onSetSeamlessPlaybackMode = { mode ->
+            coroutineScope.launch { viewModel.setSeamlessPlaybackMode(mode) }
+        },
+        onDismissSeamlessPlaybackModeDialog = ::dismissAllDialogs,
         onSetSubtitlePreferredLanguage = { language ->
             coroutineScope.launch { viewModel.setSubtitlePreferredLanguage(language ?: "none") }
         },

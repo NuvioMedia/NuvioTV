@@ -9,6 +9,7 @@ import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
+import com.nuvio.tv.data.local.SeamlessPlaybackMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.data.local.AddonSubtitleStartupMode
@@ -68,6 +69,10 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setAutoSourceFallbackEnabled(enabled: Boolean) {
         playerSettingsDataStore.setAutoSourceFallbackEnabled(enabled)
+    }
+
+    suspend fun setSeamlessPlaybackMode(mode: SeamlessPlaybackMode) {
+        playerSettingsDataStore.setSeamlessPlaybackMode(mode)
     }
 
     suspend fun setTrailerEnabled(enabled: Boolean) {

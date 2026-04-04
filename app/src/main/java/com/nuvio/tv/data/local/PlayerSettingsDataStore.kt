@@ -158,7 +158,9 @@ object AudioLanguageOption {
 data class PlayerSettings(
     val playerPreference: PlayerPreference = PlayerPreference.INTERNAL,
     val internalPlayerEngine: InternalPlayerEngine = InternalPlayerEngine.EXOPLAYER,
+    // Legacy compatibility flag; derived from seamlessPlaybackMode.
     val autoSwitchInternalPlayerOnError: Boolean = false,
+    val seamlessPlaybackMode: SeamlessPlaybackMode = SeamlessPlaybackMode.STREAM_ONLY,
     val useLibass: Boolean = false,
     val libassRenderType: LibassRenderType = LibassRenderType.OVERLAY_OPEN_GL,
     val subtitleStyle: SubtitleStyleSettings = SubtitleStyleSettings(),
@@ -198,7 +200,7 @@ data class PlayerSettings(
     val subtitleOrganizationMode: SubtitleOrganizationMode = SubtitleOrganizationMode.NONE,
     val addonSubtitleStartupMode: AddonSubtitleStartupMode = AddonSubtitleStartupMode.ALL_SUBTITLES,
     val resizeMode: Int = 0,
-    // Auto source fallback: switch to next source on unrecoverable errors
+    // Legacy compatibility flag; derived from seamlessPlaybackMode.
     val autoSourceFallbackEnabled: Boolean = true
 )
 
@@ -248,6 +250,21 @@ enum class InternalPlayerEngine {
     MVP_PLAYER
 }
 
+enum class SeamlessPlaybackMode {
+    OFF,
+    STREAM_ONLY,
+    PLAYER_ONLY,
+    STREAM_THEN_PLAYER
+}
+
+fun SeamlessPlaybackMode.allowsAutomaticStreamRecovery(): Boolean {
+    return this == SeamlessPlaybackMode.STREAM_ONLY || this == SeamlessPlaybackMode.STREAM_THEN_PLAYER
+}
+
+fun SeamlessPlaybackMode.allowsAutomaticPlayerRecovery(): Boolean {
+    return this == SeamlessPlaybackMode.PLAYER_ONLY || this == SeamlessPlaybackMode.STREAM_THEN_PLAYER
+}
+
 /**
  * Enum representing the different libass render types
  * Maps to io.github.peerless2012.ass.media.type.AssRenderType
@@ -281,6 +298,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val internalPlayerEngineKey = stringPreferencesKey("internal_player_engine")
     private val autoSwitchInternalPlayerOnErrorKey =
         booleanPreferencesKey("auto_switch_internal_player_on_error")
+    private val seamlessPlaybackModeKey = stringPreferencesKey("seamless_playback_mode")
 
     // Libass settings keys
     private val useLibassKey = booleanPreferencesKey("use_libass")
@@ -420,13 +438,22 @@ class PlayerSettingsDataStore @Inject constructor(
     val playerSettings: Flow<PlayerSettings> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             PlayerSettings(
+                seamlessPlaybackMode = parseSeamlessPlaybackMode(
+                    value = prefs[seamlessPlaybackModeKey],
+                    autoSourceFallbackEnabled = prefs[autoSourceFallbackEnabledKey] ?: true,
+                    autoSwitchInternalPlayerOnError = prefs[autoSwitchInternalPlayerOnErrorKey] ?: false
+                ),
                 playerPreference = prefs[playerPreferenceKey]?.let {
                     runCatching { PlayerPreference.valueOf(it) }.getOrDefault(PlayerPreference.INTERNAL)
                 } ?: PlayerPreference.INTERNAL,
                 internalPlayerEngine = prefs[internalPlayerEngineKey]?.let {
                     runCatching { InternalPlayerEngine.valueOf(it) }.getOrDefault(InternalPlayerEngine.EXOPLAYER)
                 } ?: InternalPlayerEngine.EXOPLAYER,
-                autoSwitchInternalPlayerOnError = prefs[autoSwitchInternalPlayerOnErrorKey] ?: false,
+                autoSwitchInternalPlayerOnError = parseSeamlessPlaybackMode(
+                    value = prefs[seamlessPlaybackModeKey],
+                    autoSourceFallbackEnabled = prefs[autoSourceFallbackEnabledKey] ?: true,
+                    autoSwitchInternalPlayerOnError = prefs[autoSwitchInternalPlayerOnErrorKey] ?: false
+                ).allowsAutomaticPlayerRecovery(),
                 useLibass = prefs[useLibassKey] ?: false,
                 libassRenderType = prefs[libassRenderTypeKey]?.let {
                     try { LibassRenderType.valueOf(it) } catch (e: Exception) { LibassRenderType.OVERLAY_OPEN_GL }
@@ -493,7 +520,11 @@ class PlayerSettingsDataStore @Inject constructor(
                 subtitleOrganizationMode = parseSubtitleOrganizationMode(prefs[subtitleOrganizationModeKey]),
                 addonSubtitleStartupMode = parseAddonSubtitleStartupMode(prefs[addonSubtitleStartupModeKey]),
                 resizeMode = (prefs[resizeModeKey] ?: 0).coerceIn(0, 4),
-                autoSourceFallbackEnabled = prefs[autoSourceFallbackEnabledKey] ?: true,
+                autoSourceFallbackEnabled = parseSeamlessPlaybackMode(
+                    value = prefs[seamlessPlaybackModeKey],
+                    autoSourceFallbackEnabled = prefs[autoSourceFallbackEnabledKey] ?: true,
+                    autoSwitchInternalPlayerOnError = prefs[autoSwitchInternalPlayerOnErrorKey] ?: false
+                ).allowsAutomaticStreamRecovery(),
                 subtitleStyle = SubtitleStyleSettings(
                     preferredLanguage = normalizeSelectableLanguageCode(
                         prefs[subtitlePreferredLanguageKey] ?: "en"
@@ -559,6 +590,23 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setAutoSwitchInternalPlayerOnError(enabled: Boolean) {
         store().edit { prefs ->
             prefs[autoSwitchInternalPlayerOnErrorKey] = enabled
+            val streamEnabled = parseSeamlessPlaybackMode(
+                value = prefs[seamlessPlaybackModeKey],
+                autoSourceFallbackEnabled = prefs[autoSourceFallbackEnabledKey] ?: true,
+                autoSwitchInternalPlayerOnError = prefs[autoSwitchInternalPlayerOnErrorKey] ?: false
+            ).allowsAutomaticStreamRecovery()
+            prefs[seamlessPlaybackModeKey] = seamlessPlaybackModeFromLegacy(
+                autoSourceFallbackEnabled = streamEnabled,
+                autoSwitchInternalPlayerOnError = enabled
+            ).name
+        }
+    }
+
+    suspend fun setSeamlessPlaybackMode(mode: SeamlessPlaybackMode) {
+        store().edit { prefs ->
+            prefs[seamlessPlaybackModeKey] = mode.name
+            prefs[autoSourceFallbackEnabledKey] = mode.allowsAutomaticStreamRecovery()
+            prefs[autoSwitchInternalPlayerOnErrorKey] = mode.allowsAutomaticPlayerRecovery()
         }
     }
 
@@ -829,6 +877,40 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setAutoSourceFallbackEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[autoSourceFallbackEnabledKey] = enabled
+            val playerEnabled = parseSeamlessPlaybackMode(
+                value = prefs[seamlessPlaybackModeKey],
+                autoSourceFallbackEnabled = prefs[autoSourceFallbackEnabledKey] ?: true,
+                autoSwitchInternalPlayerOnError = prefs[autoSwitchInternalPlayerOnErrorKey] ?: false
+            ).allowsAutomaticPlayerRecovery()
+            prefs[seamlessPlaybackModeKey] = seamlessPlaybackModeFromLegacy(
+                autoSourceFallbackEnabled = enabled,
+                autoSwitchInternalPlayerOnError = playerEnabled
+            ).name
+        }
+    }
+
+    private fun parseSeamlessPlaybackMode(
+        value: String?,
+        autoSourceFallbackEnabled: Boolean,
+        autoSwitchInternalPlayerOnError: Boolean
+    ): SeamlessPlaybackMode {
+        return value
+            ?.let { raw -> runCatching { SeamlessPlaybackMode.valueOf(raw) }.getOrNull() }
+            ?: seamlessPlaybackModeFromLegacy(
+                autoSourceFallbackEnabled = autoSourceFallbackEnabled,
+                autoSwitchInternalPlayerOnError = autoSwitchInternalPlayerOnError
+            )
+    }
+
+    private fun seamlessPlaybackModeFromLegacy(
+        autoSourceFallbackEnabled: Boolean,
+        autoSwitchInternalPlayerOnError: Boolean
+    ): SeamlessPlaybackMode {
+        return when {
+            autoSourceFallbackEnabled && autoSwitchInternalPlayerOnError -> SeamlessPlaybackMode.STREAM_THEN_PLAYER
+            autoSourceFallbackEnabled -> SeamlessPlaybackMode.STREAM_ONLY
+            autoSwitchInternalPlayerOnError -> SeamlessPlaybackMode.PLAYER_ONLY
+            else -> SeamlessPlaybackMode.OFF
         }
     }
 

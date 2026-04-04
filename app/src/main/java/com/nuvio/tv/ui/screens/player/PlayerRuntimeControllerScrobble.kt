@@ -31,7 +31,11 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
                     "subtitle=${persistedTrackPreference?.subtitle?.javaClass?.simpleName})"
             )
         }
-        initializePlayer(url, headers)
+        initializePlayer(
+            url = url,
+            headers = headers,
+            resetSeamlessRecoveryPlan = true
+        )
         if (loadSavedProgress) {
             loadSavedProgressFor(currentSeason, currentEpisode)
         }

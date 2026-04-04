@@ -5,6 +5,8 @@ import com.nuvio.tv.core.player.OpenSubtitlesHasher
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import com.nuvio.tv.data.local.FrameRateMatchingMode
+import com.nuvio.tv.data.local.allowsAutomaticPlayerRecovery
+import com.nuvio.tv.data.local.allowsAutomaticStreamRecovery
 import com.nuvio.tv.domain.model.Subtitle
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.firstOrNull
@@ -229,7 +231,9 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                 schedulePauseOverlay()
             }
             streamReuseLastLinkEnabled = settings.streamReuseLastLinkEnabled
-            autoSwitchInternalPlayerOnErrorEnabled = settings.autoSwitchInternalPlayerOnError
+            seamlessPlaybackModeSetting = settings.seamlessPlaybackMode
+            autoSwitchInternalPlayerOnErrorEnabled = settings.seamlessPlaybackMode.allowsAutomaticPlayerRecovery()
+            cachedAutoSourceFallback = settings.seamlessPlaybackMode.allowsAutomaticStreamRecovery()
             currentInternalPlayerEngine = resolvedInternalPlayerEngine
             streamAutoPlayModeSetting = settings.streamAutoPlayMode
             _uiState.update { it.copy(streamAutoPlayMode = settings.streamAutoPlayMode) }
