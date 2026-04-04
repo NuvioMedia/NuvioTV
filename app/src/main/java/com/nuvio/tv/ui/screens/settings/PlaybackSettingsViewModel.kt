@@ -66,6 +66,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setAutoSwitchInternalPlayerOnError(enabled)
     }
 
+    suspend fun setAutoSourceFallbackEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setAutoSourceFallbackEnabled(enabled)
+    }
+
     suspend fun setTrailerEnabled(enabled: Boolean) {
         trailerSettingsDataStore.setEnabled(enabled)
     }

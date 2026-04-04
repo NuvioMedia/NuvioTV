@@ -115,6 +115,7 @@ internal fun PlaybackSettingsSections(
     onSetStreamAutoPlayNextEpisodeEnabled: (Boolean) -> Unit,
     onSetStreamAutoPlayPreferBingeGroupForNextEpisode: (Boolean) -> Unit,
     onSetAutoSwitchInternalPlayerOnError: (Boolean) -> Unit,
+    onSetAutoSourceFallbackEnabled: (Boolean) -> Unit,
     onSetNextEpisodeThresholdPercent: (Float) -> Unit,
     onSetNextEpisodeThresholdMinutesBeforeEnd: (Float) -> Unit,
     onSetStreamAutoPlayTimeoutSeconds: (Int) -> Unit,
@@ -331,6 +332,18 @@ internal fun PlaybackSettingsSections(
                     subtitle = stringResource(R.string.playback_auto_switch_internal_player_on_error_sub),
                     isChecked = playerSettings.autoSwitchInternalPlayerOnError,
                     onCheckedChange = onSetAutoSwitchInternalPlayerOnError,
+                    onFocused = { focusedSection = PlaybackSection.STREAM_SELECTION },
+                    enabled = playerSettings.playerPreference != PlayerPreference.EXTERNAL
+                )
+            }
+
+            item(key = "stream_auto_source_fallback") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.SwapHoriz,
+                    title = stringResource(R.string.playback_auto_source_fallback),
+                    subtitle = stringResource(R.string.playback_auto_source_fallback_sub),
+                    isChecked = playerSettings.autoSourceFallbackEnabled,
+                    onCheckedChange = onSetAutoSourceFallbackEnabled,
                     onFocused = { focusedSection = PlaybackSection.STREAM_SELECTION },
                     enabled = playerSettings.playerPreference != PlayerPreference.EXTERNAL
                 )

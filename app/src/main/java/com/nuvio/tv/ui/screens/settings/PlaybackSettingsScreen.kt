@@ -228,6 +228,9 @@ fun PlaybackSettingsContent(
                 onSetAutoSwitchInternalPlayerOnError = { enabled ->
                     coroutineScope.launch { viewModel.setAutoSwitchInternalPlayerOnError(enabled) }
                 },
+                onSetAutoSourceFallbackEnabled = { enabled ->
+                    coroutineScope.launch { viewModel.setAutoSourceFallbackEnabled(enabled) }
+                },
                 onSetNextEpisodeThresholdPercent = { percent ->
                     coroutineScope.launch { viewModel.setNextEpisodeThresholdPercent(percent) }
                 },
