@@ -34,17 +34,19 @@ import com.nuvio.tv.data.local.AddonSubtitleStartupMode
 import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
 import com.nuvio.tv.data.local.FrameRateMatchingMode
+import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.domain.model.Subtitle
 import io.github.peerless2012.ass.media.type.AssRenderType
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 private const val STARTUP_SUBTITLE_PREFETCH_TIMEOUT_MS = 10_000L
+private const val MPV_AFR_SETTLE_DELAY_MS = 2_000L
 
 internal data class StartupSubtitlePreparation(
     val fetchedSubtitles: List<Subtitle>,
@@ -68,7 +70,12 @@ private suspend fun PlayerRuntimeController.resolveCurrentStreamMimeType(
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)
-internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<String, String>) {
+internal fun PlayerRuntimeController.initializePlayer(
+    url: String,
+    headers: Map<String, String>,
+    overrideInternalPlayerEngine: InternalPlayerEngine? = null,
+    allowEngineFailover: Boolean = true
+) {
     if (url.isEmpty()) {
         _uiState.update { it.copy(error = context.getString(R.string.player_error_no_stream_url), showLoadingOverlay = false) }
         return
@@ -76,11 +83,25 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
 
     scope.launch {
         try {
+            if (allowEngineFailover) {
+                startupEngineFailoverTriggered = false
+            }
             resetLoadingOverlayForNewStream()
+            mpvDelayStartAfterAfrSwitch = false
             val playerSettings = playerSettingsDataStore.playerSettings.first()
+            val preferredAudioLanguages = resolvePreferredAudioLanguages(
+                preferredAudioLanguage = playerSettings.preferredAudioLanguage,
+                secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
+                deviceLanguages = resolveDeviceAudioLanguages()
+            )
+            mpvPreferredAudioLanguages = preferredAudioLanguages
+            val effectiveInternalPlayerEngine = overrideInternalPlayerEngine ?: playerSettings.internalPlayerEngine
+            runtimeInternalPlayerEngineOverride = overrideInternalPlayerEngine
+            currentInternalPlayerEngine = effectiveInternalPlayerEngine
             val showLoadingStatus = playerSettings.showPlayerLoadingStatus
             _uiState.update {
                 it.copy(
+                    internalPlayerEngine = effectiveInternalPlayerEngine,
                     frameRateMatchingMode = playerSettings.frameRateMatchingMode,
                     resizeMode = playerSettings.resizeMode,
                     tunnelingEnabled = playerSettings.tunnelingEnabled,
@@ -99,6 +120,31 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                 url = url,
                 headers = headers
             )
+            if (effectiveInternalPlayerEngine == InternalPlayerEngine.MVP_PLAYER) {
+                mpvInitializationInProgress = true
+                try {
+                    afrJob.await()
+                    if (mpvDelayStartAfterAfrSwitch) {
+                        Log.d(
+                            PlayerRuntimeController.TAG,
+                            "AFR display mode switched; delaying MPV start by ${MPV_AFR_SETTLE_DELAY_MS}ms"
+                        )
+                        delay(MPV_AFR_SETTLE_DELAY_MS)
+                    }
+                    initializeMpvPlayer(
+                        url = url,
+                        headers = headers,
+                        allowEngineFailover = allowEngineFailover
+                    )
+                    // Keep addon subtitle discovery available on the mpv path too.
+                    // Exo does this later in this method, but this branch returns early.
+                    fetchAddonSubtitles()
+                } finally {
+                    mpvInitializationInProgress = false
+                }
+                return@launch
+            }
+            mpvInitializationInProgress = false
             val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings, showLoadingStatus)
             afrJob.await()
             requestedUseLibassByUser = playerSettings.useLibass
@@ -136,18 +182,6 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                     )
                 }
 
-                val deviceLanguages = if (Build.VERSION.SDK_INT >= 24) {
-                    val localeList = Resources.getSystem().configuration.locales
-                    List(localeList.size()) { localeList[it].isO3Language }
-                } else {
-                    @Suppress("DEPRECATION")
-                    listOf(Resources.getSystem().configuration.locale.isO3Language)
-                }
-                val preferredAudioLanguages = resolvePreferredAudioLanguages(
-                    preferredAudioLanguage = playerSettings.preferredAudioLanguage,
-                    secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
-                    deviceLanguages = deviceLanguages
-                )
                 if (preferredAudioLanguages.isNotEmpty()) {
                     setParameters(
                         buildUponParameters().setPreferredAudioLanguages(*preferredAudioLanguages.toTypedArray())
@@ -367,7 +401,13 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                     override fun onRenderedFirstFrame() {
                         hasRenderedFirstFrame = true
                         resetErrorRetryState()
-                        _uiState.update { it.copy(showLoadingOverlay = false, loadingMessage = null) }
+                        _uiState.update {
+                            it.copy(
+                                showLoadingOverlay = false,
+                                loadingMessage = null,
+                                showPlayerEngineSwitchInfo = false
+                            )
+                        }
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
@@ -390,6 +430,13 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                             retryCurrentStreamFromStartAfter416()
                             return
                         }
+                        if (maybeAutoSwitchInternalPlayerOnStartupError(
+                                detailedError = detailedError,
+                                allowEngineFailover = allowEngineFailover
+                            )
+                        ) {
+                            return
+                        }
                         // Attempt automatic recovery for transient errors.
                         if (attemptAutoRetry(error, detailedError)) {
                             return
@@ -408,6 +455,14 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                 fetchAddonSubtitles()
             }
         } catch (e: Exception) {
+            if (
+                maybeAutoSwitchInternalPlayerOnStartupError(
+                    detailedError = e.message ?: "Failed to initialize player",
+                    allowEngineFailover = allowEngineFailover
+                )
+            ) {
+                return@launch
+            }
             _uiState.update {
                 it.copy(
                     error = e.message ?: "Failed to initialize player",
@@ -450,6 +505,15 @@ internal fun resolvePreferredAudioLanguages(
             normalize(preferredAudioLanguage),
             normalize(secondaryPreferredAudioLanguage)
         ).distinct()
+    }
+}
+
+internal fun resolveDeviceAudioLanguages(): List<String> {
+    return if (Build.VERSION.SDK_INT >= 24) {
+        val localeList = Resources.getSystem().configuration.locales
+        List(localeList.size()) { localeList[it].isO3Language }
+    } else {
+        listOf(Resources.getSystem().configuration.locale.isO3Language)
     }
 }
 

@@ -167,4 +167,39 @@ class WatchedItemsSyncService @Inject constructor(
             Result.failure(e)
         }
     }
+
+    suspend fun deleteFromRemoteBatch(
+        contentId: String,
+        episodes: List<Pair<Int, Int>>
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            if (!shouldUseSupabaseWatchProgressSync()) {
+                return@withContext Result.success(Unit)
+            }
+            if (episodes.isEmpty()) return@withContext Result.success(Unit)
+
+            val profileId = profileManager.activeProfileId.value
+            val params = buildJsonObject {
+                put("p_profile_id", profileId)
+                put("p_keys", buildJsonArray {
+                    episodes.forEach { (season, episode) ->
+                        addJsonObject {
+                            put("content_id", contentId)
+                            put("season", season)
+                            put("episode", episode)
+                        }
+                    }
+                })
+            }
+            withJwtRefreshRetry {
+                postgrest.rpc("sync_delete_watched_items", params)
+            }
+
+            Log.d(TAG, "Batch deleted ${episodes.size} watched items from remote for $contentId profile $profileId")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to batch delete watched items from remote", e)
+            Result.failure(e)
+        }
+    }
 }

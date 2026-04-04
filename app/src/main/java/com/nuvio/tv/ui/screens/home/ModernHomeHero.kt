@@ -35,6 +35,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -166,31 +168,41 @@ internal fun ModernHeroGradientLayer(
     isFullScreen: Boolean = false,
     modifier: Modifier
 ) {
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Box(
         modifier = modifier
             .drawWithCache {
                 val horizontalFadeEndX = size.width * if (isFullScreen) 0.65f else 0.45f
-                val horizontalGradient = Brush.horizontalGradient(
-                    colorStops = if (isFullScreen) {
-                        arrayOf(
-                            0.0f to bgColor,
-                            0.22f to bgColor.copy(alpha = 0.90f),
-                            0.46f to bgColor.copy(alpha = 0.80f),
-                            0.76f to bgColor.copy(alpha = 0.42f),
-                            1.0f to Color.Transparent
-                        )
-                    } else {
-                        arrayOf(
-                            0.0f to bgColor,
-                            0.22f to bgColor.copy(alpha = 0.86f),
-                            0.46f to bgColor.copy(alpha = 0.56f),
-                            0.76f to bgColor.copy(alpha = 0.16f),
-                            1.0f to Color.Transparent
-                        )
-                    },
-                    startX = 0f,
-                    endX = horizontalFadeEndX
-                )
+                val colorStops = if (isFullScreen) {
+                    arrayOf(
+                        0.0f to bgColor,
+                        0.22f to bgColor.copy(alpha = 0.90f),
+                        0.46f to bgColor.copy(alpha = 0.80f),
+                        0.76f to bgColor.copy(alpha = 0.42f),
+                        1.0f to Color.Transparent
+                    )
+                } else {
+                    arrayOf(
+                        0.0f to bgColor,
+                        0.22f to bgColor.copy(alpha = 0.86f),
+                        0.46f to bgColor.copy(alpha = 0.56f),
+                        0.76f to bgColor.copy(alpha = 0.16f),
+                        1.0f to Color.Transparent
+                    )
+                }
+                val horizontalGradient = if (isRtl) {
+                    Brush.horizontalGradient(
+                        colorStops = colorStops,
+                        startX = size.width,
+                        endX = size.width - horizontalFadeEndX
+                    )
+                } else {
+                    Brush.horizontalGradient(
+                        colorStops = colorStops,
+                        startX = 0f,
+                        endX = horizontalFadeEndX
+                    )
+                }
 
                 val bottomStripStartY = size.height * if (isFullScreen) 0.64f else 0.82f
                 val verticalGradient = Brush.verticalGradient(
@@ -214,10 +226,11 @@ internal fun ModernHeroGradientLayer(
                 )
 
                 onDrawBehind {
-                    // 1. Horizontal fade
+                    // 1. Horizontal fade (reversed in RTL)
+                    val rectLeft = if (isRtl) size.width - horizontalFadeEndX else 0f
                     drawRect(
                         brush = horizontalGradient,
-                        topLeft = Offset(0f, 0f),
+                        topLeft = Offset(rectLeft, 0f),
                         size = Size(horizontalFadeEndX, size.height)
                     )
                     

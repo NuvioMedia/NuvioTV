@@ -106,6 +106,7 @@ class MetaDetailsViewModel @Inject constructor(
     private var trailerDelayMs = 7000L
     private var trailerAutoplayEnabled = false
     private var trailerHasPlayed = false
+    private var suppressSeasonAutoSwitch = false
 
     private var isPlayButtonFocused = false
     private var hideUnreleasedContent = false
@@ -233,7 +234,8 @@ class MetaDetailsViewModel @Inject constructor(
             if (state.nextToWatch == nextToWatch) return@update state
             val nextSeason = nextToWatch.nextSeason
             val meta = state.meta
-            val shouldSwitchSeason = nextSeason != null &&
+            val shouldSwitchSeason = !suppressSeasonAutoSwitch &&
+                nextSeason != null &&
                 nextSeason != state.selectedSeason &&
                 meta != null &&
                 state.seasons.contains(nextSeason)
@@ -1628,6 +1630,7 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun markSeasonWatched(season: Int) {
         val meta = _uiState.value.meta ?: return
+        suppressSeasonAutoSwitch = true
         viewModelScope.launch {
             val episodes = meta.videos.filter { it.season == season && it.episode != null }
             val unwatched = episodes.filter { video ->
@@ -1647,26 +1650,23 @@ class MetaDetailsViewModel @Inject constructor(
                 it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys + pendingKeys)
             }
 
-            var marked = 0
-            for (video in unwatched) {
-                val key = episodePendingKey(video)
-                runCatching {
-                    watchProgressRepository.markAsCompleted(buildCompletedEpisodeProgress(meta, video))
-                    marked++
-                }.onFailure { error ->
-                    Log.w(TAG, "Failed to mark S${video.season}E${video.episode} as watched: ${error.message}")
-                }
-                _uiState.update {
-                    it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys - key)
-                }
+            runCatching {
+                val progressList = unwatched.map { buildCompletedEpisodeProgress(meta, it) }
+                watchProgressRepository.markAsCompletedBatch(progressList)
+            }.onFailure { error ->
+                Log.w(TAG, "Failed to batch mark season $season as watched: ${error.message}")
             }
 
-            showMessage(context.getString(R.string.detail_marked_episodes_watched, marked))
+            _uiState.update {
+                it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys - pendingKeys)
+            }
+            showMessage(context.getString(R.string.detail_marked_episodes_watched, unwatched.size))
         }
     }
 
     private fun markSeasonUnwatched(season: Int) {
         val meta = _uiState.value.meta ?: return
+        suppressSeasonAutoSwitch = true
         viewModelScope.launch {
             val episodes = meta.videos.filter { it.season == season && it.episode != null }
             val watched = episodes.filter { video ->
@@ -1685,21 +1685,21 @@ class MetaDetailsViewModel @Inject constructor(
                 it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys + pendingKeys)
             }
 
-            var unmarked = 0
-            for (video in watched) {
-                val key = episodePendingKey(video)
-                runCatching {
-                    watchProgressRepository.removeFromHistory(_effectiveContentId.value, videoId = resolveFallbackVideoId(), season = video.season!!, episode = video.episode!!)
-                    unmarked++
-                }.onFailure { error ->
-                    Log.w(TAG, "Failed to unmark S${video.season}E${video.episode}: ${error.message}")
-                }
-                _uiState.update {
-                    it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys - key)
-                }
+            runCatching {
+                val episodePairs = watched.map { it.season!! to it.episode!! }
+                watchProgressRepository.removeFromHistoryBatch(
+                    contentId = _effectiveContentId.value,
+                    videoId = resolveFallbackVideoId(),
+                    episodes = episodePairs
+                )
+            }.onFailure { error ->
+                Log.w(TAG, "Failed to batch unmark season $season: ${error.message}")
             }
 
-            showMessage(context.getString(R.string.detail_marked_episodes_unwatched, unmarked))
+            _uiState.update {
+                it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys - pendingKeys)
+            }
+            showMessage(context.getString(R.string.detail_marked_episodes_unwatched, watched.size))
         }
     }
 
@@ -1729,21 +1729,17 @@ class MetaDetailsViewModel @Inject constructor(
                 it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys + pendingKeys)
             }
 
-            var marked = 0
-            for (ep in unwatched) {
-                val key = episodePendingKey(ep)
-                runCatching {
-                    watchProgressRepository.markAsCompleted(buildCompletedEpisodeProgress(meta, ep))
-                    marked++
-                }.onFailure { error ->
-                    Log.w(TAG, "Failed to mark S${ep.season}E${ep.episode} as watched: ${error.message}")
-                }
-                _uiState.update {
-                    it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys - key)
-                }
+            runCatching {
+                val progressList = unwatched.map { buildCompletedEpisodeProgress(meta, it) }
+                watchProgressRepository.markAsCompletedBatch(progressList)
+            }.onFailure { error ->
+                Log.w(TAG, "Failed to batch mark previous episodes as watched: ${error.message}")
             }
 
-            showMessage(context.getString(R.string.detail_marked_previous_watched, marked))
+            _uiState.update {
+                it.copy(episodeWatchedPendingKeys = it.episodeWatchedPendingKeys - pendingKeys)
+            }
+            showMessage(context.getString(R.string.detail_marked_previous_watched, unwatched.size))
         }
     }
 

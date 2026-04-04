@@ -79,6 +79,17 @@ internal fun PlayerRuntimeController.selectedAudioRequiresPcmForSpeed(player: Pl
 }
 
 internal fun PlayerRuntimeController.selectAudioTrack(trackIndex: Int) {
+    if (isUsingMpvEngine()) {
+        val wasPlaying = isPlaybackCurrentlyPlaying()
+        val track = _uiState.value.audioTracks.getOrNull(trackIndex)
+        val trackId = track?.trackId?.toIntOrNull()
+        val changed = trackId != null && mpvView?.selectAudioTrackById(trackId) == true
+        if (changed) {
+            keepMpvPlayingIfNeeded(wasPlaying)
+        }
+        return
+    }
+
     _exoPlayer?.let { player ->
         val tracks = player.currentTracks
         var currentAudioIndex = 0
@@ -181,6 +192,22 @@ internal fun PlayerRuntimeController.applyAddonSubtitleOverrideByLanguage(
 }
 
 internal fun PlayerRuntimeController.selectSubtitleTrack(trackIndex: Int) {
+    if (isUsingMpvEngine()) {
+        Log.d(PlayerRuntimeController.TAG, "Selecting INTERNAL subtitle trackIndex=$trackIndex (mpv)")
+        val shouldKeepPlaying = !userPausedManually && !_uiState.value.playbackEnded
+        val track = _uiState.value.subtitleTracks.getOrNull(trackIndex)
+        val trackId = track?.trackId?.toIntOrNull()
+        val changed = trackId != null && mpvView?.selectSubtitleTrackById(trackId) == true
+        if (changed) {
+            pendingAddonSubtitleLanguage = null
+            pendingAddonSubtitleTrackId = null
+            pendingAudioSelectionAfterSubtitleRefresh = null
+            updateMpvAvailableTracks()
+            keepMpvPlayingIfNeeded(shouldKeepPlaying)
+        }
+        return
+    }
+
     _exoPlayer?.let { player ->
         Log.d(PlayerRuntimeController.TAG, "Selecting INTERNAL subtitle trackIndex=$trackIndex")
         val tracks = player.currentTracks
@@ -228,6 +255,22 @@ internal fun PlayerRuntimeController.rememberInternalSubtitleSelection(trackInde
 }
 
 internal fun PlayerRuntimeController.disableSubtitles() {
+    if (isUsingMpvEngine()) {
+        if (mpvView?.disableSubtitles() == true) {
+            pendingAddonSubtitleLanguage = null
+            pendingAddonSubtitleTrackId = null
+            pendingAudioSelectionAfterSubtitleRefresh = null
+            _uiState.update {
+                it.copy(
+                    selectedAddonSubtitle = null,
+                    selectedSubtitleTrackIndex = -1
+                )
+            }
+            updateMpvAvailableTracks()
+        }
+        return
+    }
+
     _exoPlayer?.let { player ->
         player.trackSelectionParameters = player.trackSelectionParameters
             .buildUpon()
@@ -272,6 +315,36 @@ internal fun PlayerRuntimeController.toSubtitleConfiguration(subtitle: Subtitle)
 }
 
 internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
+    if (isUsingMpvEngine()) {
+        val currentlySelected = _uiState.value.selectedAddonSubtitle
+        if (currentlySelected?.id == subtitle.id && currentlySelected.url == subtitle.url) {
+            return
+        }
+        Log.d(PlayerRuntimeController.TAG, "Selecting ADDON subtitle lang=${subtitle.lang} id=${subtitle.id} (mpv)")
+        val wasPlaying = isPlaybackCurrentlyPlaying()
+        val normalizedLang = PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)
+        val trackTitle = buildAddonSubtitleTrackId(subtitle)
+        val added = mpvView?.addAndSelectExternalSubtitle(
+            url = subtitle.url,
+            title = trackTitle,
+            language = normalizedLang
+        ) == true
+        if (!added) return
+
+        pendingAddonSubtitleLanguage = null
+        pendingAddonSubtitleTrackId = null
+        pendingAudioSelectionAfterSubtitleRefresh = null
+        _uiState.update {
+            it.copy(
+                selectedAddonSubtitle = subtitle,
+                selectedSubtitleTrackIndex = -1
+            )
+        }
+        updateMpvAvailableTracks()
+        keepMpvPlayingIfNeeded(wasPlaying)
+        return
+    }
+
     _exoPlayer?.let { player ->
         val currentlySelected = _uiState.value.selectedAddonSubtitle
         if (currentlySelected?.id == subtitle.id && currentlySelected.url == subtitle.url) {

@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.os.Build
 import android.util.Log
 import com.nuvio.tv.core.player.FrameRateUtils
 import com.nuvio.tv.data.local.FrameRateMatchingMode
@@ -18,6 +19,8 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
     frameRateMatchingMode: FrameRateMatchingMode,
     resolutionMatchingEnabled: Boolean
 ) {
+    mpvDelayStartAfterAfrSwitch = false
+
     if (frameRateMatchingMode == FrameRateMatchingMode.OFF) {
         _uiState.update {
             it.copy(
@@ -97,6 +100,13 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
             detectedFps = detection.snapped,
             prefer23976Near24 = prefer23976ProbeBias
         )
+        val initialDisplayModeId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            withContext(Dispatchers.Main) {
+                activity.window?.decorView?.display?.mode?.modeId
+            }
+        } else {
+            null
+        }
 
         val result = FrameRateUtils.matchFrameRateAndWait(
             activity = activity,
@@ -107,6 +117,10 @@ internal suspend fun PlayerRuntimeController.runAfrPreflightIfEnabled(
         )
 
         if (result != null) {
+            val switchedDisplayMode = initialDisplayModeId != null &&
+                initialDisplayModeId != result.appliedMode.modeId
+            mpvDelayStartAfterAfrSwitch = switchedDisplayMode
+
             _uiState.update {
                 it.copy(
                     displayModeInfo = DisplayModeInfo(

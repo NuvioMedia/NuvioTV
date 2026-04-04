@@ -316,6 +316,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             val totalCatalogs = rows.size.coerceAtLeast(1)
             val baseSlot = 7 / totalCatalogs
             val remainder = 7 % totalCatalogs
+            val seen = mutableSetOf<String>()
             val result = mutableListOf<MetaPreview>()
             rows.forEachIndexed { index, row ->
                 val slot = baseSlot + if (index < remainder) 1 else 0
@@ -326,7 +327,9 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
                     row = row,
                     candidates = byId.values.filter { it.id !in existing }
                 )
-                result += (ordered + new).take(slot)
+                // Filter out duplicates but keep taking until slot is filled
+                val unique = (ordered + new).filter { seen.add(it.id) }
+                result += unique.take(slot)
             }
             return result
         }

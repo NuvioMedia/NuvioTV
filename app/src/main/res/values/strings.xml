@@ -328,6 +328,11 @@
     <string name="playback_player_internal">Internal</string>
     <string name="playback_player_external">External</string>
     <string name="playback_player_ask">Ask every time</string>
+    <string name="playback_internal_player_engine">Internal Engine</string>
+    <string name="playback_engine_exoplayer">ExoPlayer</string>
+    <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
+    <string name="playback_auto_switch_internal_player_on_error">Auto-switch engine on startup error</string>
+    <string name="playback_auto_switch_internal_player_on_error_sub">If stream startup fails, switch between ExoPlayer and libmpv automatically.</string>
     <string name="playback_section_audio">Audio &amp; Trailer</string>
     <string name="playback_section_audio_desc">Trailer behavior and audio controls.</string>
     <string name="playback_section_subtitles">Subtitles</string>
@@ -344,6 +349,8 @@
     <string name="playback_resolution_matching_sub">Allow display mode changes to match video resolution.</string>
     <string name="playback_player_external_desc">Always open streams in an external app</string>
     <string name="playback_player_ask_desc">Choose the player each time</string>
+    <string name="playback_engine_exoplayer_desc">Best compatibility with current Nuvio features.</string>
+    <string name="playback_engine_mvplayer_desc">Uses libmpv with Nuvio OSD controls. Experimental.</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_trailer_section">Trailer</string>
@@ -841,6 +848,8 @@
     <string name="player_loading_building">Building player…</string>
     <string name="player_loading_starting">Starting stream…</string>
     <string name="player_loading_buffering">Buffering…</string>
+    <string name="player_engine_switching_title">Switching Player Engine</string>
+    <string name="player_engine_switching_message">Startup failed. Switching to %1$s…</string>
     <string name="playback_show_loading_status">Show loading status</string>
     <string name="playback_show_loading_status_sub">Display step-by-step progress while the player is initializing.</string>
 
@@ -987,6 +996,8 @@
     <string name="search_start_title">Start Searching</string>
     <string name="search_start_subtitle">Enter at least 2 characters</string>
     <string name="search_start_subtitle_no_discover">Discover is disabled. Enter at least 2 characters</string>
+    <string name="search_recent_title">Recent searches</string>
+    <string name="search_recent_clear">Clear history</string>
     <string name="search_voice_no_speech">No speech detected. Try again.</string>
     <string name="search_voice_mic_permission">Microphone permission is required for voice search.</string>
     <string name="search_voice_failed">Voice recognition failed. Try again.</string>

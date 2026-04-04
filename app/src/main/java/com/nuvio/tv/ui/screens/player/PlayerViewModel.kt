@@ -93,6 +93,14 @@ class PlayerViewModel @Inject constructor(
         controller.attachHostActivity(activity)
     }
 
+    fun attachMpvView(view: NuvioMpvSurfaceView?) {
+        controller.attachMpvView(view)
+    }
+
+    fun pauseForLifecycle() {
+        controller.pauseForLifecycle()
+    }
+
     fun startInitialPlaybackIfNeeded() {
         controller.startInitialPlaybackIfNeeded()
     }

@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.focusGroup
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
@@ -54,11 +55,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -66,6 +67,8 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import com.nuvio.tv.ui.components.CatalogRowSection
@@ -105,7 +108,8 @@ fun SearchScreen(
     val voiceFocusRequester = remember { FocusRequester() }
     val searchFocusRequester = remember { FocusRequester() }
     val discoverFirstItemFocusRequester = remember { FocusRequester() }
-    var isSearchFieldAttached by remember { mutableStateOf(false) }
+    var isSearchFieldFocused by remember { mutableStateOf(false) }
+    var isRecentSearchSectionFocused by remember { mutableStateOf(false) }
     var focusResults by remember { mutableStateOf(false) }
     var pendingFocusMoveToResultsQuery by remember { mutableStateOf<String?>(null) }
     var pendingFocusMoveSawSearching by remember { mutableStateOf(false) }
@@ -250,6 +254,16 @@ fun SearchScreen(
     val hasPendingUnsubmittedQuery = remember(isDiscoverMode, trimmedQuery, trimmedSubmittedQuery) {
         !isDiscoverMode && trimmedQuery.length >= 2 && trimmedQuery != trimmedSubmittedQuery
     }
+    val showRecentSearches = remember(
+        trimmedQuery,
+        uiState.recentSearches,
+        isSearchFieldFocused,
+        isRecentSearchSectionFocused
+    ) {
+        trimmedQuery.isEmpty() &&
+            uiState.recentSearches.isNotEmpty() &&
+            (isSearchFieldFocused || isRecentSearchSectionFocused)
+    }
     val canMoveToResults = remember(
         isDiscoverMode,
         uiState.discoverResults,
@@ -288,6 +302,13 @@ fun SearchScreen(
         viewModel.onEvent(SearchEvent.QueryChanged(nextQuery))
         if (selectedSuggestion) {
             submitCurrentQuery(trimmedNextQuery)
+        }
+    }
+    val submitRecentSearch: (String) -> Unit = { recentQuery ->
+        val trimmedRecentQuery = recentQuery.trim()
+        if (trimmedRecentQuery.isNotEmpty()) {
+            viewModel.onEvent(SearchEvent.QueryChanged(trimmedRecentQuery))
+            submitCurrentQuery(trimmedRecentQuery)
         }
     }
 
@@ -400,7 +421,7 @@ fun SearchScreen(
                     canMoveToResults = canMoveToResults,
                     voiceFocusRequester = if (isVoiceSearchAvailable) voiceFocusRequester else null,
                     searchFocusRequester = searchFocusRequester,
-                    onAttached = { isSearchFieldAttached = true },
+                    onSearchFieldFocusChanged = { focused -> isSearchFieldFocused = focused },
                     onQueryChanged = handleQueryChanged,
                     onSubmit = {
                         submitCurrentQuery(uiState.query.trim())
@@ -415,17 +436,29 @@ fun SearchScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    EmptyScreenState(
-                        title = stringResource(R.string.search_start_title),
-                        subtitle = stringResource(R.string.search_start_subtitle),
-                        icon = Icons.Default.Search
+                if (showRecentSearches) {
+                    RecentSearchesSection(
+                        recentSearches = uiState.recentSearches,
+                        onSearchSelected = submitRecentSearch,
+                        onClearHistory = {
+                            viewModel.onEvent(SearchEvent.ClearRecentSearches)
+                        },
+                        onSectionFocusChanged = { focused -> isRecentSearchSectionFocused = focused },
+                        modifier = Modifier.padding(horizontal = 52.dp)
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        EmptyScreenState(
+                            title = stringResource(R.string.search_start_title),
+                            subtitle = stringResource(R.string.search_start_subtitle),
+                            icon = Icons.Default.Search
+                        )
+                    }
                 }
             }
         } else {
@@ -440,7 +473,7 @@ fun SearchScreen(
                         canMoveToResults = canMoveToResults,
                         voiceFocusRequester = if (isVoiceSearchAvailable) voiceFocusRequester else null,
                         searchFocusRequester = searchFocusRequester,
-                        onAttached = { isSearchFieldAttached = true },
+                        onSearchFieldFocusChanged = { focused -> isSearchFieldFocused = focused },
                         onQueryChanged = handleQueryChanged,
                         onSubmit = {
                             submitCurrentQuery(uiState.query.trim())
@@ -456,7 +489,7 @@ fun SearchScreen(
                     )
                 }
 
-                if (trimmedSubmittedQuery.length < 2 || hasPendingUnsubmittedQuery) {
+                if ((trimmedSubmittedQuery.length < 2 || hasPendingUnsubmittedQuery) && !showRecentSearches) {
                     item {
                         Text(
                             text = stringResource(R.string.search_keyboard_hint),
@@ -472,15 +505,28 @@ fun SearchScreen(
                 when {
                     trimmedSubmittedQuery.length < 2 && !hasPendingUnsubmittedQuery -> {
                         item {
-                            EmptyScreenState(
-                                title = stringResource(R.string.search_start_title),
-                                subtitle = if (uiState.discoverEnabled) {
-                                    stringResource(R.string.search_start_subtitle)
-                                } else {
-                                    stringResource(R.string.search_start_subtitle_no_discover)
-                                },
-                                icon = Icons.Default.Search
-                            )
+                            if (showRecentSearches) {
+                                RecentSearchesSection(
+                                    recentSearches = uiState.recentSearches,
+                                    onSearchSelected = submitRecentSearch,
+                                    onClearHistory = {
+                                        viewModel.onEvent(SearchEvent.ClearRecentSearches)
+                                    },
+                                    onSectionFocusChanged = { focused ->
+                                        isRecentSearchSectionFocused = focused
+                                    }
+                                )
+                            } else {
+                                EmptyScreenState(
+                                    title = stringResource(R.string.search_start_title),
+                                    subtitle = if (uiState.discoverEnabled) {
+                                        stringResource(R.string.search_start_subtitle)
+                                    } else {
+                                        stringResource(R.string.search_start_subtitle_no_discover)
+                                    },
+                                    icon = Icons.Default.Search
+                                )
+                            }
                         }
                     }
 
@@ -560,13 +606,77 @@ fun SearchScreen(
     }
 }
 
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun RecentSearchesSection(
+    recentSearches: List<String>,
+    onSearchSelected: (String) -> Unit,
+    onClearHistory: () -> Unit,
+    onSectionFocusChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .focusGroup()
+            .onFocusChanged { state ->
+                onSectionFocusChanged(state.hasFocus || state.isFocused)
+            },
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.search_recent_title),
+                style = androidx.tv.material3.MaterialTheme.typography.titleMedium,
+                color = NuvioColors.TextPrimary
+            )
+            Button(
+                onClick = onClearHistory,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioColors.BackgroundCard,
+                    contentColor = NuvioColors.TextPrimary,
+                    focusedContainerColor = NuvioColors.FocusBackground,
+                    focusedContentColor = NuvioColors.Primary
+                ),
+                shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+            ) {
+                Text(text = stringResource(R.string.search_recent_clear))
+            }
+        }
+
+        recentSearches.forEach { recentQuery ->
+            Button(
+                onClick = { onSearchSelected(recentQuery) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioColors.BackgroundCard,
+                    contentColor = NuvioColors.TextPrimary,
+                    focusedContainerColor = NuvioColors.FocusBackground,
+                    focusedContentColor = NuvioColors.Primary
+                ),
+                shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+            ) {
+                Text(
+                    text = recentQuery,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun SearchInputField(
     query: String,
     canMoveToResults: Boolean,
     voiceFocusRequester: FocusRequester?,
     searchFocusRequester: FocusRequester,
-    onAttached: () -> Unit,
+    onSearchFieldFocusChanged: (Boolean) -> Unit,
     onQueryChanged: (String) -> Unit,
     onSubmit: () -> Unit,
     showVoiceSearch: Boolean,
@@ -582,8 +692,7 @@ private fun SearchInputField(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 48.dp)
-            .onGloballyPositioned { onAttached() },
+            .padding(horizontal = 48.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(
@@ -649,6 +758,9 @@ private fun SearchInputField(
             modifier = Modifier
                 .weight(1f)
                 .focusRequester(searchFocusRequester)
+                .onFocusChanged { focusState ->
+                    onSearchFieldFocusChanged(focusState.isFocused)
+                }
                 .onPreviewKeyEvent { keyEvent ->
                     when (keyEvent.nativeKeyEvent.keyCode) {
                         KeyEvent.KEYCODE_ENTER,

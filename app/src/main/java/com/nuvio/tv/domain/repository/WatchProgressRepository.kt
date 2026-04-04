@@ -88,9 +88,29 @@ interface WatchProgressRepository {
      * Mark content as completed
      */
     suspend fun markAsCompleted(progress: WatchProgress)
+
+    /**
+     * Mark multiple episodes as completed in a single batch operation.
+     * More efficient than calling [markAsCompleted] in a loop.
+     */
+    suspend fun markAsCompletedBatch(progressList: List<WatchProgress>)
+
+    /**
+     * Remove multiple episodes from history in a single batch operation.
+     */
+    suspend fun removeFromHistoryBatch(
+        contentId: String,
+        videoId: String?,
+        episodes: List<Pair<Int, Int>>
+    )
     
     /**
      * Clear all watch progress
      */
     suspend fun clearAll()
+
+    /**
+     * Returns true if the show is dropped/hidden from progress on the active source.
+     */
+    fun isDroppedShow(contentId: String): Boolean
 }

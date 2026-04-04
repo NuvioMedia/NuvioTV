@@ -116,6 +116,7 @@ fun PlaybackSettingsContent(
     var showReuseLastLinkCacheDialog by remember { mutableStateOf(false) }
     var showPlayerPreferenceDialog by remember { mutableStateOf(false) }
     var showStreamCacheHoursDialog by remember { mutableStateOf(false) }
+    var showInternalPlayerEngineDialog by remember { mutableStateOf(false) }
 
     fun dismissAllDialogs() {
         showLanguageDialog = false
@@ -136,6 +137,7 @@ fun PlaybackSettingsContent(
         showReuseLastLinkCacheDialog = false
         showPlayerPreferenceDialog = false
         showStreamCacheHoursDialog = false
+        showInternalPlayerEngineDialog = false
     }
 
     fun openDialog(setter: () -> Unit) {
@@ -162,6 +164,7 @@ fun PlaybackSettingsContent(
                 playerSettings = playerSettings,
                 trailerSettings = trailerSettings,
                 onShowPlayerPreferenceDialog = { openDialog { showPlayerPreferenceDialog = true } },
+                onShowInternalPlayerEngineDialog = { openDialog { showInternalPlayerEngineDialog = true } },
                 onShowAudioLanguageDialog = { openDialog { showAudioLanguageDialog = true } },
                 onShowSecondaryAudioLanguageDialog = { openDialog { showSecondaryAudioLanguageDialog = true } },
                 onShowDecoderPriorityDialog = { openDialog { showDecoderPriorityDialog = true } },
@@ -186,6 +189,9 @@ fun PlaybackSettingsContent(
                     coroutineScope.launch {
                         viewModel.setStreamAutoPlayPreferBingeGroupForNextEpisode(enabled)
                     }
+                },
+                onSetAutoSwitchInternalPlayerOnError = { enabled ->
+                    coroutineScope.launch { viewModel.setAutoSwitchInternalPlayerOnError(enabled) }
                 },
                 onSetNextEpisodeThresholdPercent = { percent ->
                     coroutineScope.launch { viewModel.setNextEpisodeThresholdPercent(percent) }
@@ -227,6 +233,7 @@ fun PlaybackSettingsContent(
         installedAddonNames = installedAddonNames,
         enabledPluginNames = enabledPluginNames,
         showPlayerPreferenceDialog = showPlayerPreferenceDialog,
+        showInternalPlayerEngineDialog = showInternalPlayerEngineDialog,
         showLanguageDialog = showLanguageDialog,
         showSecondaryLanguageDialog = showSecondaryLanguageDialog,
         showSubtitleStartupModeDialog = showSubtitleStartupModeDialog,
@@ -248,6 +255,10 @@ fun PlaybackSettingsContent(
             coroutineScope.launch { viewModel.setPlayerPreference(preference) }
         },
         onDismissPlayerPreferenceDialog = ::dismissAllDialogs,
+        onSetInternalPlayerEngine = { engine ->
+            coroutineScope.launch { viewModel.setInternalPlayerEngine(engine) }
+        },
+        onDismissInternalPlayerEngineDialog = ::dismissAllDialogs,
         onSetSubtitlePreferredLanguage = { language ->
             coroutineScope.launch { viewModel.setSubtitlePreferredLanguage(language ?: "none") }
         },
