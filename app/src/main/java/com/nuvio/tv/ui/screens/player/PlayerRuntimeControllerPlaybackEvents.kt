@@ -262,19 +262,11 @@ internal fun PlayerRuntimeController.buildScrobbleItem(): TraktScrobbleItem? {
 }
 
 internal fun PlayerRuntimeController.emitScrobbleStart() {
-    Log.d("EmbySession", "emitScrobbleStart() called — currentStreamUrl=$currentStreamUrl")
     val item = currentScrobbleItem ?: buildScrobbleItem().also { currentScrobbleItem = it }
-    if (item == null) {
-        Log.d("EmbySession", "emitScrobbleStart() — no scrobble item, skipping")
-        return
-    }
-    if (hasRequestedScrobbleStartForCurrentItem) {
-        Log.d("EmbySession", "emitScrobbleStart() — already requested, skipping")
-        return
-    }
+    if (item == null) return
+    if (hasRequestedScrobbleStartForCurrentItem) return
 
     hasRequestedScrobbleStartForCurrentItem = true
-    Log.d("EmbySession", "emitScrobbleStart() — calling initEmbyItemIdAndStartSession()")
     initEmbyItemIdAndStartSession()
     val requestGeneration = ++scrobbleStartRequestGeneration
     scope.launch {
