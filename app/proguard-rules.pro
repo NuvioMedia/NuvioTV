@@ -87,3 +87,8 @@
 # Keep line numbers for crash reports
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# MPV (native JNI callbacks)
+# Native code reflects into multiple classes/methods under is.xyz.mpv,
+# so keep the whole package to avoid JNI lookup crashes after R8.
+-keep class is.xyz.mpv.** { *; }

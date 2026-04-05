@@ -834,13 +834,18 @@ fun NuvioNavHost(
             )
         }
 
-        composable(Screen.Search.route) {
+        composable(Screen.Search.route) { backStackEntry ->
+            val searchViewModel: com.nuvio.tv.ui.screens.search.SearchViewModel =
+                androidx.hilt.navigation.compose.hiltViewModel(backStackEntry)
             SearchScreen(
+                viewModel = searchViewModel,
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
                 },
                 onNavigateToSeeAll = { catalogId, addonId, type ->
-                    navController.navigate(Screen.CatalogSeeAll.createRoute(catalogId, addonId, type))
+                    navController.navigate(
+                        Screen.CatalogSeeAll.createRoute(catalogId, addonId, type, fromSearch = true)
+                    )
                 },
                 onOpenDiscover = { navController.navigate(Screen.Discover.route) }
             )
@@ -972,16 +977,35 @@ fun NuvioNavHost(
             arguments = listOf(
                 navArgument("catalogId") { type = NavType.StringType },
                 navArgument("addonId") { type = NavType.StringType },
-                navArgument("type") { type = NavType.StringType }
+                navArgument("type") { type = NavType.StringType },
+                navArgument("fromSearch") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
             )
         ) { backStackEntry ->
             val catalogId = backStackEntry.arguments?.getString("catalogId") ?: ""
             val addonId = backStackEntry.arguments?.getString("addonId") ?: ""
             val type = backStackEntry.arguments?.getString("type") ?: ""
+            val fromSearch = backStackEntry.arguments?.getBoolean("fromSearch") ?: false
+
+            // When coming from search, get the SearchViewModel from the Search back stack entry
+            // so we share the same data (existing results + pagination)
+            val searchBackStackEntry = androidx.compose.runtime.remember(fromSearch) {
+                if (fromSearch) {
+                    try { navController.getBackStackEntry(Screen.Search.route) } catch (_: Exception) { null }
+                } else null
+            }
+            val searchViewModel: com.nuvio.tv.ui.screens.search.SearchViewModel? =
+                if (searchBackStackEntry != null) {
+                    androidx.hilt.navigation.compose.hiltViewModel<com.nuvio.tv.ui.screens.search.SearchViewModel>(searchBackStackEntry)
+                } else null
+
             CatalogSeeAllScreen(
                 catalogId = catalogId,
                 addonId = addonId,
                 type = type,
+                searchViewModel = searchViewModel,
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
                 },

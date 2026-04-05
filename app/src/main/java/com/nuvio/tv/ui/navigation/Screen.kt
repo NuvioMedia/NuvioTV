@@ -139,12 +139,12 @@ sealed class Screen(val route: String) {
     data object AuthQrSignIn : Screen("auth_qr_sign_in")
     data object SyncCodeGenerate : Screen("sync_code_generate")
     data object SyncCodeClaim : Screen("sync_code_claim")
-    data object CatalogSeeAll : Screen("catalog_see_all/{catalogId}/{addonId}/{type}") {
+    data object CatalogSeeAll : Screen("catalog_see_all/{catalogId}/{addonId}/{type}?fromSearch={fromSearch}") {
         private fun encode(value: String): String =
             URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 
-        fun createRoute(catalogId: String, addonId: String, type: String): String {
-            return "catalog_see_all/${encode(catalogId)}/${encode(addonId)}/${encode(type)}"
+        fun createRoute(catalogId: String, addonId: String, type: String, fromSearch: Boolean = false): String {
+            return "catalog_see_all/${encode(catalogId)}/${encode(addonId)}/${encode(type)}?fromSearch=$fromSearch"
         }
     }
 

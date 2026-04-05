@@ -148,6 +148,10 @@ class TraktProgressService @Inject constructor(
     private val metadataState = MutableStateFlow<Map<String, ContentMetadata>>(emptyMap())
     private val watchedMoviesState = MutableStateFlow<Set<String>>(emptySet())
     private val watchedShowSeedsState = MutableStateFlow<List<WatchProgress>>(emptyList())
+    /** Content IDs of shows dropped on Trakt (from users/hidden/progress_watched). */
+    private val hiddenProgressShowIds = MutableStateFlow<Set<String>>(emptySet())
+    private var hiddenProgressShowsLoadedAtMs: Long = 0L
+    private val hiddenProgressShowsMutex = Mutex()
     /** Per-show set of watched (season, episode) pairs from /sync/watched/shows. */
     @Volatile
     private var watchedShowEpisodesMap: Map<String, Set<Pair<Int, Int>>> = emptyMap()
@@ -332,8 +336,9 @@ class TraktProgressService @Inject constructor(
             remoteProgress,
             optimisticProgress,
             metadataState,
-            hasLoadedRemoteProgress
-        ) { remote, optimistic, metadata, loaded ->
+            hasLoadedRemoteProgress,
+            hiddenProgressShowIds
+        ) { remote, optimistic, metadata, loaded, hiddenIds ->
             val now = System.currentTimeMillis()
             val validOptimistic = optimistic
                 .filterValues { it.expiresAtMs > now }
@@ -341,15 +346,20 @@ class TraktProgressService @Inject constructor(
 
             // Avoid emitting a transient empty state before first remote fetch completes.
             if (!loaded && remote.isEmpty() && validOptimistic.isEmpty()) {
+                Log.d(TAG, "observeAllProgress: skipping emission (loaded=$loaded remote=${remote.size} optimistic=${validOptimistic.size})")
                 return@combine null
             }
 
             val mergedByKey = linkedMapOf<String, WatchProgress>()
             remote.forEach { mergedByKey[progressKey(it)] = it }
             validOptimistic.forEach { (key, value) -> mergedByKey[key] = value }
-            mergedByKey.values
+            val hiddenCount = mergedByKey.values.count { isShowHiddenFromProgress(it.contentId) }
+            val result = mergedByKey.values
+                .filter { !isShowHiddenFromProgress(it.contentId) }
                 .map { enrichWithMetadata(it, metadata) }
                 .sortedByDescending { it.lastWatched }
+            Log.d(TAG, "observeAllProgress: remote=${remote.size} optimistic=${validOptimistic.size} hidden=$hiddenCount result=${result.size}")
+            result
         }
             .filterNotNull()
             .distinctUntilChanged()
@@ -360,11 +370,13 @@ class TraktProgressService @Inject constructor(
     }
 
     fun observeWatchedShowSeeds(): Flow<List<WatchProgress>> {
-        return watchedShowSeedsState
-            .onStart {
-                emit(getWatchedShowSeedsSnapshot(forceRefresh = false))
-            }
-            .distinctUntilChanged()
+        return combine(
+            watchedShowSeedsState
+                .onStart { emit(getWatchedShowSeedsSnapshot(forceRefresh = false)) },
+            hiddenProgressShowIds
+        ) { seeds, _ ->
+            seeds.filter { !isShowHiddenFromProgress(it.contentId) }
+        }.distinctUntilChanged()
     }
 
     /**
@@ -779,6 +791,9 @@ class TraktProgressService @Inject constructor(
 
         if (!force && !hasActivityChanged()) return
 
+        // Load dropped shows first so all downstream flows emit pre-filtered data.
+        ensureHiddenProgressShows(force = force)
+
         if ((force || watchedMoviesStale) && hasLoadedWatchedMovies) {
             getWatchedMoviesSnapshot(forceRefresh = true)
         }
@@ -788,6 +803,7 @@ class TraktProgressService @Inject constructor(
         }
 
         val snapshot = fetchAllProgressSnapshot(force = force)
+        Log.d(TAG, "refreshRemoteSnapshot: snapshot size=${snapshot.size}, setting remoteProgress")
         remoteProgress.value = snapshot
         hasLoadedRemoteProgress.value = true
         reconcileOptimistic(snapshot)
@@ -931,6 +947,72 @@ class TraktProgressService @Inject constructor(
         if (!entry.hasCompletedSnapshot) return false
         if (entry.activityVersion != episodeProgressActivityVersion.get()) return false
         return now - entry.updatedAtMs <= episodeProgressCacheTtlMs
+    }
+
+    /**
+     * Returns true if the given content ID belongs to a show hidden from
+     * Trakt's "progress watched" section (i.e. dropped/abandoned shows).
+     */
+    fun isShowHiddenFromProgress(contentId: String): Boolean {
+        val ids = hiddenProgressShowIds.value
+        if (ids.isEmpty()) return false
+        val canonical = canonicalLookupKey(contentId)
+        return ids.contains(contentId) || ids.contains(canonical)
+    }
+
+    private suspend fun ensureHiddenProgressShows(force: Boolean) {
+        val now = System.currentTimeMillis()
+        val ttlMs = 30 * 60_000L // refresh every 30 minutes
+        hiddenProgressShowsMutex.withLock {
+            if (!force && hiddenProgressShowsLoadedAtMs > 0 && now - hiddenProgressShowsLoadedAtMs < ttlMs) {
+                return
+            }
+        }
+        val ids = fetchHiddenProgressShowIds()
+        hiddenProgressShowsMutex.withLock {
+            hiddenProgressShowIds.value = ids
+            hiddenProgressShowsLoadedAtMs = System.currentTimeMillis()
+        }
+        trace("hidden-progress-shows refreshed: ${ids.size} shows")
+        if (ids.isNotEmpty()) {
+            Log.d(TAG, "hidden-progress-shows IDs: ${ids.take(20)}")
+        }
+    }
+
+    private suspend fun fetchHiddenProgressShowIds(): Set<String> {
+        val allIds = mutableSetOf<String>()
+        var page = 1
+        val limit = 100
+        while (true) {
+            val response = traktAuthService.executeAuthorizedRequest { authHeader ->
+                traktApi.getHiddenItems(
+                    authorization = authHeader,
+                    section = "dropped",
+                    type = "show",
+                    page = page,
+                    limit = limit
+                )
+            } ?: break
+            Log.d(TAG, "fetchDroppedShows: page=$page code=${response.code()}")
+            if (!response.isSuccessful) {
+                Log.w(TAG, "fetchDroppedShows: failed code=${response.code()}")
+                break
+            }
+            val items = response.body().orEmpty()
+            Log.d(TAG, "fetchDroppedShows: page=$page items=${items.size}")
+            if (items.isEmpty()) break
+            for (item in items) {
+                val ids = item.show?.ids ?: continue
+                val title = item.show?.title ?: "?"
+                Log.d(TAG, "fetchDroppedShows: show='$title' imdb=${ids.imdb} tmdb=${ids.tmdb} trakt=${ids.trakt}")
+                ids.imdb?.takeIf { it.isNotBlank() }?.let { allIds.add(it) }
+                ids.tmdb?.let { allIds.add("tmdb:$it") }
+                ids.trakt?.let { allIds.add("trakt:$it") }
+            }
+            if (items.size < limit) break
+            page++
+        }
+        return allIds
     }
 
     private suspend fun getWatchedMoviesSnapshot(forceRefresh: Boolean): Set<String> {
@@ -1286,12 +1368,15 @@ class TraktProgressService @Inject constructor(
 
     private suspend fun fetchAllProgressSnapshot(force: Boolean = false): List<WatchProgress> {
         val recentCompletedEpisodes = fetchRecentEpisodeHistorySnapshot()
+        Log.d(TAG, "fetchAllProgress: recentCompletedEpisodes=${recentCompletedEpisodes.size}")
         val playbackStartAt = recentWatchWindowMs()?.let { windowMs ->
             toTraktUtcDateTime(System.currentTimeMillis() - windowMs)
         }
         val inProgressMovies = getPlayback("movies", force = force, startAt = playbackStartAt).mapNotNull { mapPlaybackMovie(it) }
+        Log.d(TAG, "fetchAllProgress: inProgressMovies=${inProgressMovies.size}")
         val inProgressEpisodes = getPlayback("episodes", force = force, startAt = playbackStartAt)
             .mapNotNull { mapPlaybackEpisode(it, applyAddonRemap = true) }
+        Log.d(TAG, "fetchAllProgress: inProgressEpisodes=${inProgressEpisodes.size}")
 
         val mergedByKey = linkedMapOf<String, WatchProgress>()
 
@@ -1308,6 +1393,7 @@ class TraktProgressService @Inject constructor(
             }
 
         return mergedByKey.values.sortedByDescending { it.lastWatched }
+            .also { Log.d(TAG, "fetchAllProgress: total merged=${it.size}") }
     }
 
     private suspend fun fetchRecentEpisodeHistorySnapshot(): List<WatchProgress> {
@@ -1707,6 +1793,94 @@ class TraktProgressService @Inject constructor(
             !notFound.shows.isNullOrEmpty() ||
             !notFound.seasons.isNullOrEmpty() ||
             !notFound.episodes.isNullOrEmpty()
+    }
+
+    /**
+     * Mark multiple episodes as watched on Trakt in a single API call.
+     * Groups episodes by show and sends one POST /sync/history request.
+     */
+    suspend fun markSeasonWatchedBatch(progressList: List<WatchProgress>) {
+        if (progressList.isEmpty()) return
+        val first = progressList.first()
+        val ids = resolveHistoryIds(first)
+        if (!ids.hasAnyId()) {
+            Log.w(TAG, "markSeasonWatchedBatch: no valid Trakt IDs for ${first.contentId}")
+            return
+        }
+        val watchedAt = toTraktUtcDateTime(System.currentTimeMillis())
+        val episodesBySeason = progressList
+            .filter { it.season != null && it.episode != null }
+            .groupBy { it.season!! }
+            .mapValues { (_, episodes) ->
+                episodes.map { ep ->
+                    TraktHistoryEpisodeAddDto(
+                        number = ep.episode,
+                        watchedAt = watchedAt
+                    )
+                }
+            }
+        val body = TraktHistoryAddRequestDto(
+            shows = listOf(
+                TraktHistoryShowAddDto(
+                    title = first.name.takeIf { it.isNotBlank() },
+                    year = null,
+                    ids = ids,
+                    seasons = episodesBySeason.map { (seasonNumber, episodes) ->
+                        TraktHistorySeasonAddDto(
+                            number = seasonNumber,
+                            episodes = episodes
+                        )
+                    }
+                )
+            )
+        )
+        Log.d(TAG, "markSeasonWatchedBatch: ${progressList.size} episodes in ${episodesBySeason.size} season(s)")
+        val response = traktAuthService.executeAuthorizedWriteRequest { authHeader ->
+            traktApi.addHistory(authHeader, body)
+        }
+        Log.d(TAG, "markSeasonWatchedBatch RESPONSE: code=${response?.code()} " +
+            "added=${response?.body()?.added}")
+        if (response?.isSuccessful != true) {
+            throw IllegalStateException("Trakt batch mark watched failed (${response?.code()})")
+        }
+        refreshNow()
+    }
+
+    /**
+     * Remove multiple episodes from Trakt history in a single API call.
+     */
+    suspend fun removeSeasonFromHistoryBatch(
+        contentId: String,
+        episodes: List<Pair<Int, Int>>
+    ) {
+        if (episodes.isEmpty()) return
+        val ids = toTraktIds(parseContentIds(contentId))
+        if (!ids.hasAnyId()) {
+            Log.w(TAG, "removeSeasonFromHistoryBatch: no valid Trakt IDs for $contentId")
+            return
+        }
+        val episodesBySeason = episodes.groupBy { it.first }
+        val body = TraktHistoryRemoveRequestDto(
+            shows = listOf(
+                TraktHistoryShowRemoveDto(
+                    ids = ids,
+                    seasons = episodesBySeason.map { (seasonNumber, eps) ->
+                        TraktHistorySeasonRemoveDto(
+                            number = seasonNumber,
+                            episodes = eps.map { (_, episodeNumber) ->
+                                TraktHistoryEpisodeRemoveDto(number = episodeNumber)
+                            }
+                        )
+                    }
+                )
+            )
+        )
+        Log.d(TAG, "removeSeasonFromHistoryBatch: ${episodes.size} episodes in ${episodesBySeason.size} season(s)")
+        val response = traktAuthService.executeAuthorizedWriteRequest { authHeader ->
+            traktApi.removeHistory(authHeader, body)
+        }
+        Log.d(TAG, "removeSeasonFromHistoryBatch RESPONSE: code=${response?.code()}")
+        refreshNow()
     }
 
     private fun buildHistoryAddRequest(
