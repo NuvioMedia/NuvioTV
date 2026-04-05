@@ -256,13 +256,10 @@ fun SearchScreen(
     }
     val showRecentSearches = remember(
         trimmedQuery,
-        uiState.recentSearches,
-        isSearchFieldFocused,
-        isRecentSearchSectionFocused
+        uiState.recentSearches
     ) {
         trimmedQuery.isEmpty() &&
-            uiState.recentSearches.isNotEmpty() &&
-            (isSearchFieldFocused || isRecentSearchSectionFocused)
+            uiState.recentSearches.isNotEmpty()
     }
     val canMoveToResults = remember(
         isDiscoverMode,
@@ -571,8 +568,13 @@ fun SearchScreen(
                                 "${item.addonId}_${item.type}_${item.catalogId}_${trimmedSubmittedQuery}_$index"
                             }
                         ) { index, catalogRow ->
+                            val hasEnoughForSeeAll = catalogRow.items.size >= 15
+                            val truncatedRow = if (hasEnoughForSeeAll) {
+                                catalogRow.copy(items = catalogRow.items.take(14))
+                            } else catalogRow
                             CatalogRowSection(
-                                catalogRow = catalogRow,
+                                catalogRow = truncatedRow,
+                                showSeeAll = hasEnoughForSeeAll,
                                 showPosterLabels = uiState.posterLabelsEnabled,
                                 showAddonName = uiState.catalogAddonNameEnabled,
                                 showCatalogTypeSuffix = uiState.catalogTypeSuffixEnabled,

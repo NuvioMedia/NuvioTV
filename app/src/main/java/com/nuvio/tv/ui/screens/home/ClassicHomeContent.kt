@@ -239,7 +239,7 @@ fun ClassicHomeContent(
         itemsIndexed(
             items = visibleCatalogRows,
             key = { _, item -> "${item.addonId}_${item.apiType}_${item.catalogId}" },
-            contentType = { _, _ -> "catalog_row" }
+            contentType = { _, item -> item.apiType } // Differentiate horizontal rows by content type
         ) { index, catalogRow ->
             val catalogKey = "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}"
             val shouldRestoreFocus = restoringFocus && index == focusState.focusedRowIndex

@@ -180,6 +180,7 @@ data class PlayerSettings(
     val skipIntroEnabled: Boolean = true,
     // Dolby Vision Profile 7 → HEVC fallback (requires forked ExoPlayer)
     val mapDV7ToHevc: Boolean = false,
+    val mpvHardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE,
     // Display settings
     val frameRateMatchingMode: FrameRateMatchingMode = FrameRateMatchingMode.OFF,
     val resolutionMatchingEnabled: Boolean = false,
@@ -237,6 +238,14 @@ enum class AddonSubtitleStartupMode {
     FAST_STARTUP,
     PREFERRED_ONLY,
     ALL_SUBTITLES
+}
+
+enum class MpvHardwareDecodeMode {
+    LEGACY_DIRECT_COPY,
+    AUTO_SAFE,
+    HARDWARE_COPY,
+    HARDWARE_DIRECT,
+    DISABLED
 }
 
 enum class PlayerPreference {
@@ -318,6 +327,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val osdClockEnabledKey = booleanPreferencesKey("osd_clock_enabled")
     private val skipIntroEnabledKey = booleanPreferencesKey("skip_intro_enabled")
     private val mapDV7ToHevcKey = booleanPreferencesKey("map_dv7_to_hevc")
+    private val mpvHardwareDecodeModeKey = stringPreferencesKey("mpv_hardware_decode_mode")
     private val frameRateMatchingKey = booleanPreferencesKey("frame_rate_matching")
     private val frameRateMatchingModeKey = stringPreferencesKey("frame_rate_matching_mode")
     private val resolutionMatchingEnabledKey = booleanPreferencesKey("resolution_matching_enabled")
@@ -477,6 +487,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 osdClockEnabled = prefs[osdClockEnabledKey] ?: true,
                 skipIntroEnabled = prefs[skipIntroEnabledKey] ?: true,
                 mapDV7ToHevc = prefs[mapDV7ToHevcKey] ?: false,
+                mpvHardwareDecodeMode = parseMpvHardwareDecodeMode(prefs[mpvHardwareDecodeModeKey]),
                 frameRateMatchingMode = prefs[frameRateMatchingModeKey]?.let {
                     runCatching { FrameRateMatchingMode.valueOf(it) }.getOrNull()
                 } ?: if (prefs[frameRateMatchingKey] == true) {
@@ -848,6 +859,17 @@ class PlayerSettingsDataStore @Inject constructor(
         }
     }
 
+    private fun parseMpvHardwareDecodeMode(value: String?): MpvHardwareDecodeMode {
+        return when (value) {
+            null, "AUTO_SAFE" -> MpvHardwareDecodeMode.AUTO_SAFE
+            "HARDWARE_COPY" -> MpvHardwareDecodeMode.HARDWARE_COPY
+            "HARDWARE_DIRECT" -> MpvHardwareDecodeMode.HARDWARE_DIRECT
+            "DISABLED" -> MpvHardwareDecodeMode.DISABLED
+            "LEGACY_DIRECT_COPY" -> MpvHardwareDecodeMode.LEGACY_DIRECT_COPY
+            else -> MpvHardwareDecodeMode.AUTO_SAFE
+        }
+    }
+
     private fun normalizeSelectableLanguageCode(language: String): String {
         val code = language.trim().lowercase()
         return when (code) {
@@ -886,6 +908,12 @@ class PlayerSettingsDataStore @Inject constructor(
                 autoSourceFallbackEnabled = enabled,
                 autoSwitchInternalPlayerOnError = playerEnabled
             ).name
+        }
+    }
+
+    suspend fun setMpvHardwareDecodeMode(mode: MpvHardwareDecodeMode) {
+        store().edit { prefs ->
+            prefs[mpvHardwareDecodeModeKey] = mode.name
         }
     }
 

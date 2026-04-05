@@ -570,6 +570,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             }
         }
         is PlayerEvent.OnSelectAudioTrack -> {
+            logSwitchTrace(
+                stage = "event-select-audio",
+                message = "index=${event.index}"
+            )
             rememberAudioSelection(event.index)
             selectAudioTrack(event.index)
             _uiState.update { it.copy(showAudioOverlay = false, showSubtitleDelayOverlay = false) }
@@ -594,6 +598,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             }
         }
         is PlayerEvent.OnSelectSubtitleTrack -> {
+            logSwitchTrace(
+                stage = "event-select-subtitle-internal",
+                message = "index=${event.index}"
+            )
             autoSubtitleSelected = true
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
@@ -611,6 +619,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             }
         }
         PlayerEvent.OnDisableSubtitles -> {
+            logSwitchTrace(
+                stage = "event-disable-subtitles",
+                message = "selectedSubtitleIndex=${_uiState.value.selectedSubtitleTrackIndex}"
+            )
             autoSubtitleSelected = true
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
@@ -629,6 +641,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             }
         }
         is PlayerEvent.OnSelectAddonSubtitle -> {
+            logSwitchTrace(
+                stage = "event-select-subtitle-addon",
+                message = "addonId=${event.subtitle.id} addonLang=${event.subtitle.lang} addonName=${event.subtitle.addonName}"
+            )
             autoSubtitleSelected = true
             rememberAddonSubtitleSelection(event.subtitle)
             selectAddonSubtitle(event.subtitle)
@@ -832,6 +848,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             hasRenderedFirstFrame = false
             hasRetriedCurrentStreamAfter416 = false
             resetErrorRetryState()
+            clearPendingEngineSwitchTrackPreference()
             resetNextEpisodeCardState(clearEpisode = false)
             _uiState.update { state ->
                 state.copy(
@@ -955,6 +972,13 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 delay(1500)
                 _uiState.update { it.copy(showAspectRatioIndicator = false) }
             }
+        }
+        PlayerEvent.OnSwitchInternalPlayerEngine -> {
+            logSwitchTrace(
+                stage = "event-switch-engine",
+                message = "requestedByUser=true"
+            )
+            switchInternalPlayerEngineManually()
         }
         PlayerEvent.OnShowStreamInfo -> {
             val info = buildStreamInfoData()

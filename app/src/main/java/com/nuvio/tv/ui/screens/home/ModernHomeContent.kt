@@ -727,7 +727,7 @@ fun ModernHomeContent(
                 itemsIndexed(
                     items = carouselRows,
                     key = { _, row -> row.key },
-                    contentType = { _, _ -> "modern_home_row" }
+                    contentType = { _, row -> row.apiType ?: "modern_home_row" } // Differentiate horizontal rows by type
                 ) { _, row ->
                     val stableOnContinueWatchingOptions = remember(Unit) {
                         { item: ContinueWatchingItem -> optionsItem = item }

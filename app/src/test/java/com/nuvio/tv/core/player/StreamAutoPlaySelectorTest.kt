@@ -33,7 +33,8 @@ class StreamAutoPlaySelectorTest {
             installedAddonNames = setOf("AddonA", "AddonB"),
             selectedAddons = emptySet(),
             selectedPlugins = emptySet(),
-            preferredBingeGroup = "same-group"
+            preferredBingeGroup = "same-group",
+            preferBingeGroupInSelection = true
         )
 
         assertEquals(preferred, selected)
@@ -62,7 +63,8 @@ class StreamAutoPlaySelectorTest {
             installedAddonNames = setOf("AddonA", "AddonB"),
             selectedAddons = emptySet(),
             selectedPlugins = emptySet(),
-            preferredBingeGroup = "missing-group"
+            preferredBingeGroup = "missing-group",
+            preferBingeGroupInSelection = true
         )
 
         assertEquals(first, selected)
@@ -89,7 +91,8 @@ class StreamAutoPlaySelectorTest {
             installedAddonNames = setOf("AddonFilteredOut"),
             selectedAddons = emptySet(),
             selectedPlugins = setOf("PluginAllowed"),
-            preferredBingeGroup = "same-group"
+            preferredBingeGroup = "same-group",
+            preferBingeGroupInSelection = true
         )
 
         assertEquals(allowedPluginMatch, selected)
@@ -116,7 +119,8 @@ class StreamAutoPlaySelectorTest {
             installedAddonNames = setOf("AddonA", "AddonB"),
             selectedAddons = emptySet(),
             selectedPlugins = emptySet(),
-            preferredBingeGroup = "unmatched-group"
+            preferredBingeGroup = "unmatched-group",
+            preferBingeGroupInSelection = true
         )
 
         assertEquals(regexMatch, selected)
@@ -143,7 +147,8 @@ class StreamAutoPlaySelectorTest {
             installedAddonNames = setOf("AddonA", "AddonB"),
             selectedAddons = emptySet(),
             selectedPlugins = emptySet(),
-            preferredBingeGroup = "   "
+            preferredBingeGroup = "   ",
+            preferBingeGroupInSelection = true
         )
 
         assertEquals(first, selected)
@@ -165,7 +170,8 @@ class StreamAutoPlaySelectorTest {
             installedAddonNames = setOf("AddonA"),
             selectedAddons = emptySet(),
             selectedPlugins = emptySet(),
-            preferredBingeGroup = "same-group"
+            preferredBingeGroup = "same-group",
+            preferBingeGroupInSelection = true
         )
 
         assertNull(selected)
