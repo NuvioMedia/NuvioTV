@@ -1349,4 +1349,16 @@
     <string name="web_status_timeout">Przekroczono czas</string>
     <string name="web_status_msg_timeout">Brak odpowiedzi z TV. Spróbuj ponownie.</string>
     <string name="web_status_msg_connection_lost">Serwer TV jest nieosiągalny. Zmiany mogły zostać zastosowane.</string>
+
+    <string name="playback_internal_player_engine">Silnik wewnętrzny</string>
+    <string name="playback_engine_exoplayer">ExoPlayer</string>
+    <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
+    <string name="playback_auto_switch_internal_player_on_error">Automatyczne przełączanie silnika przy błędzie</string>
+    <string name="playback_auto_switch_internal_player_on_error_sub">Jeśli uruchomienie strumienia się nie powiedzie, automatycznie przełącz między ExoPlayer a libmpv.</string>
+    <string name="playback_engine_exoplayer_desc">Najlepsza kompatybilność z funkcjami Nuvio.</string>
+    <string name="playback_engine_mvplayer_desc">Używa libmpv z kontrolkami Nuvio OSD. Eksperymentalny.</string>
+    <string name="player_engine_switching_title">Przełączanie silnika odtwarzacza</string>
+    <string name="player_engine_switching_message">Uruchomienie nie powiodło się. Przełączanie na %1$s…</string>
+    <string name="search_recent_title">Ostatnie wyszukiwania</string>
+    <string name="search_recent_clear">Wyczyść historię</string>
 </resources>

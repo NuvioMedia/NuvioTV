@@ -207,7 +207,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     val preferExternalMetaAddonDetail: Flow<Boolean> = profileFlow { prefs ->
-        prefs[preferExternalMetaAddonDetailKey] ?: false
+        prefs[preferExternalMetaAddonDetailKey] ?: true
     }
 
     val hideUnreleasedContent: Flow<Boolean> = profileFlow { prefs ->

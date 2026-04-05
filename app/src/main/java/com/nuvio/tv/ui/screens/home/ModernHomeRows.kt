@@ -567,9 +567,9 @@ internal fun ModernRowSection(
                     items = row.items,
                     key = { _, item -> item.key },
                     contentType = { _, item ->
-                        when (item.payload) {
+                        when (val payload = item.payload) {
                             is ModernPayload.ContinueWatching -> "modern_cw_card"
-                            is ModernPayload.Catalog -> "modern_catalog_card"
+                            is ModernPayload.Catalog -> payload.itemType // Recycle by content type
                         }
                     }
                 ) { index, item ->
