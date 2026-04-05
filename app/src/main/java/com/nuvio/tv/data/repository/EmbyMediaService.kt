@@ -112,6 +112,10 @@ class EmbyMediaService @Inject constructor(
                     season = season,
                     episode = episode
                 )
+                if (!episodeResponse.isSuccessful) {
+                    Log.w(TAG, "Emby episode lookup failed for series ${matchedItem.id} S${season}E${episode}: ${episodeResponse.code()} ${episodeResponse.message()}")
+                    return null
+                }
                 val ep = episodeResponse.body()?.items?.firstOrNull()
                 if (ep == null) {
                     Log.d(TAG, "Episode S${season}E${episode} not found in Emby for series ${matchedItem.id}")
