@@ -44,6 +44,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
+import com.nuvio.tv.data.local.AudioLanguageOption
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.util.languageCodeToName
 import kotlinx.coroutines.delay
@@ -53,10 +54,12 @@ internal fun AudioSelectionOverlay(
     visible: Boolean,
     tracks: List<TrackInfo>,
     selectedIndex: Int,
+    originalLanguage: String?,
     audioAmplificationDb: Int,
     isAmplificationAvailable: Boolean,
     persistAmplification: Boolean,
     onTrackSelected: (Int) -> Unit,
+    onSelectOriginalLanguage: () -> Unit,
     onAmplificationChange: (Int) -> Unit,
     onPersistAmplificationChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
@@ -70,6 +73,9 @@ internal fun AudioSelectionOverlay(
     val currentDb = audioAmplificationDb.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
     val canDecrease = isAmplificationAvailable && currentDb > AUDIO_AMPLIFICATION_MIN_DB
     val canIncrease = isAmplificationAvailable && currentDb < AUDIO_AMPLIFICATION_MAX_DB
+    val hasOriginalTrack = remember(tracks, originalLanguage) {
+        tracks.any { track -> trackMatchesOriginalLanguage(track, originalLanguage) }
+    }
 
     var lastFocusedAudioIndex by rememberSaveable { mutableStateOf<Int?>(null) }
 
@@ -112,6 +118,37 @@ internal fun AudioSelectionOverlay(
                 color = Color.White,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
+            if (!originalLanguage.isNullOrBlank()) {
+                Card(
+                    onClick = {
+                        if (hasOriginalTrack) onSelectOriginalLanguage()
+                    },
+                    modifier = Modifier.padding(bottom = 12.dp),
+                    colors = CardDefaults.colors(
+                        containerColor = if (hasOriginalTrack) Color.Transparent else Color.White.copy(alpha = 0.08f),
+                        focusedContainerColor = if (hasOriginalTrack) Color.Transparent else Color.White.copy(alpha = 0.08f)
+                    ),
+                    shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+                    border = CardDefaults.border(
+                        border = Border(
+                            border = BorderStroke(2.dp, Color.White.copy(alpha = 0.2f)),
+                            shape = RoundedCornerShape(12.dp)
+                        ),
+                        focusedBorder = Border(
+                            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    ),
+                    scale = CardDefaults.scale(focusedScale = 1f, pressedScale = 1f)
+                ) {
+                    Text(
+                        text = "${stringResource(R.string.audio_lang_original)} (${languageCodeToName(originalLanguage)})",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (hasOriginalTrack) Color.White else Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                    )
+                }
+            }
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -149,6 +186,18 @@ internal fun AudioSelectionOverlay(
             }
         }
     }
+}
+
+private fun trackMatchesOriginalLanguage(track: TrackInfo, originalLanguage: String?): Boolean {
+    if (originalLanguage.isNullOrBlank()) return false
+    val trackLang = track.language?.trim()?.lowercase() ?: return false
+    val preferred = resolvePreferredAudioLanguages(
+        preferredAudioLanguage = AudioLanguageOption.ORIGINAL,
+        secondaryPreferredAudioLanguage = null,
+        deviceLanguages = emptyList(),
+        originalLanguage = originalLanguage
+    )
+    return preferred.any { candidate -> trackLang.startsWith(candidate) }
 }
 
 @Composable

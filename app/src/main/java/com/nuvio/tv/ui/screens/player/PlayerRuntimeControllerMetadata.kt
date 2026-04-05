@@ -1,6 +1,8 @@
 package com.nuvio.tv.ui.screens.player
 
+import android.util.Log
 import com.nuvio.tv.R
+import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Stream
@@ -18,7 +20,13 @@ internal fun PlayerRuntimeController.fetchMetaDetails(id: String?, type: String?
                 .first { it !is NetworkResult.Loading }
         ) {
             is NetworkResult.Success -> {
-                applyMetaDetails(result.data)
+                val meta = result.data
+                applyMetaDetails(meta)
+                fetchTmdbOriginalAudioLanguage(
+                    meta = meta,
+                    id = id,
+                    type = type
+                )
             }
             is NetworkResult.Error -> {
                 
@@ -32,6 +40,10 @@ internal fun PlayerRuntimeController.fetchMetaDetails(id: String?, type: String?
 
 internal fun PlayerRuntimeController.applyMetaDetails(meta: Meta) {
     metaVideos = meta.videos
+    val metaLanguage = meta.language?.takeIf { it.isNotBlank() }
+    if (metaLanguage != null || currentOriginalAudioLanguage.isNullOrBlank()) {
+        applyOriginalAudioLanguage(metaLanguage, source = "meta")
+    }
     val description = resolveDescription(meta)
 
     _uiState.update { state ->
@@ -41,6 +53,49 @@ internal fun PlayerRuntimeController.applyMetaDetails(meta: Meta) {
         )
     }
     recomputeNextEpisode(resetVisibility = false)
+}
+
+internal fun PlayerRuntimeController.fetchTmdbOriginalAudioLanguage(
+    meta: Meta,
+    id: String,
+    type: String
+) {
+    scope.launch {
+        runCatching {
+            val settings = tmdbSettingsDataStore.settings.first()
+            if (!settings.enabled) return@runCatching
+
+            val tmdbType = when (ContentType.fromString(type)) {
+                ContentType.SERIES, ContentType.TV -> ContentType.TV
+                else -> ContentType.MOVIE
+            }
+            val tmdbId = tmdbService.ensureTmdbId(meta.id, tmdbType.toApiString())
+                ?: tmdbService.ensureTmdbId(id, type)
+                ?: return@runCatching
+
+            val enrichment = tmdbMetadataService.fetchEnrichment(
+                tmdbId = tmdbId,
+                contentType = tmdbType,
+                language = settings.language
+            ) ?: return@runCatching
+
+            enrichment.language?.takeIf { it.isNotBlank() }?.let { tmdbLanguage ->
+                applyOriginalAudioLanguage(tmdbLanguage, source = "tmdb_enrichment")
+            }
+        }.onFailure { error ->
+            Log.w(PlayerRuntimeController.TAG, "Failed to fetch TMDB original language: ${error.message}")
+        }
+    }
+}
+
+internal fun PlayerRuntimeController.applyOriginalAudioLanguage(language: String?, source: String) {
+    currentOriginalAudioLanguage = language?.trim()?.lowercase()?.takeIf { it.isNotBlank() }
+    _uiState.update { it.copy(originalAudioLanguage = currentOriginalAudioLanguage) }
+    Log.d("AUDIO_ORIGINAL", "Original audio language ($source) = $currentOriginalAudioLanguage")
+
+    _exoPlayer?.currentTracks?.let { tracks ->
+        tryAutoSelectOriginalAudio(tracks)
+    }
 }
 
 internal fun PlayerRuntimeController.resolveDescription(meta: Meta): String? {

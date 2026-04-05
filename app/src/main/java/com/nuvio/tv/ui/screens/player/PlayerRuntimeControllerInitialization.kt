@@ -146,7 +146,8 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
                 val preferredAudioLanguages = resolvePreferredAudioLanguages(
                     preferredAudioLanguage = playerSettings.preferredAudioLanguage,
                     secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
-                    deviceLanguages = deviceLanguages
+                    deviceLanguages = deviceLanguages,
+                    originalLanguage = currentOriginalAudioLanguage
                 )
                 if (preferredAudioLanguages.isNotEmpty()) {
                     setParameters(
@@ -362,6 +363,7 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
 
                     override fun onTracksChanged(tracks: Tracks) {
                         updateAvailableTracks(tracks)
+                        tryAutoSelectOriginalAudio(tracks)
                     }
 
                     override fun onRenderedFirstFrame() {
@@ -421,7 +423,8 @@ internal fun PlayerRuntimeController.initializePlayer(url: String, headers: Map<
 internal fun resolvePreferredAudioLanguages(
     preferredAudioLanguage: String,
     secondaryPreferredAudioLanguage: String?,
-    deviceLanguages: List<String>
+    deviceLanguages: List<String>,
+    originalLanguage: String? = null
 ): List<String> {
     fun normalize(language: String?): String? {
         val normalized = language
@@ -432,24 +435,65 @@ internal fun resolvePreferredAudioLanguages(
         return when (normalized) {
             AudioLanguageOption.DEFAULT,
             AudioLanguageOption.DEVICE,
+            AudioLanguageOption.ORIGINAL,
             SUBTITLE_LANGUAGE_FORCED -> null
             else -> normalized
         }
     }
 
+    fun expandForAudioMatching(language: String?): List<String> {
+        val normalized = language
+            ?.trim()
+            ?.lowercase()
+            ?.replace('_', '-')
+            ?.takeIf { it.isNotBlank() }
+            ?: return emptyList()
+
+        val base = normalized.substringBefore('-')
+        val values = mutableListOf<String>()
+
+        fun addIfNotBlank(code: String?) {
+            val normalizedCode = code?.trim()?.lowercase()?.takeIf { it.isNotBlank() } ?: return
+            if (normalizedCode !in values) values += normalizedCode
+        }
+
+        addIfNotBlank(normalized)
+        addIfNotBlank(base)
+
+        if (base.length == 2) {
+            val iso3 = runCatching { java.util.Locale(base).isO3Language.lowercase() }.getOrNull()
+            addIfNotBlank(iso3)
+        } else if (base.length == 3) {
+            val iso2 = runCatching {
+                java.util.Locale.getISOLanguages().firstOrNull { iso2 ->
+                    runCatching { java.util.Locale(iso2).isO3Language.lowercase() }.getOrNull() == base
+                }
+            }.getOrNull()
+            addIfNotBlank(iso2)
+        }
+
+        return values
+    }
+
     return when (preferredAudioLanguage.trim().lowercase()) {
-        AudioLanguageOption.DEFAULT -> listOfNotNull(
-            normalize(secondaryPreferredAudioLanguage)
-        ).distinct()
+        AudioLanguageOption.DEFAULT -> listOfNotNull(normalize(secondaryPreferredAudioLanguage))
+            .flatMap(::expandForAudioMatching)
+            .distinct()
         AudioLanguageOption.DEVICE -> (
             deviceLanguages
-            .mapNotNull(::normalize)
-            + listOfNotNull(normalize(secondaryPreferredAudioLanguage))
+                .mapNotNull(::normalize)
+                .flatMap(::expandForAudioMatching)
+                + listOfNotNull(normalize(secondaryPreferredAudioLanguage)).flatMap(::expandForAudioMatching)
+            ).distinct()
+        AudioLanguageOption.ORIGINAL -> (
+            expandForAudioMatching(originalLanguage)
+                + expandForAudioMatching(secondaryPreferredAudioLanguage)
+                + deviceLanguages.flatMap(::expandForAudioMatching)
             ).distinct()
         else -> listOfNotNull(
             normalize(preferredAudioLanguage),
             normalize(secondaryPreferredAudioLanguage)
-        ).distinct()
+        ).flatMap(::expandForAudioMatching).distinct()
     }
 }
 

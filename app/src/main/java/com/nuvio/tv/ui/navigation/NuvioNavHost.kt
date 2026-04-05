@@ -276,7 +276,7 @@ fun NuvioNavHost(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
                 },
-                onPlayClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime ->
+                onPlayClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, originalLanguage ->
                     navController.navigate(
                         Screen.Stream.createRoute(
                             videoId = videoId,
@@ -293,11 +293,12 @@ fun NuvioNavHost(
                             contentId = contentId,
                             contentName = title,
                             runtime = runtime,
+                            originalLanguage = originalLanguage,
                             returnToDetailOnBack = contentType.equals("series", ignoreCase = true)
                         )
                     )
                 },
-                onPlayManuallyClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime ->
+                onPlayManuallyClick = { videoId, contentType, contentId, title, poster, backdrop, logo, season, episode, episodeName, genres, year, runtime, originalLanguage ->
                     navController.navigate(
                         Screen.Stream.createRoute(
                             videoId = videoId,
@@ -314,6 +315,7 @@ fun NuvioNavHost(
                             contentId = contentId,
                             contentName = title,
                             runtime = runtime,
+                            originalLanguage = originalLanguage,
                             manualSelection = true,
                             returnToDetailOnBack = contentType.equals("series", ignoreCase = true)
                         )
@@ -379,6 +381,11 @@ fun NuvioNavHost(
                     defaultValue = null
                 },
                 navArgument("runtime") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("originalLanguage") {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
@@ -465,6 +472,7 @@ fun NuvioNavHost(
                                 season = playbackInfo.season,
                                 episode = playbackInfo.episode,
                                 episodeTitle = playbackInfo.episodeTitle,
+                                originalLanguage = playbackInfo.originalLanguage,
                                 bingeGroup = playbackInfo.bingeGroup,
                                 autoPlayNav = false,
                                 returnToDetailOnBack = returnToDetailOnBack,
@@ -499,6 +507,7 @@ fun NuvioNavHost(
                                 season = playbackInfo.season,
                                 episode = playbackInfo.episode,
                                 episodeTitle = playbackInfo.episodeTitle,
+                                originalLanguage = playbackInfo.originalLanguage,
                                 bingeGroup = playbackInfo.bingeGroup,
                                 autoPlayNav = true,
                                 returnToDetailOnBack = returnToDetailOnBack,
@@ -585,6 +594,11 @@ fun NuvioNavHost(
                     defaultValue = null
                 },
                 navArgument("episodeTitle") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("originalLanguage") {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
@@ -708,6 +722,7 @@ fun NuvioNavHost(
                                         year = args?.getString("year"),
                                         contentId = contentId.takeIf { it.isNotBlank() },
                                         contentName = args?.getString("contentName"),
+                                        originalLanguage = args?.getString("originalLanguage"),
                                         manualSelection = true,
                                         returnToDetailOnBack = returnToDetailOnBack,
                                         returnToHomeOnBack = returnToHomeOnBack
@@ -777,6 +792,7 @@ fun NuvioNavHost(
                             contentId = contentId.takeIf { it.isNotBlank() },
                             contentName = args?.getString("contentName"),
                             runtime = null,
+                            originalLanguage = args?.getString("originalLanguage"),
                             returnToDetailOnBack = returnToDetailOnBack,
                             returnToHomeOnBack = returnToHomeOnBack
                         )
@@ -817,6 +833,7 @@ fun NuvioNavHost(
                                 contentId = args?.getString("contentId"),
                                 contentName = args?.getString("contentName"),
                                 runtime = null,
+                                originalLanguage = args?.getString("originalLanguage"),
                                 manualSelection = true,
                                 returnToDetailOnBack = args?.getString("returnToDetailOnBack")
                                     ?.toBooleanStrictOrNull() == true,

@@ -6,6 +6,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
+import com.nuvio.tv.core.tmdb.TmdbMetadataService
+import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.player.StreamAutoPlayPolicy
@@ -14,7 +16,9 @@ import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
+import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import com.nuvio.tv.domain.model.AddonStreams
+import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.repository.AddonRepository
@@ -26,6 +30,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,6 +45,7 @@ import javax.inject.Inject
 private const val TAG = "StreamScreenViewModel"
 private const val EMBEDDED_STREAM_GROUP_NAME = "Embedded Streams"
 private const val EMBEDDED_STREAM_FALLBACK_NAME = "Embed Stream"
+private const val ORIGINAL_LANGUAGE_PREFETCH_TIMEOUT_MS = 1800L
 
 @HiltViewModel
 class StreamScreenViewModel @Inject constructor(
@@ -50,6 +56,9 @@ class StreamScreenViewModel @Inject constructor(
     private val metaRepository: MetaRepository,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val streamLinkCacheDataStore: StreamLinkCacheDataStore,
+    private val tmdbSettingsDataStore: TmdbSettingsDataStore,
+    private val tmdbService: TmdbService,
+    private val tmdbMetadataService: TmdbMetadataService,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private var autoPlayHandledForSession = false
@@ -57,6 +66,7 @@ class StreamScreenViewModel @Inject constructor(
     private var directAutoPlayFlowEnabledForSession = false
     private var streamLoadJob: Job? = null
     private var sourceChipErrorDismissJob: Job? = null
+    private var tmdbOriginalLanguageJob: Job? = null
 
     private val videoId: String = savedStateHandle["videoId"] ?: ""
     private val contentType: String = savedStateHandle["contentType"] ?: ""
@@ -70,6 +80,8 @@ class StreamScreenViewModel @Inject constructor(
     private val runtime: Int? = savedStateHandle.get<String>("runtime")?.toIntOrNull()
     private val genres: String? = savedStateHandle.getOptionalString("genres")
     private val year: String? = savedStateHandle.getOptionalString("year")
+    private val originalLanguage: String? = savedStateHandle.getOptionalString("originalLanguage")
+    private var resolvedOriginalLanguage: String? = originalLanguage
     private val contentId: String? = savedStateHandle.getOptionalString("contentId")
     private val contentName: String? = savedStateHandle.getOptionalString("contentName")
     private val manualSelection: Boolean = savedStateHandle.get<String>("manualSelection")
@@ -90,7 +102,8 @@ class StreamScreenViewModel @Inject constructor(
             episodeName = episodeName,
             runtime = runtime,
             genres = genres,
-            year = year
+            year = year,
+            originalLanguage = resolvedOriginalLanguage
         )
     )
     val uiState: StateFlow<StreamScreenUiState> = _uiState.asStateFlow()
@@ -125,6 +138,7 @@ class StreamScreenViewModel @Inject constructor(
             }
         }
         loadMissingMetaDetailsIfNeeded()
+        prefetchTmdbOriginalLanguage()
         loadStreams()
     }
 
@@ -225,6 +239,7 @@ class StreamScreenViewModel @Inject constructor(
                                 contentId = contentId ?: videoId.substringBefore(":"),
                                 contentType = contentType,
                                 contentName = contentName ?: title,
+                                originalLanguage = resolvedOriginalLanguage,
                                 poster = poster,
                                 backdrop = backdrop,
                                 logo = logo,
@@ -253,7 +268,7 @@ class StreamScreenViewModel @Inject constructor(
             val installedAddons = addonRepository.getInstalledAddons().first()
             val installedAddonOrder = installedAddons.map { it.displayName }
 
-            fun applySuccess(addonStreamGroups: List<AddonStreams>, isAllLoaded: Boolean) {
+            suspend fun applySuccess(addonStreamGroups: List<AddonStreams>, isAllLoaded: Boolean) {
                 val orderedAddonStreams = StreamAutoPlaySelector.orderAddonStreams(
                     addonStreamGroups,
                     installedAddonOrder
@@ -272,6 +287,9 @@ class StreamScreenViewModel @Inject constructor(
                         selectedAddons = playerSettings.streamAutoPlaySelectedAddons,
                         selectedPlugins = playerSettings.streamAutoPlaySelectedPlugins
                     )
+                }
+                if (selectedAutoPlayStream != null) {
+                    waitForOriginalLanguagePrefetch()
                 }
                 if (selectedAutoPlayStream != null) {
                     resolvedAutoPlayTarget = true
@@ -307,7 +325,8 @@ class StreamScreenViewModel @Inject constructor(
             }
 
             if (shouldAttemptEmbeddedMetaStreamLookup()) {
-                getEmbeddedStreamsFromMeta()?.let { embeddedAddonStreams ->
+                val embeddedAddonStreams = getEmbeddedStreamsFromMeta()
+                if (embeddedAddonStreams != null) {
                     Log.d(
                         TAG,
                         "Using embedded video streams for videoId=$videoId count=${embeddedAddonStreams.streams.size}"
@@ -382,7 +401,10 @@ class StreamScreenViewModel @Inject constructor(
                 // All addons finished — run auto-select if not yet triggered
                 if (!autoSelectTriggered) {
                     autoSelectTriggered = true
-                    lastSuccessData?.let { applySuccess(it, isAllLoaded = true) }
+                    val finalData = lastSuccessData
+                    if (finalData != null) {
+                        applySuccess(finalData, isAllLoaded = true)
+                    }
                 }
                 markRemainingSourceChipsAsError()
                 if (directAutoPlayFlowEnabledForSession && !resolvedAutoPlayTarget) {
@@ -406,6 +428,53 @@ class StreamScreenViewModel @Inject constructor(
             if (!autoSelectTriggered && lastSuccessData != null) {
                 autoSelectTriggered = true
                 applySuccess(lastSuccessData!!, isAllLoaded = true)
+            }
+        }
+    }
+
+    private suspend fun waitForOriginalLanguagePrefetch() {
+        if (!resolvedOriginalLanguage.isNullOrBlank()) return
+        withTimeoutOrNull(ORIGINAL_LANGUAGE_PREFETCH_TIMEOUT_MS) {
+            while (resolvedOriginalLanguage.isNullOrBlank() && tmdbOriginalLanguageJob?.isActive == true) {
+                delay(50)
+            }
+        }
+    }
+
+    private fun prefetchTmdbOriginalLanguage() {
+        if (!resolvedOriginalLanguage.isNullOrBlank()) return
+        if (contentType.isBlank()) return
+        val candidateId = contentId?.takeIf { it.isNotBlank() } ?: videoId.substringBefore(":")
+        if (candidateId.isBlank()) return
+
+        tmdbOriginalLanguageJob?.cancel()
+        tmdbOriginalLanguageJob = viewModelScope.launch {
+            runCatching {
+                val settings = tmdbSettingsDataStore.settings.first()
+                if (!settings.enabled) return@runCatching
+
+                val tmdbContentType = when (ContentType.fromString(contentType)) {
+                    ContentType.SERIES, ContentType.TV -> ContentType.TV
+                    else -> ContentType.MOVIE
+                }
+                val tmdbId = tmdbService.ensureTmdbId(candidateId, contentType) ?: return@runCatching
+                val enrichment = tmdbMetadataService.fetchEnrichment(
+                    tmdbId = tmdbId,
+                    contentType = tmdbContentType,
+                    language = settings.language
+                ) ?: return@runCatching
+
+                val language = enrichment.language
+                    ?.trim()
+                    ?.lowercase()
+                    ?.takeIf { it.isNotBlank() }
+                    ?: return@runCatching
+
+                if (language == resolvedOriginalLanguage) return@runCatching
+                resolvedOriginalLanguage = language
+                updateUiStateIfChanged { it.copy(originalLanguage = language) }
+            }.onFailure { error ->
+                Log.w(TAG, "TMDB original language prefetch failed: ${error.message}")
             }
         }
     }
@@ -579,12 +648,15 @@ class StreamScreenViewModel @Inject constructor(
                 val genresValue = state.genres?.takeIf { it.isNotBlank() } ?: metaGenres
                 val yearValue = state.year?.takeIf { it.isNotBlank() } ?: metaYear
                 val runtimeValue = state.runtime ?: metaRuntime
+                val originalLanguageValue = state.originalLanguage?.takeIf { it.isNotBlank() } ?: meta.language
+                resolvedOriginalLanguage = originalLanguageValue
                 if (state.poster == posterValue &&
                     state.backdrop == backdropValue &&
                     state.logo == logoValue &&
                     state.genres == genresValue &&
                     state.year == yearValue &&
-                    state.runtime == runtimeValue
+                    state.runtime == runtimeValue &&
+                    state.originalLanguage == originalLanguageValue
                 ) {
                     state
                 } else {
@@ -594,7 +666,8 @@ class StreamScreenViewModel @Inject constructor(
                         logo = logoValue,
                         genres = genresValue,
                         year = yearValue,
-                        runtime = runtimeValue
+                        runtime = runtimeValue,
+                        originalLanguage = originalLanguageValue
                     )
                 }
             }
@@ -645,6 +718,7 @@ class StreamScreenViewModel @Inject constructor(
             contentId = contentId ?: videoId.substringBefore(":"),  // Use explicit contentId or extract from videoId
             contentType = contentType,
             contentName = contentName ?: title,
+            originalLanguage = resolvedOriginalLanguage,
             poster = poster,
             backdrop = backdrop,
             logo = logo,
@@ -683,6 +757,7 @@ class StreamScreenViewModel @Inject constructor(
         super.onCleared()
         streamLoadJob?.cancel()
         sourceChipErrorDismissJob?.cancel()
+        tmdbOriginalLanguageJob?.cancel()
     }
 
 }
@@ -701,6 +776,7 @@ data class StreamPlaybackInfo(
     val contentId: String?,
     val contentType: String?,
     val contentName: String?,
+    val originalLanguage: String?,
     val poster: String?,
     val backdrop: String?,
     val logo: String?,

@@ -353,7 +353,10 @@
     <string name="audio_section">Audio</string>
     <string name="audio_lang_default">Default (media file)</string>
     <string name="audio_lang_device">Device language</string>
+    <string name="audio_lang_original">Original</string>
     <string name="audio_preferred_lang">Preferred Audio Language</string>
+    <string name="audio_auto_original_title">Automatically play original audio</string>
+    <string name="audio_auto_original_sub">Play audio in the original language of the content</string>
     <string name="audio_skip_silence">Skip Silence</string>
     <string name="audio_skip_silence_sub">Skip silent portions of audio during playback</string>
     <string name="audio_advanced_section">Advanced Audio</string>

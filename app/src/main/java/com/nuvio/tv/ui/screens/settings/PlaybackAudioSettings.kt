@@ -65,6 +65,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
     onShowDecoderPriorityDialog: () -> Unit,
     onSetTrailerEnabled: (Boolean) -> Unit,
     onSetTrailerDelaySeconds: (Int) -> Unit,
+    onSetAutoPlayOriginalAudio: (Boolean) -> Unit,
     onSetSkipSilence: (Boolean) -> Unit,
     onSetTunnelingEnabled: (Boolean) -> Unit,
     onSetMapDV7ToHevc: (Boolean) -> Unit,
@@ -132,6 +133,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
         val audioLangName = when (playerSettings.preferredAudioLanguage) {
             AudioLanguageOption.DEFAULT -> stringResource(R.string.audio_lang_default)
             AudioLanguageOption.DEVICE -> stringResource(R.string.audio_lang_device)
+            AudioLanguageOption.ORIGINAL -> stringResource(R.string.audio_lang_original)
             else -> AVAILABLE_SUBTITLE_LANGUAGES.find {
                 it.code == playerSettings.preferredAudioLanguage
             }?.displayName ?: playerSettings.preferredAudioLanguage
@@ -157,6 +159,18 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
             title = stringResource(R.string.sub_secondary_lang),
             subtitle = secondaryAudioLangName,
             onClick = onShowSecondaryAudioLanguageDialog,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
+    }
+
+    item(key = "audio_auto_original") {
+        ToggleSettingsItem(
+            icon = Icons.Default.Language,
+            title = stringResource(R.string.audio_auto_original_title),
+            subtitle = stringResource(R.string.audio_auto_original_sub),
+            isChecked = playerSettings.autoPlayOriginalAudio,
+            onCheckedChange = onSetAutoPlayOriginalAudio,
             onFocused = onItemFocused,
             enabled = enabled
         )
@@ -296,7 +310,8 @@ private fun AudioLanguageSelectionDialog(
     val focusRequester = remember { FocusRequester() }
     val specialOptions = listOf(
         AudioLanguageOption.DEFAULT to stringResource(R.string.audio_lang_default),
-        AudioLanguageOption.DEVICE to stringResource(R.string.audio_lang_device)
+        AudioLanguageOption.DEVICE to stringResource(R.string.audio_lang_device),
+        AudioLanguageOption.ORIGINAL to stringResource(R.string.audio_lang_original)
     )
     val allOptions = specialOptions + AVAILABLE_SUBTITLE_LANGUAGES.sortedBy { it.displayName.lowercase() }.map { it.code to it.displayName }
 

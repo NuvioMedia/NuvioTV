@@ -150,6 +150,7 @@ data class BufferSettings(
 object AudioLanguageOption {
     const val DEFAULT = "default"  // Use media file default
     const val DEVICE = "device"    // Use device locale
+    const val ORIGINAL = "original" // Use TMDB original language
 }
 
 /**
@@ -169,6 +170,7 @@ data class PlayerSettings(
     val persistAudioAmplification: Boolean = false,
     val preferredAudioLanguage: String = AudioLanguageOption.DEVICE,
     val secondaryPreferredAudioLanguage: String? = null,
+    val autoPlayOriginalAudio: Boolean = false,
     val loadingOverlayEnabled: Boolean = true,
     val showPlayerLoadingStatus: Boolean = true,
     val pauseOverlayEnabled: Boolean = true,
@@ -282,6 +284,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val persistAudioAmplificationKey = booleanPreferencesKey("persist_audio_amplification")
     private val preferredAudioLanguageKey = stringPreferencesKey("preferred_audio_language")
     private val secondaryPreferredAudioLanguageKey = stringPreferencesKey("secondary_preferred_audio_language")
+    private val autoPlayOriginalAudioKey = booleanPreferencesKey("auto_play_original_audio")
     private val loadingOverlayEnabledKey = booleanPreferencesKey("loading_overlay_enabled")
     private val showPlayerLoadingStatusKey = booleanPreferencesKey("show_player_loading_status")
     private val pauseOverlayEnabledKey = booleanPreferencesKey("pause_overlay_enabled")
@@ -427,6 +430,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 ),
                 secondaryPreferredAudioLanguage = prefs[secondaryPreferredAudioLanguageKey]
                     ?.let(::normalizeSecondaryAudioLanguageCode),
+                autoPlayOriginalAudio = prefs[autoPlayOriginalAudioKey] ?: false,
                 loadingOverlayEnabled = prefs[loadingOverlayEnabledKey] ?: true,
                 showPlayerLoadingStatus = prefs[showPlayerLoadingStatusKey] ?: true,
                 pauseOverlayEnabled = prefs[pauseOverlayEnabledKey] ?: true,
@@ -591,6 +595,12 @@ class PlayerSettingsDataStore @Inject constructor(
             } else {
                 prefs.remove(secondaryPreferredAudioLanguageKey)
             }
+        }
+    }
+
+    suspend fun setAutoPlayOriginalAudio(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[autoPlayOriginalAudioKey] = enabled
         }
     }
 
@@ -785,6 +795,7 @@ class PlayerSettingsDataStore @Inject constructor(
         return when (normalized) {
             AudioLanguageOption.DEFAULT,
             AudioLanguageOption.DEVICE,
+            AudioLanguageOption.ORIGINAL,
             SUBTITLE_LANGUAGE_FORCED -> null
             else -> normalized
         }

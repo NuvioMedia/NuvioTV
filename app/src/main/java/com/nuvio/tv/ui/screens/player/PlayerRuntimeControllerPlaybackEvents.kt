@@ -492,6 +492,10 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             selectAudioTrack(event.index)
             _uiState.update { it.copy(showAudioOverlay = false, showSubtitleDelayOverlay = false) }
         }
+        PlayerEvent.OnSelectOriginalAudioTrack -> {
+            selectOriginalAudioTrackFromUi()
+            _uiState.update { it.copy(showAudioOverlay = false, showSubtitleDelayOverlay = false) }
+        }
         is PlayerEvent.OnSetAudioAmplificationDb -> {
             val clampedDb = event.db.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
             applyAudioAmplification(clampedDb)

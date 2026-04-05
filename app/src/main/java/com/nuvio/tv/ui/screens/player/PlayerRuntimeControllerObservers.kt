@@ -233,6 +233,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             nextEpisodeThresholdModeSetting = settings.nextEpisodeThresholdMode
             nextEpisodeThresholdPercentSetting = settings.nextEpisodeThresholdPercent
             nextEpisodeThresholdMinutesBeforeEndSetting = settings.nextEpisodeThresholdMinutesBeforeEnd
+            autoPlayOriginalAudioEnabled = settings.autoPlayOriginalAudio
 
             applySubtitlePreferences(
                 settings.subtitleStyle.preferredLanguage,

@@ -6,6 +6,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.common.Tracks
 import com.nuvio.tv.domain.model.Subtitle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
@@ -433,4 +434,76 @@ internal fun PlayerRuntimeController.captureCurrentAudioSelectionForSubtitleRefr
         }
     }
     return null
+}
+
+internal fun PlayerRuntimeController.tryAutoSelectOriginalAudio(tracks: Tracks) {
+    val player = _exoPlayer ?: return
+    Log.d("AUDIO_AUTO", "Enabled = $autoPlayOriginalAudioEnabled")
+    Log.d("AUDIO_ORIGINAL", "Original = $currentOriginalAudioLanguage")
+
+    val original = currentOriginalAudioLanguage
+    if (!autoPlayOriginalAudioEnabled || original.isNullOrBlank()) return
+
+    val preferred = resolvePreferredAudioLanguages(
+        preferredAudioLanguage = com.nuvio.tv.data.local.AudioLanguageOption.ORIGINAL,
+        secondaryPreferredAudioLanguage = null,
+        deviceLanguages = emptyList(),
+        originalLanguage = original
+    )
+
+    Log.d("AUDIO_AUTO", "Auto original active. Preferred=$preferred")
+    if (preferred.isEmpty()) return
+
+    tracks.groups.forEach { group ->
+        if (group.type != C.TRACK_TYPE_AUDIO) return@forEach
+        for (i in 0 until group.length) {
+            val format = group.getTrackFormat(i)
+            val lang = format.language?.lowercase()
+            Log.d("AUDIO_TRACK", "Track lang = ${format.language}")
+            if (lang != null && preferred.any { candidate -> lang.startsWith(candidate) }) {
+                Log.d("AUDIO_SELECT", "Selecting original audio: $lang")
+                player.trackSelectionParameters = player.trackSelectionParameters
+                    .buildUpon()
+                    .setOverrideForType(
+                        TrackSelectionOverride(
+                            group.mediaTrackGroup,
+                            listOf(i)
+                        )
+                    )
+                    .build()
+                return
+            }
+        }
+    }
+}
+
+internal fun PlayerRuntimeController.selectOriginalAudioTrackFromUi(): Boolean {
+    val originalLanguage = currentOriginalAudioLanguage ?: return false
+    val tracks = _uiState.value.audioTracks
+    val originalTrackIndex = findOriginalAudioTrackIndex(
+        tracks = tracks,
+        originalLanguage = originalLanguage
+    ) ?: return false
+
+    rememberAudioSelection(originalTrackIndex)
+    selectAudioTrack(originalTrackIndex)
+    return true
+}
+
+private fun findOriginalAudioTrackIndex(
+    tracks: List<TrackInfo>,
+    originalLanguage: String
+): Int? {
+    val preferred = resolvePreferredAudioLanguages(
+        preferredAudioLanguage = com.nuvio.tv.data.local.AudioLanguageOption.ORIGINAL,
+        secondaryPreferredAudioLanguage = null,
+        deviceLanguages = emptyList(),
+        originalLanguage = originalLanguage
+    )
+    if (preferred.isEmpty()) return null
+
+    return tracks.firstOrNull { track ->
+        val trackLang = track.language?.lowercase() ?: return@firstOrNull false
+        preferred.any { candidate -> trackLang.startsWith(candidate) }
+    }?.index
 }

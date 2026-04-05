@@ -24,6 +24,7 @@ data class StreamScreenUiState(
     // Movie-specific fields
     val genres: String? = null,
     val year: String? = null,
+    val originalLanguage: String? = null,
     val addonStreams: List<AddonStreams> = emptyList(),
     val allStreams: List<Stream> = emptyList(),
     val selectedAddonFilter: String? = null, // null means "All"
