@@ -40,7 +40,7 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 
 private const val CW_MAX_RECENT_PROGRESS_ITEMS = 300
-private const val CW_MAX_NEXT_UP_LOOKUPS = 48
+private const val CW_MAX_NEXT_UP_LOOKUPS = 32
 private const val CW_MAX_NEXT_UP_CONCURRENCY = 4
 private const val CW_MAX_ENRICHMENT_CONCURRENCY = 4
 private const val CW_PROGRESS_DEBOUNCE_MS = 500L
@@ -562,12 +562,18 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                                 }.awaitAll().filterNotNull()
 
                                 if (discoveredNextUpItems.isNotEmpty()) {
-                                    val releaseAlerts = discoveredNextUpItems.filter { it.info.isReleaseAlert }
+                                    // For Trakt users, only inject release alerts.
+                                    // For Nuvio Sync users, inject all next-up items (workaround for seed limit).
+                                    val itemsToInject = if (useTraktProgress) {
+                                        discoveredNextUpItems.filter { it.info.isReleaseAlert }
+                                    } else {
+                                        discoveredNextUpItems
+                                    }
                                     synchronized(discoveredOlderNextUpItems) {
                                         discoveredOlderNextUpItems.removeAll { old ->
-                                            releaseAlerts.any { it.info.contentId == old.info.contentId }
+                                            itemsToInject.any { it.info.contentId == old.info.contentId }
                                         }
-                                        discoveredOlderNextUpItems.addAll(releaseAlerts)
+                                        discoveredOlderNextUpItems.addAll(itemsToInject)
                                     }
                                     _uiState.update { state ->
                                         val existingContentIds = state.continueWatchingItems
@@ -578,12 +584,12 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                                                 }
                                             }
                                             .toSet()
-                                        val newAlerts = releaseAlerts.filter {
+                                        val newItems = itemsToInject.filter {
                                             it.info.contentId !in existingContentIds &&
                                                 nextUpDismissKey(it.info.contentId, it.info.seedSeason, it.info.seedEpisode) !in dismissedNextUp
                                         }
-                                        if (newAlerts.isEmpty()) return@update state
-                                        state.copy(continueWatchingItems = state.continueWatchingItems + newAlerts)
+                                        if (newItems.isEmpty()) return@update state
+                                        state.copy(continueWatchingItems = state.continueWatchingItems + newItems)
                                     }
                                 }
                             }
@@ -596,9 +602,10 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 val persistedOlderItems = synchronized(discoveredOlderNextUpItems) {
                     discoveredOlderNextUpItems.toList()
                 }
-                // Also preserve cached release alerts from disk until async inject re-verifies them.
-                val cachedReleaseAlerts = cachedNextUp
-                    .filter { it.isReleaseAlert }
+                // Preserve cached next-up items from disk until async inject re-verifies them.
+                // For Trakt: only release alerts. For Nuvio Sync: all items.
+                val cachedOlderNextUp = cachedNextUp
+                    .filter { if (useTraktProgress) it.isReleaseAlert else true }
                     .map { cached ->
                         ContinueWatchingItem.NextUp(
                             info = NextUpInfo(
@@ -632,10 +639,10 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                     }
                 val recentIds = nextUpItems.map { it.info.contentId }.toSet()
                 val inProgressIds = inProgressOnly.map { it.progress.contentId }.toSet()
-                val olderToInclude = (persistedOlderItems + cachedReleaseAlerts)
+                val olderToInclude = (persistedOlderItems + cachedOlderNextUp)
                     .distinctBy { it.info.contentId }
                     .filter {
-                        it.info.isReleaseAlert &&
+                        (if (useTraktProgress) it.info.isReleaseAlert else true) &&
                             it.info.contentId !in recentIds &&
                             it.info.contentId !in inProgressIds &&
                             nextUpDismissKey(it.info.contentId, it.info.seedSeason, it.info.seedEpisode) !in dismissedNextUp &&

@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.player
 import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
+import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import `is`.xyz.mpv.BaseMPVView
 import `is`.xyz.mpv.Utils
@@ -18,6 +19,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     private var initialized = false
     private var hasQueuedInitialMedia = false
     private var lastMediaRequestKey: String? = null
+    private var hardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE
 
     fun ensureInitialized() {
         if (initialized) return
@@ -165,6 +167,16 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             mpv.setPropertyString("aid", "auto")
         }.onFailure {
             Log.w(TAG, "Failed to set audio language preference: ${it.message}")
+        }
+    }
+
+    fun applyHardwareDecodeMode(mode: MpvHardwareDecodeMode) {
+        hardwareDecodeMode = mode
+        if (!initialized) return
+        runCatching {
+            mpv.setPropertyString("hwdec", mode.toMpvHwdecValue())
+        }.onFailure {
+            Log.w(TAG, "Failed to apply mpv hardware decode mode ($mode): ${it.message}")
         }
     }
 
@@ -445,7 +457,7 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         mpv.setOptionString("sub-font", "Roboto")
         mpv.setOptionString("sub-use-margins", "yes")
         mpv.setOptionString("sub-ass-force-margins", "yes")
-        mpv.setOptionString("hwdec", "mediacodec,mediacodec-copy")
+        mpv.setOptionString("hwdec", hardwareDecodeMode.toMpvHwdecValue())
         mpv.setOptionString("hwdec-codecs", "h264,hevc,mpeg4,mpeg2video,vp8,vp9,av1")
         mpv.setOptionString("ao", "audiotrack,opensles")
         mpv.setOptionString("audio-set-media-role", "yes")
@@ -481,6 +493,16 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             .sortedWith(compareBy({ it.key.lowercase(Locale.ROOT) }, { it.value }))
             .joinToString(separator = "|") { "${it.key.trim()}:${it.value.trim()}" }
         return "$url#$normalizedHeaders"
+    }
+
+    private fun MpvHardwareDecodeMode.toMpvHwdecValue(): String {
+        return when (this) {
+            MpvHardwareDecodeMode.LEGACY_DIRECT_COPY -> "mediacodec,mediacodec-copy"
+            MpvHardwareDecodeMode.AUTO_SAFE -> "auto-safe"
+            MpvHardwareDecodeMode.HARDWARE_COPY -> "mediacodec-copy"
+            MpvHardwareDecodeMode.HARDWARE_DIRECT -> "mediacodec"
+            MpvHardwareDecodeMode.DISABLED -> "no"
+        }
     }
 
     private fun toMpvColor(color: Int): String {

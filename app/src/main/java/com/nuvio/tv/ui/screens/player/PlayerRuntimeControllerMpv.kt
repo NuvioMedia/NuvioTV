@@ -20,6 +20,7 @@ internal fun PlayerRuntimeController.attachMpvView(view: NuvioMpvSurfaceView?) {
 
     runCatching {
         performPendingMpvHardRestartIfNeeded(view)
+        view.applyHardwareDecodeMode(mpvHardwareDecodeModeSetting)
         view.setMedia(currentStreamUrl, currentHeaders)
         view.setPlaybackSpeed(_uiState.value.playbackSpeed)
         view.applyAudioAmplificationDb(_uiState.value.audioAmplificationDb)
@@ -98,6 +99,7 @@ internal fun PlayerRuntimeController.initializeMpvPlayer(
 
     runCatching {
         performPendingMpvHardRestartIfNeeded(view)
+        view.applyHardwareDecodeMode(mpvHardwareDecodeModeSetting)
         view.setMedia(url, headers)
         view.setPlaybackSpeed(_uiState.value.playbackSpeed)
         view.applyAudioAmplificationDb(_uiState.value.audioAmplificationDb)
@@ -170,7 +172,19 @@ internal fun PlayerRuntimeController.pauseForLifecycle() {
 
 internal fun PlayerRuntimeController.updateMpvAvailableTracks() {
     if (!isUsingMpvEngine()) return
+    if (mpvTrackRefreshInProgress) return
+    mpvTrackRefreshInProgress = true
+    try {
     val snapshot = mpvView?.readTrackSnapshot() ?: return
+    val switchPending = pendingEngineSwitchTrackPreference
+        ?.takeIf { it.streamUrl == currentStreamUrl && it.sourceEngine == InternalPlayerEngine.EXOPLAYER }
+    logSwitchTrace(
+        stage = "mpv-snapshot-read",
+        message = "switchPending=${switchPending != null} audioCount=${snapshot.audioTracks.size} " +
+            "subtitleCount=${snapshot.subtitleTracks.size} " +
+            "selectedAudioId=${snapshot.audioTracks.firstOrNull { it.isSelected }?.id} " +
+            "selectedSubtitleId=${snapshot.subtitleTracks.firstOrNull { it.isSelected }?.id}"
+    )
 
     val audioTracks = snapshot.audioTracks
         .mapIndexed { index, track ->
@@ -212,6 +226,12 @@ internal fun PlayerRuntimeController.updateMpvAvailableTracks() {
     val selectedSubtitleIndex = internalSubtitleTracks.indexOfFirst { it.isSelected }
     val selectedExternalSubtitleTrack = snapshot.subtitleTracks.firstOrNull { it.isExternal && it.isSelected }
     val selectedExternalSubtitle = selectedExternalSubtitleTrack != null
+    logSwitchTrace(
+        stage = "mpv-snapshot-mapped",
+        message = "selectedAudioIndex=$selectedAudioIndex selectedSubtitleIndex=$selectedSubtitleIndex " +
+            "selectedExternalSubtitle=${selectedExternalSubtitleTrack?.id ?: "none"} " +
+            "mappedInternalSubtitleCount=${internalSubtitleTracks.size}"
+    )
 
     hasScannedTextTracksOnce = true
     maybeRestorePendingAudioSelectionAfterSubtitleRefresh(audioTracks)
@@ -257,6 +277,15 @@ internal fun PlayerRuntimeController.updateMpvAvailableTracks() {
         audioTracks = audioTracks,
         subtitleTracks = internalSubtitleTracks
     )
+    logSwitchTrace(
+        stage = "mpv-snapshot-after-restore",
+        message = "uiAudioIndex=${_uiState.value.selectedAudioTrackIndex} " +
+            "uiSubtitleIndex=${_uiState.value.selectedSubtitleTrackIndex} " +
+            "uiAddonSelected=${_uiState.value.selectedAddonSubtitle?.let { "${it.lang}/${it.addonName}/${it.id}" } ?: "none"}"
+    )
+    } finally {
+        mpvTrackRefreshInProgress = false
+    }
 }
 
 private fun PlayerRuntimeController.performPendingMpvHardRestartIfNeeded(view: NuvioMpvSurfaceView): Boolean {
