@@ -18,7 +18,10 @@ data class CachedStreamLink(
     val sourceUrls: List<String> = emptyList(),
     val filename: String? = null,
     val videoHash: String? = null,
-    val videoSize: Long? = null
+    val videoSize: Long? = null,
+    val addonName: String? = null,
+    val addonLogo: String? = null,
+    val streamDescription: String? = null
 )
 
 @Singleton
@@ -41,7 +44,10 @@ class StreamLinkCacheDataStore @Inject constructor(
         sourceUrls: List<String> = emptyList(),
         filename: String? = null,
         videoHash: String? = null,
-        videoSize: Long? = null
+        videoSize: Long? = null,
+        addonName: String? = null,
+        addonLogo: String? = null,
+        streamDescription: String? = null
     ) {
         val payload = JSONObject().apply {
             put("url", url)
@@ -52,6 +58,10 @@ class StreamLinkCacheDataStore @Inject constructor(
             put("filename", filename)
             put("videoHash", videoHash)
             videoSize?.let { put("videoSize", it) }
+            put("addonName", addonName)
+            put("addonLogo", addonLogo)
+            put("streamDescription", streamDescription)
+            
         }.toString()
 
         store().edit { prefs ->
@@ -99,7 +109,10 @@ class StreamLinkCacheDataStore @Inject constructor(
                 }.distinct(),
                 filename = json.optString("filename", "").ifBlank { null },
                 videoHash = json.optString("videoHash", "").ifBlank { null },
-                videoSize = json.optLong("videoSize", -1L).takeIf { it >= 0L }
+                videoSize = json.optLong("videoSize", -1L).takeIf { it >= 0L },
+                addonName = json.optString("addonName", "").ifBlank { null },
+                addonLogo = json.optString("addonLogo", "").ifBlank { null },
+                streamDescription = json.optString("streamDescription", "").ifBlank { null }
             )
         }.getOrNull()
 

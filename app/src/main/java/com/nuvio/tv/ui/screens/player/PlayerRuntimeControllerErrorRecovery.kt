@@ -41,6 +41,108 @@ private fun PlayerRuntimeController.resetSourceRecoveryFlags() {
     resetErrorRetryState()
 }
 
+private fun PlayerRuntimeController.nextRecoverySourceIndex(): Int? {
+    val resolvedIndex = currentStreamSourceUrls.indexOf(currentStreamUrl)
+    return if (resolvedIndex >= 0) {
+        currentStreamSourceUrls.indices.firstOrNull { it > resolvedIndex }
+    } else {
+        currentStreamSourceUrls.indices.firstOrNull()
+    }
+}
+
+private fun PlayerRuntimeController.clearReuseLastLinkLiveRecovery() {
+    pendingReuseLastLinkLiveRecovery = null
+}
+
+private fun PlayerRuntimeController.finishReuseLastLinkBootstrap() {
+    startedFromReuseLastLink = false
+    pendingReuseLastLinkLiveRecovery = null
+}
+
+private fun PlayerRuntimeController.showReuseLastLinkRecoveryFailed(detailedError: String) {
+    startedFromReuseLastLink = false
+    activeRecoveryLoadingMessage = null
+    clearReuseLastLinkLiveRecovery()
+    _uiState.update {
+        it.copy(
+            error = detailedError,
+            showLoadingOverlay = false,
+            showPauseOverlay = false,
+            isBuffering = false
+        )
+    }
+}
+
+private fun PlayerRuntimeController.tryReuseLastLinkLiveRecovery(
+    detailedError: String,
+    resumePosition: Long,
+    allowEngineFailover: Boolean,
+    startup: Boolean
+): Boolean {
+    if (!startedFromReuseLastLink) return false
+    if (hasRenderedFirstFrame) return false
+    if (pendingReuseLastLinkLiveRecovery != null) return true
+    if (hasAttemptedReuseLastLinkLiveRecovery) return false
+
+    hasAttemptedReuseLastLinkLiveRecovery = true
+    pendingReuseLastLinkLiveRecovery = PlayerRuntimeController.PendingReuseLastLinkLiveRecovery(
+        detailedError = detailedError,
+        resumePosition = resumePosition,
+        allowEngineFailover = allowEngineFailover,
+        startup = startup
+    )
+    showRecoveryLoadingOverlay(context.getString(R.string.player_loading_reuse_last_link_refresh))
+    loadSourceStreams(forceRefresh = true)
+    return true
+}
+
+internal fun PlayerRuntimeController.continueReuseLastLinkLiveRecoveryIfNeeded(): Boolean {
+    val pending = pendingReuseLastLinkLiveRecovery ?: return false
+    val nextIndex = nextRecoverySourceIndex()
+    if (nextIndex != null) {
+        finishReuseLastLinkBootstrap()
+        return switchToNextSource(
+            nextIndex = nextIndex,
+            message = context.getString(
+                if (pending.startup) R.string.player_loading_fallback_next_source_startup
+                else R.string.player_loading_fallback_next_source,
+                nextIndex + 1,
+                currentStreamSourceUrls.size
+            ),
+            resumePosition = pending.resumePosition,
+            preferInPlayerSourceSwap = !pending.startup && !isUsingMpvEngine()
+        )
+    }
+
+    clearReuseLastLinkLiveRecovery()
+    return if (pending.allowEngineFailover) {
+        finishReuseLastLinkBootstrap()
+        switchRecoveryEngineAndRestartSources(
+            detailedError = pending.detailedError,
+            allowEngineFailover = true,
+            resumePosition = pending.resumePosition
+        )
+    } else {
+        showReuseLastLinkRecoveryFailed(pending.detailedError)
+        false
+    }
+}
+
+internal fun PlayerRuntimeController.failReuseLastLinkLiveRecovery(errorMessage: String?) {
+    val pending = pendingReuseLastLinkLiveRecovery ?: return
+    clearReuseLastLinkLiveRecovery()
+    if (pending.allowEngineFailover) {
+        finishReuseLastLinkBootstrap()
+        switchRecoveryEngineAndRestartSources(
+            detailedError = pending.detailedError,
+            allowEngineFailover = true,
+            resumePosition = pending.resumePosition
+        )
+        return
+    }
+    showReuseLastLinkRecoveryFailed(errorMessage ?: pending.detailedError)
+}
+
 private fun PlayerRuntimeController.updateCurrentStreamTracking(
     candidate: RecoverySourceCandidate,
     index: Int
@@ -324,7 +426,7 @@ internal fun PlayerRuntimeController.attemptAutoRetry(
 
     // Skip auto-retry for startup failures if we have alternative streams to fall back to.
     // This prevents the user from being stuck staring at "Auto-retry 1/2" for every dead stream proxy.
-    val hasMoreStreams = currentStreamSourceUrls.getOrNull(currentStreamSourceIndex + 1) != null
+    val hasMoreStreams = nextRecoverySourceIndex() != null
     if (!hasRenderedFirstFrame && cachedAutoSourceFallback && hasMoreStreams) {
         return false // Let tryAutoSourceFallback take over immediately
     }
@@ -507,13 +609,19 @@ internal fun PlayerRuntimeController.tryAutoSourceFallback(
 ): Boolean {
     if (!cachedAutoSourceFallback) return false
 
-    var nextIndex = currentStreamSourceIndex + 1
-    if (currentStreamSourceUrls.getOrNull(nextIndex) == null && refreshRecoverySourceCandidatesFromSourcePool()) {
-        nextIndex = currentStreamSourceIndex + 1
+    var nextIndex = nextRecoverySourceIndex()
+    if (nextIndex == null && refreshRecoverySourceCandidatesFromSourcePool()) {
+        nextIndex = nextRecoverySourceIndex()
     }
-    if (currentStreamSourceUrls.getOrNull(nextIndex) == null) return false
-
     val savedPosition = currentPlaybackPositionMs()?.takeIf { it > 0L } ?: 0L
+    if (nextIndex == null) {
+        return tryReuseLastLinkLiveRecovery(
+            detailedError = error.errorCodeName ?: "Playback error",
+            resumePosition = savedPosition,
+            allowEngineFailover = autoSwitchInternalPlayerOnErrorEnabled,
+            startup = !hasRenderedFirstFrame
+        )
+    }
 
     Log.w(
         PlayerRuntimeController.TAG,
@@ -605,11 +713,11 @@ internal fun PlayerRuntimeController.attemptSeamlessStartupRecovery(
     allowEngineFailover: Boolean
 ): Boolean {
     if (cachedAutoSourceFallback) {
-        var nextIndex = currentStreamSourceIndex + 1
-        if (currentStreamSourceUrls.getOrNull(nextIndex) == null && refreshRecoverySourceCandidatesFromSourcePool()) {
-            nextIndex = currentStreamSourceIndex + 1
+        var nextIndex = nextRecoverySourceIndex()
+        if (nextIndex == null && refreshRecoverySourceCandidatesFromSourcePool()) {
+            nextIndex = nextRecoverySourceIndex()
         }
-        if (currentStreamSourceUrls.getOrNull(nextIndex) != null) {
+        if (nextIndex != null) {
             Log.w(
                 PlayerRuntimeController.TAG,
                 "Startup recovery: switching to source ${nextIndex + 1}/${currentStreamSourceUrls.size} after: $detailedError"
@@ -625,6 +733,9 @@ internal fun PlayerRuntimeController.attemptSeamlessStartupRecovery(
                 preferInPlayerSourceSwap = false
             )
         }
+    }
+    if (tryReuseLastLinkLiveRecovery(detailedError, resumePosition = 0L, allowEngineFailover = allowEngineFailover, startup = true)) {
+        return true
     }
     return switchRecoveryEngineAndRestartSources(
         detailedError = detailedError,

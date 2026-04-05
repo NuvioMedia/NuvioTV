@@ -256,7 +256,7 @@ fun NuvioNavHost(
                                 launchSingleTop = true
                             }
                         }
-                    } else {
+                                            } else {
                         navController.popBackStack()
                     }
                 },
@@ -476,7 +476,8 @@ fun NuvioNavHost(
                                 startFromBeginning = startFromBeginning,
                                 addonName = playbackInfo.addonName,
                                 addonLogo = playbackInfo.addonLogo,
-                                streamDescription = playbackInfo.streamDescription
+                                streamDescription = playbackInfo.streamDescription,
+                                reusedLastLink = playbackInfo.reusedLastLink
                             )
                         )
                     }
@@ -511,7 +512,8 @@ fun NuvioNavHost(
                                 startFromBeginning = startFromBeginning,
                                 addonName = playbackInfo.addonName,
                                 addonLogo = playbackInfo.addonLogo,
-                                streamDescription = playbackInfo.streamDescription
+                                streamDescription = playbackInfo.streamDescription,
+                                reusedLastLink = playbackInfo.reusedLastLink
                             )
                         ) {
                             popUpTo(Screen.Stream.route) { inclusive = true }
@@ -650,6 +652,11 @@ fun NuvioNavHost(
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
+                },
+                navArgument("reusedLastLink") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = "false"
                 }
             )
         ) { backStackEntry ->

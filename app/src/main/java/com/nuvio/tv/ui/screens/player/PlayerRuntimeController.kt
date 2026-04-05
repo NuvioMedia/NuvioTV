@@ -73,6 +73,13 @@ class PlayerRuntimeController(
         val trackId: String? = null
     )
 
+    internal data class PendingReuseLastLinkLiveRecovery(
+        val detailedError: String,
+        val resumePosition: Long,
+        val allowEngineFailover: Boolean,
+        val startup: Boolean
+    )
+
     internal sealed class RememberedSubtitleSelection {
         data object Disabled : RememberedSubtitleSelection()
         data class Internal(
@@ -108,6 +115,7 @@ class PlayerRuntimeController(
     internal val initialEpisode: Int? = navigationArgs.initialEpisode
     internal val initialEpisodeTitle: String? = navigationArgs.initialEpisodeTitle
     internal val mediaSourceFactory = PlayerMediaSourceFactory()
+    internal var startedFromReuseLastLink: Boolean = navigationArgs.reusedLastLink
 
     internal var currentVideoHash: String? = navigationArgs.videoHash
     internal var currentVideoSize: Long? = navigationArgs.videoSize
@@ -246,6 +254,8 @@ class PlayerRuntimeController(
     internal var seamlessPlaybackModeSetting: SeamlessPlaybackMode = SeamlessPlaybackMode.STREAM_ONLY
     internal var seamlessRecoveryEngineSwitchUsed: Boolean = false
     internal var activeRecoveryLoadingMessage: String? = null
+    internal var pendingReuseLastLinkLiveRecovery: PendingReuseLastLinkLiveRecovery? = null
+    internal var hasAttemptedReuseLastLinkLiveRecovery: Boolean = false
     internal var streamAutoPlayModeSetting: StreamAutoPlayMode = StreamAutoPlayMode.MANUAL
     internal var streamAutoPlayNextEpisodeEnabledSetting: Boolean = false
     internal var streamAutoPlayPreferBingeGroupForNextEpisodeSetting: Boolean = false
@@ -291,6 +301,7 @@ class PlayerRuntimeController(
     internal var hasRequestedScrobbleStartForCurrentItem: Boolean = false
     internal var scrobbleStartRequestGeneration: Long = 0L
     internal var playbackPreparationJob: Job? = null
+    internal var initializePlayerJob: Job? = null
     internal var hasSentCompletionScrobbleForCurrentItem: Boolean = false
     internal var requestedUseLibassByUser: Boolean = false
     internal var libassPipelineOverrideForCurrentStream: Boolean? = null

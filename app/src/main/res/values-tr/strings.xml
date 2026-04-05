@@ -813,6 +813,16 @@
     <string name="stream_no_streams">Akış bulunamadı</string>
     <string name="stream_no_streams_hint">Daha fazla akış bulmak için farklı eklentiler kurmayı deneyin</string>
     <string name="stream_finding_source">Kaynak aranıyor</string>
+    <string name="player_loading_retry_stream">Oynatma tekrar deneniyor...</string>
+    <string name="player_loading_retry_stream_rebuild">Oynatma yeniden baslatiliyor...</string>
+    <string name="player_loading_fallback_pcm_audio">Daha uyumlu bir ses modu deneniyor...</string>
+    <string name="player_loading_fallback_hevc_decoder">Daha uyumlu bir goruntu modu deneniyor...</string>
+    <string name="player_loading_fallback_http_next_source">Bu baglanti su anda kullanilamiyor. Baska bir kaynak deneniyor...</string>
+    <string name="player_loading_fallback_next_source">Bu baglanti acilmadi. Baska bir kaynak deneniyor...</string>
+    <string name="player_loading_fallback_next_source_startup">Bu kaynak acilmadi. Baska bir kaynak deneniyor...</string>
+    <string name="player_loading_reuse_last_link_refresh">Son acilan baglanti su anda kullanilamiyor. Yeni bir kaynak araniyor...</string>
+    <string name="player_loading_switch_engine_same_source">Daha uyumlu bir oynatma yontemi deneniyor...</string>
+    <string name="player_loading_switch_engine_restart_sources">Daha uyumlu bir oynatma yontemi deneniyor...</string>
     <string name="stream_type_torrent">Torrent</string>
     <string name="stream_type_youtube">YouTube</string>
     <string name="stream_type_external">Harici</string>

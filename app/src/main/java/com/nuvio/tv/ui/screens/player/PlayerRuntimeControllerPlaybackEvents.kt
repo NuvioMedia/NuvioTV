@@ -52,6 +52,10 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         firstFrameReady = pos > 0L || (playingNow && !cacheBuffering && playerDuration > 0L)
                         if (firstFrameReady) {
                             hasRenderedFirstFrame = true
+                            startedFromReuseLastLink = false
+                            hasAttemptedReuseLastLinkLiveRecovery = false
+                            pendingReuseLastLinkLiveRecovery = null
+                            
                         }
                     }
                     if (playerDuration > lastKnownDuration) {

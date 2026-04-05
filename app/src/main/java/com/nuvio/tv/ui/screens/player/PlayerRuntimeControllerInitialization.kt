@@ -42,6 +42,7 @@ import com.nuvio.tv.data.local.allowsAutomaticStreamRecovery
 import com.nuvio.tv.domain.model.Subtitle
 import io.github.peerless2012.ass.media.type.AssRenderType
 import kotlinx.coroutines.async
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.delay
@@ -67,6 +68,13 @@ private fun PlayerRuntimeController.resolveLoadingStatusMessage(
         context.getString(resId, *formatArgs)
     } else {
         _uiState.value.loadingMessage
+    }
+}
+
+private fun PlayerRuntimeController.updateLoadingMessage(message: String?) {
+    _uiState.update { state ->
+        val resolvedMessage = activeRecoveryLoadingMessage ?: message
+        if (state.loadingMessage == resolvedMessage) state else state.copy(loadingMessage = resolvedMessage)
     }
 }
 
@@ -99,7 +107,8 @@ internal fun PlayerRuntimeController.initializePlayer(
         return
     }
 
-    scope.launch {
+    initializePlayerJob?.cancel()
+    initializePlayerJob = scope.launch {
         try {
             resetLoadingOverlayForNewStream()
             hasTriedAudioPcmFallback = false
@@ -456,6 +465,9 @@ internal fun PlayerRuntimeController.initializePlayer(
 
                     override fun onRenderedFirstFrame() {
                         hasRenderedFirstFrame = true
+                        startedFromReuseLastLink = false
+                        hasAttemptedReuseLastLinkLiveRecovery = false
+                        pendingReuseLastLinkLiveRecovery = null
                         resetErrorRetryState()
                         // Restore speed after PCM fallback — audio sink is already
                         // configured in PCM mode and won't revert to passthrough.
@@ -516,6 +528,8 @@ internal fun PlayerRuntimeController.initializePlayer(
             if (!startupSubtitlePreparation.fetchCompleted) {
                 fetchAddonSubtitles()
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             if (attemptSeamlessStartupRecovery(
                     detailedError = e.message ?: "Failed to initialize player",
@@ -633,7 +647,7 @@ internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(
                 } else {
                     context.getString(R.string.player_loading_subtitles_progress, completed, total)
                 }
-                _uiState.update { it.copy(loadingMessage = msg) }
+                updateLoadingMessage(msg)
             } else null
         )
     } ?: return StartupSubtitlePreparation(
@@ -731,7 +745,8 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     _uiState.update { state ->
         state.copy(
             showLoadingOverlay = state.loadingOverlayEnabled,
-            showControls = false
+            showControls = false,
+            loadingMessage = activeRecoveryLoadingMessage
         )
     }
 }

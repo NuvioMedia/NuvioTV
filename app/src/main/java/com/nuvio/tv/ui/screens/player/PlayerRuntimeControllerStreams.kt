@@ -254,6 +254,7 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
                     val allStreams = addonStreams.flatMap { it.streams }
                     val availableAddons = addonStreams.map { it.addonName }
                     refreshRecoverySourceCandidatesFromSourcePool(allStreams)
+                    continueReuseLastLinkLiveRecoveryIfNeeded()
                     _uiState.update {
                         it.copy(
                             isLoadingSourceStreams = false,
@@ -271,6 +272,7 @@ internal fun PlayerRuntimeController.loadSourceStreams(forceRefresh: Boolean) {
                 }
 
                 is NetworkResult.Error -> {
+                    failReuseLastLinkLiveRecovery(result.message)
                     _uiState.update {
                         it.copy(
                             isLoadingSourceStreams = false,
@@ -447,6 +449,9 @@ private fun PlayerRuntimeController.persistSelectedStreamForReuse(
     val key = streamCacheKey ?: return
     val streamName = (stream.name?.takeIf { it.isNotBlank() } ?: stream.addonName)?.takeIf { it.isNotBlank() }
         ?: title
+    startedFromReuseLastLink = false
+    hasAttemptedReuseLastLinkLiveRecovery = false
+    pendingReuseLastLinkLiveRecovery = null
 
     scope.launch {
         streamLinkCacheDataStore.save(
@@ -454,10 +459,42 @@ private fun PlayerRuntimeController.persistSelectedStreamForReuse(
             url = url,
             streamName = streamName,
             headers = headers,
+            sourceUrls = (listOf(url) + stream.getStreamUrls())
+                .map(String::trim)
+                .filter(String::isNotBlank)
+                .distinct(),
+            filename = currentFilename,
+            videoHash = currentVideoHash,
+            videoSize = currentVideoSize,
+            addonName = stream.addonName,
+            addonLogo = stream.addonLogo,
+            streamDescription = stream.description,
+            
+        )
+    }
+}
+
+internal fun PlayerRuntimeController.persistCurrentPlaybackForReuseIfNeeded() {
+    if (!streamReuseLastLinkEnabled) return
+
+    val key = streamCacheKey ?: return
+    val url = currentStreamUrl.takeIf { it.isNotBlank() } ?: return
+    val streamName = (_uiState.value.currentStreamName ?: title).takeIf { it.isNotBlank() } ?: title
+
+    scope.launch {
+        streamLinkCacheDataStore.save(
+            contentKey = key,
+            url = url,
+            streamName = streamName,
+            headers = currentHeaders,
             sourceUrls = currentStreamSourceUrls,
             filename = currentFilename,
             videoHash = currentVideoHash,
-            videoSize = currentVideoSize
+            videoSize = currentVideoSize,
+            addonName = currentAddonName,
+            addonLogo = currentAddonLogo,
+            streamDescription = currentStreamDescription
+            
         )
     }
 }

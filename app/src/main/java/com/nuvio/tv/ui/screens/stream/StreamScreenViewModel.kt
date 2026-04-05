@@ -56,6 +56,7 @@ class StreamScreenViewModel @Inject constructor(
     private var directAutoPlayModeInitializedForSession = false
     private var directAutoPlayFlowEnabledForSession = false
     private var streamLoadJob: Job? = null
+    private var streamFetchJob: Job? = null
     private var sourceChipErrorDismissJob: Job? = null
 
     private val videoId: String = savedStateHandle["videoId"] ?: ""
@@ -152,7 +153,25 @@ class StreamScreenViewModel @Inject constructor(
                 }
             }
             StreamScreenEvent.OnRetry -> loadStreams()
-            StreamScreenEvent.OnBackPress -> { /* Handle in screen */ }
+            StreamScreenEvent.OnBackPress -> cancelPendingStreamResolution()
+        }
+    }
+
+    private fun cancelPendingStreamResolution() {
+        autoPlayHandledForSession = true
+        directAutoPlayFlowEnabledForSession = false
+        streamLoadJob?.cancel()
+        streamFetchJob?.cancel()
+        sourceChipErrorDismissJob?.cancel()
+        updateUiStateIfChanged {
+            it.copy(
+                isLoading = false,
+                isDirectAutoPlayFlow = false,
+                showDirectAutoPlayOverlay = false,
+                directAutoPlayMessage = null,
+                autoPlayStream = null,
+                autoPlayPlaybackInfo = null
+            )
         }
     }
 
@@ -166,6 +185,7 @@ class StreamScreenViewModel @Inject constructor(
 
     private fun loadStreams() {
         streamLoadJob?.cancel()
+        streamFetchJob?.cancel()
         sourceChipErrorDismissJob?.cancel()
         streamLoadJob = viewModelScope.launch {
             val playerSettings = playerSettingsDataStore.playerSettings.first()
@@ -236,7 +256,11 @@ class StreamScreenViewModel @Inject constructor(
                                 bingeGroup = null,
                                 filename = cached.filename,
                                 videoHash = cached.videoHash,
-                                videoSize = cached.videoSize
+                                videoSize = cached.videoSize,
+                                addonName = cached.addonName,
+                                addonLogo = cached.addonLogo,
+                                streamDescription = cached.streamDescription,
+                                reusedLastLink = true
                             )
                         )
                     }
@@ -335,7 +359,7 @@ class StreamScreenViewModel @Inject constructor(
             var autoSelectTriggered = false
             var timeoutElapsed = false
 
-            val streamLoadInner = viewModelScope.launch {
+            streamFetchJob = viewModelScope.launch {
                 streamRepository.getStreamsFromAllAddons(
                     type = contentType,
                     videoId = videoId,
@@ -660,7 +684,8 @@ class StreamScreenViewModel @Inject constructor(
             videoSize = stream.behaviorHints?.videoSize,
             addonName = stream.addonName,
             addonLogo = stream.addonLogo,
-            streamDescription = stream.description
+            streamDescription = stream.description,
+            reusedLastLink = false
         )
 
         val url = playbackInfo.url
@@ -674,7 +699,10 @@ class StreamScreenViewModel @Inject constructor(
                     sourceUrls = playbackInfo.sourceUrls,
                     filename = playbackInfo.filename,
                     videoHash = playbackInfo.videoHash,
-                    videoSize = playbackInfo.videoSize
+                    videoSize = playbackInfo.videoSize,
+                    addonName = playbackInfo.addonName,
+                    addonLogo = playbackInfo.addonLogo,
+                    streamDescription = playbackInfo.streamDescription,
                 )
             }
         }
@@ -685,6 +713,7 @@ class StreamScreenViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         streamLoadJob?.cancel()
+        streamFetchJob?.cancel()
         sourceChipErrorDismissJob?.cancel()
     }
 
@@ -718,5 +747,7 @@ data class StreamPlaybackInfo(
     val videoSize: Long? = null,
     val addonName: String? = null,
     val addonLogo: String? = null,
-    val streamDescription: String? = null
+    val streamDescription: String? = null,
+    
+    val reusedLastLink: Boolean = false
 )
