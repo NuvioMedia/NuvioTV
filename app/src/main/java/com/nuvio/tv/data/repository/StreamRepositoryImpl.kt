@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 private const val TAG = "StreamRepositoryImpl"
@@ -97,7 +98,7 @@ class StreamRepositoryImpl @Inject constructor(
                 
                 // Track number of pending jobs (Emby + addons + plugins)
                 val totalJobs = 1 + streamAddons.size + (if (tmdbId != null) 1 else 0)
-                var completedJobs = 0
+                val completedJobs = AtomicInteger(0)
 
                 launch {
                     try {
@@ -129,8 +130,7 @@ class StreamRepositoryImpl @Inject constructor(
                         if (e is CancellationException) throw e
                         Log.d(TAG, "Emby stream send failed: ${e.message}")
                     } finally {
-                        completedJobs++
-                        if (completedJobs >= totalJobs) {
+                        if (completedJobs.incrementAndGet() >= totalJobs) {
                             resultChannel.close()
                         }
                     }
@@ -172,8 +172,7 @@ class StreamRepositoryImpl @Inject constructor(
                                 detail = e.message ?: "the addon request failed"
                             )
                         } finally {
-                            completedJobs++
-                            if (completedJobs >= totalJobs) {
+                            if (completedJobs.incrementAndGet() >= totalJobs) {
                                 resultChannel.close()
                             }
                         }
@@ -186,16 +185,14 @@ class StreamRepositoryImpl @Inject constructor(
                         try {
                             // Stream plugins individually
                             streamLocalPlugins(tmdbId, type, season, episode, resultChannel) {
-                                completedJobs++
-                                if (completedJobs >= totalJobs) {
+                                if (completedJobs.incrementAndGet() >= totalJobs) {
                                     resultChannel.close()
                                 }
                             }
                         } catch (e: Exception) {
                             if (e is CancellationException) throw e
                             Log.e(TAG, "Plugin execution failed: ${e.message}")
-                            completedJobs++
-                            if (completedJobs >= totalJobs) {
+                            if (completedJobs.incrementAndGet() >= totalJobs) {
                                 resultChannel.close()
                             }
                         }
