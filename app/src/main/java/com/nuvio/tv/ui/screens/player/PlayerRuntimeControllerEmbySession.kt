@@ -80,9 +80,9 @@ internal fun PlayerRuntimeController.startEmbyProgressReporting() {
     embyProgressJob = scope.launch {
         while (isActive) {
             delay(EMBY_PROGRESS_INTERVAL_MS)
-            if (!isPlaybackCurrentlyPlaying()) continue
+            val isPlaying = isPlaybackCurrentlyPlaying()
             val positionMs = currentPlaybackPositionMs() ?: continue
-            val isPaused = !isPlaybackCurrentlyPlaying()
+            val isPaused = !isPlaying
             embySessionService.reportProgress(
                 positionMs = positionMs,
                 isPaused = isPaused
