@@ -1,9 +1,11 @@
 package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val EMBY_TAG = "EmbySession"
 private const val EMBY_PROGRESS_INTERVAL_MS = 10_000L
@@ -63,16 +65,28 @@ internal fun PlayerRuntimeController.initEmbyItemIdAndStartSession() {
 }
 
 internal fun PlayerRuntimeController.startEmbySession() {
-    val itemId = currentEmbyItemId ?: return
-    val mediaSourceId = currentEmbyMediaSourceId ?: return
-    val positionMs = _exoPlayer?.currentPosition ?: 0L
+    val itemId = currentEmbyItemId ?: run {
+        Log.w(EMBY_TAG, "startEmbySession() — currentEmbyItemId is null, aborting")
+        return
+    }
+    val mediaSourceId = currentEmbyMediaSourceId ?: run {
+        Log.w(EMBY_TAG, "startEmbySession() — currentEmbyMediaSourceId is null, aborting")
+        return
+    }
+    val positionMs = currentPlaybackPositionMs() ?: 0L
+    Log.d(EMBY_TAG, "startEmbySession() — itemId=$itemId, mediaSourceId=$mediaSourceId, positionMs=$positionMs")
 
     scope.launch {
-        embySessionService.reportStart(
-            itemId = itemId,
-            mediaSourceId = mediaSourceId,
-            positionMs = positionMs
-        )
+        try {
+            embySessionService.reportStart(
+                itemId = itemId,
+                mediaSourceId = mediaSourceId,
+                positionMs = positionMs
+            )
+            Log.d(EMBY_TAG, "startEmbySession() — reportStart completed")
+        } catch (e: Exception) {
+            Log.e(EMBY_TAG, "startEmbySession() — reportStart failed: ${e.message}", e)
+        }
     }
     startEmbyProgressReporting()
 }
@@ -82,10 +96,11 @@ internal fun PlayerRuntimeController.startEmbyProgressReporting() {
     embyProgressJob = scope.launch {
         while (isActive) {
             delay(EMBY_PROGRESS_INTERVAL_MS)
-            val player = _exoPlayer ?: break
-            val isPaused = !player.isPlaying
+            if (!isPlaybackCurrentlyPlaying()) continue
+            val positionMs = currentPlaybackPositionMs() ?: continue
+            val isPaused = !isPlaybackCurrentlyPlaying()
             embySessionService.reportProgress(
-                positionMs = player.currentPosition,
+                positionMs = positionMs,
                 isPaused = isPaused
             )
         }
@@ -98,10 +113,12 @@ internal fun PlayerRuntimeController.stopEmbySession() {
     embyInitJob?.cancel()
     embyInitJob = null
     val itemId = currentEmbyItemId ?: return
-    val positionMs = _exoPlayer?.currentPosition ?: 0L
+    val positionMs = currentPlaybackPositionMs() ?: 0L
 
     scope.launch {
-        embySessionService.reportStop(positionMs = positionMs)
+        withContext(NonCancellable) {
+            embySessionService.reportStop(positionMs = positionMs)
+        }
     }
 }
 

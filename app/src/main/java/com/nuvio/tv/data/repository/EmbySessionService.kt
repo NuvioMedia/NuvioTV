@@ -7,6 +7,7 @@ import com.nuvio.tv.data.remote.dto.emby.EmbyPlaybackProgressDto
 import com.nuvio.tv.data.remote.dto.emby.EmbyPlaybackStartDto
 import com.nuvio.tv.data.remote.dto.emby.EmbyPlaybackStopDto
 import kotlinx.coroutines.flow.first
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,6 +20,7 @@ class EmbySessionService @Inject constructor(
 ) {
     private var currentItemId: String? = null
     private var currentMediaSourceId: String? = null
+    private var currentPlaySessionId: String? = null
     private var hasReportedStart: Boolean = false
     private var lastProgressReportMs: Long = 0L
     private val progressIntervalMs = 10_000L  // Report every 10 seconds
@@ -28,25 +30,37 @@ class EmbySessionService @Inject constructor(
      * Safe to call multiple times — deduplicates by itemId.
      */
     suspend fun reportStart(itemId: String, mediaSourceId: String, positionMs: Long = 0) {
-        if (!isConnected()) return
-        if (hasReportedStart && currentItemId == itemId) return
+        val connected = isConnected()
+        Log.d(TAG, "reportStart: itemId=$itemId, mediaSourceId=$mediaSourceId, positionMs=$positionMs, isConnected=$connected")
+        if (!connected) {
+            Log.w(TAG, "reportStart: NOT connected — aborting")
+            return
+        }
+        if (hasReportedStart && currentItemId == itemId) {
+            Log.d(TAG, "reportStart: already reported for $itemId — skipping")
+            return
+        }
 
         try {
+            val playSessionId = UUID.randomUUID().toString()
             val response = embyApi.reportPlaybackStart(
                 EmbyPlaybackStartDto(
                     itemId = itemId,
                     mediaSourceId = mediaSourceId,
+                    playSessionId = playSessionId,
                     positionTicks = msToTicks(positionMs)
                 )
             )
             if (response.isSuccessful) {
                 currentItemId = itemId
                 currentMediaSourceId = mediaSourceId
+                currentPlaySessionId = playSessionId
                 hasReportedStart = true
                 lastProgressReportMs = System.currentTimeMillis()
                 Log.d(TAG, "Reported playback start: $itemId")
             } else {
-                Log.w(TAG, "Failed to report start: ${response.code()}")
+                val errorBody = response.errorBody()?.string()
+                Log.w(TAG, "Failed to report start: ${response.code()} — body: $errorBody")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error reporting playback start: ${e.message}", e)
@@ -61,6 +75,7 @@ class EmbySessionService @Inject constructor(
         if (!isConnected()) return
         val itemId = currentItemId ?: return
         val mediaSourceId = currentMediaSourceId ?: return
+        val playSessionId = currentPlaySessionId ?: return
         if (!hasReportedStart) return
 
         val now = System.currentTimeMillis()
@@ -71,6 +86,7 @@ class EmbySessionService @Inject constructor(
                 EmbyPlaybackProgressDto(
                     itemId = itemId,
                     mediaSourceId = mediaSourceId,
+                    playSessionId = playSessionId,
                     positionTicks = msToTicks(positionMs),
                     isPaused = isPaused
                 )
@@ -91,6 +107,7 @@ class EmbySessionService @Inject constructor(
         if (!isConnected()) return
         val itemId = currentItemId ?: return
         val mediaSourceId = currentMediaSourceId ?: return
+        val playSessionId = currentPlaySessionId ?: return
         if (!hasReportedStart) return
 
         try {
@@ -98,6 +115,7 @@ class EmbySessionService @Inject constructor(
                 EmbyPlaybackStopDto(
                     itemId = itemId,
                     mediaSourceId = mediaSourceId,
+                    playSessionId = playSessionId,
                     positionTicks = msToTicks(positionMs)
                 )
             )
@@ -117,12 +135,18 @@ class EmbySessionService @Inject constructor(
     fun resetSession() {
         currentItemId = null
         currentMediaSourceId = null
+        currentPlaySessionId = null
         hasReportedStart = false
         lastProgressReportMs = 0L
     }
 
     private suspend fun isConnected(): Boolean {
-        return embyAuthDataStore.state.first().isConnected
+        val state = embyAuthDataStore.state.first()
+        val connected = state.isConnected
+        if (!connected) {
+            Log.d(TAG, "isConnected=false — serverUrl='${state.serverUrl}', apiKey='${if (state.apiKey.isNullOrBlank()) "BLANK" else "SET"}', userId='${if (state.userId.isNullOrBlank()) "BLANK" else "SET"}'")
+        }
+        return connected
     }
 
     /**

@@ -7,6 +7,7 @@ import com.squareup.moshi.JsonClass
 data class EmbyPlaybackStartDto(
     @Json(name = "ItemId") val itemId: String,
     @Json(name = "MediaSourceId") val mediaSourceId: String,
+    @Json(name = "PlaySessionId") val playSessionId: String,
     @Json(name = "PositionTicks") val positionTicks: Long = 0,
     @Json(name = "CanSeek") val canSeek: Boolean = true,
     @Json(name = "IsPaused") val isPaused: Boolean = false,
@@ -18,6 +19,7 @@ data class EmbyPlaybackStartDto(
 data class EmbyPlaybackProgressDto(
     @Json(name = "ItemId") val itemId: String,
     @Json(name = "MediaSourceId") val mediaSourceId: String,
+    @Json(name = "PlaySessionId") val playSessionId: String,
     @Json(name = "PositionTicks") val positionTicks: Long = 0,
     @Json(name = "CanSeek") val canSeek: Boolean = true,
     @Json(name = "IsPaused") val isPaused: Boolean = false,
@@ -29,5 +31,6 @@ data class EmbyPlaybackProgressDto(
 data class EmbyPlaybackStopDto(
     @Json(name = "ItemId") val itemId: String,
     @Json(name = "MediaSourceId") val mediaSourceId: String,
+    @Json(name = "PlaySessionId") val playSessionId: String,
     @Json(name = "PositionTicks") val positionTicks: Long = 0
 )
