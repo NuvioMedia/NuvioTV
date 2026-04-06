@@ -100,16 +100,24 @@ fun ContinueWatchingSection(
     
     val listState = rememberLazyListState()
 
+    suspend fun restoreFocusedItem(targetIndex: Int): Boolean {
+        if (targetIndex !in items.indices || targetIndex >= focusRequesters.size) return false
+        runCatching { listState.scrollToItem(targetIndex) }
+        var focused = false
+        for (attempt in 0 until 3) {
+            withFrameNanos { }
+            focused = runCatching { focusRequesters[targetIndex].requestFocus() }.isSuccess
+            if (focused) break
+            runCatching { listState.scrollToItem(targetIndex) }
+        }
+        return focused
+    }
+
     // Restore focus to specific item if requested
     LaunchedEffect(focusedItemIndex) {
         if (focusedItemIndex >= 0 && focusedItemIndex < items.size) {
             if (lastRequestedFocusIndex == focusedItemIndex) return@LaunchedEffect
-            var focused = false
-            for (attempt in 0 until 3) {
-                withFrameNanos { }
-                focused = runCatching { focusRequesters[focusedItemIndex].requestFocus() }.isSuccess
-                if (focused) break
-            }
+            val focused = restoreFocusedItem(focusedItemIndex)
             if (focused) {
                 lastRequestedFocusIndex = focusedItemIndex
             }
@@ -211,12 +219,7 @@ fun ContinueWatchingSection(
     LaunchedEffect(items.size, pendingFocusIndex) {
         val target = pendingFocusIndex
         if (target != null && target >= 0 && target < focusRequesters.size) {
-            var focused = false
-            for (attempt in 0 until 3) {
-                withFrameNanos { }
-                focused = runCatching { focusRequesters[target].requestFocus() }.isSuccess
-                if (focused) break
-            }
+            val focused = restoreFocusedItem(target)
             if (focused) {
                 lastRequestedFocusIndex = target
             }

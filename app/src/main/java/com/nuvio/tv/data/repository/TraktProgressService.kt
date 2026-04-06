@@ -4,6 +4,9 @@ import android.os.SystemClock
 import android.util.Log
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.data.local.PersistedEpisodeRef
+import com.nuvio.tv.data.local.TraktProgressSnapshot
+import com.nuvio.tv.data.local.TraktProgressSnapshotStore
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.remote.api.TraktApi
 import com.nuvio.tv.data.remote.dto.trakt.TraktEpisodeDto
@@ -69,6 +72,7 @@ class TraktProgressService @Inject constructor(
     private val traktAuthService: TraktAuthService,
     private val metaRepository: MetaRepository,
     private val tmdbService: com.nuvio.tv.core.tmdb.TmdbService,
+    private val traktProgressSnapshotStore: TraktProgressSnapshotStore,
     private val traktSettingsDataStore: TraktSettingsDataStore,
     private val traktEpisodeMappingService: TraktEpisodeMappingService
 ) {
@@ -250,6 +254,11 @@ class TraktProgressService @Inject constructor(
             }
         }
         scope.launch {
+            loadPersistedSnapshot()
+            if (remoteProgress.value.isNotEmpty()) {
+                hydrateMetadata(remoteProgress.value)
+            }
+            trace("refresh bootstrap: persisted snapshot loaded=${hasLoadedRemoteProgress.value}")
             refreshEvents().collectLatest {
                 val success = try {
                     refreshRemoteSnapshot()
@@ -261,6 +270,64 @@ class TraktProgressService @Inject constructor(
                 updateRefreshBackoff(success)
             }
         }
+    }
+
+    private suspend fun loadPersistedSnapshot() {
+        val snapshot = traktProgressSnapshotStore.load() ?: return
+        remoteProgress.value = snapshot.remoteProgress
+            .sortedByDescending { it.lastWatched }
+        hasLoadedRemoteProgress.value = snapshot.hasLoadedRemoteProgress
+        watchedShowSeedsState.value = snapshot.watchedShowSeeds
+            .sortedByDescending { it.lastWatched }
+        watchedShowSeedsUpdatedAtMs = snapshot.watchedShowSeedsUpdatedAtMs
+        hasLoadedWatchedShowSeeds = snapshot.hasLoadedWatchedShowSeeds
+        watchedShowSeedsStale = false
+        watchedShowEpisodesMap = snapshot.watchedShowEpisodes.mapValues { (_, episodes) ->
+            episodes.map { it.season to it.episode }.toSet()
+        }
+        showIdToTraktPathId = snapshot.showIdToTraktPathId
+        hiddenProgressShowIds.value = snapshot.hiddenProgressShowIds
+        hiddenProgressShowsLoadedAtMs = snapshot.hiddenProgressShowsLoadedAtMs
+        upNextState.value = snapshot.upNext
+            .sortedByDescending { it.lastWatched }
+        hasLoadedUpNext.value = snapshot.hasLoadedUpNext
+        upNextEndpointUnavailable = snapshot.upNextEndpointUnavailable
+        lastKnownActivityFingerprint = snapshot.lastKnownActivityFingerprint
+        lastKnownMoviesWatchedAt = snapshot.lastKnownMoviesWatchedAt
+        lastKnownEpisodeActivityFingerprint = snapshot.lastKnownEpisodeActivityFingerprint
+    }
+
+    private suspend fun persistSnapshot() {
+        val watchedShowEpisodes = watchedShowEpisodesMap.mapValues { (_, episodes) ->
+            episodes
+                .sortedWith(compareBy<Pair<Int, Int>> { it.first }.thenBy { it.second })
+                .map { (season, episode) ->
+                    PersistedEpisodeRef(
+                        season = season,
+                        episode = episode
+                    )
+                }
+        }
+        traktProgressSnapshotStore.save(
+            TraktProgressSnapshot(
+                savedAtMs = System.currentTimeMillis(),
+                remoteProgress = remoteProgress.value,
+                hasLoadedRemoteProgress = hasLoadedRemoteProgress.value,
+                watchedShowSeeds = watchedShowSeedsState.value,
+                watchedShowSeedsUpdatedAtMs = watchedShowSeedsUpdatedAtMs,
+                hasLoadedWatchedShowSeeds = hasLoadedWatchedShowSeeds,
+                watchedShowEpisodes = watchedShowEpisodes,
+                showIdToTraktPathId = showIdToTraktPathId,
+                hiddenProgressShowIds = hiddenProgressShowIds.value,
+                hiddenProgressShowsLoadedAtMs = hiddenProgressShowsLoadedAtMs,
+                upNext = upNextState.value,
+                hasLoadedUpNext = hasLoadedUpNext.value,
+                upNextEndpointUnavailable = upNextEndpointUnavailable,
+                lastKnownActivityFingerprint = lastKnownActivityFingerprint,
+                lastKnownMoviesWatchedAt = lastKnownMoviesWatchedAt,
+                lastKnownEpisodeActivityFingerprint = lastKnownEpisodeActivityFingerprint
+            )
+        )
     }
 
     private fun isAllHistoryWindow(): Boolean {
@@ -845,6 +912,7 @@ class TraktProgressService @Inject constructor(
         if (!force && watchedShowSeedsStale && hasLoadedWatchedShowSeeds) {
             getWatchedShowSeedsSnapshot(forceRefresh = true)
         }
+        persistSnapshot()
     }
 
     private suspend fun hasActivityChanged(): Boolean {

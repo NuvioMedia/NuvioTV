@@ -142,7 +142,9 @@ fun NuvioNavHost(
                         contentName = item.progress.name,
                         runtime = null,
                         manualSelection = manualSelection,
-                        returnToDetailOnBack = item.progress.contentType.equals("series", ignoreCase = true),
+                        // Continue Watching is launched from Home, so back should unwind to Home,
+                        // not detour through the detail screen for series.
+                        returnToDetailOnBack = false,
                         returnToHomeOnBack = true,
                         startFromBeginning = startFromBeginning
                     )
@@ -162,7 +164,9 @@ fun NuvioNavHost(
                         contentName = item.info.name,
                         runtime = null,
                         manualSelection = manualSelection,
-                        returnToDetailOnBack = item.info.contentType.equals("series", ignoreCase = true),
+                        // Continue Watching is launched from Home, so back should unwind to Home,
+                        // not detour through the detail screen for series.
+                        returnToDetailOnBack = false,
                         returnToHomeOnBack = true,
                         startFromBeginning = startFromBeginning
                     )
