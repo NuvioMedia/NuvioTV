@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.home
 import androidx.compose.runtime.Immutable
 import com.nuvio.tv.data.local.StartupAuthNotice
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.LibraryListTab
@@ -52,7 +53,8 @@ data class HomeUiState(
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true,
     val blurUnwatchedEpisodes: Boolean = false,
-    val startupAuthNotice: StartupAuthNotice? = null
+    val startupAuthNotice: StartupAuthNotice? = null,
+    val homeRows: List<HomeRow> = emptyList()
 )
 
 @Immutable
@@ -101,6 +103,15 @@ data class NextUpInfo(
 )
 
 @Immutable
+sealed class HomeRow {
+    @Immutable
+    data class Catalog(val row: CatalogRow) : HomeRow()
+
+    @Immutable
+    data class CollectionRow(val collection: Collection) : HomeRow()
+}
+
+@Immutable
 sealed class GridItem {
     @Immutable
     data class Hero(val items: List<MetaPreview>) : GridItem()
@@ -124,6 +135,16 @@ sealed class GridItem {
         val catalogId: String,
         val addonId: String,
         val type: String
+    ) : GridItem()
+    @Immutable
+    data class CollectionHeader(
+        val collectionId: String,
+        val title: String
+    ) : GridItem()
+    @Immutable
+    data class CollectionFolder(
+        val collectionId: String,
+        val folder: com.nuvio.tv.domain.model.CollectionFolder
     ) : GridItem()
 }
 

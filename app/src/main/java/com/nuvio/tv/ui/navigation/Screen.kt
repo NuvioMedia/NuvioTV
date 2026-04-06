@@ -148,6 +148,23 @@ sealed class Screen(val route: String) {
         }
     }
 
+    data object Collections : Screen("collections")
+
+    data object CollectionEditor : Screen("collection_editor?collectionId={collectionId}") {
+        fun createRoute(collectionId: String? = null): String {
+            return "collection_editor?collectionId=${collectionId ?: ""}"
+        }
+    }
+
+    data object FolderDetail : Screen("folder_detail/{collectionId}/{folderId}") {
+        private fun encode(value: String): String =
+            URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+
+        fun createRoute(collectionId: String, folderId: String): String {
+            return "folder_detail/${encode(collectionId)}/${encode(folderId)}"
+        }
+    }
+
     data object ProfileSelection : Screen("profile_selection")
 
     data object CastDetail : Screen("cast_detail/{personId}/{personName}?preferCrew={preferCrew}") {

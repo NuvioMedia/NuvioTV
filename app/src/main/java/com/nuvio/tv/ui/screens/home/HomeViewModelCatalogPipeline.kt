@@ -7,6 +7,7 @@ import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.skipStep
 import com.nuvio.tv.domain.model.supportsExtra
@@ -28,6 +29,18 @@ private data class CatalogUpdateResult(
     val gridItems: List<GridItem>,
     val fullRows: List<CatalogRow>
 )
+
+internal fun HomeViewModel.observeCollectionsPipeline() {
+    viewModelScope.launch {
+        collectionsDataStore.collections
+            .distinctUntilChanged()
+            .collectLatest { collections ->
+                collectionsCache = collections
+                rebuildCatalogOrder(addonsCache)
+                scheduleUpdateCatalogRows()
+            }
+    }
+}
 
 internal fun HomeViewModel.loadHomeCatalogOrderPreferencePipeline() {
     viewModelScope.launch {
@@ -283,6 +296,7 @@ internal fun HomeViewModel.loadMoreCatalogItemsPipeline(catalogId: String, addon
 internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
     val orderedKeys = catalogOrder.toList()
     val catalogSnapshot = catalogsMap.toMap()
+    val collectionsSnapshot = collectionsCache.associateBy { "collection_${it.id}" }
     val heroCatalogKeys = currentHeroCatalogKeys
     val currentLayout = _uiState.value.homeLayout
     val currentGridItems = _uiState.value.gridItems
@@ -306,7 +320,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
         } else {
             emptyList()
         }
-        fun stableHeroCandidates(row: CatalogRow, candidates: Collection<MetaPreview>): List<MetaPreview> {
+        fun stableHeroCandidates(row: CatalogRow, candidates: kotlin.collections.Collection<MetaPreview>): List<MetaPreview> {
             return candidates.sortedWith(
                 compareBy<MetaPreview> { stableHeroSortKey(row, it) }
                     .thenBy { it.id }
@@ -375,82 +389,110 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             }
         }
 
-        val computedGridItems = if (currentLayout == HomeLayout.GRID) {
-            val posterCardWidthDp = _uiState.value.posterCardWidthDp
-            val itemsPerRow = when (posterCardWidthDp) {
-                104 -> 7   // compact
-                112 -> 6   // dense
-                120 -> 6   // standard
-                126 -> 6   // balanced
-                134 -> 5   // comfort
-                140 -> 5   // large
-                else -> 6
-            }
-            val rowCount = if (posterCardWidthDp <= 104) 2 else 3
-            val seeAllThreshold = itemsPerRow * rowCount + 2
-            val maxWithSeeAll = itemsPerRow * rowCount - 1
-            val maxWithoutSeeAll = itemsPerRow * rowCount
-            buildList {
-                if (heroSectionEnabled && computedHeroItems.isNotEmpty()) {
-                    add(GridItem.Hero(computedHeroItems))
-                }
-                computedDisplayRows.filter { it.items.isNotEmpty() }.forEach { row ->
-                    add(
-                        GridItem.SectionDivider(
-                            catalogName = row.catalogName,
-                            catalogId = row.catalogId,
-                            addonBaseUrl = row.addonBaseUrl,
-                            addonId = row.addonId,
-                            type = row.apiType
-                        )
-                    )
-                    val hasEnoughForSeeAll = row.items.size >= seeAllThreshold
-                    val displayItems = if (hasEnoughForSeeAll) row.items.take(maxWithSeeAll) else row.items.take(maxWithoutSeeAll)
-                    displayItems.forEach { item ->
-                        add(
-                            GridItem.Content(
-                                item = item,
-                                addonBaseUrl = row.addonBaseUrl,
-                                catalogId = row.catalogId,
-                                catalogName = row.catalogName
-                            )
-                        )
-                    }
-                    if (hasEnoughForSeeAll) {
-                        add(
-                            GridItem.SeeAll(
-                                catalogId = row.catalogId,
-                                addonId = row.addonId,
-                                type = row.apiType
-                            )
-                        )
-                    }
-                }
-            }
-        } else {
-            currentGridItems
-        }
-
-        CatalogUpdateResult(computedDisplayRows, computedHeroItems, computedGridItems, orderedRows)
+        CatalogUpdateResult(computedDisplayRows, computedHeroItems, emptyList(), orderedRows)
     }
 
     _fullCatalogRows.update { rows ->
         if (rows == fullRowsFiltered) rows else fullRowsFiltered
     }
 
-    val nextGridItems = if (currentLayout == HomeLayout.GRID) {
-        replaceGridHeroItemsPipeline(baseGridItems, baseHeroItems)
-    } else {
-        baseGridItems
+    heroItemOrder = baseHeroItems.map { it.id }
+
+    val computedHomeRows = buildList {
+        collectionsCache.forEach { collection ->
+            val key = "collection_${collection.id}"
+            if (collection.pinToTop && key !in disabledHomeCatalogKeys) {
+                add(HomeRow.CollectionRow(collection))
+            }
+        }
+        for (key in orderedKeys) {
+            if (key in disabledHomeCatalogKeys) continue
+            val collectionEntry = collectionsSnapshot[key]
+            if (collectionEntry != null) {
+                if (!collectionEntry.pinToTop) {
+                    add(HomeRow.CollectionRow(collectionEntry))
+                }
+            } else {
+                val catalogRow = displayRows.find { row ->
+                    "${row.addonId}_${row.apiType}_${row.catalogId}" == key
+                }
+                if (catalogRow != null && catalogRow.items.isNotEmpty()) {
+                    add(HomeRow.Catalog(catalogRow))
+                }
+            }
+        }
     }
 
-    heroItemOrder = baseHeroItems.map { it.id }
+    val nextGridItems = if (currentLayout == HomeLayout.GRID) {
+        val posterCardWidthDp = _uiState.value.posterCardWidthDp
+        val itemsPerRow = when (posterCardWidthDp) {
+            104 -> 7; 112 -> 6; 120 -> 6; 126 -> 6; 134 -> 5; 140 -> 5; else -> 6
+        }
+        val rowCount = if (posterCardWidthDp <= 104) 2 else 3
+        val seeAllThreshold = itemsPerRow * rowCount + 2
+        val maxWithSeeAll = itemsPerRow * rowCount - 1
+        val maxWithoutSeeAll = itemsPerRow * rowCount
+        buildList {
+            if (heroSectionEnabled && baseHeroItems.isNotEmpty()) {
+                add(GridItem.Hero(baseHeroItems))
+            }
+            computedHomeRows.forEach { homeRow ->
+                when (homeRow) {
+                    is HomeRow.Catalog -> {
+                        val row = homeRow.row
+                        if (row.items.isNotEmpty()) {
+                            add(GridItem.SectionDivider(
+                                catalogName = row.catalogName,
+                                catalogId = row.catalogId,
+                                addonBaseUrl = row.addonBaseUrl,
+                                addonId = row.addonId,
+                                type = row.apiType
+                            ))
+                            val hasEnoughForSeeAll = row.items.size >= seeAllThreshold
+                            val displayItems = if (hasEnoughForSeeAll) row.items.take(maxWithSeeAll) else row.items.take(maxWithoutSeeAll)
+                            displayItems.forEach { item ->
+                                add(GridItem.Content(
+                                    item = item,
+                                    addonBaseUrl = row.addonBaseUrl,
+                                    catalogId = row.catalogId,
+                                    catalogName = row.catalogName
+                                ))
+                            }
+                            if (hasEnoughForSeeAll) {
+                                add(GridItem.SeeAll(
+                                    catalogId = row.catalogId,
+                                    addonId = row.addonId,
+                                    type = row.apiType
+                                ))
+                            }
+                        }
+                    }
+                    is HomeRow.CollectionRow -> {
+                        val col = homeRow.collection
+                        add(GridItem.CollectionHeader(
+                            collectionId = col.id,
+                            title = col.title
+                        ))
+                        col.folders.forEach { folder ->
+                            add(GridItem.CollectionFolder(
+                                collectionId = col.id,
+                                folder = folder
+                            ))
+                        }
+                    }
+                }
+            }
+        }.let { replaceGridHeroItemsPipeline(it, baseHeroItems) }
+    } else {
+        currentGridItems
+    }
 
     _uiState.update { state ->
         state.copy(
             catalogRows = if (state.catalogRows == displayRows) state.catalogRows else displayRows,
             heroItems = if (state.heroItems == baseHeroItems) state.heroItems else baseHeroItems,
             gridItems = if (state.gridItems == nextGridItems) state.gridItems else nextGridItems,
+            homeRows = if (state.homeRows == computedHomeRows) state.homeRows else computedHomeRows,
             isLoading = false
         )
     }

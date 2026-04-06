@@ -29,6 +29,7 @@ class StartupSyncService @Inject constructor(
     private val authManager: AuthManager,
     private val pluginSyncService: PluginSyncService,
     private val addonSyncService: AddonSyncService,
+    private val collectionSyncService: CollectionSyncService,
     private val watchProgressSyncService: WatchProgressSyncService,
     private val librarySyncService: LibrarySyncService,
     private val watchedItemsSyncService: WatchedItemsSyncService,
@@ -218,6 +219,18 @@ class StartupSyncService @Inject constructor(
                 Log.e(TAG, "Failed to pull addons from remote, keeping local cache", e)
             } finally {
                 addonRepository.isSyncingFromRemote = false
+            }
+
+            try {
+                collectionSyncService.pullFromRemote()
+                    .onSuccess { applied ->
+                        Log.d(TAG, "Collections pull completed for profile $profileId (applied=$applied)")
+                    }
+                    .onFailure { e ->
+                        Log.e(TAG, "Failed to pull collections from remote, keeping local", e)
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to pull collections from remote", e)
             }
 
             val isPrimaryProfile = profileManager.activeProfileId.value == 1

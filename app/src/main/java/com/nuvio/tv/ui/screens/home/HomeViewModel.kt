@@ -9,6 +9,7 @@ import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
+import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.StartupAuthNotice
@@ -21,6 +22,7 @@ import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
@@ -58,6 +60,7 @@ class HomeViewModel @Inject constructor(
     internal val watchProgressRepository: WatchProgressRepository,
     internal val libraryRepository: LibraryRepository,
     internal val metaRepository: MetaRepository,
+    internal val collectionsDataStore: CollectionsDataStore,
     internal val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     internal val playerSettingsDataStore: PlayerSettingsDataStore,
     internal val tmdbSettingsDataStore: TmdbSettingsDataStore,
@@ -110,6 +113,7 @@ class HomeViewModel @Inject constructor(
     internal val catalogsMap = linkedMapOf<String, CatalogRow>()
     internal val catalogOrder = mutableListOf<String>()
     internal var addonsCache: List<Addon> = emptyList()
+    internal var collectionsCache: List<Collection> = emptyList()
     internal var homeCatalogOrderKeys: List<String> = emptyList()
     internal var disabledHomeCatalogKeys: Set<String> = emptySet()
     internal var currentHeroCatalogKeys: List<String> = emptyList()
@@ -189,6 +193,7 @@ class HomeViewModel @Inject constructor(
         observeBlurUnwatchedEpisodes()
         observeStartupAuthNotice()
         loadContinueWatching()
+        observeCollections()
         observeInstalledAddons()
         viewModelScope.launch {
             delay(STARTUP_GRACE_PERIOD_MS)
@@ -416,6 +421,8 @@ class HomeViewModel @Inject constructor(
         isNextUp = isNextUp
     )
 
+    private fun observeCollections() = observeCollectionsPipeline()
+
     private fun observeInstalledAddons() = observeInstalledAddonsPipeline()
 
     private suspend fun loadAllCatalogs(addons: List<Addon>, forceReload: Boolean = false) =
@@ -510,13 +517,16 @@ class HomeViewModel @Inject constructor(
         verticalScrollIndex: Int,
         verticalScrollOffset: Int,
         focusedRowIndex: Int = 0,
-        focusedItemIndex: Int = 0
+        focusedItemIndex: Int = 0,
+        focusedItemKey: String? = null
     ) {
         _gridFocusState.value = HomeScreenFocusState(
             verticalScrollIndex = verticalScrollIndex,
             verticalScrollOffset = verticalScrollOffset,
             focusedRowIndex = focusedRowIndex,
-            focusedItemIndex = focusedItemIndex
+            focusedItemIndex = focusedItemIndex,
+            focusedItemKey = focusedItemKey,
+            hasSavedFocus = true
         )
     }
 

@@ -2,6 +2,8 @@ package com.nuvio.tv.data.remote.supabase
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 
@@ -164,5 +166,12 @@ data class SupabaseAvatarCatalogItem(
 data class SupabaseProfileSettingsBlob(
     @SerialName("profile_id") val profileId: Int = 1,
     @SerialName("settings_json") val settingsJson: JsonObject = buildJsonObject { },
+    @SerialName("updated_at") val updatedAt: String? = null
+)
+
+@Serializable
+data class SupabaseCollectionBlob(
+    @SerialName("profile_id") val profileId: Int = 1,
+    @SerialName("collections_json") val collectionsJson: JsonElement = JsonArray(emptyList()),
     @SerialName("updated_at") val updatedAt: String? = null
 )

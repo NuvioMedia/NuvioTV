@@ -41,6 +41,9 @@
     <string name="web_installed">Installed</string>
     <string name="web_no_repos">No repositories installed</string>
     <string name="web_error_repo_exists">This repository is already in the list</string>
+    <string name="web_manage_collections_title">Manage Collections</string>
+    <string name="web_manage_collections_subtitle">Create and manage your custom collections</string>
+    <string name="web_status_msg_collections_updated">Your collections have been updated on the TV.</string>
 
     <!-- HomeScreen -->
     <string name="home_no_addons">No addons installed. Add one to get started.</string>
@@ -847,10 +850,10 @@
     <string name="addon_empty">No addons installed. Add one to get started.</string>
     <string name="addon_remove">Remove</string>
     <string name="addon_manage_from_phone_title">Manage from phone</string>
-    <string name="addon_manage_from_phone_subtitle">Scan a QR code to manage addons and Home catalogs from your phone</string>
+    <string name="addon_manage_from_phone_subtitle">Scan a QR code to manage addons, catalogs, and collections from your phone</string>
     <string name="addon_reorder_title">Reorder home catalogs</string>
-    <string name="addon_reorder_subtitle">Controls catalog row order on Home (Classic + Modern + Grid)</string>
-    <string name="addon_qr_scan_instruction">Scan with your phone to manage addons and catalogs</string>
+    <string name="addon_reorder_subtitle">Controls catalog and collection row order on Home (Classic + Modern + Grid)</string>
+    <string name="addon_qr_scan_instruction">Scan with your phone to manage addons, catalogs, and collections</string>
     <string name="addon_qr_close">Close</string>
     <string name="addon_confirm_title">Confirm addon &amp; catalog changes</string>
     <string name="addon_confirm_subtitle">The following changes were made from your phone:</string>

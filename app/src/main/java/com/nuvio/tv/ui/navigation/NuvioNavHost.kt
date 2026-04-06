@@ -196,6 +196,9 @@ fun NuvioNavHost(
                 },
                 onNavigateToCatalogSeeAll = { catalogId, addonId, type ->
                     navController.navigate(Screen.CatalogSeeAll.createRoute(catalogId, addonId, type))
+                },
+                onNavigateToFolderDetail = { collectionId, folderId ->
+                    navController.navigate(Screen.FolderDetail.createRoute(collectionId, folderId))
                 }
             )
         }
@@ -930,13 +933,53 @@ fun NuvioNavHost(
         composable(Screen.AddonManager.route) {
             AddonManagerScreen(
                 showBuiltInHeader = !hideBuiltInHeaders,
-                onNavigateToCatalogOrder = { navController.navigate(Screen.CatalogOrder.route) }
+                onNavigateToCatalogOrder = { navController.navigate(Screen.CatalogOrder.route) },
+                onNavigateToCollections = { navController.navigate(Screen.Collections.route) }
             )
         }
 
         composable(Screen.CatalogOrder.route) {
             CatalogOrderScreen(
                 onBackPress = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Collections.route) {
+            com.nuvio.tv.ui.screens.collection.CollectionManagementScreen(
+                onNavigateToEditor = { collectionId ->
+                    navController.navigate(Screen.CollectionEditor.createRoute(collectionId))
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.CollectionEditor.route,
+            arguments = listOf(
+                navArgument("collectionId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) {
+            com.nuvio.tv.ui.screens.collection.CollectionEditorScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.FolderDetail.route,
+            arguments = listOf(
+                navArgument("collectionId") { type = NavType.StringType },
+                navArgument("folderId") { type = NavType.StringType }
+            )
+        ) {
+            com.nuvio.tv.ui.screens.collection.FolderDetailScreen(
+                onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
+                    navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 

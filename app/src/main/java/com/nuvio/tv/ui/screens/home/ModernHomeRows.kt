@@ -145,7 +145,7 @@ private fun ModernContinueWatchingRowItem(
 @Composable
 private fun ModernCatalogRowItem(
     item: ModernCarouselItem,
-    payload: ModernPayload.Catalog,
+    payload: ModernPayload,
     requester: FocusRequester,
     useLandscapePosters: Boolean,
     showLabels: Boolean,
@@ -167,12 +167,17 @@ private fun ModernCatalogRowItem(
     onPreloadAdjacentItem: () -> Unit,
     onCatalogSelectionFocused: (FocusedCatalogSelection) -> Unit,
     onNavigateToDetail: (String, String, String) -> Unit,
+    onNavigateToFolderDetail: (String, String) -> Unit,
     onLongPress: () -> Unit,
     onBackdropInteraction: () -> Unit,
     onExpandedCatalogFocusKeyChange: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val focusKey = payload.focusKey
+    val focusKey = when (payload) {
+        is ModernPayload.Catalog -> payload.focusKey
+        is ModernPayload.CollectionFolder -> payload.focusKey
+        is ModernPayload.ContinueWatching -> error("Unsupported payload for ModernCatalogRowItem")
+    }
     var focusEventId by remember(focusKey) { mutableStateOf(0) }
     var isCardFocused by remember(focusKey) { mutableStateOf(false) }
     val latestOnFocused by rememberUpdatedState(onFocused)
@@ -189,12 +194,14 @@ private fun ModernCatalogRowItem(
         latestOnFocused()
         item.metaPreview?.let { latestOnItemFocus(it) }
         latestOnPreloadAdjacentItem()
-        latestOnCatalogSelectionFocused(
-            FocusedCatalogSelection(
-                focusKey = focusKey,
-                payload = payload
+        if (payload is ModernPayload.Catalog) {
+            latestOnCatalogSelectionFocused(
+                FocusedCatalogSelection(
+                    focusKey = focusKey,
+                    payload = payload
+                )
             )
-        )
+        }
     }
 
     val suppressCardExpansionForHeroTrailer =
@@ -257,11 +264,20 @@ private fun ModernCatalogRowItem(
             isCardFocused = focused
         },
         onClick = {
-            onNavigateToDetail(
-                payload.itemId,
-                payload.itemType,
-                payload.addonBaseUrl
-            )
+            latestOnFocused()
+            item.metaPreview?.let { latestOnItemFocus(it) }
+            when (payload) {
+                is ModernPayload.Catalog -> onNavigateToDetail(
+                    payload.itemId,
+                    payload.itemType,
+                    payload.addonBaseUrl
+                )
+                is ModernPayload.CollectionFolder -> onNavigateToFolderDetail(
+                    payload.collectionId,
+                    payload.folderId
+                )
+                is ModernPayload.ContinueWatching -> Unit
+            }
         },
         onLongPress = onLongPress,
         onBackdropInteraction = onBackdropInteraction,
@@ -309,6 +325,7 @@ internal fun ModernRowSection(
     onPreloadAdjacentItem: (MetaPreview) -> Unit,
     onCatalogSelectionFocused: (FocusedCatalogSelection) -> Unit,
     onNavigateToDetail: (String, String, String) -> Unit,
+    onNavigateToFolderDetail: (String, String) -> Unit,
     onLoadMoreCatalog: (String, String, String) -> Unit,
     onBackdropInteraction: () -> Unit,
     onExpandedCatalogFocusKeyChange: (String?) -> Unit
@@ -468,6 +485,18 @@ internal fun ModernRowSection(
                         val heightPx = with(density) { metrics.height.roundToPx() }
                         url to "${url}_${widthPx}x${heightPx}"
                     }
+                    is ModernPayload.CollectionFolder -> {
+                        val metrics = item.catalogCardMetrics(
+                            useLandscapePosters = useLandscapePosters,
+                            portraitCardWidth = portraitCatalogCardWidth,
+                            portraitCardHeight = portraitCatalogCardHeight,
+                            landscapeCardWidth = landscapeCatalogCardWidth,
+                            landscapeCardHeight = landscapeCatalogCardHeight
+                        )
+                        val widthPx = with(density) { metrics.width.roundToPx() }
+                        val heightPx = with(density) { metrics.height.roundToPx() }
+                        url to "${url}_${widthPx}x${heightPx}"
+                    }
                     is ModernPayload.ContinueWatching -> url to "${url}_${cwWidthPx}x${cwHeightPx}"
                 }
             }
@@ -497,6 +526,16 @@ internal fun ModernRowSection(
                         )
                         with(density) { metrics.width.roundToPx() } to with(density) { metrics.height.roundToPx() }
                     }
+                    is ModernPayload.CollectionFolder -> {
+                        val metrics = item.catalogCardMetrics(
+                            useLandscapePosters = useLandscapePosters,
+                            portraitCardWidth = portraitCatalogCardWidth,
+                            portraitCardHeight = portraitCatalogCardHeight,
+                            landscapeCardWidth = landscapeCatalogCardWidth,
+                            landscapeCardHeight = landscapeCatalogCardHeight
+                        )
+                        with(density) { metrics.width.roundToPx() } to with(density) { metrics.height.roundToPx() }
+                    }
                     is ModernPayload.ContinueWatching -> cwWidthPx to cwHeightPx
                 }
                 enqueueIfNeeded(item, wPx, hPx)
@@ -511,6 +550,16 @@ internal fun ModernRowSection(
                         val item = currentItems.getOrNull(i) ?: continue
                         val (wPx, hPx) = when (item.payload) {
                             is ModernPayload.Catalog -> {
+                                val metrics = item.catalogCardMetrics(
+                                    useLandscapePosters = useLandscapePosters,
+                                    portraitCardWidth = portraitCatalogCardWidth,
+                                    portraitCardHeight = portraitCatalogCardHeight,
+                                    landscapeCardWidth = landscapeCatalogCardWidth,
+                                    landscapeCardHeight = landscapeCatalogCardHeight
+                                )
+                                with(density) { metrics.width.roundToPx() } to with(density) { metrics.height.roundToPx() }
+                            }
+                            is ModernPayload.CollectionFolder -> {
                                 val metrics = item.catalogCardMetrics(
                                     useLandscapePosters = useLandscapePosters,
                                     portraitCardWidth = portraitCatalogCardWidth,
@@ -569,7 +618,8 @@ internal fun ModernRowSection(
                     contentType = { _, item ->
                         when (val payload = item.payload) {
                             is ModernPayload.ContinueWatching -> "modern_cw_card"
-                            is ModernPayload.Catalog -> payload.itemType // Recycle by content type
+                            is ModernPayload.Catalog -> payload.itemType
+                            is ModernPayload.CollectionFolder -> "modern_collection_folder_card"
                         }
                     }
                 ) { index, item ->
@@ -593,15 +643,24 @@ internal fun ModernRowSection(
                             )
                         }
 
-                        is ModernPayload.Catalog -> {
+                        is ModernPayload.Catalog,
+                        is ModernPayload.CollectionFolder -> {
                             val nextCatalogItem = row.items.getOrNull(index + 1)?.metaPreview
-                            val metaPreview = item.metaPreview ?: return@itemsIndexed
-                            val isWatched = isCatalogItemWatched(metaPreview)
-                            val onLongPress: () -> Unit = remember(metaPreview, payload.addonBaseUrl) {
-                                {
-                                    onCatalogItemLongPress(metaPreview, payload.addonBaseUrl)
-                                    Unit
+                            val metaPreview = item.metaPreview
+                            val isWatched = metaPreview?.let(isCatalogItemWatched) ?: false
+                            val onLongPress: () -> Unit = when {
+                                payload is ModernPayload.Catalog && metaPreview != null -> remember(metaPreview, payload.addonBaseUrl) {
+                                    {
+                                        onCatalogItemLongPress(metaPreview, payload.addonBaseUrl)
+                                        Unit
+                                    }
                                 }
+                                else -> remember(Unit) { {} }
+                            }
+                            val expandedFocusKey = when (payload) {
+                                is ModernPayload.Catalog -> payload.focusKey
+                                is ModernPayload.CollectionFolder -> payload.focusKey
+                                is ModernPayload.ContinueWatching -> null
                             }
                             ModernCatalogRowItem(
                                 item = item,
@@ -619,7 +678,7 @@ internal fun ModernRowSection(
                                 effectiveAutoplayEnabled = effectiveAutoplayEnabled,
                                 trailerPlaybackTarget = trailerPlaybackTarget,
                                 isBackdropExpanded = effectiveExpandEnabled && !isRowScrolling &&
-                                    expandedCatalogFocusKey == payload.focusKey,
+                                    expandedCatalogFocusKey == expandedFocusKey,
                                 expandedTrailerPreviewUrl = expandedTrailerPreviewUrl,
                                 expandedTrailerPreviewAudioUrl = expandedTrailerPreviewAudioUrl,
                                 isWatched = isWatched,
@@ -630,6 +689,7 @@ internal fun ModernRowSection(
                                 },
                                 onCatalogSelectionFocused = onCatalogSelectionFocused,
                                 onNavigateToDetail = onNavigateToDetail,
+                                onNavigateToFolderDetail = onNavigateToFolderDetail,
                                 onLongPress = onLongPress,
                                 onBackdropInteraction = onBackdropInteraction,
                                 onExpandedCatalogFocusKeyChange = onExpandedCatalogFocusKeyChange
@@ -709,6 +769,10 @@ private fun ModernCarouselCard(
         effectiveBackdropUrl ?: item.heroPreview.poster
     } else {
         item.imageUrl ?: item.heroPreview.poster ?: item.heroPreview.backdrop
+    }
+    val imageContentScale = when (item.payload) {
+        is ModernPayload.CollectionFolder -> ContentScale.FillBounds
+        else -> ContentScale.Crop
     }
     // Keep decode target stable across expand/collapse to avoid recreating image requests/painters
     // purely due to animated width changes.
@@ -865,7 +929,7 @@ private fun ModernCarouselCard(
                             placeholder = backgroundPainter,
                             error = backgroundPainter,
                             fallback = backgroundPainter,
-                            contentScale = ContentScale.Crop
+                            contentScale = imageContentScale
                         )
                     } else {
                         MonochromePosterPlaceholder()
