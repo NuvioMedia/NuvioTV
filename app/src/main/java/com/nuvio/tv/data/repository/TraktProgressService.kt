@@ -1091,6 +1091,9 @@ class TraktProgressService @Inject constructor(
 
     private suspend fun refreshUpNextSnapshot() {
         if (upNextEndpointUnavailable) return
+        if (!hasLoadedWatchedShowSeeds || watchedShowSeedsStale) {
+            getWatchedShowSeedsSnapshot(forceRefresh = hasLoadedWatchedShowSeeds)
+        }
 
         val snapshot = try {
             fetchUpNextSnapshot()
@@ -1156,6 +1159,19 @@ class TraktProgressService @Inject constructor(
 
         val contentId = normalizeContentId(show.ids)
         if (contentId.isBlank()) return null
+        val aired = progress.aired ?: 0
+        val completed = progress.completed ?: 0
+        if (aired > 0 && completed >= aired) {
+            trace(
+                "up-next drop: fully watched via Trakt counts " +
+                    "contentId=$contentId aired=$aired completed=$completed"
+            )
+            return null
+        }
+        if (isShowFullyWatchedForContinueWatching(contentId)) {
+            trace("up-next drop: fully watched via watched/aired validation contentId=$contentId")
+            return null
+        }
 
         val resolvedEpisode = resolveAddonEpisodeProgress(
             contentId = contentId,
@@ -1196,6 +1212,22 @@ class TraktProgressService @Inject constructor(
             .flatMap { it.orEmpty().asSequence() }
             .map { it.trim() }
             .firstOrNull { it.isNotEmpty() }
+    }
+
+    private suspend fun isShowFullyWatchedForContinueWatching(contentId: String): Boolean {
+        val rawKey = contentId.trim()
+        if (rawKey.isBlank()) return false
+        val canonicalKey = canonicalLookupKey(rawKey)
+        val watchedEpisodes = watchedShowEpisodesMap[canonicalKey]
+            ?: watchedShowEpisodesMap[rawKey]
+            ?: emptySet()
+        if (watchedEpisodes.isEmpty()) return false
+
+        ensureEpisodeProgressSnapshot(contentId = canonicalKey, forceRefresh = false)
+        val airedEpisodes = episodeProgressState.value[canonicalKey]?.airedEpisodes.orEmpty()
+        if (airedEpisodes.isEmpty()) return false
+
+        return airedEpisodes.all { it in watchedEpisodes }
     }
 
     private suspend fun getWatchedShowSeedsSnapshot(forceRefresh: Boolean): List<WatchProgress> {
