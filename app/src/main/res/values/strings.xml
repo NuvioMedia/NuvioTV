@@ -1196,6 +1196,10 @@
     <string name="plugin_confirm_total">Total repositories: %1$d</string>
     <string name="plugin_confirm_reject">Reject</string>
     <string name="plugin_confirm_confirm">Confirm</string>
+    <string name="plugin_risky_enable_title">Enable provider?</string>
+    <string name="plugin_risky_enable_message">%1$s is known to cause crashes on some content. Enable anyway?</string>
+    <string name="plugin_risky_enable_cancel">Cancel</string>
+    <string name="plugin_risky_enable_confirm">Enable</string>
     <string name="plugin_updated_format">Updated: %1$s</string>
     <string name="plugin_test_btn">Test</string>
     <string name="plugin_test_results">Test Results (%1$d streams)</string>

@@ -547,6 +547,13 @@ class PluginManager @Inject constructor(
                 
                 // Create scraper info
                 val scraperId = "$repoId:${info.id}"
+                val existingScraper = existingScrapers.firstOrNull { it.id == scraperId }
+                val defaultEnabled = info.enabled &&
+                    !PluginSafety.isVideoEasyScraper(
+                        scraperId = info.id,
+                        scraperName = info.name,
+                        filename = info.filename
+                    )
                 val scraper = ScraperInfo(
                     id = scraperId,
                     repositoryId = repoId,
@@ -555,7 +562,7 @@ class PluginManager @Inject constructor(
                     version = info.version,
                     filename = info.filename,
                     supportedTypes = info.supportedTypes,
-                    enabled = true,
+                    enabled = existingScraper?.enabled ?: defaultEnabled,
                     manifestEnabled = info.enabled,
                     logo = info.logo,
                     contentLanguage = info.contentLanguage ?: emptyList(),

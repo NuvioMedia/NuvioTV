@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.core.plugin.PluginSafety
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.core.server.DeviceIpAddress
@@ -91,6 +92,8 @@ class PluginViewModel @Inject constructor(
             PluginUiEvent.StopQrMode -> stopQrMode()
             PluginUiEvent.ConfirmPendingRepoChange -> confirmPendingRepoChange()
             PluginUiEvent.RejectPendingRepoChange -> rejectPendingRepoChange()
+            PluginUiEvent.ConfirmPendingScraperEnable -> confirmPendingScraperEnable()
+            PluginUiEvent.DismissPendingScraperEnable -> dismissPendingScraperEnable()
         }
     }
 
@@ -157,9 +160,34 @@ class PluginViewModel @Inject constructor(
     }
 
     private fun toggleScraper(scraperId: String, enabled: Boolean) {
+        val scraper = _uiState.value.scrapers.firstOrNull { it.id == scraperId }
+        if (enabled && scraper != null && PluginSafety.isVideoEasyScraper(scraper.id, scraper.name, scraper.filename)) {
+            _uiState.update {
+                it.copy(
+                    pendingScraperEnable = PendingScraperEnableInfo(
+                        scraperId = scraper.id,
+                        scraperName = scraper.name
+                    )
+                )
+            }
+            return
+        }
+
         viewModelScope.launch {
             pluginManager.toggleScraper(scraperId, enabled)
         }
+    }
+
+    private fun confirmPendingScraperEnable() {
+        val pending = _uiState.value.pendingScraperEnable ?: return
+        _uiState.update { it.copy(pendingScraperEnable = null) }
+        viewModelScope.launch {
+            pluginManager.toggleScraper(pending.scraperId, true)
+        }
+    }
+
+    private fun dismissPendingScraperEnable() {
+        _uiState.update { it.copy(pendingScraperEnable = null) }
     }
 
     private fun setPluginsEnabled(enabled: Boolean) {
