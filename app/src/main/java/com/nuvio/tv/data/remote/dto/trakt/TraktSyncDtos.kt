@@ -28,6 +28,22 @@ data class TraktPlaybackItemDto(
 )
 
 @JsonClass(generateAdapter = true)
+data class TraktUpNextItemDto(
+    @Json(name = "show") val show: TraktShowDto? = null,
+    @Json(name = "progress") val progress: TraktProgressInfoDto? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktProgressInfoDto(
+    @Json(name = "aired") val aired: Int? = null,
+    @Json(name = "completed") val completed: Int? = null,
+    @Json(name = "last_watched_at") val lastWatchedAt: String? = null,
+    @Json(name = "reset_at") val resetAt: String? = null,
+    @Json(name = "next_episode") val nextEpisode: TraktEpisodeDto? = null,
+    @Json(name = "last_episode") val lastEpisode: TraktEpisodeDto? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class TraktWatchedMovieItemDto(
     @Json(name = "plays") val plays: Int? = null,
     @Json(name = "last_watched_at") val lastWatchedAt: String? = null,

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchedItemsPreferences
+import com.nuvio.tv.data.repository.TraktProgressService
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Video
@@ -48,6 +49,8 @@ private const val CW_PROGRESS_DEBOUNCE_MS = 500L
 private data class ContinueWatchingSettingsSnapshot(
     val items: List<WatchProgress>,
     val nextUpSeeds: List<WatchProgress>,
+    val traktUpNext: List<TraktProgressService.TraktUpNextEntry>,
+    val traktUpNextLoaded: Boolean,
     val daysCap: Int,
     val dismissedNextUp: Set<String>,
     val showUnairedNextUp: Boolean,
@@ -214,13 +217,17 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
             ) { daysCap, dismissedNextUp, showUnairedNextUp ->
                 Triple(daysCap, dismissedNextUp, showUnairedNextUp)
             },
-            watchedItemsPreferences.allItems.map { it.size }
-        ) { progressSnapshot, settingsSnapshot, watchedItemsSize ->
+            watchedItemsPreferences.allItems.map { it.size },
+            traktProgressService.observeUpNext(),
+            traktProgressService.observeUpNextLoaded()
+        ) { progressSnapshot, settingsSnapshot, watchedItemsSize, traktUpNext, traktUpNextLoaded ->
             val (items, nextUpSeeds) = progressSnapshot
             val (daysCap, dismissedNextUp, showUnairedNextUp) = settingsSnapshot
             ContinueWatchingSettingsSnapshot(
                 items = items,
                 nextUpSeeds = nextUpSeeds,
+                traktUpNext = traktUpNext,
+                traktUpNextLoaded = traktUpNextLoaded,
                 daysCap = daysCap,
                 dismissedNextUp = dismissedNextUp,
                 showUnairedNextUp = showUnairedNextUp,
@@ -234,9 +241,12 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 val useTraktProgress = watchProgressRepository.isTraktProgressActive()
                 val items = snapshot.items
                 val nextUpSeeds = snapshot.nextUpSeeds
+                val traktUpNext = snapshot.traktUpNext
+                val traktUpNextLoaded = snapshot.traktUpNextLoaded
                 val daysCap = snapshot.daysCap
                 val dismissedNextUp = snapshot.dismissedNextUp
                 val showUnairedNextUp = snapshot.showUnairedNextUp
+                val useOfficialTraktUpNext = useTraktProgress && traktUpNextLoaded
                 val cutoffMs = if (daysCap == TraktSettingsDataStore.CONTINUE_WATCHING_DAYS_CAP_ALL) {
                     null
                 } else {
@@ -403,49 +413,58 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 val nextUpStartMs = SystemClock.elapsedRealtime()
                 val publishedPartialNextUpCount = AtomicInteger(0)
                 val partialPublishMutex = Mutex()
-                val nextUpItems = buildLightweightNextUpItems(
-                    allProgress = recentItems,
-                    nextUpSeeds = recentNextUpSeeds,
-                    inProgressItems = inProgressOnly,
-                    dismissedNextUp = dismissedNextUp,
-                    showUnairedNextUp = showUnairedNextUp,
-                    debug = debug,
-                    onPartialUpdate = { partialNextUpItems ->
-                        partialPublishMutex.withLock {
-                            val partialCount = partialNextUpItems.size
-                            if (partialCount > publishedPartialNextUpCount.get()) {
-                                publishedPartialNextUpCount.set(partialCount)
-                                val cachedPartialNextUp = partialNextUpItems.map { nextUp ->
-                                    val cached = cachedEnrichmentFromNextUp[nextUp.info.contentId]
-                                    if (cached != null) {
-                                        nextUp.copy(info = nextUp.info.copy(
-                                            thumbnail = cached.thumbnail ?: nextUp.info.thumbnail,
-                                            backdrop = cached.backdrop ?: nextUp.info.backdrop,
-                                            poster = cached.poster ?: nextUp.info.poster,
-                                            logo = cached.logo ?: nextUp.info.logo,
-                                            name = cached.name.takeIf { it.isNotBlank() } ?: nextUp.info.name
-                                        ))
-                                    } else nextUp
-                                }
-                                val partialItems = mergeContinueWatchingItems(
-                                    inProgressItems = inProgressOnly,
-                                    nextUpItems = cachedPartialNextUp
-                                )
-                                _uiState.update { state ->
-                                    if (state.continueWatchingItems == partialItems) {
-                                        state
-                                    } else {
-                                        state.copy(continueWatchingItems = partialItems)
+                val nextUpItems = if (useOfficialTraktUpNext) {
+                    buildOfficialTraktUpNextItems(
+                        traktUpNext = traktUpNext,
+                        inProgressItems = inProgressOnly,
+                        dismissedNextUp = dismissedNextUp,
+                        showUnairedNextUp = showUnairedNextUp
+                    )
+                } else {
+                    buildLightweightNextUpItems(
+                        allProgress = recentItems,
+                        nextUpSeeds = recentNextUpSeeds,
+                        inProgressItems = inProgressOnly,
+                        dismissedNextUp = dismissedNextUp,
+                        showUnairedNextUp = showUnairedNextUp,
+                        debug = debug,
+                        onPartialUpdate = { partialNextUpItems ->
+                            partialPublishMutex.withLock {
+                                val partialCount = partialNextUpItems.size
+                                if (partialCount > publishedPartialNextUpCount.get()) {
+                                    publishedPartialNextUpCount.set(partialCount)
+                                    val cachedPartialNextUp = partialNextUpItems.map { nextUp ->
+                                        val cached = cachedEnrichmentFromNextUp[nextUp.info.contentId]
+                                        if (cached != null) {
+                                            nextUp.copy(info = nextUp.info.copy(
+                                                thumbnail = cached.thumbnail ?: nextUp.info.thumbnail,
+                                                backdrop = cached.backdrop ?: nextUp.info.backdrop,
+                                                poster = cached.poster ?: nextUp.info.poster,
+                                                logo = cached.logo ?: nextUp.info.logo,
+                                                name = cached.name.takeIf { it.isNotBlank() } ?: nextUp.info.name
+                                            ))
+                                        } else nextUp
                                     }
+                                    val partialItems = mergeContinueWatchingItems(
+                                        inProgressItems = inProgressOnly,
+                                        nextUpItems = cachedPartialNextUp
+                                    )
+                                    _uiState.update { state ->
+                                        if (state.continueWatchingItems == partialItems) {
+                                            state
+                                        } else {
+                                            state.copy(continueWatchingItems = partialItems)
+                                        }
+                                    }
+                                    debug.recordPartialRendered(
+                                        count = partialItems.size,
+                                        elapsedMs = SystemClock.elapsedRealtime() - cycleStartMs
+                                    )
                                 }
-                                debug.recordPartialRendered(
-                                    count = partialItems.size,
-                                    elapsedMs = SystemClock.elapsedRealtime() - cycleStartMs
-                                )
                             }
                         }
-                    }
-                )
+                    )
+                }
                 debug.recordNextUpBuildComplete(
                     count = nextUpItems.size,
                     elapsedMs = SystemClock.elapsedRealtime() - nextUpStartMs
@@ -508,7 +527,7 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                 // --- CW next-up injection ---
                 // Discover next-up items for older seeds and inject release alerts into CW.
                 // Hidden (dropped) shows are already filtered out by observeWatchedShowSeeds().
-                if (true) {
+                if (!useOfficialTraktUpNext) {
                     val recentSeedContentIds = recentNextUpSeeds
                         .filter { isSeriesTypeCW(it.contentType) && it.season != null && it.episode != null }
                         .map { it.contentId }
@@ -644,22 +663,26 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                             )
                         )
                     }
-                val recentIds = nextUpItems.map { it.info.contentId }.toSet()
-                val inProgressIds = inProgressOnly.map { it.progress.contentId }.toSet()
-                val allSeedContentIds = nextUpSeeds
-                    .map { it.contentId }
-                    .toSet()
-                val olderToInclude = (persistedOlderItems + cachedOlderNextUp)
-                    .distinctBy { it.info.contentId }
-                    .filter {
-                        (if (useTraktProgress) it.info.isReleaseAlert else true) &&
-                            it.info.contentId in allSeedContentIds &&
-                            it.info.contentId !in recentIds &&
-                            it.info.contentId !in inProgressIds &&
-                            nextUpDismissKey(it.info.contentId, it.info.seedSeason, it.info.seedEpisode) !in dismissedNextUp &&
-                            !watchProgressRepository.isDroppedShow(it.info.contentId)
-                    }
-                val allNextUpItems = nextUpItems + olderToInclude
+                val allNextUpItems = if (useOfficialTraktUpNext) {
+                    nextUpItems
+                } else {
+                    val recentIds = nextUpItems.map { it.info.contentId }.toSet()
+                    val inProgressIds = inProgressOnly.map { it.progress.contentId }.toSet()
+                    val allSeedContentIds = nextUpSeeds
+                        .map { it.contentId }
+                        .toSet()
+                    val olderToInclude = (persistedOlderItems + cachedOlderNextUp)
+                        .distinctBy { it.info.contentId }
+                        .filter {
+                            (if (useTraktProgress) it.info.isReleaseAlert else true) &&
+                                it.info.contentId in allSeedContentIds &&
+                                it.info.contentId !in recentIds &&
+                                it.info.contentId !in inProgressIds &&
+                                nextUpDismissKey(it.info.contentId, it.info.seedSeason, it.info.seedEpisode) !in dismissedNextUp &&
+                                !watchProgressRepository.isDroppedShow(it.info.contentId)
+                        }
+                    nextUpItems + olderToInclude
+                }
                 val normalItems = mergeContinueWatchingItems(
                     inProgressItems = inProgressOnly,
                     nextUpItems = allNextUpItems.map { nextUp ->
@@ -913,6 +936,90 @@ private fun resolveVideoForProgress(progress: WatchProgress, meta: CwMetaSummary
     }
 
     return null
+}
+
+private fun HomeViewModel.buildOfficialTraktUpNextItems(
+    traktUpNext: List<TraktProgressService.TraktUpNextEntry>,
+    inProgressItems: List<ContinueWatchingItem.InProgress>,
+    dismissedNextUp: Set<String>,
+    showUnairedNextUp: Boolean
+): List<ContinueWatchingItem.NextUp> {
+    val todayLocal = LocalDate.now(ZoneId.systemDefault())
+    val inProgressIds = inProgressItems
+        .map { it.progress.contentId }
+        .filter { it.isNotBlank() }
+        .toSet()
+
+    return traktUpNext
+        .asSequence()
+        .filter { it.contentId.isNotBlank() }
+        .filter { it.contentId !in inProgressIds }
+        .mapNotNull { entry ->
+            val released = entry.released
+            val releaseDate = parseEpisodeReleaseDate(released)
+            val hasAired = releaseDate?.let { !it.isAfter(todayLocal) } ?: true
+            if (!showUnairedNextUp && !hasAired) return@mapNotNull null
+
+            val seedSeason = entry.seedSeason ?: entry.season
+            val seedEpisode = entry.seedEpisode ?: entry.episode
+            if (nextUpDismissKey(entry.contentId, seedSeason, seedEpisode) in dismissedNextUp) {
+                return@mapNotNull null
+            }
+
+            val seedProgress = WatchProgress(
+                contentId = entry.contentId,
+                contentType = "series",
+                name = entry.name,
+                poster = entry.poster,
+                backdrop = entry.backdrop,
+                logo = entry.logo,
+                videoId = entry.videoId,
+                season = seedSeason,
+                episode = seedEpisode,
+                episodeTitle = null,
+                position = 1L,
+                duration = 1L,
+                lastWatched = entry.lastWatched
+            )
+            val releaseState = resolveNextUpReleaseState(
+                seedProgress = seedProgress,
+                nextSeason = entry.season,
+                nextReleased = released,
+                hasAired = hasAired
+            )
+
+            ContinueWatchingItem.NextUp(
+                info = NextUpInfo(
+                    contentId = entry.contentId,
+                    contentType = "series",
+                    name = entry.name,
+                    poster = entry.poster,
+                    backdrop = entry.backdrop,
+                    logo = entry.logo,
+                    videoId = entry.videoId,
+                    season = entry.season,
+                    episode = entry.episode,
+                    episodeTitle = entry.episodeTitle,
+                    episodeDescription = entry.episodeDescription,
+                    thumbnail = entry.thumbnail,
+                    released = released,
+                    hasAired = hasAired,
+                    airDateLabel = if (hasAired || releaseDate == null) null else formatEpisodeAirDateLabel(releaseDate),
+                    lastWatched = entry.lastWatched,
+                    imdbRating = entry.imdbRating,
+                    genres = entry.genres,
+                    releaseInfo = entry.releaseInfo,
+                    sortTimestamp = releaseState.sortTimestamp,
+                    releaseTimestamp = releaseState.releaseTimestamp,
+                    isReleaseAlert = releaseState.isReleaseAlert,
+                    isNewSeasonRelease = releaseState.isNewSeasonRelease,
+                    seedSeason = seedSeason,
+                    seedEpisode = seedEpisode
+                )
+            )
+        }
+        .sortedByDescending { it.info.sortTimestamp }
+        .toList()
 }
 
 private suspend fun HomeViewModel.buildLightweightNextUpItems(
