@@ -231,8 +231,7 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
             try {
                 debug.markPhase("filter-snapshot")
                 val cycleStartMs = SystemClock.elapsedRealtime()
-                val useTraktProgress = traktSettingsDataStore.watchProgressSource.first() ==
-                    com.nuvio.tv.data.local.WatchProgressSource.TRAKT
+                val useTraktProgress = watchProgressRepository.isTraktProgressActive()
                 val items = snapshot.items
                 val nextUpSeeds = snapshot.nextUpSeeds
                 val daysCap = snapshot.daysCap
@@ -304,8 +303,9 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                                 )
                             )
                         }
-                    } else if (useTraktProgress && cachedInProgress.isNotEmpty()) {
-                        // Trakt hasn't responded yet — restore last known in-progress items from disk.
+                    }
+                    // For Trakt: show cached in-progress until Trakt responds (items non-empty).
+                    if (liveInProgress.isEmpty() && useTraktProgress && cachedInProgress.isNotEmpty() && items.isEmpty()) {
                         cachedInProgress.forEach { cached ->
                             add(
                                 ContinueWatchingItem.InProgress(
@@ -379,6 +379,13 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                         inProgressItems = inProgressOnly,
                         nextUpItems = cachedNextUpItems
                     )
+                    _uiState.update { state ->
+                        if (state.continueWatchingItems == initialItems) {
+                            state
+                        } else {
+                            state.copy(continueWatchingItems = initialItems)
+                        }
+                    }
                     _uiState.update { state ->
                         if (state.continueWatchingItems == initialItems) {
                             state
@@ -639,10 +646,14 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                     }
                 val recentIds = nextUpItems.map { it.info.contentId }.toSet()
                 val inProgressIds = inProgressOnly.map { it.progress.contentId }.toSet()
+                val allSeedContentIds = nextUpSeeds
+                    .map { it.contentId }
+                    .toSet()
                 val olderToInclude = (persistedOlderItems + cachedOlderNextUp)
                     .distinctBy { it.info.contentId }
                     .filter {
                         (if (useTraktProgress) it.info.isReleaseAlert else true) &&
+                            it.info.contentId in allSeedContentIds &&
                             it.info.contentId !in recentIds &&
                             it.info.contentId !in inProgressIds &&
                             nextUpDismissKey(it.info.contentId, it.info.seedSeason, it.info.seedEpisode) !in dismissedNextUp &&
@@ -680,6 +691,46 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                     count = normalItems.size,
                     elapsedMs = SystemClock.elapsedRealtime() - cycleStartMs
                 )
+
+                // Save lightweight CW snapshot to disk immediately so cache stays fresh
+                // even if enrichment is cancelled by collectLatest.
+                viewModelScope.launch(Dispatchers.IO) {
+                    val currentItems = _uiState.value.continueWatchingItems
+                    val brokenUrls = com.nuvio.tv.ui.components.brokenImageUrls
+                    val nextUpSnap = currentItems.mapNotNull { item ->
+                        val nu = item as? ContinueWatchingItem.NextUp ?: return@mapNotNull null
+                        val info = nu.info
+                        com.nuvio.tv.data.local.CachedNextUpItem(
+                            contentId = info.contentId, contentType = info.contentType, name = info.name,
+                            poster = info.poster, backdrop = info.backdrop, logo = info.logo,
+                            videoId = info.videoId, season = info.season, episode = info.episode,
+                            episodeTitle = info.episodeTitle, episodeDescription = info.episodeDescription,
+                            thumbnail = info.thumbnail?.takeIf { it !in brokenUrls },
+                            released = info.released, hasAired = info.hasAired, airDateLabel = info.airDateLabel,
+                            lastWatched = info.lastWatched, imdbRating = info.imdbRating, genres = info.genres,
+                            releaseInfo = info.releaseInfo, sortTimestamp = info.sortTimestamp,
+                            releaseTimestamp = info.releaseTimestamp, isReleaseAlert = info.isReleaseAlert,
+                            isNewSeasonRelease = info.isNewSeasonRelease, seedSeason = info.seedSeason,
+                            seedEpisode = info.seedEpisode
+                        )
+                    }
+                    val ipSnap = currentItems.mapNotNull { item ->
+                        val ip = item as? ContinueWatchingItem.InProgress ?: return@mapNotNull null
+                        val p = ip.progress
+                        com.nuvio.tv.data.local.CachedInProgressItem(
+                            contentId = p.contentId, contentType = p.contentType, name = p.name,
+                            poster = p.poster, backdrop = p.backdrop, logo = p.logo,
+                            videoId = p.videoId, season = p.season, episode = p.episode,
+                            episodeTitle = p.episodeTitle, position = p.position, duration = p.duration,
+                            lastWatched = p.lastWatched, progressPercent = p.progressPercent,
+                            episodeThumbnail = ip.episodeThumbnail?.takeIf { it !in brokenUrls },
+                            episodeDescription = ip.episodeDescription, episodeImdbRating = ip.episodeImdbRating,
+                            genres = ip.genres, releaseInfo = ip.releaseInfo
+                        )
+                    }
+                    runCatching { cwEnrichmentCache.saveNextUpSnapshot(nextUpSnap) }
+                    runCatching { cwEnrichmentCache.saveInProgressSnapshot(ipSnap) }
+                }
 
                 // Rich metadata only runs after the final lightweight CW list is visible.
                 // If TMDB enrichment is enabled for CW, skip grace period to avoid
@@ -727,9 +778,10 @@ private fun shouldTreatAsInProgressForContinueWatching(progress: WatchProgress):
     // Rewatch edge case: a started replay can be below the default 2% "in progress"
     // threshold, but should still suppress Next Up and appear as resume.
     val hasStartedPlayback = progress.position > 0L || progress.progressPercent?.let { it > 0f } == true
-    return hasStartedPlayback &&
+    val result = hasStartedPlayback &&
         progress.source != WatchProgress.SOURCE_TRAKT_HISTORY &&
         progress.source != WatchProgress.SOURCE_TRAKT_SHOW_PROGRESS
+    return result
 }
 
 private fun shouldUseAsCompletedSeed(progress: WatchProgress): Boolean {

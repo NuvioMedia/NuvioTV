@@ -346,7 +346,6 @@ class TraktProgressService @Inject constructor(
 
             // Avoid emitting a transient empty state before first remote fetch completes.
             if (!loaded && remote.isEmpty() && validOptimistic.isEmpty()) {
-                Log.d(TAG, "observeAllProgress: skipping emission (loaded=$loaded remote=${remote.size} optimistic=${validOptimistic.size})")
                 return@combine null
             }
 
@@ -358,7 +357,6 @@ class TraktProgressService @Inject constructor(
                 .filter { !isShowHiddenFromProgress(it.contentId) }
                 .map { enrichWithMetadata(it, metadata) }
                 .sortedByDescending { it.lastWatched }
-            Log.d(TAG, "observeAllProgress: remote=${remote.size} optimistic=${validOptimistic.size} hidden=$hiddenCount result=${result.size}")
             result
         }
             .filterNotNull()
@@ -803,7 +801,6 @@ class TraktProgressService @Inject constructor(
         }
 
         val snapshot = fetchAllProgressSnapshot(force = force)
-        Log.d(TAG, "refreshRemoteSnapshot: snapshot size=${snapshot.size}, setting remoteProgress")
         remoteProgress.value = snapshot
         hasLoadedRemoteProgress.value = true
         reconcileOptimistic(snapshot)
@@ -974,9 +971,6 @@ class TraktProgressService @Inject constructor(
             hiddenProgressShowsLoadedAtMs = System.currentTimeMillis()
         }
         trace("hidden-progress-shows refreshed: ${ids.size} shows")
-        if (ids.isNotEmpty()) {
-            Log.d(TAG, "hidden-progress-shows IDs: ${ids.take(20)}")
-        }
     }
 
     private suspend fun fetchHiddenProgressShowIds(): Set<String> {
@@ -993,18 +987,14 @@ class TraktProgressService @Inject constructor(
                     limit = limit
                 )
             } ?: break
-            Log.d(TAG, "fetchDroppedShows: page=$page code=${response.code()}")
             if (!response.isSuccessful) {
                 Log.w(TAG, "fetchDroppedShows: failed code=${response.code()}")
                 break
             }
             val items = response.body().orEmpty()
-            Log.d(TAG, "fetchDroppedShows: page=$page items=${items.size}")
             if (items.isEmpty()) break
             for (item in items) {
                 val ids = item.show?.ids ?: continue
-                val title = item.show?.title ?: "?"
-                Log.d(TAG, "fetchDroppedShows: show='$title' imdb=${ids.imdb} tmdb=${ids.tmdb} trakt=${ids.trakt}")
                 ids.imdb?.takeIf { it.isNotBlank() }?.let { allIds.add(it) }
                 ids.tmdb?.let { allIds.add("tmdb:$it") }
                 ids.trakt?.let { allIds.add("trakt:$it") }
@@ -1368,17 +1358,21 @@ class TraktProgressService @Inject constructor(
 
     private suspend fun fetchAllProgressSnapshot(force: Boolean = false): List<WatchProgress> {
         val recentCompletedEpisodes = fetchRecentEpisodeHistorySnapshot()
-        Log.d(TAG, "fetchAllProgress: recentCompletedEpisodes=${recentCompletedEpisodes.size}")
         val playbackStartAt = recentWatchWindowMs()?.let { windowMs ->
             toTraktUtcDateTime(System.currentTimeMillis() - windowMs)
         }
         val inProgressMovies = getPlayback("movies", force = force, startAt = playbackStartAt).mapNotNull { mapPlaybackMovie(it) }
-        Log.d(TAG, "fetchAllProgress: inProgressMovies=${inProgressMovies.size}")
         val inProgressEpisodes = getPlayback("episodes", force = force, startAt = playbackStartAt)
             .mapNotNull { mapPlaybackEpisode(it, applyAddonRemap = true) }
-        Log.d(TAG, "fetchAllProgress: inProgressEpisodes=${inProgressEpisodes.size}")
 
         val mergedByKey = linkedMapOf<String, WatchProgress>()
+
+        // In-progress items first, then completed episodes override them.
+        (inProgressMovies + inProgressEpisodes)
+            .sortedByDescending { it.lastWatched }
+            .forEach { progress ->
+                mergedByKey[progressKey(progress)] = progress
+            }
 
         recentCompletedEpisodes
             .sortedByDescending { it.lastWatched }
@@ -1386,14 +1380,17 @@ class TraktProgressService @Inject constructor(
                 mergedByKey[progressKey(progress)] = progress
             }
 
-        (inProgressMovies + inProgressEpisodes)
-            .sortedByDescending { it.lastWatched }
-            .forEach { progress ->
-                mergedByKey[progressKey(progress)] = progress
-            }
+        val completedEpisodeKeys = recentCompletedEpisodes
+            .filter { it.season != null && it.episode != null }
+            .map { "${it.contentId}_s${it.season}e${it.episode}" }
+            .toSet()
+        mergedByKey.entries.removeAll { (key, progress) ->
+            progress.source == WatchProgress.SOURCE_TRAKT_PLAYBACK &&
+                progress.season != null && progress.episode != null &&
+                "${progress.contentId}_s${progress.season}e${progress.episode}" in completedEpisodeKeys
+        }
 
         return mergedByKey.values.sortedByDescending { it.lastWatched }
-            .also { Log.d(TAG, "fetchAllProgress: total merged=${it.size}") }
     }
 
     private suspend fun fetchRecentEpisodeHistorySnapshot(): List<WatchProgress> {

@@ -46,6 +46,7 @@ android {
         targetSdk = 36
         versionCode = 50
         versionName = "0.5.6-debug-trakt"
+        versionName = "0.5.7-beta"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
