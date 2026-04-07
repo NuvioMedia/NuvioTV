@@ -510,6 +510,12 @@
     <string name="layout_modern_topbar_sub">Enable floating topbar navigation.</string>
     <string name="layout_modern_topbar_blur">Modern Topbar Blur</string>
     <string name="layout_modern_topbar_blur_sub">Toggle blur effect for modern topbar surfaces.</string>
+    <string name="layout_navigation_style">Navigation Style</string>
+    <string name="layout_nav_classic">Classic</string>
+    <string name="layout_nav_modern_sidebar">Modern Sidebar</string>
+    <string name="layout_nav_modern_topbar">Modern Topbar</string>
+    <string name="layout_navigation_blur">Navigation Blur</string>
+    <string name="layout_navigation_blur_sub">Toggle blur effect for navigation surfaces.</string>
     <string name="layout_fullscreen_hero_backdrop">Fullscreen Hero Backdrop</string>
     <string name="layout_fullscreen_hero_backdrop_sub">Expand the hero backdrop to fill the entire screen.</string>
     <string name="layout_show_hero">Show Hero Section</string>

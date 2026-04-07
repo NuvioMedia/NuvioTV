@@ -333,6 +333,16 @@
     <string name="layout_modern_sidebar_sub">Włącz pływającą nawigację boczną.</string>
     <string name="layout_modern_sidebar_blur">Rozmycie nowoczesnego paska bocznego</string>
     <string name="layout_modern_sidebar_blur_sub">Przełącz efekt rozmycia dla nowoczesnych powierzchni bocznych.</string>
+    <string name="layout_modern_topbar">Nowoczesny pasek górny</string>
+    <string name="layout_modern_topbar_sub">Włącz pływającą nawigację górną.</string>
+    <string name="layout_modern_topbar_blur">Rozmycie nowoczesnego paska górnego</string>
+    <string name="layout_modern_topbar_blur_sub">Przełącz efekt rozmycia dla nowoczesnych powierzchni górnych.</string>
+    <string name="layout_navigation_style">Styl nawigacji</string>
+    <string name="layout_nav_classic">Klasyczny</string>
+    <string name="layout_nav_modern_sidebar">Nowoczesny pasek boczny</string>
+    <string name="layout_nav_modern_topbar">Nowoczesny pasek górny</string>
+    <string name="layout_navigation_blur">Rozmycie nawigacji</string>
+    <string name="layout_navigation_blur_sub">Przełącz efekt rozmycia dla powierzchni nawigacji.</string>
     <string name="layout_show_hero">Pokaż sekcję hero</string>
     <string name="layout_show_hero_sub">Wyświetl karuzelę hero na górze strony głównej.</string>
     <string name="layout_show_discover">Pokaż Odkrywaj w wyszukiwarce</string>

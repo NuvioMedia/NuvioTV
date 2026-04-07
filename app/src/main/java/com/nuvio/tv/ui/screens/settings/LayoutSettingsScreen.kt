@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -95,6 +97,7 @@ fun LayoutSettingsContent(
     var detailPageExpanded by rememberSaveable { mutableStateOf(false) }
     var focusedPosterExpanded by rememberSaveable { mutableStateOf(false) }
     var posterCardStyleExpanded by rememberSaveable { mutableStateOf(false) }
+    var showNavigationStyleDialog by rememberSaveable { mutableStateOf(false) }
 
     val defaultHomeLayoutHeaderFocus = remember { FocusRequester() }
     val homeContentHeaderFocus = remember { FocusRequester() }
@@ -279,7 +282,18 @@ fun LayoutSettingsContent(
                         focusRequester = homeContentHeaderFocus,
                         onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                     ) {
-                        if (!uiState.modernSidebarEnabled) {
+                        NavigationSettingsItem(
+                            icon = androidx.compose.material.icons.Icons.Default.Menu,
+                            title = stringResource(R.string.layout_navigation_style),
+                            subtitle = when (uiState.navigationStyle) {
+                                NavigationStyle.CLASSIC -> stringResource(R.string.layout_nav_classic)
+                                NavigationStyle.MODERN_SIDEBAR -> stringResource(R.string.layout_nav_modern_sidebar)
+                                NavigationStyle.MODERN_TOPBAR -> stringResource(R.string.layout_nav_modern_topbar)
+                            },
+                            onClick = { showNavigationStyleDialog = true },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                        )
+                        if (uiState.navigationStyle == NavigationStyle.CLASSIC) {
                             CompactToggleRow(
                                 title = stringResource(R.string.layout_collapse_sidebar),
                                 subtitle = stringResource(R.string.layout_collapse_sidebar_sub),
@@ -292,49 +306,14 @@ fun LayoutSettingsContent(
                                 onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                             )
                         }
-                        CompactToggleRow(
-                            title = stringResource(R.string.layout_modern_sidebar),
-                            subtitle = stringResource(R.string.layout_modern_sidebar_sub),
-                            checked = uiState.modernSidebarEnabled,
-                            onToggle = {
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetModernSidebarEnabled(!uiState.modernSidebarEnabled)
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                        )
-                        if (uiState.modernSidebarEnabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        if (uiState.navigationStyle != NavigationStyle.CLASSIC && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                             CompactToggleRow(
-                                title = stringResource(R.string.layout_modern_sidebar_blur),
-                                subtitle = stringResource(R.string.layout_modern_sidebar_blur_sub),
-                                checked = uiState.modernSidebarBlurEnabled,
+                                title = stringResource(R.string.layout_navigation_blur),
+                                subtitle = stringResource(R.string.layout_navigation_blur_sub),
+                                checked = uiState.navigationBlurEnabled,
                                 onToggle = {
                                     viewModel.onEvent(
-                                        LayoutSettingsEvent.SetModernSidebarBlurEnabled(!uiState.modernSidebarBlurEnabled)
-                                    )
-                                },
-                                onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                            )
-                        }
-                        CompactToggleRow(
-                            title = stringResource(R.string.layout_modern_topbar),
-                            subtitle = stringResource(R.string.layout_modern_topbar_sub),
-                            checked = uiState.modernTopbarEnabled,
-                            onToggle = {
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetModernTopbarEnabled(!uiState.modernTopbarEnabled)
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                        )
-                        if (uiState.modernTopbarEnabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                            CompactToggleRow(
-                                title = stringResource(R.string.layout_modern_topbar_blur),
-                                subtitle = stringResource(R.string.layout_modern_topbar_blur_sub),
-                                checked = uiState.modernTopbarBlurEnabled,
-                                onToggle = {
-                                    viewModel.onEvent(
-                                        LayoutSettingsEvent.SetModernTopbarBlurEnabled(!uiState.modernTopbarBlurEnabled)
+                                        LayoutSettingsEvent.SetNavigationBlurEnabled(!uiState.navigationBlurEnabled)
                                     )
                                 },
                                 onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
@@ -624,6 +603,87 @@ fun LayoutSettingsContent(
                             },
                             onFocused = { focusedSection = LayoutSettingsSection.POSTER_CARD_STYLE }
                         )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showNavigationStyleDialog) {
+        NavigationStyleDialog(
+            currentStyle = uiState.navigationStyle,
+            onStyleSelected = { style ->
+                viewModel.onEvent(LayoutSettingsEvent.SetNavigationStyle(style))
+                showNavigationStyleDialog = false
+            },
+            onDismiss = { showNavigationStyleDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun NavigationStyleDialog(
+    currentStyle: NavigationStyle,
+    onStyleSelected: (NavigationStyle) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val focusRequester = remember { FocusRequester() }
+    val options = listOf(
+        NavigationStyle.CLASSIC to stringResource(R.string.layout_nav_classic),
+        NavigationStyle.MODERN_SIDEBAR to stringResource(R.string.layout_nav_modern_sidebar),
+        NavigationStyle.MODERN_TOPBAR to stringResource(R.string.layout_nav_modern_topbar)
+    )
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    com.nuvio.tv.ui.components.NuvioDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.layout_navigation_style),
+        width = 380.dp,
+        suppressFirstKeyUp = false
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            options.forEachIndexed { index, (style, label) ->
+                val isSelected = style == currentStyle
+
+                Card(
+                    onClick = { onStyleSelected(style) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
+                    colors = CardDefaults.colors(
+                        containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
+                        focusedContainerColor = NuvioColors.FocusBackground
+                    ),
+                    shape = CardDefaults.shape(shape = RoundedCornerShape(10.dp)),
+                    scale = CardDefaults.scale(focusedScale = 1f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (isSelected) {
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = NuvioColors.Primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }

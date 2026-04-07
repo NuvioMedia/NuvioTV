@@ -16,6 +16,20 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class NavigationStyle {
+    CLASSIC,
+    MODERN_SIDEBAR,
+    MODERN_TOPBAR;
+
+    companion object {
+        fun from(modernSidebarEnabled: Boolean, modernTopbarEnabled: Boolean): NavigationStyle = when {
+            modernTopbarEnabled -> MODERN_TOPBAR
+            modernSidebarEnabled -> MODERN_SIDEBAR
+            else -> CLASSIC
+        }
+    }
+}
+
 data class LayoutSettingsUiState(
     val selectedLayout: HomeLayout = HomeLayout.MODERN,
     val hasChosen: Boolean = false,
@@ -48,7 +62,17 @@ data class LayoutSettingsUiState(
     val preferExternalMetaAddonDetail: Boolean = false,
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true
-)
+) {
+    val navigationStyle: NavigationStyle
+        get() = NavigationStyle.from(modernSidebarEnabled, modernTopbarEnabled)
+
+    val navigationBlurEnabled: Boolean
+        get() = when (navigationStyle) {
+            NavigationStyle.MODERN_SIDEBAR -> modernSidebarBlurEnabled
+            NavigationStyle.MODERN_TOPBAR -> modernTopbarBlurEnabled
+            NavigationStyle.CLASSIC -> false
+        }
+}
 
 data class CatalogInfo(
     val key: String,
@@ -60,9 +84,9 @@ sealed class LayoutSettingsEvent {
     data class SelectLayout(val layout: HomeLayout) : LayoutSettingsEvent()
     data class ToggleHeroCatalog(val catalogKey: String) : LayoutSettingsEvent()
     data class SetSidebarCollapsed(val collapsed: Boolean) : LayoutSettingsEvent()
-    data class SetModernSidebarEnabled(val enabled: Boolean) : LayoutSettingsEvent()
+    data class SetNavigationStyle(val style: NavigationStyle) : LayoutSettingsEvent()
+    data class SetNavigationBlurEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetModernSidebarBlurEnabled(val enabled: Boolean) : LayoutSettingsEvent()
-    data class SetModernTopbarEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetModernTopbarBlurEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetModernLandscapePostersEnabled(val enabled: Boolean) : LayoutSettingsEvent()
     data class SetModernHeroFullScreenBackdropEnabled(val enabled: Boolean) : LayoutSettingsEvent()
@@ -262,9 +286,9 @@ class LayoutSettingsViewModel @Inject constructor(
             is LayoutSettingsEvent.SelectLayout -> selectLayout(event.layout)
             is LayoutSettingsEvent.ToggleHeroCatalog -> toggleHeroCatalog(event.catalogKey)
             is LayoutSettingsEvent.SetSidebarCollapsed -> setSidebarCollapsed(event.collapsed)
-            is LayoutSettingsEvent.SetModernSidebarEnabled -> setModernSidebarEnabled(event.enabled)
+            is LayoutSettingsEvent.SetNavigationStyle -> setNavigationStyle(event.style)
+            is LayoutSettingsEvent.SetNavigationBlurEnabled -> setNavigationBlurEnabled(event.enabled)
             is LayoutSettingsEvent.SetModernSidebarBlurEnabled -> setModernSidebarBlurEnabled(event.enabled)
-            is LayoutSettingsEvent.SetModernTopbarEnabled -> setModernTopbarEnabled(event.enabled)
             is LayoutSettingsEvent.SetModernTopbarBlurEnabled -> setModernTopbarBlurEnabled(event.enabled)
             is LayoutSettingsEvent.SetModernLandscapePostersEnabled -> setModernLandscapePostersEnabled(event.enabled)
             is LayoutSettingsEvent.SetModernHeroFullScreenBackdropEnabled -> setModernHeroFullScreenBackdropEnabled(event.enabled)
@@ -314,6 +338,38 @@ class LayoutSettingsViewModel @Inject constructor(
         if (_uiState.value.sidebarCollapsedByDefault == collapsed) return
         viewModelScope.launch {
             layoutPreferenceDataStore.setSidebarCollapsedByDefault(collapsed)
+        }
+    }
+
+    private fun setNavigationStyle(style: NavigationStyle) {
+        val current = _uiState.value.navigationStyle
+        if (current == style) return
+        viewModelScope.launch {
+            when (style) {
+                NavigationStyle.CLASSIC -> {
+                    layoutPreferenceDataStore.setModernSidebarEnabled(false)
+                    layoutPreferenceDataStore.setModernTopbarEnabled(false)
+                }
+                NavigationStyle.MODERN_SIDEBAR -> {
+                    layoutPreferenceDataStore.setModernSidebarEnabled(true)
+                    // setModernSidebarEnabled already disables topbar internally
+                }
+                NavigationStyle.MODERN_TOPBAR -> {
+                    layoutPreferenceDataStore.setModernTopbarEnabled(true)
+                    // setModernTopbarEnabled already disables sidebar internally
+                }
+            }
+        }
+    }
+
+    private fun setNavigationBlurEnabled(enabled: Boolean) {
+        val style = _uiState.value.navigationStyle
+        viewModelScope.launch {
+            when (style) {
+                NavigationStyle.MODERN_SIDEBAR -> layoutPreferenceDataStore.setModernSidebarBlurEnabled(enabled)
+                NavigationStyle.MODERN_TOPBAR -> layoutPreferenceDataStore.setModernTopbarBlurEnabled(enabled)
+                NavigationStyle.CLASSIC -> { /* no-op */ }
+            }
         }
     }
 
