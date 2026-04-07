@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import android.content.Context
 import android.content.res.Resources
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import com.nuvio.tv.R
@@ -43,6 +44,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 private const val STARTUP_SUBTITLE_PREFETCH_TIMEOUT_MS = 10_000L
@@ -302,14 +305,15 @@ internal fun PlayerRuntimeController.initializePlayer(
                 applySubtitlePreferences(preferred, secondary)
                 applyStartupSubtitlePreparation(startupSubtitlePreparation)
                 val startupSubtitleConfigurations = buildStartupSubtitleConfigurations(startupSubtitlePreparation)
-                setMediaSource(
+                val initialMediaSource = withContext(Dispatchers.IO) {
                     mediaSourceFactory.createMediaSource(
                         url = url,
                         headers = headers,
                         subtitleConfigurations = startupSubtitleConfigurations,
                         mimeTypeOverride = currentStreamMimeType
                     )
-                )
+                }
+                setMediaSource(initialMediaSource)
                 if (showLoadingStatus) _uiState.update { it.copy(loadingMessage = context.getString(R.string.player_loading_starting)) }
                 playWhenReady = true
                 prepare()
@@ -425,6 +429,12 @@ internal fun PlayerRuntimeController.initializePlayer(
                             }
                             append(" [${error.errorCode}]")
                         }
+                        val streamForLog = summarizeStreamUrlForLog(currentStreamUrl)
+                        Log.e(
+                            PlayerRuntimeController.TAG,
+                            "ExoPlayer error: stream=$streamForLog errorCode=${error.errorCode} detail=$detailedError",
+                            error
+                        )
                         val responseCode =
                             (error.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode
                         if (responseCode == 416 && !hasRetriedCurrentStreamAfter416) {
@@ -471,6 +481,18 @@ internal fun PlayerRuntimeController.initializePlayer(
                 )
             }
         }
+    }
+}
+
+private fun summarizeStreamUrlForLog(url: String): String {
+    val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return url.substringBefore('?')
+    val scheme = uri.scheme
+    val host = uri.host
+    val path = uri.path.orEmpty()
+    return when {
+        !scheme.isNullOrBlank() && !host.isNullOrBlank() -> "$scheme://$host$path"
+        !scheme.isNullOrBlank() && path.isNotBlank() -> "$scheme:$path"
+        else -> url.substringBefore('?')
     }
 }
 

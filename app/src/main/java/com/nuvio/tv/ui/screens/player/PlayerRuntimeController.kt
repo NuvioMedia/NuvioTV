@@ -124,7 +124,7 @@ class PlayerRuntimeController(
     internal val initialSeason: Int? = navigationArgs.initialSeason
     internal val initialEpisode: Int? = navigationArgs.initialEpisode
     internal val initialEpisodeTitle: String? = navigationArgs.initialEpisodeTitle
-    internal val mediaSourceFactory = PlayerMediaSourceFactory()
+    internal val mediaSourceFactory = PlayerMediaSourceFactory(context)
 
     internal var currentVideoHash: String? = navigationArgs.videoHash
     internal var currentVideoSize: Long? = navigationArgs.videoSize
