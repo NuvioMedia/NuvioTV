@@ -44,6 +44,8 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val modernSidebarEnabledKey = booleanPreferencesKey("modern_sidebar_enabled")
     private val legacyModernSidebarEnabledKey = booleanPreferencesKey("glass_sidepanel_enabled")
     private val modernSidebarBlurEnabledKey = booleanPreferencesKey("modern_sidebar_blur_enabled")
+    private val modernTopbarEnabledKey = booleanPreferencesKey("modern_topbar_enabled")
+    private val modernTopbarBlurEnabledKey = booleanPreferencesKey("modern_topbar_blur_enabled")
     private val modernLandscapePostersEnabledKey = booleanPreferencesKey("modern_landscape_posters_enabled")
     private val heroSectionEnabledKey = booleanPreferencesKey("hero_section_enabled")
     private val searchDiscoverEnabledKey = booleanPreferencesKey("search_discover_enabled")
@@ -126,6 +128,14 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     val modernSidebarBlurEnabled: Flow<Boolean> = profileFlow { prefs ->
         prefs[modernSidebarBlurEnabledKey] ?: false
+    }
+
+    val modernTopbarEnabled: Flow<Boolean> = profileFlow { prefs ->
+        prefs[modernTopbarEnabledKey] ?: false
+    }
+
+    val modernTopbarBlurEnabled: Flow<Boolean> = profileFlow { prefs ->
+        prefs[modernTopbarBlurEnabledKey] ?: false
     }
 
     val modernLandscapePostersEnabled: Flow<Boolean> = profileFlow { prefs ->
@@ -287,6 +297,7 @@ class LayoutPreferenceDataStore @Inject constructor(
             prefs.remove(legacyModernSidebarEnabledKey)
             if (enabled) {
                 prefs[sidebarCollapsedKey] = false
+                prefs[modernTopbarEnabledKey] = false
             }
         }
     }
@@ -294,6 +305,22 @@ class LayoutPreferenceDataStore @Inject constructor(
     suspend fun setModernSidebarBlurEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[modernSidebarBlurEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setModernTopbarEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[modernTopbarEnabledKey] = enabled
+            if (enabled) {
+                prefs[modernSidebarEnabledKey] = false
+                prefs.remove(legacyModernSidebarEnabledKey)
+            }
+        }
+    }
+
+    suspend fun setModernTopbarBlurEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[modernTopbarBlurEnabledKey] = enabled
         }
     }
 

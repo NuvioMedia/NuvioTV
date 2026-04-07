@@ -45,6 +45,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -157,7 +158,9 @@ private data class MainUiPrefs(
     val hasChosenLayout: Boolean? = null,
     val sidebarCollapsed: Boolean = false,
     val modernSidebarEnabled: Boolean = false,
-    val modernSidebarBlurPref: Boolean = false
+    val modernSidebarBlurPref: Boolean = false,
+    val modernTopbarEnabled: Boolean = false,
+    val modernTopbarBlurPref: Boolean = false
 )
 
 @AndroidEntryPoint
@@ -283,6 +286,10 @@ class MainActivity : ComponentActivity() {
                     )
                 }.combine(layoutPreferenceDataStore.modernSidebarBlurEnabled) { prefs, modernSidebarBlurPref ->
                     prefs.copy(modernSidebarBlurPref = modernSidebarBlurPref)
+                }.combine(layoutPreferenceDataStore.modernTopbarEnabled) { prefs, modernTopbarEnabled ->
+                    prefs.copy(modernTopbarEnabled = modernTopbarEnabled)
+                }.combine(layoutPreferenceDataStore.modernTopbarBlurEnabled) { prefs, modernTopbarBlurPref ->
+                    prefs.copy(modernTopbarBlurPref = modernTopbarBlurPref)
                 }
             }
             val mainUiPrefs by mainUiPrefsFlow.collectAsState(initial = MainUiPrefs(hasChosenLayout = null))
@@ -291,223 +298,249 @@ class MainActivity : ComponentActivity() {
                 CompositionLocalProvider(
                     LocalBringIntoViewSpec provides NuvioScrollDefaults.smoothScrollSpec
                 ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    shape = RectangleShape,
-                    colors = SurfaceDefaults.colors(
-                        containerColor = NuvioColors.Background
-                    )
-                ) {
-                    if (hasSeenAuthQrOnFirstLaunch == null) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(NuvioColors.Background)
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        shape = RectangleShape,
+                        colors = SurfaceDefaults.colors(
+                            containerColor = NuvioColors.Background
                         )
-                        return@Surface
-                    }
-
-                    if (
-                        hasSeenAuthQrOnFirstLaunch == false &&
-                        authState !is AuthState.FullAccount &&
-                        !onboardingCompletedThisSession
                     ) {
-                        AuthQrSignInScreen(
-                            onBackPress = {},
-                            onContinue = {
-                                lifecycleScope.launch {
-                                    val shouldRunRemoteOnboardingSync =
-                                        authManager.authState.value is AuthState.FullAccount
-
-                                    if (shouldRunRemoteOnboardingSync) {
-                                        if (onboardingProfileSyncInProgress) return@launch
-                                        onboardingProfileSyncInProgress = true
-                                        val maxAttempts = 3
-                                        var synced = false
-                                        for (attempt in 0 until maxAttempts) {
-                                            val result = profileSyncService.pullFromRemote()
-                                            if (result.isSuccess) {
-                                                synced = true
-                                                break
-                                            }
-                                            if (attempt < maxAttempts - 1) {
-                                                delay(1_000)
-                                            }
-                                        }
-                                        if (!synced) {
-                                            android.util.Log.w(
-                                                "MainActivity",
-                                                "Onboarding profile sync failed after retries; continuing"
-                                            )
-                                        }
-                                    }
-                                    appOnboardingDataStore.setHasSeenAuthQrOnFirstLaunch(true)
-                                    onboardingCompletedThisSession = true
-                                    onboardingProfileSyncInProgress = false
-                                }
-                                if (authManager.authState.value is AuthState.FullAccount) {
-                                    startupSyncService.requestSyncNow()
-                                }
-                            }
-                        )
-                        return@Surface
-                    }
-
-                    val shouldShowProfileSelection =
-                        !hasSelectedProfileThisSession && (profiles.size > 1 || activeProfileHasPin)
-
-                    if (shouldShowProfileSelection) {
-                        ProfileSelectionScreen(
-                            onProfileSelected = {
-                                hasSelectedProfileThisSession = true
-                                if (authManager.authState.value is AuthState.FullAccount) {
-                                    startupSyncService.requestSyncNow()
-                                }
-                            }
-                        )
-                        return@Surface
-                    }
-
-                    val layoutChosen = mainUiPrefs.hasChosenLayout
-                    if (layoutChosen == null) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(NuvioColors.Background)
-                        )
-                        return@Surface
-                    }
-                    val sidebarCollapsed = mainUiPrefs.sidebarCollapsed
-                    val modernSidebarEnabled = mainUiPrefs.modernSidebarEnabled
-                    val modernSidebarBlurEnabled =
-                        mainUiPrefs.modernSidebarBlurPref && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
-                    val hideBuiltInHeadersForFloatingPill = modernSidebarEnabled && !sidebarCollapsed
-
-                    val updateViewModel: UpdateViewModel = hiltViewModel(this@MainActivity)
-                    val updateState by updateViewModel.uiState.collectAsState()
-
-                    val startDestination = if (layoutChosen) Screen.Home.route else Screen.LayoutSelection.route
-                    val navController = rememberNavController()
-                    val navBackStackEntry by navController.currentBackStackEntryAsState()
-                    val currentRoute = navBackStackEntry?.destination?.route
-
-                    val view = LocalView.current
-                    LaunchedEffect(currentRoute) {
-                        val holder = PerformanceMetricsState.getHolderForHierarchy(view)
-                        if (currentRoute != null) {
-                            holder.state?.putState("Screen", currentRoute)
-                        }
-                    }
-
-                    val rootRoutes = remember {
-                        setOf(
-                            Screen.Home.route,
-                            Screen.Search.route,
-                            Screen.Library.route,
-                            Screen.Settings.route,
-                            Screen.AddonManager.route
-                        )
-                    }
-
-                    val strNavHome = stringResource(R.string.nav_home)
-                    val strNavSearch = stringResource(R.string.nav_search)
-                    val strNavLibrary = stringResource(R.string.nav_library)
-                    val strNavAddons = stringResource(R.string.nav_addons)
-                    val strNavSettings = stringResource(R.string.nav_settings)
-                    val drawerItems = remember(
-                        strNavHome,
-                        strNavSearch,
-                        strNavLibrary,
-                        strNavAddons,
-                        strNavSettings
-                    ) {
-                        listOf(
-                            DrawerItem(
-                                route = Screen.Home.route,
-                                label = strNavHome,
-                                icon = Icons.Default.Home
-                            ),
-                            DrawerItem(
-                                route = Screen.Search.route,
-                                label = strNavSearch,
-                                iconRes = R.raw.sidebar_search
-                            ),
-                            DrawerItem(
-                                route = Screen.Library.route,
-                                label = strNavLibrary,
-                                iconRes = R.raw.sidebar_library
-                            ),
-                            DrawerItem(
-                                route = Screen.AddonManager.route,
-                                label = strNavAddons,
-                                iconRes = R.raw.sidebar_plugin
-                            ),
-                            DrawerItem(
-                                route = Screen.Settings.route,
-                                label = strNavSettings,
-                                iconRes = R.raw.sidebar_settings
+                        if (hasSeenAuthQrOnFirstLaunch == null) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(NuvioColors.Background)
                             )
+                            return@Surface
+                        }
+
+                        if (
+                            hasSeenAuthQrOnFirstLaunch == false &&
+                            authState !is AuthState.FullAccount &&
+                            !onboardingCompletedThisSession
+                        ) {
+                            AuthQrSignInScreen(
+                                onBackPress = {},
+                                onContinue = {
+                                    lifecycleScope.launch {
+                                        val shouldRunRemoteOnboardingSync =
+                                            authManager.authState.value is AuthState.FullAccount
+
+                                        if (shouldRunRemoteOnboardingSync) {
+                                            if (onboardingProfileSyncInProgress) return@launch
+                                            onboardingProfileSyncInProgress = true
+                                            val maxAttempts = 3
+                                            var synced = false
+                                            for (attempt in 0 until maxAttempts) {
+                                                val result = profileSyncService.pullFromRemote()
+                                                if (result.isSuccess) {
+                                                    synced = true
+                                                    break
+                                                }
+                                                if (attempt < maxAttempts - 1) {
+                                                    delay(1_000)
+                                                }
+                                            }
+                                            if (!synced) {
+                                                android.util.Log.w(
+                                                    "MainActivity",
+                                                    "Onboarding profile sync failed after retries; continuing"
+                                                )
+                                            }
+                                        }
+                                        appOnboardingDataStore.setHasSeenAuthQrOnFirstLaunch(true)
+                                        onboardingCompletedThisSession = true
+                                        onboardingProfileSyncInProgress = false
+                                    }
+                                    if (authManager.authState.value is AuthState.FullAccount) {
+                                        startupSyncService.requestSyncNow()
+                                    }
+                                }
+                            )
+                            return@Surface
+                        }
+
+                        val shouldShowProfileSelection =
+                            !hasSelectedProfileThisSession && (profiles.size > 1 || activeProfileHasPin)
+
+                        if (shouldShowProfileSelection) {
+                            ProfileSelectionScreen(
+                                onProfileSelected = {
+                                    hasSelectedProfileThisSession = true
+                                    if (authManager.authState.value is AuthState.FullAccount) {
+                                        startupSyncService.requestSyncNow()
+                                    }
+                                }
+                            )
+                            return@Surface
+                        }
+
+                        val layoutChosen = mainUiPrefs.hasChosenLayout
+                        if (layoutChosen == null) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(NuvioColors.Background)
+                            )
+                            return@Surface
+                        }
+                        val sidebarCollapsed = mainUiPrefs.sidebarCollapsed
+                        val modernSidebarEnabled = mainUiPrefs.modernSidebarEnabled
+                        val modernSidebarBlurEnabled =
+                            mainUiPrefs.modernSidebarBlurPref && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
+                        val modernTopbarEnabled = mainUiPrefs.modernTopbarEnabled
+                        val modernTopbarBlurEnabled =
+                            mainUiPrefs.modernTopbarBlurPref && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
+
+                        val hideBuiltInHeadersForFloatingPill = modernSidebarEnabled && !sidebarCollapsed
+
+                        val updateViewModel: UpdateViewModel = hiltViewModel(this@MainActivity)
+                        val updateState by updateViewModel.uiState.collectAsState()
+
+                        val startDestination = if (layoutChosen) Screen.Home.route else Screen.LayoutSelection.route
+                        val navController = rememberNavController()
+                        val navBackStackEntry by navController.currentBackStackEntryAsState()
+                        val currentRoute = navBackStackEntry?.destination?.route
+
+                        val view = LocalView.current
+                        LaunchedEffect(currentRoute) {
+                            val holder = PerformanceMetricsState.getHolderForHierarchy(view)
+                            if (currentRoute != null) {
+                                holder.state?.putState("Screen", currentRoute)
+                            }
+                        }
+
+                        val rootRoutes = remember {
+                            setOf(
+                                Screen.Home.route,
+                                Screen.Search.route,
+                                Screen.Library.route,
+                                Screen.Settings.route,
+                                Screen.AddonManager.route
+                            )
+                        }
+
+                        val strNavHome = stringResource(R.string.nav_home)
+                        val strNavSearch = stringResource(R.string.nav_search)
+                        val strNavLibrary = stringResource(R.string.nav_library)
+                        val strNavAddons = stringResource(R.string.nav_addons)
+                        val strNavSettings = stringResource(R.string.nav_settings)
+                        val drawerItems = remember(
+                            strNavHome,
+                            strNavSearch,
+                            strNavLibrary,
+                            strNavAddons,
+                            strNavSettings
+                        ) {
+                            listOf(
+                                DrawerItem(
+                                    route = Screen.Home.route,
+                                    label = strNavHome,
+                                    icon = Icons.Default.Home
+                                ),
+                                DrawerItem(
+                                    route = Screen.Search.route,
+                                    label = strNavSearch,
+                                    iconRes = R.raw.sidebar_search
+                                ),
+                                DrawerItem(
+                                    route = Screen.Library.route,
+                                    label = strNavLibrary,
+                                    iconRes = R.raw.sidebar_library
+                                ),
+                                DrawerItem(
+                                    route = Screen.AddonManager.route,
+                                    label = strNavAddons,
+                                    iconRes = R.raw.sidebar_plugin
+                                ),
+                                DrawerItem(
+                                    route = Screen.Settings.route,
+                                    label = strNavSettings,
+                                    iconRes = R.raw.sidebar_settings
+                                )
+                            )
+                        }
+                        val selectedDrawerRoute = drawerItems.firstOrNull { item ->
+                            currentRoute == item.route || currentRoute?.startsWith("${item.route}/") == true
+                        }?.route
+                        val selectedDrawerItem = drawerItems.firstOrNull { it.route == selectedDrawerRoute } ?: drawerItems.first()
+
+                        if (modernSidebarEnabled) {
+                            ModernSidebarScaffold(
+                                navController = navController,
+                                startDestination = startDestination,
+                                currentRoute = currentRoute,
+                                rootRoutes = rootRoutes,
+                                drawerItems = drawerItems,
+                                selectedDrawerRoute = selectedDrawerRoute,
+                                selectedDrawerItem = selectedDrawerItem,
+                                sidebarCollapsed = sidebarCollapsed,
+                                modernSidebarBlurEnabled = modernSidebarBlurEnabled,
+                                hideBuiltInHeaders = hideBuiltInHeadersForFloatingPill,
+                                activeProfileName = activeProfile?.name ?: "",
+                                activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
+                                activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
+                                showProfileSelector = profiles.size > 1,
+                                onSwitchProfile = { hasSelectedProfileThisSession = false },
+                                onExitApp = {
+                                    finishAffinity()
+                                    finishAndRemoveTask()
+                                }
+                            )
+                        } else if (modernTopbarEnabled) {
+                            ModernTopbarScaffold(
+                                navController = navController,
+                                startDestination = startDestination,
+                                currentRoute = currentRoute,
+                                rootRoutes = rootRoutes,
+                                drawerItems = drawerItems,
+                                selectedDrawerRoute = selectedDrawerRoute,
+                                selectedDrawerItem = selectedDrawerItem,
+                                sidebarCollapsed = sidebarCollapsed,
+                                modernTopbarBlurEnabled = modernTopbarBlurEnabled,
+                                hideBuiltInHeaders = hideBuiltInHeadersForFloatingPill,
+                                activeProfileName = activeProfile?.name ?: "",
+                                activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
+                                activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
+                                showProfileSelector = profiles.size > 1,
+                                onSwitchProfile = { hasSelectedProfileThisSession = false },
+                                onExitApp = {
+                                    finishAffinity()
+                                    finishAndRemoveTask()
+                                }
+                            )
+                        } else {
+                            LegacySidebarScaffold(
+                                navController = navController,
+                                startDestination = startDestination,
+                                currentRoute = currentRoute,
+                                rootRoutes = rootRoutes,
+                                drawerItems = drawerItems,
+                                selectedDrawerRoute = selectedDrawerRoute,
+                                sidebarCollapsed = sidebarCollapsed,
+                                hideBuiltInHeaders = false,
+                                activeProfileName = activeProfile?.name ?: "",
+                                activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
+                                activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
+                                showProfileSelector = profiles.size > 1,
+                                onSwitchProfile = { hasSelectedProfileThisSession = false },
+                                onExitApp = {
+                                    finishAffinity()
+                                    finishAndRemoveTask()
+                                }
+                            )
+                        }
+
+                        UpdatePromptDialog(
+                            state = updateState,
+                            onDismiss = { updateViewModel.dismissDialog() },
+                            onDownload = { updateViewModel.downloadUpdate() },
+                            onInstall = { updateViewModel.installUpdateOrRequestPermission() },
+                            onIgnore = { updateViewModel.ignoreThisVersion() },
+                            onOpenUnknownSources = { updateViewModel.openUnknownSourcesSettings() }
                         )
                     }
-                    val selectedDrawerRoute = drawerItems.firstOrNull { item ->
-                        currentRoute == item.route || currentRoute?.startsWith("${item.route}/") == true
-                    }?.route
-                    val selectedDrawerItem = drawerItems.firstOrNull { it.route == selectedDrawerRoute } ?: drawerItems.first()
-
-                    if (modernSidebarEnabled) {
-                        ModernSidebarScaffold(
-                            navController = navController,
-                            startDestination = startDestination,
-                            currentRoute = currentRoute,
-                            rootRoutes = rootRoutes,
-                            drawerItems = drawerItems,
-                            selectedDrawerRoute = selectedDrawerRoute,
-                            selectedDrawerItem = selectedDrawerItem,
-                            sidebarCollapsed = sidebarCollapsed,
-                            modernSidebarBlurEnabled = modernSidebarBlurEnabled,
-                            hideBuiltInHeaders = hideBuiltInHeadersForFloatingPill,
-                            activeProfileName = activeProfile?.name ?: "",
-                            activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
-                            activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
-                            showProfileSelector = profiles.size > 1,
-                            onSwitchProfile = { hasSelectedProfileThisSession = false },
-                            onExitApp = {
-                                finishAffinity()
-                                finishAndRemoveTask()
-                            }
-                        )
-                    } else {
-                        LegacySidebarScaffold(
-                            navController = navController,
-                            startDestination = startDestination,
-                            currentRoute = currentRoute,
-                            rootRoutes = rootRoutes,
-                            drawerItems = drawerItems,
-                            selectedDrawerRoute = selectedDrawerRoute,
-                            sidebarCollapsed = sidebarCollapsed,
-                            hideBuiltInHeaders = false,
-                            activeProfileName = activeProfile?.name ?: "",
-                            activeProfileColorHex = activeProfile?.avatarColorHex ?: "#1E88E5",
-                            activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
-                            showProfileSelector = profiles.size > 1,
-                            onSwitchProfile = { hasSelectedProfileThisSession = false },
-                            onExitApp = {
-                                finishAffinity()
-                                finishAndRemoveTask()
-                            }
-                        )
-                    }
-
-                    UpdatePromptDialog(
-                        state = updateState,
-                        onDismiss = { updateViewModel.dismissDialog() },
-                        onDownload = { updateViewModel.downloadUpdate() },
-                        onInstall = { updateViewModel.installUpdateOrRequestPermission() },
-                        onIgnore = { updateViewModel.ignoreThisVersion() },
-                        onOpenUnknownSources = { updateViewModel.openUnknownSourcesSettings() }
-                    )
                 }
-            }
             }
         }
 
@@ -965,8 +998,8 @@ private fun ModernSidebarScaffold(
         label = "sidebarSurfaceAlpha"
     )
     val shouldApplySidebarHaze = showSidebar && modernSidebarBlurEnabled && (
-        isSidebarExpanded || sidebarCollapsePending
-        )
+            isSidebarExpanded || sidebarCollapsePending
+            )
     val sidebarTransition = updateTransition(
         targetState = isSidebarExpanded,
         label = "sidebarTransition"
@@ -1250,6 +1283,352 @@ private fun ModernSidebarScaffold(
 }
 
 @Composable
+private fun ModernTopbarScaffold(
+    navController: NavHostController,
+    startDestination: String,
+    currentRoute: String?,
+    rootRoutes: Set<String>,
+    drawerItems: List<DrawerItem>,
+    selectedDrawerRoute: String?,
+    selectedDrawerItem: DrawerItem,
+    sidebarCollapsed: Boolean,
+    modernTopbarBlurEnabled: Boolean,
+    hideBuiltInHeaders: Boolean,
+    activeProfileName: String,
+    activeProfileColorHex: String,
+    activeProfileAvatarImageUrl: String?,
+    showProfileSelector: Boolean,
+    onSwitchProfile: () -> Unit,
+    onExitApp: () -> Unit
+) {
+    val showSidebar = currentRoute in rootRoutes
+    val collapsedSidebarHeight = if (sidebarCollapsed) 0.dp else 68.dp
+    val openSidebarHeight = 84.dp
+
+    val focusManager = LocalFocusManager.current
+    val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    val contentFocusRequester = remember { FocusRequester() }
+    val drawerItemFocusRequesters = remember(drawerItems) {
+        drawerItems.associate { item -> item.route to FocusRequester() }
+    }
+
+    var isSidebarExpanded by remember { mutableStateOf(false) }
+    var sidebarCollapsePending by remember { mutableStateOf(false) }
+    var pendingContentFocusTransfer by remember { mutableStateOf(false) }
+    var pendingSidebarFocusRequest by remember { mutableStateOf(false) }
+    var focusedDrawerIndex by remember { mutableStateOf(-1) }
+    var isFloatingPillIconOnly by remember { mutableStateOf(false) }
+    val keepFloatingPillExpanded = selectedDrawerRoute == Screen.Settings.route
+    val keepSidebarFocusDuringCollapse =
+        isSidebarExpanded || sidebarCollapsePending || pendingContentFocusTransfer
+    val hasSidebarProfileItem = showProfileSelector && activeProfileName.isNotEmpty()
+    val sidebarTopBoundaryIndex = if (hasSidebarProfileItem) drawerItems.size else 0
+
+    LaunchedEffect(showSidebar) {
+        if (!showSidebar) {
+            isSidebarExpanded = false
+            sidebarCollapsePending = false
+            pendingContentFocusTransfer = false
+            pendingSidebarFocusRequest = false
+            isFloatingPillIconOnly = false
+        }
+    }
+
+    LaunchedEffect(keepFloatingPillExpanded, showSidebar) {
+        if (!showSidebar || keepFloatingPillExpanded) {
+            isFloatingPillIconOnly = false
+        }
+    }
+
+    BackHandler(enabled = currentRoute in rootRoutes && !isSidebarExpanded && !sidebarCollapsePending) {
+        isSidebarExpanded = true
+        sidebarCollapsePending = false
+        pendingSidebarFocusRequest = true
+    }
+
+    BackHandler(enabled = currentRoute in rootRoutes && isSidebarExpanded && !sidebarCollapsePending) {
+        onExitApp()
+    }
+
+    LaunchedEffect(sidebarCollapsePending, isSidebarExpanded, showSidebar) {
+        if (!showSidebar || !sidebarCollapsePending) {
+            return@LaunchedEffect
+        }
+        if (!isSidebarExpanded) {
+            sidebarCollapsePending = false
+            return@LaunchedEffect
+        }
+        delay(95L)
+        isSidebarExpanded = false
+        sidebarCollapsePending = false
+    }
+
+    val sidebarVisible = showSidebar && (isSidebarExpanded || !sidebarCollapsed)
+    val sidebarHazeState = remember { HazeState() }
+    val targetSidebarHeight = when {
+        !sidebarVisible -> 0.dp
+        isSidebarExpanded -> openSidebarHeight
+        else -> collapsedSidebarHeight
+    }
+    val sidebarHeight by animateDpAsState(
+        targetValue = targetSidebarHeight,
+        animationSpec = if (isSidebarExpanded) {
+            keyframes {
+                durationMillis = 365
+                (openSidebarHeight + 6.dp) at 175 // CHECK THIS JIC
+            }
+        } else {
+            tween(durationMillis = 385, easing = LinearOutSlowInEasing)
+        },
+        label = "sidebarHeight"
+    )
+    val sidebarSlideY by animateDpAsState(
+        targetValue = if (sidebarVisible) 0.dp else (-18).dp,
+        animationSpec = tween(durationMillis = 205, easing = FastOutSlowInEasing),
+        label = "sidebarSlideY"
+    )
+    val sidebarSurfaceAlpha by animateFloatAsState(
+        targetValue = if (sidebarVisible) 1f else 0f,
+        animationSpec = tween(durationMillis = 135, easing = FastOutSlowInEasing),
+        label = "sidebarSurfaceAlpha"
+    )
+    val shouldApplySidebarHaze = showSidebar && modernTopbarBlurEnabled && (
+            isSidebarExpanded || sidebarCollapsePending
+            )
+    val sidebarTransition = updateTransition(
+        targetState = isSidebarExpanded,
+        label = "sidebarTransition"
+    )
+    val sidebarLabelAlpha by sidebarTransition.animateFloat(
+        transitionSpec = {
+            if (targetState) {
+                tween(durationMillis = 125, easing = FastOutSlowInEasing)
+            } else {
+                tween(durationMillis = 145, easing = LinearOutSlowInEasing)
+            }
+        },
+        label = "sidebarLabelAlpha"
+    ) { expanded ->
+        if (expanded) 1f else 0f
+    }
+    val sidebarExpandProgress by sidebarTransition.animateFloat(
+        transitionSpec = {
+            if (targetState) {
+                tween(durationMillis = 345, easing = FastOutSlowInEasing)
+            } else {
+                tween(durationMillis = 385, easing = LinearOutSlowInEasing)
+            }
+        },
+        label = "sidebarExpandProgress"
+    ) { expanded ->
+        if (expanded) 1f else 0f
+    }
+
+    val sidebarBlocksContentKeys by remember { derivedStateOf { sidebarExpandProgress > 0.2f } }
+    val sidebarShowExpandedPanel by remember { derivedStateOf { sidebarExpandProgress > 0.01f } }
+    val sidebarShowCollapsedPill by remember { derivedStateOf { sidebarExpandProgress < 0.98f } }
+
+    val sidebarIconScale by sidebarTransition.animateFloat(
+        transitionSpec = { tween(durationMillis = 145, easing = FastOutSlowInEasing) },
+        label = "sidebarIconScale"
+    ) { expanded ->
+        if (expanded) 1f else 0.92f
+    }
+    val sidebarBloomScale by sidebarTransition.animateFloat(
+        transitionSpec = {
+            if (targetState) {
+                tween(durationMillis = 345, easing = FastOutSlowInEasing)
+            } else {
+                tween(durationMillis = 395, easing = LinearOutSlowInEasing)
+            }
+        },
+        label = "sidebarBloomScale"
+    ) { expanded ->
+        if (expanded) 1f else 0.9f
+    }
+    val sidebarDeflateOffsetX by sidebarTransition.animateDp(
+        transitionSpec = {
+            if (targetState) {
+                tween(durationMillis = 345, easing = FastOutSlowInEasing)
+            } else {
+                tween(durationMillis = 395, easing = LinearOutSlowInEasing)
+            }
+        },
+        label = "sidebarDeflateOffsetX"
+    ) { expanded ->
+        if (expanded) 0.dp else (-8).dp
+    }
+    val sidebarDeflateOffsetY by sidebarTransition.animateDp(
+        transitionSpec = {
+            if (targetState) {
+                tween(durationMillis = 345, easing = FastOutSlowInEasing)
+            } else {
+                tween(durationMillis = 395, easing = LinearOutSlowInEasing)
+            }
+        },
+        label = "sidebarDeflateOffsetY"
+    ) { expanded ->
+        if (expanded) 0.dp else (-6).dp
+    }
+
+    LaunchedEffect(isSidebarExpanded, sidebarCollapsePending, pendingContentFocusTransfer, showSidebar) {
+        if (!showSidebar || !pendingContentFocusTransfer || isSidebarExpanded || sidebarCollapsePending) {
+            return@LaunchedEffect
+        }
+        repeat(2) { withFrameNanos { } }
+        runCatching { contentFocusRequester.requestFocus() }
+        pendingContentFocusTransfer = false
+    }
+
+    LaunchedEffect(isSidebarExpanded, pendingSidebarFocusRequest, showSidebar, selectedDrawerRoute) {
+        if (!showSidebar || !pendingSidebarFocusRequest || !isSidebarExpanded) {
+            return@LaunchedEffect
+        }
+        val targetRoute = selectedDrawerRoute ?: run {
+            pendingSidebarFocusRequest = false
+            return@LaunchedEffect
+        }
+        val requester = drawerItemFocusRequesters[targetRoute] ?: run {
+            pendingSidebarFocusRequest = false
+            return@LaunchedEffect
+        }
+        repeat(2) { withFrameNanos { } }
+        runCatching { requester.requestFocus() }
+        pendingSidebarFocusRequest = false
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .onPreviewKeyEvent { keyEvent ->
+                    if (
+                        isSidebarExpanded &&
+                        !sidebarCollapsePending &&
+                        sidebarBlocksContentKeys &&
+                        keyEvent.type == KeyEventType.KeyDown &&
+                        isBlockedContentKey(keyEvent.key)
+                    ) {
+                        true
+                    } else {
+                        false
+                    }
+                }
+                .onKeyEvent { keyEvent ->
+                    if (showSidebar && !isSidebarExpanded && keyEvent.type == KeyEventType.KeyDown) {
+                        if (keyEvent.key == Key.DirectionUp) {
+                            if (focusManager.moveFocus(FocusDirection.Up)) {
+                                true
+                            } else {
+                                isSidebarExpanded = true
+                                sidebarCollapsePending = false
+                                pendingSidebarFocusRequest = true
+                                true
+                            }
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                }
+        ) {
+            CompositionLocalProvider(
+                LocalSidebarExpanded provides isSidebarExpanded,
+                LocalContentFocusRequester provides contentFocusRequester
+            ) {
+                NuvioNavHost(
+                    navController = navController,
+                    startDestination = startDestination,
+                    hideBuiltInHeaders = hideBuiltInHeaders
+                )
+            }
+        }
+
+        if (showSidebar && (sidebarVisible || sidebarHeight > 0.dp)) {
+            val panelShape = RoundedCornerShape(999.dp)
+            val showExpandedPanel = isSidebarExpanded || sidebarShowExpandedPanel
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .wrapContentWidth()
+                    .height(sidebarHeight)
+                    .offset {
+                        IntOffset(
+                            sidebarDeflateOffsetX.roundToPx(),
+                            (sidebarSlideY + sidebarDeflateOffsetY).roundToPx()
+                        )
+                    }
+                    .graphicsLayer {
+                        alpha = sidebarSurfaceAlpha
+                        scaleX = sidebarBloomScale
+                        scaleY = sidebarBloomScale
+                        transformOrigin = TransformOrigin(0.5f, 0f)
+                    }
+                    .selectableGroup()
+                    .onPreviewKeyEvent { keyEvent ->
+                        if (!isSidebarExpanded || keyEvent.type != KeyEventType.KeyDown) {
+                            return@onPreviewKeyEvent false
+                        }
+                        when (keyEvent.key) {
+                            Key.DirectionLeft -> {
+                                focusedDrawerIndex == 0
+                            }
+
+                            Key.DirectionRight -> {
+                                focusedDrawerIndex == drawerItems.lastIndex
+                            }
+
+                            Key.DirectionDown -> {
+                                pendingContentFocusTransfer = false
+                                sidebarCollapsePending = true
+                                true
+                            }
+
+                            else -> false
+                        }
+                    }
+            ) {
+                if (showExpandedPanel) {
+                    ModernTopbarBlurPanel(
+                        drawerItems = drawerItems,
+                        selectedDrawerRoute = selectedDrawerRoute,
+                        keepSidebarFocusDuringCollapse = keepSidebarFocusDuringCollapse,
+                        sidebarLabelAlpha = sidebarLabelAlpha,
+                        sidebarIconScale = sidebarIconScale,
+                        sidebarExpandProgress = sidebarExpandProgress,
+                        isSidebarExpanded = isSidebarExpanded,
+                        sidebarCollapsePending = sidebarCollapsePending,
+                        blurEnabled = modernTopbarBlurEnabled,
+                        sidebarHazeState = sidebarHazeState,
+                        panelShape = panelShape,
+                        drawerItemFocusRequesters = drawerItemFocusRequesters,
+                        onDrawerItemFocused = { focusedDrawerIndex = it },
+                        onDrawerItemClick = { targetRoute ->
+                            navigateToDrawerRoute(
+                                navController = navController,
+                                currentRoute = currentRoute,
+                                targetRoute = targetRoute
+                            )
+                            pendingSidebarFocusRequest = false
+                            isSidebarExpanded = false
+                            sidebarCollapsePending = false
+                            pendingContentFocusTransfer = true
+                        },
+                        activeProfileName = activeProfileName,
+                        activeProfileColorHex = activeProfileColorHex,
+                        activeProfileAvatarImageUrl = activeProfileAvatarImageUrl,
+                        showProfileSelector = showProfileSelector,
+                        onSwitchProfile = onSwitchProfile
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun CollapsedSidebarPill(
     label: String,
     iconRes: Int?,
@@ -1365,11 +1744,11 @@ private fun navigateToDrawerRoute(
 
 private fun isBlockedContentKey(key: Key): Boolean {
     return key == Key.DirectionUp ||
-        key == Key.DirectionDown ||
-        key == Key.DirectionLeft ||
-        key == Key.DirectionRight ||
-        key == Key.DirectionCenter ||
-        key == Key.Enter
+            key == Key.DirectionDown ||
+            key == Key.DirectionLeft ||
+            key == Key.DirectionRight ||
+            key == Key.DirectionCenter ||
+            key == Key.Enter
 }
 
 @Composable

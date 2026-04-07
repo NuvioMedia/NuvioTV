@@ -146,463 +146,487 @@ fun LayoutSettingsContent(
                 .fillMaxWidth()
                 .weight(1f)
         ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentPadding = PaddingValues(bottom = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item(key = "home_layout_section") {
-                CollapsibleSectionCard(
-                    title = stringResource(R.string.layout_section_home),
-                    description = stringResource(R.string.layout_section_home_desc),
-                    expanded = homeLayoutExpanded,
-                    onToggle = { homeLayoutExpanded = !homeLayoutExpanded },
-                    focusRequester = homeLayoutHeaderFocus,
-                    onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(bottom = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item(key = "home_layout_section") {
+                    CollapsibleSectionCard(
+                        title = stringResource(R.string.layout_section_home),
+                        description = stringResource(R.string.layout_section_home_desc),
+                        expanded = homeLayoutExpanded,
+                        onToggle = { homeLayoutExpanded = !homeLayoutExpanded },
+                        focusRequester = homeLayoutHeaderFocus,
+                        onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
                     ) {
-                        LayoutCard(
-                            layout = HomeLayout.MODERN,
-                            isSelected = uiState.selectedLayout == HomeLayout.MODERN,
-                            showLivePreview = activePreviewLayout == HomeLayout.MODERN || uiState.selectedLayout == HomeLayout.MODERN,
-                            onClick = {
-                                viewModel.onEvent(LayoutSettingsEvent.SelectLayout(HomeLayout.MODERN))
-                            },
-                            onFocused = {
-                                focusedSection = LayoutSettingsSection.HOME_LAYOUT
-                                activePreviewLayout = HomeLayout.MODERN
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                        LayoutCard(
-                            layout = HomeLayout.GRID,
-                            isSelected = uiState.selectedLayout == HomeLayout.GRID,
-                            showLivePreview = activePreviewLayout == HomeLayout.GRID || uiState.selectedLayout == HomeLayout.GRID,
-                            onClick = {
-                                viewModel.onEvent(LayoutSettingsEvent.SelectLayout(HomeLayout.GRID))
-                            },
-                            onFocused = {
-                                focusedSection = LayoutSettingsSection.HOME_LAYOUT
-                                activePreviewLayout = HomeLayout.GRID
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                        LayoutCard(
-                            layout = HomeLayout.CLASSIC,
-                            isSelected = uiState.selectedLayout == HomeLayout.CLASSIC,
-                            showLivePreview = activePreviewLayout == HomeLayout.CLASSIC || uiState.selectedLayout == HomeLayout.CLASSIC,
-                            onClick = {
-                                viewModel.onEvent(LayoutSettingsEvent.SelectLayout(HomeLayout.CLASSIC))
-                            },
-                            onFocused = {
-                                focusedSection = LayoutSettingsSection.HOME_LAYOUT
-                                activePreviewLayout = HomeLayout.CLASSIC
-                            },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            LayoutCard(
+                                layout = HomeLayout.MODERN,
+                                isSelected = uiState.selectedLayout == HomeLayout.MODERN,
+                                showLivePreview = activePreviewLayout == HomeLayout.MODERN || uiState.selectedLayout == HomeLayout.MODERN,
+                                onClick = {
+                                    viewModel.onEvent(LayoutSettingsEvent.SelectLayout(HomeLayout.MODERN))
+                                },
+                                onFocused = {
+                                    focusedSection = LayoutSettingsSection.HOME_LAYOUT
+                                    activePreviewLayout = HomeLayout.MODERN
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                            LayoutCard(
+                                layout = HomeLayout.GRID,
+                                isSelected = uiState.selectedLayout == HomeLayout.GRID,
+                                showLivePreview = activePreviewLayout == HomeLayout.GRID || uiState.selectedLayout == HomeLayout.GRID,
+                                onClick = {
+                                    viewModel.onEvent(LayoutSettingsEvent.SelectLayout(HomeLayout.GRID))
+                                },
+                                onFocused = {
+                                    focusedSection = LayoutSettingsSection.HOME_LAYOUT
+                                    activePreviewLayout = HomeLayout.GRID
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                            LayoutCard(
+                                layout = HomeLayout.CLASSIC,
+                                isSelected = uiState.selectedLayout == HomeLayout.CLASSIC,
+                                showLivePreview = activePreviewLayout == HomeLayout.CLASSIC || uiState.selectedLayout == HomeLayout.CLASSIC,
+                                onClick = {
+                                    viewModel.onEvent(LayoutSettingsEvent.SelectLayout(HomeLayout.CLASSIC))
+                                },
+                                onFocused = {
+                                    focusedSection = LayoutSettingsSection.HOME_LAYOUT
+                                    activePreviewLayout = HomeLayout.CLASSIC
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
 
-                    if (uiState.selectedLayout == HomeLayout.MODERN) {
+                        if (uiState.selectedLayout == HomeLayout.MODERN) {
+                            CompactToggleRow(
+                                title = stringResource(R.string.layout_landscape_posters),
+                                subtitle = stringResource(R.string.layout_landscape_posters_sub),
+                                checked = uiState.modernLandscapePostersEnabled,
+                                onToggle = {
+                                    viewModel.onEvent(
+                                        LayoutSettingsEvent.SetModernLandscapePostersEnabled(
+                                            !uiState.modernLandscapePostersEnabled
+                                        )
+                                    )
+                                },
+                                onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
+                            )
+                        }
+
+                        if (uiState.selectedLayout == HomeLayout.MODERN) {
+                            CompactToggleRow(
+                                title = stringResource(R.string.layout_fullscreen_hero_backdrop),
+                                subtitle = stringResource(R.string.layout_fullscreen_hero_backdrop_sub),
+                                checked = uiState.modernHeroFullScreenBackdropEnabled,
+                                onToggle = {
+                                    viewModel.onEvent(
+                                        LayoutSettingsEvent.SetModernHeroFullScreenBackdropEnabled(!uiState.modernHeroFullScreenBackdropEnabled)
+                                    )
+                                },
+                                onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
+                            )
+                        }
+
+                        if (uiState.heroSectionEnabled && uiState.availableCatalogs.isNotEmpty() && uiState.selectedLayout != HomeLayout.MODERN) {
+                            Text(
+                                text = stringResource(R.string.layout_hero_catalogs),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = NuvioColors.TextSecondary
+                            )
+                            Text(
+                                text = stringResource(R.string.layout_hero_catalogs_sub),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = NuvioColors.TextTertiary
+                            )
+                            LazyRow(
+                                contentPadding = PaddingValues(end = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(
+                                    items = uiState.availableCatalogs,
+                                    key = { it.key }
+                                ) { catalog ->
+                                    CatalogChip(
+                                        catalogInfo = catalog,
+                                        isSelected = catalog.key in uiState.heroCatalogKeys,
+                                        onClick = {
+                                            viewModel.onEvent(LayoutSettingsEvent.ToggleHeroCatalog(catalog.key))
+                                        },
+                                        onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item(key = "home_content_section") {
+                    CollapsibleSectionCard(
+                        title = stringResource(R.string.layout_section_content),
+                        description = stringResource(R.string.layout_section_content_desc),
+                        expanded = homeContentExpanded,
+                        onToggle = { homeContentExpanded = !homeContentExpanded },
+                        focusRequester = homeContentHeaderFocus,
+                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                    ) {
+                        if (!uiState.modernSidebarEnabled) {
+                            CompactToggleRow(
+                                title = stringResource(R.string.layout_collapse_sidebar),
+                                subtitle = stringResource(R.string.layout_collapse_sidebar_sub),
+                                checked = uiState.sidebarCollapsedByDefault,
+                                onToggle = {
+                                    viewModel.onEvent(
+                                        LayoutSettingsEvent.SetSidebarCollapsed(!uiState.sidebarCollapsedByDefault)
+                                    )
+                                },
+                                onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                            )
+                        }
                         CompactToggleRow(
-                            title = stringResource(R.string.layout_landscape_posters),
-                            subtitle = stringResource(R.string.layout_landscape_posters_sub),
-                            checked = uiState.modernLandscapePostersEnabled,
+                            title = stringResource(R.string.layout_modern_sidebar),
+                            subtitle = stringResource(R.string.layout_modern_sidebar_sub),
+                            checked = uiState.modernSidebarEnabled,
                             onToggle = {
                                 viewModel.onEvent(
-                                    LayoutSettingsEvent.SetModernLandscapePostersEnabled(
-                                        !uiState.modernLandscapePostersEnabled
+                                    LayoutSettingsEvent.SetModernSidebarEnabled(!uiState.modernSidebarEnabled)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                        )
+                        if (uiState.modernSidebarEnabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                            CompactToggleRow(
+                                title = stringResource(R.string.layout_modern_sidebar_blur),
+                                subtitle = stringResource(R.string.layout_modern_sidebar_blur_sub),
+                                checked = uiState.modernSidebarBlurEnabled,
+                                onToggle = {
+                                    viewModel.onEvent(
+                                        LayoutSettingsEvent.SetModernSidebarBlurEnabled(!uiState.modernSidebarBlurEnabled)
+                                    )
+                                },
+                                onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                            )
+                        }
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_modern_topbar),
+                            subtitle = stringResource(R.string.layout_modern_topbar_sub),
+                            checked = uiState.modernTopbarEnabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetModernTopbarEnabled(!uiState.modernTopbarEnabled)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                        )
+                        if (uiState.modernTopbarEnabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                            CompactToggleRow(
+                                title = stringResource(R.string.layout_modern_topbar_blur),
+                                subtitle = stringResource(R.string.layout_modern_topbar_blur_sub),
+                                checked = uiState.modernTopbarBlurEnabled,
+                                onToggle = {
+                                    viewModel.onEvent(
+                                        LayoutSettingsEvent.SetModernTopbarBlurEnabled(!uiState.modernTopbarBlurEnabled)
+                                    )
+                                },
+                                onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                            )
+                        }
+                        if (uiState.selectedLayout != HomeLayout.MODERN) {
+                            CompactToggleRow(
+                                title = stringResource(R.string.layout_show_hero),
+                                subtitle = stringResource(R.string.layout_show_hero_sub),
+                                checked = uiState.heroSectionEnabled,
+                                onToggle = {
+                                    viewModel.onEvent(
+                                        LayoutSettingsEvent.SetHeroSectionEnabled(!uiState.heroSectionEnabled)
+                                    )
+                                },
+                                onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                            )
+                        }
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_show_discover),
+                            subtitle = stringResource(R.string.layout_show_discover_sub),
+                            checked = uiState.searchDiscoverEnabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetSearchDiscoverEnabled(!uiState.searchDiscoverEnabled)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                        )
+                        if (uiState.selectedLayout != HomeLayout.MODERN) {
+                            CompactToggleRow(
+                                title = stringResource(R.string.layout_poster_labels),
+                                subtitle = stringResource(R.string.layout_poster_labels_sub),
+                                checked = uiState.posterLabelsEnabled,
+                                onToggle = {
+                                    viewModel.onEvent(
+                                        LayoutSettingsEvent.SetPosterLabelsEnabled(!uiState.posterLabelsEnabled)
+                                    )
+                                },
+                                onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                            )
+                        }
+                        if (uiState.selectedLayout != HomeLayout.MODERN) {
+                            CompactToggleRow(
+                                title = stringResource(R.string.layout_addon_name),
+                                subtitle = stringResource(R.string.layout_addon_name_sub),
+                                checked = uiState.catalogAddonNameEnabled,
+                                onToggle = {
+                                    viewModel.onEvent(
+                                        LayoutSettingsEvent.SetCatalogAddonNameEnabled(!uiState.catalogAddonNameEnabled)
+                                    )
+                                },
+                                onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                            )
+                        }
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_catalog_type),
+                            subtitle = stringResource(R.string.layout_catalog_type_sub),
+                            checked = uiState.catalogTypeSuffixEnabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetCatalogTypeSuffixEnabled(!uiState.catalogTypeSuffixEnabled)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                        )
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_hide_unreleased),
+                            subtitle = stringResource(R.string.layout_hide_unreleased_sub),
+                            checked = uiState.hideUnreleasedContent,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetHideUnreleasedContent(!uiState.hideUnreleasedContent)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                        )
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_blur_cw_next_up),
+                            subtitle = stringResource(R.string.layout_blur_cw_next_up_sub),
+                            checked = uiState.blurContinueWatchingNextUp,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetBlurContinueWatchingNextUp(!uiState.blurContinueWatchingNextUp)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                        )
+                    }
+                }
+
+                item(key = "detail_page_section") {
+                    CollapsibleSectionCard(
+                        title = stringResource(R.string.layout_section_detail),
+                        description = stringResource(R.string.layout_section_detail_desc),
+                        expanded = detailPageExpanded,
+                        onToggle = { detailPageExpanded = !detailPageExpanded },
+                        focusRequester = detailPageHeaderFocus,
+                        onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
+                    ) {
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_blur_unwatched),
+                            subtitle = stringResource(R.string.layout_blur_unwatched_sub),
+                            checked = uiState.blurUnwatchedEpisodes,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetBlurUnwatchedEpisodes(!uiState.blurUnwatchedEpisodes)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
+                        )
+
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_trailer_button),
+                            subtitle = stringResource(R.string.layout_trailer_button_sub),
+                            checked = uiState.detailPageTrailerButtonEnabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetDetailPageTrailerButtonEnabled(
+                                        !uiState.detailPageTrailerButtonEnabled
                                     )
                                 )
                             },
-                            onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
+                            onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
                         )
-                    }
 
-                    if (uiState.selectedLayout == HomeLayout.MODERN) {
                         CompactToggleRow(
-                            title = stringResource(R.string.layout_fullscreen_hero_backdrop),
-                            subtitle = stringResource(R.string.layout_fullscreen_hero_backdrop_sub),
-                            checked = uiState.modernHeroFullScreenBackdropEnabled,
+                            title = stringResource(R.string.layout_prefer_external_meta),
+                            subtitle = stringResource(R.string.layout_prefer_external_meta_sub),
+                            checked = uiState.preferExternalMetaAddonDetail,
                             onToggle = {
                                 viewModel.onEvent(
-                                    LayoutSettingsEvent.SetModernHeroFullScreenBackdropEnabled(!uiState.modernHeroFullScreenBackdropEnabled)
+                                    LayoutSettingsEvent.SetPreferExternalMetaAddonDetail(
+                                        !uiState.preferExternalMetaAddonDetail
+                                    )
                                 )
                             },
-                            onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
+                            onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
+                        )
+
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_show_full_release_date),
+                            subtitle = stringResource(R.string.layout_show_full_release_date_sub),
+                            checked = uiState.showFullReleaseDate,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetShowFullReleaseDate(!uiState.showFullReleaseDate)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
                         )
                     }
+                }
 
-                    if (uiState.heroSectionEnabled && uiState.availableCatalogs.isNotEmpty() && uiState.selectedLayout != HomeLayout.MODERN) {
-                        Text(
-                            text = stringResource(R.string.layout_hero_catalogs),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = NuvioColors.TextSecondary
-                        )
-                        Text(
-                            text = stringResource(R.string.layout_hero_catalogs_sub),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NuvioColors.TextTertiary
-                        )
-                        LazyRow(
-                            contentPadding = PaddingValues(end = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                if (uiState.selectedLayout != HomeLayout.GRID) {
+                    item(key = "focused_poster_section") {
+                        CollapsibleSectionCard(
+                            title = stringResource(R.string.layout_section_focused),
+                            description = stringResource(R.string.layout_section_focused_desc),
+                            expanded = focusedPosterExpanded,
+                            onToggle = { focusedPosterExpanded = !focusedPosterExpanded },
+                            focusRequester = focusedPosterHeaderFocus,
+                            onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
                         ) {
-                            items(
-                                items = uiState.availableCatalogs,
-                                key = { it.key }
-                            ) { catalog ->
-                                CatalogChip(
-                                    catalogInfo = catalog,
-                                    isSelected = catalog.key in uiState.heroCatalogKeys,
-                                    onClick = {
-                                        viewModel.onEvent(LayoutSettingsEvent.ToggleHeroCatalog(catalog.key))
+                            val isModern = uiState.selectedLayout == HomeLayout.MODERN
+                            val isModernLandscape = isModern && uiState.modernLandscapePostersEnabled
+                            val showAutoplayRow = uiState.focusedPosterBackdropExpandEnabled || isModernLandscape
+
+                            if (!isModernLandscape) {
+                                CompactToggleRow(
+                                    title = stringResource(R.string.layout_expand_poster),
+                                    subtitle = stringResource(R.string.layout_expand_poster_sub),
+                                    checked = uiState.focusedPosterBackdropExpandEnabled,
+                                    onToggle = {
+                                        viewModel.onEvent(
+                                            LayoutSettingsEvent.SetFocusedPosterBackdropExpandEnabled(
+                                                !uiState.focusedPosterBackdropExpandEnabled
+                                            )
+                                        )
                                     },
-                                    onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
+                                    onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
+                                )
+                            }
+
+                            if (!isModernLandscape && uiState.focusedPosterBackdropExpandEnabled) {
+                                SliderSettingsItem(
+                                    icon = Icons.Default.Timer,
+                                    title = stringResource(R.string.layout_expand_delay),
+                                    subtitle = stringResource(R.string.layout_expand_delay_sub),
+                                    value = uiState.focusedPosterBackdropExpandDelaySeconds,
+                                    valueText = "${uiState.focusedPosterBackdropExpandDelaySeconds}s",
+                                    minValue = 0,
+                                    maxValue = 10,
+                                    step = 1,
+                                    onValueChange = { seconds ->
+                                        viewModel.onEvent(
+                                            LayoutSettingsEvent.SetFocusedPosterBackdropExpandDelaySeconds(seconds)
+                                        )
+                                    },
+                                    onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
+                                )
+                            }
+
+                            if (showAutoplayRow) {
+                                CompactToggleRow(
+                                    title = if (isModern) {
+                                        stringResource(R.string.layout_autoplay_trailer)
+                                    } else {
+                                        stringResource(R.string.layout_autoplay_trailer_expanded)
+                                    },
+                                    subtitle = if (isModern) {
+                                        stringResource(R.string.layout_autoplay_trailer_sub)
+                                    } else {
+                                        stringResource(R.string.layout_autoplay_trailer_expanded_sub)
+                                    },
+                                    checked = uiState.focusedPosterBackdropTrailerEnabled,
+                                    onToggle = {
+                                        viewModel.onEvent(
+                                            LayoutSettingsEvent.SetFocusedPosterBackdropTrailerEnabled(
+                                                !uiState.focusedPosterBackdropTrailerEnabled
+                                            )
+                                        )
+                                    },
+                                    onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
+                                )
+                            }
+
+                            if (showAutoplayRow && uiState.focusedPosterBackdropTrailerEnabled) {
+                                CompactToggleRow(
+                                    title = stringResource(R.string.layout_trailer_muted),
+                                    subtitle = if (isModern) {
+                                        stringResource(R.string.layout_trailer_muted_sub_preview)
+                                    } else {
+                                        stringResource(R.string.layout_trailer_muted_sub_expanded)
+                                    },
+                                    checked = uiState.focusedPosterBackdropTrailerMuted,
+                                    onToggle = {
+                                        viewModel.onEvent(
+                                            LayoutSettingsEvent.SetFocusedPosterBackdropTrailerMuted(
+                                                !uiState.focusedPosterBackdropTrailerMuted
+                                            )
+                                        )
+                                    },
+                                    onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
+                                )
+                            }
+
+                            if (
+                                isModern &&
+                                showAutoplayRow &&
+                                uiState.focusedPosterBackdropTrailerEnabled
+                            ) {
+                                ModernTrailerPlaybackTargetRow(
+                                    selectedTarget = uiState.focusedPosterBackdropTrailerPlaybackTarget,
+                                    onTargetSelected = { target ->
+                                        viewModel.onEvent(
+                                            LayoutSettingsEvent.SetFocusedPosterBackdropTrailerPlaybackTarget(target)
+                                        )
+                                    },
+                                    onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            item(key = "home_content_section") {
-                CollapsibleSectionCard(
-                    title = stringResource(R.string.layout_section_content),
-                    description = stringResource(R.string.layout_section_content_desc),
-                    expanded = homeContentExpanded,
-                    onToggle = { homeContentExpanded = !homeContentExpanded },
-                    focusRequester = homeContentHeaderFocus,
-                    onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                ) {
-                    if (!uiState.modernSidebarEnabled) {
-                        CompactToggleRow(
-                            title = stringResource(R.string.layout_collapse_sidebar),
-                            subtitle = stringResource(R.string.layout_collapse_sidebar_sub),
-                            checked = uiState.sidebarCollapsedByDefault,
-                            onToggle = {
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetSidebarCollapsed(!uiState.sidebarCollapsedByDefault)
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                        )
-                    }
-                    CompactToggleRow(
-                        title = stringResource(R.string.layout_modern_sidebar),
-                        subtitle = stringResource(R.string.layout_modern_sidebar_sub),
-                        checked = uiState.modernSidebarEnabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                LayoutSettingsEvent.SetModernSidebarEnabled(!uiState.modernSidebarEnabled)
-                            )
-                        },
-                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                    )
-                    if (uiState.modernSidebarEnabled && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                        CompactToggleRow(
-                            title = stringResource(R.string.layout_modern_sidebar_blur),
-                            subtitle = stringResource(R.string.layout_modern_sidebar_blur_sub),
-                            checked = uiState.modernSidebarBlurEnabled,
-                            onToggle = {
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetModernSidebarBlurEnabled(!uiState.modernSidebarBlurEnabled)
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                        )
-                    }
-                    if (uiState.selectedLayout != HomeLayout.MODERN) {
-                        CompactToggleRow(
-                            title = stringResource(R.string.layout_show_hero),
-                            subtitle = stringResource(R.string.layout_show_hero_sub),
-                            checked = uiState.heroSectionEnabled,
-                            onToggle = {
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetHeroSectionEnabled(!uiState.heroSectionEnabled)
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                        )
-                    }
-                    CompactToggleRow(
-                        title = stringResource(R.string.layout_show_discover),
-                        subtitle = stringResource(R.string.layout_show_discover_sub),
-                        checked = uiState.searchDiscoverEnabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                LayoutSettingsEvent.SetSearchDiscoverEnabled(!uiState.searchDiscoverEnabled)
-                            )
-                        },
-                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                    )
-                    if (uiState.selectedLayout != HomeLayout.MODERN) {
-                        CompactToggleRow(
-                            title = stringResource(R.string.layout_poster_labels),
-                            subtitle = stringResource(R.string.layout_poster_labels_sub),
-                            checked = uiState.posterLabelsEnabled,
-                            onToggle = {
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetPosterLabelsEnabled(!uiState.posterLabelsEnabled)
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                        )
-                    }
-                    if (uiState.selectedLayout != HomeLayout.MODERN) {
-                        CompactToggleRow(
-                            title = stringResource(R.string.layout_addon_name),
-                            subtitle = stringResource(R.string.layout_addon_name_sub),
-                            checked = uiState.catalogAddonNameEnabled,
-                            onToggle = {
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetCatalogAddonNameEnabled(!uiState.catalogAddonNameEnabled)
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                        )
-                    }
-                    CompactToggleRow(
-                        title = stringResource(R.string.layout_catalog_type),
-                        subtitle = stringResource(R.string.layout_catalog_type_sub),
-                        checked = uiState.catalogTypeSuffixEnabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                LayoutSettingsEvent.SetCatalogTypeSuffixEnabled(!uiState.catalogTypeSuffixEnabled)
-                            )
-                        },
-                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                    )
-                    CompactToggleRow(
-                        title = stringResource(R.string.layout_hide_unreleased),
-                        subtitle = stringResource(R.string.layout_hide_unreleased_sub),
-                        checked = uiState.hideUnreleasedContent,
-                        onToggle = {
-                            viewModel.onEvent(
-                                LayoutSettingsEvent.SetHideUnreleasedContent(!uiState.hideUnreleasedContent)
-                            )
-                        },
-                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                    )
-                    CompactToggleRow(
-                        title = stringResource(R.string.layout_blur_cw_next_up),
-                        subtitle = stringResource(R.string.layout_blur_cw_next_up_sub),
-                        checked = uiState.blurContinueWatchingNextUp,
-                        onToggle = {
-                            viewModel.onEvent(
-                                LayoutSettingsEvent.SetBlurContinueWatchingNextUp(!uiState.blurContinueWatchingNextUp)
-                            )
-                        },
-                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                    )
-                }
-            }
-
-            item(key = "detail_page_section") {
-                CollapsibleSectionCard(
-                    title = stringResource(R.string.layout_section_detail),
-                    description = stringResource(R.string.layout_section_detail_desc),
-                    expanded = detailPageExpanded,
-                    onToggle = { detailPageExpanded = !detailPageExpanded },
-                    focusRequester = detailPageHeaderFocus,
-                    onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
-                ) {
-                    CompactToggleRow(
-                        title = stringResource(R.string.layout_blur_unwatched),
-                        subtitle = stringResource(R.string.layout_blur_unwatched_sub),
-                        checked = uiState.blurUnwatchedEpisodes,
-                        onToggle = {
-                            viewModel.onEvent(
-                                LayoutSettingsEvent.SetBlurUnwatchedEpisodes(!uiState.blurUnwatchedEpisodes)
-                            )
-                        },
-                        onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
-                    )
-
-                    CompactToggleRow(
-                        title = stringResource(R.string.layout_trailer_button),
-                        subtitle = stringResource(R.string.layout_trailer_button_sub),
-                        checked = uiState.detailPageTrailerButtonEnabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                LayoutSettingsEvent.SetDetailPageTrailerButtonEnabled(
-                                    !uiState.detailPageTrailerButtonEnabled
-                                )
-                            )
-                        },
-                        onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
-                    )
-
-                    CompactToggleRow(
-                        title = stringResource(R.string.layout_prefer_external_meta),
-                        subtitle = stringResource(R.string.layout_prefer_external_meta_sub),
-                        checked = uiState.preferExternalMetaAddonDetail,
-                        onToggle = {
-                            viewModel.onEvent(
-                                LayoutSettingsEvent.SetPreferExternalMetaAddonDetail(
-                                    !uiState.preferExternalMetaAddonDetail
-                                )
-                            )
-                        },
-                        onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
-                    )
-
-                    CompactToggleRow(
-                        title = stringResource(R.string.layout_show_full_release_date),
-                        subtitle = stringResource(R.string.layout_show_full_release_date_sub),
-                        checked = uiState.showFullReleaseDate,
-                        onToggle = {
-                            viewModel.onEvent(
-                                LayoutSettingsEvent.SetShowFullReleaseDate(!uiState.showFullReleaseDate)
-                            )
-                        },
-                        onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
-                    )
-                }
-            }
-
-            if (uiState.selectedLayout != HomeLayout.GRID) {
-            item(key = "focused_poster_section") {
-                CollapsibleSectionCard(
-                    title = stringResource(R.string.layout_section_focused),
-                    description = stringResource(R.string.layout_section_focused_desc),
-                    expanded = focusedPosterExpanded,
-                    onToggle = { focusedPosterExpanded = !focusedPosterExpanded },
-                    focusRequester = focusedPosterHeaderFocus,
-                    onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
-                ) {
-                    val isModern = uiState.selectedLayout == HomeLayout.MODERN
-                    val isModernLandscape = isModern && uiState.modernLandscapePostersEnabled
-                    val showAutoplayRow = uiState.focusedPosterBackdropExpandEnabled || isModernLandscape
-
-                    if (!isModernLandscape) {
-                        CompactToggleRow(
-                            title = stringResource(R.string.layout_expand_poster),
-                            subtitle = stringResource(R.string.layout_expand_poster_sub),
-                            checked = uiState.focusedPosterBackdropExpandEnabled,
-                            onToggle = {
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetFocusedPosterBackdropExpandEnabled(
-                                        !uiState.focusedPosterBackdropExpandEnabled
-                                    )
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
-                        )
-                    }
-
-                    if (!isModernLandscape && uiState.focusedPosterBackdropExpandEnabled) {
-                        SliderSettingsItem(
-                            icon = Icons.Default.Timer,
-                            title = stringResource(R.string.layout_expand_delay),
-                            subtitle = stringResource(R.string.layout_expand_delay_sub),
-                            value = uiState.focusedPosterBackdropExpandDelaySeconds,
-                            valueText = "${uiState.focusedPosterBackdropExpandDelaySeconds}s",
-                            minValue = 0,
-                            maxValue = 10,
-                            step = 1,
-                            onValueChange = { seconds ->
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetFocusedPosterBackdropExpandDelaySeconds(seconds)
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
-                        )
-                    }
-
-                    if (showAutoplayRow) {
-                        CompactToggleRow(
-                            title = if (isModern) {
-                                stringResource(R.string.layout_autoplay_trailer)
-                            } else {
-                                stringResource(R.string.layout_autoplay_trailer_expanded)
-                            },
-                            subtitle = if (isModern) {
-                                stringResource(R.string.layout_autoplay_trailer_sub)
-                            } else {
-                                stringResource(R.string.layout_autoplay_trailer_expanded_sub)
-                            },
-                            checked = uiState.focusedPosterBackdropTrailerEnabled,
-                            onToggle = {
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetFocusedPosterBackdropTrailerEnabled(
-                                        !uiState.focusedPosterBackdropTrailerEnabled
-                                    )
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
-                        )
-                    }
-
-                    if (showAutoplayRow && uiState.focusedPosterBackdropTrailerEnabled) {
-                        CompactToggleRow(
-                            title = stringResource(R.string.layout_trailer_muted),
-                            subtitle = if (isModern) {
-                                stringResource(R.string.layout_trailer_muted_sub_preview)
-                            } else {
-                                stringResource(R.string.layout_trailer_muted_sub_expanded)
-                            },
-                            checked = uiState.focusedPosterBackdropTrailerMuted,
-                            onToggle = {
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetFocusedPosterBackdropTrailerMuted(
-                                        !uiState.focusedPosterBackdropTrailerMuted
-                                    )
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
-                        )
-                    }
-
-                    if (
-                        isModern &&
-                        showAutoplayRow &&
-                        uiState.focusedPosterBackdropTrailerEnabled
-                    ) {
-                        ModernTrailerPlaybackTargetRow(
-                            selectedTarget = uiState.focusedPosterBackdropTrailerPlaybackTarget,
-                            onTargetSelected = { target ->
-                                viewModel.onEvent(
-                                    LayoutSettingsEvent.SetFocusedPosterBackdropTrailerPlaybackTarget(target)
-                                )
-                            },
-                            onFocused = { focusedSection = LayoutSettingsSection.FOCUSED_POSTER }
-                        )
-                    }
-                }
-            }
-            }
-
-            item(key = "poster_style_section") {
-                CollapsibleSectionCard(
-                    title = stringResource(R.string.layout_section_card_style),
-                    description = stringResource(R.string.layout_section_card_style_desc),
-                    expanded = posterCardStyleExpanded,
-                    onToggle = { posterCardStyleExpanded = !posterCardStyleExpanded },
-                    focusRequester = posterCardStyleHeaderFocus,
-                    onFocused = { focusedSection = LayoutSettingsSection.POSTER_CARD_STYLE }
-                ) {
-                    PosterCardStyleControls(
-                        widthDp = uiState.posterCardWidthDp,
-                        cornerRadiusDp = uiState.posterCardCornerRadiusDp,
-                        onWidthSelected = { width ->
-                            viewModel.onEvent(LayoutSettingsEvent.SetPosterCardWidth(width))
-                        },
-                        onCornerRadiusSelected = { radius ->
-                            viewModel.onEvent(LayoutSettingsEvent.SetPosterCardCornerRadius(radius))
-                        },
-                        onReset = {
-                            viewModel.onEvent(LayoutSettingsEvent.ResetPosterCardStyle)
-                        },
+                item(key = "poster_style_section") {
+                    CollapsibleSectionCard(
+                        title = stringResource(R.string.layout_section_card_style),
+                        description = stringResource(R.string.layout_section_card_style_desc),
+                        expanded = posterCardStyleExpanded,
+                        onToggle = { posterCardStyleExpanded = !posterCardStyleExpanded },
+                        focusRequester = posterCardStyleHeaderFocus,
                         onFocused = { focusedSection = LayoutSettingsSection.POSTER_CARD_STYLE }
-                    )
+                    ) {
+                        PosterCardStyleControls(
+                            widthDp = uiState.posterCardWidthDp,
+                            cornerRadiusDp = uiState.posterCardCornerRadiusDp,
+                            onWidthSelected = { width ->
+                                viewModel.onEvent(LayoutSettingsEvent.SetPosterCardWidth(width))
+                            },
+                            onCornerRadiusSelected = { radius ->
+                                viewModel.onEvent(LayoutSettingsEvent.SetPosterCardCornerRadius(radius))
+                            },
+                            onReset = {
+                                viewModel.onEvent(LayoutSettingsEvent.ResetPosterCardStyle)
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.POSTER_CARD_STYLE }
+                        )
+                    }
                 }
             }
-        }
         }
     }
 }

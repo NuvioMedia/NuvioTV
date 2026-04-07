@@ -156,20 +156,20 @@ fun ModernHomeContent(
     val trailerPlaybackTarget = uiState.focusedPosterBackdropTrailerPlaybackTarget
     val effectiveAutoplayEnabled =
         uiState.focusedPosterBackdropTrailerEnabled &&
-            (isLandscapeModern || uiState.focusedPosterBackdropExpandEnabled)
+                (isLandscapeModern || uiState.focusedPosterBackdropExpandEnabled)
     val landscapeExpandedCardMode =
         isLandscapeModern &&
-            effectiveAutoplayEnabled &&
-            trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD
+                effectiveAutoplayEnabled &&
+                trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.EXPANDED_CARD
     val effectiveExpandEnabled =
         (uiState.focusedPosterBackdropExpandEnabled && expandControlAvailable) ||
-            landscapeExpandedCardMode
+                landscapeExpandedCardMode
     val showCatalogTypeSuffixInModern = uiState.catalogTypeSuffixEnabled
     val showFullReleaseDate = uiState.showFullReleaseDate
     val shouldActivateFocusedPosterFlow =
         effectiveExpandEnabled ||
-            (effectiveAutoplayEnabled &&
-                trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA)
+                (effectiveAutoplayEnabled &&
+                        trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA)
     val visibleHomeRows = remember(uiState.homeRows, uiState.catalogRows) {
         if (uiState.homeRows.isNotEmpty()) {
             uiState.homeRows
@@ -200,11 +200,11 @@ fun ModernHomeContent(
             if (uiState.continueWatchingItems.isNotEmpty()) {
                 val reuseContinueWatchingRow =
                     rowBuildCache.continueWatchingRow != null &&
-                        rowBuildCache.continueWatchingItems == uiState.continueWatchingItems &&
-                        rowBuildCache.continueWatchingTitle == strContinueWatching &&
-                        rowBuildCache.continueWatchingAirsDateTemplate == strAirsDate &&
-                        rowBuildCache.continueWatchingUpcomingLabel == strUpcoming &&
-                        rowBuildCache.continueWatchingUseLandscapePosters == useLandscapePosters
+                            rowBuildCache.continueWatchingItems == uiState.continueWatchingItems &&
+                            rowBuildCache.continueWatchingTitle == strContinueWatching &&
+                            rowBuildCache.continueWatchingAirsDateTemplate == strAirsDate &&
+                            rowBuildCache.continueWatchingUpcomingLabel == strUpcoming &&
+                            rowBuildCache.continueWatchingUseLandscapePosters == useLandscapePosters
                 val continueWatchingRow = if (reuseContinueWatchingRow) {
                     checkNotNull(rowBuildCache.continueWatchingRow)
                 } else {
@@ -244,9 +244,9 @@ fun ModernHomeContent(
                         val cached = rowBuildCache.catalogRows[rowKey]
                         val canReuseMappedRow =
                             cached != null &&
-                                cached.source == row &&
-                                cached.useLandscapePosters == useLandscapePosters &&
-                                cached.showCatalogTypeSuffix == showCatalogTypeSuffixInModern
+                                    cached.source == row &&
+                                    cached.useLandscapePosters == useLandscapePosters &&
+                                    cached.showCatalogTypeSuffix == showCatalogTypeSuffixInModern
 
                         val mappedRow = if (canReuseMappedRow) {
                             val cachedMappedRow = checkNotNull(cached).mappedRow
@@ -722,10 +722,10 @@ fun ModernHomeContent(
             isSidebarExpanded
         ) {
             effectiveAutoplayEnabled &&
-                !isSidebarExpanded &&
-                !isVerticalRowsScrolling &&
-                trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA &&
-                !heroTrailerUrl.isNullOrBlank()
+                    !isSidebarExpanded &&
+                    !isVerticalRowsScrolling &&
+                    trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA &&
+                    !heroTrailerUrl.isNullOrBlank()
         }
         var heroTrailerFirstFrameRendered by remember(heroTrailerUrl) { mutableStateOf(false) }
         LaunchedEffect(shouldPlayHeroTrailer) {
@@ -791,8 +791,13 @@ fun ModernHomeContent(
         val catalogBottomPadding = 0.dp
         val heroToCatalogGap = 16.dp
         val rowTitleBottom = 14.dp
+        val topbarDynamicOffset by animateDpAsState(
+            targetValue = if (uiState.modernTopbarEnabled && isSidebarExpanded) 56.dp else 0.dp,
+            animationSpec = tween(durationMillis = 350),
+            label = "topbarDynamicOffset"
+        )
         val rowsViewportHeightFraction = if (useLandscapePosters) 0.49f else 0.52f
-        val rowsViewportHeight = maxHeight * rowsViewportHeightFraction
+        val rowsViewportHeight = (maxHeight * rowsViewportHeightFraction) - topbarDynamicOffset
         val localDensity = LocalDensity.current
         val rowTitleLineHeight = MaterialTheme.typography.titleMedium.lineHeight
         val rowTitleHeight = with(localDensity) {
@@ -880,8 +885,8 @@ fun ModernHomeContent(
             enrichmentActive = heroSceneState.enrichmentActive,
             portraitMode = !useLandscapePosters,
             trailerPlaying = heroSceneState.fullScreenBackdrop &&
-                heroSceneState.shouldPlayTrailer &&
-                heroSceneState.trailerFirstFrameRendered,
+                    heroSceneState.shouldPlayTrailer &&
+                    heroSceneState.trailerFirstFrameRendered,
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(
@@ -906,17 +911,17 @@ fun ModernHomeContent(
                     .focusRestorer { focusRestorerRequester }
                     .onPreviewKeyEvent { event ->
                         val native = event.nativeKeyEvent
-                       
-                    
+
+
                         if (native.action == AndroidKeyEvent.ACTION_DOWN &&
                             native.repeatCount > 0 &&
                             (native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_DOWN ||
-                                native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_UP ||
-                                native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_LEFT ||
-                                native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_RIGHT)
+                                    native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_UP ||
+                                    native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_LEFT ||
+                                    native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_RIGHT)
                         ) {
                             val isVertical = native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_DOWN ||
-                                native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_UP
+                                    native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_UP
                             val gateMs = if (isVertical) 112L else 80L
                             val now = android.os.SystemClock.uptimeMillis()
                             if (now - lastKeyRepeatDispatchRef.get() < gateMs) {
@@ -945,97 +950,97 @@ fun ModernHomeContent(
                     key = { _, row -> row.key },
                     contentType = { _, row -> row.apiType ?: "modern_home_row" } // Differentiate horizontal rows by type
                 ) { _, row ->
-                            val stableOnContinueWatchingOptions = remember(Unit) {
-                                { item: ContinueWatchingItem -> optionsItem = item }
+                    val stableOnContinueWatchingOptions = remember(Unit) {
+                        { item: ContinueWatchingItem -> optionsItem = item }
+                    }
+                    val stableOnRowItemFocused = remember(Unit) {
+                        { rowKey: String, index: Int, isContinueWatchingRow: Boolean ->
+                            val rowBecameActive = focusHolder.activeRowKey != rowKey
+                            val itemChanged = focusHolder.activeItemIndex != index
+                            if (rowBecameActive || itemChanged) {
+                                val now = System.currentTimeMillis()
+                                val timeSinceLastHeroNav = now - lastHeroNavigationAtMsRef.get()
+                                heroFocusSettleDelayMsRef.set(
+                                    if (lastHeroNavigationAtMsRef.get() != 0L &&
+                                        timeSinceLastHeroNav in 1 until MODERN_HERO_RAPID_NAV_THRESHOLD_MS
+                                    ) MODERN_HERO_RAPID_NAV_SETTLE_MS
+                                    else MODERN_HERO_FOCUS_DEBOUNCE_MS
+                                )
+                                lastHeroNavigationAtMsRef.set(now)
+                                focusHolder.activeRowKey = rowKey
+                                focusHolder.activeItemIndex = index
+                                activeRowKey = rowKey
+                                activeItemIndex = index
                             }
-                            val stableOnRowItemFocused = remember(Unit) {
-                                { rowKey: String, index: Int, isContinueWatchingRow: Boolean ->
-                                    val rowBecameActive = focusHolder.activeRowKey != rowKey
-                                    val itemChanged = focusHolder.activeItemIndex != index
-                                    if (rowBecameActive || itemChanged) {
-                                        val now = System.currentTimeMillis()
-                                        val timeSinceLastHeroNav = now - lastHeroNavigationAtMsRef.get()
-                                        heroFocusSettleDelayMsRef.set(
-                                            if (lastHeroNavigationAtMsRef.get() != 0L &&
-                                                timeSinceLastHeroNav in 1 until MODERN_HERO_RAPID_NAV_THRESHOLD_MS
-                                            ) MODERN_HERO_RAPID_NAV_SETTLE_MS
-                                            else MODERN_HERO_FOCUS_DEBOUNCE_MS
-                                        )
-                                        lastHeroNavigationAtMsRef.set(now)
-                                        focusHolder.activeRowKey = rowKey
-                                        focusHolder.activeItemIndex = index
-                                        activeRowKey = rowKey
-                                        activeItemIndex = index
-                                    }
-                                    if (focusedItemByRow[rowKey] != index) {
-                                        focusedItemByRow[rowKey] = index
-                                    }
-                                    if (isContinueWatchingRow) {
-                                        if (lastFocusedContinueWatchingIndexRef.get() != index) {
-                                            lastFocusedContinueWatchingIndexRef.set(index)
-                                        }
-                                        if (focusedCatalogSelection != null) {
-                                            focusedCatalogSelection = null
-                                        }
-                                    }
+                            if (focusedItemByRow[rowKey] != index) {
+                                focusedItemByRow[rowKey] = index
+                            }
+                            if (isContinueWatchingRow) {
+                                if (lastFocusedContinueWatchingIndexRef.get() != index) {
+                                    lastFocusedContinueWatchingIndexRef.set(index)
+                                }
+                                if (focusedCatalogSelection != null) {
+                                    focusedCatalogSelection = null
                                 }
                             }
-                            ModernRowSection(
-                                row = row,
-                                isActiveRow = row.key == activeRowKey,
-                                isVerticalRowsScrolling = isVerticalRowsScrolling,
-                                rowTitleBottom = rowTitleBottom,
-                                defaultBringIntoViewSpec = defaultBringIntoViewSpec,
-                                focusStateCatalogRowScrollIndex = remember(focusState.catalogRowScrollStates, row.key) {
-                                    focusState.catalogRowScrollStates[row.key] ?: 0
-                                },
-                                uiCaches = uiCaches,
-                                pendingRowFocusKey = pendingRowFocusKey,
-                                pendingRowFocusIndex = pendingRowFocusIndex,
-                                pendingRowFocusNonce = pendingRowFocusNonce,
-                                onPendingRowFocusCleared = remember(Unit) {
-                                    {
-                                        pendingRowFocusKey = null
-                                        pendingRowFocusIndex = null
-                                    }
-                                },
-                                onRowItemFocused = stableOnRowItemFocused,
-                                useLandscapePosters = useLandscapePosters,
-                                showLabels = uiState.posterLabelsEnabled,
-                                posterCardCornerRadius = posterCardCornerRadius,
-                                focusedPosterBackdropTrailerMuted = uiState.focusedPosterBackdropTrailerMuted,
-                                effectiveExpandEnabled = effectiveExpandEnabled,
-                                effectiveAutoplayEnabled = effectiveAutoplayEnabled,
-                                trailerPlaybackTarget = trailerPlaybackTarget,
-                                expandedCatalogFocusKey = expandedCatalogFocusKey,
-                                expandedTrailerPreviewUrl = expandedCatalogTrailerUrl,
-                                expandedTrailerPreviewAudioUrl = expandedCatalogTrailerAudioUrl,
-                                portraitCatalogCardWidth = portraitCatalogCardWidth,
-                                portraitCatalogCardHeight = portraitCatalogCardHeight,
-                                landscapeCatalogCardWidth = landscapeCatalogCardWidth,
-                                landscapeCatalogCardHeight = landscapeCatalogCardHeight,
-                                continueWatchingCardWidth = continueWatchingCardWidth,
-                                continueWatchingCardHeight = continueWatchingCardHeight,
-                                blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
-                                onContinueWatchingClick = onContinueWatchingClick,
-                                onContinueWatchingOptions = stableOnContinueWatchingOptions,
-                                isCatalogItemWatched = isCatalogItemWatched,
-                                onCatalogItemLongPress = onCatalogItemLongPress,
-                                onItemFocus = onItemFocus,
-                                onPreloadAdjacentItem = onPreloadAdjacentItem,
-                                onCatalogSelectionFocused = remember(Unit) {
-                                    { selection: FocusedCatalogSelection ->
-                                        if (focusedCatalogSelection != selection) {
-                                            focusedCatalogSelection = selection
-                                        }
-                                    }
-                                },
-                                onNavigateToDetail = onNavigateToDetail,
-                                onNavigateToFolderDetail = onNavigateToFolderDetail,
-                                onLoadMoreCatalog = onLoadMoreCatalog,
-                                onBackdropInteraction = remember(Unit) { { expansionInteractionNonce++ } },
-                                onExpandedCatalogFocusKeyChange = remember(Unit) { { expandedCatalogFocusKey = it } }
-                            )
+                        }
+                    }
+                    ModernRowSection(
+                        row = row,
+                        isActiveRow = row.key == activeRowKey,
+                        isVerticalRowsScrolling = isVerticalRowsScrolling,
+                        rowTitleBottom = rowTitleBottom,
+                        defaultBringIntoViewSpec = defaultBringIntoViewSpec,
+                        focusStateCatalogRowScrollIndex = remember(focusState.catalogRowScrollStates, row.key) {
+                            focusState.catalogRowScrollStates[row.key] ?: 0
+                        },
+                        uiCaches = uiCaches,
+                        pendingRowFocusKey = pendingRowFocusKey,
+                        pendingRowFocusIndex = pendingRowFocusIndex,
+                        pendingRowFocusNonce = pendingRowFocusNonce,
+                        onPendingRowFocusCleared = remember(Unit) {
+                            {
+                                pendingRowFocusKey = null
+                                pendingRowFocusIndex = null
+                            }
+                        },
+                        onRowItemFocused = stableOnRowItemFocused,
+                        useLandscapePosters = useLandscapePosters,
+                        showLabels = uiState.posterLabelsEnabled,
+                        posterCardCornerRadius = posterCardCornerRadius,
+                        focusedPosterBackdropTrailerMuted = uiState.focusedPosterBackdropTrailerMuted,
+                        effectiveExpandEnabled = effectiveExpandEnabled,
+                        effectiveAutoplayEnabled = effectiveAutoplayEnabled,
+                        trailerPlaybackTarget = trailerPlaybackTarget,
+                        expandedCatalogFocusKey = expandedCatalogFocusKey,
+                        expandedTrailerPreviewUrl = expandedCatalogTrailerUrl,
+                        expandedTrailerPreviewAudioUrl = expandedCatalogTrailerAudioUrl,
+                        portraitCatalogCardWidth = portraitCatalogCardWidth,
+                        portraitCatalogCardHeight = portraitCatalogCardHeight,
+                        landscapeCatalogCardWidth = landscapeCatalogCardWidth,
+                        landscapeCatalogCardHeight = landscapeCatalogCardHeight,
+                        continueWatchingCardWidth = continueWatchingCardWidth,
+                        continueWatchingCardHeight = continueWatchingCardHeight,
+                        blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
+                        onContinueWatchingClick = onContinueWatchingClick,
+                        onContinueWatchingOptions = stableOnContinueWatchingOptions,
+                        isCatalogItemWatched = isCatalogItemWatched,
+                        onCatalogItemLongPress = onCatalogItemLongPress,
+                        onItemFocus = onItemFocus,
+                        onPreloadAdjacentItem = onPreloadAdjacentItem,
+                        onCatalogSelectionFocused = remember(Unit) {
+                            { selection: FocusedCatalogSelection ->
+                                if (focusedCatalogSelection != selection) {
+                                    focusedCatalogSelection = selection
+                                }
+                            }
+                        },
+                        onNavigateToDetail = onNavigateToDetail,
+                        onNavigateToFolderDetail = onNavigateToFolderDetail,
+                        onLoadMoreCatalog = onLoadMoreCatalog,
+                        onBackdropInteraction = remember(Unit) { { expansionInteractionNonce++ } },
+                        onExpandedCatalogFocusKeyChange = remember(Unit) { { expandedCatalogFocusKey = it } }
+                    )
                 }
             }
         }
