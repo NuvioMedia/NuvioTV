@@ -10,6 +10,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.nuvio.tv.domain.model.HomeLayout
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -40,6 +41,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     private val heroCatalogKeysKey = stringPreferencesKey("hero_catalog_keys")
     private val homeCatalogOrderKeysKey = stringPreferencesKey("home_catalog_order_keys")
     private val disabledHomeCatalogKeysKey = stringPreferencesKey("disabled_home_catalog_keys")
+    private val customCatalogTitlesKey = stringPreferencesKey("custom_catalog_titles")
     private val sidebarCollapsedKey = booleanPreferencesKey("sidebar_collapsed_by_default")
     private val modernSidebarEnabledKey = booleanPreferencesKey("modern_sidebar_enabled")
     private val legacyModernSidebarEnabledKey = booleanPreferencesKey("glass_sidepanel_enabled")
@@ -108,6 +110,10 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     val disabledHomeCatalogKeys: Flow<List<String>> = profileFlow { prefs ->
         parseCatalogKeys(prefs[disabledHomeCatalogKeysKey])
+    }
+
+    val customCatalogTitles: Flow<Map<String, String>> = profileFlow { prefs ->
+        parseCustomTitles(prefs[customCatalogTitlesKey])
     }
 
     val sidebarCollapsedByDefault: Flow<Boolean> = profileFlow { prefs ->
@@ -450,5 +456,99 @@ class LayoutPreferenceDataStore @Inject constructor(
             .filter { it.isNotEmpty() }
             .distinct()
             .toList()
+    }
+
+    private fun parseCustomTitles(json: String?): Map<String, String> {
+        if (json.isNullOrBlank()) return emptyMap()
+        return try {
+            val type = object : TypeToken<Map<String, String>>() {}.type
+            gson.fromJson<Map<String, String>>(json, type).orEmpty()
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    suspend fun setCustomCatalogTitles(titles: Map<String, String>) {
+        store().edit { prefs ->
+            val filtered = titles.filterValues { it.isNotBlank() }
+            if (filtered.isEmpty()) {
+                prefs.remove(customCatalogTitlesKey)
+            } else {
+                prefs[customCatalogTitlesKey] = gson.toJson(filtered)
+            }
+        }
+    }
+
+    suspend fun exportCatalogSettingsToSyncPayload(): com.nuvio.tv.core.sync.SyncHomeCatalogPayload {
+        val prefs = store().data.first()
+        val orderKeys = parseCatalogKeys(prefs[homeCatalogOrderKeysKey])
+        val disabledKeys = parseCatalogKeys(prefs[disabledHomeCatalogKeysKey]).toSet()
+        val titles = parseCustomTitles(prefs[customCatalogTitlesKey])
+
+        val items = orderKeys.mapIndexed { index, key ->
+            val isCollection = key.startsWith("collection_")
+            if (isCollection) {
+                com.nuvio.tv.core.sync.SyncCatalogItem(
+                    addonId = "",
+                    type = "",
+                    catalogId = "",
+                    enabled = key !in disabledKeys,
+                    order = index,
+                    customTitle = titles[key].orEmpty(),
+                    isCollection = true,
+                    collectionId = key.removePrefix("collection_"),
+                )
+            } else {
+                val parts = key.split("_", limit = 3)
+                com.nuvio.tv.core.sync.SyncCatalogItem(
+                    addonId = parts.getOrElse(0) { "" },
+                    type = parts.getOrElse(1) { "" },
+                    catalogId = parts.getOrElse(2) { "" },
+                    enabled = !disabledKeys.any { dk -> dk.contains("_${parts.getOrElse(1) { "" }}_${parts.getOrElse(2) { "" }}_") || dk == key },
+                    order = index,
+                    customTitle = titles[key].orEmpty(),
+                    isCollection = false,
+                )
+            }
+        }
+
+        return com.nuvio.tv.core.sync.SyncHomeCatalogPayload(
+            items = items,
+        )
+    }
+
+    suspend fun applyCatalogSettingsFromRemote(payload: com.nuvio.tv.core.sync.SyncHomeCatalogPayload) {
+        val sortedItems = payload.items.sortedBy { it.order }
+        val orderKeys = sortedItems.map { item ->
+            if (item.isCollection) "collection_${item.collectionId}"
+            else "${item.addonId}_${item.type}_${item.catalogId}"
+        }
+        val disabledKeys = sortedItems.filter { !it.enabled }.map { item ->
+            if (item.isCollection) "collection_${item.collectionId}"
+            else "${item.addonId}_${item.type}_${item.catalogId}"
+        }
+        val titles = sortedItems.associate { item ->
+            val key = if (item.isCollection) "collection_${item.collectionId}"
+            else "${item.addonId}_${item.type}_${item.catalogId}"
+            key to item.customTitle
+        }.filterValues { it.isNotBlank() }
+
+        store().edit { prefs ->
+            if (orderKeys.isNotEmpty()) {
+                prefs[homeCatalogOrderKeysKey] = gson.toJson(orderKeys)
+            } else {
+                prefs.remove(homeCatalogOrderKeysKey)
+            }
+            if (disabledKeys.isNotEmpty()) {
+                prefs[disabledHomeCatalogKeysKey] = gson.toJson(disabledKeys)
+            } else {
+                prefs.remove(disabledHomeCatalogKeysKey)
+            }
+            if (titles.isNotEmpty()) {
+                prefs[customCatalogTitlesKey] = gson.toJson(titles)
+            } else {
+                prefs.remove(customCatalogTitlesKey)
+            }
+        }
     }
 }

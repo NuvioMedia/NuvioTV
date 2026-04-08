@@ -30,6 +30,7 @@ class StartupSyncService @Inject constructor(
     private val pluginSyncService: PluginSyncService,
     private val addonSyncService: AddonSyncService,
     private val collectionSyncService: CollectionSyncService,
+    private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService,
     private val watchProgressSyncService: WatchProgressSyncService,
     private val librarySyncService: LibrarySyncService,
     private val watchedItemsSyncService: WatchedItemsSyncService,
@@ -232,6 +233,18 @@ class StartupSyncService @Inject constructor(
                     }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to pull collections from remote", e)
+            }
+
+            try {
+                homeCatalogSettingsSyncService.pullFromRemote()
+                    .onSuccess { applied ->
+                        Log.d(TAG, "Home catalog settings pull completed for profile $profileId (applied=$applied)")
+                    }
+                    .onFailure { e ->
+                        Log.e(TAG, "Failed to pull home catalog settings from remote, keeping local", e)
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to pull home catalog settings from remote", e)
             }
 
             val isPrimaryProfile = profileManager.activeProfileId.value == 1

@@ -1,9 +1,6 @@
 package com.nuvio.tv.ui.screens.collection
 
-import android.graphics.Bitmap
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,10 +26,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.PhoneAndroid
-import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,14 +41,11 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -114,10 +105,6 @@ fun CollectionManagementScreen(
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    DisposableEffect(Unit) {
-        onDispose { viewModel.stopQrMode() }
-    }
 
     var exportMessage by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(exportMessage) {
@@ -242,10 +229,6 @@ fun CollectionManagementScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ManageFromPhoneCard(onClick = { viewModel.startQrMode() })
-
         Spacer(modifier = Modifier.height(24.dp))
 
         if (uiState.collections.isEmpty()) {
@@ -281,23 +264,6 @@ fun CollectionManagementScreen(
                 }
             }
         }
-    }
-
-    if (uiState.isQrModeActive) {
-        QrCodeOverlay(
-            qrBitmap = uiState.qrCodeBitmap,
-            serverUrl = uiState.serverUrl,
-            onClose = { viewModel.stopQrMode() },
-            hasPendingChange = uiState.pendingCollectionChange != null
-        )
-    }
-
-    if (uiState.pendingCollectionChange != null) {
-        ConfirmCollectionChangesDialog(
-            pending = uiState.pendingCollectionChange!!,
-            onConfirm = { viewModel.confirmPendingChange() },
-            onReject = { viewModel.rejectPendingChange() }
-        )
     }
     }
 }
@@ -676,295 +642,6 @@ private fun CollectionListItem(
                     shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                 ) {
                     Icon(Icons.Default.Delete, "Delete")
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun ManageFromPhoneCard(onClick: () -> Unit) {
-    var isFocused by remember { mutableStateOf(false) }
-
-    Surface(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .onFocusChanged { isFocused = it.isFocused },
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.FocusBackground
-        ),
-        border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(18.dp)
-            )
-        ),
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(18.dp)),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.01f)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.QrCode2,
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp),
-                    tint = if (isFocused) NuvioColors.Secondary else NuvioColors.TextSecondary
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = "Manage from Phone",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = NuvioColors.TextPrimary
-                    )
-                    Text(
-                        text = "Scan QR code to manage collections from your phone",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = NuvioColors.TextSecondary
-                    )
-                }
-            }
-            Icon(
-                imageVector = Icons.Default.PhoneAndroid,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = NuvioColors.TextSecondary
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun QrCodeOverlay(
-    qrBitmap: Bitmap?,
-    serverUrl: String?,
-    onClose: () -> Unit,
-    hasPendingChange: Boolean = false
-) {
-    val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(hasPendingChange) {
-        if (!hasPendingChange) {
-            focusRequester.requestFocus()
-        }
-    }
-
-    BackHandler { onClose() }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.85f)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Scan with your phone to manage collections",
-                style = MaterialTheme.typography.bodyMedium,
-                color = NuvioColors.TextSecondary,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (qrBitmap != null) {
-                Image(
-                    bitmap = qrBitmap.asImageBitmap(),
-                    contentDescription = "QR Code",
-                    modifier = Modifier.size(220.dp),
-                    contentScale = ContentScale.Fit
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (serverUrl != null) {
-                Text(
-                    text = serverUrl,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.TextTertiary,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Surface(
-                onClick = onClose,
-                modifier = Modifier.focusRequester(focusRequester),
-                colors = ClickableSurfaceDefaults.colors(
-                    containerColor = NuvioColors.Surface,
-                    focusedContainerColor = NuvioColors.FocusBackground
-                ),
-                border = ClickableSurfaceDefaults.border(
-                    focusedBorder = Border(
-                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                        shape = RoundedCornerShape(50)
-                    )
-                ),
-                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50)),
-                scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = NuvioColors.TextPrimary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Close",
-                        color = NuvioColors.TextPrimary
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun ConfirmCollectionChangesDialog(
-    pending: PendingCollectionChangeInfo,
-    onConfirm: () -> Unit,
-    onReject: () -> Unit
-) {
-    val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
-
-    BackHandler { onReject() }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.8f)),
-        contentAlignment = Alignment.Center
-    ) {
-        Surface(
-            onClick = { },
-            modifier = Modifier.width(480.dp),
-            colors = ClickableSurfaceDefaults.colors(
-                containerColor = NuvioColors.SurfaceVariant
-            ),
-            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(16.dp))
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Apply Collection Changes?",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = NuvioColors.TextPrimary
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Changes from your phone are ready to apply.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            color = NuvioColors.Surface,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .padding(16.dp)
-                ) {
-                    Text(
-                        text = "${pending.proposedCollectionCount} collection${if (pending.proposedCollectionCount != 1) "s" else ""} will replace your current collections.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = NuvioColors.TextSecondary
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                if (pending.isApplying) {
-                    LoadingIndicator(modifier = Modifier.size(36.dp))
-                } else {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Surface(
-                            onClick = onReject,
-                            colors = ClickableSurfaceDefaults.colors(
-                                containerColor = NuvioColors.Surface,
-                                focusedContainerColor = NuvioColors.FocusBackground
-                            ),
-                            border = ClickableSurfaceDefaults.border(
-                                focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                                    shape = RoundedCornerShape(50)
-                                )
-                            ),
-                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                    tint = NuvioColors.TextPrimary
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Reject",
-                                    color = NuvioColors.TextPrimary
-                                )
-                            }
-                        }
-
-                        Surface(
-                            onClick = onConfirm,
-                            modifier = Modifier.focusRequester(focusRequester),
-                            colors = ClickableSurfaceDefaults.colors(
-                                containerColor = NuvioColors.Secondary,
-                                focusedContainerColor = NuvioColors.SecondaryVariant
-                            ),
-                            border = ClickableSurfaceDefaults.border(
-                                focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                                    shape = RoundedCornerShape(50)
-                                )
-                            ),
-                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50))
-                        ) {
-                            Text(
-                                text = "Apply",
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-                                color = NuvioColors.OnSecondary
-                            )
-                        }
-                    }
                 }
             }
         }

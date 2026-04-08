@@ -117,6 +117,7 @@ class HomeViewModel @Inject constructor(
     internal var collectionsCache: List<Collection> = emptyList()
     internal var homeCatalogOrderKeys: List<String> = emptyList()
     internal var disabledHomeCatalogKeys: Set<String> = emptySet()
+    internal var customCatalogTitles: Map<String, String> = emptyMap()
     internal var currentHeroCatalogKeys: List<String> = emptyList()
     internal var catalogUpdateJob: Job? = null
     internal var hasRenderedFirstCatalog = false
@@ -189,6 +190,7 @@ class HomeViewModel @Inject constructor(
         observeExternalMetaPrefetchPreference()
         loadHomeCatalogOrderPreference()
         loadDisabledHomeCatalogPreference()
+        loadCustomCatalogTitles()
         observeLibraryState()
         observeTmdbSettings()
         observeMdbListSettings()
@@ -262,6 +264,8 @@ class HomeViewModel @Inject constructor(
     private fun loadHomeCatalogOrderPreference() = loadHomeCatalogOrderPreferencePipeline()
 
     private fun loadDisabledHomeCatalogPreference() = loadDisabledHomeCatalogPreferencePipeline()
+
+    private fun loadCustomCatalogTitles() = loadCustomCatalogTitlesPipeline()
 
     private fun observeTmdbSettings() = observeTmdbSettingsPipeline()
 

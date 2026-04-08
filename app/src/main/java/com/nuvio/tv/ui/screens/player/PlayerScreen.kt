@@ -933,6 +933,7 @@ fun PlayerScreen(
             uiState.subtitleAiToast?.let { SubtitleAiToastBadge(it) }
         }
 
+
         AnimatedVisibility(
             visible = uiState.showPlayerEngineSwitchInfo && uiState.error == null,
             enter = fadeIn(animationSpec = tween(180)),
@@ -1897,6 +1898,7 @@ private fun SubtitleAiLoadingBadge() {
 }
 
 @Composable
+
 private fun PlayerEngineSwitchIndicator(
     title: String,
     message: String
@@ -1969,6 +1971,7 @@ private fun SubtitleAiToastBadge(toast: SubtitleAiToast) {
 }
 
 @Composable
+
 private fun SubtitleDelayOverlay(
     subtitleDelayMs: Int,
     isAutoSyncButtonFocused: Boolean,

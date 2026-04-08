@@ -82,6 +82,12 @@ class ProfileSettingsSyncService @Inject constructor(
         "track_preference"
     )
 
+    private val catalogKeysExcludedFromBlob = setOf(
+        "home_catalog_order_keys",
+        "disabled_home_catalog_keys",
+        "custom_catalog_titles"
+    )
+
     init {
         observeLocalSettingsChangesAndSync()
     }
@@ -180,6 +186,7 @@ class ProfileSettingsSyncService @Inject constructor(
                 val prefs = profileDataStoreFactory.get(profileId, feature).data.first()
                 val serialized = buildJsonObject {
                     prefs.asMap().forEach { (key, rawValue) ->
+                        if (feature == "layout_settings" && key.name in catalogKeysExcludedFromBlob) return@forEach
                         val encoded = encodePreferenceValue(rawValue) ?: return@forEach
                         put(key.name, encoded)
                     }
@@ -200,9 +207,35 @@ class ProfileSettingsSyncService @Inject constructor(
             syncedFeatures.forEach { feature ->
                 val featureJson = featuresJson[feature]?.jsonObject ?: return@forEach
                 profileDataStoreFactory.get(profileId, feature).edit { mutablePrefs ->
+                    val preservedEntries = if (feature == "layout_settings") {
+                        val entries = mutableMapOf<Preferences.Key<*>, Any>()
+                        catalogKeysExcludedFromBlob.forEach { keyName ->
+                            val strKey = stringPreferencesKey(keyName)
+                            mutablePrefs[strKey]?.let { entries[strKey] = it }
+                            val boolKey = booleanPreferencesKey(keyName)
+                            mutablePrefs[boolKey]?.let { entries[boolKey] = it }
+                        }
+                        entries
+                    } else {
+                        emptyMap()
+                    }
+
                     mutablePrefs.clear()
                     featureJson.forEach { (keyName, encodedValue) ->
+                        if (feature == "layout_settings" && keyName in catalogKeysExcludedFromBlob) return@forEach
                         applyEncodedPreference(mutablePrefs, keyName, encodedValue)
+                    }
+
+                    @Suppress("UNCHECKED_CAST")
+                    preservedEntries.forEach { (key, value) ->
+                        when (value) {
+                            is String -> mutablePrefs[key as Preferences.Key<String>] = value
+                            is Boolean -> mutablePrefs[key as Preferences.Key<Boolean>] = value
+                            is Int -> mutablePrefs[key as Preferences.Key<Int>] = value
+                            is Long -> mutablePrefs[key as Preferences.Key<Long>] = value
+                            is Float -> mutablePrefs[key as Preferences.Key<Float>] = value
+                            is Double -> mutablePrefs[key as Preferences.Key<Double>] = value
+                        }
                     }
                 }
             }
@@ -218,7 +251,7 @@ class ProfileSettingsSyncService @Inject constructor(
                     val featureFlows = syncedFeatures.map { feature ->
                         profileDataStoreFactory.get(profileId, feature).data
                             .map { prefs ->
-                                "$feature={${buildFeatureSignature(prefs)}}"
+                                "$feature={${buildFeatureSignature(prefs, feature)}}"
                             }
                     }
                     combine(featureFlows) { signatures ->
@@ -244,7 +277,7 @@ class ProfileSettingsSyncService @Inject constructor(
         val signatures = ArrayList<String>(syncedFeatures.size)
         syncedFeatures.forEach { feature ->
             val prefs = profileDataStoreFactory.get(profileId, feature).data.first()
-            signatures += "$feature={${buildFeatureSignature(prefs)}}"
+            signatures += "$feature={${buildFeatureSignature(prefs, feature)}}"
         }
         return signatures.joinToString(separator = "||")
     }
@@ -256,10 +289,11 @@ class ProfileSettingsSyncService @Inject constructor(
         }
     }
 
-    private fun buildFeatureSignature(prefs: Preferences): String {
+    private fun buildFeatureSignature(prefs: Preferences, feature: String = ""): String {
         return prefs.asMap()
             .entries
             .mapNotNull { (key, rawValue) ->
+                if (feature == "layout_settings" && key.name in catalogKeysExcludedFromBlob) return@mapNotNull null
                 encodePreferenceValue(rawValue)?.let { encoded ->
                     key.name to encoded.toString()
                 }

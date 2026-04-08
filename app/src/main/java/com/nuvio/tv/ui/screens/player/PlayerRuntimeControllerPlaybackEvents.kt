@@ -629,22 +629,15 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             resetSubtitleAutoSyncState()
             rememberInternalSubtitleSelection(event.index)
             selectSubtitleTrack(event.index)
-            // Re-enable translation if the selected track is English and setting is on
-            val selectedTrack = _uiState.value.subtitleTracks.getOrNull(event.index)
-            val isEnglish = selectedTrack?.language?.startsWith("en", ignoreCase = true) == true
-            if (translationManager != null) {
-                translationManager.isEnabled = _uiState.value.autoTranslateSubtitles && isEnglish
-                if (!translationManager.isEnabled) translationManager.reset()
-            }
-            _uiState.update {
+            _uiState.update { 
                 it.copy(
                     showSubtitleOverlay = true,
                     showSubtitleStylePanel = false,
                     showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
                     showControls = true,
-                    selectedAddonSubtitle = null
-                )
+                    selectedAddonSubtitle = null 
+                ) 
             }
         }
         PlayerEvent.OnDisableSubtitles -> {
@@ -659,9 +652,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             resetSubtitleAutoSyncState()
             rememberSubtitleDisabled()
             disableSubtitles()
-            translationManager?.isEnabled = false
-            translationManager?.reset()
-            _uiState.update {
+            _uiState.update { 
                 it.copy(
                     showSubtitleOverlay = true,
                     showSubtitleStylePanel = false,
@@ -670,7 +661,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showControls = true,
                     selectedAddonSubtitle = null,
                     selectedSubtitleTrackIndex = -1
-                )
+                ) 
             }
         }
         is PlayerEvent.OnSelectAddonSubtitle -> {
@@ -681,9 +672,6 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             autoSubtitleSelected = true
             rememberAddonSubtitleSelection(event.subtitle)
             selectAddonSubtitle(event.subtitle)
-            // Addon subtitle takes over — disable translation to avoid double-processing
-            translationManager?.isEnabled = false
-            translationManager?.reset()
             _uiState.update {
                 it.copy(
                     showSubtitleOverlay = true,
@@ -1052,14 +1040,6 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         PlayerEvent.OnDismissStreamInfo -> {
             _uiState.update { it.copy(showStreamInfoOverlay = false) }
-        }
-        is PlayerEvent.OnSetAutoTranslateSubtitles -> {
-            scope.launch {
-                playerSettingsDataStore.setAutoTranslateSubtitles(event.enabled)
-                translationManager?.isEnabled = event.enabled
-                translationManager?.reset()
-                _uiState.update { it.copy(autoTranslateSubtitles = event.enabled) }
-            }
         }
     }
 }

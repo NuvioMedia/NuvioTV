@@ -176,3 +176,10 @@ data class SupabaseCollectionBlob(
     @SerialName("collections_json") val collectionsJson: JsonElement = JsonArray(emptyList()),
     @SerialName("updated_at") val updatedAt: String? = null
 )
+
+@Serializable
+data class SupabaseHomeCatalogSettingsBlob(
+    @SerialName("profile_id") val profileId: Int = 1,
+    @SerialName("settings_json") val settingsJson: JsonObject = buildJsonObject { },
+    @SerialName("updated_at") val updatedAt: String? = null
+)

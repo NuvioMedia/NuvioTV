@@ -405,6 +405,11 @@ object AddonWebPage {
     display: flex;
     gap: 0;
     margin-bottom: 2.5rem;
+     position: sticky;
+     top: 0;
+     z-index: 40;
+     background: rgba(6, 8, 14, 0.92);
+     backdrop-filter: blur(18px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
   .tab {
@@ -852,34 +857,46 @@ object AddonWebPage {
     <p>${context.getString(R.string.web_manage_addons_subtitle)}</p>
   </div>
 
-  <div class="add-section">
-    <label>${context.getString(R.string.web_add_addon_url)}</label>
-    <div class="add-row">
-      <input type="url" id="addonUrl" placeholder="${context.getString(R.string.web_placeholder_url)}" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <button class="btn" id="addBtn" onclick="addAddon()">${context.getString(R.string.web_btn_add)}</button>
-    </div>
-    <div class="add-error" id="addError"></div>
+  <div class="tabs">
+    <button class="tab active" type="button" onclick="switchTab('addons')">Addons</button>
+    <button class="tab" type="button" onclick="switchTab('catalogs')">Catalogs</button>
+    <button class="tab" type="button" onclick="switchTab('collections')">Collections</button>
   </div>
 
-  <div class="section-label">${context.getString(R.string.web_installed_addons)}</div>
-  <ul class="addon-list" id="addonList"></ul>
-  <div class="empty-state" id="emptyState">${context.getString(R.string.web_no_addons)}</div>
+  <div class="tab-content active" id="tab-addons">
+    <div class="add-section">
+      <label>${context.getString(R.string.web_add_addon_url)}</label>
+      <div class="add-row">
+        <input type="url" id="addonUrl" placeholder="${context.getString(R.string.web_placeholder_url)}" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button class="btn" id="addBtn" onclick="addAddon()">${context.getString(R.string.web_btn_add)}</button>
+      </div>
+      <div class="add-error" id="addError"></div>
+    </div>
 
-  <div class="section-block">
-    <div class="section-label">${context.getString(R.string.web_home_catalogs)}</div>
-    <ul class="addon-list" id="catalogList"></ul>
-    <div class="empty-state" id="catalogEmptyState">${context.getString(R.string.web_no_catalogs)}</div>
+    <div class="section-label">${context.getString(R.string.web_installed_addons)}</div>
+    <ul class="addon-list" id="addonList"></ul>
+    <div class="empty-state" id="emptyState">${context.getString(R.string.web_no_addons)}</div>
   </div>
 
-  <div class="section-block">
-    <div class="section-label">Collections</div>
-    <div class="add-section" style="display:flex;gap:0.5rem">
-      <button class="btn" onclick="addCollection()" style="flex:1">+ New Collection</button>
-      <button class="btn" onclick="exportCollections()" style="flex:1">Export</button>
-      <button class="btn" onclick="showImportModal()" style="flex:1">Import</button>
+  <div class="tab-content" id="tab-catalogs">
+    <div class="section-block">
+      <div class="section-label">${context.getString(R.string.web_home_catalogs)}</div>
+      <ul class="addon-list" id="catalogList"></ul>
+      <div class="empty-state" id="catalogEmptyState">${context.getString(R.string.web_no_catalogs)}</div>
     </div>
-    <div id="collectionsList"></div>
-    <div class="empty-state" id="collectionsEmptyState">No collections yet</div>
+  </div>
+
+  <div class="tab-content" id="tab-collections">
+    <div class="section-block">
+      <div class="section-label">Collections</div>
+      <div class="add-section" style="display:flex;gap:0.5rem">
+        <button class="btn" onclick="addCollection()" style="flex:1">+ New Collection</button>
+        <button class="btn" onclick="exportCollections()" style="flex:1">Export</button>
+        <button class="btn" onclick="showImportModal()" style="flex:1">Import</button>
+      </div>
+      <div id="collectionsList"></div>
+      <div class="empty-state" id="collectionsEmptyState">No collections yet</div>
+    </div>
   </div>
 
   <div class="import-overlay" id="importOverlay">
@@ -1509,7 +1526,7 @@ function updateCollectionTitle(ci, val) {
 }
 
 function addFolder(ci) {
-  collections[ci].folders.push({ id: generateId(), title: 'New Folder', coverImageUrl: null, focusGifUrl: null, coverEmoji: null, tileShape: 'SQUARE', hideTitle: false, catalogSources: [] });
+  collections[ci].folders.push({ id: generateId(), title: 'New Folder', coverImageUrl: null, focusGifUrl: null, focusGifEnabled: true, coverEmoji: null, tileShape: 'SQUARE', hideTitle: false, catalogSources: [] });
   expandedFolder = ci + '-' + (collections[ci].folders.length - 1);
   renderCollections();
 }
@@ -1553,7 +1570,6 @@ function updateFolderFocusGifUrl(ci, fi, val) {
 function updateFolderFocusGifEnabled(ci, fi, checked) {
   collections[ci].folders[fi].focusGifEnabled = checked;
 }
-  collections[ci].folders.push({ id: generateId(), title: 'New Folder', coverImageUrl: null, focusGifUrl: null, focusGifEnabled: true, coverEmoji: null, tileShape: 'SQUARE', hideTitle: false, catalogSources: [] });
 
 function updateFolderCoverEmoji(ci, fi, val) {
   collections[ci].folders[fi].coverEmoji = val || null;

@@ -68,6 +68,15 @@ internal fun HomeViewModel.loadDisabledHomeCatalogPreferencePipeline() {
     }
 }
 
+internal fun HomeViewModel.loadCustomCatalogTitlesPipeline() {
+    viewModelScope.launch {
+        layoutPreferenceDataStore.customCatalogTitles.collectLatest { titles ->
+            customCatalogTitles = titles
+            scheduleUpdateCatalogRows()
+        }
+    }
+}
+
 internal fun HomeViewModel.observeTmdbSettingsPipeline() {
     viewModelScope.launch {
         tmdbSettingsDataStore.settings
@@ -302,9 +311,14 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
     val currentGridItems = _uiState.value.gridItems
     val heroSectionEnabled = _uiState.value.heroSectionEnabled
     val hideUnreleased = _uiState.value.hideUnreleasedContent
+    val titlesSnapshot = customCatalogTitles
 
     val (displayRows, baseHeroItems, baseGridItems, fullRowsFiltered) = withContext(Dispatchers.Default) {
-        val rawRows = orderedKeys.mapNotNull { key -> catalogSnapshot[key] }
+        val rawRows = orderedKeys.mapNotNull { key ->
+            val row = catalogSnapshot[key] ?: return@mapNotNull null
+            val custom = titlesSnapshot[key]
+            if (!custom.isNullOrBlank()) row.copy(catalogName = custom) else row
+        }
         val orderedRows = if (hideUnreleased) {
             val today = LocalDate.now()
             rawRows.map { it.filterReleasedItems(today) }
