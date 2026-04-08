@@ -5,6 +5,7 @@ import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.PluginDataStore
 import com.nuvio.tv.data.remote.supabase.SupabasePlugin
+import com.nuvio.tv.domain.model.RemotePluginInfo
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -60,6 +61,7 @@ class PluginSyncService @Inject constructor(
                             put("name", repo.name)
                             put("enabled", repo.enabled)
                             put("sort_order", index)
+                            put("repo_type", repo.type.name)
                         }
                     }
                 })
@@ -78,7 +80,7 @@ class PluginSyncService @Inject constructor(
         }
     }
 
-    suspend fun getRemoteRepoUrls(): Result<List<String>> = withContext(Dispatchers.IO) {
+    suspend fun getRemoteRepoUrls(): Result<List<RemotePluginInfo>> = withContext(Dispatchers.IO) {
         try {
             val effectiveUserId = authManager.getEffectiveUserId(fallbackToOwnIdOnFailure = false)
                 ?: return@withContext Result.failure(
@@ -101,7 +103,7 @@ class PluginSyncService @Inject constructor(
             Result.success(
                 remotePlugins
                 .sortedBy { it.sortOrder }
-                .map { it.url }
+                .map { RemotePluginInfo(url = it.url, repoType = it.repoType) }
             )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get remote repo URLs", e)

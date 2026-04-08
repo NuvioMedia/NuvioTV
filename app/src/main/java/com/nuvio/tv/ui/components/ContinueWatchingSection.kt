@@ -72,6 +72,9 @@ private val BadgeShape = RoundedCornerShape(4.dp)
 private val CwNewEpisodeBadgeColor = Color(0xFF1D4ED8)
 private val CwNewSeasonBadgeColor = Color(0xFFB45309)
 
+/** URLs that failed to load — skip them immediately on next recomposition. */
+internal val brokenImageUrls = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun ContinueWatchingSection(
@@ -274,26 +277,43 @@ fun ContinueWatchingCard(
     }
     val progressFraction = remember(progress) { progress?.progressPercentage ?: 0f }
     val imageModel = remember(nextUp, progress, item) {
+        fun firstNonBroken(vararg candidates: String?): String? {
+            return candidates.firstOrNull { !it.isNullOrBlank() && it !in brokenImageUrls }?.trim()
+        }
         when {
-            nextUp != null && !nextUp.hasAired -> firstNonBlank(
+            nextUp != null && !nextUp.hasAired -> firstNonBroken(
                 nextUp.backdrop,
                 nextUp.poster,
-                nextUp.thumbnail,
-                progress?.backdrop,
-                progress?.poster
+                nextUp.thumbnail
             )
-            nextUp != null -> firstNonBlank(
+            nextUp != null -> firstNonBroken(
                 nextUp.thumbnail,
                 nextUp.backdrop,
                 nextUp.poster
             )
-            else -> firstNonBlank(
+            else -> firstNonBroken(
                 (item as? ContinueWatchingItem.InProgress)?.episodeThumbnail,
                 progress?.backdrop,
                 progress?.poster
             )
         }
     }
+    val fallbackImageModel = remember(nextUp, progress, item) {
+        when {
+            nextUp != null -> firstNonBlank(
+                nextUp.backdrop,
+                nextUp.poster
+            )
+            else -> firstNonBlank(
+                progress?.backdrop,
+                progress?.poster
+            )
+        }
+    }
+    var usesFallbackImage by remember { mutableStateOf(false) }
+    // Reset fallback state when the item changes
+    LaunchedEffect(imageModel) { usesFallbackImage = false }
+    val effectiveImageModel = if (usesFallbackImage) fallbackImageModel else imageModel
     val titleText = remember(progress, nextUp) { progress?.name ?: nextUp?.name.orEmpty() }
     val context = LocalContext.current
     val strAirsDateForEpisode = nextUp?.airDateLabel?.let { stringResource(R.string.cw_airs_date, it) }
@@ -312,11 +332,11 @@ fun ContinueWatchingCard(
         with(density) { imageHeight.roundToPx() }
     }
     val shouldBlur = blurUnwatchedEpisodes && nextUp != null
-    val imageRequest = remember(imageModel, requestWidthPx, requestHeightPx, shouldBlur) {
+    val imageRequest = remember(effectiveImageModel, requestWidthPx, requestHeightPx, shouldBlur) {
         ImageRequest.Builder(context)
-            .data(imageModel)
+            .data(effectiveImageModel)
             .crossfade(false)
-            .memoryCacheKey("${imageModel}_${requestWidthPx}x${requestHeightPx}_blur${shouldBlur}")
+            .memoryCacheKey("${effectiveImageModel}_${requestWidthPx}x${requestHeightPx}_blur${shouldBlur}")
             .size(width = requestWidthPx, height = requestHeightPx)
             .apply {
                 if (shouldBlur) transformations(com.nuvio.tv.ui.util.BlurTransformation())
@@ -389,7 +409,7 @@ fun ContinueWatchingCard(
                     .clip(CwClipShape)
             ) {
                 // Background image with size hints for efficient decoding
-                if (imageModel.isNullOrBlank()) {
+                if (effectiveImageModel.isNullOrBlank()) {
                     MonochromePosterPlaceholder()
                 } else {
                     AsyncImage(
@@ -399,7 +419,16 @@ fun ContinueWatchingCard(
                         placeholder = backgroundPainter,
                         error = backgroundPainter,
                         fallback = backgroundPainter,
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        onError = {
+                            // Primary image failed (e.g. broken thumbnail URL) — remember and try fallback.
+                            if (!usesFallbackImage && effectiveImageModel != null) {
+                                brokenImageUrls.add(effectiveImageModel)
+                                if (fallbackImageModel != null && fallbackImageModel != effectiveImageModel) {
+                                    usesFallbackImage = true
+                                }
+                            }
+                        }
                     )
                 }
 

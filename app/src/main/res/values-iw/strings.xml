@@ -650,6 +650,7 @@
     <string name="subtitle_style_defaults">ברירות מחדל</string>
     <string name="subtitle_style_on">פועל</string>
     <string name="subtitle_style_off">כבוי</string>
+    <string name="subtitle_auto_translate">תרגום אוטומטי</string>
     <string name="panel_failed_load_streams">טעינת זרמים נכשלה</string>
     <string name="panel_failed_load_episodes">טעינת פרקים נכשלה</string>
 
@@ -952,6 +953,8 @@
     <string name="playback_section_audio_desc">התנהגות טריילר ופקדי שמע.</string>
     <string name="playback_section_subtitles">כתוביות</string>
     <string name="playback_section_subtitles_desc">שפה, סגנון ומצב רינדור.</string>
+    <string name="playback_section_ai_subtitles">כתוביות AI</string>
+    <string name="playback_section_ai_subtitles_desc">הגדרות תרגום AI ואפשרויות.</string>
     <string name="playback_resolution_matching">התאמת רזולוציה</string>
     <string name="playback_resolution_matching_sub">אפשר שינויי מצב תצוגה להתאמת רזולוציית הוידאו.</string>
     <string name="playback_player_ask_desc">בחר נגן בכל פעם</string>
@@ -1015,6 +1018,18 @@
     <string name="sub_size">גודל</string>
     <string name="sub_bold">מודגש</string>
     <string name="sub_bold_sub">השתמש בעיצוב גופן מודגש לכתוביות</string>
+    <string name="sub_ai_enabled">תרגום AI</string>
+    <string name="sub_ai_enabled_sub">תרגום כתוביות מובנות באמצעות AI</string>
+    <string name="sub_ai_target_lang">שפת יעד</string>
+    <string name="sub_ai_target_lang_sub">שפה לתרגום הכתוביות אליה</string>
+    <string name="sub_ai_auto_select">בחירה אוטומטית של AI</string>
+    <string name="sub_ai_auto_select_sub">הפעל תרגום AI אוטומטית בתחילת ניגון</string>
+    <string name="sub_remove_hearing_impaired">הסרת הערות לקויי שמיעה</string>
+    <string name="sub_remove_hearing_impaired_sub">הסר [תיאורי צלילים] מכתוביות מתורגמות על ידי AI</string>
+    <string name="sub_ai_api_key">מפתח Gemini API</string>
+    <string name="sub_ai_api_key_sub">נדרש — קבל מפתח חינמי ב-aistudio.google.com/apikey</string>
+    <string name="sub_ai_api_key_qr">הגדר מפתח דרך הטלפון</string>
+    <string name="sub_ai_api_key_qr_sub">סרוק קוד QR בטלפון כדי להזין את המפתח בקלות</string>
     <string name="sub_outline">מתאר</string>
     <string name="sub_outline_sub">הוסף מתאר סביב טקסט הכתוביות לנראות טובה יותר</string>
     <string name="sub_text_color">צבע טקסט</string>

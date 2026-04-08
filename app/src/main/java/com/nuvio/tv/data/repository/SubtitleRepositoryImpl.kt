@@ -15,6 +15,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 class SubtitleRepositoryImpl @Inject constructor(
@@ -33,7 +34,8 @@ class SubtitleRepositoryImpl @Inject constructor(
         videoId: String?,
         videoHash: String?,
         videoSize: Long?,
-        filename: String?
+        filename: String?,
+        onProgress: ((completed: Int, total: Int, addonName: String?) -> Unit)?
     ): List<Subtitle> = withContext(Dispatchers.IO) {
         val requestType = canonicalSubtitleType(type)
         val startedAtMs = System.currentTimeMillis()
@@ -57,11 +59,15 @@ class SubtitleRepositoryImpl @Inject constructor(
         }
         
         Log.d(TAG, "Found ${subtitleAddons.size} subtitle addons: ${subtitleAddons.map { it.name }}")
-        
+
         if (subtitleAddons.isEmpty()) {
             return@withContext emptyList()
         }
-        
+
+        val total = subtitleAddons.size
+        val completedCount = AtomicInteger(0)
+        onProgress?.invoke(0, total, null)
+
         // Fetch subtitles from all addons in parallel
         val result = coroutineScope {
             subtitleAddons.map { addon ->
@@ -70,6 +76,7 @@ class SubtitleRepositoryImpl @Inject constructor(
                     val subtitles = withTimeoutOrNull(PER_ADDON_TIMEOUT_MS) {
                         fetchSubtitlesFromAddon(addon, type, id, videoId, videoHash, videoSize, filename)
                     }
+                    onProgress?.invoke(completedCount.incrementAndGet(), total, addon.displayName)
                     if (subtitles == null) {
                         Log.w(
                             TAG,

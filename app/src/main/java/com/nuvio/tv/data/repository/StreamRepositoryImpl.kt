@@ -226,19 +226,18 @@ class StreamRepositoryImpl @Inject constructor(
                             val baseName = result.name?.takeIf { it.isNotBlank() }
                             val quality = result.quality?.takeIf { it.isNotBlank() }
 
-                            val displayTitle = buildString {
-                                append(baseTitle ?: baseName ?: scraperName)
-                                if (!quality.isNullOrBlank() && !(baseTitle ?: "").contains(quality)) {
-                                    append(" ").append(quality)
+                            // Only show quality in the name field as "Name - resolution"
+                            val qualityLabel = quality ?: "Unknown"
+                            val displayName = buildString {
+                                append(baseName ?: baseTitle ?: scraperName)
+                                if (!toString().contains(qualityLabel)) {
+                                    append(" - ").append(qualityLabel)
                                 }
                             }.takeIf { it.isNotBlank() }
 
-                            val displayName = buildString {
-                                append(baseName ?: baseTitle ?: scraperName)
-                                if (!quality.isNullOrBlank() && !(baseName ?: "").contains(quality)) {
-                                    append(" - ").append(quality)
-                                }
-                            }.takeIf { it.isNotBlank() }
+                            // Title stays clean — no quality appended
+                            val displayTitle = (baseTitle ?: baseName ?: scraperName)
+                                .takeIf { it.isNotBlank() }
 
                             Stream(
                                 name = displayName,
@@ -258,7 +257,9 @@ class StreamRepositoryImpl @Inject constructor(
                                 infoHash = result.infoHash,
                                 fileIdx = null,
                                 ytId = null,
-                                externalUrl = null
+                                externalUrl = null,
+                                quality = quality,
+                                qualityValue = parseQualityValue(quality)
                             )
                         }
                     )
@@ -278,11 +279,25 @@ class StreamRepositoryImpl @Inject constructor(
      * Build a description string from scraper result
      */
     private fun buildDescription(result: com.nuvio.tv.domain.model.LocalScraperResult): String? {
+        // Quality is shown in the stream name — only show size/language in description
         val parts = mutableListOf<String>()
-        result.quality?.let { parts.add(it) }
         result.size?.let { parts.add(it) }
         result.language?.let { parts.add(it) }
         return if (parts.isNotEmpty()) parts.joinToString(" • ") else null
+    }
+
+    private fun parseQualityValue(quality: String?): Int {
+        if (quality == null) return -1
+        val lower = quality.lowercase()
+        return when {
+            lower.contains("4k") || lower.contains("2160") -> 2160
+            lower.contains("1080") -> 1080
+            lower.contains("800") -> 800
+            lower.contains("720") -> 720
+            lower.contains("480") -> 480
+            lower.contains("360") -> 360
+            else -> -1
+        }
     }
 
     override suspend fun getStreamsFromAddon(

@@ -18,10 +18,33 @@ import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.VerticalAlignBottom
+import android.view.KeyEvent
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.tv.material3.Border
+import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
@@ -311,6 +334,185 @@ internal fun LazyListScope.subtitleSettingsItems(
                 onClick = { onSetLibassRenderType(LibassRenderType.CUES) },
                 onFocused = onItemFocused
             )
+        }
+    }
+}
+
+internal fun LazyListScope.subtitleAiSettingsItems(
+    playerSettings: PlayerSettings,
+    onSetSubtitleAiEnabled: (Boolean) -> Unit,
+    onSetSubtitleAiAutoSelect: (Boolean) -> Unit,
+    onSetSubtitleRemoveHearingImpaired: (Boolean) -> Unit,
+    onShowAiTargetLangDialog: () -> Unit,
+    onShowAiKeyDialog: () -> Unit,
+    onStartAiKeyServer: () -> Unit,
+    onItemFocused: () -> Unit = {},
+    enabled: Boolean = true
+) {
+    item(key = "subtitle_ai_enabled") {
+        ToggleSettingsItem(
+            icon = Icons.Default.AutoAwesome,
+            title = stringResource(R.string.sub_ai_enabled),
+            subtitle = stringResource(R.string.sub_ai_enabled_sub),
+            isChecked = playerSettings.subtitleAiEnabled,
+            onCheckedChange = onSetSubtitleAiEnabled,
+            onFocused = onItemFocused,
+            enabled = enabled
+        )
+    }
+
+    if (playerSettings.subtitleAiEnabled) {
+        item(key = "subtitle_ai_auto_select") {
+            ToggleSettingsItem(
+                icon = Icons.Default.AutoAwesome,
+                title = stringResource(R.string.sub_ai_auto_select),
+                subtitle = stringResource(R.string.sub_ai_auto_select_sub),
+                isChecked = playerSettings.subtitleAiAutoSelect,
+                onCheckedChange = onSetSubtitleAiAutoSelect,
+                onFocused = onItemFocused,
+                enabled = enabled
+            )
+        }
+
+        item(key = "subtitle_ai_target_language") {
+            SettingsActionRow(
+                title = stringResource(R.string.sub_ai_target_lang),
+                subtitle = stringResource(R.string.sub_ai_target_lang_sub),
+                value = playerSettings.subtitleTranslateTargetLanguage,
+                onClick = onShowAiTargetLangDialog,
+                enabled = enabled
+            )
+        }
+
+        item(key = "subtitle_remove_hearing_impaired") {
+            ToggleSettingsItem(
+                icon = Icons.Default.ClosedCaption,
+                title = stringResource(R.string.sub_remove_hearing_impaired),
+                subtitle = stringResource(R.string.sub_remove_hearing_impaired_sub),
+                isChecked = playerSettings.subtitleRemoveHearingImpaired,
+                onCheckedChange = onSetSubtitleRemoveHearingImpaired,
+                onFocused = onItemFocused,
+                enabled = enabled
+            )
+        }
+
+        item(key = "subtitle_ai_api_key") {
+            SettingsActionRow(
+                title = stringResource(R.string.sub_ai_api_key),
+                subtitle = stringResource(R.string.sub_ai_api_key_sub),
+                value = maskAiApiKey(playerSettings.subtitleAiApiKey),
+                onClick = onShowAiKeyDialog,
+                enabled = enabled
+            )
+        }
+
+        item(key = "subtitle_ai_api_key_qr") {
+            SettingsActionRow(
+                title = stringResource(R.string.sub_ai_api_key_qr),
+                subtitle = stringResource(R.string.sub_ai_api_key_qr_sub),
+                value = "",
+                onClick = onStartAiKeyServer,
+                enabled = enabled
+            )
+        }
+    }
+}
+
+private fun maskAiApiKey(key: String): String {
+    val trimmed = key.trim()
+    if (trimmed.isBlank()) return "Not set"
+    return if (trimmed.length <= 4) "••••" else "••••${trimmed.takeLast(4)}"
+}
+
+@Composable
+internal fun AiApiKeyDialog(
+    currentKey: String,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var value by remember(currentKey) { mutableStateOf(currentKey) }
+    var isInputFocused by remember { mutableStateOf(false) }
+    val inputFocusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = "Gemini API Key",
+        subtitle = "Enter your Google Gemini API key from aistudio.google.com/apikey",
+        width = 700.dp
+    ) {
+        Card(
+            onClick = { inputFocusRequester.requestFocus() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { isInputFocused = it.isFocused || it.hasFocus },
+            colors = CardDefaults.colors(
+                containerColor = NuvioColors.BackgroundElevated,
+                focusedContainerColor = NuvioColors.BackgroundElevated
+            ),
+            border = CardDefaults.border(
+                border = Border(
+                    border = androidx.compose.foundation.BorderStroke(1.dp, NuvioColors.Border),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
+                ),
+                focusedBorder = Border(
+                    border = androidx.compose.foundation.BorderStroke(2.dp, NuvioColors.FocusRing),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
+                )
+            ),
+            shape = CardDefaults.shape(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)),
+            scale = CardDefaults.scale(focusedScale = 1f)
+        ) {
+            Box(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                BasicTextField(
+                    value = value,
+                    onValueChange = { value = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(inputFocusRequester)
+                        .onKeyEvent { event ->
+                            event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER &&
+                                event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN
+                        },
+                    singleLine = true,
+                    keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = NuvioColors.TextPrimary),
+                    cursorBrush = SolidColor(
+                        if (isInputFocused) NuvioColors.Primary else androidx.compose.ui.graphics.Color.Transparent
+                    ),
+                    decorationBox = { innerTextField ->
+                        if (value.isBlank()) {
+                            Text(
+                                text = "AIzaSy...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = NuvioColors.TextTertiary
+                            )
+                        }
+                        innerTextField()
+                    }
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioColors.BackgroundElevated,
+                    contentColor = NuvioColors.TextPrimary
+                )
+            ) { Text("Cancel") }
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = { onSave(value.trim()) },
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioColors.BackgroundCard,
+                    contentColor = NuvioColors.TextPrimary
+                )
+            ) { Text("Save") }
         }
     }
 }

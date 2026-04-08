@@ -27,7 +27,9 @@ import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.ui.components.CatalogRowSection
+import com.nuvio.tv.ui.components.CollectionRowSection
 import com.nuvio.tv.ui.components.ContinueWatchingSection
 import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.PosterCardStyle
@@ -54,6 +56,7 @@ fun ClassicHomeContent(
     onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit = {},
     showContinueWatchingManualPlayOption: Boolean = false,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
+    onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> },
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean = { false },
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
@@ -107,16 +110,25 @@ fun ClassicHomeContent(
             focusState.verticalScrollIndex == 0 &&
             focusState.verticalScrollOffset == 0
     }
-    val visibleCatalogRows = remember(uiState.catalogRows) {
-        uiState.catalogRows.filter { it.items.isNotEmpty() }
+    val visibleHomeRows = remember(uiState.homeRows, uiState.catalogRows) {
+        if (uiState.homeRows.isNotEmpty()) {
+            uiState.homeRows
+        } else {
+            uiState.catalogRows.filter { it.items.isNotEmpty() }.map { HomeRow.Catalog(it) }
+        }
     }
-    val visibleCatalogKeys = remember(visibleCatalogRows) {
-        visibleCatalogRows.mapTo(mutableSetOf()) { "${it.addonId}_${it.apiType}_${it.catalogId}" }
+    val visibleRowKeys = remember(visibleHomeRows) {
+        visibleHomeRows.mapTo(mutableSetOf()) { row ->
+            when (row) {
+                is HomeRow.Catalog -> "${row.row.addonId}_${row.row.apiType}_${row.row.catalogId}"
+                is HomeRow.CollectionRow -> "collection_${row.collection.id}"
+            }
+        }
     }
 
-    LaunchedEffect(visibleCatalogKeys) {
-        rowStates.keys.retainAll(visibleCatalogKeys)
-        rowFocusRequesters.keys.retainAll(visibleCatalogKeys)
+    LaunchedEffect(visibleRowKeys) {
+        rowStates.keys.retainAll(visibleRowKeys)
+        rowFocusRequesters.keys.retainAll(visibleRowKeys)
     }
 
     DisposableEffect(Unit) {
@@ -237,67 +249,101 @@ fun ClassicHomeContent(
         }
 
         itemsIndexed(
-            items = visibleCatalogRows,
-            key = { _, item -> "${item.addonId}_${item.apiType}_${item.catalogId}" },
-            contentType = { _, _ -> "catalog_row" }
-        ) { index, catalogRow ->
-            val catalogKey = "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}"
-            val shouldRestoreFocus = restoringFocus && index == focusState.focusedRowIndex
-            val shouldInitialFocusFirstCatalogRow =
-                shouldRequestInitialFocus &&
-                    !heroVisible &&
-                    uiState.continueWatchingItems.isEmpty() &&
-                    index == 0
-            val focusedItemIndex = when {
-                shouldRestoreFocus -> focusState.focusedItemIndex
-                shouldInitialFocusFirstCatalogRow -> 0
-                else -> -1
-            }
-
-            val listState = rowStates.getOrPut(catalogKey) {
-                LazyListState(
-                    firstVisibleItemIndex = focusState.catalogRowScrollStates[catalogKey] ?: 0
-                )
-            }
-            val rowFocusRequester = rowFocusRequesters.getOrPut(catalogKey) { FocusRequester() }
-
-            CatalogRowSection(
-                catalogRow = catalogRow,
-                posterCardStyle = posterCardStyle,
-                showPosterLabels = uiState.posterLabelsEnabled,
-                showAddonName = uiState.catalogAddonNameEnabled,
-                showCatalogTypeSuffix = uiState.catalogTypeSuffixEnabled,
-                focusedPosterBackdropExpandEnabled = uiState.focusedPosterBackdropExpandEnabled,
-                focusedPosterBackdropExpandDelaySeconds = uiState.focusedPosterBackdropExpandDelaySeconds,
-                focusedPosterBackdropTrailerEnabled = uiState.focusedPosterBackdropTrailerEnabled,
-                focusedPosterBackdropTrailerMuted = uiState.focusedPosterBackdropTrailerMuted,
-                trailerPreviewUrls = trailerPreviewUrls,
-                trailerPreviewAudioUrls = trailerPreviewAudioUrls,
-                onRequestTrailerPreview = onRequestTrailerPreview,
-                onItemFocus = onItemFocus,
-                isItemWatched = isCatalogItemWatched,
-                onItemLongPress = onCatalogItemLongPress,
-                onItemClick = { id, type, addonBaseUrl ->
-                    onNavigateToDetail(id, type, addonBaseUrl)
-                },
-                onSeeAll = {
-                    onNavigateToCatalogSeeAll(
-                        catalogRow.catalogId,
-                        catalogRow.addonId,
-                        catalogRow.apiType
-                    )
-                },
-                rowFocusRequester = rowFocusRequester,
-                listState = listState,
-                enableRowFocusRestorer = true,
-                
-                focusedItemIndex = focusedItemIndex,
-                onItemFocused = { itemIndex ->
-                    if (restoringFocus) restoringFocus = false
-                    currentFocusSnapshot.rowIndex = index
-                    currentFocusSnapshot.itemIndex = itemIndex
+            items = visibleHomeRows,
+            key = { _, item ->
+                when (item) {
+                    is HomeRow.Catalog -> "${item.row.addonId}_${item.row.apiType}_${item.row.catalogId}"
+                    is HomeRow.CollectionRow -> "collection_${item.collection.id}"
                 }
-            )
+            },
+            contentType = { _, item ->
+                when (item) {
+                    is HomeRow.Catalog -> "catalog_row"
+                    is HomeRow.CollectionRow -> "collection_row"
+                }
+            }
+        ) { index, homeRow ->
+            when (homeRow) {
+                is HomeRow.Catalog -> {
+                    val catalogRow = homeRow.row
+                    val catalogKey = "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}"
+                    val shouldRestoreFocus = restoringFocus && index == focusState.focusedRowIndex
+                    val shouldInitialFocusFirstCatalogRow =
+                        shouldRequestInitialFocus &&
+                            !heroVisible &&
+                            uiState.continueWatchingItems.isEmpty() &&
+                            index == 0
+                    val focusedItemIndex = when {
+                        shouldRestoreFocus -> focusState.focusedItemIndex
+                        shouldInitialFocusFirstCatalogRow -> 0
+                        else -> -1
+                    }
+
+                    val listState = rowStates.getOrPut(catalogKey) {
+                        LazyListState(
+                            firstVisibleItemIndex = focusState.catalogRowScrollStates[catalogKey] ?: 0
+                        )
+                    }
+                    val rowFocusRequester = rowFocusRequesters.getOrPut(catalogKey) { FocusRequester() }
+
+                    CatalogRowSection(
+                        catalogRow = catalogRow,
+                        posterCardStyle = posterCardStyle,
+                        showPosterLabels = uiState.posterLabelsEnabled,
+                        showAddonName = uiState.catalogAddonNameEnabled,
+                        showCatalogTypeSuffix = uiState.catalogTypeSuffixEnabled,
+                        focusedPosterBackdropExpandEnabled = uiState.focusedPosterBackdropExpandEnabled,
+                        focusedPosterBackdropExpandDelaySeconds = uiState.focusedPosterBackdropExpandDelaySeconds,
+                        focusedPosterBackdropTrailerEnabled = uiState.focusedPosterBackdropTrailerEnabled,
+                        focusedPosterBackdropTrailerMuted = uiState.focusedPosterBackdropTrailerMuted,
+                        trailerPreviewUrls = trailerPreviewUrls,
+                        trailerPreviewAudioUrls = trailerPreviewAudioUrls,
+                        onRequestTrailerPreview = onRequestTrailerPreview,
+                        onItemFocus = onItemFocus,
+                        isItemWatched = isCatalogItemWatched,
+                        onItemLongPress = onCatalogItemLongPress,
+                        onItemClick = { id, type, addonBaseUrl ->
+                            onNavigateToDetail(id, type, addonBaseUrl)
+                        },
+                        onSeeAll = {
+                            onNavigateToCatalogSeeAll(
+                                catalogRow.catalogId,
+                                catalogRow.addonId,
+                                catalogRow.apiType
+                            )
+                        },
+                        rowFocusRequester = rowFocusRequester,
+                        listState = listState,
+                        enableRowFocusRestorer = true,
+                        focusedItemIndex = focusedItemIndex,
+                        onItemFocused = { itemIndex ->
+                            if (restoringFocus) restoringFocus = false
+                            currentFocusSnapshot.rowIndex = index
+                            currentFocusSnapshot.itemIndex = itemIndex
+                        }
+                    )
+                }
+
+                is HomeRow.CollectionRow -> {
+                    val collectionKey = "collection_${homeRow.collection.id}"
+                    val listState = rowStates.getOrPut(collectionKey) {
+                        LazyListState(
+                            firstVisibleItemIndex = focusState.catalogRowScrollStates[collectionKey] ?: 0
+                        )
+                    }
+
+                    CollectionRowSection(
+                        collection = homeRow.collection,
+                        onFolderClick = onNavigateToFolderDetail,
+                        listState = listState,
+                        onItemFocused = { itemIndex ->
+                            if (restoringFocus) restoringFocus = false
+                            currentFocusSnapshot.rowIndex = index
+                            currentFocusSnapshot.itemIndex = itemIndex
+                        }
+                    )
+                }
+            }
         }
     }
 }

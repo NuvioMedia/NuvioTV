@@ -4,6 +4,7 @@ import androidx.media3.common.C
 import androidx.media3.common.TrackGroup
 import androidx.media3.ui.AspectRatioFrameLayout
 import com.nuvio.tv.data.local.FrameRateMatchingMode
+import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.repository.SkipInterval
@@ -36,6 +37,7 @@ data class PlayerUiState(
     val playbackSpeed: Float = 1f,
     val loadingOverlayEnabled: Boolean = true,
     val showLoadingOverlay: Boolean = true,
+    val loadingMessage: String? = null,
     val pauseOverlayEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
     val showPauseOverlay: Boolean = false,
@@ -49,8 +51,15 @@ data class PlayerUiState(
     val showAudioOverlay: Boolean = false,
     val showSubtitleOverlay: Boolean = false,
     val showSubtitleStylePanel: Boolean = false,
+    val showSubtitleTimingDialog: Boolean = false,
     val showSubtitleDelayOverlay: Boolean = false,
     val subtitleDelayMs: Int = 0,
+    val subtitleAutoSyncCues: List<SubtitleSyncCue> = emptyList(),
+    val subtitleAutoSyncCapturedVideoMs: Long? = null,
+    val subtitleAutoSyncStatus: String? = null,
+    val subtitleAutoSyncError: String? = null,
+    val subtitleAutoSyncLoading: Boolean = false,
+    val subtitleAutoSyncLoadedTrackKey: String? = null,
     val showSpeedDialog: Boolean = false,
     val showMoreDialog: Boolean = false,
     // Subtitle style settings
@@ -115,11 +124,14 @@ data class PlayerUiState(
     // Stream source badge
     val showStreamSourceIndicator: Boolean = false,
     val streamSourceIndicatorText: String = "",
+    val showPlayerEngineSwitchInfo: Boolean = false,
+    val playerEngineSwitchInfoText: String = "",
     // Frame rate matching
     val detectedFrameRateRaw: Float = 0f,
     val detectedFrameRateSource: FrameRateSource? = null,
     val detectedFrameRate: Float = 0f,
     val afrProbeRunning: Boolean = false,
+    val internalPlayerEngine: InternalPlayerEngine = InternalPlayerEngine.EXOPLAYER,
     val frameRateMatchingMode: FrameRateMatchingMode = FrameRateMatchingMode.OFF,
     val displayModeInfo: DisplayModeInfo? = null,
     val showDisplayModeInfo: Boolean = false,
@@ -131,8 +143,21 @@ data class PlayerUiState(
     val aspectRatioIndicatorText: String = "",
     // Stream info overlay
     val showStreamInfoOverlay: Boolean = false,
-    val streamInfoData: StreamInfoData? = null
+    val streamInfoData: StreamInfoData? = null,
+    // Subtitle auto-translation
+    val autoTranslateSubtitles: Boolean = false,
+    val subtitleTranslationAvailable: Boolean = false,
+    val subtitleTranslating: Boolean = false,
+    val subtitleTranslationError: String? = null,  // non-null = last batch failed
+    val subtitleTranslatedCount: Int = 0,
+    val subtitleTotalCount: Int = 0,
+    val subtitleLookaheadUpToMs: Long = 0L,
+    val subtitleAiTargetLangCode: String = "HE",
+    val subtitleAiToast: SubtitleAiToast? = null,
+    val removeHearingImpaired: Boolean = false
 )
+
+enum class SubtitleAiToast { TRANSLATING, SUCCESS, ERROR }
 
 data class TrackInfo(
     val index: Int,
@@ -158,6 +183,11 @@ data class NextEpisodeInfo(
     val unairedMessage: String?
 )
 
+data class SubtitleSyncCue(
+    val startTimeMs: Long,
+    val text: String
+)
+
 sealed class PlayerEvent {
     data object OnPlayPause : PlayerEvent()
     data object OnSeekForward : PlayerEvent()
@@ -178,9 +208,14 @@ sealed class PlayerEvent {
     data object OnShowSubtitleOverlay : PlayerEvent()
     data object OnOpenSubtitleStylePanel : PlayerEvent()
     data object OnDismissSubtitleStylePanel : PlayerEvent()
+    data object OnShowSubtitleTimingDialog : PlayerEvent()
+    data object OnDismissSubtitleTimingDialog : PlayerEvent()
+    data object OnCaptureSubtitleAutoSyncTime : PlayerEvent()
+    data class OnApplySubtitleAutoSyncCue(val cueStartTimeMs: Long) : PlayerEvent()
+    data object OnReloadSubtitleAutoSyncCues : PlayerEvent()
     data object OnShowSubtitleDelayOverlay : PlayerEvent()
     data object OnHideSubtitleDelayOverlay : PlayerEvent()
-    data class OnAdjustSubtitleDelay(val deltaMs: Int) : PlayerEvent()
+    data class OnAdjustSubtitleDelay(val deltaMs: Int, val showOverlay: Boolean = true) : PlayerEvent()
     data object OnShowSpeedDialog : PlayerEvent()
     data object OnShowMoreDialog : PlayerEvent()
     data object OnDismissMoreDialog : PlayerEvent()
@@ -216,8 +251,10 @@ sealed class PlayerEvent {
     data class OnSetSubtitleVerticalOffset(val offset: Int) : PlayerEvent()
     data object OnResetSubtitleDefaults : PlayerEvent()
     data object OnToggleAspectRatio : PlayerEvent()
+    data object OnSwitchInternalPlayerEngine : PlayerEvent()
     data object OnShowStreamInfo : PlayerEvent()
     data object OnDismissStreamInfo : PlayerEvent()
+    data class OnSetAutoTranslateSubtitles(val enabled: Boolean) : PlayerEvent()
 }
 
 data class ParentalWarning(

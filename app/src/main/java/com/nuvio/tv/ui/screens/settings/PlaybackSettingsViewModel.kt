@@ -1,8 +1,21 @@
 package com.nuvio.tv.ui.screens.settings
 
+import android.content.Context
+import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.core.qr.QrCodeGenerator
+import com.nuvio.tv.core.server.AiKeyConfigServer
+import com.nuvio.tv.core.server.DeviceIpAddress
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import com.nuvio.tv.data.local.LibassRenderType
+import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.PlayerPreference
@@ -11,6 +24,7 @@ import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.data.local.AddonSubtitleStartupMode
+import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.SubtitleOrganizationMode
 import com.nuvio.tv.data.local.TrailerSettings
 import com.nuvio.tv.data.local.TrailerSettingsDataStore
@@ -21,13 +35,25 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
+data class AiKeyServerState(
+    val isActive: Boolean = false,
+    val serverUrl: String? = null,
+    val qrBitmap: Bitmap? = null,
+    val keyReceived: Boolean = false
+)
+
 @HiltViewModel
 class PlaybackSettingsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val addonRepository: AddonRepository,
     private val pluginManager: PluginManager
 ) : ViewModel() {
+
+    private val _aiKeyServerState = MutableStateFlow(AiKeyServerState())
+    val aiKeyServerState: StateFlow<AiKeyServerState> = _aiKeyServerState.asStateFlow()
+    private var aiKeyServer: AiKeyConfigServer? = null
 
     val playerSettings: Flow<PlayerSettings> = playerSettingsDataStore.playerSettings
     val trailerSettings: Flow<TrailerSettings> = trailerSettingsDataStore.settings
@@ -55,6 +81,14 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setPlayerPreference(preference: PlayerPreference) {
         playerSettingsDataStore.setPlayerPreference(preference)
+    }
+
+    suspend fun setInternalPlayerEngine(engine: InternalPlayerEngine) {
+        playerSettingsDataStore.setInternalPlayerEngine(engine)
+    }
+
+    suspend fun setAutoSwitchInternalPlayerOnError(enabled: Boolean) {
+        playerSettingsDataStore.setAutoSwitchInternalPlayerOnError(enabled)
     }
 
     suspend fun setTrailerEnabled(enabled: Boolean) {
@@ -91,6 +125,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setLoadingOverlayEnabled(enabled)
     }
 
+    suspend fun setShowPlayerLoadingStatus(enabled: Boolean) {
+        playerSettingsDataStore.setShowPlayerLoadingStatus(enabled)
+    }
+
     suspend fun setPauseOverlayEnabled(enabled: Boolean) {
         playerSettingsDataStore.setPauseOverlayEnabled(enabled)
     }
@@ -115,6 +153,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setMapDV7ToHevc(enabled)
     }
 
+    suspend fun setMpvHardwareDecodeMode(mode: MpvHardwareDecodeMode) {
+        playerSettingsDataStore.setMpvHardwareDecodeMode(mode)
+    }
+
     /**
      * Set whether to use libass for ASS/SSA subtitle rendering
      */
@@ -127,6 +169,63 @@ class PlaybackSettingsViewModel @Inject constructor(
      */
     suspend fun setLibassRenderType(renderType: LibassRenderType) {
         playerSettingsDataStore.setLibassRenderType(renderType)
+    }
+
+    suspend fun setSubtitleAiTargetLanguage(language: String) {
+        playerSettingsDataStore.setSubtitleTranslateTargetLanguage(language)
+    }
+
+    suspend fun setSubtitleAiEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setSubtitleAiEnabled(enabled)
+    }
+
+    suspend fun setSubtitleAiAutoSelect(enabled: Boolean) {
+        playerSettingsDataStore.setSubtitleAiAutoSelect(enabled)
+    }
+
+    suspend fun setSubtitleRemoveHearingImpaired(enabled: Boolean) {
+        playerSettingsDataStore.setSubtitleRemoveHearingImpaired(enabled)
+    }
+
+    suspend fun saveSubtitleAiApiKey(key: String) {
+        playerSettingsDataStore.setSubtitleAiApiKey(key)
+    }
+
+    fun startAiKeyServer() {
+        viewModelScope.launch {
+            stopAiKeyServerInternal()
+            val server = AiKeyConfigServer.startOnAvailablePort(
+                onKeyReceived = { key ->
+                    viewModelScope.launch {
+                        playerSettingsDataStore.setSubtitleAiApiKey(key)
+                        _aiKeyServerState.update { it.copy(keyReceived = true) }
+                        kotlinx.coroutines.delay(2500)
+                        stopAiKeyServerInternal()
+                        _aiKeyServerState.update { AiKeyServerState() }
+                    }
+                }
+            ) ?: return@launch
+            aiKeyServer = server
+            val ip = DeviceIpAddress.get(context) ?: "device-ip"
+            val url = "http://$ip:${server.listeningPort}"
+            val qr = QrCodeGenerator.generate(url, 512)
+            _aiKeyServerState.update { AiKeyServerState(isActive = true, serverUrl = url, qrBitmap = qr) }
+        }
+    }
+
+    fun stopAiKeyServer() {
+        stopAiKeyServerInternal()
+        _aiKeyServerState.update { AiKeyServerState() }
+    }
+
+    private fun stopAiKeyServerInternal() {
+        aiKeyServer?.stop()
+        aiKeyServer = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopAiKeyServerInternal()
     }
 
     // Subtitle style settings functions

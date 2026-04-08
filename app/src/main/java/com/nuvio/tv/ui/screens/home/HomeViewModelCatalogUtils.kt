@@ -45,16 +45,19 @@ internal fun HomeViewModel.cancelInFlightCatalogLoads() {
 
 internal fun HomeViewModel.rebuildCatalogOrder(addons: List<Addon>) {
     val defaultOrder = buildDefaultCatalogOrder(addons)
-    val availableSet = defaultOrder.toSet()
+    val collectionKeys = collectionsCache.map { "collection_${it.id}" }
+    val allAvailable = (defaultOrder + collectionKeys).toSet()
 
     val savedValid = homeCatalogOrderKeys
         .asSequence()
-        .filter { it in availableSet }
+        .filter { it in allAvailable }
         .distinct()
         .toList()
 
     val savedSet = savedValid.toSet()
-    val mergedOrder = savedValid + defaultOrder.filterNot { it in savedSet }
+    val unsavedCatalogs = defaultOrder.filterNot { it in savedSet }
+    val unsavedCollections = collectionKeys.filterNot { it in savedSet }
+    val mergedOrder = savedValid + unsavedCatalogs + unsavedCollections
 
     catalogOrder.clear()
     catalogOrder.addAll(mergedOrder)

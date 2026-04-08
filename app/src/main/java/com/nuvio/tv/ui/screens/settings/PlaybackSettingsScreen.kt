@@ -133,6 +133,7 @@ fun PlaybackSettingsContent(
     val trailerSettings by viewModel.trailerSettings.collectAsStateWithLifecycle(initialValue = TrailerSettings())
     val installedAddonNames by viewModel.installedAddonNames.collectAsStateWithLifecycle(initialValue = emptyList())
     val enabledPluginNames by viewModel.enabledPluginNames.collectAsStateWithLifecycle(initialValue = emptyList())
+    val aiKeyServerState by viewModel.aiKeyServerState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
 
     // Dialog states
@@ -145,6 +146,7 @@ fun PlaybackSettingsContent(
     var showAudioLanguageDialog by remember { mutableStateOf(false) }
     var showSecondaryAudioLanguageDialog by remember { mutableStateOf(false) }
     var showDecoderPriorityDialog by remember { mutableStateOf(false) }
+    var showMpvHardwareDecodeModeDialog by remember { mutableStateOf(false) }
     var showStreamAutoPlayModeDialog by remember { mutableStateOf(false) }
     var showStreamAutoPlaySourceDialog by remember { mutableStateOf(false) }
     var showStreamAutoPlayAddonSelectionDialog by remember { mutableStateOf(false) }
@@ -153,6 +155,7 @@ fun PlaybackSettingsContent(
     var showNextEpisodeThresholdModeDialog by remember { mutableStateOf(false) }
     var showReuseLastLinkCacheDialog by remember { mutableStateOf(false) }
     var showPlayerPreferenceDialog by remember { mutableStateOf(false) }
+    var showInternalPlayerEngineDialog by remember { mutableStateOf(false) }
 
     fun dismissAllDialogs() {
         showLanguageDialog = false
@@ -164,6 +167,7 @@ fun PlaybackSettingsContent(
         showAudioLanguageDialog = false
         showSecondaryAudioLanguageDialog = false
         showDecoderPriorityDialog = false
+        showMpvHardwareDecodeModeDialog = false
         showStreamAutoPlayModeDialog = false
         showStreamAutoPlaySourceDialog = false
         showStreamAutoPlayAddonSelectionDialog = false
@@ -172,6 +176,7 @@ fun PlaybackSettingsContent(
         showNextEpisodeThresholdModeDialog = false
         showReuseLastLinkCacheDialog = false
         showPlayerPreferenceDialog = false
+        showInternalPlayerEngineDialog = false
     }
 
     fun openDialog(setter: () -> Unit) {
@@ -179,6 +184,7 @@ fun PlaybackSettingsContent(
         setter()
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -198,9 +204,11 @@ fun PlaybackSettingsContent(
                 playerSettings = playerSettings,
                 trailerSettings = trailerSettings,
                 onShowPlayerPreferenceDialog = { openDialog { showPlayerPreferenceDialog = true } },
+                onShowInternalPlayerEngineDialog = { openDialog { showInternalPlayerEngineDialog = true } },
                 onShowAudioLanguageDialog = { openDialog { showAudioLanguageDialog = true } },
                 onShowSecondaryAudioLanguageDialog = { openDialog { showSecondaryAudioLanguageDialog = true } },
                 onShowDecoderPriorityDialog = { openDialog { showDecoderPriorityDialog = true } },
+                onShowMpvHardwareDecodeModeDialog = { openDialog { showMpvHardwareDecodeModeDialog = true } },
                 onShowLanguageDialog = { openDialog { showLanguageDialog = true } },
                 onShowSecondaryLanguageDialog = { openDialog { showSecondaryLanguageDialog = true } },
                 onShowSubtitleStartupModeDialog = { openDialog { showSubtitleStartupModeDialog = true } },
@@ -222,6 +230,9 @@ fun PlaybackSettingsContent(
                         viewModel.setStreamAutoPlayPreferBingeGroupForNextEpisode(enabled)
                     }
                 },
+                onSetAutoSwitchInternalPlayerOnError = { enabled ->
+                    coroutineScope.launch { viewModel.setAutoSwitchInternalPlayerOnError(enabled) }
+                },
                 onSetNextEpisodeThresholdPercent = { percent ->
                     coroutineScope.launch { viewModel.setNextEpisodeThresholdPercent(percent) }
                 },
@@ -232,6 +243,7 @@ fun PlaybackSettingsContent(
                     coroutineScope.launch { viewModel.setStreamAutoPlayTimeoutSeconds(seconds) }
                 },
                 onSetReuseLastLinkEnabled = { enabled -> coroutineScope.launch { viewModel.setStreamReuseLastLinkEnabled(enabled) } },
+                onSetShowPlayerLoadingStatus = { enabled -> coroutineScope.launch { viewModel.setShowPlayerLoadingStatus(enabled) } },
                 onSetLoadingOverlayEnabled = { enabled -> coroutineScope.launch { viewModel.setLoadingOverlayEnabled(enabled) } },
                 onSetPauseOverlayEnabled = { enabled -> coroutineScope.launch { viewModel.setPauseOverlayEnabled(enabled) } },
                 onSetOsdClockEnabled = { enabled -> coroutineScope.launch { viewModel.setOsdClockEnabled(enabled) } },
@@ -250,16 +262,35 @@ fun PlaybackSettingsContent(
                 onSetSubtitleBold = { bold -> coroutineScope.launch { viewModel.setSubtitleBold(bold) } },
                 onSetSubtitleOutlineEnabled = { enabled -> coroutineScope.launch { viewModel.setSubtitleOutlineEnabled(enabled) } },
                 onSetUseLibass = { enabled -> coroutineScope.launch { viewModel.setUseLibass(enabled) } },
-                onSetLibassRenderType = { renderType -> coroutineScope.launch { viewModel.setLibassRenderType(renderType) } }
+                onSetLibassRenderType = { renderType -> coroutineScope.launch { viewModel.setLibassRenderType(renderType) } },
+                onSetSubtitleAiEnabled = { enabled -> coroutineScope.launch { viewModel.setSubtitleAiEnabled(enabled) } },
+                onSetSubtitleAiAutoSelect = { enabled -> coroutineScope.launch { viewModel.setSubtitleAiAutoSelect(enabled) } },
+                onSetSubtitleRemoveHearingImpaired = { enabled -> coroutineScope.launch { viewModel.setSubtitleRemoveHearingImpaired(enabled) } },
+                onSaveSubtitleAiApiKey = { key -> coroutineScope.launch { viewModel.saveSubtitleAiApiKey(key) } },
+                onSetSubtitleAiTargetLanguage = { lang -> coroutineScope.launch { viewModel.setSubtitleAiTargetLanguage(lang) } },
+                aiKeyServerState = aiKeyServerState,
+                onStartAiKeyServer = { viewModel.startAiKeyServer() },
+                onStopAiKeyServer = { viewModel.stopAiKeyServer() }
             )
         }
+    } // end Column
+
+    if (aiKeyServerState.isActive) {
+        AiKeyQrOverlay(
+            qrBitmap = aiKeyServerState.qrBitmap,
+            serverUrl = aiKeyServerState.serverUrl,
+            keyReceived = aiKeyServerState.keyReceived,
+            onClose = { viewModel.stopAiKeyServer() }
+        )
     }
+    } // end Box
 
     PlaybackSettingsDialogsHost(
         playerSettings = playerSettings,
         installedAddonNames = installedAddonNames,
         enabledPluginNames = enabledPluginNames,
         showPlayerPreferenceDialog = showPlayerPreferenceDialog,
+        showInternalPlayerEngineDialog = showInternalPlayerEngineDialog,
         showLanguageDialog = showLanguageDialog,
         showSecondaryLanguageDialog = showSecondaryLanguageDialog,
         showSubtitleStartupModeDialog = showSubtitleStartupModeDialog,
@@ -269,6 +300,7 @@ fun PlaybackSettingsContent(
         showAudioLanguageDialog = showAudioLanguageDialog,
         showSecondaryAudioLanguageDialog = showSecondaryAudioLanguageDialog,
         showDecoderPriorityDialog = showDecoderPriorityDialog,
+        showMpvHardwareDecodeModeDialog = showMpvHardwareDecodeModeDialog,
         showStreamAutoPlayModeDialog = showStreamAutoPlayModeDialog,
         showStreamAutoPlaySourceDialog = showStreamAutoPlaySourceDialog,
         showStreamAutoPlayAddonSelectionDialog = showStreamAutoPlayAddonSelectionDialog,
@@ -280,6 +312,10 @@ fun PlaybackSettingsContent(
             coroutineScope.launch { viewModel.setPlayerPreference(preference) }
         },
         onDismissPlayerPreferenceDialog = ::dismissAllDialogs,
+        onSetInternalPlayerEngine = { engine ->
+            coroutineScope.launch { viewModel.setInternalPlayerEngine(engine) }
+        },
+        onDismissInternalPlayerEngineDialog = ::dismissAllDialogs,
         onSetSubtitlePreferredLanguage = { language ->
             coroutineScope.launch { viewModel.setSubtitlePreferredLanguage(language ?: "none") }
         },
@@ -306,6 +342,9 @@ fun PlaybackSettingsContent(
         },
         onSetDecoderPriority = { priority ->
             coroutineScope.launch { viewModel.setDecoderPriority(priority) }
+        },
+        onSetMpvHardwareDecodeMode = { mode ->
+            coroutineScope.launch { viewModel.setMpvHardwareDecodeMode(mode) }
         },
         onSetStreamAutoPlayMode = { mode ->
             coroutineScope.launch { viewModel.setStreamAutoPlayMode(mode) }
@@ -337,6 +376,7 @@ fun PlaybackSettingsContent(
         onDismissAudioLanguageDialog = ::dismissAllDialogs,
         onDismissSecondaryAudioLanguageDialog = ::dismissAllDialogs,
         onDismissDecoderPriorityDialog = ::dismissAllDialogs,
+        onDismissMpvHardwareDecodeModeDialog = ::dismissAllDialogs,
         onDismissStreamAutoPlayModeDialog = ::dismissAllDialogs,
         onDismissStreamAutoPlaySourceDialog = ::dismissAllDialogs,
         onDismissStreamRegexDialog = ::dismissAllDialogs,

@@ -651,6 +651,52 @@ class WatchProgressRepositoryImpl @Inject constructor(
         triggerWatchedItemsSync()
     }
 
+    override suspend fun removeFromHistoryBatch(
+        contentId: String,
+        videoId: String?,
+        episodes: List<Pair<Int, Int>>
+    ) {
+        if (episodes.isEmpty()) return
+        val useTraktProgress = shouldUseTraktProgress()
+        val hasEffectiveTraktConnection = hasEffectiveTraktConnection()
+
+        // Batch local removes (single DataStore transaction each)
+        watchProgressPreferences.removeProgressBatch(contentId, episodes)
+        watchedItemsPreferences.unmarkAsWatchedBatch(contentId, episodes)
+
+        // Batch Trakt remove (single API call)
+        if (hasEffectiveTraktConnection) {
+            episodes.forEach { (season, episode) ->
+                traktProgressService.applyOptimisticRemoval(contentId, season, episode)
+            }
+            runCatching {
+                traktProgressService.removeSeasonFromHistoryBatch(contentId, episodes)
+            }.onFailure { error ->
+                Log.w(TAG, "Failed to batch remove from Trakt history", error)
+            }
+        }
+
+        if (!useTraktProgress) {
+            val remoteDeleteKeys = episodes.flatMap { (season, episode) ->
+                listOf("${contentId}_s${season}e${episode}")
+            } + contentId
+            if (authManager.isAuthenticated && remoteDeleteKeys.isNotEmpty()) {
+                watchProgressSyncService.deleteFromRemote(remoteDeleteKeys.distinct())
+                    .onFailure { error ->
+                        Log.w(TAG, "removeFromHistoryBatch remote delete failed", error)
+                    }
+            }
+            if (authManager.isAuthenticated) {
+                watchedItemsSyncService.deleteFromRemoteBatch(contentId, episodes)
+                    .onFailure { error ->
+                        Log.w(TAG, "removeFromHistoryBatch watched item remote delete failed", error)
+                    }
+            }
+            triggerRemoteSync()
+            triggerWatchedItemsSync()
+        }
+    }
+
     override suspend fun markAsCompleted(progress: WatchProgress) {
         // Clear any CW dismiss keys for this series so it reappears in Continue Watching.
         if (progress.contentType.equals("series", ignoreCase = true) ||
@@ -732,6 +778,86 @@ class WatchProgressRepositoryImpl @Inject constructor(
         triggerWatchedItemsSync()
     }
 
+    override suspend fun markAsCompletedBatch(progressList: List<WatchProgress>) {
+        if (progressList.isEmpty()) return
+        val firstProgress = progressList.first()
+        // Clear CW dismiss keys once for the series
+        if (firstProgress.contentType.equals("series", ignoreCase = true) ||
+            firstProgress.contentType.equals("tv", ignoreCase = true)) {
+            traktSettingsDataStore.removeDismissedNextUpKeysForContent(firstProgress.contentId)
+        }
+        val useTraktProgress = shouldUseTraktProgress()
+        val hasEffectiveTraktConnection = hasEffectiveTraktConnection()
+        val now = System.currentTimeMillis()
+
+        val completedList = progressList.map { progress ->
+            val duration = progress.duration.takeIf { it > 0L } ?: 1L
+            progress.copy(
+                position = duration,
+                duration = duration,
+                progressPercent = 100f,
+                lastWatched = now
+            )
+        }
+
+        if (useTraktProgress && hasEffectiveTraktConnection) {
+            // Trakt is primary — optimistic update + batch Trakt call + local save
+            completedList.forEach {
+                optimisticContinueWatchingUpdates.tryEmit(it)
+                traktProgressService.applyOptimisticProgress(it)
+            }
+            runCatching {
+                traktProgressService.markSeasonWatchedBatch(completedList)
+            }.onFailure {
+                completedList.forEach { ep ->
+                    traktProgressService.applyOptimisticRemoval(ep.contentId, ep.season, ep.episode)
+                }
+                throw it
+            }
+            // Also save locally for offline access
+            watchProgressPreferences.markAsCompletedBatch(progressList)
+            val watchedItems = progressList.map { progress ->
+                WatchedItem(
+                    contentId = progress.contentId,
+                    contentType = progress.contentType,
+                    title = progress.name,
+                    season = progress.season,
+                    episode = progress.episode,
+                    watchedAt = now
+                )
+            }
+            watchedItemsPreferences.markAsWatchedBatch(watchedItems)
+            return
+        }
+
+        // Nuvio sync is primary — batch local save first
+        watchProgressPreferences.markAsCompletedBatch(progressList)
+        val watchedItems = progressList.map { progress ->
+            WatchedItem(
+                contentId = progress.contentId,
+                contentType = progress.contentType,
+                title = progress.name,
+                season = progress.season,
+                episode = progress.episode,
+                watchedAt = now
+            )
+        }
+        watchedItemsPreferences.markAsWatchedBatch(watchedItems)
+
+        // Mirror to Trakt if connected (same as single markAsCompleted)
+        if (hasEffectiveTraktConnection) {
+            completedList.forEach { optimisticContinueWatchingUpdates.tryEmit(it) }
+            runCatching {
+                traktProgressService.markSeasonWatchedBatch(completedList)
+            }.onFailure { error ->
+                Log.w(TAG, "Failed to mirror batch mark watched to Trakt", error)
+            }
+        }
+
+        triggerRemoteSync()
+        triggerWatchedItemsSync()
+    }
+
     override suspend fun clearAll() {
         if (shouldUseTraktProgress()) {
             traktProgressService.clearOptimistic()
@@ -740,6 +866,12 @@ class WatchProgressRepositoryImpl @Inject constructor(
         }
         watchProgressPreferences.clearAll()
     }
+
+    override fun isDroppedShow(contentId: String): Boolean {
+        return traktProgressService.isShowHiddenFromProgress(contentId)
+    }
+
+    override suspend fun isTraktProgressActive(): Boolean = shouldUseTraktProgress()
 
     private fun progressKey(progress: WatchProgress): String {
         return if (progress.season != null && progress.episode != null) {

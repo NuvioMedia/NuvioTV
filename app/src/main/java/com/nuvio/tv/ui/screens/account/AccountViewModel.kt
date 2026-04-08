@@ -581,12 +581,13 @@ class AccountViewModel @Inject constructor(
         try {
             profileSettingsSyncService.pullCurrentProfileFromRemote()
             pluginManager.isSyncingFromRemote = true
-            val remotePluginUrls = pluginSyncService.getRemoteRepoUrls().getOrElse { throw it }
+            val remotePlugins = pluginSyncService.getRemoteRepoUrls().getOrElse { throw it }
             pluginManager.reconcileWithRemoteRepoUrls(
-                remoteUrls = remotePluginUrls,
+                remotePlugins = remotePlugins,
                 removeMissingLocal = true
             )
             pluginManager.isSyncingFromRemote = false
+            pluginManager.flushPendingSync()
 
             addonRepository.isSyncingFromRemote = true
             val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }

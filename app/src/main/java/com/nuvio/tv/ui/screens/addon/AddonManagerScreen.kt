@@ -31,6 +31,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -97,7 +99,8 @@ import kotlinx.coroutines.delay
 fun AddonManagerScreen(
     viewModel: AddonManagerViewModel = hiltViewModel(),
     showBuiltInHeader: Boolean = true,
-    onNavigateToCatalogOrder: () -> Unit = {}
+    onNavigateToCatalogOrder: () -> Unit = {},
+    onNavigateToCollections: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -326,6 +329,10 @@ fun AddonManagerScreen(
                     item {
                         CatalogOrderEntryCard(onClick = onNavigateToCatalogOrder)
                     }
+                }
+
+                item {
+                    CollectionsEntryCard(onClick = onNavigateToCollections)
                 }
             }
 
@@ -568,6 +575,67 @@ private fun CatalogOrderEntryCard(onClick: () -> Unit) {
             }
             Icon(
                 imageVector = Icons.Default.ArrowDownward,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = NuvioColors.TextSecondary
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun CollectionsEntryCard(onClick: () -> Unit) {
+    var isFocused by remember { mutableStateOf(false) }
+
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { isFocused = it.isFocused },
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = NuvioColors.BackgroundCard,
+            focusedContainerColor = NuvioColors.FocusBackground
+        ),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                shape = RoundedCornerShape(18.dp)
+            )
+        ),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(18.dp)),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.01f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.FolderOpen,
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    tint = if (isFocused) NuvioColors.Secondary else NuvioColors.TextSecondary
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "Collections",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = NuvioColors.TextPrimary
+                    )
+                    Text(
+                        text = "Group catalogs into folders on your home screen",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = NuvioColors.TextSecondary
+                    )
+                }
+            }
+            Icon(
+                imageVector = Icons.Default.ArrowForward,
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
                 tint = NuvioColors.TextSecondary
@@ -839,12 +907,33 @@ private fun ConfirmAddonChangesDialog(
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
+                        if (pendingChange.collectionsChanged) {
+                            Text(
+                                text = "Collections updated",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = NuvioColors.TextPrimary,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 4.dp)
+                            )
+                            Text(
+                                text = "${pendingChange.proposedCollectionCount} collection(s) will replace current collections",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = NuvioColors.TextSecondary,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 8.dp, bottom = 2.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
                         if (
                             pendingChange.addedUrls.isEmpty() &&
                             pendingChange.removedUrls.isEmpty() &&
                             !pendingChange.catalogsReordered &&
                             pendingChange.disabledCatalogNames.isEmpty() &&
-                            pendingChange.enabledCatalogNames.isEmpty()
+                            pendingChange.enabledCatalogNames.isEmpty() &&
+                            !pendingChange.collectionsChanged
                         ) {
                             Text(
                                 text = stringResource(R.string.addon_confirm_no_changes),

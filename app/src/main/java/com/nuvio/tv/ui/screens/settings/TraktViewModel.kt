@@ -64,6 +64,7 @@ class TraktViewModel @Inject constructor(
     private val watchedItemsPreferences: WatchedItemsPreferences,
     private val watchedItemsSyncService: WatchedItemsSyncService,
     private val watchedSeriesStateHolder: WatchedSeriesStateHolder,
+    private val cwEnrichmentCache: com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TraktUiState())
@@ -129,6 +130,9 @@ class TraktViewModel @Inject constructor(
     fun onWatchProgressSourceSelected(source: WatchProgressSource) {
         viewModelScope.launch {
             traktSettingsDataStore.setWatchProgressSource(source)
+            // Clear CW cache so stale items from the previous source don't flash on screen.
+            cwEnrichmentCache.saveInProgressSnapshot(emptyList())
+            cwEnrichmentCache.saveNextUpSnapshot(emptyList())
             if (source == WatchProgressSource.TRAKT) {
                 watchedItemsPreferences.clearAll()
                 watchedSeriesStateHolder.update(emptySet())
@@ -204,6 +208,9 @@ class TraktViewModel @Inject constructor(
             pollJob?.cancel()
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             traktAuthService.revokeAndLogout()
+            // Clear CW cache so stale Trakt items don't flash on next launch.
+            cwEnrichmentCache.saveInProgressSnapshot(emptyList())
+            cwEnrichmentCache.saveNextUpSnapshot(emptyList())
             // Repopulate watched items from Nuvio sync now that Trakt is no
             // longer the source of truth.
             watchedSeriesStateHolder.update(emptySet())

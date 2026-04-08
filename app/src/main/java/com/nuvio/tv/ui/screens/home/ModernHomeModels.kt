@@ -8,6 +8,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.domain.model.Collection
+import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
@@ -67,6 +69,16 @@ sealed class ModernPayload {
         val trailerTitle: String,
         val trailerReleaseInfo: String?,
         val trailerApiType: String
+    ) : ModernPayload()
+    data class CollectionFolder(
+        val focusKey: String,
+        val collectionId: String,
+        val collectionTitle: String,
+        val folderId: String,
+        val posterShape: PosterShape,
+        val focusGlowEnabled: Boolean,
+        val focusGifEnabled: Boolean,
+        val focusGifUrl: String?
     ) : ModernPayload()
 }
 
@@ -194,13 +206,6 @@ internal fun ModernCarouselItem.catalogCardMetrics(
     landscapeCardWidth: androidx.compose.ui.unit.Dp,
     landscapeCardHeight: androidx.compose.ui.unit.Dp
 ): ModernCatalogCardMetrics {
-    if (payload !is ModernPayload.Catalog) {
-        return ModernCatalogCardMetrics(
-            width = if (useLandscapePosters) landscapeCardWidth else portraitCardWidth,
-            height = if (useLandscapePosters) landscapeCardHeight else portraitCardHeight
-        )
-    }
-
     if (useLandscapePosters) {
         return ModernCatalogCardMetrics(
             width = landscapeCardWidth,
@@ -208,7 +213,13 @@ internal fun ModernCarouselItem.catalogCardMetrics(
         )
     }
 
-    return when (metaPreview?.posterShape ?: PosterShape.POSTER) {
+    val posterShape = when (payload) {
+        is ModernPayload.Catalog -> metaPreview?.posterShape ?: PosterShape.POSTER
+        is ModernPayload.CollectionFolder -> payload.posterShape
+        is ModernPayload.ContinueWatching -> PosterShape.POSTER
+    }
+
+    return when (posterShape) {
         PosterShape.LANDSCAPE -> ModernCatalogCardMetrics(
             width = landscapeCardWidth,
             height = landscapeCardHeight
@@ -440,6 +451,54 @@ internal fun buildCatalogItem(
             trailerApiType = item.apiType
         ),
         metaPreview = item
+    )
+}
+
+internal fun buildCollectionFolderItem(
+    collection: Collection,
+    folder: CollectionFolder,
+    useLandscapePosters: Boolean,
+    occurrence: Int = 0
+): ModernCarouselItem {
+    val title = if (!folder.coverEmoji.isNullOrBlank()) {
+        "${folder.coverEmoji}  ${folder.title}"
+    } else {
+        folder.title
+    }
+    val imageUrl = firstNonBlank(folder.coverImageUrl, collection.backdropImageUrl)
+    val heroImageUrl = if (useLandscapePosters) {
+        firstNonBlank(folder.coverImageUrl, collection.backdropImageUrl)
+    } else {
+        imageUrl
+    }
+
+    return ModernCarouselItem(
+        key = "collection_${collection.id}_${folder.id}_$occurrence",
+        title = folder.title,
+        subtitle = collection.title,
+        imageUrl = heroImageUrl,
+        heroPreview = HeroPreview(
+            title = title,
+            logo = null,
+            description = null,
+            contentTypeText = collection.title,
+            yearText = null,
+            imdbText = null,
+            genres = emptyList(),
+            poster = imageUrl,
+            backdrop = firstNonBlank(folder.coverImageUrl, collection.backdropImageUrl),
+            imageUrl = heroImageUrl
+        ),
+        payload = ModernPayload.CollectionFolder(
+            focusKey = "collection_${collection.id}::${folder.id}",
+            collectionId = collection.id,
+            collectionTitle = collection.title,
+            folderId = folder.id,
+            posterShape = folder.tileShape,
+            focusGlowEnabled = collection.focusGlowEnabled,
+            focusGifEnabled = folder.focusGifEnabled,
+            focusGifUrl = folder.focusGifUrl
+        )
     )
 }
 

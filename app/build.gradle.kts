@@ -44,8 +44,8 @@ android {
         applicationId = "com.nuvio.tv"
         minSdk = 24
         targetSdk = 36
-        versionCode = 49
-        versionName = "0.5.6-beta"
+        versionCode = 50
+        versionName = "0.5.7-beta"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
@@ -57,6 +57,7 @@ android {
         buildConfigField("String", "TRAKT_API_URL", "\"${localProperties.getProperty("TRAKT_API_URL", "https://api.trakt.tv/")}\"")
         buildConfigField("String", "TRAKT_REDIRECT_URI", "\"${localProperties.getProperty("TRAKT_REDIRECT_URI", "urn:ietf:wg:oauth:2.0:oob")}\"")
         buildConfigField("String", "TMDB_API_KEY", "\"${localProperties.getProperty("TMDB_API_KEY", "")}\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"${localProperties.getProperty("GEMINI_API_KEY", "")}\"")
         buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "https://app.nuvio.tv/tv-login")}\"")
         buildConfigField("String", "DONATIONS_BASE_URL", "\"${localProperties.getProperty("DONATIONS_BASE_URL", "")}\"")
         buildConfigField("String", "DONATIONS_DONATE_URL", "\"${localProperties.getProperty("DONATIONS_DONATE_URL", "")}\"")
@@ -177,6 +178,9 @@ android {
             pickFirsts += listOf(
                 "lib/*/libc++_shared.so",
                 "lib/*/libavcodec.so",
+                "lib/*/libavdevice.so",
+                "lib/*/libavfilter.so",
+                "lib/*/libavformat.so",
                 "lib/*/libavutil.so",
                 "lib/*/libswscale.so",
                 "lib/*/libswresample.so"
@@ -254,6 +258,7 @@ dependencies {
 
     // Image Loading
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
     implementation(libs.coil.svg)
 
     // Navigation
@@ -292,8 +297,9 @@ dependencies {
 
     // libass-android for ASS/SSA subtitle support (from Maven Central)
     implementation("io.github.peerless2012:ass-media:0.4.0-beta01")
-    implementation("io.github.anilbeesetti:nextlib-mediainfo:1.9.1-0.11.0")
-    implementation("io.github.anilbeesetti:nextlib-media3ext:1.9.1-0.11.0")
+    // Local nextlib-mediainfo fork (static FFmpeg; no libav*.so in final AAR)
+    implementation(files("libs/nextlib-mediainfo-local.aar"))
+    implementation("io.github.abdallahmehiz:mpv-android-lib:0.1.12")
     implementation("dev.chrisbanes.haze:haze-android:0.7.3") {
         exclude(group = "org.jetbrains.compose.ui")
         exclude(group = "org.jetbrains.compose.foundation")
@@ -303,6 +309,26 @@ dependencies {
     implementation(libs.quickjs.kt)
     implementation(libs.jsoup)
     implementation(libs.gson)
+
+    // Jackson — required by CloudStream DEX extensions at runtime
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.0")
+
+    // NiceHTTP — HTTP client used by CloudStream extensions via `app.get()`
+    implementation(libs.nicehttp)
+
+    // Conscrypt — TLS provider with browser-compatible fingerprint for Cloudflare bypass
+    implementation(libs.conscrypt.android)
+
+    // CloudStream library — provides core API classes for extension compatibility
+    implementation(libs.cloudstream.library) {
+        // Exclude heavy deps we don't need or that conflict
+        exclude(group = "org.mozilla", module = "rhino")
+        exclude(group = "com.github.AmarullisVFX", module = "newpipeextractor")
+        exclude(group = "com.github.AmaryllisVFX", module = "newpipeextractor")
+        exclude(group = "com.github.AmaryllisVFX.newpipeextractor")
+        exclude(group = "info.debatty", module = "java-string-similarity")
+    }
 
     // Markdown rendering
     implementation(libs.markdown.renderer.m3)

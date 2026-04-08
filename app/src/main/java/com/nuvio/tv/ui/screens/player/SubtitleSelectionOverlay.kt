@@ -45,7 +45,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.res.stringResource
 import androidx.tv.material3.Card
@@ -66,6 +68,7 @@ import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
 import com.nuvio.tv.ui.theme.NuvioColors
 
 private const val SubtitleOffLanguageKey = "__off__"
+private const val SubtitleAiLanguageKey = "__ai__"
 private const val SubtitleUnknownLanguageKey = "__unknown__"
 private const val SubtitleFocusTag = "SubtitleFocus"
 
@@ -96,6 +99,8 @@ internal fun SubtitleSelectionOverlay(
     selectedAddonSubtitle: Subtitle?,
     subtitleStyle: SubtitleStyleSettings,
     subtitleDelayMs: Int,
+    autoTranslateSubtitles: Boolean,
+    translationAvailable: Boolean,
     installedSubtitleAddonOrder: List<String>,
     isLoadingAddons: Boolean,
     onInternalTrackSelected: (Int) -> Unit,
@@ -106,6 +111,8 @@ internal fun SubtitleSelectionOverlay(
     modifier: Modifier = Modifier
 ) {
     val noneLabel = stringResource(R.string.subtitle_none)
+    val builtInLabel = stringResource(R.string.subtitle_built_in)
+    val forcedLabel = stringResource(R.string.sub_forced_lang)
     var persistedStyleFocusKey by rememberSaveable { mutableStateOf<String?>(null) }
     val sessionPreferredLanguage = remember(visible) { subtitleStyle.preferredLanguage }
     val sessionSecondaryPreferredLanguage = remember(visible) { subtitleStyle.secondaryPreferredLanguage }
@@ -121,18 +128,21 @@ internal fun SubtitleSelectionOverlay(
             addonSubtitles = sessionAddonSubtitles,
             preferredLanguage = sessionPreferredLanguage,
             secondaryPreferredLanguage = sessionSecondaryPreferredLanguage,
-            noneLabel = noneLabel
+            noneLabel = noneLabel,
+            translationAvailable = translationAvailable
         )
     }
     val sessionInitialLanguageKey = remember(visible) {
-        selectedSubtitleLanguageKey(
+        if (autoTranslateSubtitles && translationAvailable) SubtitleAiLanguageKey
+        else selectedSubtitleLanguageKey(
             internalTracks = sessionInternalTracks,
             selectedInternalIndex = sessionSelectedInternalIndex,
             selectedAddonSubtitle = sessionSelectedAddonSubtitle
         )
     }
     val sessionInitialSelectedOptionId = remember(visible) {
-        selectedSubtitleOptionId(
+        if (autoTranslateSubtitles && translationAvailable) null
+        else selectedSubtitleOptionId(
             internalTracks = sessionInternalTracks,
             selectedInternalIndex = sessionSelectedInternalIndex,
             selectedAddonSubtitle = sessionSelectedAddonSubtitle
@@ -144,7 +154,9 @@ internal fun SubtitleSelectionOverlay(
             internalTracks = sessionInternalTracks,
             addonSubtitles = sessionAddonSubtitles,
             installedAddonOrder = sessionInstalledSubtitleAddonOrder,
-            selectedOptionId = activeSelectedOptionId
+            selectedOptionId = activeSelectedOptionId,
+            builtInLabel = builtInLabel,
+            forcedLabel = forcedLabel
         )
     }
 
@@ -220,7 +232,7 @@ internal fun SubtitleSelectionOverlay(
     val languageItemRequesters = rememberFocusRequesterMap(languageItems.map { it.key })
     val optionItemRequesters = rememberFocusRequesterMap(subtitleOptions.map { it.id })
     val styleRequesters = rememberStyleFocusRequesters()
-    val optionRailVisible = selectedLanguageKey != SubtitleOffLanguageKey
+    val optionRailVisible = selectedLanguageKey != SubtitleOffLanguageKey && selectedLanguageKey != SubtitleAiLanguageKey
     val styleRailVisible = optionRailVisible && (revealStyleRail || selectedOptionId != null)
     val languageTargetKey: String? = remember(languageItems, lastFocusedLanguageKey, selectedLanguageKey) {
         lastFocusedLanguageKey?.takeIf { key -> languageItems.any { it.key == key } }
@@ -444,8 +456,20 @@ internal fun SubtitleSelectionOverlay(
                         if (languageKey == SubtitleOffLanguageKey) {
                             selectedOptionId = null
                             revealStyleRail = false
+                            onEvent(PlayerEvent.OnSetAutoTranslateSubtitles(false))
                             onDisableSubtitles()
+                        } else if (languageKey == SubtitleAiLanguageKey) {
+                            selectedOptionId = null
+                            revealStyleRail = false
+                            onEvent(PlayerEvent.OnSetAutoTranslateSubtitles(true))
+                            val englishTrack = sessionInternalTracks.firstOrNull {
+                                it.language?.startsWith("en", ignoreCase = true) == true
+                            }
+                            if (englishTrack != null) {
+                                onInternalTrackSelected(englishTrack.index)
+                            }
                         } else {
+                            onEvent(PlayerEvent.OnSetAutoTranslateSubtitles(false))
                             val nextOptions = buildSessionOptions(languageKey, selectedOptionId)
                             val nextSelectedId = selectedOptionId?.takeIf { id ->
                                 nextOptions.any { it.id == id }
@@ -523,6 +547,7 @@ internal fun SubtitleSelectionOverlay(
                     SubtitleStyleRail(
                         subtitleStyle = subtitleStyle,
                         subtitleDelayMs = subtitleDelayMs,
+                        autoTranslateSubtitles = autoTranslateSubtitles,
                         listState = styleListState,
                         onMoveLeft = ::moveFocusBackToOptionRail,
                         focusRequesters = styleRequesters,
@@ -736,12 +761,15 @@ private fun SubtitleOptionsRail(
 private fun SubtitleStyleRail(
     subtitleStyle: SubtitleStyleSettings,
     subtitleDelayMs: Int,
+    autoTranslateSubtitles: Boolean,
     listState: LazyListState,
     onMoveLeft: () -> Unit,
     focusRequesters: Map<String, FocusRequester>,
     onStyleFocused: (String) -> Unit,
     onEvent: (PlayerEvent) -> Unit
 ) {
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
     RailColumn(width = 280.dp, title = stringResource(R.string.subtitle_style_title)) {
         LazyColumn(
             state = listState,
@@ -760,7 +788,7 @@ private fun SubtitleStyleRail(
                         .focusRequester(requireNotNull(focusRequesters[StyleFocusKey.DelaySet]))
                         .onPreviewKeyEvent { event ->
                             when (event.nativeKeyEvent.keyCode) {
-                                android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                moveLeftKey -> {
                                     when (event.nativeKeyEvent.action) {
                                         android.view.KeyEvent.ACTION_DOWN -> {
                                             onMoveLeft()
@@ -885,6 +913,19 @@ private fun SubtitleStyleRail(
                 }
             }
             item {
+                OverlaySectionCard(title = stringResource(R.string.subtitle_auto_translate)) {
+                    ToggleChip(
+                        label = if (autoTranslateSubtitles) stringResource(R.string.subtitle_style_on) else stringResource(R.string.subtitle_style_off),
+                        isEnabled = autoTranslateSubtitles,
+                        onMoveLeft = onMoveLeft,
+                        focusRequester = focusRequesters[StyleFocusKey.AutoTranslate],
+                        focusKey = StyleFocusKey.AutoTranslate,
+                        onFocused = onStyleFocused,
+                        onClick = { onEvent(PlayerEvent.OnSetAutoTranslateSubtitles(!autoTranslateSubtitles)) }
+                    )
+                }
+            }
+            item {
                 Card(
                     onClick = { onEvent(PlayerEvent.OnResetSubtitleDefaults) },
                     colors = overlayCardColors(selected = false),
@@ -893,7 +934,7 @@ private fun SubtitleStyleRail(
                         .focusRequester(requireNotNull(focusRequesters[StyleFocusKey.Reset]))
                         .onPreviewKeyEvent { event ->
                             when (event.nativeKeyEvent.keyCode) {
-                                android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                moveLeftKey -> {
                                     when (event.nativeKeyEvent.action) {
                                         android.view.KeyEvent.ACTION_DOWN -> {
                                             onMoveLeft()
@@ -952,6 +993,8 @@ private fun SubtitleLanguageCard(
     onFocused: () -> Unit
 ) {
     val textColor = if (isSelected) NuvioColors.OnSecondary else Color.White
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val moveToOptionsKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_LEFT else android.view.KeyEvent.KEYCODE_DPAD_RIGHT
 
     Card(
         onClick = onClick,
@@ -960,7 +1003,7 @@ private fun SubtitleLanguageCard(
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onPreviewKeyEvent { event ->
                 when (event.nativeKeyEvent.keyCode) {
-                    android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    moveToOptionsKey -> {
                         val moveRight = onMoveRight ?: return@onPreviewKeyEvent false
                         when (event.nativeKeyEvent.action) {
                             android.view.KeyEvent.ACTION_DOWN -> {
@@ -1028,6 +1071,9 @@ private fun SubtitleOptionCard(
     } else {
         NuvioColors.TextTertiary
     }
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
+    val moveRightKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_LEFT else android.view.KeyEvent.KEYCODE_DPAD_RIGHT
 
     Card(
         onClick = onClick,
@@ -1036,7 +1082,7 @@ private fun SubtitleOptionCard(
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onPreviewKeyEvent { event ->
                 when (event.nativeKeyEvent.keyCode) {
-                    android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    moveLeftKey -> {
                         when (event.nativeKeyEvent.action) {
                             android.view.KeyEvent.ACTION_DOWN -> {
                                 onMoveLeft()
@@ -1048,7 +1094,7 @@ private fun SubtitleOptionCard(
                         }
                     }
 
-                    android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    moveRightKey -> {
                         when (event.nativeKeyEvent.action) {
                             android.view.KeyEvent.ACTION_DOWN -> {
                                 onMoveRight()
@@ -1285,6 +1331,8 @@ private fun StepperButton(
     onFocused: ((String) -> Unit)? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
 
     IconButton(
         onClick = onClick,
@@ -1293,7 +1341,7 @@ private fun StepperButton(
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onPreviewKeyEvent { event ->
                 when (event.nativeKeyEvent.keyCode) {
-                    android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    moveLeftKey -> {
                         val moveLeft = onMoveLeft ?: return@onPreviewKeyEvent false
                         when (event.nativeKeyEvent.action) {
                             android.view.KeyEvent.ACTION_DOWN -> {
@@ -1345,6 +1393,8 @@ private fun ToggleChip(
     onFocused: ((String) -> Unit)? = null,
     onClick: () -> Unit
 ) {
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
     Card(
         onClick = onClick,
         modifier = if (focusRequester != null) {
@@ -1352,7 +1402,7 @@ private fun ToggleChip(
                 .focusRequester(focusRequester)
                 .onPreviewKeyEvent { event ->
                     when (event.nativeKeyEvent.keyCode) {
-                        android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        moveLeftKey -> {
                             val moveLeft = onMoveLeft ?: return@onPreviewKeyEvent false
                             when (event.nativeKeyEvent.action) {
                                 android.view.KeyEvent.ACTION_DOWN -> {
@@ -1375,7 +1425,7 @@ private fun ToggleChip(
             Modifier
                 .onPreviewKeyEvent { event ->
                     when (event.nativeKeyEvent.keyCode) {
-                        android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        moveLeftKey -> {
                             val moveLeft = onMoveLeft ?: return@onPreviewKeyEvent false
                             when (event.nativeKeyEvent.action) {
                                 android.view.KeyEvent.ACTION_DOWN -> {
@@ -1448,6 +1498,8 @@ private fun ColorChip(
     onClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val moveLeftKey = if (isRtl) android.view.KeyEvent.KEYCODE_DPAD_RIGHT else android.view.KeyEvent.KEYCODE_DPAD_LEFT
 
     Card(
         onClick = { if (enabled) onClick() },
@@ -1460,7 +1512,7 @@ private fun ColorChip(
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onPreviewKeyEvent { event ->
                 when (event.nativeKeyEvent.keyCode) {
-                    android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    moveLeftKey -> {
                         val moveLeft = onMoveLeft ?: return@onPreviewKeyEvent false
                         when (event.nativeKeyEvent.action) {
                             android.view.KeyEvent.ACTION_DOWN -> {
@@ -1522,6 +1574,7 @@ private object StyleFocusKey {
     const val OffsetIncrease = "offset_increase"
     const val DelaySet = "delay_set"
     const val Reset = "reset"
+    const val AutoTranslate = "auto_translate"
     const val TextColorPrefix = "text_color"
     const val OutlineColorPrefix = "outline_color"
 }
@@ -1561,7 +1614,8 @@ private fun rememberStyleFocusRequesters(): Map<String, FocusRequester> {
             StyleFocusKey.OffsetDecrease,
             StyleFocusKey.OffsetIncrease,
             StyleFocusKey.DelaySet,
-            StyleFocusKey.Reset
+            StyleFocusKey.Reset,
+            StyleFocusKey.AutoTranslate
         ).associateWith { FocusRequester() } +
             OverlayTextColors.associate { color ->
                 "${StyleFocusKey.TextColorPrefix}:${color.toArgb()}" to FocusRequester()
@@ -1612,7 +1666,8 @@ private fun buildSubtitleLanguageRailItems(
     addonSubtitles: List<Subtitle>,
     preferredLanguage: String,
     secondaryPreferredLanguage: String?,
-    noneLabel: String
+    noneLabel: String,
+    translationAvailable: Boolean = false
 ): List<SubtitleLanguageRailItem> {
     val counts = linkedMapOf<String, Int>()
     internalTracks.forEach { track ->
@@ -1647,13 +1702,17 @@ private fun buildSubtitleLanguageRailItems(
             )
         }
 
+    val aiItems = if (translationAvailable) listOf(
+        SubtitleLanguageRailItem(key = SubtitleAiLanguageKey, label = "AI", count = 0)
+    ) else emptyList()
+
     return listOf(
         SubtitleLanguageRailItem(
             key = SubtitleOffLanguageKey,
             label = noneLabel,
             count = 0
         )
-    ) + sortedItems
+    ) + aiItems + sortedItems
 }
 
 private fun preferredOverlayLanguageOrder(
@@ -1679,7 +1738,9 @@ private fun buildSubtitleOptionRailItems(
     internalTracks: List<TrackInfo>,
     addonSubtitles: List<Subtitle>,
     installedAddonOrder: List<String>,
-    selectedOptionId: String?
+    selectedOptionId: String?,
+    builtInLabel: String,
+    forcedLabel: String
 ): List<SubtitleOptionRailItem> {
     if (selectedLanguageKey == SubtitleOffLanguageKey) return emptyList()
 
@@ -1691,10 +1752,10 @@ private fun buildSubtitleOptionRailItems(
                 id = "internal:${track.index}",
                 kind = SubtitleOptionKind.INTERNAL,
                 title = track.name,
-                sourceLabel = "Built in",
+                sourceLabel = builtInLabel,
                 meta = listOfNotNull(
                     track.codec,
-                    if (track.isForced) "Forced" else null
+                    if (track.isForced) forcedLabel else null
                 ).joinToString(" • ").ifBlank { null },
                 isSelected = "internal:${track.index}" == selectedOptionId,
                 internalTrackIndex = track.index
@@ -1808,6 +1869,7 @@ private fun normalizeOverlayLanguageKeyForTrack(track: TrackInfo): String {
 private fun subtitleLanguageLabel(key: String): String {
     return when (key) {
         SubtitleOffLanguageKey -> Subtitle.languageCodeToName("none")
+        SubtitleAiLanguageKey -> "AI"
         SubtitleUnknownLanguageKey -> "Unknown"
         else -> Subtitle.languageCodeToName(key)
     }

@@ -25,6 +25,7 @@ internal fun PlayerRuntimeController.showEpisodesPanel() {
             showAudioOverlay = false,
             showSubtitleOverlay = false,
             showSubtitleStylePanel = false,
+            showSubtitleTimingDialog = false,
             showSpeedDialog = false,
             showMoreDialog = false
         )
@@ -47,6 +48,7 @@ internal fun PlayerRuntimeController.showSourcesPanel() {
             showAudioOverlay = false,
             showSubtitleOverlay = false,
             showSubtitleStylePanel = false,
+            showSubtitleTimingDialog = false,
             showSpeedDialog = false,
             showMoreDialog = false,
             showEpisodesPanel = false,
@@ -271,12 +273,15 @@ private fun PlayerRuntimeController.applySelectedStreamState(
     url: String,
     headers: Map<String, String>
 ) {
-    currentStreamUrl = url
-    currentHeaders = headers
+    val (cleanUrl, mergedHeaders) = PlayerMediaSourceFactory.extractUserInfoAuth(url, headers)
+    currentStreamUrl = cleanUrl
+    currentHeaders = mergedHeaders
     currentFilename = stream.behaviorHints?.filename ?: navigationArgs.filename
+    currentStreamResponseHeaders = stream.behaviorHints?.proxyHeaders?.response.orEmpty()
     currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
-        url = url,
-        filename = currentFilename
+        url = cleanUrl,
+        filename = currentFilename,
+        responseHeaders = currentStreamResponseHeaders
     )
     currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
     currentVideoHash = stream.behaviorHints?.videoHash
@@ -340,7 +345,7 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
     )
     persistSelectedStreamForReuse(stream = stream, url = url, headers = newHeaders)
     hasRetriedCurrentStreamAfter416 = false
-    errorRetryCount = 0
+    resetErrorRetryState()
     subtitleDisabledByPersistedPreference = false
     subtitleAddonRestoredByPersistedPreference = false
     pendingRestoredAddonSubtitle = null
@@ -616,7 +621,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
     subtitleAddonRestoredByPersistedPreference = false
     pendingRestoredAddonSubtitle = null
     hasRetriedCurrentStreamAfter416 = false
-    errorRetryCount = 0
+    resetErrorRetryState()
     currentVideoId = targetVideo?.id ?: _uiState.value.episodeStreamsForVideoId ?: currentVideoId
     currentSeason = targetVideo?.season ?: _uiState.value.episodeStreamsSeason ?: currentSeason
     currentEpisode = targetVideo?.episode ?: _uiState.value.episodeStreamsEpisode ?: currentEpisode
@@ -687,6 +692,7 @@ internal fun PlayerRuntimeController.showEpisodeStreamPicker(video: Video, force
             showAudioOverlay = false,
             showSubtitleOverlay = false,
             showSubtitleStylePanel = false,
+            showSubtitleTimingDialog = false,
             showSpeedDialog = false,
             showMoreDialog = false,
             episodesSelectedSeason = video.season ?: it.episodesSelectedSeason

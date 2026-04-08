@@ -73,6 +73,7 @@ private val StyleGridWidth = (StyleCardWidth * 3) + (StyleCardGap * 2)
 @Composable
 internal fun SubtitleStyleSidePanel(
     subtitleStyle: SubtitleStyleSettings,
+    autoTranslateSubtitles: Boolean,
     onEvent: (PlayerEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -231,24 +232,33 @@ internal fun SubtitleStyleSidePanel(
                 }
                 SubtitleStyleSection(
                     title = stringResource(R.string.subtitle_style_defaults),
+                    centerContent = false,
                     modifier = Modifier
                         .width(StyleCardWidth)
                         .height(StyleCardHeight)
                 ) {
-                    Card(
-                        onClick = { onEvent(PlayerEvent.OnResetSubtitleDefaults) },
-                        colors = CardDefaults.colors(
-                            containerColor = Color.White.copy(alpha = 0.1f),
-                            focusedContainerColor = Color.White.copy(alpha = 0.2f)
-                        ),
-                        shape = CardDefaults.shape(RoundedCornerShape(12.dp))
-                    ) {
-                        Text(
-                            text = stringResource(R.string.subtitle_style_reset),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.8f),
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SubtitleStyleSettingRow(label = stringResource(R.string.subtitle_auto_translate)) {
+                            SubtitleStyleToggleButton(
+                                isEnabled = autoTranslateSubtitles,
+                                onClick = { onEvent(PlayerEvent.OnSetAutoTranslateSubtitles(!autoTranslateSubtitles)) }
+                            )
+                        }
+                        Card(
+                            onClick = { onEvent(PlayerEvent.OnResetSubtitleDefaults) },
+                            colors = CardDefaults.colors(
+                                containerColor = Color.White.copy(alpha = 0.1f),
+                                focusedContainerColor = Color.White.copy(alpha = 0.2f)
+                            ),
+                            shape = CardDefaults.shape(RoundedCornerShape(12.dp))
+                        ) {
+                            Text(
+                                text = stringResource(R.string.subtitle_style_reset),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.8f),
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                            )
+                        }
                     }
                 }
             }
