@@ -46,6 +46,7 @@ class AddonPreferences @Inject constructor(
     private val gson = Gson()
     private val orderedUrlsKey = stringPreferencesKey("installed_addon_urls_ordered")
     private val legacyUrlsKey = stringSetPreferencesKey("installed_addon_urls")
+    private val userSetNamesKey = stringPreferencesKey("addon_user_set_names")
     private val manifestSuffix = "/manifest.json"
 
     private fun canonicalizeUrl(url: String): String {
@@ -130,6 +131,28 @@ class AddonPreferences @Inject constructor(
             gson.fromJson(json, type) ?: getDefaultAddons().toList()
         } catch (e: Exception) {
             getDefaultAddons().toList()
+        }
+    }
+
+    val userSetNames: Flow<Map<String, String>> = effectiveProfileIdFlow.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { preferences ->
+            val json = preferences[userSetNamesKey]
+            if (json != null) parseNameMap(json) else emptyMap()
+        }
+    }
+
+    suspend fun setUserSetNames(names: Map<String, String>) {
+        store().edit { preferences ->
+            preferences[userSetNamesKey] = gson.toJson(names)
+        }
+    }
+
+    private fun parseNameMap(json: String): Map<String, String> {
+        return try {
+            val type = object : TypeToken<Map<String, String>>() {}.type
+            gson.fromJson(json, type) ?: emptyMap()
+        } catch (e: Exception) {
+            emptyMap()
         }
     }
 

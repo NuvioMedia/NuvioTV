@@ -2,9 +2,11 @@ package com.nuvio.tv.ui.screens.addon
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
+import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +21,7 @@ import javax.inject.Inject
 @HiltViewModel
 class CatalogOrderViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
+    private val collectionsDataStore: CollectionsDataStore,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore
 ) : ViewModel() {
 
@@ -69,11 +72,13 @@ class CatalogOrderViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 addonRepository.getInstalledAddons(),
+                collectionsDataStore.collections,
                 layoutPreferenceDataStore.homeCatalogOrderKeys,
                 layoutPreferenceDataStore.disabledHomeCatalogKeys
-            ) { addons, savedOrderKeys, disabledKeys ->
+            ) { addons, collections, savedOrderKeys, disabledKeys ->
                 buildOrderedCatalogItems(
                     addons = addons,
+                    collections = collections,
                     savedOrderKeys = savedOrderKeys,
                     disabledKeys = disabledKeys.toSet()
                 )
@@ -91,12 +96,23 @@ class CatalogOrderViewModel @Inject constructor(
 
     private fun buildOrderedCatalogItems(
         addons: List<Addon>,
+        collections: List<Collection> = emptyList(),
         savedOrderKeys: List<String>,
         disabledKeys: Set<String>
     ): List<CatalogOrderItem> {
         val defaultEntries = buildDefaultCatalogEntries(addons)
-        val availableMap = defaultEntries.associateBy { it.key }
-        val defaultOrderKeys = defaultEntries.map { it.key }
+        val collectionEntries = collections.map { collection ->
+            CatalogOrderEntry(
+                key = "collection_${collection.id}",
+                disableKey = "collection_${collection.id}",
+                catalogName = collection.title,
+                addonName = "${collection.folders.size} folder${if (collection.folders.size != 1) "s" else ""}",
+                typeLabel = "collection"
+            )
+        }
+        val allEntries = defaultEntries + collectionEntries
+        val availableMap = allEntries.associateBy { it.key }
+        val defaultOrderKeys = allEntries.map { it.key }
 
         val savedValid = savedOrderKeys
             .asSequence()

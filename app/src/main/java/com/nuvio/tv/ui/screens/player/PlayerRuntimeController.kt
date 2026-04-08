@@ -134,18 +134,29 @@ class PlayerRuntimeController(
     internal var currentAddonName: String? = navigationArgs.addonName
     internal var currentAddonLogo: String? = navigationArgs.addonLogo
     internal var currentStreamDescription: String? = navigationArgs.streamDescription
+    internal val contentLanguage: String? = navigationArgs.contentLanguage
     internal var currentVideoCodec: String? = null
     internal var currentVideoWidth: Int? = null
     internal var currentVideoHeight: Int? = null
     internal var currentVideoBitrate: Int? = null
-    internal var currentStreamUrl: String = initialStreamUrl
-    internal var currentStreamMimeType: String? =
-        PlayerMediaSourceFactory.inferMimeType(
-            url = initialStreamUrl,
-            filename = currentFilename
+    internal var currentStreamUrl: String
+    internal var currentStreamResponseHeaders: Map<String, String> = emptyMap()
+    internal var currentStreamMimeType: String?
+    internal var currentHeaders: Map<String, String>
+
+    init {
+        val (cleanInitialUrl, mergedInitialHeaders) = PlayerMediaSourceFactory.extractUserInfoAuth(
+            initialStreamUrl,
+            PlayerMediaSourceFactory.sanitizeHeaders(PlayerMediaSourceFactory.parseHeaders(headersJson))
         )
-    internal var currentHeaders: Map<String, String> =
-        PlayerMediaSourceFactory.sanitizeHeaders(PlayerMediaSourceFactory.parseHeaders(headersJson))
+        currentStreamUrl = cleanInitialUrl
+        currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
+            url = cleanInitialUrl,
+            filename = currentFilename,
+            responseHeaders = currentStreamResponseHeaders
+        )
+        currentHeaders = mergedInitialHeaders
+    }
 
     fun getCurrentStreamUrl(): String = currentStreamUrl
     fun getCurrentHeaders(): Map<String, String> = currentHeaders
@@ -181,7 +192,6 @@ class PlayerRuntimeController(
     val exoPlayer: ExoPlayer?
         get() = _exoPlayer
     internal var playbackSpeedAwareAudioOutputProvider: PlaybackSpeedAwareAudioOutputProvider? = null
-    internal var isReleasingPlayer: Boolean = false
 
     internal var progressJob: Job? = null
     internal var hideControlsJob: Job? = null
@@ -194,6 +204,7 @@ class PlayerRuntimeController(
     internal var hideStreamSourceIndicatorJob: Job? = null
     internal var hidePlayerEngineSwitchInfoJob: Job? = null
     internal var hideSubtitleDelayOverlayJob: Job? = null
+    internal var subtitleAutoSyncLoadJob: Job? = null
     internal var nextEpisodeAutoPlayJob: Job? = null
     internal var sourceStreamsJob: Job? = null
     internal var sourceChipErrorDismissJob: Job? = null
@@ -271,6 +282,12 @@ class PlayerRuntimeController(
     internal var pendingPreviewSeekPosition: Long? = null
     internal var pendingResumeProgress: WatchProgress? = null
     internal var hasRetriedCurrentStreamAfter416: Boolean = false
+    internal var isReleasingPlayer: Boolean = false
+    internal var cachedDecoderPriority: Int = 1
+    internal var hasTriedAudioPcmFallback: Boolean = false
+    internal var hasTriedDv7HevcFallback: Boolean = false
+    internal var forceDv7ToHevc: Boolean = false
+    internal var startupRetryCount: Int = 0
     internal var errorRetryCount: Int = 0
     internal var errorRetryJob: Job? = null
     internal var currentScrobbleItem: TraktScrobbleItem? = null
@@ -289,11 +306,12 @@ class PlayerRuntimeController(
     internal var libassPipelineDecisionStreamUrl: String? = null
     internal var episodeStreamsJob: Job? = null
     internal var episodeStreamsCacheRequestKey: String? = null
-    internal val streamCacheKey: String? by lazy {
-        val type = contentType?.lowercase()
-        val vid = currentVideoId
-        if (type.isNullOrBlank() || vid.isNullOrBlank()) null else "$type|$vid"
-    }
+    internal val streamCacheKey: String?
+        get() {
+            val type = contentType?.lowercase()
+            val vid = currentVideoId
+            return if (type.isNullOrBlank() || vid.isNullOrBlank()) null else "$type|$vid"
+        }
 
     init {
         if (!navigationArgs.startFromBeginning) {

@@ -218,6 +218,9 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         window?.setBackgroundDrawable(null)
+
+        // Store Activity reference for CloudStream extensions that need it in plugin.load()
+        com.lagradost.cloudstream3.AcraApplication.setActivity(this)
         setContent {
             var hasSelectedProfileThisSession by rememberSaveable { mutableStateOf(false) }
             var onboardingCompletedThisSession by remember { mutableStateOf(false) }
@@ -538,6 +541,11 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         profileSettingsSyncService.requestForegroundPull()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        com.lagradost.cloudstream3.AcraApplication.setActivity(null)
     }
 }
 

@@ -202,6 +202,8 @@
     <string name="audio_section">Audio</string>
     <string name="audio_lang_default">Domyślny (plik multimedialny)</string>
     <string name="audio_lang_device">Język urządzenia</string>
+    <string name="audio_lang_original">Język oryginalny</string>
+    <string name="audio_lang_original_hint">Wymaga włączonego wzbogacania TMDB</string>
     <string name="audio_preferred_lang">Preferowany język audio</string>
     <string name="audio_skip_silence">Pomijaj ciszę</string>
     <string name="audio_skip_silence_sub">Pomijaj ciche fragmenty podczas odtwarzania</string>
@@ -214,6 +216,18 @@
     <string name="audio_tunneled">Tunelowane odtwarzanie</string>
     <string name="audio_tunneled_sub">Synchronizacja audio/wideo na poziomie sprzętu. Może poprawić odtwarzanie na niektórych urządzeniach Android TV</string>
     <string name="audio_dv_sub">Mapuj Dolby Vision Profil 7 na standardowy HEVC dla urządzeń bez obsługi DV</string>
+    <string name="audio_mpv_hwdec_title">Dekodowanie sprzętowe (tylko MPV)</string>
+    <string name="audio_mpv_hwdec_dialog_subtitle">Wybierz jak libmpv powinien używać dekoderów sprzętowych.</string>
+    <string name="audio_mpv_hwdec_legacy_direct_copy">Starszy (direct -&gt; copy)</string>
+    <string name="audio_mpv_hwdec_legacy_direct_copy_desc">Poprzednie domyślne zachowanie: najpierw bezpośredni sprzęt, potem kopiowanie.</string>
+    <string name="audio_mpv_hwdec_auto_safe">Auto (auto-safe)</string>
+    <string name="audio_mpv_hwdec_auto_safe_desc">Bezpieczniejszy tryb automatyczny z awaryjnym przełączaniem gdy dekodery zawiodą.</string>
+    <string name="audio_mpv_hwdec_hardware_copy">Sprzętowy (copy) (mediacodec-copy)</string>
+    <string name="audio_mpv_hwdec_hardware_copy_desc">Dekodowanie sprzętowe z kopiowaniem do pamięci programowej.</string>
+    <string name="audio_mpv_hwdec_hardware_direct">Sprzętowy (direct) (mediacodec)</string>
+    <string name="audio_mpv_hwdec_hardware_direct_desc">Bezpośrednie dekodowanie sprzętowe. Najszybsza ścieżka na kompatybilnych urządzeniach.</string>
+    <string name="audio_mpv_hwdec_disabled">Wyłączone (no)</string>
+    <string name="audio_mpv_hwdec_disabled_desc">Wyłącza dekodowanie sprzętowe i używa tylko dekodowania programowego.</string>
     <string name="audio_decoder_device_only_desc">Używaj tylko wbudowanych dekoderów sprzętowych. Najbardziej kompatybilne, ale może nie obsługiwać wszystkich formatów.</string>
     <string name="audio_decoder_prefer_device_desc">Używaj dekoderów sprzętowych gdy dostępne, w przeciwnym razie FFmpeg. Zalecane dla większości urządzeń.</string>
     <string name="audio_decoder_prefer_app_desc">Używaj dekoderów FFmpeg gdy dostępne. Lepsza obsługa formatów, ale wyższe użycie CPU.</string>
@@ -583,10 +597,10 @@
     <string name="addon_empty">Brak zainstalowanych dodatków. Dodaj jeden, aby zacząć.</string>
     <string name="addon_remove">Usuń</string>
     <string name="addon_manage_from_phone_title">Zarządzaj z telefonu</string>
-    <string name="addon_manage_from_phone_subtitle">Zeskanuj kod QR, aby zarządzać dodatkami i katalogami z telefonu</string>
+    <string name="addon_manage_from_phone_subtitle">Zeskanuj kod QR, aby zarządzać dodatkami, katalogami i kolekcjami z telefonu</string>
     <string name="addon_reorder_title">Zmień kolejność katalogów</string>
-    <string name="addon_reorder_subtitle">Kontroluje kolejność wierszy katalogów na ekranie głównym</string>
-    <string name="addon_qr_scan_instruction">Zeskanuj telefonem, aby zarządzać dodatkami i katalogami</string>
+    <string name="addon_reorder_subtitle">Kontroluje kolejność wierszy katalogów i kolekcji na ekranie głównym</string>
+    <string name="addon_qr_scan_instruction">Zeskanuj telefonem, aby zarządzać dodatkami, katalogami i kolekcjami</string>
     <string name="addon_qr_close">Zamknij</string>
     <string name="addon_confirm_title">Potwierdź zmiany dodatków i katalogów</string>
     <string name="addon_confirm_subtitle">Następujące zmiany zostały wprowadzone z telefonu:</string>
@@ -875,6 +889,10 @@
     <string name="plugin_confirm_total">Łącznie repozytoriów: %1$d</string>
     <string name="plugin_confirm_reject">Odrzuć</string>
     <string name="plugin_confirm_confirm">Potwierdź</string>
+    <string name="plugin_risky_enable_title">Włączyć dostawcę?</string>
+    <string name="plugin_risky_enable_message">%1$s może powodować awarie przy niektórych treściach. Włączyć mimo to?</string>
+    <string name="plugin_risky_enable_cancel">Anuluj</string>
+    <string name="plugin_risky_enable_confirm">Włącz</string>
     <string name="plugin_updated_format">Zaktualizowano: %1$s</string>
     <string name="plugin_test_btn">Testuj</string>
     <string name="plugin_test_results">Wyniki testu (%1$d źródeł)</string>
@@ -1213,6 +1231,7 @@
     <string name="cd_subtitles">Napisy</string>
     <string name="cd_audio_tracks">Ścieżki audio</string>
     <string name="cd_sources">Źródła</string>
+    <string name="cd_switch_player_engine">Przełącz silnik odtwarzacza</string>
     <string name="cd_episodes">Odcinki</string>
     <string name="cd_playback_speed">Prędkość odtwarzania</string>
     <string name="cd_aspect_ratio">Proporcje obrazu</string>
@@ -1333,6 +1352,9 @@
     <string name="web_installed">Zainstalowany</string>
     <string name="web_error_addon_exists">Ten dodatek jest już na liście</string>
     <string name="web_error_repo_exists">To repozytorium jest już na liście</string>
+    <string name="web_manage_collections_title">Zarządzaj kolekcjami</string>
+    <string name="web_manage_collections_subtitle">Twórz i zarządzaj swoimi kolekcjami</string>
+    <string name="web_status_msg_collections_updated">Twoje kolekcje zostały zaktualizowane na TV.</string>
     <string name="web_error_failed_save">Nie udało się zapisać. Sprawdź połączenie z TV.</string>
     <string name="web_no_repos">Brak zainstalowanych repozytoriów</string>
     <string name="web_manage_repos_title">Zarządzaj repozytoriami</string>
@@ -1359,6 +1381,7 @@
     <string name="playback_engine_mvplayer_desc">Używa libmpv z kontrolkami Nuvio OSD. Eksperymentalny.</string>
     <string name="player_engine_switching_title">Przełączanie silnika odtwarzacza</string>
     <string name="player_engine_switching_message">Uruchomienie nie powiodło się. Przełączanie na %1$s…</string>
+    <string name="player_engine_switching_manual_message">Przełączanie na %1$s…</string>
     <string name="search_recent_title">Ostatnie wyszukiwania</string>
     <string name="search_recent_clear">Wyczyść historię</string>
 </resources>

@@ -34,11 +34,9 @@ internal fun PlayerRuntimeController.maybeAutoSwitchInternalPlayerOnStartupError
     val switchMessage = context.getString(R.string.player_engine_switching_message, targetEngineLabel)
 
     hidePlayerEngineSwitchInfoJob?.cancel()
+    showRecoveryOverlay()
     _uiState.update {
         it.copy(
-            error = null,
-            showPauseOverlay = false,
-            showLoadingOverlay = it.loadingOverlayEnabled,
             internalPlayerEngine = targetEngine,
             showPlayerEngineSwitchInfo = true,
             playerEngineSwitchInfoText = switchMessage

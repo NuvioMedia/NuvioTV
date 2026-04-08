@@ -355,6 +355,7 @@ fun PlayerRuntimeController.scheduleHideControls() {
             !_uiState.value.showSubtitleOverlay && !_uiState.value.showSubtitleStylePanel &&
             !_uiState.value.showSpeedDialog && !_uiState.value.showMoreDialog &&
             !_uiState.value.showSubtitleDelayOverlay &&
+            !_uiState.value.showSubtitleTimingDialog &&
             !_uiState.value.showEpisodesPanel && !_uiState.value.showSourcesPanel &&
             !_uiState.value.showStreamInfoOverlay) {
             _uiState.update { it.copy(showControls = false) }
@@ -371,6 +372,7 @@ internal fun PlayerRuntimeController.showSubtitleDelayOverlay() {
             showAudioOverlay = false,
             showSubtitleOverlay = false,
             showSubtitleStylePanel = false,
+            showSubtitleTimingDialog = false,
             showSpeedDialog = false
         )
     }
@@ -384,24 +386,39 @@ internal fun PlayerRuntimeController.hideSubtitleDelayOverlay() {
 }
 
 internal fun PlayerRuntimeController.adjustSubtitleDelay(deltaMs: Int) {
+    adjustSubtitleDelay(deltaMs = deltaMs, showOverlay = true)
+}
+
+internal fun PlayerRuntimeController.adjustSubtitleDelay(deltaMs: Int, showOverlay: Boolean) {
     val currentState = _uiState.value
     val currentDelayMs = currentState.subtitleDelayMs
     val newDelayMs = (currentDelayMs + deltaMs).coerceIn(
         minimumValue = SUBTITLE_DELAY_MIN_MS,
         maximumValue = SUBTITLE_DELAY_MAX_MS
     )
-    val keepInlineInSubtitleOverlay = currentState.showSubtitleOverlay
+    val keepInlineInSubtitleOverlay = showOverlay && currentState.showSubtitleOverlay
 
     subtitleDelayUs.set(newDelayMs.toLong() * 1000L)
     if (isUsingMpvEngine()) {
         mpvView?.setSubtitleDelayMs(newDelayMs)
     }
-    _uiState.update {
-        it.copy(
-            subtitleDelayMs = newDelayMs,
-            showControls = if (keepInlineInSubtitleOverlay) it.showControls else false,
-            showSubtitleDelayOverlay = if (keepInlineInSubtitleOverlay) false else true
-        )
+    if (showOverlay) {
+        _uiState.update {
+            it.copy(
+                subtitleDelayMs = newDelayMs,
+                showControls = if (keepInlineInSubtitleOverlay) it.showControls else false,
+                showSubtitleDelayOverlay = if (keepInlineInSubtitleOverlay) false else true
+            )
+        }
+    } else {
+        hideSubtitleDelayOverlayJob?.cancel()
+        _uiState.update {
+            it.copy(
+                subtitleDelayMs = newDelayMs,
+                showSubtitleDelayOverlay = false,
+                showControls = true
+            )
+        }
     }
 
     _exoPlayer?.let { player ->
@@ -410,7 +427,7 @@ internal fun PlayerRuntimeController.adjustSubtitleDelay(deltaMs: Int) {
             .build()
     }
     
-    if (keepInlineInSubtitleOverlay) {
+    if (!showOverlay || keepInlineInSubtitleOverlay) {
         hideSubtitleDelayOverlayJob?.cancel()
         hideSubtitleDelayOverlayJob = null
     } else {
@@ -440,7 +457,8 @@ internal fun PlayerRuntimeController.schedulePauseOverlay() {
         val s = _uiState.value
         val anyPanelOpen = s.showSubtitleOverlay || s.showSubtitleStylePanel ||
             s.showSpeedDialog || s.showMoreDialog || s.showEpisodesPanel ||
-            s.showSourcesPanel || s.showAudioOverlay || s.showStreamInfoOverlay
+            s.showSourcesPanel || s.showAudioOverlay || s.showStreamInfoOverlay ||
+            s.showSubtitleTimingDialog
         if (!s.isPlaying && s.pauseOverlayEnabled && s.error == null && !anyPanelOpen) {
             _uiState.update { it.copy(showPauseOverlay = true, showControls = false) }
         }
@@ -572,7 +590,13 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             )
             rememberAudioSelection(event.index)
             selectAudioTrack(event.index)
-            _uiState.update { it.copy(showAudioOverlay = false, showSubtitleDelayOverlay = false) }
+            _uiState.update {
+                it.copy(
+                    showAudioOverlay = false,
+                    showSubtitleDelayOverlay = false,
+                    showSubtitleTimingDialog = false
+                )
+            }
         }
         is PlayerEvent.OnSetAudioAmplificationDb -> {
             val clampedDb = event.db.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
@@ -602,12 +626,14 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
+            resetSubtitleAutoSyncState()
             rememberInternalSubtitleSelection(event.index)
             selectSubtitleTrack(event.index)
             _uiState.update { 
                 it.copy(
                     showSubtitleOverlay = true,
                     showSubtitleStylePanel = false,
+                    showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
                     showControls = true,
                     selectedAddonSubtitle = null 
@@ -623,12 +649,14 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
+            resetSubtitleAutoSyncState()
             rememberSubtitleDisabled()
             disableSubtitles()
             _uiState.update { 
                 it.copy(
                     showSubtitleOverlay = true,
                     showSubtitleStylePanel = false,
+                    showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
                     showControls = true,
                     selectedAddonSubtitle = null,
@@ -648,6 +676,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 it.copy(
                     showSubtitleOverlay = true,
                     showSubtitleStylePanel = false,
+                    showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
                     showControls = true
                 )
@@ -670,11 +699,15 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 it.copy(
                     playbackSpeed = event.speed,
                     showSpeedDialog = false,
+                    showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false
                 ) 
             }
         }
         PlayerEvent.OnToggleControls -> {
+            if (_uiState.value.showSubtitleTimingDialog) {
+                dismissSubtitleTimingDialog()
+            }
             if (_uiState.value.showSubtitleDelayOverlay) {
                 hideSubtitleDelayOverlay()
             }
@@ -697,6 +730,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleOverlay = false,
                     showSubtitleStylePanel = false,
                     showMoreDialog = false,
+                    showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
                     showControls = true
                 )
@@ -709,6 +743,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showAudioOverlay = false,
                     showSubtitleStylePanel = false,
                     showMoreDialog = false,
+                    showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
                     showControls = true
                 )
@@ -720,6 +755,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleOverlay = false,
                     showSubtitleStylePanel = true,
                     showMoreDialog = false,
+                    showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
                     showControls = true
                 )
@@ -729,6 +765,21 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             _uiState.update { it.copy(showSubtitleStylePanel = false) }
             scheduleHideControls()
         }
+        PlayerEvent.OnShowSubtitleTimingDialog -> {
+            showSubtitleTimingDialog()
+        }
+        PlayerEvent.OnDismissSubtitleTimingDialog -> {
+            dismissSubtitleTimingDialog()
+        }
+        PlayerEvent.OnCaptureSubtitleAutoSyncTime -> {
+            captureSubtitleAutoSyncTime()
+        }
+        is PlayerEvent.OnApplySubtitleAutoSyncCue -> {
+            applySubtitleAutoSyncCue(event.cueStartTimeMs)
+        }
+        PlayerEvent.OnReloadSubtitleAutoSyncCues -> {
+            reloadSubtitleAutoSyncCues()
+        }
         PlayerEvent.OnShowSubtitleDelayOverlay -> {
             showSubtitleDelayOverlay()
         }
@@ -736,7 +787,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             hideSubtitleDelayOverlay()
         }
         is PlayerEvent.OnAdjustSubtitleDelay -> {
-            adjustSubtitleDelay(event.deltaMs)
+            adjustSubtitleDelay(event.deltaMs, event.showOverlay)
         }
         PlayerEvent.OnShowSpeedDialog -> {
             val state = _uiState.value
@@ -761,6 +812,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleOverlay = false,
                     showSubtitleStylePanel = false,
                     showMoreDialog = false,
+                    showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
                     showControls = true
                 )
@@ -773,6 +825,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showAudioOverlay = false,
                     showSubtitleOverlay = false,
                     showSubtitleStylePanel = false,
+                    showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
                     showSpeedDialog = false,
                     showControls = true
@@ -833,6 +886,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showAudioOverlay = false, 
                     showSubtitleOverlay = false, 
                     showSubtitleStylePanel = false,
+                    showSubtitleTimingDialog = false,
                     showSpeedDialog = false,
                     showSubtitleDelayOverlay = false,
                     showMoreDialog = false
@@ -850,6 +904,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 state.copy(
                     error = null,
                     showLoadingOverlay = state.loadingOverlayEnabled,
+                    showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false
                 )
             }

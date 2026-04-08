@@ -134,6 +134,7 @@ internal fun LazyListScope.trailerAndAudioSettingsItems(
         val audioLangName = when (playerSettings.preferredAudioLanguage) {
             AudioLanguageOption.DEFAULT -> stringResource(R.string.audio_lang_default)
             AudioLanguageOption.DEVICE -> stringResource(R.string.audio_lang_device)
+            AudioLanguageOption.ORIGINAL -> stringResource(R.string.audio_lang_original)
             else -> AVAILABLE_SUBTITLE_LANGUAGES.find {
                 it.code == playerSettings.preferredAudioLanguage
             }?.displayName ?: playerSettings.preferredAudioLanguage
@@ -332,8 +333,10 @@ private fun AudioLanguageSelectionDialog(
     val focusRequester = remember { FocusRequester() }
     val specialOptions = listOf(
         AudioLanguageOption.DEFAULT to stringResource(R.string.audio_lang_default),
-        AudioLanguageOption.DEVICE to stringResource(R.string.audio_lang_device)
+        AudioLanguageOption.DEVICE to stringResource(R.string.audio_lang_device),
+        AudioLanguageOption.ORIGINAL to stringResource(R.string.audio_lang_original)
     )
+    val originalHint = stringResource(R.string.audio_lang_original_hint)
     val allOptions = specialOptions + AVAILABLE_SUBTITLE_LANGUAGES.sortedBy { it.displayName.lowercase() }.map { it.code to it.displayName }
 
     LaunchedEffect(Unit) {
@@ -362,6 +365,7 @@ private fun AudioLanguageSelectionDialog(
                 ) { index ->
                     val (code, name) = allOptions[index]
                     val isSelected = code == selectedLanguage
+                    val isOriginal = code == AudioLanguageOption.ORIGINAL
                     var isFocused by remember { mutableStateOf(false) }
 
                     Card(
@@ -383,12 +387,21 @@ private fun AudioLanguageSelectionDialog(
                                 .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = name,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary,
-                                modifier = Modifier.weight(1f)
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary
+                                )
+                                if (isOriginal) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = originalHint,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = NuvioColors.TextSecondary
+                                    )
+                                }
+                            }
                             if (isSelected) {
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Icon(

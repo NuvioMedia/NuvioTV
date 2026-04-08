@@ -3,6 +3,9 @@ package com.nuvio.tv.di
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.plugin.PluginRuntime
+import com.nuvio.tv.core.plugin.cloudstream.ExternalExtensionLoader
+import com.nuvio.tv.core.plugin.cloudstream.ExternalExtensionRunner
+import com.nuvio.tv.core.plugin.cloudstream.ExternalRepoParser
 import com.nuvio.tv.core.sync.PluginSyncService
 import com.nuvio.tv.data.local.PluginDataStore
 import com.nuvio.tv.data.local.StreamCacheDataStore
@@ -29,8 +32,14 @@ object PluginModule {
         streamCacheDataStore: StreamCacheDataStore,
         runtime: PluginRuntime,
         pluginSyncService: PluginSyncService,
-        authManager: AuthManager
+        authManager: AuthManager,
+        externalRepoParser: ExternalRepoParser,
+        externalExtensionLoader: ExternalExtensionLoader,
+        externalExtensionRunner: ExternalExtensionRunner
     ): PluginManager {
-        return PluginManager(dataStore, streamCacheDataStore, runtime, pluginSyncService, authManager)
+        return PluginManager(
+            dataStore, streamCacheDataStore, runtime, pluginSyncService, authManager,
+            externalRepoParser, externalExtensionLoader, externalExtensionRunner
+        )
     }
 }

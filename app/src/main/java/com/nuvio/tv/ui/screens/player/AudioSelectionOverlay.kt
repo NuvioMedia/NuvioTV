@@ -265,7 +265,7 @@ private fun AudioTrackCard(
                     style = MaterialTheme.typography.titleMedium,
                     color = primaryTextColor
                 )
-                if (!track.language.isNullOrBlank()) {
+                if (!track.language.isNullOrBlank() && track.language != "und") {
                     Text(
                         text = languageCodeToName(track.language),
                         style = MaterialTheme.typography.bodySmall,

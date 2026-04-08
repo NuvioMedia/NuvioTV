@@ -51,8 +51,15 @@ data class PlayerUiState(
     val showAudioOverlay: Boolean = false,
     val showSubtitleOverlay: Boolean = false,
     val showSubtitleStylePanel: Boolean = false,
+    val showSubtitleTimingDialog: Boolean = false,
     val showSubtitleDelayOverlay: Boolean = false,
     val subtitleDelayMs: Int = 0,
+    val subtitleAutoSyncCues: List<SubtitleSyncCue> = emptyList(),
+    val subtitleAutoSyncCapturedVideoMs: Long? = null,
+    val subtitleAutoSyncStatus: String? = null,
+    val subtitleAutoSyncError: String? = null,
+    val subtitleAutoSyncLoading: Boolean = false,
+    val subtitleAutoSyncLoadedTrackKey: String? = null,
     val showSpeedDialog: Boolean = false,
     val showMoreDialog: Boolean = false,
     // Subtitle style settings
@@ -163,6 +170,11 @@ data class NextEpisodeInfo(
     val unairedMessage: String?
 )
 
+data class SubtitleSyncCue(
+    val startTimeMs: Long,
+    val text: String
+)
+
 sealed class PlayerEvent {
     data object OnPlayPause : PlayerEvent()
     data object OnSeekForward : PlayerEvent()
@@ -183,9 +195,14 @@ sealed class PlayerEvent {
     data object OnShowSubtitleOverlay : PlayerEvent()
     data object OnOpenSubtitleStylePanel : PlayerEvent()
     data object OnDismissSubtitleStylePanel : PlayerEvent()
+    data object OnShowSubtitleTimingDialog : PlayerEvent()
+    data object OnDismissSubtitleTimingDialog : PlayerEvent()
+    data object OnCaptureSubtitleAutoSyncTime : PlayerEvent()
+    data class OnApplySubtitleAutoSyncCue(val cueStartTimeMs: Long) : PlayerEvent()
+    data object OnReloadSubtitleAutoSyncCues : PlayerEvent()
     data object OnShowSubtitleDelayOverlay : PlayerEvent()
     data object OnHideSubtitleDelayOverlay : PlayerEvent()
-    data class OnAdjustSubtitleDelay(val deltaMs: Int) : PlayerEvent()
+    data class OnAdjustSubtitleDelay(val deltaMs: Int, val showOverlay: Boolean = true) : PlayerEvent()
     data object OnShowSpeedDialog : PlayerEvent()
     data object OnShowMoreDialog : PlayerEvent()
     data object OnDismissMoreDialog : PlayerEvent()
