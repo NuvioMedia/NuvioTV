@@ -810,6 +810,9 @@ fun NuvioNavHost(
                         }
                     }
                 },
+                onNavigateToCastDetail = { personId, personName, preferCrew ->
+                    navController.navigate(Screen.CastDetail.createRoute(personId, personName, preferCrew))
+                },
                 onPlaybackErrorBack = {
                     val returnedToStream = navController.popBackStack(Screen.Stream.route, inclusive = false)
                     if (!returnedToStream) {

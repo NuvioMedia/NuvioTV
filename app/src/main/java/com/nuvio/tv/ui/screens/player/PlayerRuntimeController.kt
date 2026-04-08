@@ -22,6 +22,8 @@ import com.nuvio.tv.data.repository.TraktScrobbleItem
 import com.nuvio.tv.data.repository.TraktScrobbleService
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
+import com.nuvio.tv.core.tmdb.TmdbMetadataService
+import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.StreamRepository
@@ -52,6 +54,8 @@ class PlayerRuntimeController(
     internal val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     internal val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
     internal val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
+    internal val tmdbService: TmdbService,
+    internal val tmdbMetadataService: TmdbMetadataService,
     savedStateHandle: SavedStateHandle,
     internal val scope: CoroutineScope
 ) {
