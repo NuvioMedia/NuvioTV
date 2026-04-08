@@ -664,6 +664,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 ) 
             }
         }
+        is PlayerEvent.OnSetAutoTranslateSubtitles -> {
+            _uiState.update { it.copy(autoTranslateSubtitles = event.enabled) }
+        }
         is PlayerEvent.OnSelectAddonSubtitle -> {
             logSwitchTrace(
                 stage = "event-select-subtitle-addon",
