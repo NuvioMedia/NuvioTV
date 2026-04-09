@@ -637,6 +637,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
             error = null,
             currentSeason = currentSeason,
             currentEpisode = currentEpisode,
+            currentVideoId = currentVideoId,
             currentEpisodeTitle = currentEpisodeTitle,
             currentStreamName = stream.name ?: stream.addonName,
             currentStreamUrl = url,

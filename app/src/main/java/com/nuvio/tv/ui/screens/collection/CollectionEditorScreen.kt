@@ -71,6 +71,8 @@ import com.nuvio.tv.domain.model.FolderViewMode
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -215,7 +217,7 @@ fun CollectionEditorScreen(
     ) {
         item(key = "header") {
             Text(
-                text = if (uiState.isNew) "New Collection" else "Edit Collection",
+                text = if (uiState.isNew) stringResource(R.string.collections_new) else stringResource(R.string.collections_editor_edit_collection),
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioColors.TextPrimary
             )
@@ -224,7 +226,7 @@ fun CollectionEditorScreen(
 
         item(key = "title") {
             Text(
-                text = "Row Title",
+                text = stringResource(R.string.collections_editor_row_title),
                 style = MaterialTheme.typography.labelLarge,
                 color = NuvioColors.TextSecondary
             )
@@ -238,11 +240,11 @@ fun CollectionEditorScreen(
                     value = uiState.title,
                     onValueChange = { viewModel.setTitle(it) },
                     modifier = Modifier.weight(1f),
-                    placeholder = "Collection name"
+                    placeholder = stringResource(R.string.collections_editor_placeholder_name)
                 )
                 val canSaveCollection = uiState.title.isNotBlank() && uiState.folders.isNotEmpty()
                 NuvioButton(onClick = { viewModel.save { onBack() } }, enabled = canSaveCollection) {
-                    Text("Save")
+                    Text(stringResource(R.string.collections_editor_save))
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -250,7 +252,7 @@ fun CollectionEditorScreen(
 
         item(key = "backdrop") {
             Text(
-                text = "Backdrop Image",
+                text = stringResource(R.string.collections_editor_backdrop),
                 style = MaterialTheme.typography.labelLarge,
                 color = NuvioColors.TextSecondary
             )
@@ -259,7 +261,7 @@ fun CollectionEditorScreen(
                 value = uiState.backdropImageUrl,
                 onValueChange = { viewModel.setBackdropImageUrl(it) },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = "Backdrop image URL (optional)"
+                placeholder = stringResource(R.string.collections_editor_placeholder_backdrop)
             )
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -290,13 +292,13 @@ fun CollectionEditorScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Pin Above Catalogs",
+                            text = stringResource(R.string.collections_editor_pin_above),
                             style = MaterialTheme.typography.titleMedium,
                             color = NuvioColors.TextPrimary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Show this collection above all regular home catalogs. Multiple pinned collections follow collection creation order.",
+                            text = stringResource(R.string.collections_editor_pin_above_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = NuvioColors.TextSecondary
                         )
@@ -343,13 +345,13 @@ fun CollectionEditorScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Focus Glow",
+                            text = stringResource(R.string.collections_editor_focus_glow),
                             style = MaterialTheme.typography.titleMedium,
                             color = NuvioColors.TextPrimary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Use the native TV glow on this collection's home-screen custom catalog cards",
+                            text = stringResource(R.string.collections_editor_focus_glow_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = NuvioColors.TextSecondary
                         )
@@ -372,7 +374,7 @@ fun CollectionEditorScreen(
 
         item(key = "view_mode") {
             Text(
-                text = "View Mode",
+                text = stringResource(R.string.collections_editor_view_mode),
                 style = MaterialTheme.typography.labelLarge,
                 color = NuvioColors.TextSecondary
             )
@@ -382,9 +384,9 @@ fun CollectionEditorScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 val viewModes = listOf(
-                    FolderViewMode.TABBED_GRID to "Tabs",
-                    FolderViewMode.ROWS to "Rows",
-                    FolderViewMode.FOLLOW_LAYOUT to "Follow Home Layout"
+                    FolderViewMode.TABBED_GRID to stringResource(R.string.collections_editor_view_mode_tabs),
+                    FolderViewMode.ROWS to stringResource(R.string.collections_editor_view_mode_rows),
+                    FolderViewMode.FOLLOW_LAYOUT to stringResource(R.string.collections_editor_view_mode_follow)
                 )
                 viewModes.forEach { (mode, label) ->
                     val isSelected = uiState.viewMode == mode
@@ -442,13 +444,13 @@ fun CollectionEditorScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Show \"All\" Tab",
+                                text = stringResource(R.string.collections_editor_show_all_tab),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = NuvioColors.TextPrimary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Combine all catalogs into one tab",
+                                text = stringResource(R.string.collections_editor_show_all_tab_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = NuvioColors.TextSecondary
                             )
@@ -477,7 +479,7 @@ fun CollectionEditorScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Folders",
+                    text = stringResource(R.string.collections_editor_folders),
                     style = MaterialTheme.typography.titleMedium,
                     color = NuvioColors.TextPrimary
                 )
@@ -510,9 +512,9 @@ fun CollectionEditorScreen(
         item(key = "add_folder") {
             Box(modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 4.dp)) {
                 NuvioButton(onClick = { viewModel.addFolder() }) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add")
+                    Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.cd_add))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Add Folder")
+                    Text(stringResource(R.string.collections_editor_add_folder))
                 }
             }
         }
@@ -551,7 +553,7 @@ private fun FolderListItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${folder.tileShape.name.lowercase().replaceFirstChar { it.uppercase() }} - ${folder.catalogSources.size} catalog${if (folder.catalogSources.size != 1) "s" else ""}",
+                    text = "${folder.tileShape.name.lowercase().replaceFirstChar { it.uppercase() }} - ${stringResource(R.string.collections_editor_catalog_count, folder.catalogSources.size)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextTertiary
                 )
@@ -559,16 +561,16 @@ private fun FolderListItem(
 
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 NuvioButton(onClick = onMoveUp) {
-                    Icon(Icons.Default.KeyboardArrowUp, "Move Up", tint = if (!isFirst) NuvioColors.TextSecondary else NuvioColors.TextTertiary)
+                    Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.cd_move_up), tint = if (!isFirst) NuvioColors.TextSecondary else NuvioColors.TextTertiary)
                 }
                 NuvioButton(onClick = onMoveDown) {
-                    Icon(Icons.Default.KeyboardArrowDown, "Move Down", tint = if (!isLast) NuvioColors.TextSecondary else NuvioColors.TextTertiary)
+                    Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.cd_move_down), tint = if (!isLast) NuvioColors.TextSecondary else NuvioColors.TextTertiary)
                 }
                 NuvioButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, "Edit", tint = NuvioColors.TextSecondary)
+                    Icon(Icons.Default.Edit, stringResource(R.string.cd_edit), tint = NuvioColors.TextSecondary)
                 }
                 NuvioButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, "Delete", tint = NuvioColors.TextSecondary)
+                    Icon(Icons.Default.Delete, stringResource(R.string.cd_delete), tint = NuvioColors.TextSecondary)
                 }
             }
         }
@@ -623,17 +625,17 @@ private fun FolderEditorContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Edit Folder",
+                text = stringResource(R.string.collections_editor_edit_folder),
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioColors.TextPrimary
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 NuvioButton(onClick = { viewModel.cancelFolderEdit() }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.collections_cancel))
                 }
                 val canSaveFolder = (uiState.editingFolder?.catalogSources?.isNotEmpty() == true)
                 NuvioButton(onClick = { viewModel.saveFolderEdit() }, enabled = canSaveFolder) {
-                    Text("Save")
+                    Text(stringResource(R.string.collections_editor_save))
                 }
             }
         }
@@ -662,13 +664,13 @@ private fun FolderEditorContent(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Text("Folder Title", style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
+                Text(stringResource(R.string.collections_editor_folder_title), style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
                 Spacer(modifier = Modifier.height(8.dp))
                 NuvioTextField(
                     value = folder.title,
                     onValueChange = { viewModel.updateFolderTitle(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = "Folder name",
+                    placeholder = stringResource(R.string.collections_editor_placeholder_folder),
                     focusRequester = titleFocusRequester
                 )
             }
@@ -681,7 +683,7 @@ private fun FolderEditorContent(
                     else -> "none"
                 }
 
-                Text("Cover", style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
+                Text(stringResource(R.string.collections_editor_cover), style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(
@@ -703,7 +705,7 @@ private fun FolderEditorContent(
                             )
                         ),
                         shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
-                    ) { Text("None") }
+                    ) { Text(stringResource(R.string.collections_editor_cover_none)) }
 
                     Button(
                         onClick = { viewModel.showEmojiPicker() },
@@ -726,9 +728,9 @@ private fun FolderEditorContent(
                         shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                     ) {
                         if (hasEmoji) {
-                            Text("${folder.coverEmoji}  Emoji")
+                            Text("${folder.coverEmoji}  ${stringResource(R.string.collections_editor_cover_emoji)}")
                         } else {
-                            Text("Emoji")
+                            Text(stringResource(R.string.collections_editor_cover_emoji))
                         }
                     }
 
@@ -751,7 +753,7 @@ private fun FolderEditorContent(
                             )
                         ),
                         shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
-                    ) { Text("Image URL") }
+                    ) { Text(stringResource(R.string.collections_editor_cover_image_url)) }
                 }
 
                 if (coverMode == "image") {
@@ -778,7 +780,7 @@ private fun FolderEditorContent(
                             ) {
                                 AsyncImage(
                                     model = folder.coverImageUrl,
-                                    contentDescription = "Preview",
+                                    contentDescription = stringResource(R.string.cd_preview),
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .clip(RoundedCornerShape(12.dp)),
@@ -790,13 +792,13 @@ private fun FolderEditorContent(
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("Focus GIF", style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
+                Text(stringResource(R.string.collections_editor_focus_gif), style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
                 Spacer(modifier = Modifier.height(8.dp))
                 NuvioTextField(
                     value = folder.focusGifUrl.orEmpty(),
                     onValueChange = { viewModel.updateFolderFocusGifUrl(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = "Animated GIF URL (plays only while focused)"
+                    placeholder = stringResource(R.string.collections_editor_placeholder_gif)
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -823,7 +825,7 @@ private fun FolderEditorContent(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Play GIF on Focus", style = MaterialTheme.typography.bodyLarge, color = NuvioColors.TextPrimary)
+                        Text(stringResource(R.string.collections_editor_play_gif), style = MaterialTheme.typography.bodyLarge, color = NuvioColors.TextPrimary)
                         Switch(
                             checked = folder.focusGifEnabled,
                             onCheckedChange = { viewModel.updateFolderFocusGifEnabled(it) }
@@ -833,7 +835,7 @@ private fun FolderEditorContent(
             }
 
             item {
-                Text("Tile Shape", style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
+                Text(stringResource(R.string.collections_editor_tile_shape), style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
                 Spacer(modifier = Modifier.height(8.dp))
                 val shapeFocusRequesters = remember { PosterShape.entries.associateWith { FocusRequester() } }
                 Row(
@@ -844,9 +846,9 @@ private fun FolderEditorContent(
                 ) {
                     PosterShape.entries.forEach { shape ->
                         val label = when (shape) {
-                            PosterShape.POSTER -> "Poster"
-                            PosterShape.LANDSCAPE -> "Wide"
-                            PosterShape.SQUARE -> "Square"
+                            PosterShape.POSTER -> stringResource(R.string.collections_editor_shape_poster)
+                            PosterShape.LANDSCAPE -> stringResource(R.string.collections_editor_shape_wide)
+                            PosterShape.SQUARE -> stringResource(R.string.collections_editor_shape_square)
                         }
                         val isSelected = folder.tileShape == shape
                         Button(
@@ -902,13 +904,13 @@ private fun FolderEditorContent(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Hide Title",
+                                text = stringResource(R.string.collections_editor_hide_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = NuvioColors.TextPrimary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Only show the cover image",
+                                text = stringResource(R.string.collections_editor_hide_title_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = NuvioColors.TextSecondary
                             )
@@ -934,9 +936,9 @@ private fun FolderEditorContent(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Catalogs", style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
+                    Text(stringResource(R.string.collections_editor_catalogs), style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
                     Text(
-                        "${folder.catalogSources.size} catalog${if (folder.catalogSources.size != 1) "s" else ""}",
+                        "${folder.catalogSources.size} ${stringResource(R.string.collections_editor_catalogs).lowercase()}",
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextTertiary
                     )
@@ -976,7 +978,7 @@ private fun FolderEditorContent(
                                 color = if (isMissing) NuvioColors.Error else NuvioColors.TextPrimary
                             )
                             Text(
-                                text = if (isMissing) "Addon not installed: ${source.addonId}" else "${source.type} - ${catalog.addonName}",
+                                text = if (isMissing) stringResource(R.string.collections_editor_addon_missing, source.addonId) else "${source.type} - ${catalog.addonName}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = if (isMissing) NuvioColors.Error.copy(alpha = 0.7f) else NuvioColors.TextTertiary
                             )
@@ -998,7 +1000,7 @@ private fun FolderEditorContent(
                                 ),
                                 shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                             ) {
-                                Icon(Icons.Default.KeyboardArrowUp, "Move Up", tint = if (index > 0) NuvioColors.TextSecondary else NuvioColors.TextTertiary)
+                                Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.cd_move_up), tint = if (index > 0) NuvioColors.TextSecondary else NuvioColors.TextTertiary)
                             }
                             Button(
                                 onClick = { viewModel.moveCatalogSourceDown(index) },
@@ -1016,7 +1018,7 @@ private fun FolderEditorContent(
                                 ),
                                 shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                             ) {
-                                Icon(Icons.Default.KeyboardArrowDown, "Move Down", tint = if (index < folder.catalogSources.size - 1) NuvioColors.TextSecondary else NuvioColors.TextTertiary)
+                                Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.cd_move_down), tint = if (index < folder.catalogSources.size - 1) NuvioColors.TextSecondary else NuvioColors.TextTertiary)
                             }
                             Button(
                                 onClick = {
@@ -1038,7 +1040,7 @@ private fun FolderEditorContent(
                                 ),
                                 shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                             ) {
-                                Icon(Icons.Default.Close, "Remove")
+                                Icon(Icons.Default.Close, stringResource(R.string.cd_remove))
                             }
                         }
                     }
@@ -1047,9 +1049,9 @@ private fun FolderEditorContent(
 
             item {
                 NuvioButton(onClick = { viewModel.showCatalogPicker() }) {
-                    Icon(Icons.Default.Add, "Add")
+                    Icon(Icons.Default.Add, stringResource(R.string.cd_add))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Add Catalog")
+                    Text(stringResource(R.string.collections_editor_add_catalog))
                 }
             }
         }
@@ -1075,11 +1077,11 @@ private fun CatalogPickerContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Select Catalogs",
+                text = stringResource(R.string.collections_editor_select_catalogs),
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioColors.TextPrimary
             )
-            NuvioButton(onClick = onBack) { Text("Done") }
+            NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_editor_done)) }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -1144,7 +1146,7 @@ private fun CatalogPickerContent(
                         } else {
                             Icon(
                                 imageVector = Icons.Default.Add,
-                                contentDescription = "Add",
+                                contentDescription = stringResource(R.string.cd_add),
                                 tint = NuvioColors.TextTertiary
                             )
                         }
@@ -1214,11 +1216,11 @@ private fun EmojiPickerContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Choose Emoji",
+                text = stringResource(R.string.collections_editor_choose_emoji),
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioColors.TextPrimary
             )
-            NuvioButton(onClick = onBack) { Text("Back") }
+            NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_editor_back)) }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

@@ -286,7 +286,11 @@ class WatchProgressSyncService @Inject constructor(
                 }
             }
             .groupBy { it.contentId }
-            .mapValues { (_, episodes) -> episodes.maxByOrNull { it.lastWatched } }
+            .mapValues { (_, episodes) -> episodes.maxWithOrNull(
+                compareBy<WatchProgress> { it.lastWatched }
+                    .thenBy { it.season ?: 0 }
+                    .thenBy { it.episode ?: 0 }
+            ) }
 
         latestEpisodeByContent.forEach { (contentId, latestEpisode) ->
             val latest = latestEpisode ?: return@forEach

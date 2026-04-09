@@ -297,6 +297,11 @@ class TraktViewModel @Inject constructor(
             else -> TraktConnectionMode.DISCONNECTED
         }
 
+        val previousState = _uiState.value
+        val connectedIdentityChanged = mode == TraktConnectionMode.CONNECTED &&
+            previousState.mode == TraktConnectionMode.CONNECTED &&
+            previousState.username != authState.username
+
         _uiState.update { current ->
             current.copy(
                 mode = mode,
@@ -308,12 +313,22 @@ class TraktViewModel @Inject constructor(
                 deviceCodeExpiresAtMillis = authState.expiresAt,
                 credentialsConfigured = traktAuthService.hasRequiredCredentials(),
                 isPolling = if (mode == TraktConnectionMode.CONNECTED) false else current.isPolling,
-                connectedStats = if (mode == TraktConnectionMode.CONNECTED) current.connectedStats else null,
-                isStatsLoading = if (mode == TraktConnectionMode.CONNECTED) current.isStatsLoading else false
+                connectedStats = if (mode == TraktConnectionMode.CONNECTED && !connectedIdentityChanged) {
+                    current.connectedStats
+                } else {
+                    null
+                },
+                isStatsLoading = if (mode == TraktConnectionMode.CONNECTED && !connectedIdentityChanged) {
+                    current.isStatsLoading
+                } else {
+                    false
+                }
             )
         }
 
-        if (mode == TraktConnectionMode.CONNECTED && lastMode == null) {
+        if (mode == TraktConnectionMode.CONNECTED && connectedIdentityChanged) {
+            loadConnectedStats(forceRefresh = true)
+        } else if (mode == TraktConnectionMode.CONNECTED && lastMode == null) {
             loadConnectedStats(forceRefresh = false)
         } else if (mode == TraktConnectionMode.CONNECTED &&
             (lastMode != TraktConnectionMode.CONNECTED || shouldAutoSyncNow())

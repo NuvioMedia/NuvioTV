@@ -30,6 +30,7 @@ class StartupSyncService @Inject constructor(
     private val pluginSyncService: PluginSyncService,
     private val addonSyncService: AddonSyncService,
     private val collectionSyncService: CollectionSyncService,
+    private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService,
     private val watchProgressSyncService: WatchProgressSyncService,
     private val librarySyncService: LibrarySyncService,
     private val watchedItemsSyncService: WatchedItemsSyncService,
@@ -234,12 +235,23 @@ class StartupSyncService @Inject constructor(
                 Log.e(TAG, "Failed to pull collections from remote", e)
             }
 
-            val isPrimaryProfile = profileManager.activeProfileId.value == 1
-            val isTraktConnected = isPrimaryProfile && traktAuthDataStore.isAuthenticated.first()
+            try {
+                homeCatalogSettingsSyncService.pullFromRemote()
+                    .onSuccess { applied ->
+                        Log.d(TAG, "Home catalog settings pull completed for profile $profileId (applied=$applied)")
+                    }
+                    .onFailure { e ->
+                        Log.e(TAG, "Failed to pull home catalog settings from remote, keeping local", e)
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to pull home catalog settings from remote", e)
+            }
+
+            val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
             val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync()
             Log.d(
                 TAG,
-                "Watch progress sync: isTraktConnected=$isTraktConnected isPrimaryProfile=$isPrimaryProfile shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
+                "Watch progress sync: isTraktConnected=$isTraktConnected shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
             )
             if (!isTraktConnected) {
                 // Pull library and watched items first — these are lightweight and critical.

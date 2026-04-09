@@ -117,6 +117,7 @@ class HomeViewModel @Inject constructor(
     internal var collectionsCache: List<Collection> = emptyList()
     internal var homeCatalogOrderKeys: List<String> = emptyList()
     internal var disabledHomeCatalogKeys: Set<String> = emptySet()
+    internal var customCatalogTitles: Map<String, String> = emptyMap()
     internal var currentHeroCatalogKeys: List<String> = emptyList()
     internal var catalogUpdateJob: Job? = null
     internal var hasRenderedFirstCatalog = false
@@ -189,6 +190,7 @@ class HomeViewModel @Inject constructor(
         observeExternalMetaPrefetchPreference()
         loadHomeCatalogOrderPreference()
         loadDisabledHomeCatalogPreference()
+        loadCustomCatalogTitles()
         observeLibraryState()
         observeTmdbSettings()
         observeMdbListSettings()
@@ -262,6 +264,8 @@ class HomeViewModel @Inject constructor(
     private fun loadHomeCatalogOrderPreference() = loadHomeCatalogOrderPreferencePipeline()
 
     private fun loadDisabledHomeCatalogPreference() = loadDisabledHomeCatalogPreferencePipeline()
+
+    private fun loadCustomCatalogTitles() = loadCustomCatalogTitlesPipeline()
 
     private fun observeTmdbSettings() = observeTmdbSettingsPipeline()
 
@@ -496,6 +500,11 @@ class HomeViewModel @Inject constructor(
     /**
      * Saves the current focus and scroll state for restoration when returning to this screen.
      */
+    // When true, the next saveFocusState call is suppressed and the flag
+    // is reset.  Used during layout switches to prevent the outgoing
+    // layout's onDispose from poisoning the incoming layout's focus state.
+    internal var suppressFocusSave: Boolean = false
+
     fun saveFocusState(
         verticalScrollIndex: Int,
         verticalScrollOffset: Int,
@@ -503,6 +512,10 @@ class HomeViewModel @Inject constructor(
         focusedItemIndex: Int,
         catalogRowScrollStates: Map<String, Int>
     ) {
+        if (suppressFocusSave) {
+            suppressFocusSave = false
+            return
+        }
         val nextState = HomeScreenFocusState(
             verticalScrollIndex = verticalScrollIndex,
             verticalScrollOffset = verticalScrollOffset,

@@ -100,3 +100,10 @@
 # Native code reflects into multiple classes/methods under is.xyz.mpv,
 # so keep the whole package to avoid JNI lookup crashes after R8.
 -keep class is.xyz.mpv.** { *; }
+
+# ── Missing class stubs (referenced by cloudstream3 / jsoup / newpipe) ────────
+-dontwarn org.mozilla.javascript.**
+-dontwarn com.google.re2j.**
+-dontwarn javax.script.**
+-dontwarn okhttp3.internal.sse.**
+-dontwarn org.jsoup.helper.Re2jRegex

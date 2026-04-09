@@ -474,14 +474,14 @@ internal fun buildCollectionFolderItem(
 
     return ModernCarouselItem(
         key = "collection_${collection.id}_${folder.id}_$occurrence",
-        title = folder.title,
-        subtitle = collection.title,
+        title = if (folder.hideTitle) "" else folder.title,
+        subtitle = if (folder.hideTitle) null else collection.title,
         imageUrl = heroImageUrl,
         heroPreview = HeroPreview(
-            title = title,
+            title = if (folder.hideTitle) "" else title,
             logo = null,
             description = null,
-            contentTypeText = collection.title,
+            contentTypeText = if (folder.hideTitle) null else collection.title,
             yearText = null,
             imdbText = null,
             genres = emptyList(),

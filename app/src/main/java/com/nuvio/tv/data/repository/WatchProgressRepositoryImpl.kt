@@ -345,15 +345,42 @@ class WatchProgressRepositoryImpl @Inject constructor(
                         mergeNextUpSeeds(canonicalSeeds, optimisticSeeds)
                     }
                 } else {
-                    watchProgressPreferences.allProgress.map { items ->
-                        items.filter { progress ->
-                            progress.isCompleted() &&
-                                progress.contentType.equals("series", ignoreCase = true) &&
-                                progress.season != null &&
-                                progress.episode != null &&
-                                progress.season != 0 &&
-                                !isMalformedNextUpSeedContentId(progress.contentId)
-                        }
+                    // Use watched items (fully synced with pagination) to build seeds
+                    // instead of watch progress (limited to 1000 entries).
+                    watchedItemsPreferences.allItems.map { items ->
+                        items
+                            .filter { item ->
+                                (item.contentType.equals("series", ignoreCase = true) ||
+                                    item.contentType.equals("tv", ignoreCase = true)) &&
+                                    item.season != null &&
+                                    item.episode != null &&
+                                    item.season != 0 &&
+                                    !isMalformedNextUpSeedContentId(item.contentId)
+                            }
+                            .groupBy { it.contentId }
+                            .mapNotNull { (_, episodes) ->
+                                val latest = episodes.maxWithOrNull(
+                                    compareBy<WatchedItem> { it.watchedAt }
+                                        .thenBy { it.season ?: 0 }
+                                        .thenBy { it.episode ?: 0 }
+                                ) ?: return@mapNotNull null
+                                WatchProgress(
+                                    contentId = latest.contentId,
+                                    contentType = latest.contentType,
+                                    name = latest.title,
+                                    poster = null,
+                                    backdrop = null,
+                                    logo = null,
+                                    videoId = latest.contentId,
+                                    season = latest.season,
+                                    episode = latest.episode,
+                                    episodeTitle = null,
+                                    position = 1L,
+                                    duration = 1L,
+                                    lastWatched = latest.watchedAt,
+                                    progressPercent = 100f
+                                )
+                            }
                     }
                 }
             }
