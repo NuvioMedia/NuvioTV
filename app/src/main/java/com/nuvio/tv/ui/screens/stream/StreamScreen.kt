@@ -258,6 +258,7 @@ fun StreamScreen(
                     shouldRestoreFocusedStream = restoreFocusedStream,
                     onRestoreFocusedStreamHandled = { restoreFocusedStream = false },
                     onRetry = { viewModel.onEvent(StreamScreenEvent.OnRetry) },
+                    onReload = { viewModel.onEvent(StreamScreenEvent.OnReload) },
                     modifier = Modifier
                         .weight(0.6f)
                         .fillMaxHeight()
@@ -492,6 +493,7 @@ private fun RightStreamSection(
     shouldRestoreFocusedStream: Boolean,
     onRestoreFocusedStreamHandled: () -> Unit,
     onRetry: () -> Unit,
+    onReload: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
@@ -537,6 +539,40 @@ private fun RightStreamSection(
             .padding(top = 48.dp, end = 48.dp, bottom = 48.dp)
     ) {
         val chipRowHeight = 56.dp
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            var isFocused by remember { mutableStateOf(false) }
+
+            Card(
+                onClick = onReload,
+                modifier = Modifier.onFocusChanged { isFocused = it.isFocused },
+                colors = CardDefaults.colors(
+                    containerColor = NuvioColors.BackgroundCard,
+                    focusedContainerColor = NuvioColors.Secondary
+                ),
+                border = CardDefaults.border(
+                    focusedBorder = Border(
+                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                ),
+                shape = CardDefaults.shape(shape = RoundedCornerShape(8.dp)),
+                scale = CardDefaults.scale(focusedScale = 1.05f)
+            ) {
+                Text(
+                    text = stringResource(R.string.sources_reload),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (isFocused) NuvioColors.OnSecondary else NuvioColors.TextPrimary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Addon filter chips
         Box(modifier = Modifier.height(chipRowHeight)) {

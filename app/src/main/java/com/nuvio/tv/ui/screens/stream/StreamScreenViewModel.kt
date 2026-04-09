@@ -29,7 +29,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -153,6 +152,7 @@ class StreamScreenViewModel @Inject constructor(
                 }
             }
             StreamScreenEvent.OnRetry -> loadStreams()
+            StreamScreenEvent.OnReload -> loadStreams(true)
             StreamScreenEvent.OnBackPress -> { /* Handle in screen */ }
         }
     }
@@ -165,7 +165,7 @@ class StreamScreenViewModel @Inject constructor(
             streamAutoPlayMode != StreamAutoPlayMode.MANUAL
     }
 
-    private fun loadStreams() {
+    private fun loadStreams(forceRefresh: Boolean = false) {
         streamLoadJob?.cancel()
         sourceChipErrorDismissJob?.cancel()
         streamLoadJob = viewModelScope.launch {
@@ -343,7 +343,8 @@ class StreamScreenViewModel @Inject constructor(
                     type = contentType,
                     videoId = videoId,
                     season = season,
-                    episode = episode
+                    episode = episode,
+                    forceRefresh
                 ).collect { result ->
                     when (result) {
                         is NetworkResult.Success -> {

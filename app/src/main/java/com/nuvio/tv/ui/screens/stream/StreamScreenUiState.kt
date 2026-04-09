@@ -42,5 +42,6 @@ sealed class StreamScreenEvent {
     data class OnStreamSelected(val stream: Stream) : StreamScreenEvent()
     data object OnAutoPlayConsumed : StreamScreenEvent()
     data object OnRetry : StreamScreenEvent()
+    data object OnReload : StreamScreenEvent()
     data object OnBackPress : StreamScreenEvent()
 }
