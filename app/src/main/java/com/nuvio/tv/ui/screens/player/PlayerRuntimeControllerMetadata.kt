@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Stream
 import kotlinx.coroutines.delay
@@ -27,6 +28,10 @@ internal fun PlayerRuntimeController.fetchMetaDetails(id: String?, type: String?
                 
             }
         }
+    }
+
+    scope.launch {
+        enrichDescriptionFromTmdb(id, type)
     }
 }
 
@@ -62,6 +67,82 @@ internal fun PlayerRuntimeController.updateEpisodeDescription() {
 
     if (!overview.isNullOrBlank()) {
         _uiState.update { it.copy(description = overview) }
+    }
+
+    // Re-enrich from TMDB for the new episode.
+    scope.launch {
+        enrichDescriptionFromTmdb(contentId, contentType)
+    }
+}
+
+private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(id: String?, type: String?) {
+    if (id.isNullOrBlank() || type.isNullOrBlank()) return
+    val settings = tmdbSettingsDataStore.settings.first()
+    if (!settings.enabled || !settings.useBasicInfo) return
+
+    val tmdbId = runCatching { tmdbService.ensureTmdbId(id, type) }.getOrNull() ?: return
+    val contentType = when (type.lowercase()) {
+        "series", "tv" -> ContentType.SERIES
+        else -> ContentType.MOVIE
+    }
+    val enrichment = runCatching {
+        tmdbMetadataService.fetchEnrichment(
+            tmdbId = tmdbId,
+            contentType = contentType,
+            language = settings.language
+        )
+    }.getOrNull() ?: return
+
+    val isSeries = type.lowercase() in listOf("series", "tv")
+    val season = currentSeason
+    val episode = currentEpisode
+
+    // For series, try to get episode-level overview and title from TMDB.
+    val episodeEnrichment = if (isSeries && season != null && episode != null) {
+        runCatching {
+            tmdbMetadataService.fetchEpisodeEnrichment(
+                tmdbId = tmdbId,
+                seasonNumbers = listOf(season),
+                language = settings.language
+            )[season to episode]
+        }.getOrNull()
+    } else null
+
+    val tmdbDescription = episodeEnrichment?.overview ?: enrichment.description
+    if (settings.useBasicInfo && !tmdbDescription.isNullOrBlank()) {
+        _uiState.update { it.copy(description = tmdbDescription) }
+    }
+
+    // Enrich title from TMDB (localized).
+    if (settings.useBasicInfo) {
+        val tmdbTitle = enrichment.localizedTitle
+        if (!tmdbTitle.isNullOrBlank()) {
+            _uiState.update { it.copy(title = tmdbTitle) }
+        }
+    }
+
+    // Enrich logo from TMDB if artwork is enabled.
+    if (settings.useArtwork) {
+        val tmdbLogo = enrichment.logo
+        if (!tmdbLogo.isNullOrBlank()) {
+            _uiState.update { it.copy(logo = tmdbLogo) }
+        }
+    }
+
+    // Also enrich episode title from TMDB if available.
+    if (settings.useBasicInfo) {
+        val tmdbEpisodeTitle = episodeEnrichment?.title
+        if (!tmdbEpisodeTitle.isNullOrBlank()) {
+            _uiState.update { it.copy(currentEpisodeTitle = tmdbEpisodeTitle) }
+        }
+    }
+
+    // Enrich cast from TMDB if addon didn't provide any.
+    if (settings.useBasicInfo && enrichment.castMembers.isNotEmpty()) {
+        _uiState.update { state ->
+            if (state.castMembers.isEmpty()) state.copy(castMembers = enrichment.castMembers)
+            else state
+        }
     }
 }
 

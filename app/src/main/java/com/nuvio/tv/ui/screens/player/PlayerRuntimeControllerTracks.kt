@@ -75,7 +75,10 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                     val channelLayout = CustomDefaultTrackNameProvider.getChannelLayoutName(
                         format.channelCount
                     )
-                    val baseName = format.label ?: format.language ?: "Audio ${audioTracks.size + 1}"
+                    val langDisplay = format.language?.takeIf { it != "und" }?.let {
+                        com.nuvio.tv.ui.util.languageCodeToName(it)
+                    }
+                    val baseName = format.label ?: langDisplay ?: "Audio ${audioTracks.size + 1}"
                     val suffix = listOfNotNull(codecName, channelLayout).joinToString(" ")
                     val displayName = if (suffix.isNotEmpty()) "$baseName ($suffix)" else baseName
 

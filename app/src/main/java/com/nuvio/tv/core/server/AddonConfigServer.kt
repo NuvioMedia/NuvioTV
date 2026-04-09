@@ -31,9 +31,40 @@ class AddonConfigServer(
         val isDisabled: Boolean
     )
 
+    data class CollectionInfo(
+        val id: String,
+        val title: String,
+        val backdropImageUrl: String? = null,
+        val pinToTop: Boolean = false,
+        val focusGlowEnabled: Boolean = true,
+        val viewMode: String = "TABBED_GRID",
+        val showAllTab: Boolean = true,
+        val folders: List<FolderInfo>
+    )
+
+    data class FolderInfo(
+        val id: String,
+        val title: String,
+        val coverImageUrl: String?,
+        val focusGifUrl: String?,
+        val focusGifEnabled: Boolean = true,
+        val coverEmoji: String?,
+        val tileShape: String,
+        val hideTitle: Boolean,
+        val catalogSources: List<CatalogSourceInfo>
+    )
+
+    data class CatalogSourceInfo(
+        val addonId: String,
+        val type: String,
+        val catalogId: String
+    )
+
     data class PageState(
         val addons: List<AddonInfo>,
-        val catalogs: List<CatalogInfo>
+        val catalogs: List<CatalogInfo>,
+        val collections: List<CollectionInfo> = emptyList(),
+        val disabledCollectionKeys: List<String> = emptyList()
     )
 
     data class PendingAddonChange(
@@ -41,6 +72,8 @@ class AddonConfigServer(
         val proposedUrls: List<String>,
         val proposedCatalogOrderKeys: List<String> = emptyList(),
         val proposedDisabledCatalogKeys: List<String> = emptyList(),
+        val proposedCollectionsJson: String? = null,
+        val proposedDisabledCollectionKeys: List<String> = emptyList(),
         var status: ChangeStatus = ChangeStatus.PENDING
     )
 
@@ -67,13 +100,14 @@ class AddonConfigServer(
             method == Method.GET && uri == "/api/state" -> servePageState()
             method == Method.GET && uri == "/api/addons" -> serveAddonList()
             method == Method.POST && uri == "/api/addons" -> handleAddonUpdate(session)
+            method == Method.GET && uri == "/api/collections" -> serveCollections()
             method == Method.GET && uri.startsWith("/api/status/") -> serveChangeStatus(uri)
             else -> newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not found")
         }
     }
 
     private fun serveWebPage(): Response {
-        return newFixedLengthResponse(Response.Status.OK, "text/html", AddonWebPage.getHtml(context))
+        return newFixedLengthResponse(Response.Status.OK, "text/html; charset=utf-8", AddonWebPage.getHtml(context))
     }
 
     private fun serveLogo(): Response {
@@ -90,16 +124,22 @@ class AddonConfigServer(
         }
     }
 
+    private fun serveCollections(): Response {
+        val collections = currentPageStateProvider().collections
+        val json = gson.toJson(collections)
+        return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", json)
+    }
+
     private fun serveAddonList(): Response {
         val addons = currentPageStateProvider().addons
         val json = gson.toJson(addons)
-        return newFixedLengthResponse(Response.Status.OK, "application/json", json)
+        return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", json)
     }
 
     private fun servePageState(): Response {
         val state = currentPageStateProvider()
         val json = gson.toJson(state)
-        return newFixedLengthResponse(Response.Status.OK, "application/json", json)
+        return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", json)
     }
 
     private fun handleAddonUpdate(session: IHTTPSession): Response {
@@ -118,16 +158,21 @@ class AddonConfigServer(
             val urls = parseStringList(parsed["urls"])
             val catalogOrderKeys = parseStringList(parsed["catalogOrderKeys"])
             val disabledCatalogKeys = parseStringList(parsed["disabledCatalogKeys"])
+            val collectionsRaw = parsed["collections"]
+            val collectionsJson = if (collectionsRaw != null) gson.toJson(collectionsRaw) else null
+            val disabledCollectionKeys = parseStringList(parsed["disabledCollectionKeys"])
             PendingAddonChange(
                 proposedUrls = urls,
                 proposedCatalogOrderKeys = catalogOrderKeys,
-                proposedDisabledCatalogKeys = disabledCatalogKeys
+                proposedDisabledCatalogKeys = disabledCatalogKeys,
+                proposedCollectionsJson = collectionsJson,
+                proposedDisabledCollectionKeys = disabledCollectionKeys
             )
         } catch (e: Exception) {
             val error = mapOf("error" to "Invalid request body")
             return newFixedLengthResponse(
                 Response.Status.BAD_REQUEST,
-                "application/json",
+                "application/json; charset=utf-8",
                 gson.toJson(error)
             )
         }
@@ -136,7 +181,7 @@ class AddonConfigServer(
         onChangeProposed(change)
 
         val response = mapOf("status" to "pending_confirmation", "id" to change.id)
-        return newFixedLengthResponse(Response.Status.OK, "application/json", gson.toJson(response))
+        return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", gson.toJson(response))
     }
 
     private fun serveChangeStatus(uri: String): Response {
@@ -144,7 +189,7 @@ class AddonConfigServer(
         val change = pendingChanges[id]
         val status = change?.status?.name?.lowercase() ?: "not_found"
         val response = mapOf("status" to status)
-        return newFixedLengthResponse(Response.Status.OK, "application/json", gson.toJson(response))
+        return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", gson.toJson(response))
     }
 
     private fun parseStringList(rawValue: Any?): List<String> {

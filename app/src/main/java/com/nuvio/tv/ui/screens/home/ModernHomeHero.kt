@@ -341,7 +341,7 @@ private fun HeroTitleContent(
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.CenterStart
             )
-        } else {
+        } else if (preview.title.isNotBlank()) {
             Text(
                 text = preview.title,
                 style = scaledTitleStyle,

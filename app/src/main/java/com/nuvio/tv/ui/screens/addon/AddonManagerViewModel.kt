@@ -9,8 +9,12 @@ import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.core.server.AddonConfigServer
 import com.nuvio.tv.core.server.DeviceIpAddress
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.Addon
+import com.nuvio.tv.domain.model.Collection
+import com.nuvio.tv.domain.model.CollectionFolder
+import com.nuvio.tv.domain.model.CollectionCatalogSource
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,6 +35,7 @@ import javax.inject.Inject
 class AddonManagerViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
+    private val collectionsDataStore: CollectionsDataStore,
     private val profileManager: ProfileManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -48,10 +53,12 @@ class AddonManagerViewModel @Inject constructor(
     private var logoBytes: ByteArray? = null
     private var homeCatalogOrderKeys: List<String> = emptyList()
     private var disabledHomeCatalogKeys: Set<String> = emptySet()
+    private var currentCollections: List<Collection> = emptyList()
 
     init {
         observeInstalledAddons()
         observeCatalogPreferences()
+        observeCollections()
         loadLogoBytes()
     }
 
@@ -203,6 +210,35 @@ class AddonManagerViewModel @Inject constructor(
                     savedOrderKeys = homeCatalogOrderKeys,
                     disabledKeys = disabledHomeCatalogKeys
                 )
+                // Build unified catalog list with collections interleaved
+                val catalogInfos = orderedCatalogs.map { catalog ->
+                    AddonConfigServer.CatalogInfo(
+                        key = catalog.key,
+                        disableKey = catalog.disableKey,
+                        catalogName = catalog.catalogName,
+                        addonName = catalog.addonName,
+                        type = catalog.typeLabel,
+                        isDisabled = catalog.isDisabled
+                    )
+                }
+                val collectionInfos = currentCollections.map { col ->
+                    val colKey = "collection_${col.id}"
+                    AddonConfigServer.CatalogInfo(
+                        key = colKey,
+                        disableKey = colKey,
+                        catalogName = col.title,
+                        addonName = "${col.folders.size} folder${if (col.folders.size != 1) "s" else ""}",
+                        type = "collection",
+                        isDisabled = colKey in disabledHomeCatalogKeys
+                    )
+                }
+                // Interleave based on saved order
+                val catalogByKey = (catalogInfos + collectionInfos).associateBy { it.key }
+                val savedOrder = homeCatalogOrderKeys
+                val orderedKeys = savedOrder.filter { it in catalogByKey }
+                val unseenKeys = catalogByKey.keys - orderedKeys.toSet()
+                val unifiedCatalogs = (orderedKeys + unseenKeys).mapNotNull { catalogByKey[it] }
+
                 AddonConfigServer.PageState(
                     addons = addons.map { addon ->
                         AddonConfigServer.AddonInfo(
@@ -211,16 +247,10 @@ class AddonManagerViewModel @Inject constructor(
                             description = addon.description
                         )
                     },
-                    catalogs = orderedCatalogs.map { catalog ->
-                        AddonConfigServer.CatalogInfo(
-                            key = catalog.key,
-                            disableKey = catalog.disableKey,
-                            catalogName = catalog.catalogName,
-                            addonName = catalog.addonName,
-                            type = catalog.typeLabel,
-                            isDisabled = catalog.isDisabled
-                        )
-                    }
+                    catalogs = unifiedCatalogs,
+                    collections = collectionsToServerFormat(currentCollections),
+                    disabledCollectionKeys = disabledHomeCatalogKeys
+                        .filter { it.startsWith("collection_") }
                 )
             },
             onChangeProposed = { change -> handleChangeProposed(change) },
@@ -293,6 +323,8 @@ class AddonManagerViewModel @Inject constructor(
             disabledKeys = disabledHomeCatalogKeys
         )
         val availableCatalogKeys = currentCatalogEntries.map { it.key }.toSet()
+        val collectionKeysSet = currentCollections.map { "collection_${it.id}" }.toSet()
+        val allValidOrderKeys = availableCatalogKeys + collectionKeysSet
         val availableDisableKeyToName = currentCatalogEntries.associate { entry ->
             entry.disableKey to "${entry.catalogName} • ${entry.addonName}"
         }
@@ -306,7 +338,7 @@ class AddonManagerViewModel @Inject constructor(
         } else {
             change.proposedCatalogOrderKeys
                 .asSequence()
-                .filter { it in availableCatalogKeys }
+                .filter { it in allValidOrderKeys }
                 .distinct()
                 .toList()
         }
@@ -336,6 +368,13 @@ class AddonManagerViewModel @Inject constructor(
             removedNameMap[normalizeUrlForComparison(url)] ?: url
         }
 
+        val proposedCollectionsJson = change.proposedCollectionsJson
+        val collectionsChanged = proposedCollectionsJson != null
+        val proposedCollectionCount = if (proposedCollectionsJson != null) {
+            try { parseCollectionsFromJson(proposedCollectionsJson).size } catch (_: Exception) { 0 }
+        } else 0
+        val proposedDisabledCollectionKeys = change.proposedDisabledCollectionKeys
+
         _uiState.update {
             it.copy(
                 pendingChange = PendingChangeInfo(
@@ -348,7 +387,11 @@ class AddonManagerViewModel @Inject constructor(
                     catalogsReordered = catalogsReordered,
                     disabledCatalogNames = newlyDisabledCatalogs,
                     enabledCatalogNames = newlyEnabledCatalogs,
-                    removedNames = removedNames
+                    removedNames = removedNames,
+                    collectionsChanged = collectionsChanged,
+                    proposedCollectionsJson = proposedCollectionsJson,
+                    proposedCollectionCount = proposedCollectionCount,
+                    proposedDisabledCollectionKeys = proposedDisabledCollectionKeys
                 )
             )
         }
@@ -382,6 +425,18 @@ class AddonManagerViewModel @Inject constructor(
         viewModelScope.launch {
             addonRepository.setAddonOrder(pending.proposedUrls)
             applyCatalogPreferencesFromPending(pending, pending.proposedUrls)
+            if (pending.collectionsChanged && pending.proposedCollectionsJson != null) {
+                try {
+                    val newCollections = parseCollectionsFromJson(pending.proposedCollectionsJson)
+                    collectionsDataStore.setCollections(newCollections)
+                } catch (_: Exception) { }
+            }
+            // Apply disabled collection key changes
+            if (pending.proposedDisabledCollectionKeys.isNotEmpty() || disabledHomeCatalogKeys.any { it.startsWith("collection_") }) {
+                val nonCollectionDisabledKeys = disabledHomeCatalogKeys.filter { !it.startsWith("collection_") }
+                val mergedDisabledKeys = nonCollectionDisabledKeys + pending.proposedDisabledCollectionKeys
+                layoutPreferenceDataStore.setDisabledHomeCatalogKeys(mergedDisabledKeys)
+            }
             server?.confirmChange(pending.changeId)
 
             _uiState.update { it.copy(pendingChange = null) }
@@ -420,10 +475,13 @@ class AddonManagerViewModel @Inject constructor(
         )
         val availableCatalogKeys = availableCatalogEntries.map { it.key }.toSet()
         val availableDisableKeys = availableCatalogEntries.map { it.disableKey }.toSet()
+        // Collection keys are also valid in the ordering
+        val collectionKeys = currentCollections.map { "collection_${it.id}" }.toSet()
+        val allValidOrderKeys = availableCatalogKeys + collectionKeys
 
         val validCatalogOrder = pending.proposedCatalogOrderKeys
             .asSequence()
-            .filter { it in availableCatalogKeys }
+            .filter { it in allValidOrderKeys }
             .distinct()
             .toList()
         val validDisabledCatalogs = pending.proposedDisabledCatalogKeys
@@ -447,6 +505,51 @@ class AddonManagerViewModel @Inject constructor(
                 disabledHomeCatalogKeys = keys.toSet()
             }
         }
+    }
+
+    private fun observeCollections() {
+        viewModelScope.launch {
+            collectionsDataStore.collections.collect { cols ->
+                currentCollections = cols
+            }
+        }
+    }
+
+    private fun collectionsToServerFormat(cols: List<Collection>): List<AddonConfigServer.CollectionInfo> {
+        return cols.map { col ->
+            AddonConfigServer.CollectionInfo(
+                id = col.id,
+                title = col.title,
+                backdropImageUrl = col.backdropImageUrl,
+                pinToTop = col.pinToTop,
+                focusGlowEnabled = col.focusGlowEnabled,
+                viewMode = col.viewMode.name,
+                showAllTab = col.showAllTab,
+                folders = col.folders.map { folder ->
+                    AddonConfigServer.FolderInfo(
+                        id = folder.id,
+                        title = folder.title,
+                        coverImageUrl = folder.coverImageUrl,
+                        focusGifUrl = folder.focusGifUrl,
+                        focusGifEnabled = folder.focusGifEnabled,
+                        coverEmoji = folder.coverEmoji,
+                        tileShape = folder.tileShape.name,
+                        hideTitle = folder.hideTitle,
+                        catalogSources = folder.catalogSources.map { src ->
+                            AddonConfigServer.CatalogSourceInfo(
+                                addonId = src.addonId,
+                                type = src.type,
+                                catalogId = src.catalogId
+                            )
+                        }
+                    )
+                }
+            )
+        }
+    }
+
+    private fun parseCollectionsFromJson(json: String): List<Collection> {
+        return collectionsDataStore.importFromJson(json)
     }
 
     private fun observeInstalledAddons() {

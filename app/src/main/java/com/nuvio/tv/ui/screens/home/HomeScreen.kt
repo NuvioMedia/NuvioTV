@@ -81,13 +81,16 @@ fun HomeScreen(
     },
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = onContinueWatchingClick,
     onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit = onContinueWatchingClick,
-    onNavigateToCatalogSeeAll: (String, String, String) -> Unit = { _, _, _ -> }
+    onNavigateToCatalogSeeAll: (String, String, String) -> Unit = { _, _, _ -> },
+    onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val effectiveAutoplayEnabled by viewModel.effectiveAutoplayEnabled.collectAsStateWithLifecycle(
         initialValue = false
     )
     val hasCatalogContent = uiState.catalogRows.any { it.items.isNotEmpty() }
+    val hasCollectionContent = uiState.homeRows.any { it is HomeRow.CollectionRow }
+    val hasHeroContent = uiState.heroItems.isNotEmpty()
     var hasEnteredCatalogContent by rememberSaveable { mutableStateOf(false) }
     var showHomeContentWithAnimation by rememberSaveable { mutableStateOf(false) }
     var hasReleasedStartupCwGate by rememberSaveable { mutableStateOf(false) }
@@ -106,8 +109,8 @@ fun HomeScreen(
         { item, addonBaseUrl -> posterOptionsTarget = HomePosterOptionsTarget(item, addonBaseUrl) }
     }
 
-    LaunchedEffect(hasCatalogContent) {
-        if (hasCatalogContent) {
+    LaunchedEffect(hasCatalogContent, hasCollectionContent, hasHeroContent) {
+        if (hasCatalogContent || hasCollectionContent || hasHeroContent) {
             hasEnteredCatalogContent = true
         }
     }
@@ -117,9 +120,9 @@ fun HomeScreen(
         startupCwGateTimedOut = true
     }
 
-    LaunchedEffect(uiState.continueWatchingItems.isNotEmpty(), startupCwGateTimedOut) {
+    LaunchedEffect(uiState.continueWatchingItems.isNotEmpty(), startupCwGateTimedOut, uiState.isLoading) {
         if (!hasReleasedStartupCwGate &&
-            (uiState.continueWatchingItems.isNotEmpty() || startupCwGateTimedOut)
+            (uiState.continueWatchingItems.isNotEmpty() || startupCwGateTimedOut || !uiState.isLoading)
         ) {
             hasReleasedStartupCwGate = true
         }
@@ -150,7 +153,8 @@ fun HomeScreen(
     ) {
         val hasAnyContent = uiState.catalogRows.isNotEmpty() ||
             uiState.continueWatchingItems.isNotEmpty() ||
-            uiState.heroItems.isNotEmpty()
+            uiState.heroItems.isNotEmpty() ||
+            hasCollectionContent
 
         when {
             uiState.isLoading && !hasAnyContent -> {
@@ -175,7 +179,7 @@ fun HomeScreen(
                 }
             }
 
-            uiState.error == "No catalog addons installed" && uiState.catalogRows.isEmpty() -> {
+            uiState.error == "No catalog addons installed" && uiState.catalogRows.isEmpty() && !hasCollectionContent && !hasHeroContent -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -198,7 +202,7 @@ fun HomeScreen(
             else -> {
                 val shouldShowLoadingGate =
                     !hasReleasedStartupCwGate ||
-                        (!hasEnteredCatalogContent && !hasCatalogContent)
+                        (!hasEnteredCatalogContent && !hasCatalogContent && !hasCollectionContent && !hasHeroContent)
                 LaunchedEffect(shouldShowLoadingGate) {
                     if (shouldShowLoadingGate) {
                         showHomeContentWithAnimation = false
@@ -239,6 +243,7 @@ fun HomeScreen(
                                 onContinueWatchingPlayManually = onContinueWatchingPlayManually,
                                 showContinueWatchingManualPlayOption = effectiveAutoplayEnabled,
                                 onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
+                                onNavigateToFolderDetail = onNavigateToFolderDetail,
                                 isCatalogItemWatched = isCatalogItemWatched,
                                 onCatalogItemLongPress = onCatalogItemLongPress
                             )
@@ -253,6 +258,7 @@ fun HomeScreen(
                                 onContinueWatchingPlayManually = onContinueWatchingPlayManually,
                                 showContinueWatchingManualPlayOption = effectiveAutoplayEnabled,
                                 onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
+                                onNavigateToFolderDetail = onNavigateToFolderDetail,
                                 isCatalogItemWatched = isCatalogItemWatched,
                                 onCatalogItemLongPress = onCatalogItemLongPress
                             )
@@ -265,6 +271,7 @@ fun HomeScreen(
                                 onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
                                 onContinueWatchingPlayManually = onContinueWatchingPlayManually,
                                 showContinueWatchingManualPlayOption = effectiveAutoplayEnabled,
+                                onNavigateToFolderDetail = onNavigateToFolderDetail,
                                 isCatalogItemWatched = isCatalogItemWatched,
                                 onCatalogItemLongPress = onCatalogItemLongPress
                             )
@@ -356,6 +363,7 @@ private fun ClassicHomeRoute(
     onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit,
     showContinueWatchingManualPlayOption: Boolean,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
+    onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> },
     isCatalogItemWatched: (MetaPreview) -> Boolean,
     onCatalogItemLongPress: (MetaPreview, String) -> Unit
 ) {
@@ -372,6 +380,7 @@ private fun ClassicHomeRoute(
         onContinueWatchingPlayManually = onContinueWatchingPlayManually,
         showContinueWatchingManualPlayOption = showContinueWatchingManualPlayOption,
         onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
+        onNavigateToFolderDetail = onNavigateToFolderDetail,
         onRemoveContinueWatching = { contentId, season, episode, isNextUp ->
             viewModel.onEvent(HomeEvent.OnRemoveContinueWatching(contentId, season, episode, isNextUp))
         },
@@ -400,6 +409,7 @@ private fun GridHomeRoute(
     onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit,
     showContinueWatchingManualPlayOption: Boolean,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
+    onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> },
     isCatalogItemWatched: (MetaPreview) -> Boolean,
     onCatalogItemLongPress: (MetaPreview, String) -> Unit
 ) {
@@ -414,6 +424,7 @@ private fun GridHomeRoute(
         onContinueWatchingPlayManually = onContinueWatchingPlayManually,
         showContinueWatchingManualPlayOption = showContinueWatchingManualPlayOption,
         onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
+        onNavigateToFolderDetail = onNavigateToFolderDetail,
         onRemoveContinueWatching = { contentId, season, episode, isNextUp ->
             viewModel.onEvent(HomeEvent.OnRemoveContinueWatching(contentId, season, episode, isNextUp))
         },
@@ -422,8 +433,8 @@ private fun GridHomeRoute(
         onItemFocus = { item ->
             viewModel.onItemFocus(item)
         },
-        onSaveGridFocusState = { vi, vo ->
-            viewModel.saveGridFocusState(vi, vo)
+        onSaveGridFocusState = { vi, vo, key ->
+            viewModel.saveGridFocusState(vi, vo, focusedItemKey = key)
         }
     )
 }
@@ -437,6 +448,7 @@ private fun ModernHomeRoute(
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit,
     onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit,
     showContinueWatchingManualPlayOption: Boolean,
+    onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> },
     isCatalogItemWatched: (MetaPreview) -> Boolean,
     onCatalogItemLongPress: (MetaPreview, String) -> Unit
 ) {
@@ -483,6 +495,7 @@ private fun ModernHomeRoute(
         onRemoveContinueWatching = removeContinueWatching,
         isCatalogItemWatched = isCatalogItemWatched,
         onCatalogItemLongPress = onCatalogItemLongPress,
+        onNavigateToFolderDetail = onNavigateToFolderDetail,
         onItemFocus = remember(viewModel) {
             { item -> viewModel.onItemFocus(item) }
         },

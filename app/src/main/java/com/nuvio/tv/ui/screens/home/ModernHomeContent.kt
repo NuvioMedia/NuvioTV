@@ -94,11 +94,15 @@ import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.imageLoader
 import coil.request.ImageRequest
+import com.nuvio.tv.domain.model.CatalogRow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.ContinueWatchingCard
+import com.nuvio.tv.ui.components.HeroCarousel
+import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.ContinueWatchingOptionsDialog
 import com.nuvio.tv.ui.components.MonochromePosterPlaceholder
 import com.nuvio.tv.ui.components.TrailerPlayer
@@ -112,7 +116,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 private const val MODERN_HERO_RAPID_NAV_THRESHOLD_MS = 130L
 private const val MODERN_HERO_RAPID_NAV_SETTLE_MS = 170L
-
 private fun buildPrefetchRequest(
     context: android.content.Context,
     url: String,
@@ -140,6 +143,7 @@ fun ModernHomeContent(
     onRemoveContinueWatching: (String, Int?, Int?, Boolean) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean = { false },
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
+    onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> },
     onItemFocus: (MetaPreview) -> Unit = {},
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
     onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
@@ -162,14 +166,264 @@ fun ModernHomeContent(
     val effectiveExpandEnabled =
         (uiState.focusedPosterBackdropExpandEnabled && expandControlAvailable) ||
             landscapeExpandedCardMode
+    val showCatalogTypeSuffixInModern = uiState.catalogTypeSuffixEnabled
+    val showFullReleaseDate = uiState.showFullReleaseDate
     val shouldActivateFocusedPosterFlow =
         effectiveExpandEnabled ||
             (effectiveAutoplayEnabled &&
                 trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA)
-    val carouselRows = uiState.modernHomePresentation.rows
+    val visibleHomeRows = remember(uiState.homeRows, uiState.catalogRows) {
+        if (uiState.homeRows.isNotEmpty()) {
+            val latestCatalogByKey = uiState.catalogRows.associateBy { catalogRowKey(it) }
+            uiState.homeRows.map { homeRow ->
+                when (homeRow) {
+                    is HomeRow.Catalog -> {
+                        val latest = latestCatalogByKey[catalogRowKey(homeRow.row)]
+                        if (latest != null && latest !== homeRow.row) HomeRow.Catalog(latest) else homeRow
+                    }
+                    else -> homeRow
+                }
+            }
+        } else {
+            uiState.catalogRows.filter { it.items.isNotEmpty() }.map { HomeRow.Catalog(it) }
+        }
+    }
+    val visibleCatalogRows = remember(visibleHomeRows) {
+        visibleHomeRows.filterIsInstance<HomeRow.Catalog>().map { it.row }
+    }
+    val strContinueWatching = stringResource(R.string.continue_watching)
+    val strAirsDate = stringResource(R.string.cw_airs_date)
+    val strUpcoming = stringResource(R.string.cw_upcoming)
+    val strTypeMovie = stringResource(R.string.type_movie)
+    val strTypeSeries = stringResource(R.string.type_series)
+    val rowBuildCache = remember { ModernCarouselRowBuildCache() }
+    val context = LocalContext.current
+    val carouselRows = remember(
+        uiState.continueWatchingItems,
+        visibleHomeRows,
+        useLandscapePosters,
+        showCatalogTypeSuffixInModern,
+        strTypeMovie,
+        strTypeSeries
+    ) {
+        buildList {
+            val activeCatalogKeys = LinkedHashSet<String>(visibleCatalogRows.size)
+            if (uiState.continueWatchingItems.isNotEmpty()) {
+                val reuseContinueWatchingRow =
+                    rowBuildCache.continueWatchingRow != null &&
+                        rowBuildCache.continueWatchingItems == uiState.continueWatchingItems &&
+                        rowBuildCache.continueWatchingTitle == strContinueWatching &&
+                        rowBuildCache.continueWatchingAirsDateTemplate == strAirsDate &&
+                        rowBuildCache.continueWatchingUpcomingLabel == strUpcoming &&
+                        rowBuildCache.continueWatchingUseLandscapePosters == useLandscapePosters
+                val continueWatchingRow = if (reuseContinueWatchingRow) {
+                    checkNotNull(rowBuildCache.continueWatchingRow)
+                } else {
+                    HeroCarouselRow(
+                        key = "continue_watching",
+                        title = strContinueWatching,
+                        globalRowIndex = -1,
+                        items = uiState.continueWatchingItems.map { item ->
+                            buildContinueWatchingItem(
+                                item = item,
+                                useLandscapePosters = useLandscapePosters,
+                                airsDateTemplate = strAirsDate,
+                                upcomingLabel = strUpcoming,
+                                context = context
+                            )
+                        }
+                    )
+                }
+                rowBuildCache.continueWatchingItems = uiState.continueWatchingItems
+                rowBuildCache.continueWatchingTitle = strContinueWatching
+                rowBuildCache.continueWatchingAirsDateTemplate = strAirsDate
+                rowBuildCache.continueWatchingUpcomingLabel = strUpcoming
+                rowBuildCache.continueWatchingUseLandscapePosters = useLandscapePosters
+                rowBuildCache.continueWatchingRow = continueWatchingRow
+                add(continueWatchingRow)
+            } else {
+                rowBuildCache.continueWatchingItems = emptyList()
+                rowBuildCache.continueWatchingRow = null
+            }
 
-    if (carouselRows.isEmpty()) return
-    val carouselLookups = uiState.modernHomePresentation.lookups
+            visibleHomeRows.forEachIndexed { index, homeRow ->
+                when (homeRow) {
+                    is HomeRow.Catalog -> {
+                        val row = homeRow.row
+                        val rowKey = catalogRowKey(row)
+                        activeCatalogKeys += rowKey
+                        val cached = rowBuildCache.catalogRows[rowKey]
+                        val canReuseMappedRow =
+                            cached != null &&
+                                cached.source == row &&
+                                cached.useLandscapePosters == useLandscapePosters &&
+                                cached.showCatalogTypeSuffix == showCatalogTypeSuffixInModern
+
+                        val mappedRow = if (canReuseMappedRow) {
+                            val cachedMappedRow = checkNotNull(cached).mappedRow
+                            if (cachedMappedRow.globalRowIndex == index) {
+                                cachedMappedRow
+                            } else {
+                                cachedMappedRow.copy(globalRowIndex = index)
+                            }
+                        } else {
+                            val rowItemOccurrenceCounts = mutableMapOf<String, Int>()
+                            val rowItemCache = rowBuildCache.catalogItemCache.getOrPut(rowKey) { mutableMapOf() }
+                            HeroCarouselRow(
+                                key = rowKey,
+                                title = catalogRowTitle(
+                                    row = row,
+                                    showCatalogTypeSuffix = showCatalogTypeSuffixInModern,
+                                    strTypeMovie = strTypeMovie,
+                                    strTypeSeries = strTypeSeries
+                                ),
+                                globalRowIndex = index,
+                                catalogId = row.catalogId,
+                                addonId = row.addonId,
+                                apiType = row.apiType,
+                                supportsSkip = row.supportsSkip,
+                                hasMore = row.hasMore,
+                                isLoading = row.isLoading,
+                                items = row.items.map { item ->
+                                    val occurrence = rowItemOccurrenceCounts.getOrDefault(item.id, 0)
+                                    rowItemOccurrenceCounts[item.id] = occurrence + 1
+                                    val cacheKey = "${item.id}_$occurrence"
+                                    val cachedItem = rowItemCache[cacheKey]
+                                    if (cachedItem != null &&
+                                        cachedItem.source == item &&
+                                        cachedItem.useLandscapePosters == useLandscapePosters &&
+                                        cachedItem.showFullReleaseDate == showFullReleaseDate
+                                    ) {
+                                        cachedItem.carouselItem
+                                    } else {
+                                        val built = buildCatalogItem(
+                                            item = item,
+                                            row = row,
+                                            useLandscapePosters = useLandscapePosters,
+                                            occurrence = occurrence,
+                                            strTypeMovie = strTypeMovie,
+                                            strTypeSeries = strTypeSeries,
+                                            showFullReleaseDate = showFullReleaseDate
+                                        )
+                                        rowItemCache[cacheKey] = CachedCarouselItem(
+                                            source = item,
+                                            useLandscapePosters = useLandscapePosters,
+                                            showFullReleaseDate = showFullReleaseDate,
+                                            carouselItem = built
+                                        )
+                                        built
+                                    }
+                                }
+                            )
+                        }
+
+                        rowBuildCache.catalogRows[rowKey] = ModernCatalogRowBuildCacheEntry(
+                            source = row,
+                            useLandscapePosters = useLandscapePosters,
+                            showCatalogTypeSuffix = showCatalogTypeSuffixInModern,
+                            mappedRow = mappedRow
+                        )
+                        add(mappedRow)
+                    }
+
+                    is HomeRow.CollectionRow -> {
+                        val collection = homeRow.collection
+                        val occurrenceCounts = mutableMapOf<String, Int>()
+                        add(
+                            HeroCarouselRow(
+                                key = "collection_${collection.id}",
+                                title = collection.title,
+                                globalRowIndex = index,
+                                items = collection.folders.map { folder ->
+                                    val occurrence = occurrenceCounts.getOrDefault(folder.id, 0)
+                                    occurrenceCounts[folder.id] = occurrence + 1
+                                    buildCollectionFolderItem(
+                                        collection = collection,
+                                        folder = folder,
+                                        useLandscapePosters = useLandscapePosters,
+                                        occurrence = occurrence
+                                    )
+                                }
+                            )
+                        )
+                    }
+                }
+            }
+            rowBuildCache.catalogRows.keys.retainAll(activeCatalogKeys)
+            rowBuildCache.catalogItemCache.keys.retainAll(activeCatalogKeys)
+        }
+    }
+
+    // Show spinner when collections are ready but catalogs haven't arrived
+    // yet — prevents collections from grabbing focus before catalogs
+    // appear above them.  Only waits when addons are installed (meaning
+    // catalogs are expected to load).
+    val hasCollections = visibleHomeRows.any { it is HomeRow.CollectionRow }
+    val hasCatalogs = uiState.catalogRows.isNotEmpty()
+    if (hasCollections && !hasCatalogs && uiState.installedAddonsCount > 0) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            LoadingIndicator()
+        }
+        return
+    }
+
+    if (carouselRows.isEmpty()) {
+        // No carousel rows but hero items may exist — show standalone hero
+        if (uiState.heroSectionEnabled && uiState.heroItems.isNotEmpty()) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                HeroCarousel(
+                    items = uiState.heroItems,
+                    onItemClick = { item ->
+                        onNavigateToDetail(item.id, item.apiType, "")
+                    },
+                    onItemFocus = onItemFocus
+                )
+            }
+        }
+        return
+    }
+    val carouselLookups = remember(carouselRows) {
+        val rowIndexByKey = LinkedHashMap<String, Int>(carouselRows.size)
+        val rowByKey = LinkedHashMap<String, HeroCarouselRow>(carouselRows.size)
+        val rowKeyByGlobalRowIdx = LinkedHashMap<Int, String>(carouselRows.size)
+        val firstHeroPreviewByRowMap = LinkedHashMap<String, HeroPreview>(carouselRows.size)
+        val fallbackBackdropByRowMap = LinkedHashMap<String, String>(carouselRows.size)
+        val activeRowKeys = LinkedHashSet<String>(carouselRows.size)
+        val activeItemKeysByRow = LinkedHashMap<String, Set<String>>(carouselRows.size)
+        val activeCatalogItemIds = LinkedHashSet<String>()
+
+        carouselRows.forEachIndexed { index, row ->
+            rowIndexByKey[row.key] = index
+            rowByKey[row.key] = row
+            rowKeyByGlobalRowIdx[row.globalRowIndex] = row.key
+            activeRowKeys += row.key
+
+            row.items.firstOrNull()?.heroPreview?.let { firstHeroPreviewByRowMap[row.key] = it }
+            row.items.firstNotNullOfOrNull { it.heroPreview.backdrop }?.let { fallbackBackdropByRowMap[row.key] = it }
+
+            val itemKeys = LinkedHashSet<String>(row.items.size)
+            row.items.forEach { item ->
+                itemKeys += item.key
+                val payload = item.payload
+                if (payload is ModernPayload.Catalog) {
+                    activeCatalogItemIds += payload.itemId
+                }
+            }
+            activeItemKeysByRow[row.key] = itemKeys
+        }
+
+        CarouselRowLookups(
+            rowIndexByKey = rowIndexByKey,
+            rowByKey = rowByKey,
+            rowKeyByGlobalRowIndex = rowKeyByGlobalRowIdx,
+            firstHeroPreviewByRow = firstHeroPreviewByRowMap,
+            fallbackBackdropByRow = fallbackBackdropByRowMap,
+            activeRowKeys = activeRowKeys,
+            activeItemKeysByRow = activeItemKeysByRow,
+            activeCatalogItemIds = activeCatalogItemIds
+        )
+    }
+    val rowIndexByKey = carouselLookups.rowIndexByKey
     val rowByKey = carouselLookups.rowByKey
     val rowKeyByGlobalRowIndex = carouselLookups.rowKeyByGlobalRowIndex
     val firstHeroPreviewByRow = carouselLookups.firstHeroPreviewByRow
@@ -210,6 +464,9 @@ fun ModernHomeContent(
     }
     var activeRowKey by remember { mutableStateOf<String?>(null) }
     var activeItemIndex by remember { mutableIntStateOf(0) }
+    // Tracks the row key that was auto-selected on initial load.
+    // Used to detect if the user has manually navigated away.
+    var initialAutoSelectedKey by remember { mutableStateOf<String?>(null) }
     var pendingRowFocusKey by remember { mutableStateOf<String?>(null) }
     var pendingRowFocusIndex by remember { mutableStateOf<Int?>(null) }
     var pendingRowFocusNonce by remember { mutableIntStateOf(0) }
@@ -328,7 +585,26 @@ fun ModernHomeContent(
 
         val hadActiveRow = focusHolder.activeRowKey != null
         val existingActive = focusHolder.activeRowKey?.let(rowByKey::get)
-        val resolvedActive = existingActive ?: carouselRows.first()
+        val firstRow = carouselRows.first()
+        // When new rows appear before the auto-selected row (e.g., catalogs
+        // load after collections), move focus to the new first row — but only
+        // if the user hasn't manually navigated away from the initial position.
+        // Detect if the auto-selected row is stale: new rows appeared
+        // above it (e.g., catalogs loaded after collections) and the user
+        // hasn't manually navigated away from the initial selection.
+        val userStillOnAutoSelected = initialAutoSelectedKey != null &&
+            focusHolder.activeRowKey == initialAutoSelectedKey
+        val autoSelectedStale = hadActiveRow && existingActive != null &&
+            existingActive.key != firstRow.key &&
+            rowIndexByKey.getOrDefault(existingActive.key, 0) > 0 &&
+            !restoredFromSavedState &&
+            !focusState.hasSavedFocus &&
+            userStillOnAutoSelected
+        val resolvedActive = when {
+            autoSelectedStale -> firstRow
+            existingActive != null -> existingActive
+            else -> firstRow
+        }
         val resolvedIndex = focusedItemByRow[resolvedActive.key]
             ?.coerceIn(0, (resolvedActive.items.size - 1).coerceAtLeast(0))
             ?: 0
@@ -339,7 +615,8 @@ fun ModernHomeContent(
         focusedItemByRow[resolvedActive.key] = resolvedIndex
         heroItem = resolvedActive.items.getOrNull(resolvedIndex)?.heroPreview
             ?: resolvedActive.items.firstOrNull()?.heroPreview
-        if (!focusState.hasSavedFocus && (!hadActiveRow || existingActive == null)) {
+        if (!focusState.hasSavedFocus && (!hadActiveRow || existingActive == null || autoSelectedStale)) {
+            initialAutoSelectedKey = resolvedActive.key
             pendingRowFocusKey = resolvedActive.key
             pendingRowFocusIndex = resolvedIndex
             pendingRowFocusNonce++
@@ -729,96 +1006,102 @@ fun ModernHomeContent(
                     key = { _, row -> row.key },
                     contentType = { _, row -> row.apiType ?: "modern_home_row" } // Differentiate horizontal rows by type
                 ) { _, row ->
-                    val stableOnContinueWatchingOptions = remember(Unit) {
-                        { item: ContinueWatchingItem -> optionsItem = item }
-                    }
-                    val stableOnRowItemFocused = remember(Unit) {
-                        { rowKey: String, index: Int, isContinueWatchingRow: Boolean ->
-                            val rowBecameActive = focusHolder.activeRowKey != rowKey
-                            val itemChanged = focusHolder.activeItemIndex != index
-                            if (rowBecameActive || itemChanged) {
-                                val now = System.currentTimeMillis()
-                                val timeSinceLastHeroNav = now - lastHeroNavigationAtMsRef.get()
-                                heroFocusSettleDelayMsRef.set(
-                                    if (lastHeroNavigationAtMsRef.get() != 0L &&
-                                        timeSinceLastHeroNav in 1 until MODERN_HERO_RAPID_NAV_THRESHOLD_MS
-                                    ) MODERN_HERO_RAPID_NAV_SETTLE_MS
-                                    else MODERN_HERO_FOCUS_DEBOUNCE_MS
-                                )
-                                lastHeroNavigationAtMsRef.set(now)
-                                focusHolder.activeRowKey = rowKey
-                                focusHolder.activeItemIndex = index
-                                activeRowKey = rowKey
-                                activeItemIndex = index
+                            val stableOnContinueWatchingOptions = remember(Unit) {
+                                { item: ContinueWatchingItem -> optionsItem = item }
                             }
-                            if (focusedItemByRow[rowKey] != index) {
-                                focusedItemByRow[rowKey] = index
-                            }
-                            if (isContinueWatchingRow) {
-                                if (lastFocusedContinueWatchingIndexRef.get() != index) {
-                                    lastFocusedContinueWatchingIndexRef.set(index)
-                                }
-                                if (focusedCatalogSelection != null) {
-                                    focusedCatalogSelection = null
-                                }
-                            }
-                        }
-                    }
-                    ModernRowSection(
-                        row = row,
-                        isActiveRow = activeRowKey == row.key,
-                        isVerticalRowsScrolling = isVerticalRowsScrolling,
-                        rowTitleBottom = rowTitleBottom,
-                        defaultBringIntoViewSpec = defaultBringIntoViewSpec,
-                        focusStateCatalogRowScrollIndex = remember(focusState.catalogRowScrollStates, row.key) {
-                            focusState.catalogRowScrollStates[row.key] ?: 0
-                        },
-                        uiCaches = uiCaches,
-                        pendingRowFocusKey = pendingRowFocusKey,
-                        pendingRowFocusIndex = pendingRowFocusIndex,
-                        pendingRowFocusNonce = pendingRowFocusNonce,
-                        onPendingRowFocusCleared = remember(Unit) {
-                            {
-                                pendingRowFocusKey = null
-                                pendingRowFocusIndex = null
-                            }
-                        },
-                        onRowItemFocused = stableOnRowItemFocused,
-                        useLandscapePosters = useLandscapePosters,
-                        showLabels = uiState.posterLabelsEnabled,
-                        posterCardCornerRadius = posterCardCornerRadius,
-                        focusedPosterBackdropTrailerMuted = uiState.focusedPosterBackdropTrailerMuted,
-                        effectiveExpandEnabled = effectiveExpandEnabled,
-                        effectiveAutoplayEnabled = effectiveAutoplayEnabled,
-                        trailerPlaybackTarget = trailerPlaybackTarget,
-                        expandedCatalogFocusKey = expandedCatalogFocusKey,
-                        expandedTrailerPreviewUrl = expandedCatalogTrailerUrl,
-                        expandedTrailerPreviewAudioUrl = expandedCatalogTrailerAudioUrl,
-                        portraitCatalogCardWidth = portraitCatalogCardWidth,
-                        portraitCatalogCardHeight = portraitCatalogCardHeight,
-                        landscapeCatalogCardWidth = landscapeCatalogCardWidth,
-                        landscapeCatalogCardHeight = landscapeCatalogCardHeight,
-                        continueWatchingCardWidth = continueWatchingCardWidth,
-                        continueWatchingCardHeight = continueWatchingCardHeight,
-                        blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
-                        onContinueWatchingClick = onContinueWatchingClick,
-                        onContinueWatchingOptions = stableOnContinueWatchingOptions,
-                        isCatalogItemWatched = isCatalogItemWatched,
-                        onCatalogItemLongPress = onCatalogItemLongPress,
-                        onItemFocus = onItemFocus,
-                        onPreloadAdjacentItem = onPreloadAdjacentItem,
-                        onCatalogSelectionFocused = remember(Unit) {
-                            { selection: FocusedCatalogSelection ->
-                                if (focusedCatalogSelection != selection) {
-                                    focusedCatalogSelection = selection
+                            val stableOnRowItemFocused = remember(Unit) {
+                                { rowKey: String, index: Int, isContinueWatchingRow: Boolean ->
+                                    val rowBecameActive = focusHolder.activeRowKey != rowKey
+                                    val itemChanged = focusHolder.activeItemIndex != index
+                                    if (rowBecameActive || itemChanged) {
+                                        val now = System.currentTimeMillis()
+                                        val timeSinceLastHeroNav = now - lastHeroNavigationAtMsRef.get()
+                                        heroFocusSettleDelayMsRef.set(
+                                            if (lastHeroNavigationAtMsRef.get() != 0L &&
+                                                timeSinceLastHeroNav in 1 until MODERN_HERO_RAPID_NAV_THRESHOLD_MS
+                                            ) MODERN_HERO_RAPID_NAV_SETTLE_MS
+                                            else MODERN_HERO_FOCUS_DEBOUNCE_MS
+                                        )
+                                        lastHeroNavigationAtMsRef.set(now)
+                                        focusHolder.activeRowKey = rowKey
+                                        focusHolder.activeItemIndex = index
+                                        activeRowKey = rowKey
+                                        activeItemIndex = index
+                                    }
+                                    if (focusedItemByRow[rowKey] != index) {
+                                        focusedItemByRow[rowKey] = index
+                                    }
+                                    if (isContinueWatchingRow) {
+                                        if (lastFocusedContinueWatchingIndexRef.get() != index) {
+                                            lastFocusedContinueWatchingIndexRef.set(index)
+                                        }
+                                    }
+                                    // Clear catalog selection when focusing any
+                                    // non-catalog row (CW, collection) so stale
+                                    // trailer requests don't fire in the hero.
+                                    if (isContinueWatchingRow || row.items.getOrNull(index)?.payload is ModernPayload.CollectionFolder) {
+                                        if (focusedCatalogSelection != null) {
+                                            focusedCatalogSelection = null
+                                        }
+                                    }
                                 }
                             }
-                        },
-                        onNavigateToDetail = onNavigateToDetail,
-                        onLoadMoreCatalog = onLoadMoreCatalog,
-                        onBackdropInteraction = remember(Unit) { { expansionInteractionNonce++ } },
-                        onExpandedCatalogFocusKeyChange = remember(Unit) { { expandedCatalogFocusKey = it } }
-                    )
+                            ModernRowSection(
+                                row = row,
+                                isActiveRow = row.key == activeRowKey,
+                                isVerticalRowsScrolling = isVerticalRowsScrolling,
+                                rowTitleBottom = rowTitleBottom,
+                                defaultBringIntoViewSpec = defaultBringIntoViewSpec,
+                                focusStateCatalogRowScrollIndex = remember(focusState.catalogRowScrollStates, row.key) {
+                                    focusState.catalogRowScrollStates[row.key] ?: 0
+                                },
+                                uiCaches = uiCaches,
+                                pendingRowFocusKey = pendingRowFocusKey,
+                                pendingRowFocusIndex = pendingRowFocusIndex,
+                                pendingRowFocusNonce = pendingRowFocusNonce,
+                                onPendingRowFocusCleared = remember(Unit) {
+                                    {
+                                        pendingRowFocusKey = null
+                                        pendingRowFocusIndex = null
+                                    }
+                                },
+                                onRowItemFocused = stableOnRowItemFocused,
+                                useLandscapePosters = useLandscapePosters,
+                                showLabels = uiState.posterLabelsEnabled,
+                                posterCardCornerRadius = posterCardCornerRadius,
+                                focusedPosterBackdropTrailerMuted = uiState.focusedPosterBackdropTrailerMuted,
+                                effectiveExpandEnabled = effectiveExpandEnabled,
+                                effectiveAutoplayEnabled = effectiveAutoplayEnabled,
+                                trailerPlaybackTarget = trailerPlaybackTarget,
+                                expandedCatalogFocusKey = expandedCatalogFocusKey,
+                                expandedTrailerPreviewUrl = expandedCatalogTrailerUrl,
+                                expandedTrailerPreviewAudioUrl = expandedCatalogTrailerAudioUrl,
+                                portraitCatalogCardWidth = portraitCatalogCardWidth,
+                                portraitCatalogCardHeight = portraitCatalogCardHeight,
+                                landscapeCatalogCardWidth = landscapeCatalogCardWidth,
+                                landscapeCatalogCardHeight = landscapeCatalogCardHeight,
+                                continueWatchingCardWidth = continueWatchingCardWidth,
+                                continueWatchingCardHeight = continueWatchingCardHeight,
+                                blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
+                                onContinueWatchingClick = onContinueWatchingClick,
+                                onContinueWatchingOptions = stableOnContinueWatchingOptions,
+                                isCatalogItemWatched = isCatalogItemWatched,
+                                onCatalogItemLongPress = onCatalogItemLongPress,
+                                onItemFocus = onItemFocus,
+                                onPreloadAdjacentItem = onPreloadAdjacentItem,
+                                onCatalogSelectionFocused = remember(Unit) {
+                                    { selection: FocusedCatalogSelection ->
+                                        if (focusedCatalogSelection != selection) {
+                                            focusedCatalogSelection = selection
+                                        }
+                                    }
+                                },
+                                onNavigateToDetail = onNavigateToDetail,
+                                onNavigateToFolderDetail = onNavigateToFolderDetail,
+                                onLoadMoreCatalog = onLoadMoreCatalog,
+                                onBackdropInteraction = remember(Unit) { { expansionInteractionNonce++ } },
+                                onExpandedCatalogFocusKeyChange = remember(Unit) { { expandedCatalogFocusKey = it } }
+                            )
                 }
             }
         }

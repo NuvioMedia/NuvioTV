@@ -44,8 +44,8 @@ android {
         applicationId = "com.nuvio.tv"
         minSdk = 24
         targetSdk = 36
-        versionCode = 49
-        versionName = "0.5.6-beta"
+        versionCode = 50
+        versionName = "0.5.7-beta"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
@@ -257,6 +257,7 @@ dependencies {
 
     // Image Loading
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
     implementation(libs.coil.svg)
 
     // Navigation
@@ -307,6 +308,26 @@ dependencies {
     implementation(libs.quickjs.kt)
     implementation(libs.jsoup)
     implementation(libs.gson)
+
+    // Jackson — required by CloudStream DEX extensions at runtime
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.0")
+
+    // NiceHTTP — HTTP client used by CloudStream extensions via `app.get()`
+    implementation(libs.nicehttp)
+
+    // Conscrypt — TLS provider with browser-compatible fingerprint for Cloudflare bypass
+    implementation(libs.conscrypt.android)
+
+    // CloudStream library — provides core API classes for extension compatibility
+    implementation(libs.cloudstream.library) {
+        // Exclude heavy deps we don't need or that conflict
+        exclude(group = "org.mozilla", module = "rhino")
+        exclude(group = "com.github.AmarullisVFX", module = "newpipeextractor")
+        exclude(group = "com.github.AmaryllisVFX", module = "newpipeextractor")
+        exclude(group = "com.github.AmaryllisVFX.newpipeextractor")
+        exclude(group = "info.debatty", module = "java-string-similarity")
+    }
 
     // Markdown rendering
     implementation(libs.markdown.renderer.m3)

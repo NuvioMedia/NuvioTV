@@ -9,6 +9,7 @@ import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.AuthSessionNoticeDataStore
+import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.StartupAuthNotice
@@ -21,6 +22,7 @@ import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.LibraryEntryInput
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
@@ -58,6 +60,7 @@ class HomeViewModel @Inject constructor(
     internal val watchProgressRepository: WatchProgressRepository,
     internal val libraryRepository: LibraryRepository,
     internal val metaRepository: MetaRepository,
+    internal val collectionsDataStore: CollectionsDataStore,
     internal val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     internal val playerSettingsDataStore: PlayerSettingsDataStore,
     internal val tmdbSettingsDataStore: TmdbSettingsDataStore,
@@ -70,7 +73,8 @@ class HomeViewModel @Inject constructor(
     internal val trailerService: TrailerService,
     internal val watchedItemsPreferences: WatchedItemsPreferences,
     internal val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
-    internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache
+    internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache,
+    private val profileManager: com.nuvio.tv.core.profile.ProfileManager
 ) : ViewModel() {
     companion object {
         internal const val TAG = "HomeViewModel"
@@ -110,8 +114,10 @@ class HomeViewModel @Inject constructor(
     internal val catalogsMap = linkedMapOf<String, CatalogRow>()
     internal val catalogOrder = mutableListOf<String>()
     internal var addonsCache: List<Addon> = emptyList()
+    internal var collectionsCache: List<Collection> = emptyList()
     internal var homeCatalogOrderKeys: List<String> = emptyList()
     internal var disabledHomeCatalogKeys: Set<String> = emptySet()
+    internal var customCatalogTitles: Map<String, String> = emptyMap()
     internal var currentHeroCatalogKeys: List<String> = emptyList()
     internal var catalogUpdateJob: Job? = null
     internal var hasRenderedFirstCatalog = false
@@ -152,6 +158,7 @@ class HomeViewModel @Inject constructor(
     internal val cwNextUpResolutionCache = Collections.synchronizedMap(mutableMapOf<String, NextUpResolution?>())
     internal val cwNextUpNegativeCacheTimestamps = Collections.synchronizedMap(mutableMapOf<String, Long>())
     internal val discoveredOlderNextUpItems = Collections.synchronizedList(mutableListOf<ContinueWatchingItem.NextUp>())
+    internal val cwLastProcessedNextUpContentIds = Collections.synchronizedSet(mutableSetOf<String>())
     internal val fullyWatchedSeriesIds get() = watchedSeriesStateHolder
     internal var tmdbEnrichFocusJob: Job? = null
     internal var pendingTmdbEnrichItemId: String? = null
@@ -183,13 +190,25 @@ class HomeViewModel @Inject constructor(
         observeExternalMetaPrefetchPreference()
         loadHomeCatalogOrderPreference()
         loadDisabledHomeCatalogPreference()
+        loadCustomCatalogTitles()
         observeLibraryState()
         observeTmdbSettings()
         observeMdbListSettings()
         observeBlurUnwatchedEpisodes()
         observeStartupAuthNotice()
         loadContinueWatching()
+        observeCollections()
         observeInstalledAddons()
+        // Clear CW state when profile changes so items don't leak between profiles.
+        viewModelScope.launch {
+            var previousProfileId = profileManager.activeProfileId.value
+            profileManager.activeProfileId.collect { newId ->
+                if (newId != previousProfileId) {
+                    previousProfileId = newId
+                    _uiState.update { it.copy(continueWatchingItems = emptyList()) }
+                }
+            }
+        }
         viewModelScope.launch {
             delay(STARTUP_GRACE_PERIOD_MS)
             startupGracePeriodActive = false
@@ -245,6 +264,8 @@ class HomeViewModel @Inject constructor(
     private fun loadHomeCatalogOrderPreference() = loadHomeCatalogOrderPreferencePipeline()
 
     private fun loadDisabledHomeCatalogPreference() = loadDisabledHomeCatalogPreferencePipeline()
+
+    private fun loadCustomCatalogTitles() = loadCustomCatalogTitlesPipeline()
 
     private fun observeTmdbSettings() = observeTmdbSettingsPipeline()
 
@@ -306,33 +327,55 @@ class HomeViewModel @Inject constructor(
             val cachedNextUp = runCatching { cwEnrichmentCache.getNextUpSnapshot() }.getOrDefault(emptyList())
             if (cachedInProgress.isEmpty() && cachedNextUp.isEmpty()) return@launch
             val dismissedNextUp = traktSettingsDataStore.dismissedNextUpKeys.first()
+            // Cross-reference cached in-progress items with current WatchProgressPreferences
+            // to avoid showing stale progress (e.g. item completed since cache was saved).
+            val currentProgress = runCatching {
+                watchProgressRepository.allProgress.first()
+            }.getOrDefault(emptyList())
+            val currentProgressByContentId = currentProgress.associateBy { it.contentId }
             val inProgressItems = cachedInProgress
                 .filter { !watchProgressRepository.isDroppedShow(it.contentId) }
-                .map { cached ->
-                ContinueWatchingItem.InProgress(
-                    progress = com.nuvio.tv.domain.model.WatchProgress(
-                        contentId = cached.contentId,
-                        contentType = cached.contentType,
-                        name = cached.name,
-                        poster = cached.poster,
-                        backdrop = cached.backdrop,
-                        logo = cached.logo,
-                        videoId = cached.videoId,
-                        season = cached.season,
-                        episode = cached.episode,
-                        episodeTitle = cached.episodeTitle,
-                        position = cached.position,
-                        duration = cached.duration,
-                        lastWatched = cached.lastWatched,
-                        progressPercent = cached.progressPercent
-                    ),
-                    episodeThumbnail = cached.episodeThumbnail,
-                    episodeDescription = cached.episodeDescription,
-                    episodeImdbRating = cached.episodeImdbRating,
-                    genres = cached.genres,
-                    releaseInfo = cached.releaseInfo
-                )
-            }
+                .mapNotNull { cached ->
+                    // Use live progress data if available; skip if item is now completed.
+                    val liveProgress = currentProgressByContentId[cached.contentId]
+                    val progress = if (liveProgress != null) {
+                        if (liveProgress.isCompleted()) return@mapNotNull null
+                        if (!liveProgress.isInProgress() && liveProgress.position <= 0L) return@mapNotNull null
+                        liveProgress.copy(
+                            poster = liveProgress.poster ?: cached.poster,
+                            backdrop = liveProgress.backdrop ?: cached.backdrop,
+                            logo = liveProgress.logo ?: cached.logo,
+                            name = liveProgress.name.takeIf { it.isNotBlank() } ?: cached.name,
+                            episodeTitle = liveProgress.episodeTitle ?: cached.episodeTitle
+                        )
+                    } else {
+                        // No live data — trust cached item as-is.
+                        com.nuvio.tv.domain.model.WatchProgress(
+                            contentId = cached.contentId,
+                            contentType = cached.contentType,
+                            name = cached.name,
+                            poster = cached.poster,
+                            backdrop = cached.backdrop,
+                            logo = cached.logo,
+                            videoId = cached.videoId,
+                            season = cached.season,
+                            episode = cached.episode,
+                            episodeTitle = cached.episodeTitle,
+                            position = cached.position,
+                            duration = cached.duration,
+                            lastWatched = cached.lastWatched,
+                            progressPercent = cached.progressPercent
+                        )
+                    }
+                    ContinueWatchingItem.InProgress(
+                        progress = progress,
+                        episodeThumbnail = cached.episodeThumbnail,
+                        episodeDescription = cached.episodeDescription,
+                        episodeImdbRating = cached.episodeImdbRating,
+                        genres = cached.genres,
+                        releaseInfo = cached.releaseInfo
+                    )
+                }
             val nextUpItems = cachedNextUp
                 .filter { !watchProgressRepository.isDroppedShow(it.contentId) }
                 .filter { nextUpDismissKey(it.contentId, it.seedSeason, it.seedEpisode) !in dismissedNextUp }
@@ -393,6 +436,8 @@ class HomeViewModel @Inject constructor(
         episode = episode,
         isNextUp = isNextUp
     )
+
+    private fun observeCollections() = observeCollectionsPipeline()
 
     private fun observeInstalledAddons() = observeInstalledAddonsPipeline()
 
@@ -455,6 +500,11 @@ class HomeViewModel @Inject constructor(
     /**
      * Saves the current focus and scroll state for restoration when returning to this screen.
      */
+    // When true, the next saveFocusState call is suppressed and the flag
+    // is reset.  Used during layout switches to prevent the outgoing
+    // layout's onDispose from poisoning the incoming layout's focus state.
+    internal var suppressFocusSave: Boolean = false
+
     fun saveFocusState(
         verticalScrollIndex: Int,
         verticalScrollOffset: Int,
@@ -462,6 +512,10 @@ class HomeViewModel @Inject constructor(
         focusedItemIndex: Int,
         catalogRowScrollStates: Map<String, Int>
     ) {
+        if (suppressFocusSave) {
+            suppressFocusSave = false
+            return
+        }
         val nextState = HomeScreenFocusState(
             verticalScrollIndex = verticalScrollIndex,
             verticalScrollOffset = verticalScrollOffset,
@@ -488,13 +542,16 @@ class HomeViewModel @Inject constructor(
         verticalScrollIndex: Int,
         verticalScrollOffset: Int,
         focusedRowIndex: Int = 0,
-        focusedItemIndex: Int = 0
+        focusedItemIndex: Int = 0,
+        focusedItemKey: String? = null
     ) {
         _gridFocusState.value = HomeScreenFocusState(
             verticalScrollIndex = verticalScrollIndex,
             verticalScrollOffset = verticalScrollOffset,
             focusedRowIndex = focusedRowIndex,
-            focusedItemIndex = focusedItemIndex
+            focusedItemIndex = focusedItemIndex,
+            focusedItemKey = focusedItemKey,
+            hasSavedFocus = true
         )
     }
 

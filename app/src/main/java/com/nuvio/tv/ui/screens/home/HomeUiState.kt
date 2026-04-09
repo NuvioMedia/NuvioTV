@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.home
 import androidx.compose.runtime.Immutable
 import com.nuvio.tv.data.local.StartupAuthNotice
 import com.nuvio.tv.domain.model.CatalogRow
+import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.LibraryListTab
@@ -52,7 +53,8 @@ data class HomeUiState(
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true,
     val blurUnwatchedEpisodes: Boolean = false,
-    val startupAuthNotice: StartupAuthNotice? = null
+    val startupAuthNotice: StartupAuthNotice? = null,
+    val homeRows: List<HomeRow> = emptyList()
 )
 
 @Immutable
@@ -64,7 +66,8 @@ sealed class ContinueWatchingItem {
         val episodeThumbnail: String? = null,
         val episodeImdbRating: Float? = null,
         val genres: List<String> = emptyList(),
-        val releaseInfo: String? = null
+        val releaseInfo: String? = null,
+        val contentLanguage: String? = null
     ) : ContinueWatchingItem()
 
     @Immutable
@@ -97,8 +100,18 @@ data class NextUpInfo(
     val isReleaseAlert: Boolean = false,
     val isNewSeasonRelease: Boolean = false,
     val seedSeason: Int? = null,
-    val seedEpisode: Int? = null
+    val seedEpisode: Int? = null,
+    val contentLanguage: String? = null
 )
+
+@Immutable
+sealed class HomeRow {
+    @Immutable
+    data class Catalog(val row: CatalogRow) : HomeRow()
+
+    @Immutable
+    data class CollectionRow(val collection: Collection) : HomeRow()
+}
 
 @Immutable
 sealed class GridItem {
@@ -124,6 +137,18 @@ sealed class GridItem {
         val catalogId: String,
         val addonId: String,
         val type: String
+    ) : GridItem()
+    @Immutable
+    data class CollectionHeader(
+        val collectionId: String,
+        val title: String
+    ) : GridItem()
+    @Immutable
+    data class CollectionFolder(
+        val collectionId: String,
+        val collectionTitle: String,
+        val focusGlowEnabled: Boolean,
+        val folder: com.nuvio.tv.domain.model.CollectionFolder
     ) : GridItem()
 }
 

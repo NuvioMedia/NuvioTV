@@ -211,8 +211,9 @@ fun MetaDetailsScreen(
         episodeName: String?,
         genres: String?,
         year: String?,
-        runtime: Int?
-    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _ -> },
+        runtime: Int?,
+        contentLanguage: String?
+    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> },
     onPlayManuallyClick: (
         videoId: String,
         contentType: String,
@@ -226,8 +227,9 @@ fun MetaDetailsScreen(
         episodeName: String?,
         genres: String?,
         year: String?,
-        runtime: Int?
-    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _ -> }
+        runtime: Int?,
+        contentLanguage: String?
+    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val effectiveAutoplayEnabled by viewModel.effectiveAutoplayEnabled.collectAsStateWithLifecycle(
@@ -450,7 +452,8 @@ fun MetaDetailsScreen(
                             video.title,
                             null,
                             null,
-                            video.runtime
+                            video.runtime,
+                            meta.language
                         )
                     },
                     onEpisodeManualPlayClick = { video ->
@@ -467,7 +470,8 @@ fun MetaDetailsScreen(
                             video.title,
                             null,
                             null,
-                            video.runtime
+                            video.runtime,
+                            meta.language
                         )
                     },
                     onPlayClick = { videoId ->
@@ -484,7 +488,8 @@ fun MetaDetailsScreen(
                             null,
                             genresString,
                             yearString,
-                            null
+                            null,
+                            meta.language
                         )
                     },
                     onPlayManuallyClick = { videoId ->
@@ -501,7 +506,8 @@ fun MetaDetailsScreen(
                             null,
                             genresString,
                             yearString,
-                            null
+                            null,
+                            meta.language
                         )
                     },
                     showManualPlayOption = effectiveAutoplayEnabled,
@@ -1400,6 +1406,7 @@ private fun MetaDetailsContent(
                             onSeasonSelected = onSeasonSelected,
                             onSeasonLongPress = { seasonOptionsDialogSeason = it },
                             selectedTabFocusRequester = selectedSeasonFocusRequester,
+                            upFocusRequester = heroPlayFocusRequester,
                             downFocusRequester = seasonDownFocusRequester
                         )
                     }
