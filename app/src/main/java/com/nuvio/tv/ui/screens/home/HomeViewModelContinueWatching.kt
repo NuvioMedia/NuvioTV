@@ -1098,7 +1098,7 @@ internal fun mergeContinueWatchingItems(
     filteredNextUpItems.forEach { combined.add(it.info.sortTimestamp to it) }
 
     val seen = mutableSetOf<String>()
-    return combined
+    val result = combined
         .sortedByDescending { it.first }
         .map { it.second }
         .filter { item ->
@@ -1108,6 +1108,8 @@ internal fun mergeContinueWatchingItems(
             }
             contentId.isBlank() || seen.add(contentId)
         }
+
+    return result
 }
 
 private suspend fun HomeViewModel.buildNextUpItem(
@@ -1274,7 +1276,7 @@ private suspend fun HomeViewModel.enrichNextUpItem(
     } else {
         null
     }
-    val released = tmdbData?.airDate
+    val released = (if (currentTmdbSettings.useReleaseDates) tmdbData?.airDate else null)
         ?: video?.released?.trim()?.takeIf { it.isNotEmpty() }
         ?: item.info.released
     val releaseDate = parseEpisodeReleaseDate(released)

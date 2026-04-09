@@ -30,6 +30,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
@@ -298,8 +301,7 @@ class TraktProgressService @Inject constructor(
 
         val optimistic = progress.copy(
             progressPercent = derivedPercent,
-            source = WatchProgress.SOURCE_TRAKT_PLAYBACK,
-            lastWatched = now
+            source = WatchProgress.SOURCE_TRAKT_PLAYBACK
         )
 
         optimisticProgress.update { current ->
@@ -369,8 +371,7 @@ class TraktProgressService @Inject constructor(
 
     fun observeWatchedShowSeeds(): Flow<List<WatchProgress>> {
         return combine(
-            watchedShowSeedsState
-                .onStart { emit(getWatchedShowSeedsSnapshot(forceRefresh = false)) },
+            watchedShowSeedsState,
             hiddenProgressShowIds
         ) { seeds, _ ->
             seeds.filter { !isShowHiddenFromProgress(it.contentId) }
@@ -796,17 +797,21 @@ class TraktProgressService @Inject constructor(
             getWatchedMoviesSnapshot(forceRefresh = true)
         }
 
-        if (force && hasLoadedWatchedShowSeeds) {
-            getWatchedShowSeedsSnapshot(forceRefresh = true)
-        }
+        val needSeedsRefresh = force ||
+            (watchedShowSeedsStale && hasLoadedWatchedShowSeeds)
+        coroutineScope {
+            val progressDeferred = async { fetchAllProgressSnapshot(force = force) }
+            val seedsDeferred = if (needSeedsRefresh) {
+                async { getWatchedShowSeedsSnapshot(forceRefresh = true) }
+            } else null
 
-        val snapshot = fetchAllProgressSnapshot(force = force)
-        remoteProgress.value = snapshot
-        hasLoadedRemoteProgress.value = true
-        reconcileOptimistic(snapshot)
-        hydrateMetadata(snapshot)
-        if (!force && watchedShowSeedsStale && hasLoadedWatchedShowSeeds) {
-            getWatchedShowSeedsSnapshot(forceRefresh = true)
+            val snapshot = progressDeferred.await()
+            seedsDeferred?.await()
+
+            remoteProgress.value = snapshot
+            hasLoadedRemoteProgress.value = true
+            reconcileOptimistic(snapshot)
+            hydrateMetadata(snapshot)
         }
     }
 
@@ -1357,13 +1362,22 @@ class TraktProgressService @Inject constructor(
     }
 
     private suspend fun fetchAllProgressSnapshot(force: Boolean = false): List<WatchProgress> {
-        val recentCompletedEpisodes = fetchRecentEpisodeHistorySnapshot()
         val playbackStartAt = recentWatchWindowMs()?.let { windowMs ->
             toTraktUtcDateTime(System.currentTimeMillis() - windowMs)
         }
-        val inProgressMovies = getPlayback("movies", force = force, startAt = playbackStartAt).mapNotNull { mapPlaybackMovie(it) }
-        val inProgressEpisodes = getPlayback("episodes", force = force, startAt = playbackStartAt)
-            .mapNotNull { mapPlaybackEpisode(it, applyAddonRemap = true) }
+
+        val (recentCompletedEpisodes, inProgressMovies, inProgressEpisodes) = coroutineScope {
+            val historyDeferred = async { fetchRecentEpisodeHistorySnapshot() }
+            val moviesDeferred = async {
+                getPlayback("movies", force = force, startAt = playbackStartAt)
+                    .mapNotNull { mapPlaybackMovie(it) }
+            }
+            val episodesDeferred = async {
+                getPlayback("episodes", force = force, startAt = playbackStartAt)
+                    .mapNotNull { mapPlaybackEpisode(it, applyAddonRemap = true) }
+            }
+            Triple(historyDeferred.await(), moviesDeferred.await(), episodesDeferred.await())
+        }
 
         val mergedByKey = linkedMapOf<String, WatchProgress>()
 
@@ -1390,7 +1404,8 @@ class TraktProgressService @Inject constructor(
                 "${progress.contentId}_s${progress.season}e${progress.episode}" in completedEpisodeKeys
         }
 
-        return mergedByKey.values.sortedByDescending { it.lastWatched }
+        val finalSnapshot = mergedByKey.values.sortedByDescending { it.lastWatched }
+        return finalSnapshot
     }
 
     private suspend fun fetchRecentEpisodeHistorySnapshot(): List<WatchProgress> {

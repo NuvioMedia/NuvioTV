@@ -28,6 +28,7 @@ import javax.inject.Singleton
 
 private const val TAG = "HomeCatalogSettingsSyncService"
 private const val PUSH_DEBOUNCE_MS = 1500L
+private const val SETTINGS_SYNC_PLATFORM = "tv"
 
 @Serializable
 data class SyncCatalogItem(
@@ -86,6 +87,7 @@ class HomeCatalogSettingsSyncService @Inject constructor(
             val params = buildJsonObject {
                 put("p_profile_id", profileId)
                 put("p_settings_json", jsonElement)
+                put("p_platform", SETTINGS_SYNC_PLATFORM)
             }
 
             withJwtRefreshRetry {
@@ -106,6 +108,7 @@ class HomeCatalogSettingsSyncService @Inject constructor(
 
             val params = buildJsonObject {
                 put("p_profile_id", profileId)
+                put("p_platform", SETTINGS_SYNC_PLATFORM)
             }
 
             val response = withJwtRefreshRetry {

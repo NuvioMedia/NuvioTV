@@ -80,6 +80,7 @@ data class PlayerUiState(
     val episodes: List<Video> = emptyList(),
     val currentSeason: Int? = null,
     val currentEpisode: Int? = null,
+    val currentVideoId: String? = null,
     val currentEpisodeTitle: String? = null,
     val blurUnwatchedEpisodes: Boolean = false,
     val episodeWatchProgressMap: Map<Pair<Int, Int>, WatchProgress> = emptyMap(),

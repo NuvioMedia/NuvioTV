@@ -623,12 +623,12 @@ private fun CollectionsEntryCard(onClick: () -> Unit) {
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "Collections",
+                        text = stringResource(R.string.collections_card_title),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = NuvioColors.TextPrimary
                     )
                     Text(
-                        text = "Group catalogs into folders on your home screen",
+                        text = stringResource(R.string.collections_card_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )

@@ -82,7 +82,13 @@ internal fun HomeViewModel.observeTmdbSettingsPipeline() {
         tmdbSettingsDataStore.settings
             .distinctUntilChanged()
             .collectLatest { settings ->
+                val languageChanged = currentTmdbSettings.language != settings.language
                 currentTmdbSettings = settings
+                if (languageChanged) {
+                    // Allow re-enrichment with the new language on next focus.
+                    prefetchedTmdbIds.clear()
+                    prefetchedExternalMetaIds.clear()
+                }
                 scheduleUpdateCatalogRows()
             }
     }
@@ -151,7 +157,16 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
 
         rebuildCatalogOrder(addons)
 
-        if (catalogOrder.isEmpty()) {
+        // Hero has its own catalog sources (heroCatalogKeys) configured
+        // independently in Layout Settings.  When the user has explicitly
+        // selected hero catalogs, load those even if they are disabled from
+        // home rows.  When no hero catalogs are selected, the hero simply
+        // piggybacks on whatever home catalogs are loaded — if none are
+        // loaded, the hero has no data and won't render.
+        val heroCatalogSet = currentHeroCatalogKeys.toSet()
+        val hasHeroSelections = heroCatalogSet.isNotEmpty()
+
+        if (catalogOrder.isEmpty() && !hasHeroSelections) {
             catalogsLoadInProgress = false
             _uiState.update { it.copy(isLoading = false, error = appContext.getString(R.string.home_error_no_catalog_addons)) }
             return
@@ -170,13 +185,86 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
                 }
                 .map { catalog -> addon to catalog }
         }
-        pendingCatalogLoads = catalogsToLoad.size
-        catalogsToLoad.forEach { (addon, catalog) ->
+
+        // Load hero-selected catalogs even if disabled from home rows —
+        // the hero has its own catalog source independent of home rows.
+        val alreadyLoadingKeys = catalogsToLoad.map { (addon, catalog) ->
+            catalogKey(addonId = addon.id, type = catalog.apiType, catalogId = catalog.id)
+        }.toSet()
+        val heroOnlyCatalogs = if (hasHeroSelections) {
+            addons.flatMap { addon ->
+                addon.catalogs
+                    .filter { catalog ->
+                        val key = catalogKey(addonId = addon.id, type = catalog.apiType, catalogId = catalog.id)
+                        key in heroCatalogSet && key !in alreadyLoadingKeys && !catalog.isSearchOnlyCatalog()
+                    }
+                    .map { catalog -> addon to catalog }
+            }
+        } else {
+            emptyList()
+        }
+
+        val allCatalogsToLoad = catalogsToLoad + heroOnlyCatalogs
+        pendingCatalogLoads = allCatalogsToLoad.size
+        if (allCatalogsToLoad.isEmpty()) {
+            // No home catalogs and no hero catalogs to load —
+            // but collections may still exist to render.
+            catalogsLoadInProgress = false
+            if (catalogOrder.isNotEmpty()) {
+                scheduleUpdateCatalogRows()
+            } else {
+                _uiState.update { it.copy(isLoading = false, error = appContext.getString(R.string.home_error_no_catalog_addons)) }
+            }
+            return
+        }
+        allCatalogsToLoad.forEach { (addon, catalog) ->
             loadCatalogPipeline(addon, catalog, generation)
         }
     } catch (e: Exception) {
         catalogsLoadInProgress = false
         _uiState.update { it.copy(isLoading = false, error = e.message) }
+    }
+}
+
+/**
+ * Additively loads hero-selected catalogs that are not already in [catalogsMap].
+ * Unlike [loadAllCatalogsPipeline] this does NOT clear existing state — it only
+ * fills in missing hero catalog data so the hero section can render.
+ *
+ * Called from the presentation pipeline when [currentHeroCatalogKeys] arrives
+ * after the initial catalog load (due to the layout preference debounce).
+ */
+internal fun HomeViewModel.loadHeroCatalogsPipeline() {
+    val heroCatalogKeys = currentHeroCatalogKeys
+    if (heroCatalogKeys.isEmpty() || addonsCache.isEmpty()) return
+
+    val heroCatalogSet = heroCatalogKeys.toSet()
+    val alreadyLoadedKeys = catalogsMap.keys.toSet()
+    val missingHeroKeys = heroCatalogSet - alreadyLoadedKeys
+    if (missingHeroKeys.isEmpty()) {
+        // All hero catalogs already loaded — just refresh presentation
+        scheduleUpdateCatalogRows()
+        return
+    }
+
+    val heroToLoad = addonsCache.flatMap { addon ->
+        addon.catalogs
+            .filter { catalog ->
+                val key = catalogKey(addonId = addon.id, type = catalog.apiType, catalogId = catalog.id)
+                key in missingHeroKeys && !catalog.isSearchOnlyCatalog()
+            }
+            .map { catalog -> addon to catalog }
+    }
+
+    if (heroToLoad.isEmpty()) {
+        scheduleUpdateCatalogRows()
+        return
+    }
+
+    val generation = catalogLoadGeneration
+    pendingCatalogLoads += heroToLoad.size
+    heroToLoad.forEach { (addon, catalog) ->
+        loadCatalogPipeline(addon, catalog, generation)
     }
 }
 
@@ -326,11 +414,25 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             rawRows
         }
         val selectedHeroCatalogSet = heroCatalogKeys.toSet()
+        val orderedKeySet = orderedKeys.toSet()
         val selectedHeroRows = if (selectedHeroCatalogSet.isNotEmpty()) {
-            orderedRows.filter { row ->
+            // Include hero catalogs from ordered rows
+            val fromOrdered = orderedRows.filter { row ->
                 val key = "${row.addonId}_${row.apiType}_${row.catalogId}"
                 key in selectedHeroCatalogSet
             }
+            // Also include hero catalogs loaded but not in catalog order
+            // (e.g., catalogs disabled from home rows but selected for hero)
+            val heroOnlyRows = selectedHeroCatalogSet
+                .filter { it !in orderedKeySet }
+                .mapNotNull { catalogSnapshot[it] }
+            val heroOnlyFiltered = if (hideUnreleased) {
+                val today = LocalDate.now()
+                heroOnlyRows.map { it.filterReleasedItems(today) }
+            } else {
+                heroOnlyRows
+            }
+            fromOrdered + heroOnlyFiltered
         } else {
             emptyList()
         }
@@ -370,8 +472,23 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
         val fallbackHeroItemsFromSelectedCatalogs = slotShuffled(
             selectedHeroRows, { true }, currentHeroOrder
         )
+        // When orderedRows is empty (all catalogs disabled), include any
+        // hero-only loaded catalogs as fallback hero sources.
+        val allHeroFallbackRows = if (orderedRows.isNotEmpty()) {
+            orderedRows
+        } else {
+            val nonOrderedRows = catalogSnapshot.keys
+                .filter { it !in orderedKeySet }
+                .mapNotNull { catalogSnapshot[it] }
+            if (hideUnreleased) {
+                val today = LocalDate.now()
+                nonOrderedRows.map { it.filterReleasedItems(today) }
+            } else {
+                nonOrderedRows
+            }
+        }
         val fallbackHeroItemsWithArtwork = slotShuffled(
-            orderedRows, { it.hasHeroArtwork() }, currentHeroOrder
+            allHeroFallbackRows, { it.hasHeroArtwork() }, currentHeroOrder
         )
 
         val computedHeroItems = when {
@@ -503,13 +620,18 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
         currentGridItems
     }
 
+    // Clear any stale error when content is now available (e.g., hero
+    // catalogs loaded after the initial startup race set an error).
+    val hasContent = computedHomeRows.isNotEmpty() || baseHeroItems.isNotEmpty() || displayRows.isNotEmpty()
+
     _uiState.update { state ->
         state.copy(
             catalogRows = if (state.catalogRows == displayRows) state.catalogRows else displayRows,
             heroItems = if (state.heroItems == baseHeroItems) state.heroItems else baseHeroItems,
             gridItems = if (state.gridItems == nextGridItems) state.gridItems else nextGridItems,
             homeRows = if (state.homeRows == computedHomeRows) state.homeRows else computedHomeRows,
-            isLoading = false
+            isLoading = false,
+            error = if (hasContent) null else state.error
         )
     }
 

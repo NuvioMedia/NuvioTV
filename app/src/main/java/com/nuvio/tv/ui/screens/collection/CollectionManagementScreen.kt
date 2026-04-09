@@ -63,6 +63,8 @@ import com.nuvio.tv.data.local.ValidationResult
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.R
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -102,7 +104,7 @@ fun CollectionManagementScreen(
     onBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val clipboardManager = LocalClipboardManager.current
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -127,10 +129,7 @@ fun CollectionManagementScreen(
             importError = uiState.importError,
             onTextChange = { viewModel.updateImportText(it) },
             onImport = { viewModel.importCollections() },
-            onPaste = {
-                val clip = clipboardManager.getText()?.text ?: ""
-                viewModel.updateImportText(clip)
-            },
+            onPaste = {},
             onBack = { viewModel.hideImportDialog() },
             importMode = uiState.importMode,
             onModeChange = { viewModel.setImportMode(it) },
@@ -162,7 +161,7 @@ fun CollectionManagementScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Collections",
+                text = stringResource(R.string.collections_header),
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioColors.TextPrimary
             )
@@ -170,13 +169,6 @@ fun CollectionManagementScreen(
             LaunchedEffect(Unit) {
                 repeat(3) { withFrameNanos { } }
                 try { newButtonFocusRequester.requestFocus() } catch (_: Exception) {}
-            }
-            var showCopied by remember { mutableStateOf(false) }
-            LaunchedEffect(showCopied) {
-                if (showCopied) {
-                    kotlinx.coroutines.delay(2000)
-                    showCopied = false
-                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (uiState.collections.isNotEmpty()) {
@@ -201,30 +193,29 @@ fun CollectionManagementScreen(
                                     val uri = resolver.insert(existingUri, values)
                                     uri?.let { resolver.openOutputStream(it)?.use { os -> os.write(json.toByteArray()) } }
                                 }
-                                exportMessage = "Saved to Downloads"
+                                exportMessage = "saved"
                             } catch (_: Exception) {
-                                exportMessage = "Export failed"
+                                exportMessage = "failed"
                             }
                         }
                     }) {
-                        Text(exportMessage ?: "Export File")
-                    }
-                    NuvioButton(onClick = {
-                        val json = viewModel.exportCollections()
-                        clipboardManager.setText(AnnotatedString(json))
-                        showCopied = true
-                    }) {
-                        Text(if (showCopied) "Copied!" else "Copy JSON")
+                        Text(exportMessage?.let {
+                            when (it) {
+                                "saved" -> stringResource(R.string.collections_saved_downloads)
+                                "failed" -> stringResource(R.string.collections_export_failed)
+                                else -> it
+                            }
+                        } ?: stringResource(R.string.collections_export_file))
                     }
                 }
                 NuvioButton(onClick = { viewModel.showImportDialog() }) {
-                    Text("Import")
+                    Text(stringResource(R.string.collections_import))
                 }
                 NuvioButton(
                     onClick = { onNavigateToEditor(null) },
                     modifier = Modifier.focusRequester(newButtonFocusRequester)
                 ) {
-                    Text("New Collection")
+                    Text(stringResource(R.string.collections_new))
                 }
             }
         }
@@ -237,7 +228,7 @@ fun CollectionManagementScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No collections yet. Create one to organize your catalogs.",
+                    text = stringResource(R.string.collections_empty),
                     color = NuvioColors.TextSecondary,
                     style = MaterialTheme.typography.bodyLarge
                 )
@@ -299,12 +290,12 @@ private fun ImportContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Import Collections",
+                text = stringResource(R.string.collections_import_header),
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioColors.TextPrimary
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                NuvioButton(onClick = onBack) { Text("Cancel") }
+                NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_cancel)) }
             }
         }
 
@@ -317,7 +308,7 @@ private fun ImportContent(
         ) {
             item {
                 Text(
-                    text = "Import collections from JSON. Catalogs from addons you don't have installed will show a warning.",
+                    text = stringResource(R.string.collections_import_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
@@ -326,11 +317,11 @@ private fun ImportContent(
 
                 // Mode tabs
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ImportMode.entries.forEach { mode ->
+                    ImportMode.entries.filter { it != ImportMode.PASTE }.forEach { mode ->
                         val label = when (mode) {
-                            ImportMode.PASTE -> "Paste JSON"
-                            ImportMode.FILE -> "From File"
-                            ImportMode.URL -> "From URL"
+                            ImportMode.PASTE -> stringResource(R.string.collections_mode_paste)
+                            ImportMode.FILE -> stringResource(R.string.collections_mode_file)
+                            ImportMode.URL -> stringResource(R.string.collections_mode_url)
                         }
                         if (mode == importMode) {
                             Button(
@@ -366,9 +357,9 @@ private fun ImportContent(
                 when (importMode) {
                     ImportMode.PASTE -> {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            NuvioButton(onClick = onPaste) { Text("Paste from Clipboard") }
+                            NuvioButton(onClick = onPaste) { Text(stringResource(R.string.collections_paste_clipboard)) }
                             if (importText.isNotBlank()) {
-                                NuvioButton(onClick = onValidate) { Text("Validate") }
+                                NuvioButton(onClick = onValidate) { Text(stringResource(R.string.collections_validate)) }
                             }
                         }
 
@@ -398,7 +389,7 @@ private fun ImportContent(
                                     decorationBox = { innerTextField ->
                                         if (importText.isEmpty()) {
                                             Text(
-                                                text = "Paste collections JSON here...",
+                                                text = stringResource(R.string.collections_paste_hint),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = NuvioColors.TextTertiary
                                             )
@@ -412,17 +403,17 @@ private fun ImportContent(
 
                     ImportMode.FILE -> {
                         Text(
-                            text = "Reads nuvio-collections.json from the Downloads folder.",
+                            text = stringResource(R.string.collections_file_description),
                             style = MaterialTheme.typography.bodySmall,
                             color = NuvioColors.TextTertiary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        NuvioButton(onClick = onPickFile) { Text("Load File") }
+                        NuvioButton(onClick = onPickFile) { Text(stringResource(R.string.collections_load_file)) }
 
                         if (importText.isNotBlank()) {
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "File loaded (${importText.length} characters)",
+                                text = stringResource(R.string.collections_file_loaded, importText.length),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = NuvioColors.TextSecondary
                             )
@@ -469,7 +460,7 @@ private fun ImportContent(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         NuvioButton(onClick = onFetchUrl) {
-                            Text(if (isLoadingImport) "Fetching..." else "Fetch URL")
+                            Text(if (isLoadingImport) stringResource(R.string.collections_fetching) else stringResource(R.string.collections_fetch_url))
                         }
 
                         if (isLoadingImport) {
@@ -495,20 +486,19 @@ private fun ImportContent(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "Valid JSON",
+                                text = stringResource(R.string.collections_valid_json),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = NuvioColors.Primary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "${validationResult.collectionCount} collection${if (validationResult.collectionCount != 1) "s" else ""}, " +
-                                        "${validationResult.folderCount} folder${if (validationResult.folderCount != 1) "s" else ""}",
+                                text = stringResource(R.string.collections_valid_summary, validationResult.collectionCount, validationResult.folderCount),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = NuvioColors.TextSecondary
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             NuvioButton(onClick = onConfirmImport) {
-                                Text("Confirm Import")
+                                Text(stringResource(R.string.collections_confirm_import))
                             }
                         }
                     }
@@ -559,7 +549,7 @@ private fun CollectionListItem(
                     color = NuvioColors.TextPrimary
                 )
                 Text(
-                    text = "${collection.folders.size} folder${if (collection.folders.size != 1) "s" else ""}",
+                    text = stringResource(R.string.collections_folder_count, collection.folders.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextTertiary
                 )
@@ -583,7 +573,7 @@ private fun CollectionListItem(
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                 ) {
-                    Icon(Icons.Default.KeyboardArrowUp, "Move Up")
+                    Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.cd_move_up))
                 }
 
                 Button(
@@ -603,7 +593,7 @@ private fun CollectionListItem(
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                 ) {
-                    Icon(Icons.Default.KeyboardArrowDown, "Move Down")
+                    Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.cd_move_down))
                 }
 
                 Button(
@@ -622,7 +612,7 @@ private fun CollectionListItem(
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                 ) {
-                    Icon(Icons.Default.Edit, "Edit")
+                    Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
                 }
 
                 Button(
@@ -641,7 +631,7 @@ private fun CollectionListItem(
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                 ) {
-                    Icon(Icons.Default.Delete, "Delete")
+                    Icon(Icons.Default.Delete, stringResource(R.string.cd_delete))
                 }
             }
         }

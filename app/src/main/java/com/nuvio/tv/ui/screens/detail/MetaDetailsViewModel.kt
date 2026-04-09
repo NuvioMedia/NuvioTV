@@ -1144,7 +1144,7 @@ class MetaDetailsViewModel @Inject constructor(
                     video.copy(
                         title = ep?.title ?: video.title,
                         overview = ep?.overview ?: video.overview,
-                        released = ep?.airDate ?: video.released,
+                        released = if (settings.useReleaseDates) ep?.airDate ?: video.released else video.released,
                         thumbnail = ep?.thumbnail ?: video.thumbnail,
                         runtime = ep?.runtimeMinutes
                     )

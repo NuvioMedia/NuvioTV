@@ -192,9 +192,9 @@ object AddonWebPage {
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
   .addon-order {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.2rem;
     flex-shrink: 0;
   }
   .btn-order {
@@ -312,6 +312,19 @@ object AddonWebPage {
     text-transform: uppercase;
     color: rgba(207, 102, 121, 0.95);
     border: 1px solid rgba(207, 102, 121, 0.35);
+    padding: 0.12rem 0.45rem;
+    border-radius: 100px;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+  }
+  .badge-collection {
+    display: inline-block;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(130, 170, 255, 0.95);
+    border: 1px solid rgba(130, 170, 255, 0.35);
     padding: 0.12rem 0.45rem;
     border-radius: 100px;
     margin-left: 0.5rem;
@@ -858,9 +871,9 @@ object AddonWebPage {
   </div>
 
   <div class="tabs">
-    <button class="tab active" type="button" onclick="switchTab('addons')">Addons</button>
-    <button class="tab" type="button" onclick="switchTab('catalogs')">Catalogs</button>
-    <button class="tab" type="button" onclick="switchTab('collections')">Collections</button>
+    <button class="tab active" type="button" onclick="switchTab('addons')">${context.getString(R.string.web_tab_addons)}</button>
+    <button class="tab" type="button" onclick="switchTab('catalogs')">${context.getString(R.string.web_tab_home_layout)}</button>
+    <button class="tab" type="button" onclick="switchTab('collections')">${context.getString(R.string.web_tab_collections)}</button>
   </div>
 
   <div class="tab-content active" id="tab-addons">
@@ -881,6 +894,10 @@ object AddonWebPage {
   <div class="tab-content" id="tab-catalogs">
     <div class="section-block">
       <div class="section-label">${context.getString(R.string.web_home_catalogs)}</div>
+      <div class="add-section" style="display:flex;gap:0.5rem">
+        <button class="btn" onclick="enableAllCatalogs()" style="flex:1">${context.getString(R.string.web_btn_enable_all)}</button>
+        <button class="btn" onclick="disableAllCatalogs()" style="flex:1">${context.getString(R.string.web_btn_disable_all)}</button>
+      </div>
       <ul class="addon-list" id="catalogList"></ul>
       <div class="empty-state" id="catalogEmptyState">${context.getString(R.string.web_no_catalogs)}</div>
     </div>
@@ -888,24 +905,28 @@ object AddonWebPage {
 
   <div class="tab-content" id="tab-collections">
     <div class="section-block">
-      <div class="section-label">Collections</div>
+      <div class="section-label">${context.getString(R.string.web_tab_collections)}</div>
       <div class="add-section" style="display:flex;gap:0.5rem">
-        <button class="btn" onclick="addCollection()" style="flex:1">+ New Collection</button>
-        <button class="btn" onclick="exportCollections()" style="flex:1">Export</button>
-        <button class="btn" onclick="showImportModal()" style="flex:1">Import</button>
+        <button class="btn" onclick="enableAllCollections()" style="flex:1">${context.getString(R.string.web_btn_show_all)}</button>
+        <button class="btn" onclick="disableAllCollections()" style="flex:1">${context.getString(R.string.web_btn_hide_all)}</button>
+      </div>
+      <div class="add-section" style="display:flex;gap:0.5rem">
+        <button class="btn" onclick="addCollection()" style="flex:1">${context.getString(R.string.web_btn_new_collection)}</button>
+        <button class="btn" onclick="exportCollections()" style="flex:1">${context.getString(R.string.web_btn_export)}</button>
+        <button class="btn" onclick="showImportModal()" style="flex:1">${context.getString(R.string.web_btn_import)}</button>
       </div>
       <div id="collectionsList"></div>
-      <div class="empty-state" id="collectionsEmptyState">No collections yet</div>
+      <div class="empty-state" id="collectionsEmptyState">${context.getString(R.string.web_no_collections)}</div>
     </div>
   </div>
 
   <div class="import-overlay" id="importOverlay">
     <div class="import-modal">
-      <div style="font-size:1.1rem;font-weight:700;margin-bottom:1rem">Import Collections</div>
+      <div style="font-size:1.1rem;font-weight:700;margin-bottom:1rem">${context.getString(R.string.web_import_collections_title)}</div>
       <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
-        <button class="btn import-tab-btn active" onclick="switchImportTab('paste')">Paste</button>
-        <button class="btn import-tab-btn" onclick="switchImportTab('file')">File</button>
-        <button class="btn import-tab-btn" onclick="switchImportTab('url')">URL</button>
+        <button class="btn import-tab-btn active" onclick="switchImportTab('paste')">${context.getString(R.string.web_import_tab_paste)}</button>
+        <button class="btn import-tab-btn" onclick="switchImportTab('file')">${context.getString(R.string.web_import_tab_file)}</button>
+        <button class="btn import-tab-btn" onclick="switchImportTab('url')">${context.getString(R.string.web_import_tab_url)}</button>
       </div>
       <div id="import-tab-paste" class="import-tab active">
         <textarea id="importJsonInput" placeholder="Paste collections JSON here..." style="width:100%;min-height:120px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:0.75rem;color:#fff;font-family:monospace;font-size:0.8rem;resize:vertical"></textarea>
@@ -952,6 +973,39 @@ var pollTimer = null;
 var pollStartTime = 0;
 var POLL_TIMEOUT = 120000;
 var POLL_INTERVAL = 1500;
+
+var i18n = {
+  newCollection: '${context.getString(R.string.collections_new).replace("'", "\\'")}',
+  backdrop: '${context.getString(R.string.collections_editor_backdrop).replace("'", "\\'")}',
+  pinAbove: '${context.getString(R.string.collections_editor_pin_above).replace("'", "\\'")}',
+  focusGlow: '${context.getString(R.string.collections_editor_focus_glow).replace("'", "\\'")}',
+  viewMode: '${context.getString(R.string.collections_editor_view_mode).replace("'", "\\'")}',
+  tabs: '${context.getString(R.string.collections_editor_view_mode_tabs).replace("'", "\\'")}',
+  rows: '${context.getString(R.string.collections_editor_view_mode_rows).replace("'", "\\'")}',
+  followHome: '${context.getString(R.string.collections_editor_view_mode_follow).replace("'", "\\'")}',
+  showAllTab: '${context.getString(R.string.collections_editor_show_all_tab).replace("'", "\\'")}',
+  cover: '${context.getString(R.string.collections_editor_cover).replace("'", "\\'")}',
+  coverNone: '${context.getString(R.string.collections_editor_cover_none).replace("'", "\\'")}',
+  coverEmoji: '${context.getString(R.string.collections_editor_cover_emoji).replace("'", "\\'")}',
+  coverImage: '${context.getString(R.string.collections_editor_cover_image_url).replace("'", "\\'")}',
+  focusGif: '${context.getString(R.string.collections_editor_focus_gif).replace("'", "\\'")}',
+  playGif: '${context.getString(R.string.collections_editor_play_gif).replace("'", "\\'")}',
+  tileShape: '${context.getString(R.string.collections_editor_tile_shape).replace("'", "\\'")}',
+  hideTitle: '${context.getString(R.string.collections_editor_hide_title).replace("'", "\\'")}',
+  catalogs: '${context.getString(R.string.collections_editor_catalogs).replace("'", "\\'")}',
+  addCatalog: '${context.getString(R.string.collections_editor_add_catalog).replace("'", "\\'")}',
+  addFolder: '${context.getString(R.string.collections_editor_add_folder).replace("'", "\\'")}',
+  folders: '${context.getString(R.string.collections_editor_folders).replace("'", "\\'")}',
+  hidden: '${context.getString(R.string.web_badge_disabled).replace("'", "\\'")}',
+  display: '${context.getString(R.string.collections_editor_display).replace("'", "\\'")}',
+  shape: '${context.getString(R.string.collections_editor_tile_shape).replace("'", "\\'")}',
+  shapePoster: '${context.getString(R.string.collections_editor_shape_poster).replace("'", "\\'")}',
+  shapeWide: '${context.getString(R.string.collections_editor_shape_wide).replace("'", "\\'")}',
+  shapeSquare: '${context.getString(R.string.collections_editor_shape_square).replace("'", "\\'")}',
+  tapToPickEmoji: '${context.getString(R.string.collections_editor_cover_emoji).replace("'", "\\'")}',
+  added: '${context.getString(R.string.web_btn_add).replace("'", "\\'")}',
+  add: '+ ${context.getString(R.string.web_btn_add).replace("'", "\\'")}'
+};
 var connectionLost = false;
 var consecutiveErrors = 0;
 var activeTab = 'addons';
@@ -1211,15 +1265,22 @@ function renderCatalogs() {
 
     li.innerHTML =
       '<div class="addon-order">' +
-        '<button class="btn-order" onclick="moveCatalog(' + i + ',-1)"' + (isFirst ? ' disabled' : '') + '>' +
+        '<button class="btn-order" onclick="moveCatalogToTop(' + i + ')"' + (isFirst ? ' disabled' : '') + ' title="Send to top">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11l-6-6-6 6"/><path d="M18 18l-6-6-6 6"/></svg>' +
+        '</button>' +
+        '<button class="btn-order" onclick="moveCatalog(' + i + ',-1)"' + (isFirst ? ' disabled' : '') + ' title="Move up">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>' +
         '</button>' +
-        '<button class="btn-order" onclick="moveCatalog(' + i + ',1)"' + (isLast ? ' disabled' : '') + '>' +
+        '<button class="btn-order" onclick="moveCatalog(' + i + ',1)"' + (isLast ? ' disabled' : '') + ' title="Move down">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>' +
+        '</button>' +
+        '<button class="btn-order" onclick="moveCatalogToBottom(' + i + ')"' + (isLast ? ' disabled' : '') + ' title="Send to bottom">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l6 6 6-6"/><path d="M6 13l6 6 6-6"/></svg>' +
         '</button>' +
       '</div>' +
       '<div class="catalog-info">' +
         '<div class="catalog-name">' + escapeHtml(formatCatalogTitle(catalog.catalogName, catalog.type)) +
+          (isCollection ? '<span class="badge-collection">${context.getString(R.string.web_badge_collection).replace("'", "\\'")}</span>' : '') +
           (catalog.isDisabled ? '<span class="badge-disabled">${context.getString(R.string.web_badge_disabled).replace("'", "\\'")}</span>' : '') +
         '</div>' +
         '<div class="catalog-meta">' + escapeHtml(catalog.addonName) + '</div>' +
@@ -1250,6 +1311,20 @@ function moveCatalog(index, direction) {
   renderCatalogs();
 }
 
+function moveCatalogToTop(index) {
+  if (index <= 0) return;
+  var item = catalogs.splice(index, 1)[0];
+  catalogs.unshift(item);
+  renderCatalogs();
+}
+
+function moveCatalogToBottom(index) {
+  if (index >= catalogs.length - 1) return;
+  var item = catalogs.splice(index, 1)[0];
+  catalogs.push(item);
+  renderCatalogs();
+}
+
 function toggleCatalog(index) {
   var item = catalogs[index];
   if (!item) return;
@@ -1262,6 +1337,50 @@ function toggleCatalog(index) {
     else if (!item.isDisabled && idx >= 0) disabledCollectionKeys.splice(idx, 1);
   }
   renderCatalogs();
+}
+
+function enableAllCatalogs() {
+  catalogs.forEach(function(item) {
+    item.isDisabled = false;
+    if (item.isCollection) {
+      var key = 'collection_' + item.collectionId;
+      var idx = disabledCollectionKeys.indexOf(key);
+      if (idx >= 0) disabledCollectionKeys.splice(idx, 1);
+    }
+  });
+  renderCatalogs();
+}
+
+function disableAllCatalogs() {
+  catalogs.forEach(function(item) {
+    item.isDisabled = true;
+    if (item.isCollection) {
+      var key = 'collection_' + item.collectionId;
+      if (disabledCollectionKeys.indexOf(key) < 0) disabledCollectionKeys.push(key);
+    }
+  });
+  renderCatalogs();
+}
+
+function enableAllCollections() {
+  disabledCollectionKeys = [];
+  catalogs.forEach(function(item) {
+    if (item.isCollection) item.isDisabled = false;
+  });
+  renderCatalogs();
+  renderCollections();
+}
+
+function disableAllCollections() {
+  collections.forEach(function(col) {
+    var key = 'collection_' + col.id;
+    if (disabledCollectionKeys.indexOf(key) < 0) disabledCollectionKeys.push(key);
+  });
+  catalogs.forEach(function(item) {
+    if (item.isCollection) item.isDisabled = true;
+  });
+  renderCatalogs();
+  renderCollections();
 }
 
 async function addAddon() {
@@ -1491,7 +1610,7 @@ function isCollectionDisabled(ci) {
 }
 
 function addCollection() {
-  collections.push({ id: generateId(), title: 'New Collection', backdropImageUrl: null, pinToTop: false, focusGlowEnabled: true, viewMode: 'TABBED_GRID', showAllTab: true, folders: [] });
+  collections.push({ id: generateId(), title: i18n.newCollection, backdropImageUrl: null, pinToTop: false, focusGlowEnabled: true, viewMode: 'TABBED_GRID', showAllTab: true, folders: [] });
   expandedCollection = collections.length - 1;
   expandedFolder = null;
   renderCollections();
@@ -1696,7 +1815,7 @@ function renderCollections() {
       '<div class="collection-header collapse-header" onclick="toggleCollectionExpand(' + ci + ')">' +
         '<span class="collapse-arrow' + (isExpanded ? ' open' : '') + '">&#9654;</span>' +
         '<input class="collection-title-input" value="' + escapeAttr(col.title) + '" onchange="updateCollectionTitle(' + ci + ',this.value);updateSaveButtonState()" onclick="event.stopPropagation()" placeholder="Collection name">' +
-        (disabled ? '<span class="badge-collection-disabled">Hidden</span>' : '') +
+        (disabled ? '<span class="badge-collection-disabled">' + i18n.hidden + '</span>' : '') +
         (errors.length > 0 ? '<span style="font-size:0.6rem;font-weight:700;color:rgba(255,180,60,0.9);background:rgba(255,180,60,0.12);padding:0.2rem 0.5rem;border-radius:100px;flex-shrink:0">' + errors.length + ' issue' + (errors.length > 1 ? 's' : '') + '</span>' : '') +
         '<div class="col-actions" onclick="event.stopPropagation()">' +
           '<button class="btn-order" onclick="moveCollection(' + ci + ',-1)"' + (ci === 0 ? ' disabled' : '') + '>' +
@@ -1716,7 +1835,7 @@ function renderCollections() {
 
     if (!isExpanded) {
       card.innerHTML = headerHtml +
-        '<div class="folder-summary">' + folderCount + ' folder' + (folderCount !== 1 ? 's' : '') + '</div>';
+        '<div class="folder-summary">' + i18n.folders + ': ' + folderCount + '</div>';
       container.appendChild(card);
       return;
     }
@@ -1725,12 +1844,12 @@ function renderCollections() {
     var settingsHtml =
       '<div class="col-settings">' +
         '<div class="col-setting-row">' +
-          '<span class="col-meta-label">Backdrop</span>' +
+          '<span class="col-meta-label">' + i18n.backdrop + '</span>' +
           '<img id="col-backdrop-preview-' + ci + '" src="' + escapeAttr(col.backdropImageUrl || '') + '" style="' + (col.backdropImageUrl ? '' : 'display:none') + '" onerror="this.style.display=\'none\'">' +
           '<input type="url" placeholder="Image URL (optional)" value="' + escapeAttr(col.backdropImageUrl || '') + '" oninput="updateCollectionBackdrop(' + ci + ',this.value)">' +
         '</div>' +
         '<div class="col-setting-row">' +
-          '<span class="toggle-label">Pin above catalogs</span>' +
+          '<span class="toggle-label">' + i18n.pinAbove + '</span>' +
           '<label class="toggle-switch" onclick="event.stopPropagation()">' +
             '<input type="checkbox"' + (col.pinToTop ? ' checked' : '') + ' onchange="updateCollectionPinToTop(' + ci + ',this.checked)">' +
             '<span class="toggle-track"></span>' +
@@ -1738,7 +1857,7 @@ function renderCollections() {
           '</label>' +
         '</div>' +
         '<div class="col-setting-row">' +
-          '<span class="toggle-label">Focus glow on cards</span>' +
+          '<span class="toggle-label">' + i18n.focusGlow + '</span>' +
           '<label class="toggle-switch" onclick="event.stopPropagation()">' +
             '<input type="checkbox"' + (col.focusGlowEnabled !== false ? ' checked' : '') + ' onchange="updateCollectionFocusGlow(' + ci + ',this.checked)">' +
             '<span class="toggle-track"></span>' +
@@ -1746,16 +1865,16 @@ function renderCollections() {
           '</label>' +
         '</div>' +
         '<div class="col-setting-row">' +
-          '<span class="col-meta-label">View Mode</span>' +
+          '<span class="col-meta-label">' + i18n.viewMode + '</span>' +
           '<div class="cover-mode-picker">' +
-            '<button class="cover-mode-btn' + ((col.viewMode === 'TABBED_GRID' || !col.viewMode) ? ' active' : '') + '" onclick="updateCollectionViewMode(' + ci + ',\'TABBED_GRID\')">Tabs</button>' +
-            '<button class="cover-mode-btn' + (col.viewMode === 'ROWS' ? ' active' : '') + '" onclick="updateCollectionViewMode(' + ci + ',\'ROWS\')">Rows</button>' +
-            '<button class="cover-mode-btn' + (col.viewMode === 'FOLLOW_LAYOUT' ? ' active' : '') + '" onclick="updateCollectionViewMode(' + ci + ',\'FOLLOW_LAYOUT\')">Follow Home</button>' +
+            '<button class="cover-mode-btn' + ((col.viewMode === 'TABBED_GRID' || !col.viewMode) ? ' active' : '') + '" onclick="updateCollectionViewMode(' + ci + ',\'TABBED_GRID\')">' + i18n.tabs + '</button>' +
+            '<button class="cover-mode-btn' + (col.viewMode === 'ROWS' ? ' active' : '') + '" onclick="updateCollectionViewMode(' + ci + ',\'ROWS\')">' + i18n.rows + '</button>' +
+            '<button class="cover-mode-btn' + (col.viewMode === 'FOLLOW_LAYOUT' ? ' active' : '') + '" onclick="updateCollectionViewMode(' + ci + ',\'FOLLOW_LAYOUT\')">' + i18n.followHome + '</button>' +
           '</div>' +
         '</div>' +
         ((col.viewMode === 'TABBED_GRID' || !col.viewMode) ?
         '<div class="col-setting-row">' +
-          '<span class="toggle-label">Show "All" tab</span>' +
+          '<span class="toggle-label">' + i18n.showAllTab + '</span>' +
           '<label class="toggle-switch" onclick="event.stopPropagation()">' +
             '<input type="checkbox"' + (col.showAllTab !== false ? ' checked' : '') + ' onchange="updateCollectionShowAllTab(' + ci + ',this.checked)">' +
             '<span class="toggle-track"></span>' +
@@ -1841,12 +1960,12 @@ function renderCollections() {
           (isFolderExpanded ?
           '<div class="folder-settings">' +
             '<div class="folder-settings-group">' +
-              '<div class="folder-settings-group-label">Cover</div>' +
+              '<div class="folder-settings-group-label">' + i18n.cover + '</div>' +
               '<div class="folder-setting-item">' +
                 '<div class="cover-mode-picker">' +
-                  '<button class="cover-mode-btn' + (coverMode === 'none' ? ' active' : '') + '" onclick="setFolderCoverMode(' + ci + ',' + fi + ',\'none\')">None</button>' +
-                  '<button class="cover-mode-btn' + (coverMode === 'emoji' ? ' active' : '') + '" onclick="setFolderCoverMode(' + ci + ',' + fi + ',\'emoji\')">Emoji</button>' +
-                  '<button class="cover-mode-btn' + (coverMode === 'image' ? ' active' : '') + '" onclick="setFolderCoverMode(' + ci + ',' + fi + ',\'image\')">Image</button>' +
+                  '<button class="cover-mode-btn' + (coverMode === 'none' ? ' active' : '') + '" onclick="setFolderCoverMode(' + ci + ',' + fi + ',\'none\')">' + i18n.coverNone + '</button>' +
+                  '<button class="cover-mode-btn' + (coverMode === 'emoji' ? ' active' : '') + '" onclick="setFolderCoverMode(' + ci + ',' + fi + ',\'emoji\')">' + i18n.coverEmoji + '</button>' +
+                  '<button class="cover-mode-btn' + (coverMode === 'image' ? ' active' : '') + '" onclick="setFolderCoverMode(' + ci + ',' + fi + ',\'image\')">' + i18n.coverImage + '</button>' +
                 '</div>' +
               '</div>' +
               (coverMode === 'emoji' ?
@@ -1854,7 +1973,7 @@ function renderCollections() {
                 '<button class="emoji-picker-btn" onclick="toggleEmojiPicker(' + ci + ',' + fi + ')">' +
                   (folder.coverEmoji ? escapeHtml(folder.coverEmoji) : '😀') +
                 '</button>' +
-                '<span style="font-size:0.78rem;color:rgba(255,255,255,0.3);flex:1">Tap to pick emoji</span>' +
+                '<span style="font-size:0.78rem;color:rgba(255,255,255,0.3);flex:1">' + i18n.tapToPickEmoji + '</span>' +
               '</div>' +
               '<div id="emoji-grid-' + ci + '-' + fi + '" class="emoji-grid-wrap" style="margin:0 0.75rem 0.5rem">' +
                 '<input class="emoji-grid-search" placeholder="Search emoji..." oninput="filterEmoji(' + ci + ',' + fi + ',this.value)">' +
@@ -1869,7 +1988,7 @@ function renderCollections() {
                 '<input type="url" placeholder="Focused GIF URL (optional)" value="' + escapeAttr(folder.focusGifUrl || '') + '" oninput="updateFolderFocusGifUrl(' + ci + ',' + fi + ',this.value)">' +
               '</div>' +
               '<div class="folder-setting-item">' +
-                '<span class="toggle-label">Play GIF on focus</span>' +
+                '<span class="toggle-label">' + i18n.playGif + '</span>' +
                 '<label class="toggle-switch">' +
                   '<input type="checkbox"' + (folder.focusGifEnabled !== false ? ' checked' : '') + ' onchange="updateFolderFocusGifEnabled(' + ci + ',' + fi + ',this.checked)">' +
                   '<span class="toggle-track"></span>' +
@@ -1878,17 +1997,17 @@ function renderCollections() {
               '</div>' +
             '</div>' +
             '<div class="folder-settings-group">' +
-              '<div class="folder-settings-group-label">Display</div>' +
+              '<div class="folder-settings-group-label">' + i18n.display + '</div>' +
               '<div class="folder-setting-item">' +
-                '<span class="folder-setting-label">Shape</span>' +
+                '<span class="folder-setting-label">' + i18n.shape + '</span>' +
                 '<select onchange="updateFolderTileShape(' + ci + ',' + fi + ',this.value)">' +
-                  '<option value="POSTER"' + (folder.tileShape === 'POSTER' ? ' selected' : '') + '>Poster</option>' +
-                  '<option value="LANDSCAPE"' + (folder.tileShape === 'LANDSCAPE' ? ' selected' : '') + '>Landscape</option>' +
-                  '<option value="SQUARE"' + ((folder.tileShape === 'SQUARE' || !folder.tileShape) ? ' selected' : '') + '>Square</option>' +
+                  '<option value="POSTER"' + (folder.tileShape === 'POSTER' ? ' selected' : '') + '>' + i18n.shapePoster + '</option>' +
+                  '<option value="LANDSCAPE"' + (folder.tileShape === 'LANDSCAPE' ? ' selected' : '') + '>' + i18n.shapeWide + '</option>' +
+                  '<option value="SQUARE"' + ((folder.tileShape === 'SQUARE' || !folder.tileShape) ? ' selected' : '') + '>' + i18n.shapeSquare + '</option>' +
                 '</select>' +
               '</div>' +
               '<div class="folder-setting-item">' +
-                '<span class="toggle-label">Hide title</span>' +
+                '<span class="toggle-label">' + i18n.hideTitle + '</span>' +
                 '<label class="toggle-switch">' +
                   '<input type="checkbox" id="ht-' + ci + '-' + fi + '"' + (folder.hideTitle ? ' checked' : '') + ' onchange="updateFolderHideTitle(' + ci + ',' + fi + ',this.checked)">' +
                   '<span class="toggle-track"></span>' +
@@ -1897,7 +2016,7 @@ function renderCollections() {
               '</div>' +
             '</div>' +
             '<div class="folder-settings-group">' +
-              '<div class="folder-settings-group-label">Active Sources</div>' +
+              '<div class="folder-settings-group-label">' + i18n.catalogs + '</div>' +
               '<div style="padding:0.5rem 0.75rem">' +
                 '<input class="source-search-input" placeholder="Filter active sources..." oninput="filterActiveSources(' + ci + ',' + fi + ',this.value)" id="active-src-search-' + ci + '-' + fi + '">' +
                 '<div id="active-src-list-' + ci + '-' + fi + '" style="max-height:180px;overflow-y:auto;border:1px solid rgba(255,255,255,0.05);border-radius:8px;margin-top:0.25rem">' +
@@ -1907,7 +2026,7 @@ function renderCollections() {
               '</div>' +
             '</div>' +
             '<div class="folder-settings-group" style="margin-top:0.5rem">' +
-              '<div class="folder-settings-group-label">Add Sources</div>' +
+              '<div class="folder-settings-group-label">' + i18n.addCatalog + '</div>' +
               '<div style="padding:0.5rem 0.75rem">' +
                 '<input class="source-search-input" placeholder="Search catalogs..." oninput="filterCatalogSources(' + ci + ',' + fi + ',this.value)" id="src-search-' + ci + '-' + fi + '">' +
                 '<div id="src-list-' + ci + '-' + fi + '" style="max-height:200px;overflow-y:auto;border:1px solid rgba(255,255,255,0.05);border-radius:8px;margin-top:0.25rem">' + sourceListHtml + '</div>' +
@@ -1919,7 +2038,7 @@ function renderCollections() {
     });
 
     card.innerHTML = headerHtml + settingsHtml + foldersHtml +
-      '<div style="padding:0.5rem 1rem 0.875rem"><button class="btn" onclick="addFolder(' + ci + ')" style="width:100%;padding:0.6rem;font-size:0.8rem">+ Add Folder</button></div>';
+      '<div style="padding:0.5rem 1rem 0.875rem"><button class="btn" onclick="addFolder(' + ci + ')" style="width:100%;padding:0.6rem;font-size:0.8rem">+ ' + i18n.addFolder + '</button></div>';
 
     container.appendChild(card);
   });

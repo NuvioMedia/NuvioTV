@@ -6,13 +6,13 @@
 
     <!-- WebConfigServers -->
     <string name="web_manage_addons_title">Manage Addons</string>
-    <string name="web_manage_addons_subtitle">Manage addons and home catalogs</string>
+    <string name="web_manage_addons_subtitle">Manage addons, catalogs, and collections</string>
     <string name="web_add_addon_url">Add addon by URL</string>
     <string name="web_placeholder_url">https://example.com/manifest.json</string>
     <string name="web_btn_add">Add</string>
     <string name="web_installed_addons">Installed Addons</string>
     <string name="web_no_addons">No addons installed</string>
-    <string name="web_home_catalogs">Home Catalogs</string>
+    <string name="web_home_catalogs">Home Catalogs and Collections</string>
     <string name="web_no_catalogs">No home catalogs available</string>
     <string name="web_btn_save">Save Changes</string>
     <string name="web_connection_lost">Connection to TV lost</string>
@@ -44,6 +44,22 @@
     <string name="web_manage_collections_title">Manage Collections</string>
     <string name="web_manage_collections_subtitle">Create and manage your custom collections</string>
     <string name="web_status_msg_collections_updated">Your collections have been updated on the TV.</string>
+    <string name="web_tab_addons">Addons</string>
+    <string name="web_tab_home_layout">Home Layout</string>
+    <string name="web_tab_collections">Collections</string>
+    <string name="web_btn_enable_all">Enable All</string>
+    <string name="web_btn_disable_all">Disable All</string>
+    <string name="web_btn_show_all">Show All</string>
+    <string name="web_btn_hide_all">Hide All</string>
+    <string name="web_btn_new_collection">+ New Collection</string>
+    <string name="web_btn_export">Export</string>
+    <string name="web_btn_import">Import</string>
+    <string name="web_no_collections">No collections yet</string>
+    <string name="web_badge_collection">Collection</string>
+    <string name="web_import_collections_title">Import Collections</string>
+    <string name="web_import_tab_paste">Paste</string>
+    <string name="web_import_tab_file">File</string>
+    <string name="web_import_tab_url">URL</string>
 
     <!-- HomeScreen -->
     <string name="home_no_addons">No addons installed. Add one to get started.</string>
@@ -1388,10 +1404,13 @@
     <string name="cd_loading_logo">Loading logo</string>
     <string name="cd_move_up">Move up</string>
     <string name="cd_move_down">Move down</string>
+    <string name="cd_edit">Edit</string>
+    <string name="cd_delete">Delete</string>
     <string name="cd_qr_code">QR Code</string>
     <string name="cd_add">Add</string>
     <string name="cd_refresh">Refresh</string>
     <string name="cd_remove">Remove</string>
+    <string name="cd_preview">Preview</string>
     <string name="cd_test">Test</string>
     <string name="cd_unlink">Unlink</string>
     <string name="cd_nuvio_logo">NuvioTV</string>
@@ -1411,5 +1430,81 @@
     <string name="debug_signin_success">Signed in successfully</string>
     <string name="debug_generate_description">Debug-generated %1$s item #%2$d</string>
     <string name="debug_generate_result_failed">Failed: %1$s</string>
+
+    <!-- Collection Management -->
+    <string name="collections_header">Collections</string>
+    <string name="collections_empty">No collections yet. Create one to organize your catalogs.</string>
+    <string name="collections_new">New Collection</string>
+    <string name="collections_import">Import</string>
+    <string name="collections_export_file">Export File</string>
+    <string name="collections_saved_downloads">Saved to Downloads</string>
+    <string name="collections_export_failed">Export failed</string>
+    <string name="collections_import_header">Import Collections</string>
+    <string name="collections_import_description">Import collections from JSON. Catalogs from addons you don\'t have installed will show a warning.</string>
+    <string name="collections_cancel">Cancel</string>
+    <string name="collections_mode_paste">Paste JSON</string>
+    <string name="collections_mode_file">From File</string>
+    <string name="collections_mode_url">From URL</string>
+    <string name="collections_paste_clipboard">Paste from Clipboard</string>
+    <string name="collections_validate">Validate</string>
+    <string name="collections_paste_hint">Paste collections JSON here…</string>
+    <string name="collections_file_description">Reads nuvio-collections.json from the Downloads folder.</string>
+    <string name="collections_load_file">Load File</string>
+    <string name="collections_file_loaded">File loaded (%1$d characters)</string>
+    <string name="collections_fetch_url">Fetch URL</string>
+    <string name="collections_fetching">Fetching…</string>
+    <string name="collections_valid_json">Valid JSON</string>
+    <string name="collections_valid_summary">%1$d collection(s), %2$d folder(s)</string>
+    <string name="collections_confirm_import">Confirm Import</string>
+    <string name="collections_folder_count">%1$d folder(s)</string>
+
+    <!-- Collection Editor -->
+    <string name="collections_editor_row_title">Row Title</string>
+    <string name="collections_editor_save">Save</string>
+    <string name="collections_editor_backdrop">Backdrop Image</string>
+    <string name="collections_editor_pin_above">Pin Above Catalogs</string>
+    <string name="collections_editor_pin_above_desc">Show this collection above all regular home catalogs. Multiple pinned collections follow collection creation order.</string>
+    <string name="collections_editor_focus_glow">Focus Glow</string>
+    <string name="collections_editor_focus_glow_desc">Use the native TV glow on this collection\'s home-screen custom catalog cards</string>
+    <string name="collections_editor_view_mode">View Mode</string>
+    <string name="collections_editor_show_all_tab">Show \"All\" Tab</string>
+    <string name="collections_editor_show_all_tab_desc">Combine all catalogs into one tab</string>
+    <string name="collections_editor_folders">Folders</string>
+    <string name="collections_editor_add_folder">Add Folder</string>
+    <string name="collections_editor_edit_folder">Edit Folder</string>
+    <string name="collections_editor_folder_title">Folder Title</string>
+    <string name="collections_editor_cover">Cover</string>
+    <string name="collections_editor_cover_none">None</string>
+    <string name="collections_editor_cover_emoji">Emoji</string>
+    <string name="collections_editor_cover_image_url">Image URL</string>
+    <string name="collections_editor_focus_gif">Focus GIF</string>
+    <string name="collections_editor_play_gif">Play GIF on Focus</string>
+    <string name="collections_editor_tile_shape">Tile Shape</string>
+    <string name="collections_editor_hide_title">Hide Title</string>
+    <string name="collections_editor_hide_title_desc">Only show the cover image</string>
+    <string name="collections_editor_display">Display</string>
+    <string name="collections_editor_catalogs">Catalogs</string>
+    <string name="collections_editor_add_catalog">Add Catalog</string>
+    <string name="collections_editor_select_catalogs">Select Catalogs</string>
+    <string name="collections_editor_done">Done</string>
+    <string name="collections_editor_choose_emoji">Choose Emoji</string>
+    <string name="collections_editor_back">Back</string>
+    <string name="collections_editor_edit_collection">Edit Collection</string>
+    <string name="collections_editor_catalog_count">%1$d catalog(s)</string>
+    <string name="collections_editor_view_mode_tabs">Tabs</string>
+    <string name="collections_editor_view_mode_rows">Rows</string>
+    <string name="collections_editor_view_mode_follow">Follow Home Layout</string>
+    <string name="collections_editor_shape_poster">Poster</string>
+    <string name="collections_editor_shape_wide">Wide</string>
+    <string name="collections_editor_shape_square">Square</string>
+    <string name="collections_editor_addon_missing">Addon not installed: %1$s</string>
+    <string name="collections_editor_placeholder_name">Collection name</string>
+    <string name="collections_editor_placeholder_backdrop">Backdrop image URL (optional)</string>
+    <string name="collections_editor_placeholder_folder">Folder name</string>
+    <string name="collections_editor_placeholder_gif">Animated GIF URL (plays only while focused)</string>
+    <string name="collections_card_title">Collections</string>
+    <string name="collections_card_subtitle">Group catalogs into folders on your home screen</string>
+    <string name="collections_tab_all">All</string>
+    <string name="collections_tab_combined">Combined</string>
 
 </resources>

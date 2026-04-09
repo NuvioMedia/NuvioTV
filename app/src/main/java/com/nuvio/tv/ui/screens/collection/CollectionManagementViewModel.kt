@@ -27,7 +27,7 @@ data class CollectionManagementUiState(
     val importText: String = "",
     val importError: String? = null,
     val exportedJson: String? = null,
-    val importMode: ImportMode = ImportMode.PASTE,
+    val importMode: ImportMode = ImportMode.FILE,
     val importUrl: String = "",
     val validationResult: ValidationResult? = null,
     val validatedJson: String? = null,
@@ -95,7 +95,7 @@ class CollectionManagementViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 showImportDialog = true, importText = "", importError = null,
-                importMode = ImportMode.PASTE, importUrl = "",
+                importMode = ImportMode.FILE, importUrl = "",
                 validationResult = null, validatedJson = null, isLoadingImport = false
             )
         }
@@ -105,7 +105,7 @@ class CollectionManagementViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 showImportDialog = false, importText = "", importError = null,
-                importMode = ImportMode.PASTE, importUrl = "",
+                importMode = ImportMode.FILE, importUrl = "",
                 validationResult = null, validatedJson = null, isLoadingImport = false
             )
         }
@@ -232,7 +232,7 @@ class CollectionManagementViewModel @Inject constructor(
                 it.copy(
                     showImportDialog = false, importText = "", importError = null,
                     validationResult = null, validatedJson = null, importUrl = "",
-                    importMode = ImportMode.PASTE
+                    importMode = ImportMode.FILE
                 )
             }
         }
