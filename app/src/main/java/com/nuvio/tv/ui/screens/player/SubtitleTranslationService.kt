@@ -109,7 +109,8 @@ internal class SubtitleTranslationService(
                 Log.d(TAG, "API response (${response.code}): $responseBody")
 
                 if (!response.isSuccessful) {
-                    return@withContext TranslationResult(lines, false, "HTTP ${response.code}: $responseBody")
+                    val errorMsg = if (response.code == 429) "RATE_LIMITED" else "HTTP ${response.code}: $responseBody"
+                    return@withContext TranslationResult(lines, false, errorMsg)
                 }
 
                 val json = JSONObject(responseBody)

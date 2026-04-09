@@ -101,7 +101,7 @@ class PlayerRuntimeController(
                     firstBatchSuccessShown = true
                     showAiToast(SubtitleAiToast.SUCCESS)
                 } else if (!success) {
-                    showAiToast(SubtitleAiToast.ERROR)
+                    showAiToast(if (error == "RATE_LIMITED") SubtitleAiToast.RATE_LIMITED else SubtitleAiToast.ERROR)
                 }
             }
             mgr.onLookaheadAdvanced = { upToMs, total ->

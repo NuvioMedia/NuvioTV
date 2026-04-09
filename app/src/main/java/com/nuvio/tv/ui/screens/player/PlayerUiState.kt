@@ -157,7 +157,7 @@ data class PlayerUiState(
     val removeHearingImpaired: Boolean = false
 )
 
-enum class SubtitleAiToast { TRANSLATING, SUCCESS, ERROR }
+enum class SubtitleAiToast { TRANSLATING, SUCCESS, ERROR, RATE_LIMITED }
 
 data class TrackInfo(
     val index: Int,

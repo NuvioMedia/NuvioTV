@@ -415,6 +415,17 @@ internal fun LazyListScope.subtitleAiSettingsItems(
                 enabled = enabled
             )
         }
+
+        item(key = "subtitle_ai_disclaimer") {
+            Text(
+                text = stringResource(R.string.sub_ai_free_tier_disclaimer),
+                style = MaterialTheme.typography.bodySmall,
+                color = NuvioColors.TextSecondary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
     }
 }
 

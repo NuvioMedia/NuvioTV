@@ -1956,6 +1956,11 @@ private fun SubtitleAiToastBadge(toast: SubtitleAiToast) {
             Color(0xFF3A1A1A).copy(alpha = 0.90f),
             Color(0xFFFF6B6B)
         )
+        SubtitleAiToast.RATE_LIMITED -> Triple(
+            "AI rate limit reached — paused",
+            Color(0xFF3A2A00).copy(alpha = 0.90f),
+            Color(0xFFFFCC44)
+        )
     }
     Box(
         modifier = Modifier
