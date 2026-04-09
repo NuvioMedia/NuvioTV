@@ -109,16 +109,16 @@ class EmbyMediaService @Inject constructor(
             val targetItem: EmbyItemDto = if (isEpisode && season != null && episode != null) {
                 val episodeResponse = embyApi.getEpisodes(
                     seriesId = matchedItem.id,
-                    season = season,
-                    episode = episode
+                    season = season
                 )
                 if (!episodeResponse.isSuccessful) {
                     Log.w(TAG, "Emby episode lookup failed for series ${matchedItem.id} S${season}E${episode}: ${episodeResponse.code()} ${episodeResponse.message()}")
                     return null
                 }
-                val ep = episodeResponse.body()?.items?.firstOrNull()
+                val episodes = episodeResponse.body()?.items ?: emptyList()
+                val ep = episodes.firstOrNull { it.indexNumber == episode }
                 if (ep == null) {
-                    Log.d(TAG, "Episode S${season}E${episode} not found in Emby for series ${matchedItem.id}")
+                    Log.d(TAG, "Episode S${season}E${episode} not found in Emby for series ${matchedItem.id} (got ${episodes.size} episodes, indices: ${episodes.mapNotNull { it.indexNumber }})")
                     return null
                 }
                 ep
