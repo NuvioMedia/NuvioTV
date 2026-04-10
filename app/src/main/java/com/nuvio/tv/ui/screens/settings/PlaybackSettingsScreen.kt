@@ -131,6 +131,9 @@ fun PlaybackSettingsContent(
 ) {
     val playerSettings by viewModel.playerSettings.collectAsStateWithLifecycle(initialValue = PlayerSettings())
     val trailerSettings by viewModel.trailerSettings.collectAsStateWithLifecycle(initialValue = TrailerSettings())
+    val torrentSettings by viewModel.torrentSettingsFlow.collectAsStateWithLifecycle(
+        initialValue = com.nuvio.tv.core.torrent.TorrentSettingsData()
+    )
     val installedAddonNames by viewModel.installedAddonNames.collectAsStateWithLifecycle(initialValue = emptyList())
     val enabledPluginNames by viewModel.enabledPluginNames.collectAsStateWithLifecycle(initialValue = emptyList())
     val coroutineScope = rememberCoroutineScope()
@@ -260,7 +263,11 @@ fun PlaybackSettingsContent(
                 onSetSubtitleBold = { bold -> coroutineScope.launch { viewModel.setSubtitleBold(bold) } },
                 onSetSubtitleOutlineEnabled = { enabled -> coroutineScope.launch { viewModel.setSubtitleOutlineEnabled(enabled) } },
                 onSetUseLibass = { enabled -> coroutineScope.launch { viewModel.setUseLibass(enabled) } },
-                onSetLibassRenderType = { renderType -> coroutineScope.launch { viewModel.setLibassRenderType(renderType) } }
+                onSetLibassRenderType = { renderType -> coroutineScope.launch { viewModel.setLibassRenderType(renderType) } },
+                p2pEnabled = torrentSettings.p2pEnabled,
+                onSetP2pEnabled = { enabled -> viewModel.setP2pEnabled(enabled) },
+                hideTorrentStats = torrentSettings.hideTorrentStats,
+                onSetHideTorrentStats = { enabled -> viewModel.setHideTorrentStats(enabled) }
             )
         }
     }

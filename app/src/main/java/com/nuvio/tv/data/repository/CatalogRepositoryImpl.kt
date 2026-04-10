@@ -116,29 +116,36 @@ class CatalogRepositoryImpl @Inject constructor(
         skip: Int,
         extraArgs: Map<String, String>
     ): String {
-        val cleanBaseUrl = baseUrl.trimEnd('/')
+        // Separate path from query string so the catalog path segment is
+        // inserted before any query parameters (configurable addon URLs).
+        val trimmedBase = baseUrl.trimEnd('/')
+        val queryStart = trimmedBase.indexOf('?')
+        val basePath = if (queryStart >= 0) trimmedBase.substring(0, queryStart).trimEnd('/') else trimmedBase
+        val baseQuery = if (queryStart >= 0) trimmedBase.substring(queryStart) else ""
 
-        if (extraArgs.isEmpty()) {
-            return if (skip > 0) {
-                "$cleanBaseUrl/catalog/$type/$catalogId/skip=$skip.json"
+        val catalogPath = if (extraArgs.isEmpty()) {
+            if (skip > 0) {
+                "$basePath/catalog/$type/$catalogId/skip=$skip.json"
             } else {
-                "$cleanBaseUrl/catalog/$type/$catalogId.json"
+                "$basePath/catalog/$type/$catalogId.json"
             }
+        } else {
+            val allArgs = LinkedHashMap<String, String>()
+            allArgs.putAll(extraArgs)
+
+            // For Stremio catalogs, pagination is controlled by `skip` inside extraArgs.
+            if (!allArgs.containsKey("skip") && skip > 0) {
+                allArgs["skip"] = skip.toString()
+            }
+
+            val encodedArgs = allArgs.entries.joinToString("&") { (key, value) ->
+                "${encodeArg(key)}=${encodeArg(value)}"
+            }
+
+            "$basePath/catalog/$type/$catalogId/$encodedArgs.json"
         }
 
-        val allArgs = LinkedHashMap<String, String>()
-        allArgs.putAll(extraArgs)
-
-        // For Stremio catalogs, pagination is controlled by `skip` inside extraArgs.
-        if (!allArgs.containsKey("skip") && skip > 0) {
-            allArgs["skip"] = skip.toString()
-        }
-
-        val encodedArgs = allArgs.entries.joinToString("&") { (key, value) ->
-            "${encodeArg(key)}=${encodeArg(value)}"
-        }
-
-        return "$cleanBaseUrl/catalog/$type/$catalogId/$encodedArgs.json"
+        return catalogPath + baseQuery
     }
 
     private fun encodeArg(value: String): String {

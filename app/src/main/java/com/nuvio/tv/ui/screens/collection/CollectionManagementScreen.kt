@@ -1,9 +1,6 @@
 package com.nuvio.tv.ui.screens.collection
 
-import android.graphics.Bitmap
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,10 +26,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.PhoneAndroid
-import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,14 +41,11 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -72,6 +63,8 @@ import com.nuvio.tv.data.local.ValidationResult
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.R
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -111,13 +104,9 @@ fun CollectionManagementScreen(
     onBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val clipboardManager = LocalClipboardManager.current
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    DisposableEffect(Unit) {
-        onDispose { viewModel.stopQrMode() }
-    }
 
     var exportMessage by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(exportMessage) {
@@ -140,10 +129,7 @@ fun CollectionManagementScreen(
             importError = uiState.importError,
             onTextChange = { viewModel.updateImportText(it) },
             onImport = { viewModel.importCollections() },
-            onPaste = {
-                val clip = clipboardManager.getText()?.text ?: ""
-                viewModel.updateImportText(clip)
-            },
+            onPaste = {},
             onBack = { viewModel.hideImportDialog() },
             importMode = uiState.importMode,
             onModeChange = { viewModel.setImportMode(it) },
@@ -175,7 +161,7 @@ fun CollectionManagementScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Collections",
+                text = stringResource(R.string.collections_header),
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioColors.TextPrimary
             )
@@ -183,13 +169,6 @@ fun CollectionManagementScreen(
             LaunchedEffect(Unit) {
                 repeat(3) { withFrameNanos { } }
                 try { newButtonFocusRequester.requestFocus() } catch (_: Exception) {}
-            }
-            var showCopied by remember { mutableStateOf(false) }
-            LaunchedEffect(showCopied) {
-                if (showCopied) {
-                    kotlinx.coroutines.delay(2000)
-                    showCopied = false
-                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (uiState.collections.isNotEmpty()) {
@@ -214,37 +193,32 @@ fun CollectionManagementScreen(
                                     val uri = resolver.insert(existingUri, values)
                                     uri?.let { resolver.openOutputStream(it)?.use { os -> os.write(json.toByteArray()) } }
                                 }
-                                exportMessage = "Saved to Downloads"
+                                exportMessage = "saved"
                             } catch (_: Exception) {
-                                exportMessage = "Export failed"
+                                exportMessage = "failed"
                             }
                         }
                     }) {
-                        Text(exportMessage ?: "Export File")
-                    }
-                    NuvioButton(onClick = {
-                        val json = viewModel.exportCollections()
-                        clipboardManager.setText(AnnotatedString(json))
-                        showCopied = true
-                    }) {
-                        Text(if (showCopied) "Copied!" else "Copy JSON")
+                        Text(exportMessage?.let {
+                            when (it) {
+                                "saved" -> stringResource(R.string.collections_saved_downloads)
+                                "failed" -> stringResource(R.string.collections_export_failed)
+                                else -> it
+                            }
+                        } ?: stringResource(R.string.collections_export_file))
                     }
                 }
                 NuvioButton(onClick = { viewModel.showImportDialog() }) {
-                    Text("Import")
+                    Text(stringResource(R.string.collections_import))
                 }
                 NuvioButton(
                     onClick = { onNavigateToEditor(null) },
                     modifier = Modifier.focusRequester(newButtonFocusRequester)
                 ) {
-                    Text("New Collection")
+                    Text(stringResource(R.string.collections_new))
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ManageFromPhoneCard(onClick = { viewModel.startQrMode() })
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -254,7 +228,7 @@ fun CollectionManagementScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No collections yet. Create one to organize your catalogs.",
+                    text = stringResource(R.string.collections_empty),
                     color = NuvioColors.TextSecondary,
                     style = MaterialTheme.typography.bodyLarge
                 )
@@ -281,23 +255,6 @@ fun CollectionManagementScreen(
                 }
             }
         }
-    }
-
-    if (uiState.isQrModeActive) {
-        QrCodeOverlay(
-            qrBitmap = uiState.qrCodeBitmap,
-            serverUrl = uiState.serverUrl,
-            onClose = { viewModel.stopQrMode() },
-            hasPendingChange = uiState.pendingCollectionChange != null
-        )
-    }
-
-    if (uiState.pendingCollectionChange != null) {
-        ConfirmCollectionChangesDialog(
-            pending = uiState.pendingCollectionChange!!,
-            onConfirm = { viewModel.confirmPendingChange() },
-            onReject = { viewModel.rejectPendingChange() }
-        )
     }
     }
 }
@@ -333,12 +290,12 @@ private fun ImportContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Import Collections",
+                text = stringResource(R.string.collections_import_header),
                 style = MaterialTheme.typography.headlineMedium,
                 color = NuvioColors.TextPrimary
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                NuvioButton(onClick = onBack) { Text("Cancel") }
+                NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_cancel)) }
             }
         }
 
@@ -351,7 +308,7 @@ private fun ImportContent(
         ) {
             item {
                 Text(
-                    text = "Import collections from JSON. Catalogs from addons you don't have installed will show a warning.",
+                    text = stringResource(R.string.collections_import_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
                 )
@@ -360,11 +317,11 @@ private fun ImportContent(
 
                 // Mode tabs
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ImportMode.entries.forEach { mode ->
+                    ImportMode.entries.filter { it != ImportMode.PASTE }.forEach { mode ->
                         val label = when (mode) {
-                            ImportMode.PASTE -> "Paste JSON"
-                            ImportMode.FILE -> "From File"
-                            ImportMode.URL -> "From URL"
+                            ImportMode.PASTE -> stringResource(R.string.collections_mode_paste)
+                            ImportMode.FILE -> stringResource(R.string.collections_mode_file)
+                            ImportMode.URL -> stringResource(R.string.collections_mode_url)
                         }
                         if (mode == importMode) {
                             Button(
@@ -400,9 +357,9 @@ private fun ImportContent(
                 when (importMode) {
                     ImportMode.PASTE -> {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            NuvioButton(onClick = onPaste) { Text("Paste from Clipboard") }
+                            NuvioButton(onClick = onPaste) { Text(stringResource(R.string.collections_paste_clipboard)) }
                             if (importText.isNotBlank()) {
-                                NuvioButton(onClick = onValidate) { Text("Validate") }
+                                NuvioButton(onClick = onValidate) { Text(stringResource(R.string.collections_validate)) }
                             }
                         }
 
@@ -432,7 +389,7 @@ private fun ImportContent(
                                     decorationBox = { innerTextField ->
                                         if (importText.isEmpty()) {
                                             Text(
-                                                text = "Paste collections JSON here...",
+                                                text = stringResource(R.string.collections_paste_hint),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = NuvioColors.TextTertiary
                                             )
@@ -446,17 +403,17 @@ private fun ImportContent(
 
                     ImportMode.FILE -> {
                         Text(
-                            text = "Reads nuvio-collections.json from the Downloads folder.",
+                            text = stringResource(R.string.collections_file_description),
                             style = MaterialTheme.typography.bodySmall,
                             color = NuvioColors.TextTertiary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        NuvioButton(onClick = onPickFile) { Text("Load File") }
+                        NuvioButton(onClick = onPickFile) { Text(stringResource(R.string.collections_load_file)) }
 
                         if (importText.isNotBlank()) {
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "File loaded (${importText.length} characters)",
+                                text = stringResource(R.string.collections_file_loaded, importText.length),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = NuvioColors.TextSecondary
                             )
@@ -503,7 +460,7 @@ private fun ImportContent(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         NuvioButton(onClick = onFetchUrl) {
-                            Text(if (isLoadingImport) "Fetching..." else "Fetch URL")
+                            Text(if (isLoadingImport) stringResource(R.string.collections_fetching) else stringResource(R.string.collections_fetch_url))
                         }
 
                         if (isLoadingImport) {
@@ -529,20 +486,19 @@ private fun ImportContent(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "Valid JSON",
+                                text = stringResource(R.string.collections_valid_json),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = NuvioColors.Primary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "${validationResult.collectionCount} collection${if (validationResult.collectionCount != 1) "s" else ""}, " +
-                                        "${validationResult.folderCount} folder${if (validationResult.folderCount != 1) "s" else ""}",
+                                text = stringResource(R.string.collections_valid_summary, validationResult.collectionCount, validationResult.folderCount),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = NuvioColors.TextSecondary
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             NuvioButton(onClick = onConfirmImport) {
-                                Text("Confirm Import")
+                                Text(stringResource(R.string.collections_confirm_import))
                             }
                         }
                     }
@@ -593,7 +549,7 @@ private fun CollectionListItem(
                     color = NuvioColors.TextPrimary
                 )
                 Text(
-                    text = "${collection.folders.size} folder${if (collection.folders.size != 1) "s" else ""}",
+                    text = stringResource(R.string.collections_folder_count, collection.folders.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioColors.TextTertiary
                 )
@@ -617,7 +573,7 @@ private fun CollectionListItem(
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                 ) {
-                    Icon(Icons.Default.KeyboardArrowUp, "Move Up")
+                    Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.cd_move_up))
                 }
 
                 Button(
@@ -637,7 +593,7 @@ private fun CollectionListItem(
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                 ) {
-                    Icon(Icons.Default.KeyboardArrowDown, "Move Down")
+                    Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.cd_move_down))
                 }
 
                 Button(
@@ -656,7 +612,7 @@ private fun CollectionListItem(
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                 ) {
-                    Icon(Icons.Default.Edit, "Edit")
+                    Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
                 }
 
                 Button(
@@ -675,296 +631,7 @@ private fun CollectionListItem(
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
                 ) {
-                    Icon(Icons.Default.Delete, "Delete")
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun ManageFromPhoneCard(onClick: () -> Unit) {
-    var isFocused by remember { mutableStateOf(false) }
-
-    Surface(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .onFocusChanged { isFocused = it.isFocused },
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = NuvioColors.BackgroundCard,
-            focusedContainerColor = NuvioColors.FocusBackground
-        ),
-        border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(18.dp)
-            )
-        ),
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(18.dp)),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.01f)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.QrCode2,
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp),
-                    tint = if (isFocused) NuvioColors.Secondary else NuvioColors.TextSecondary
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = "Manage from Phone",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = NuvioColors.TextPrimary
-                    )
-                    Text(
-                        text = "Scan QR code to manage collections from your phone",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = NuvioColors.TextSecondary
-                    )
-                }
-            }
-            Icon(
-                imageVector = Icons.Default.PhoneAndroid,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = NuvioColors.TextSecondary
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun QrCodeOverlay(
-    qrBitmap: Bitmap?,
-    serverUrl: String?,
-    onClose: () -> Unit,
-    hasPendingChange: Boolean = false
-) {
-    val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(hasPendingChange) {
-        if (!hasPendingChange) {
-            focusRequester.requestFocus()
-        }
-    }
-
-    BackHandler { onClose() }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.85f)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Scan with your phone to manage collections",
-                style = MaterialTheme.typography.bodyMedium,
-                color = NuvioColors.TextSecondary,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (qrBitmap != null) {
-                Image(
-                    bitmap = qrBitmap.asImageBitmap(),
-                    contentDescription = "QR Code",
-                    modifier = Modifier.size(220.dp),
-                    contentScale = ContentScale.Fit
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (serverUrl != null) {
-                Text(
-                    text = serverUrl,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NuvioColors.TextTertiary,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Surface(
-                onClick = onClose,
-                modifier = Modifier.focusRequester(focusRequester),
-                colors = ClickableSurfaceDefaults.colors(
-                    containerColor = NuvioColors.Surface,
-                    focusedContainerColor = NuvioColors.FocusBackground
-                ),
-                border = ClickableSurfaceDefaults.border(
-                    focusedBorder = Border(
-                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                        shape = RoundedCornerShape(50)
-                    )
-                ),
-                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50)),
-                scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = NuvioColors.TextPrimary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Close",
-                        color = NuvioColors.TextPrimary
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-private fun ConfirmCollectionChangesDialog(
-    pending: PendingCollectionChangeInfo,
-    onConfirm: () -> Unit,
-    onReject: () -> Unit
-) {
-    val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
-
-    BackHandler { onReject() }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.8f)),
-        contentAlignment = Alignment.Center
-    ) {
-        Surface(
-            onClick = { },
-            modifier = Modifier.width(480.dp),
-            colors = ClickableSurfaceDefaults.colors(
-                containerColor = NuvioColors.SurfaceVariant
-            ),
-            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(16.dp))
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Apply Collection Changes?",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = NuvioColors.TextPrimary
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Changes from your phone are ready to apply.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = NuvioColors.TextSecondary
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            color = NuvioColors.Surface,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .padding(16.dp)
-                ) {
-                    Text(
-                        text = "${pending.proposedCollectionCount} collection${if (pending.proposedCollectionCount != 1) "s" else ""} will replace your current collections.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = NuvioColors.TextSecondary
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                if (pending.isApplying) {
-                    LoadingIndicator(modifier = Modifier.size(36.dp))
-                } else {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Surface(
-                            onClick = onReject,
-                            colors = ClickableSurfaceDefaults.colors(
-                                containerColor = NuvioColors.Surface,
-                                focusedContainerColor = NuvioColors.FocusBackground
-                            ),
-                            border = ClickableSurfaceDefaults.border(
-                                focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                                    shape = RoundedCornerShape(50)
-                                )
-                            ),
-                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                    tint = NuvioColors.TextPrimary
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Reject",
-                                    color = NuvioColors.TextPrimary
-                                )
-                            }
-                        }
-
-                        Surface(
-                            onClick = onConfirm,
-                            modifier = Modifier.focusRequester(focusRequester),
-                            colors = ClickableSurfaceDefaults.colors(
-                                containerColor = NuvioColors.Secondary,
-                                focusedContainerColor = NuvioColors.SecondaryVariant
-                            ),
-                            border = ClickableSurfaceDefaults.border(
-                                focusedBorder = Border(
-                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                                    shape = RoundedCornerShape(50)
-                                )
-                            ),
-                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(50))
-                        ) {
-                            Text(
-                                text = "Apply",
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-                                color = NuvioColors.OnSecondary
-                            )
-                        }
-                    }
+                    Icon(Icons.Default.Delete, stringResource(R.string.cd_delete))
                 }
             }
         }

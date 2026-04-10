@@ -531,6 +531,7 @@ class AddonManagerViewModel @Inject constructor(
                         title = folder.title,
                         coverImageUrl = folder.coverImageUrl,
                         focusGifUrl = folder.focusGifUrl,
+                        focusGifEnabled = folder.focusGifEnabled,
                         coverEmoji = folder.coverEmoji,
                         tileShape = folder.tileShape.name,
                         hideTitle = folder.hideTitle,

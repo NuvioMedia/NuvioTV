@@ -12,16 +12,25 @@ import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.FolderViewMode
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.skipStep
+import com.nuvio.tv.domain.model.supportsExtra
 import com.nuvio.tv.domain.repository.AddonRepository
+import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.ui.screens.home.GridItem
 import com.nuvio.tv.ui.screens.home.HomeRow
 import com.nuvio.tv.ui.screens.home.HomeUiState
+import com.nuvio.tv.ui.screens.home.homeItemStatusKey
 import com.nuvio.tv.domain.repository.CatalogRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -36,12 +45,14 @@ data class FolderDetailUiState(
     val tabs: List<FolderTab> = emptyList(),
     val selectedTabIndex: Int = 0,
     val isLoading: Boolean = true,
-    val followLayoutHomeState: HomeUiState? = null
+    val followLayoutHomeState: HomeUiState? = null,
+    val movieWatchedStatus: Map<String, Boolean> = emptyMap()
 )
 
 data class FolderTab(
     val label: String,
     val typeLabel: String = "",
+    val rawType: String = "",
     val catalogRow: CatalogRow? = null,
     val isLoading: Boolean = true,
     val error: String? = null,
@@ -61,7 +72,15 @@ class FolderDetailViewModel @Inject constructor(
     private val collectionsDataStore: CollectionsDataStore,
     private val addonRepository: AddonRepository,
     private val catalogRepository: CatalogRepository,
-    private val layoutPreferenceDataStore: LayoutPreferenceDataStore
+    private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
+    private val watchProgressRepository: WatchProgressRepository,
+    private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
+    private val tmdbService: com.nuvio.tv.core.tmdb.TmdbService,
+    private val tmdbMetadataService: com.nuvio.tv.core.tmdb.TmdbMetadataService,
+    private val tmdbSettingsDataStore: com.nuvio.tv.data.local.TmdbSettingsDataStore,
+    private val mdbListRepository: com.nuvio.tv.data.repository.MDBListRepository,
+    private val mdbListSettingsDataStore: com.nuvio.tv.data.local.MDBListSettingsDataStore,
+    private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository
 ) : ViewModel() {
 
     private val collectionId: String = savedStateHandle["collectionId"] ?: ""
@@ -69,6 +88,12 @@ class FolderDetailViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(FolderDetailUiState())
     val uiState: StateFlow<FolderDetailUiState> = _uiState.asStateFlow()
+
+    private var movieWatchedJob: Job? = null
+    private var enrichFocusJob: Job? = null
+    private val enrichedItemIds = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+    private val _enrichingItemId = MutableStateFlow<String?>(null)
+    val enrichingItemId: StateFlow<String?> = _enrichingItemId.asStateFlow()
 
     private val _rowsFocusState = MutableStateFlow(com.nuvio.tv.ui.screens.home.HomeScreenFocusState())
     val rowsFocusState: StateFlow<com.nuvio.tv.ui.screens.home.HomeScreenFocusState> = _rowsFocusState.asStateFlow()
@@ -81,6 +106,36 @@ class FolderDetailViewModel @Inject constructor(
 
     init {
         loadFolder()
+        // Observe watched status immediately so badges are ready when catalogs load.
+        observeWatchedStatusCombined()
+    }
+
+    private fun observeWatchedStatusCombined() {
+        movieWatchedJob = viewModelScope.launch {
+            combine(
+                watchProgressRepository.observeWatchedMovieIds(),
+                watchedSeriesStateHolder.fullyWatchedSeriesIds,
+                _uiState.map { state -> state.tabs.flatMap { it.catalogRow?.items.orEmpty() } }
+                    .distinctUntilChanged()
+            ) { movieWatchedIds, seriesWatchedIds, allItems ->
+                Triple(movieWatchedIds, seriesWatchedIds, allItems)
+            }.collectLatest { (movieWatchedIds, seriesWatchedIds, allItems) ->
+                val newStatus = mutableMapOf<String, Boolean>()
+                allItems.forEach { item ->
+                    val key = com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)
+                    val isWatched = when (item.apiType) {
+                        "movie" -> item.id in movieWatchedIds
+                        "series", "tv" -> item.id in seriesWatchedIds
+                        else -> false
+                    }
+                    newStatus[key] = isWatched
+                }
+                _uiState.update { s ->
+                    if (s.movieWatchedStatus == newStatus) s else s.copy(movieWatchedStatus = newStatus)
+                }
+                rebuildFollowLayoutState()
+            }
+        }
     }
 
     private val hasAllTab: Boolean
@@ -117,8 +172,10 @@ class FolderDetailViewModel @Inject constructor(
             val sourceTabs = folder.catalogSources.map { source ->
                 val addon = addons.find { it.id == source.addonId }
                 val catalog = addon?.catalogs?.find { it.id == source.catalogId && it.apiType == source.type }
+                    ?: addon?.catalogs?.find { it.id == source.catalogId.substringBefore(",") && it.apiType == source.type }
+                    ?: addons.firstNotNullOfOrNull { a -> a.catalogs.find { it.id == source.catalogId && it.apiType == source.type } }
                 val (name, typeLabel) = buildTabLabels(source, catalog?.name)
-                FolderTab(label = name, typeLabel = typeLabel, isLoading = true)
+                FolderTab(label = name, typeLabel = typeLabel, rawType = source.type, isLoading = true)
             }
 
             val tabs = if (showAll) {
@@ -202,6 +259,13 @@ class FolderDetailViewModel @Inject constructor(
                         catalogName = row.catalogName
                     ))
                 }
+                if (row.hasMore && !row.isLoading) {
+                    add(GridItem.SeeAll(
+                        catalogId = row.catalogId,
+                        addonId = row.addonId,
+                        type = row.apiType
+                    ))
+                }
             }
         }
 
@@ -219,7 +283,8 @@ class FolderDetailViewModel @Inject constructor(
                 modernHeroFullScreenBackdropEnabled = s.modernHeroFullScreenBackdropEnabled,
                 catalogAddonNameEnabled = false,
                 catalogTypeSuffixEnabled = true,
-                posterLabelsEnabled = true
+                posterLabelsEnabled = true,
+                movieWatchedStatus = s.movieWatchedStatus
             ))
         }
     }
@@ -255,17 +320,36 @@ class FolderDetailViewModel @Inject constructor(
                 return@launch
             }
 
-            val catalog = addon.catalogs.find { it.id == source.catalogId && it.apiType == source.type }
-            val catalogName = catalog?.name ?: source.catalogId
+            var catalog = addon.catalogs.find { it.id == source.catalogId && it.apiType == source.type }
+                ?: addon.catalogs.find { it.id == source.catalogId.substringBefore(",") && it.apiType == source.type }
+            // If the catalog wasn't found in the declared addon, search all installed addons.
+            var effectiveAddon: com.nuvio.tv.domain.model.Addon = addon
+            if (catalog == null) {
+                for (a in addons) {
+                    val match = a.catalogs.find { it.id == source.catalogId && it.apiType == source.type }
+                    if (match != null) {
+                        effectiveAddon = a
+                        catalog = match
+                        break
+                    }
+                }
+            }
+            val tab = _uiState.value.tabs.getOrNull(tabIndex)
+            val catalogName = catalog?.name ?: tab?.label?.takeIf { it != tab?.typeLabel } ?: source.catalogId
+
+            val supportsSkip = catalog?.supportsExtra("skip") ?: false
+            val skipStep = catalog?.skipStep() ?: 100
 
             catalogRepository.getCatalog(
-                addonBaseUrl = addon.baseUrl,
-                addonId = addon.id,
-                addonName = addon.displayName,
+                addonBaseUrl = effectiveAddon.baseUrl,
+                addonId = effectiveAddon.id,
+                addonName = effectiveAddon.displayName,
                 catalogId = source.catalogId,
                 catalogName = catalogName,
                 type = source.type,
-                skip = 0
+                skip = 0,
+                skipStep = skipStep,
+                supportsSkip = supportsSkip
             ).collect { result ->
                 when (result) {
                     is NetworkResult.Success -> {
@@ -297,6 +381,100 @@ class FolderDetailViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun loadMoreItems(tabIndex: Int) {
+        val state = _uiState.value
+        val tab = state.tabs.getOrNull(tabIndex) ?: return
+
+        // All tab: load more from all source tabs that still have more
+        if (tab.isAllTab && hasAllTab) {
+            val tabOffset = 1
+            state.tabs.drop(tabOffset).forEachIndexed { index, sourceTab ->
+                val sourceRow = sourceTab.catalogRow ?: return@forEachIndexed
+                if (sourceRow.hasMore && !sourceRow.isLoading) {
+                    loadMoreItems(index + tabOffset)
+                }
+            }
+            return
+        }
+
+        val row = tab.catalogRow ?: return
+        if (!row.hasMore || row.isLoading) return
+
+        // Mark the tab's catalogRow as loading
+        _uiState.update { s ->
+            val tabs = s.tabs.toMutableList()
+            if (tabIndex < tabs.size) {
+                tabs[tabIndex] = tabs[tabIndex].copy(
+                    catalogRow = row.copy(isLoading = true)
+                )
+            }
+            s.copy(tabs = tabs)
+        }
+        rebuildAllTab()
+        rebuildFollowLayoutState()
+
+        viewModelScope.launch {
+            val nextSkip = (row.currentPage + 1) * row.skipStep
+
+            catalogRepository.getCatalog(
+                addonBaseUrl = row.addonBaseUrl,
+                addonId = row.addonId,
+                addonName = row.addonName,
+                catalogId = row.catalogId,
+                catalogName = row.catalogName,
+                type = row.apiType,
+                skip = nextSkip,
+                skipStep = row.skipStep,
+                supportsSkip = row.supportsSkip
+            ).collect { result ->
+                when (result) {
+                    is NetworkResult.Success -> {
+                        _uiState.update { s ->
+                            val currentTab = s.tabs.getOrNull(tabIndex)
+                            val currentRow = currentTab?.catalogRow ?: return@update s
+                            val existingIds = currentRow.items.map { "${it.apiType}:${it.id}" }.toHashSet()
+                            val newItems = result.data.items.filter { "${it.apiType}:${it.id}" !in existingIds }
+                            val mergedItems = currentRow.items + newItems
+                            val hasMore = if (newItems.isEmpty()) false else result.data.hasMore
+
+                            val tabs = s.tabs.toMutableList()
+                            tabs[tabIndex] = tabs[tabIndex].copy(
+                                catalogRow = result.data.copy(
+                                    items = mergedItems,
+                                    hasMore = hasMore,
+                                    isLoading = false
+                                )
+                            )
+                            s.copy(tabs = tabs)
+                        }
+                        rebuildAllTab()
+                        rebuildFollowLayoutState()
+                    }
+                    is NetworkResult.Error -> {
+                        _uiState.update { s ->
+                            val currentRow = s.tabs.getOrNull(tabIndex)?.catalogRow ?: return@update s
+                            val tabs = s.tabs.toMutableList()
+                            tabs[tabIndex] = tabs[tabIndex].copy(
+                                catalogRow = currentRow.copy(isLoading = false)
+                            )
+                            s.copy(tabs = tabs)
+                        }
+                    }
+                    NetworkResult.Loading -> {}
+                }
+            }
+        }
+    }
+
+    fun loadMoreForCatalog(catalogId: String, addonId: String, type: String) {
+        val state = _uiState.value
+        val tabIndex = state.tabs.indexOfFirst { tab ->
+            val row = tab.catalogRow ?: return@indexOfFirst false
+            row.catalogId == catalogId && row.addonId == addonId && row.apiType == type
+        }
+        if (tabIndex >= 0) loadMoreItems(tabIndex)
     }
 
     fun selectTab(index: Int) {
@@ -388,5 +566,141 @@ class FolderDetailViewModel @Inject constructor(
             typeLabel
         }
         return name to typeLabel
+    }
+
+    fun onItemFocused(item: MetaPreview) {
+        // Clear enriching for previous item immediately.
+        if (_enrichingItemId.value != null && _enrichingItemId.value != item.id) {
+            _enrichingItemId.value = null
+        }
+        if (item.id in enrichedItemIds) return
+
+        // Check if any enrichment source is active — if so, signal enriching immediately
+        // so hero content hides until enrichment completes.
+        val viewMode = _uiState.value.viewMode
+        if (viewMode == FolderViewMode.FOLLOW_LAYOUT && _uiState.value.homeLayout == HomeLayout.MODERN) {
+            _enrichingItemId.value = item.id
+        }
+
+        enrichFocusJob?.cancel()
+        enrichFocusJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            kotlinx.coroutines.delay(350)
+            val tmdbSettings = tmdbSettingsDataStore.settings.first()
+            val mdbSettings = mdbListSettingsDataStore.settings.first()
+            val homeLayout = _uiState.value.homeLayout
+            val tmdbEnabled = tmdbSettings.enabled &&
+                (homeLayout != HomeLayout.MODERN || tmdbSettings.modernHomeEnabled)
+            val mdbEnabled = mdbSettings.enabled && mdbSettings.apiKey.isNotBlank()
+            val externalMetaEnabled = layoutPreferenceDataStore.preferExternalMetaAddonDetail.first()
+            if (!tmdbEnabled && !mdbEnabled && !externalMetaEnabled) {
+                if (_enrichingItemId.value == item.id) _enrichingItemId.value = null
+                return@launch
+            }
+
+            val mdbRating = if (mdbEnabled) {
+                runCatching { mdbListRepository.getImdbRatingForItem(item.id, item.apiType) }.getOrNull()
+            } else null
+
+            var enrichment: com.nuvio.tv.core.tmdb.TmdbEnrichment? = null
+            if (tmdbEnabled) {
+                val tmdbId = runCatching { tmdbService.ensureTmdbId(item.id, item.apiType) }.getOrNull()
+                if (tmdbId != null) {
+                    enrichment = runCatching {
+                        tmdbMetadataService.fetchEnrichment(
+                            tmdbId = tmdbId,
+                            contentType = item.type,
+                            language = tmdbSettings.language
+                        )
+                    }.getOrNull()
+                }
+            }
+
+            if (enrichment == null && mdbRating == null && !externalMetaEnabled) return@launch
+            enrichedItemIds.add(item.id)
+
+            // Apply TMDB + MDB enrichment if available.
+            if (enrichment != null || mdbRating != null) {
+                val finalEnrichment = enrichment
+                val finalMdbRating = mdbRating
+
+                updateItemInTabs(item.id) { merged ->
+                    var result = merged
+                if (finalEnrichment != null) {
+                    if (tmdbSettings.useBasicInfo) {
+                        result = result.copy(
+                            name = finalEnrichment.localizedTitle ?: result.name,
+                            description = finalEnrichment.description ?: result.description,
+                            genres = if (finalEnrichment.genres.isNotEmpty()) finalEnrichment.genres else result.genres,
+                            imdbRating = finalEnrichment.rating?.toFloat() ?: result.imdbRating
+                        )
+                    }
+                    if (tmdbSettings.useArtwork) {
+                        result = result.copy(
+                            background = finalEnrichment.backdrop ?: result.background,
+                            logo = finalEnrichment.logo ?: result.logo
+                        )
+                    }
+                    if (tmdbSettings.useReleaseDates) {
+                        result = result.copy(
+                            releaseInfo = finalEnrichment.releaseInfo ?: result.releaseInfo
+                        )
+                    }
+                    if (tmdbSettings.useDetails) {
+                        result = result.copy(
+                            runtime = finalEnrichment.runtimeMinutes?.toString() ?: result.runtime,
+                            ageRating = finalEnrichment.ageRating ?: result.ageRating,
+                            status = finalEnrichment.status ?: result.status
+                        )
+                    }
+                }
+                if (finalMdbRating != null && result.imdbRating == null) {
+                    result = result.copy(imdbRating = finalMdbRating.toFloat())
+                }
+                result
+            }
+            }
+
+            // External meta addon fallback when TMDB didn't enrich.
+            if (enrichment == null && externalMetaEnabled) {
+                val metaResult = metaRepository.getMetaFromAllAddons(item.apiType, item.id)
+                    .first { it is NetworkResult.Success || it is NetworkResult.Error }
+                if (metaResult is NetworkResult.Success) {
+                    val meta = metaResult.data
+                    updateItemInTabs(item.id) { merged ->
+                        merged.copy(
+                            name = meta.name.takeIf { it.isNotBlank() } ?: merged.name,
+                            description = meta.description?.takeIf { it.isNotBlank() } ?: merged.description,
+                            background = meta.background?.takeIf { it.isNotBlank() } ?: merged.background,
+                            logo = meta.logo?.takeIf { it.isNotBlank() } ?: merged.logo,
+                            genres = meta.genres.takeIf { it.isNotEmpty() } ?: merged.genres,
+                            imdbRating = meta.imdbRating ?: merged.imdbRating,
+                            releaseInfo = meta.releaseInfo?.takeIf { it.isNotBlank() } ?: merged.releaseInfo
+                        )
+                    }
+                }
+            }
+
+            // Sync enriched tabs into followLayoutHomeState for FOLLOW_LAYOUT mode.
+            if (_enrichingItemId.value == item.id) _enrichingItemId.value = null
+            rebuildFollowLayoutState()
+        }
+    }
+
+    private fun updateItemInTabs(itemId: String, transform: (MetaPreview) -> MetaPreview) {
+        _uiState.update { state ->
+            var changed = false
+            val updatedTabs = state.tabs.map { tab ->
+                val row = tab.catalogRow ?: return@map tab
+                val idx = row.items.indexOfFirst { it.id == itemId }
+                if (idx < 0) return@map tab
+                val merged = transform(row.items[idx])
+                if (merged == row.items[idx]) return@map tab
+                changed = true
+                val items = row.items.toMutableList()
+                items[idx] = merged
+                tab.copy(catalogRow = row.copy(items = items))
+            }
+            if (changed) state.copy(tabs = updatedTabs) else state
+        }
     }
 }

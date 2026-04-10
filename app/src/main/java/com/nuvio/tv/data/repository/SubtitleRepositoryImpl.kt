@@ -142,12 +142,15 @@ class SubtitleRepositoryImpl @Inject constructor(
         }
         
         // Build the subtitle URL with optional extra parameters
-        val baseUrl = addon.baseUrl.trimEnd('/')
+        val rawBaseUrl = addon.baseUrl.trimEnd('/')
+        val queryStart = rawBaseUrl.indexOf('?')
+        val basePath = if (queryStart >= 0) rawBaseUrl.substring(0, queryStart).trimEnd('/') else rawBaseUrl
+        val baseQuery = if (queryStart >= 0) rawBaseUrl.substring(queryStart) else ""
         val extraParams = buildExtraParams(videoHash, videoSize, filename)
         val subtitleUrl = if (extraParams.isNotEmpty()) {
-            "$baseUrl/subtitles/$normalizedType/$actualId/$extraParams.json"
+            "$basePath/subtitles/$normalizedType/$actualId/$extraParams.json$baseQuery"
         } else {
-            "$baseUrl/subtitles/$normalizedType/$actualId.json"
+            "$basePath/subtitles/$normalizedType/$actualId.json$baseQuery"
         }
         
         Log.d(TAG, "Fetching subtitles from ${addon.name}: $subtitleUrl")

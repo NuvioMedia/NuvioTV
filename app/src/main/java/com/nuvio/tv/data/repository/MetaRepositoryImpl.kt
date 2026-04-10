@@ -305,9 +305,12 @@ class MetaRepositoryImpl @Inject constructor(
 
     private fun buildMetaUrl(baseUrl: String, type: String, id: String): String {
         val cleanBaseUrl = baseUrl.trimEnd('/')
+        val queryStart = cleanBaseUrl.indexOf('?')
+        val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl
+        val baseQuery = if (queryStart >= 0) cleanBaseUrl.substring(queryStart) else ""
         val encodedType = encodePathSegment(type)
         val encodedId = encodePathSegment(id)
-        return "$cleanBaseUrl/meta/$encodedType/$encodedId.json"
+        return "$basePath/meta/$encodedType/$encodedId.json$baseQuery"
     }
 
     private fun Addon.supportsMetaType(type: String): Boolean {

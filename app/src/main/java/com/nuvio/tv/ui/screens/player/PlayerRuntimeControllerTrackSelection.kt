@@ -290,6 +290,7 @@ internal fun PlayerRuntimeController.rememberInternalSubtitleSelection(trackInde
 }
 
 internal fun PlayerRuntimeController.disableSubtitles() {
+    resetSubtitleAutoSyncState()
     logSwitchTrace(
         stage = "disable-subtitles",
         message = "usingMpv=${isUsingMpvEngine()} selectedSubtitleIndex=${_uiState.value.selectedSubtitleTrackIndex}"
@@ -309,11 +310,35 @@ internal fun PlayerRuntimeController.disableSubtitles() {
         }
         return
     }
-
     _exoPlayer?.let { player ->
         player.trackSelectionParameters = player.trackSelectionParameters
             .buildUpon()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+            .build()
+    }
+}
+
+internal fun PlayerRuntimeController.refreshActiveSubtitleTrackAfterTimingChange() {
+    val player = _exoPlayer ?: return
+    val state = _uiState.value
+    if (state.selectedAddonSubtitle == null && state.selectedSubtitleTrackIndex < 0) return
+
+    // Force a renderer reset so stale cues from the old delay do not linger on screen.
+    player.trackSelectionParameters = player.trackSelectionParameters
+        .buildUpon()
+        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+        .build()
+
+    scope.launch {
+        delay(90)
+        if (_exoPlayer !== player) return@launch
+        val latestState = _uiState.value
+        if (latestState.selectedAddonSubtitle == null && latestState.selectedSubtitleTrackIndex < 0) {
+            return@launch
+        }
+        player.trackSelectionParameters = player.trackSelectionParameters
+            .buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
             .build()
     }
 }
@@ -428,6 +453,7 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         if (currentlySelected?.id == subtitle.id && currentlySelected.url == subtitle.url) {
             return@let
         }
+        resetSubtitleAutoSyncState()
         val normalizedLang = PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang)
         val inferredMime = PlayerSubtitleUtils.mimeTypeFromUrl(subtitle.url)
         Log.d(
@@ -483,9 +509,12 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
 
         player.setMediaSource(
             mediaSourceFactory.createMediaSource(
+                context = context,
                 url = currentStreamUrl,
                 headers = currentHeaders,
                 subtitleConfigurations = subtitleConfigurations,
+                filename = currentFilename,
+                responseHeaders = currentStreamResponseHeaders,
                 mimeTypeOverride = currentStreamMimeType
             ),
             currentPosition

@@ -28,6 +28,9 @@ jsoup = "1.17.2"
 gson = "2.10.1"
 markdownRenderer = "0.33.0"
 nanohttpd = "2.3.1"
+cloudstream = "v4.7.0"
+nicehttp = "0.4.16"
+conscrypt = { strictly = "2.5.2" }
 zxing = "3.5.3"
 supabase = "3.1.4"
 ktor = "3.1.1"
@@ -106,6 +109,9 @@ quickjs-kt = { group = "io.github.dokar3", name = "quickjs-kt-android", version.
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 nanohttpd = { group = "org.nanohttpd", name = "nanohttpd", version.ref = "nanohttpd" }
+cloudstream-library = { group = "com.github.recloudstream.cloudstream", name = "library", version.ref = "cloudstream" }
+nicehttp = { group = "com.github.Blatzar", name = "NiceHttp", version.ref = "nicehttp" }
+conscrypt-android = { group = "org.conscrypt", name = "conscrypt-android", version.ref = "conscrypt" }
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 
 # Markdown rendering

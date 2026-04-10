@@ -15,6 +15,7 @@ data class CollectionFolder(
     val title: String,
     val coverImageUrl: String? = null,
     val focusGifUrl: String? = null,
+    val focusGifEnabled: Boolean = true,
     val coverEmoji: String? = null,
     val tileShape: PosterShape = PosterShape.SQUARE,
     val hideTitle: Boolean = false,

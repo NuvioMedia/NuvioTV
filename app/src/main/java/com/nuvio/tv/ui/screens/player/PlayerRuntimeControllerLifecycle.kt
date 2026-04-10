@@ -10,6 +10,7 @@ internal fun PlayerRuntimeController.releasePlayer() {
 internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) {
     isReleasingPlayer = true
     if (flushPlaybackState) {
+        stopTorrentStream()
         flushPlaybackSnapshotForSwitchOrExit()
     }
 
@@ -29,6 +30,7 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     hideStreamSourceIndicatorJob?.cancel()
     hidePlayerEngineSwitchInfoJob?.cancel()
     hideSubtitleDelayOverlayJob?.cancel()
+    subtitleAutoSyncLoadJob?.cancel()
     playbackPreparationJob?.cancel()
     playbackPreparationJob = null
     delayMpvResumeSeekUntilVideoTrack = false

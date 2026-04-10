@@ -87,6 +87,7 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -120,8 +121,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun PlayerScreen(
     viewModel: PlayerViewModel = hiltViewModel(),
-    onBackPress: (currentSeason: Int?, currentEpisode: Int?, autoPlayEnabled: Boolean) -> Unit,
-    onPlaybackErrorBack: () -> Unit = { onBackPress(null, null, false) },
+    onBackPress: (currentVideoId: String?, currentSeason: Int?, currentEpisode: Int?, autoPlayEnabled: Boolean) -> Unit,
+    onPlaybackErrorBack: () -> Unit = { onBackPress(null, null, null, false) },
     onPlaybackEnded: ((nextVideoId: String?, nextSeason: Int?, nextEpisode: Int?) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -137,9 +138,12 @@ fun PlayerScreen(
     val skipIntroFocusRequester = remember { FocusRequester() }
     var skipButtonActuallyVisible by remember { mutableStateOf(false) }
     val nextEpisodeFocusRequester = remember { FocusRequester() }
+    var subtitleDelayAutoSyncFocused by remember { mutableStateOf(false) }
+    var subtitleTimingConsumeNextConfirmKeyUp by remember { mutableStateOf(false) }
+    var exoPlayerView by remember { mutableStateOf<PlayerView?>(null) }
     val exitPlayer: () -> Unit = {
         viewModel.stopAndRelease()
-        onBackPress(uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL)
+        onBackPress(uiState.currentVideoId, uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL)
     }
     val exitPlayerFromError: () -> Unit = {
         viewModel.stopAndRelease()
@@ -157,6 +161,8 @@ fun PlayerScreen(
             viewModel.onEvent(PlayerEvent.OnDismissPauseOverlay)
         } else if (uiState.showMoreDialog) {
             viewModel.onEvent(PlayerEvent.OnDismissMoreDialog)
+        } else if (uiState.showSubtitleTimingDialog) {
+            viewModel.onEvent(PlayerEvent.OnDismissSubtitleTimingDialog)
         } else if (uiState.showSubtitleDelayOverlay) {
             viewModel.onEvent(PlayerEvent.OnHideSubtitleDelayOverlay)
         } else if (uiState.showSubtitleStylePanel) {
@@ -196,7 +202,7 @@ fun PlayerScreen(
             if (onPlaybackEnded != null) {
                 onPlaybackEnded(next?.videoId, next?.season, next?.episode)
             } else {
-                onBackPress(uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL)
+                onBackPress(uiState.currentVideoId, uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL)
             }
         }
     }
@@ -259,6 +265,7 @@ fun PlayerScreen(
         uiState.showSourcesPanel,
         uiState.showSubtitleStylePanel,
         uiState.showSubtitleDelayOverlay,
+        uiState.showSubtitleTimingDialog,
         uiState.showAudioOverlay,
         uiState.showSubtitleOverlay,
         uiState.showSpeedDialog,
@@ -266,6 +273,7 @@ fun PlayerScreen(
         if (uiState.showControls && !uiState.showEpisodesPanel && !uiState.showSourcesPanel &&
             !uiState.showAudioOverlay && !uiState.showSubtitleOverlay &&
             !uiState.showSubtitleStylePanel && !uiState.showSubtitleDelayOverlay &&
+            !uiState.showSubtitleTimingDialog &&
             !uiState.showSpeedDialog
         ) {
             // Wait for AnimatedVisibility animation to complete before focusing play/pause button
@@ -293,6 +301,14 @@ fun PlayerScreen(
     // Initial focus on container - the LaunchedEffect above will handle focusing controls
     LaunchedEffect(Unit) {
         containerFocusRequester.requestFocus()
+    }
+    LaunchedEffect(uiState.showSubtitleDelayOverlay) {
+        subtitleDelayAutoSyncFocused = false
+    }
+    LaunchedEffect(uiState.showSubtitleTimingDialog) {
+        if (!uiState.showSubtitleTimingDialog) {
+            subtitleTimingConsumeNextConfirmKeyUp = false
+        }
     }
 
     Box(
@@ -332,6 +348,7 @@ fun PlayerScreen(
                     !uiState.showAudioOverlay &&
                     !uiState.showSubtitleOverlay &&
                     !uiState.showSubtitleStylePanel &&
+                    !uiState.showSubtitleTimingDialog &&
                     !uiState.showSpeedDialog
                 ) {
                     viewModel.onEvent(PlayerEvent.OnShowSubtitleOverlay)
@@ -339,23 +356,54 @@ fun PlayerScreen(
                 true
             }
             .onKeyEvent { keyEvent ->
+                if (subtitleTimingConsumeNextConfirmKeyUp &&
+                    keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_UP &&
+                    (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                        keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)
+                ) {
+                    subtitleTimingConsumeNextConfirmKeyUp = false
+                    return@onKeyEvent true
+                }
                 if (uiState.showSubtitleDelayOverlay) {
                     if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
-                        when (keyEvent.nativeKeyEvent.keyCode) {
-                            KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(-SUBTITLE_DELAY_STEP_MS))
-                                return@onKeyEvent true
+                        if (subtitleDelayAutoSyncFocused) {
+                            when (keyEvent.nativeKeyEvent.keyCode) {
+                                KeyEvent.KEYCODE_DPAD_CENTER,
+                                KeyEvent.KEYCODE_ENTER -> {
+                                    subtitleDelayAutoSyncFocused = false
+                                    subtitleTimingConsumeNextConfirmKeyUp = true
+                                    viewModel.onEvent(PlayerEvent.OnShowSubtitleTimingDialog)
+                                    return@onKeyEvent true
+                                }
+                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                    subtitleDelayAutoSyncFocused = false
+                                    return@onKeyEvent true
+                                }
+                                KeyEvent.KEYCODE_DPAD_DOWN,
+                                KeyEvent.KEYCODE_DPAD_LEFT,
+                                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                    return@onKeyEvent true
+                                }
                             }
-                            KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(SUBTITLE_DELAY_STEP_MS))
-                                return@onKeyEvent true
-                            }
-                            KeyEvent.KEYCODE_DPAD_CENTER,
-                            KeyEvent.KEYCODE_ENTER,
-                            KeyEvent.KEYCODE_DPAD_UP,
-                            KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                viewModel.onEvent(PlayerEvent.OnHideSubtitleDelayOverlay)
-                                return@onKeyEvent true
+                        } else {
+                            when (keyEvent.nativeKeyEvent.keyCode) {
+                                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                    viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(-SUBTITLE_DELAY_STEP_MS))
+                                    return@onKeyEvent true
+                                }
+                                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                    viewModel.onEvent(PlayerEvent.OnAdjustSubtitleDelay(SUBTITLE_DELAY_STEP_MS))
+                                    return@onKeyEvent true
+                                }
+                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    subtitleDelayAutoSyncFocused = true
+                                    return@onKeyEvent true
+                                }
+                                KeyEvent.KEYCODE_DPAD_CENTER,
+                                KeyEvent.KEYCODE_ENTER,
+                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                    return@onKeyEvent true
+                                }
                             }
                         }
                     }
@@ -365,13 +413,18 @@ fun PlayerScreen(
                     ) {
                         return@onKeyEvent true
                     }
+                    if (keyEvent.nativeKeyEvent.keyCode != KeyEvent.KEYCODE_BACK) {
+                        // While open, consume all non-back keys to avoid accidental dismissal.
+                        return@onKeyEvent true
+                    }
                 }
 
                 // When a side panel or dialog is open, let it handle all keys
                 val panelOrDialogOpen = uiState.showEpisodesPanel || uiState.showSourcesPanel ||
                         uiState.showAudioOverlay || uiState.showSubtitleOverlay ||
                         uiState.showSubtitleStylePanel || uiState.showSpeedDialog ||
-                        uiState.showSubtitleDelayOverlay || uiState.showMoreDialog
+                        uiState.showSubtitleDelayOverlay || uiState.showSubtitleTimingDialog ||
+                        uiState.showMoreDialog
                 if (panelOrDialogOpen) return@onKeyEvent false
 
                 if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_UP) {
@@ -513,7 +566,29 @@ fun PlayerScreen(
         } else {
             viewModel.exoPlayer?.let { player ->
                 val subtitleStyle = uiState.subtitleStyle
-                val resizeMode = uiState.resizeMode
+                val aspectMode = uiState.aspectMode
+
+                DisposableEffect(player, exoPlayerView, aspectMode) {
+                    val boundView = exoPlayerView
+                    if (boundView == null) {
+                        onDispose { }
+                    } else {
+                        val listener = object : androidx.media3.common.Player.Listener {
+                            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                                boundView.post { applyExoAspectMode(boundView, aspectMode) }
+                            }
+
+                            override fun onRenderedFirstFrame() {
+                                boundView.post { applyExoAspectMode(boundView, aspectMode) }
+                            }
+                        }
+                        player.addListener(listener)
+                        boundView.post { applyExoAspectMode(boundView, aspectMode) }
+                        onDispose {
+                            player.removeListener(listener)
+                        }
+                    }
+                }
 
                 AndroidView(
                     factory = { context ->
@@ -522,13 +597,15 @@ fun PlayerScreen(
                             useController = false
                             keepScreenOn = false
                             setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+                            exoPlayerView = this
                         }
                     },
                     update = { playerView ->
+                        exoPlayerView = playerView
                         // Keep device awake only while playback is active (or buffering), not when paused.
                         playerView.keepScreenOn = uiState.isPlaying || uiState.isBuffering
-                        Log.d("PlayerScreen", "Applying resizeMode: $resizeMode")
-                        playerView.resizeMode = resizeMode
+                        playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        applyExoAspectMode(playerView, aspectMode)
                         playerView.subtitleView?.apply {
                             // Calculate font size based on percentage (100% = 24sp base)
                             val baseFontSize = 24f
@@ -586,6 +663,7 @@ fun PlayerScreen(
             logoUrl = uiState.logo,
             title = uiState.title,
             message = uiState.loadingMessage,
+            progress = uiState.loadingProgress,
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(2f)
@@ -617,13 +695,64 @@ fun PlayerScreen(
                 .zIndex(2.6f)
         )
 
+        // Torrent stats overlay (top-right corner)
+        TorrentOverlay(
+            visible = uiState.isTorrentStream && uiState.showTorrentStats && !uiState.hideTorrentStats && uiState.error == null,
+            downloadSpeed = uiState.torrentDownloadSpeed,
+            uploadSpeed = uiState.torrentUploadSpeed,
+            peers = uiState.torrentPeers,
+            seeds = uiState.torrentSeeds,
+            totalProgress = uiState.torrentTotalProgress,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 16.dp, end = 16.dp)
+                .zIndex(2.7f)
+        )
+
         // Buffering indicator
         if (uiState.isBuffering && !uiState.showLoadingOverlay) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                LoadingIndicator()
+                if (uiState.isTorrentStream && uiState.torrentBufferingMessage != null) {
+                    // Torrent rebuffer: spinner + download stats + progress bar
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        LoadingIndicator()
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = uiState.torrentBufferingMessage ?: "",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                        if (uiState.torrentBufferingProgress > 0f) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .width(200.dp)
+                                    .height(3.dp)
+                                    .background(
+                                        color = Color.White.copy(alpha = 0.2f),
+                                        shape = RoundedCornerShape(2.dp)
+                                    )
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(uiState.torrentBufferingProgress.coerceIn(0f, 1f))
+                                        .height(3.dp)
+                                        .background(
+                                            color = Color.White.copy(alpha = 0.85f),
+                                            shape = RoundedCornerShape(2.dp)
+                                        )
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    LoadingIndicator()
+                }
             }
         }
 
@@ -652,6 +781,11 @@ fun PlayerScreen(
             onFocused = { viewModel.scheduleHideControls() },
             focusRequester = skipIntroFocusRequester,
             downFocusRequester = if (uiState.showControls) progressBarFocusRequester else null,
+            upFocusRequester = null,
+            onHideControls = {
+                if (uiState.showControls) viewModel.hideControls()
+                else viewModel.onEvent(PlayerEvent.OnToggleControls)
+            },
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = 32.dp, bottom = skipButtonBottomPadding)
@@ -790,7 +924,7 @@ fun PlayerScreen(
                     val title = uiState.title
                     val headers = viewModel.getCurrentHeaders()
                     viewModel.stopAndRelease()
-                    onBackPress(uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL)
+                    onBackPress(uiState.currentVideoId, uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL)
                     ExternalPlayerLauncher.launch(
                         context = context,
                         url = url,
@@ -855,6 +989,7 @@ fun PlayerScreen(
                 !uiState.showSourcesPanel &&
                 !uiState.showAudioOverlay &&
                 !uiState.showSubtitleOverlay &&
+                !uiState.showSubtitleTimingDialog &&
                 !uiState.showSpeedDialog,
             enter = fadeIn(animationSpec = tween(120)),
             exit = fadeOut(animationSpec = tween(120)),
@@ -864,14 +999,22 @@ fun PlayerScreen(
                 .zIndex(2.3f)
         ) {
             SubtitleDelayOverlay(
-                subtitleDelayMs = uiState.subtitleDelayMs
+                subtitleDelayMs = uiState.subtitleDelayMs,
+                isAutoSyncButtonFocused = subtitleDelayAutoSyncFocused,
+                isSliderFocused = !subtitleDelayAutoSyncFocused,
+                onOpenSyncByLine = {
+                    subtitleDelayAutoSyncFocused = false
+                    subtitleTimingConsumeNextConfirmKeyUp = true
+                    viewModel.onEvent(PlayerEvent.OnShowSubtitleTimingDialog)
+                }
             )
         }
 
         AnimatedVisibility(
             visible = uiState.showSeekOverlay && !uiState.showControls && uiState.error == null &&
                 !uiState.showLoadingOverlay && !uiState.showPauseOverlay &&
-                !uiState.showSubtitleDelayOverlay && !uiState.showMoreDialog,
+                !uiState.showSubtitleDelayOverlay && !uiState.showSubtitleTimingDialog &&
+                !uiState.showMoreDialog,
             enter = fadeIn(animationSpec = tween(150)),
             exit = fadeOut(animationSpec = tween(150)),
             modifier = Modifier.align(Alignment.BottomCenter)
@@ -1035,6 +1178,42 @@ fun PlayerScreen(
                 .fillMaxSize()
                 .zIndex(2.6f)
         )
+
+        PlayerOverlayScaffold(
+            visible = uiState.showSubtitleTimingDialog &&
+                uiState.error == null &&
+                !uiState.showLoadingOverlay &&
+                !uiState.showPauseOverlay &&
+                !uiState.showEpisodesPanel &&
+                !uiState.showSourcesPanel &&
+                !uiState.showAudioOverlay &&
+                !uiState.showSubtitleOverlay &&
+                !uiState.showSubtitleStylePanel &&
+                !uiState.showSubtitleDelayOverlay &&
+                !uiState.showSpeedDialog &&
+                !uiState.showMoreDialog,
+            onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissSubtitleTimingDialog) },
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(2.35f),
+            captureKeys = false,
+            contentPadding = PaddingValues(top = 44.dp)
+        ) {
+            SubtitleTimingDialog(
+                modifier = Modifier.align(Alignment.TopCenter),
+                currentPositionMs = uiState.currentPosition,
+                selectedAddonSubtitle = uiState.selectedAddonSubtitle,
+                cues = uiState.subtitleAutoSyncCues,
+                capturedVideoMs = uiState.subtitleAutoSyncCapturedVideoMs,
+                statusMessage = uiState.subtitleAutoSyncStatus,
+                errorMessage = uiState.subtitleAutoSyncError,
+                isLoadingCues = uiState.subtitleAutoSyncLoading,
+                onCaptureNow = { viewModel.onEvent(PlayerEvent.OnCaptureSubtitleAutoSyncTime) },
+                onCueSelected = { cue ->
+                    viewModel.onEvent(PlayerEvent.OnApplySubtitleAutoSyncCue(cue.startTimeMs))
+                }
+            )
+        }
 
         if (uiState.showSpeedDialog) {
             SpeedSelectionDialog(
@@ -1208,6 +1387,7 @@ private fun PlayerControlsOverlay(
                 focusRequester = progressBarFocusRequester,
                 upFocusRequester = progressBarUpFocusRequester,
                 downFocusRequester = playPauseFocusRequester,
+                onUpKey = onHideControls,
                 onFocused = onResetHideTimer
 )
 
@@ -1476,6 +1656,7 @@ private fun ProgressBar(
     focusRequester: FocusRequester? = null,
     upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
+    onUpKey: (() -> Unit)? = null,
     onFocused: (() -> Unit)? = null
 ) {
     val progress = if (duration > 0) {
@@ -1544,6 +1725,9 @@ private fun ProgressBar(
                                     upFocusRequester.requestFocus()
                                 } catch (_: Exception) {
                                 }
+                                true
+                            } else if (onUpKey != null) {
+                                onUpKey.invoke()
                                 true
                             } else {
                                 false
@@ -1764,9 +1948,15 @@ private fun PlayerEngineSwitchIndicator(
 }
 
 @Composable
-private fun SubtitleDelayOverlay(subtitleDelayMs: Int) {
+private fun SubtitleDelayOverlay(
+    subtitleDelayMs: Int,
+    isAutoSyncButtonFocused: Boolean,
+    isSliderFocused: Boolean,
+    onOpenSyncByLine: () -> Unit
+) {
     val fraction = ((subtitleDelayMs - SUBTITLE_DELAY_MIN_MS).toFloat() /
         (SUBTITLE_DELAY_MAX_MS - SUBTITLE_DELAY_MIN_MS).toFloat()).coerceIn(0f, 1f)
+    val sliderAccent = if (isSliderFocused) Color(0xFF4AA3FF) else Color.White
 
     Column(
         modifier = Modifier
@@ -1822,7 +2012,7 @@ private fun SubtitleDelayOverlay(subtitleDelayMs: Int) {
                         modifier = Modifier
                             .width(1.dp)
                             .height(tickHeight)
-                            .background(Color.White.copy(alpha = 0.22f))
+                            .background(sliderAccent.copy(alpha = if (isSliderFocused) 0.52f else 0.22f))
                     )
                 }
             }
@@ -1834,7 +2024,29 @@ private fun SubtitleDelayOverlay(subtitleDelayMs: Int) {
                     .width(thumbWidth)
                     .height(8.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.95f))
+                    .background(sliderAccent.copy(alpha = 0.95f))
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Card(
+            onClick = onOpenSyncByLine,
+            colors = CardDefaults.colors(
+                containerColor = if (isAutoSyncButtonFocused) {
+                    Color.White.copy(alpha = 0.22f)
+                } else {
+                    Color.White.copy(alpha = 0.11f)
+                },
+                focusedContainerColor = Color.White.copy(alpha = 0.22f)
+            ),
+            shape = CardDefaults.shape(RoundedCornerShape(12.dp))
+        ) {
+            Text(
+                text = "Sync Line",
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                color = Color.White,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
             )
         }
     }

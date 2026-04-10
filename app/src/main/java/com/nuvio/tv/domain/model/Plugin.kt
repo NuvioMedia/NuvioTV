@@ -3,6 +3,22 @@ package com.nuvio.tv.domain.model
 import com.squareup.moshi.JsonClass
 
 /**
+ * Repository type distinguishing native JS plugins from external DEX extensions.
+ */
+enum class RepositoryType {
+    NUVIO_JS,
+    EXTERNAL_DEX
+}
+
+/**
+ * Plugin info returned from Supabase sync, with optional type hint.
+ */
+data class RemotePluginInfo(
+    val url: String,
+    val repoType: String? = null
+)
+
+/**
  * Represents a plugin repository containing scrapers
  */
 data class PluginRepository(
@@ -12,7 +28,8 @@ data class PluginRepository(
     val description: String? = null,
     val enabled: Boolean = true,
     val lastUpdated: Long = 0L,
-    val scraperCount: Int = 0
+    val scraperCount: Int = 0,
+    val type: RepositoryType = RepositoryType.NUVIO_JS
 )
 
 /**
@@ -64,7 +81,8 @@ data class ScraperInfo(
     val logo: String?,
     val contentLanguage: List<String>,
     val repositoryId: String,
-    val formats: List<String>?
+    val formats: List<String>?,
+    val type: RepositoryType = RepositoryType.NUVIO_JS
 ) {
     fun supportsType(type: String): Boolean {
         val normalizedType = when (type.lowercase()) {
@@ -91,6 +109,36 @@ data class LocalScraperResult(
     val peers: Int? = null,
     val infoHash: String? = null,
     val headers: Map<String, String>? = null
+)
+
+/**
+ * Manifest format for external extension repositories.
+ */
+@JsonClass(generateAdapter = true)
+data class ExternalRepoManifest(
+    val name: String,
+    val description: String? = null,
+    val manifestVersion: Int = 1,
+    val pluginLists: List<String>
+)
+
+/**
+ * Entry for an individual extension in an external repository's plugins list.
+ */
+@JsonClass(generateAdapter = true)
+data class ExternalPluginEntry(
+    val name: String,
+    val internalName: String,
+    val description: String? = null,
+    val version: Int = 1,
+    val apiVersion: Int = 1,
+    val status: Int = 1,
+    val authors: List<String>? = null,
+    val tvTypes: List<String>? = null,
+    val iconUrl: String? = null,
+    val url: String,
+    val fileSize: Long? = null,
+    val repositoryUrl: String? = null
 )
 
 /**

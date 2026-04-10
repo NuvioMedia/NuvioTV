@@ -192,6 +192,12 @@ class CollectionEditorViewModel @Inject constructor(
         }
     }
 
+    fun updateFolderFocusGifEnabled(enabled: Boolean) {
+        _uiState.update { state ->
+            state.copy(editingFolder = state.editingFolder?.copy(focusGifEnabled = enabled))
+        }
+    }
+
     fun updateFolderCoverEmoji(emoji: String) {
         _uiState.update { state ->
             state.copy(editingFolder = state.editingFolder?.copy(

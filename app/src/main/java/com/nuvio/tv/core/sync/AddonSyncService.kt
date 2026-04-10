@@ -50,6 +50,7 @@ class AddonSyncService @Inject constructor(
             }
 
             val localUrls = addonPreferences.installedAddonUrls.first()
+            val userSetNames = addonPreferences.userSetNames.first()
             Log.d(TAG, "pushToRemote: localUrls count=${localUrls.size} for profile $profileId")
 
             val params = buildJsonObject {
@@ -58,6 +59,10 @@ class AddonSyncService @Inject constructor(
                         addJsonObject {
                             put("url", url)
                             put("sort_order", index)
+                            val name = userSetNames[url]
+                            if (!name.isNullOrBlank()) {
+                                put("name", name)
+                            }
                         }
                     }
                 })
@@ -96,6 +101,14 @@ class AddonSyncService @Inject constructor(
                     .decodeList<SupabaseAddon>()
             }
 
+            val nameMap = mutableMapOf<String, String>()
+            remoteAddons.forEach { addon ->
+                if (!addon.name.isNullOrBlank()) {
+                    nameMap[canonicalizeUrl(addon.url)] = addon.name
+                }
+            }
+            addonPreferences.setUserSetNames(nameMap)
+
             Result.success(
                 remoteAddons
                 .sortedBy { it.sortOrder }
@@ -105,5 +118,18 @@ class AddonSyncService @Inject constructor(
             Log.e(TAG, "Failed to get remote addon URLs", e)
             Result.failure(e)
         }
+    }
+
+    private fun canonicalizeUrl(url: String): String {
+        val trimmed = url.trim().trimEnd('/')
+        val queryStart = trimmed.indexOf('?')
+        val path = if (queryStart >= 0) trimmed.substring(0, queryStart) else trimmed
+        val query = if (queryStart >= 0) trimmed.substring(queryStart) else ""
+        val cleanPath = if (path.endsWith("/manifest.json", ignoreCase = true)) {
+            path.dropLast("/manifest.json".length).trimEnd('/')
+        } else {
+            path.trimEnd('/')
+        }
+        return cleanPath + query
     }
 }

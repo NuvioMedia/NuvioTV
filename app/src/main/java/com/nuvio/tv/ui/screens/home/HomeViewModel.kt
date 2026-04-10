@@ -73,7 +73,8 @@ class HomeViewModel @Inject constructor(
     internal val trailerService: TrailerService,
     internal val watchedItemsPreferences: WatchedItemsPreferences,
     internal val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
-    internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache
+    internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache,
+    private val profileManager: com.nuvio.tv.core.profile.ProfileManager
 ) : ViewModel() {
     companion object {
         internal const val TAG = "HomeViewModel"
@@ -116,6 +117,7 @@ class HomeViewModel @Inject constructor(
     internal var collectionsCache: List<Collection> = emptyList()
     internal var homeCatalogOrderKeys: List<String> = emptyList()
     internal var disabledHomeCatalogKeys: Set<String> = emptySet()
+    internal var customCatalogTitles: Map<String, String> = emptyMap()
     internal var currentHeroCatalogKeys: List<String> = emptyList()
     internal var catalogUpdateJob: Job? = null
     internal var hasRenderedFirstCatalog = false
@@ -156,6 +158,7 @@ class HomeViewModel @Inject constructor(
     internal val cwNextUpResolutionCache = Collections.synchronizedMap(mutableMapOf<String, NextUpResolution?>())
     internal val cwNextUpNegativeCacheTimestamps = Collections.synchronizedMap(mutableMapOf<String, Long>())
     internal val discoveredOlderNextUpItems = Collections.synchronizedList(mutableListOf<ContinueWatchingItem.NextUp>())
+    internal val cwLastProcessedNextUpContentIds = Collections.synchronizedSet(mutableSetOf<String>())
     internal val fullyWatchedSeriesIds get() = watchedSeriesStateHolder
     internal var tmdbEnrichFocusJob: Job? = null
     internal var pendingTmdbEnrichItemId: String? = null
@@ -187,6 +190,7 @@ class HomeViewModel @Inject constructor(
         observeExternalMetaPrefetchPreference()
         loadHomeCatalogOrderPreference()
         loadDisabledHomeCatalogPreference()
+        loadCustomCatalogTitles()
         observeLibraryState()
         observeTmdbSettings()
         observeMdbListSettings()
@@ -195,6 +199,16 @@ class HomeViewModel @Inject constructor(
         loadContinueWatching()
         observeCollections()
         observeInstalledAddons()
+        // Clear CW state when profile changes so items don't leak between profiles.
+        viewModelScope.launch {
+            var previousProfileId = profileManager.activeProfileId.value
+            profileManager.activeProfileId.collect { newId ->
+                if (newId != previousProfileId) {
+                    previousProfileId = newId
+                    _uiState.update { it.copy(continueWatchingItems = emptyList()) }
+                }
+            }
+        }
         viewModelScope.launch {
             delay(STARTUP_GRACE_PERIOD_MS)
             startupGracePeriodActive = false
@@ -250,6 +264,8 @@ class HomeViewModel @Inject constructor(
     private fun loadHomeCatalogOrderPreference() = loadHomeCatalogOrderPreferencePipeline()
 
     private fun loadDisabledHomeCatalogPreference() = loadDisabledHomeCatalogPreferencePipeline()
+
+    private fun loadCustomCatalogTitles() = loadCustomCatalogTitlesPipeline()
 
     private fun observeTmdbSettings() = observeTmdbSettingsPipeline()
 
@@ -484,6 +500,11 @@ class HomeViewModel @Inject constructor(
     /**
      * Saves the current focus and scroll state for restoration when returning to this screen.
      */
+    // When true, the next saveFocusState call is suppressed and the flag
+    // is reset.  Used during layout switches to prevent the outgoing
+    // layout's onDispose from poisoning the incoming layout's focus state.
+    internal var suppressFocusSave: Boolean = false
+
     fun saveFocusState(
         verticalScrollIndex: Int,
         verticalScrollOffset: Int,
@@ -491,6 +512,10 @@ class HomeViewModel @Inject constructor(
         focusedItemIndex: Int,
         catalogRowScrollStates: Map<String, Int>
     ) {
+        if (suppressFocusSave) {
+            suppressFocusSave = false
+            return
+        }
         val nextState = HomeScreenFocusState(
             verticalScrollIndex = verticalScrollIndex,
             verticalScrollOffset = verticalScrollOffset,

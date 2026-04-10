@@ -74,13 +74,15 @@ class CatalogOrderViewModel @Inject constructor(
                 addonRepository.getInstalledAddons(),
                 collectionsDataStore.collections,
                 layoutPreferenceDataStore.homeCatalogOrderKeys,
-                layoutPreferenceDataStore.disabledHomeCatalogKeys
-            ) { addons, collections, savedOrderKeys, disabledKeys ->
+                layoutPreferenceDataStore.disabledHomeCatalogKeys,
+                layoutPreferenceDataStore.customCatalogTitles
+            ) { addons, collections, savedOrderKeys, disabledKeys, customTitles ->
                 buildOrderedCatalogItems(
                     addons = addons,
                     collections = collections,
                     savedOrderKeys = savedOrderKeys,
-                    disabledKeys = disabledKeys.toSet()
+                    disabledKeys = disabledKeys.toSet(),
+                    customTitles = customTitles
                 )
             }.collectLatest { orderedItems ->
                 disabledKeysCache = orderedItems.filter { it.isDisabled }.map { it.disableKey }.toSet()
@@ -98,7 +100,8 @@ class CatalogOrderViewModel @Inject constructor(
         addons: List<Addon>,
         collections: List<Collection> = emptyList(),
         savedOrderKeys: List<String>,
-        disabledKeys: Set<String>
+        disabledKeys: Set<String>,
+        customTitles: Map<String, String> = emptyMap()
     ): List<CatalogOrderItem> {
         val defaultEntries = buildDefaultCatalogEntries(addons)
         val collectionEntries = collections.map { collection ->
@@ -126,10 +129,11 @@ class CatalogOrderViewModel @Inject constructor(
 
         return effectiveOrder.mapIndexedNotNull { index, key ->
             val entry = availableMap[key] ?: return@mapIndexedNotNull null
+            val displayName = customTitles[key]?.takeIf { it.isNotBlank() } ?: entry.catalogName
             CatalogOrderItem(
                 key = entry.key,
                 disableKey = entry.disableKey,
-                catalogName = entry.catalogName,
+                catalogName = displayName,
                 addonName = entry.addonName,
                 typeLabel = entry.typeLabel,
                 isDisabled = entry.disableKey in disabledKeys,

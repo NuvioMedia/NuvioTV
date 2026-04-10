@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.plugin
 
 import android.graphics.Bitmap
+import com.nuvio.tv.core.plugin.TestDiagnostics
 import com.nuvio.tv.domain.model.LocalScraperResult
 import com.nuvio.tv.domain.model.PluginRepository
 import com.nuvio.tv.domain.model.ScraperInfo
@@ -13,6 +14,7 @@ data class PluginUiState(
     val isAddingRepo: Boolean = false,
     val isTesting: Boolean = false,
     val testResults: List<LocalScraperResult>? = null,
+    val testDiagnostics: TestDiagnostics? = null,
     val testScraperId: String? = null,
     val errorMessage: String? = null,
     val successMessage: String? = null,
@@ -44,6 +46,7 @@ sealed interface PluginUiEvent {
     data class RemoveRepository(val repoId: String) : PluginUiEvent
     data class RefreshRepository(val repoId: String) : PluginUiEvent
     data class ToggleScraper(val scraperId: String, val enabled: Boolean) : PluginUiEvent
+    data class ToggleAllScrapersForRepo(val repoId: String, val enabled: Boolean) : PluginUiEvent
     data class TestScraper(val scraperId: String) : PluginUiEvent
     data class SetPluginsEnabled(val enabled: Boolean) : PluginUiEvent
     object ClearTestResults : PluginUiEvent

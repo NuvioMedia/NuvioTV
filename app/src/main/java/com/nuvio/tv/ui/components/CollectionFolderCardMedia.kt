@@ -6,6 +6,9 @@ fun collectionFolderCardImageUrl(
     folder: CollectionFolder,
     isFocused: Boolean
 ): String? {
+    if (!folder.focusGifEnabled) {
+        return firstNonBlank(folder.coverImageUrl)
+    }
     return if (isFocused) {
         firstNonBlank(folder.focusGifUrl, folder.coverImageUrl)
     } else {

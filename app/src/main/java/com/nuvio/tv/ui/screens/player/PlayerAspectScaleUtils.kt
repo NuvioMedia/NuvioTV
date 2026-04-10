@@ -26,11 +26,30 @@ internal fun nextAspectMode(current: AspectMode): AspectMode {
 internal fun aspectModeLabel(mode: AspectMode, getString: (Int) -> String): String =
     getString(mode.labelResId)
 
+internal fun applyExoAspectMode(playerView: PlayerView, mode: AspectMode) {
+    val contentFrame = playerView.findViewById<View>(androidx.media3.ui.R.id.exo_content_frame)
+    val surfaceView = resolveVideoSurfaceView(playerView)
+    val targetView = contentFrame ?: surfaceView ?: playerView
+
+    playerView.scaleX = 1.0f
+    playerView.scaleY = 1.0f
+    contentFrame?.scaleX = 1.0f
+    contentFrame?.scaleY = 1.0f
+    surfaceView?.scaleX = 1.0f
+    surfaceView?.scaleY = 1.0f
+
+    applyAspectScale(playerView, targetView, mode)
+}
+
 internal fun applyAspectMode(playerView: PlayerView, mode: AspectMode) {
     val targetView = resolveVideoSurfaceView(playerView) ?: playerView
     playerView.scaleX = 1.0f
     playerView.scaleY = 1.0f
 
+    applyAspectScale(playerView, targetView, mode)
+}
+
+private fun applyAspectScale(playerView: PlayerView, targetView: View, mode: AspectMode) {
     when (mode) {
         AspectMode.ORIGINAL -> {
             targetView.scaleX = 1.0f
