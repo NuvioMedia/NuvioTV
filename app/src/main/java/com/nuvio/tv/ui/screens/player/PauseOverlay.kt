@@ -61,6 +61,8 @@ fun PauseOverlay(
     year: String?,
     type: String?,
     description: String?,
+    showDescription: Boolean,
+    showCast: Boolean,
     cast: List<MetaCastMember>,
     modifier: Modifier = Modifier
 ) {
@@ -101,6 +103,8 @@ fun PauseOverlay(
                     year = year,
                     type = type,
                     description = description,
+                    showDescription = showDescription,
+                    showCast = showCast,
                     cast = cast,
                     onCastSelected = { selectedCastMember = it }
                 )
@@ -143,6 +147,8 @@ private fun PauseMetadataView(
     year: String?,
     type: String?,
     description: String?,
+    showDescription: Boolean,
+    showCast: Boolean,
     cast: List<MetaCastMember>,
     onCastSelected: (MetaCastMember) -> Unit
 ) {
@@ -219,7 +225,7 @@ private fun PauseMetadataView(
                 )
             }
 
-            if (!description.isNullOrBlank()) {
+            if (showDescription && !description.isNullOrBlank()) {
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodyLarge,
@@ -230,7 +236,7 @@ private fun PauseMetadataView(
                 )
             }
 
-            if (cast.isNotEmpty()) {
+            if (showCast && cast.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Text(

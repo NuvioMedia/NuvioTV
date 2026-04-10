@@ -116,6 +116,14 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setPauseOverlayEnabled(enabled)
     }
 
+    suspend fun setPauseOverlayDescriptionEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setPauseOverlayDescriptionEnabled(enabled)
+    }
+
+    suspend fun setPauseOverlayCastEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setPauseOverlayCastEnabled(enabled)
+    }
+
     suspend fun setOsdClockEnabled(enabled: Boolean) {
         playerSettingsDataStore.setOsdClockEnabled(enabled)
     }

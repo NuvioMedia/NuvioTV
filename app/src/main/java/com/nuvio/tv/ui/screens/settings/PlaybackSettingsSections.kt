@@ -27,7 +27,9 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PauseCircle
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Subject
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.runtime.Composable
@@ -124,6 +126,8 @@ internal fun PlaybackSettingsSections(
     onSetShowPlayerLoadingStatus: (Boolean) -> Unit,
     onSetLoadingOverlayEnabled: (Boolean) -> Unit,
     onSetPauseOverlayEnabled: (Boolean) -> Unit,
+    onSetPauseOverlayDescriptionEnabled: (Boolean) -> Unit,
+    onSetPauseOverlayCastEnabled: (Boolean) -> Unit,
     onSetOsdClockEnabled: (Boolean) -> Unit,
     onSetSkipIntroEnabled: (Boolean) -> Unit,
     onSetFrameRateMatchingMode: (FrameRateMatchingMode) -> Unit,
@@ -258,6 +262,30 @@ internal fun PlaybackSettingsSections(
                     onCheckedChange = onSetPauseOverlayEnabled,
                     onFocused = { focusedSection = PlaybackSection.GENERAL },
                     enabled = !generalUi.isExternalPlayer
+                )
+            }
+
+            item(key = "general_pause_overlay_description") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.Subject,
+                    title = stringResource(R.string.playback_pause_overlay_description),
+                    subtitle = stringResource(R.string.playback_pause_overlay_description_sub),
+                    isChecked = playerSettings.pauseOverlayDescriptionEnabled,
+                    onCheckedChange = onSetPauseOverlayDescriptionEnabled,
+                    onFocused = { focusedSection = PlaybackSection.GENERAL },
+                    enabled = playerSettings.pauseOverlayEnabled && !generalUi.isExternalPlayer
+                )
+            }
+
+            item(key = "general_pause_overlay_cast") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.People,
+                    title = stringResource(R.string.playback_pause_overlay_cast),
+                    subtitle = stringResource(R.string.playback_pause_overlay_cast_sub),
+                    isChecked = playerSettings.pauseOverlayCastEnabled,
+                    onCheckedChange = onSetPauseOverlayCastEnabled,
+                    onFocused = { focusedSection = PlaybackSection.GENERAL },
+                    enabled = playerSettings.pauseOverlayEnabled && !generalUi.isExternalPlayer
                 )
             }
 

@@ -680,6 +680,8 @@ fun PlayerScreen(
             year = uiState.releaseYear,
             type = uiState.contentType,
             description = uiState.description,
+            showDescription = uiState.pauseOverlayDescriptionEnabled,
+            showCast = uiState.pauseOverlayCastEnabled,
             cast = uiState.castMembers,
             modifier = Modifier
                 .fillMaxSize()
