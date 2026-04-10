@@ -1509,6 +1509,7 @@ private fun ModernTopbarScaffold(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .haze(state = sidebarHazeState)
                 .onPreviewKeyEvent { keyEvent ->
                     if (
                         isSidebarExpanded &&

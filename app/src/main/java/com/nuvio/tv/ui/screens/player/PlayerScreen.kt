@@ -1319,6 +1319,8 @@ private fun PlayerControlsOverlay(
                         text = displayName,
                         style = MaterialTheme.typography.headlineMedium,
                         color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 20.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1333,7 +1335,8 @@ private fun PlayerControlsOverlay(
                         Text(
                             text = episodeInfo,
                             style = MaterialTheme.typography.titleMedium,
-                            color = Color.White.copy(alpha = 0.9f),
+                            color = Color.White.copy(alpha = 0.75f),
+                            fontSize = 14.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1362,6 +1365,7 @@ private fun PlayerControlsOverlay(
                                     text = stringResource(R.string.player_via, (uiState.currentStreamName ?: "").replace("\n", " · ")),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Color.White.copy(alpha = 0.68f),
+                                    fontSize = 12.sp,
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -1564,7 +1568,8 @@ private fun PlayerControlsOverlay(
                 Text(
                     text = "${formatTime(uiState.currentPosition)} / ${formatTime(uiState.duration)}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.9f)
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontSize = 12.sp
                 )
             }
         }
@@ -1587,7 +1592,7 @@ private fun ControlButton(
     IconButton(
         onClick = onClick,
         modifier = Modifier
-            .size(48.dp)
+            .size(34.dp)
             .then(
                 if (focusRequester != null) Modifier.focusRequester(focusRequester)
                 else Modifier
@@ -1634,13 +1639,13 @@ private fun ControlButton(
             Icon(
                 painter = iconPainter,
                 contentDescription = contentDescription,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(20.dp)
             )
         } else {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(24.dp)
             )
         }
     }
@@ -1787,7 +1792,8 @@ private fun SeekOverlay(uiState: PlayerUiState) {
             Text(
                 text = "${formatTime(uiState.currentPosition)} / ${formatTime(uiState.duration)}",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.9f)
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 12.sp
             )
         }
     }
