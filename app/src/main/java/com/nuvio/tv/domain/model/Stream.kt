@@ -18,6 +18,7 @@ data class Stream(
     val behaviorHints: StreamBehaviorHints?,
     val addonName: String,
     val addonLogo: String?,
+    val sources: List<String>? = null,
     val quality: String? = null,
     val qualityValue: Int = -1
 ) {

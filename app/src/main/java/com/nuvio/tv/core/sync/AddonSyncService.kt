@@ -122,10 +122,14 @@ class AddonSyncService @Inject constructor(
 
     private fun canonicalizeUrl(url: String): String {
         val trimmed = url.trim().trimEnd('/')
-        return if (trimmed.endsWith("/manifest.json", ignoreCase = true)) {
-            trimmed.dropLast("/manifest.json".length).trimEnd('/')
+        val queryStart = trimmed.indexOf('?')
+        val path = if (queryStart >= 0) trimmed.substring(0, queryStart) else trimmed
+        val query = if (queryStart >= 0) trimmed.substring(queryStart) else ""
+        val cleanPath = if (path.endsWith("/manifest.json", ignoreCase = true)) {
+            path.dropLast("/manifest.json".length).trimEnd('/')
         } else {
-            trimmed
+            path.trimEnd('/')
         }
+        return cleanPath + query
     }
 }

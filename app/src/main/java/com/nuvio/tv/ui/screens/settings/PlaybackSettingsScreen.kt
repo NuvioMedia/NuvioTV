@@ -131,6 +131,9 @@ fun PlaybackSettingsContent(
 ) {
     val playerSettings by viewModel.playerSettings.collectAsStateWithLifecycle(initialValue = PlayerSettings())
     val trailerSettings by viewModel.trailerSettings.collectAsStateWithLifecycle(initialValue = TrailerSettings())
+    val torrentSettings by viewModel.torrentSettingsFlow.collectAsStateWithLifecycle(
+        initialValue = com.nuvio.tv.core.torrent.TorrentSettingsData()
+    )
     val installedAddonNames by viewModel.installedAddonNames.collectAsStateWithLifecycle(initialValue = emptyList())
     val enabledPluginNames by viewModel.enabledPluginNames.collectAsStateWithLifecycle(initialValue = emptyList())
     val aiKeyServerState by viewModel.aiKeyServerState.collectAsStateWithLifecycle()
@@ -270,7 +273,11 @@ fun PlaybackSettingsContent(
                 onSetSubtitleAiTargetLanguage = { lang -> coroutineScope.launch { viewModel.setSubtitleAiTargetLanguage(lang) } },
                 aiKeyServerState = aiKeyServerState,
                 onStartAiKeyServer = { viewModel.startAiKeyServer() },
-                onStopAiKeyServer = { viewModel.stopAiKeyServer() }
+                onStopAiKeyServer = { viewModel.stopAiKeyServer() },
+                p2pEnabled = torrentSettings.p2pEnabled,
+                onSetP2pEnabled = { enabled -> viewModel.setP2pEnabled(enabled) },
+                hideTorrentStats = torrentSettings.hideTorrentStats,
+                onSetHideTorrentStats = { enabled -> viewModel.setHideTorrentStats(enabled) }
             )
         }
     } // end Column

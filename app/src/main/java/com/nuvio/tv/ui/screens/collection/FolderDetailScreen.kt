@@ -64,6 +64,8 @@ import com.nuvio.tv.ui.screens.home.HomeScreenFocusState
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.screens.home.ModernHomeContent
 import com.nuvio.tv.ui.theme.NuvioColors
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
@@ -104,6 +106,7 @@ fun FolderDetailScreen(
             focusState = followLayoutFocusState,
             enrichingItemId = enrichingItemId,
             onNavigateToDetail = onNavigateToDetail,
+            onLoadMoreCatalog = viewModel::loadMoreForCatalog,
             onSaveFocusState = viewModel::saveFollowLayoutFocusState,
             onSaveGridFocusState = viewModel::saveFollowLayoutGridFocusState,
             onItemFocus = viewModel::onItemFocused
@@ -122,6 +125,7 @@ fun FolderDetailScreen(
                     onSelectTab = viewModel::selectTab,
                     onNavigateToDetail = onNavigateToDetail,
                     isItemWatched = isItemWatched,
+                    onLoadMore = { viewModel.loadMoreItems(uiState.selectedTabIndex) },
                     onSaveFocusState = { verticalIndex, verticalOffset, focusedItemKey ->
                         viewModel.saveTabFocusState(
                             tabIndex = uiState.selectedTabIndex,
@@ -138,6 +142,7 @@ fun FolderDetailScreen(
                         focusState = rowsFocusState,
                         onNavigateToDetail = onNavigateToDetail,
                         isItemWatched = isItemWatched,
+                        onLoadMoreCatalog = viewModel::loadMoreForCatalog,
                         onSaveFocusState = viewModel::saveRowsFocusState
                     )
                 }
@@ -198,6 +203,7 @@ private fun TabbedGridContent(
     onSelectTab: (Int) -> Unit,
     onNavigateToDetail: (String, String, String) -> Unit,
     onSaveFocusState: (Int, Int, String?) -> Unit,
+    onLoadMore: () -> Unit = {},
     isItemWatched: (MetaPreview) -> Boolean = { false }
 ) {
     val tabFocusRequesters = remember(uiState.tabs.size) { uiState.tabs.indices.map { FocusRequester() } }
@@ -351,6 +357,23 @@ private fun TabbedGridContent(
                 }
             }
 
+            val catalogRow = currentTab.catalogRow
+            LaunchedEffect(gridState, items.size) {
+                snapshotFlow {
+                    val lastVisible = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                    val total = gridState.layoutInfo.totalItemsCount
+                    lastVisible to total
+                }
+                    .distinctUntilChanged()
+                    .collect { (lastVisible, total) ->
+                        if (total > 0 && lastVisible >= total - 10) {
+                            if (catalogRow != null && catalogRow.hasMore && !catalogRow.isLoading) {
+                                onLoadMore()
+                            }
+                        }
+                    }
+            }
+
             LazyVerticalGrid(
                 state = gridState,
                 columns = GridCells.Adaptive(minSize = posterCardStyle.width),
@@ -389,6 +412,20 @@ private fun TabbedGridContent(
                         }
                     )
                 }
+                if (catalogRow != null && catalogRow.isLoading) {
+                    item(
+                        span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LoadingIndicator()
+                        }
+                    }
+                }
             }
         }
     }
@@ -400,6 +437,7 @@ private fun RowsContent(
     uiState: FolderDetailUiState,
     focusState: HomeScreenFocusState,
     onNavigateToDetail: (String, String, String) -> Unit,
+    onLoadMoreCatalog: (String, String, String) -> Unit = { _, _, _ -> },
     onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit,
     isItemWatched: (MetaPreview) -> Boolean = { false }
 ) {
@@ -439,6 +477,7 @@ private fun RowsContent(
 
     val strTypeMovie = stringResource(R.string.type_movie)
     val strTypeSeries = stringResource(R.string.type_series)
+    val loadMoreLabel = stringResource(R.string.action_load_more)
 
     LazyColumn(
         state = columnListState,
@@ -510,6 +549,15 @@ private fun RowsContent(
                         CatalogRowSection(
                             catalogRow = catalogRow,
                             onItemClick = onNavigateToDetail,
+                            onSeeAll = {
+                                onLoadMoreCatalog(
+                                    catalogRow.catalogId,
+                                    catalogRow.addonId,
+                                    catalogRow.apiType
+                                )
+                            },
+                            showSeeAll = catalogRow.hasMore && !catalogRow.isLoading,
+                            seeAllLabel = loadMoreLabel,
                             showPosterLabels = true,
                             showAddonName = false,
                             showCatalogTypeSuffix = true,
@@ -541,6 +589,7 @@ private fun FollowLayoutContent(
     focusState: HomeScreenFocusState,
     enrichingItemId: String? = null,
     onNavigateToDetail: (String, String, String) -> Unit,
+    onLoadMoreCatalog: (String, String, String) -> Unit = { _, _, _ -> },
     onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit,
     onSaveGridFocusState: (Int, Int, String?) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {}
@@ -563,11 +612,11 @@ private fun FollowLayoutContent(
     }
     val noOpCwClick: (ContinueWatchingItem) -> Unit = remember { { } }
     val noOpRemoveCw: (String, Int?, Int?, Boolean) -> Unit = remember { { _, _, _, _ -> } }
-    val noOpSeeAll: (String, String, String) -> Unit = remember { { _, _, _ -> } }
     val noOpFolderDetail: (String, String) -> Unit = remember { { _, _ -> } }
     val isItemWatched: (MetaPreview) -> Boolean = remember(homeState.movieWatchedStatus) {
         { item -> homeState.movieWatchedStatus[com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)] == true }
     }
+    val loadMoreLabel = stringResource(R.string.action_load_more)
 
     when (uiState.homeLayout) {
         HomeLayout.CLASSIC -> ClassicHomeContent(
@@ -578,10 +627,11 @@ private fun FollowLayoutContent(
             trailerPreviewAudioUrls = emptyMap(),
             onNavigateToDetail = onNavigateToDetail,
             onContinueWatchingClick = noOpCwClick,
-            onNavigateToCatalogSeeAll = noOpSeeAll,
+            onNavigateToCatalogSeeAll = onLoadMoreCatalog,
             onNavigateToFolderDetail = noOpFolderDetail,
             onRemoveContinueWatching = noOpRemoveCw,
             isCatalogItemWatched = isItemWatched,
+            catalogSeeAllLabel = loadMoreLabel,
             onRequestTrailerPreview = { },
             onSaveFocusState = onSaveFocusState
         )
@@ -590,10 +640,11 @@ private fun FollowLayoutContent(
             gridFocusState = focusState,
             onNavigateToDetail = onNavigateToDetail,
             onContinueWatchingClick = noOpCwClick,
-            onNavigateToCatalogSeeAll = noOpSeeAll,
+            onNavigateToCatalogSeeAll = onLoadMoreCatalog,
             onNavigateToFolderDetail = noOpFolderDetail,
             onRemoveContinueWatching = noOpRemoveCw,
             isCatalogItemWatched = isItemWatched,
+            catalogSeeAllLabel = loadMoreLabel,
             posterCardStyle = posterCardStyle,
             onSaveGridFocusState = onSaveGridFocusState
         )
@@ -606,7 +657,7 @@ private fun FollowLayoutContent(
             onNavigateToDetail = onNavigateToDetail,
             onContinueWatchingClick = noOpCwClick,
             onRequestTrailerPreview = { _, _, _, _ -> },
-            onLoadMoreCatalog = noOpSeeAll,
+            onLoadMoreCatalog = onLoadMoreCatalog,
             onRemoveContinueWatching = noOpRemoveCw,
             isCatalogItemWatched = isItemWatched,
             onNavigateToFolderDetail = noOpFolderDetail,

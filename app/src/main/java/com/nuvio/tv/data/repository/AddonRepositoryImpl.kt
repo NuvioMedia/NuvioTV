@@ -54,11 +54,17 @@ class AddonRepositoryImpl @Inject constructor(
 
     private fun canonicalizeUrl(url: String): String {
         val trimmed = url.trim().trimEnd('/')
-        return if (trimmed.endsWith(MANIFEST_SUFFIX, ignoreCase = true)) {
-            trimmed.dropLast(MANIFEST_SUFFIX.length).trimEnd('/')
+        // Separate path from query string so we can detect /manifest.json
+        // even when the URL carries query parameters (e.g. configurable addons).
+        val queryStart = trimmed.indexOf('?')
+        val path = if (queryStart >= 0) trimmed.substring(0, queryStart) else trimmed
+        val query = if (queryStart >= 0) trimmed.substring(queryStart) else ""
+        val cleanPath = if (path.endsWith(MANIFEST_SUFFIX, ignoreCase = true)) {
+            path.dropLast(MANIFEST_SUFFIX.length).trimEnd('/')
         } else {
-            trimmed
+            path.trimEnd('/')
         }
+        return cleanPath + query
     }
 
     private fun normalizeUrl(url: String): String = canonicalizeUrl(url).lowercase()
@@ -175,7 +181,10 @@ class AddonRepositoryImpl @Inject constructor(
 
     override suspend fun fetchAddon(baseUrl: String): NetworkResult<Addon> {
         val cleanBaseUrl = canonicalizeUrl(baseUrl)
-        val manifestUrl = "$cleanBaseUrl/manifest.json"
+        val queryStart = cleanBaseUrl.indexOf('?')
+        val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl
+        val baseQuery = if (queryStart >= 0) cleanBaseUrl.substring(queryStart) else ""
+        val manifestUrl = "$basePath/manifest.json$baseQuery"
 
         return when (val result = safeApiCall { api.getManifest(manifestUrl) }) {
             is NetworkResult.Success -> {

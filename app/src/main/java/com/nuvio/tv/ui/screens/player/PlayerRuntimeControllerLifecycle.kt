@@ -10,6 +10,7 @@ internal fun PlayerRuntimeController.releasePlayer() {
 internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) {
     isReleasingPlayer = true
     if (flushPlaybackState) {
+        stopTorrentStream()
         flushPlaybackSnapshotForSwitchOrExit()
     }
 

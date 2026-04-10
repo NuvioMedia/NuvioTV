@@ -481,7 +481,7 @@ internal fun buildCollectionFolderItem(
             title = if (folder.hideTitle) "" else title,
             logo = null,
             description = null,
-            contentTypeText = if (folder.hideTitle) null else collection.title,
+            contentTypeText = null,
             yearText = null,
             imdbText = null,
             genres = emptyList(),

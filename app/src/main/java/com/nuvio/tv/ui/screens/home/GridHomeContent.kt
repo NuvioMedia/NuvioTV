@@ -93,6 +93,7 @@ fun GridHomeContent(
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
     onItemFocus: (com.nuvio.tv.domain.model.MetaPreview) -> Unit = {},
+    catalogSeeAllLabel: String? = null,
     onSaveGridFocusState: (Int, Int, String?) -> Unit
 ) {
     val gridState = rememberLazyGridState(
@@ -410,6 +411,7 @@ fun GridHomeContent(
                             SeeAllGridCard(
                                 posterCardStyle = posterCardStyle,
                                 focusRequester = focusRequester,
+                                label = catalogSeeAllLabel,
                                 onClick = {
                                     onNavigateToCatalogSeeAll(
                                         gridItem.catalogId,
@@ -610,6 +612,7 @@ private fun SeeAllGridCard(
     onClick: () -> Unit,
     posterCardStyle: PosterCardStyle,
     focusRequester: FocusRequester? = null,
+    label: String? = null,
     modifier: Modifier = Modifier
 ) {
     val seeAllCardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
@@ -646,13 +649,13 @@ private fun SeeAllGridCard(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = stringResource(R.string.action_see_all),
+                    contentDescription = label ?: stringResource(R.string.action_see_all),
                     modifier = Modifier.size(32.dp),
                     tint = NuvioColors.TextSecondary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = stringResource(R.string.action_see_all),
+                    text = label ?: stringResource(R.string.action_see_all),
                     style = MaterialTheme.typography.titleSmall,
                     color = NuvioColors.TextSecondary,
                     textAlign = TextAlign.Center

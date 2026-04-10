@@ -70,6 +70,7 @@ fun ClassicHomeContent(
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     onRequestTrailerPreview: (MetaPreview) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {},
+    catalogSeeAllLabel: String? = null,
     onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
 ) {
 
@@ -336,6 +337,7 @@ fun ClassicHomeContent(
                         onItemFocus = onItemFocus,
                         isItemWatched = isCatalogItemWatched,
                         onItemLongPress = onCatalogItemLongPress,
+                        seeAllLabel = catalogSeeAllLabel,
                         onItemClick = { id, type, addonBaseUrl ->
                             onNavigateToDetail(id, type, addonBaseUrl)
                         },

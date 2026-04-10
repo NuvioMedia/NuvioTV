@@ -546,7 +546,10 @@ class MetaDetailsViewModel @Inject constructor(
             .toIntOrNull()
             ?: return raw
 
-        return tmdbService.tmdbToImdb(tmdbNumericId, itemType)
+        // Use a short timeout so a blocked TMDB API doesn't stall the detail screen.
+        return kotlinx.coroutines.withTimeoutOrNull(5_000L) {
+            tmdbService.tmdbToImdb(tmdbNumericId, itemType)
+        }
             ?.takeIf { it.isNotBlank() }
             ?: raw
     }

@@ -247,12 +247,11 @@ class StartupSyncService @Inject constructor(
                 Log.e(TAG, "Failed to pull home catalog settings from remote", e)
             }
 
-            val isPrimaryProfile = profileManager.activeProfileId.value == 1
-            val isTraktConnected = isPrimaryProfile && traktAuthDataStore.isAuthenticated.first()
+            val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
             val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync()
             Log.d(
                 TAG,
-                "Watch progress sync: isTraktConnected=$isTraktConnected isPrimaryProfile=$isPrimaryProfile shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
+                "Watch progress sync: isTraktConnected=$isTraktConnected shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
             )
             if (!isTraktConnected) {
                 // Pull library and watched items first — these are lightweight and critical.

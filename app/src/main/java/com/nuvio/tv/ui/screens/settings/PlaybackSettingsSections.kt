@@ -77,7 +77,8 @@ private enum class PlaybackSection {
     STREAM_SELECTION,
     AUDIO_TRAILER,
     SUBTITLES,
-    AI_SUBTITLES
+    AI_SUBTITLES,
+    P2P
 }
 
 private data class PlaybackGeneralUi(
@@ -154,7 +155,11 @@ internal fun PlaybackSettingsSections(
     onSetSubtitleAiTargetLanguage: (String) -> Unit,
     aiKeyServerState: com.nuvio.tv.ui.screens.settings.AiKeyServerState,
     onStartAiKeyServer: () -> Unit,
-    onStopAiKeyServer: () -> Unit
+    onStopAiKeyServer: () -> Unit,
+    p2pEnabled: Boolean = false,
+    onSetP2pEnabled: (Boolean) -> Unit = {},
+    hideTorrentStats: Boolean = false,
+    onSetHideTorrentStats: (Boolean) -> Unit = {}
 ) {
     var showAiKeyDialog by remember { mutableStateOf(false) }
     var showAiTargetLangDialog by remember { mutableStateOf(false) }
@@ -164,6 +169,7 @@ internal fun PlaybackSettingsSections(
     var audioTrailerExpanded by rememberSaveable { mutableStateOf(false) }
     var subtitlesExpanded by rememberSaveable { mutableStateOf(false) }
     var aiSubtitlesExpanded by rememberSaveable { mutableStateOf(false) }
+    var p2pExpanded by rememberSaveable { mutableStateOf(false) }
 
     val defaultGeneralHeaderFocus = remember { FocusRequester() }
     val afrHeaderFocus = remember { FocusRequester() }
@@ -171,6 +177,7 @@ internal fun PlaybackSettingsSections(
     val audioTrailerHeaderFocus = remember { FocusRequester() }
     val subtitlesHeaderFocus = remember { FocusRequester() }
     val aiSubtitlesHeaderFocus = remember { FocusRequester() }
+    val p2pHeaderFocus = remember { FocusRequester() }
     val generalHeaderFocus = initialFocusRequester ?: defaultGeneralHeaderFocus
 
     var focusedSection by remember { mutableStateOf<PlaybackSection?>(null) }
@@ -188,6 +195,10 @@ internal fun PlaybackSettingsSections(
     val strSectionSubtitlesDesc = stringResource(R.string.playback_section_subtitles_desc)
     val strSectionAiSubtitles = stringResource(R.string.playback_section_ai_subtitles)
     val strSectionAiSubtitlesDesc = stringResource(R.string.playback_section_ai_subtitles_desc)
+    val strSectionP2p = stringResource(R.string.settings_p2p_title)
+    val strSectionP2pDesc = stringResource(R.string.settings_p2p_subtitle)
+    val strHideTorrentStats = stringResource(R.string.settings_p2p_hide_stats_title)
+    val strHideTorrentStatsDesc = stringResource(R.string.settings_p2p_hide_stats_subtitle)
     val generalUi = PlaybackGeneralUi(
         isExternalPlayer = playerSettings.playerPreference == PlayerPreference.EXTERNAL,
         frameRateMatchingLabel = frameRateMatchingModeLabel(
@@ -227,6 +238,11 @@ internal fun PlaybackSettingsSections(
     LaunchedEffect(subtitlesExpanded, focusedSection) {
         if (!subtitlesExpanded && focusedSection == PlaybackSection.SUBTITLES) {
             subtitlesHeaderFocus.requestFocus()
+        }
+    }
+    LaunchedEffect(p2pExpanded, focusedSection) {
+        if (!p2pExpanded && focusedSection == PlaybackSection.P2P) {
+            p2pHeaderFocus.requestFocus()
         }
     }
 
@@ -464,6 +480,37 @@ internal fun PlaybackSettingsSections(
                 onItemFocused = { focusedSection = PlaybackSection.AI_SUBTITLES },
                 enabled = !generalUi.isExternalPlayer
             )
+        }
+
+        playbackCollapsibleSection(
+            keyPrefix = "p2p",
+            title = strSectionP2p,
+            description = strSectionP2pDesc,
+            expanded = p2pExpanded,
+            onToggle = { p2pExpanded = !p2pExpanded },
+            focusRequester = p2pHeaderFocus,
+            onHeaderFocused = { focusedSection = PlaybackSection.P2P }
+        ) {
+            item(key = "p2p_enabled") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.Info,
+                    title = strSectionP2p,
+                    subtitle = strSectionP2pDesc,
+                    isChecked = p2pEnabled,
+                    onCheckedChange = onSetP2pEnabled,
+                    onFocused = { focusedSection = PlaybackSection.P2P }
+                )
+            }
+            item(key = "p2p_hide_stats") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.Info,
+                    title = strHideTorrentStats,
+                    subtitle = strHideTorrentStatsDesc,
+                    isChecked = hideTorrentStats,
+                    onCheckedChange = onSetHideTorrentStats,
+                    onFocused = { focusedSection = PlaybackSection.P2P }
+                )
+            }
         }
     }
 

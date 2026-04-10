@@ -124,6 +124,7 @@
     <!-- CatalogRowSection -->
     <string name="catalog_from_addon">from %1$s</string>
     <string name="action_see_all">See All</string>
+    <string name="action_load_more">Load More</string>
 
     <!-- HeroSection -->
     <string name="hero_creator">Creator: %1$s</string>
@@ -877,6 +878,16 @@
     <string name="stream_finding_source">Finding stream source</string>
     <string name="stream_type_torrent">Torrent</string>
     <string name="stream_type_youtube">YouTube</string>
+    <string name="p2p_consent_title">P2P Streaming</string>
+    <string name="p2p_consent_body">This stream uses peer-to-peer (P2P) technology. By enabling P2P, you acknowledge and agree that:\n\n\u2022 Your IP address will be visible to other peers in the network\n\u2022 You are solely responsible for the content you access\n\u2022 You confirm you have the legal right to stream this content in your jurisdiction\n\u2022 Nuvio does not host, distribute, or control any P2P content\n\u2022 Nuvio bears no liability for any legal consequences arising from your use of P2P streaming\n\nYou use this feature entirely at your own risk. P2P can be disabled anytime in Settings.</string>
+    <string name="p2p_consent_enable">Enable P2P</string>
+    <string name="p2p_consent_cancel">Cancel</string>
+    <string name="settings_p2p_title">P2P Streaming</string>
+    <string name="settings_p2p_subtitle">Allow peer-to-peer (torrent) streams</string>
+    <string name="settings_p2p_hide_stats_title">Hide torrent stats</string>
+    <string name="settings_p2p_hide_stats_subtitle">Hide buffer, seeds, peers and download speed during loading and playback</string>
+    <string name="p2p_download_title">Downloading P2P Engine</string>
+    <string name="p2p_download_subtitle">This is a one-time download required for P2P streaming.</string>
     <string name="stream_type_external">External</string>
     <string name="stream_player_picker_title">What player should be used?</string>
     <string name="stream_player_internal">Internal</string>

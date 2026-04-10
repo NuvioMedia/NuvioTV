@@ -51,11 +51,15 @@ class AddonPreferences @Inject constructor(
 
     private fun canonicalizeUrl(url: String): String {
         val trimmed = url.trim().trimEnd('/')
-        return if (trimmed.endsWith(manifestSuffix, ignoreCase = true)) {
-            trimmed.dropLast(manifestSuffix.length).trimEnd('/')
+        val queryStart = trimmed.indexOf('?')
+        val path = if (queryStart >= 0) trimmed.substring(0, queryStart) else trimmed
+        val query = if (queryStart >= 0) trimmed.substring(queryStart) else ""
+        val cleanPath = if (path.endsWith(manifestSuffix, ignoreCase = true)) {
+            path.dropLast(manifestSuffix.length).trimEnd('/')
         } else {
-            trimmed
+            path.trimEnd('/')
         }
+        return cleanPath + query
     }
 
     val installedAddonUrls: Flow<List<String>> = effectiveProfileIdFlow.flatMapLatest { pid ->

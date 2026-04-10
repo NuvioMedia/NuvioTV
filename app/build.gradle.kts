@@ -44,8 +44,8 @@ android {
         applicationId = "com.nuvio.tv"
         minSdk = 24
         targetSdk = 36
-        versionCode = 50
-        versionName = "0.5.7-beta"
+        versionCode = 51
+        versionName = "0.6.0-beta"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
@@ -167,8 +167,7 @@ android {
 
     sourceSets {
         getByName("main") {
-            // Keep local jniLibs disabled; use dependency-provided native libs only.
-            jniLibs.srcDirs("src/main/_jni_disabled")
+            jniLibs.srcDirs("src/main/jniLibs")
         }
     }
 
@@ -183,7 +182,8 @@ android {
                 "lib/*/libavformat.so",
                 "lib/*/libavutil.so",
                 "lib/*/libswscale.so",
-                "lib/*/libswresample.so"
+                "lib/*/libswresample.so",
+                "lib/*/libtorrserver.so"
             )
         }
     }
@@ -338,6 +338,7 @@ dependencies {
     // QR code + local server for addon management
     implementation(libs.nanohttpd)
     implementation(libs.zxing.core)
+
 
     // Supabase
     implementation(platform(libs.supabase.bom))

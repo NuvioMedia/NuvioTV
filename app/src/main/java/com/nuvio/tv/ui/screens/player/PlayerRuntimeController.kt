@@ -8,6 +8,7 @@ import com.nuvio.tv.BuildConfig
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.core.torrent.TorrentService
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
@@ -35,7 +36,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicLong
 
@@ -56,6 +59,8 @@ class PlayerRuntimeController(
     internal val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     internal val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
     internal val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
+    internal val torrentService: TorrentService,
+    internal val torrentSettings: com.nuvio.tv.core.torrent.TorrentSettings,
     internal val tmdbService: com.nuvio.tv.core.tmdb.TmdbService,
     internal val tmdbMetadataService: com.nuvio.tv.core.tmdb.TmdbMetadataService,
     internal val tmdbSettingsDataStore: com.nuvio.tv.data.local.TmdbSettingsDataStore,
@@ -359,6 +364,21 @@ class PlayerRuntimeController(
     internal var libassPipelineSwitchInFlight: Boolean = false
     internal var hasDetectedAssSsaTrackForCurrentStream: Boolean = false
     internal var libassPipelineDecisionStreamUrl: String? = null
+    internal var torrentStreamJob: Job? = null
+    internal var torrentStateObserverJob: Job? = null
+    internal var isTorrentStream: Boolean = navigationArgs.infoHash != null
+    internal var currentInfoHash: String? = navigationArgs.infoHash
+    internal var currentFileIdx: Int? = navigationArgs.fileIdx
+    internal var currentTorrentSources: List<String>? =
+        navigationArgs.sourcesJson?.let { raw ->
+            runCatching {
+                val arr = org.json.JSONArray(raw)
+                (0 until arr.length()).mapNotNull { i ->
+                    arr.optString(i).takeIf { s -> s.isNotEmpty() }
+                }
+            }.getOrNull()?.takeIf { it.isNotEmpty() }
+        }
+
     internal var episodeStreamsJob: Job? = null
     internal var episodeStreamsCacheRequestKey: String? = null
     internal val streamCacheKey: String?
@@ -377,11 +397,21 @@ class PlayerRuntimeController(
         fetchMetaDetails(contentId, contentType)
         observeBlurUnwatchedEpisodes()
         observeEpisodeWatchProgress()
+        observeTorrentSettings()
+    }
+
+    private fun observeTorrentSettings() {
+        scope.launch {
+            torrentSettings.settings.collect { settings ->
+                _uiState.update { it.copy(hideTorrentStats = settings.hideTorrentStats) }
+            }
+        }
     }
     
 
     fun onCleared() {
         releasePlayer()
+        stopTorrentStream()
         mediaSourceFactory.shutdown()
         sourceChipErrorDismissJob?.cancel()
     }

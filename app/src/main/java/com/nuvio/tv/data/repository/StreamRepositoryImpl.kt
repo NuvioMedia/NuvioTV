@@ -306,9 +306,12 @@ class StreamRepositoryImpl @Inject constructor(
         videoId: String
     ): NetworkResult<List<Stream>> {
         val cleanBaseUrl = baseUrl.trimEnd('/')
+        val queryStart = cleanBaseUrl.indexOf('?')
+        val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl
+        val baseQuery = if (queryStart >= 0) cleanBaseUrl.substring(queryStart) else ""
         val encodedType = encodePathSegment(type)
         val encodedVideoId = encodePathSegment(videoId)
-        val streamUrl = "$cleanBaseUrl/stream/$encodedType/$encodedVideoId.json"
+        val streamUrl = "$basePath/stream/$encodedType/$encodedVideoId.json$baseQuery"
         Log.d(TAG, "Fetching streams type=$type videoId=$videoId url=$streamUrl")
 
         // First, get addon info for name and logo

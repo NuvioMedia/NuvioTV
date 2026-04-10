@@ -3,6 +3,7 @@ package com.nuvio.tv.data.repository
 import android.os.SystemClock
 import android.util.Log
 import com.nuvio.tv.BuildConfig
+import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.remote.api.TraktApi
@@ -72,7 +73,8 @@ class TraktProgressService @Inject constructor(
     private val metaRepository: MetaRepository,
     private val tmdbService: com.nuvio.tv.core.tmdb.TmdbService,
     private val traktSettingsDataStore: TraktSettingsDataStore,
-    private val traktEpisodeMappingService: TraktEpisodeMappingService
+    private val traktEpisodeMappingService: TraktEpisodeMappingService,
+    private val profileManager: ProfileManager
 ) {
     companion object {
         private const val TAG = "TraktProgressSvc"
@@ -222,6 +224,13 @@ class TraktProgressService @Inject constructor(
 
     init {
         scope.launch {
+            profileManager.activeProfileId
+                .collectLatest {
+                    resetProfileScopedState()
+                    refreshSignals.tryEmit(Unit)
+                }
+        }
+        scope.launch {
             traktSettingsDataStore.continueWatchingDaysCap.collectLatest { days ->
                 continueWatchingWindowDays = days
             }
@@ -242,6 +251,58 @@ class TraktProgressService @Inject constructor(
 
     private fun isAllHistoryWindow(): Boolean {
         return continueWatchingWindowDays == TraktSettingsDataStore.CONTINUE_WATCHING_DAYS_CAP_ALL
+    }
+
+    private suspend fun resetProfileScopedState() {
+        remoteProgress.value = emptyList()
+        optimisticProgress.value = emptyMap()
+        metadataState.value = emptyMap()
+        watchedMoviesState.value = emptySet()
+        watchedShowSeedsState.value = emptyList()
+        hiddenProgressShowIds.value = emptySet()
+        episodeProgressState.value = emptyMap()
+        hasLoadedRemoteProgress.value = false
+        watchedShowEpisodesMap = emptyMap()
+        showIdToTraktPathId = emptyMap()
+        hiddenProgressShowsLoadedAtMs = 0L
+        forceRefreshUntilMs = 0L
+        watchedMoviesUpdatedAtMs = 0L
+        watchedMoviesLastAttemptAtMs = 0L
+        hasLoadedWatchedMovies = false
+        watchedMoviesStale = true
+        watchedShowSeedsUpdatedAtMs = 0L
+        watchedShowSeedsLastAttemptAtMs = 0L
+        hasLoadedWatchedShowSeeds = false
+        watchedShowSeedsStale = true
+        lastFastSyncRequestMs = 0L
+        lastKnownActivityFingerprint = null
+        lastKnownMoviesWatchedAt = null
+        lastKnownEpisodeActivityFingerprint = null
+        lastManualRefreshSignalMs = 0L
+        metadataWarmupScheduled = false
+        refreshIntervalMs = baseRefreshIntervalMs
+        consecutiveRefreshFailures = 0
+        episodeProgressActivityVersion.set(0L)
+
+        cacheMutex.withLock {
+            episodeVideoIdCache.clear()
+            cachedMoviesPlayback = null
+            cachedEpisodesPlayback = null
+            cachedUserStats = null
+        }
+        metadataMutex.withLock {
+            inFlightMetadataKeys.clear()
+        }
+        watchedMoviesMutex.withLock {
+            // No-op lock boundary for watched-movie fetch state reset above.
+        }
+        watchedShowSeedsMutex.withLock {
+            // No-op lock boundary for watched-show fetch state reset above.
+        }
+        episodeProgressMutex.withLock {
+            inFlightEpisodeProgressKeys.clear()
+            episodeProgressLastAttemptAtMs.clear()
+        }
     }
 
     private fun recentWatchWindowMs(): Long? {

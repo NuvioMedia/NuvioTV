@@ -67,6 +67,9 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                             isPlaying = playingNow,
                             isBuffering = !firstFrameReady || cacheBuffering,
                             showLoadingOverlay = if (state.loadingOverlayEnabled) !firstFrameReady else false,
+                            // Snap the loading-logo fill to 100% once playback is
+                            // ready so the logo finishes filling on dismissal.
+                            loadingProgress = if (firstFrameReady && state.loadingProgress != null) 1f else state.loadingProgress,
                             playbackEnded = ended
                         )
                     }
@@ -99,6 +102,27 @@ internal fun PlayerRuntimeController.startProgressUpdates() {
                         currentPosition = displayPosition,
                         duration = playerDuration.coerceAtLeast(0L)
                     )
+                }
+                // Update torrent rebuffer progress from ExoPlayer's buffer state
+                if (isTorrentStream && _uiState.value.isBuffering && hasRenderedFirstFrame) {
+                    val bufferedAheadMs = (player.bufferedPosition - pos).coerceAtLeast(0)
+                    val bufferedSec = bufferedAheadMs / 1000f
+                    val statsHidden = _uiState.value.hideTorrentStats
+                    val message = if (statsHidden) {
+                        null
+                    } else {
+                        val speed = formatTorrentSpeed(_uiState.value.torrentDownloadSpeed)
+                        val peerInfo = "${_uiState.value.torrentSeeds} seeds \u00B7 ${_uiState.value.torrentPeers} peers"
+                        val bufLabel = String.format("%.0fs", bufferedSec)
+                        "$bufLabel buffered \u00B7 $peerInfo \u00B7 $speed"
+                    }
+                    val progress = (bufferedSec / 10f).coerceIn(0f, 1f)
+                    _uiState.update {
+                        it.copy(
+                            torrentBufferingMessage = message,
+                            torrentBufferingProgress = progress
+                        )
+                    }
                 }
                 updateActiveSkipInterval(pos)
                 evaluateNextEpisodeCardVisibility(
@@ -911,11 +935,36 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleDelayOverlay = false
                 )
             }
-            releasePlayer()
-            initializePlayer(currentStreamUrl, currentHeaders)
+            if (isTorrentStream && currentInfoHash != null) {
+                releasePlayer()
+                stopTorrentStream()
+                launchTorrentSourceStream(
+                    stream = com.nuvio.tv.domain.model.Stream(
+                        name = _uiState.value.currentStreamName,
+                        title = null,
+                        description = null,
+                        url = null,
+                        ytId = null,
+                        infoHash = currentInfoHash,
+                        fileIdx = currentFileIdx,
+                        externalUrl = null,
+                        behaviorHints = null,
+                        addonName = currentAddonName ?: "",
+                        addonLogo = currentAddonLogo
+                    ),
+                    infoHash = currentInfoHash!!,
+                    loadSavedProgress = true
+                )
+            } else {
+                releasePlayer()
+                initializePlayer(currentStreamUrl, currentHeaders)
+            }
         }
         PlayerEvent.OnParentalGuideHide -> {
             _uiState.update { it.copy(showParentalGuide = false) }
+        }
+        PlayerEvent.OnToggleTorrentStats -> {
+            _uiState.update { it.copy(showTorrentStats = !it.showTorrentStats) }
         }
         is PlayerEvent.OnShowDisplayModeInfo -> {
             _uiState.update {
@@ -1080,4 +1129,12 @@ internal fun PlayerRuntimeController.buildStreamInfoData(): StreamInfoData {
             else -> null
         }
     )
+}
+
+private fun formatTorrentSpeed(bytesPerSec: Long): String {
+    return when {
+        bytesPerSec >= 1_048_576 -> String.format("%.1f MB/s", bytesPerSec / 1_048_576.0)
+        bytesPerSec >= 1_024 -> String.format("%.0f KB/s", bytesPerSec / 1_024.0)
+        else -> "$bytesPerSec B/s"
+    }
 }

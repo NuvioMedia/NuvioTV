@@ -180,15 +180,17 @@ internal fun PlayerRuntimeController.initializePlayer(
                 requestedLibassRenderType == AssRenderType.OVERLAY_CANVAS -> AssRenderType.EFFECTS_CANVAS
                 else -> requestedLibassRenderType
             }
-            val loadControl = DefaultLoadControl.Builder()
-                .setTargetBufferBytes(100 * 1024 * 1024)
-                .setBufferDurationsMs(
-                    DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
-                    70_000,
-                    DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
-                    5_000
-                )
-                .build()
+            val loadControl = run {
+                DefaultLoadControl.Builder()
+                    .setTargetBufferBytes(100 * 1024 * 1024)
+                    .setBufferDurationsMs(
+                        DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+                        70_000,
+                        DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+                        5_000
+                    )
+                    .build()
+            }
 
             
             trackSelector = DefaultTrackSelector(context).apply {
@@ -439,6 +441,10 @@ internal fun PlayerRuntimeController.initializePlayer(
                             it.copy(
                                 showLoadingOverlay = false,
                                 loadingMessage = null,
+                                // Snap the loading-logo fill to 100% so the logo
+                                // appears fully filled as the overlay fades out
+                                // (rather than freezing at the partial buffer %).
+                                loadingProgress = if (it.loadingProgress != null) 1f else null,
                                 showPlayerEngineSwitchInfo = false
                             )
                         }
@@ -733,7 +739,8 @@ internal fun PlayerRuntimeController.resetLoadingOverlayForNewStream() {
     _uiState.update { state ->
         state.copy(
             showLoadingOverlay = state.loadingOverlayEnabled,
-            showControls = false
+            showControls = false,
+            loadingProgress = null
         )
     }
 }

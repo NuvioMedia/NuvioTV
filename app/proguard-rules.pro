@@ -53,6 +53,9 @@
 # Keep server classes and their inner data classes (serialized with Gson)
 -keep class com.nuvio.tv.core.server.** { *; }
 
+# ── Torrent streaming (TorrServer) ─────────────────────────────────────────────
+-keep class com.nuvio.tv.core.torrent.** { *; }
+
 #── QuickJS ────────────────────────────────────────────────────────────────────
 # Keep quickjs-kt library classes for proper type conversion
 -keep class com.dokar.quickjs.** { *; }
