@@ -158,6 +158,7 @@ class UpdateViewModel @Inject constructor(
             return
         }
 
+        _uiState.update { it.copy(showUnknownSourcesDialog = false) }
         ApkInstaller.launchInstall(context, apkFile)
     }
 

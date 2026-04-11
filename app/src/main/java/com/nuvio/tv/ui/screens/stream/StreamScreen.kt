@@ -152,6 +152,12 @@ fun StreamScreen(
     }
 
     fun routeAutoPlay(playbackInfo: StreamPlaybackInfo) {
+        // Always check P2P consent for torrents, even in direct auto-play flow
+        if (playbackInfo.isTorrent && !p2pEnabled) {
+            pendingTorrentPlaybackInfo = playbackInfo
+            showP2pConsentDialog = true
+            return
+        }
         if (uiState.isDirectAutoPlayFlow) {
             onAutoPlayResolved(playbackInfo)
             return
@@ -179,6 +185,12 @@ fun StreamScreen(
     LaunchedEffect(uiState.autoPlayPlaybackInfo) {
         val playbackInfo = uiState.autoPlayPlaybackInfo ?: return@LaunchedEffect
         if (playbackInfo.url != null || (playbackInfo.isTorrent && playbackInfo.infoHash != null)) {
+            // Torrent cached links still need P2P consent
+            if (playbackInfo.isTorrent && !p2pEnabled) {
+                pendingTorrentPlaybackInfo = playbackInfo
+                showP2pConsentDialog = true
+                return@LaunchedEffect
+            }
             onAutoPlayResolved(playbackInfo)
             viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
         }
@@ -316,6 +328,8 @@ fun StreamScreen(
                 onDismiss = {
                     showP2pConsentDialog = false
                     pendingTorrentPlaybackInfo = null
+                    // Cancelled P2P consent — fall back to manual stream selection
+                    viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
                 }
             )
         }

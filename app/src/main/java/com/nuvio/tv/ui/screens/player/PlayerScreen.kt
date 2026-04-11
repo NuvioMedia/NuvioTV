@@ -126,8 +126,6 @@ fun PlayerScreen(
     onPlaybackEnded: ((nextVideoId: String?, nextSeason: Int?, nextEpisode: Int?) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val layoutDirection = LocalLayoutDirection.current
-    val isRtl = layoutDirection == LayoutDirection.Rtl
     val lifecycleOwner = LocalLifecycleOwner.current
     val containerFocusRequester = remember { FocusRequester() }
     val playPauseFocusRequester = remember { FocusRequester() }
@@ -477,7 +475,7 @@ fun PlayerScreen(
                                     else -> 10_000L
                                 }
                                 val isLeft = keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
-                                val deltaMs = if (isLeft xor isRtl) -stepMs else stepMs
+                                val deltaMs = if (isLeft) -stepMs else stepMs
                                 viewModel.onEvent(PlayerEvent.OnPreviewSeekBy(deltaMs))
                                 true
                             } else {
@@ -1255,7 +1253,6 @@ private fun PlayerControlsOverlay(
     onBack: () -> Unit,
     skipButtonVisible: Boolean = false
 ) {
-    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val customPlayPainter = rememberRawSvgPainter(R.raw.ic_player_play)
     val customPausePainter = rememberRawSvgPainter(R.raw.ic_player_pause)
     val customSubtitlePainter = rememberRawSvgPainter(R.raw.ic_player_subtitles)
@@ -1375,7 +1372,8 @@ private fun PlayerControlsOverlay(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Progress bar
+            // Progress bar — always LTR regardless of locale
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             ProgressBar(
                 currentPosition = uiState.pendingPreviewSeekPosition ?: uiState.currentPosition,
                 duration = uiState.duration,
@@ -1385,17 +1383,18 @@ private fun PlayerControlsOverlay(
                 onSeekCommit = {
                     viewModel.onEvent(PlayerEvent.OnCommitPreviewSeek)
                 },
-                isRtl = isRtl,
                 focusRequester = progressBarFocusRequester,
                 upFocusRequester = progressBarUpFocusRequester,
                 downFocusRequester = playPauseFocusRequester,
                 onUpKey = onHideControls,
                 onFocused = onResetHideTimer
-)
+            )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Control buttons row
+            // Control buttons row — always LTR regardless of locale
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1569,6 +1568,7 @@ private fun PlayerControlsOverlay(
                     color = Color.White.copy(alpha = 0.9f)
                 )
             }
+            }
         }
     }
 }
@@ -1654,7 +1654,6 @@ private fun ProgressBar(
     duration: Long,
     onSeekPreview: (Long) -> Unit,
     onSeekCommit: () -> Unit,
-    isRtl: Boolean = false,
     focusRequester: FocusRequester? = null,
     upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
@@ -1736,11 +1735,11 @@ private fun ProgressBar(
                             }
                         }
                         KeyEvent.KEYCODE_DPAD_LEFT -> {
-                            onSeekPreview(if (isRtl) 10_000L else -10_000L)
+                            onSeekPreview(-10_000L)
                             true
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                            onSeekPreview(if (isRtl) -10_000L else 10_000L)
+                            onSeekPreview(10_000L)
                             true
                         }
                         else -> false
@@ -1772,12 +1771,14 @@ private fun SeekOverlay(uiState: PlayerUiState) {
             .fillMaxWidth()
             .padding(horizontal = 32.dp, vertical = 24.dp)
     ) {
-        ProgressBar(
-            currentPosition = uiState.currentPosition,
-            duration = uiState.duration,
-            onSeekPreview = {},
-            onSeekCommit = {}
-        )
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            ProgressBar(
+                currentPosition = uiState.currentPosition,
+                duration = uiState.duration,
+                onSeekPreview = {},
+                onSeekCommit = {}
+            )
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 

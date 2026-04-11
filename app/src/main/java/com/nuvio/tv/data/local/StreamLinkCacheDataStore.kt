@@ -21,7 +21,8 @@ data class CachedStreamLink(
     val videoSize: Long? = null,
     val infoHash: String? = null,
     val fileIdx: Int? = null,
-    val sources: List<String>? = null
+    val sources: List<String>? = null,
+    val bingeGroup: String? = null
 )
 
 @Singleton
@@ -46,7 +47,8 @@ class StreamLinkCacheDataStore @Inject constructor(
         videoSize: Long? = null,
         infoHash: String? = null,
         fileIdx: Int? = null,
-        sources: List<String>? = null
+        sources: List<String>? = null,
+        bingeGroup: String? = null
     ) {
         val payload = JSONObject().apply {
             put("url", url)
@@ -59,6 +61,7 @@ class StreamLinkCacheDataStore @Inject constructor(
             infoHash?.let { put("infoHash", it) }
             fileIdx?.let { put("fileIdx", it) }
             sources?.let { put("sources", JSONArray(it)) }
+            bingeGroup?.let { put("bingeGroup", it) }
         }.toString()
 
         store().edit { prefs ->
@@ -109,7 +112,8 @@ class StreamLinkCacheDataStore @Inject constructor(
                 videoSize = json.optLong("videoSize", -1L).takeIf { it >= 0L },
                 infoHash = infoHash,
                 fileIdx = if (json.has("fileIdx")) json.optInt("fileIdx", -1).takeIf { it >= 0 } else null,
-                sources = sources
+                sources = sources,
+                bingeGroup = json.optString("bingeGroup", "").ifBlank { null }
             )
         }.getOrNull()
 

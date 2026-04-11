@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
+import com.nuvio.tv.core.sync.homeCatalogKey
+import com.nuvio.tv.core.sync.homeLegacyDisabledCatalogKey
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.core.server.AddonConfigServer
@@ -45,9 +47,11 @@ class AddonManagerViewModel @Inject constructor(
 
     val isReadOnly: Boolean
         get() {
-            val profile = profileManager.activeProfile ?: return false
-            return !profile.isPrimary && profile.usesPrimaryAddons
+            return AddonManagementAccess.isReadOnly(profileManager.activeProfile)
         }
+
+    val webConfigMode: AddonConfigServer.WebConfigMode
+        get() = AddonManagementAccess.webConfigMode(profileManager.activeProfile)
 
     private var server: AddonConfigServer? = null
     private var logoBytes: ByteArray? = null
@@ -203,6 +207,7 @@ class AddonManagerViewModel @Inject constructor(
 
         server = AddonConfigServer.startOnAvailablePort(
             context = context,
+            webConfigMode = webConfigMode,
             currentPageStateProvider = {
                 val addons = _uiState.value.installedAddons
                 val orderedCatalogs = buildOrderedCatalogEntries(
@@ -596,7 +601,10 @@ class AddonManagerViewModel @Inject constructor(
 
         return effectiveOrder.mapNotNull { key ->
             val entry = entryByKey[key] ?: return@mapNotNull null
-            entry.copy(isDisabled = entry.disableKey in disabledKeys)
+            entry.copy(
+                isDisabled = entry.disableKey in disabledKeys ||
+                    (entry.legacyDisableKey != null && entry.legacyDisableKey in disabledKeys)
+            )
         }
     }
 
@@ -617,7 +625,12 @@ class AddonManagerViewModel @Inject constructor(
                         entries.add(
                             QrCatalogEntry(
                                 key = key,
-                                disableKey = disableCatalogKey(
+                                disableKey = homeCatalogKey(
+                                    addonId = addon.id,
+                                    type = catalog.apiType,
+                                    catalogId = catalog.id
+                                ),
+                                legacyDisableKey = homeLegacyDisabledCatalogKey(
                                     addonBaseUrl = addon.baseUrl,
                                     type = catalog.apiType,
                                     catalogId = catalog.id,
@@ -635,16 +648,7 @@ class AddonManagerViewModel @Inject constructor(
     }
 
     private fun catalogKey(addonId: String, type: String, catalogId: String): String {
-        return "${addonId}_${type}_${catalogId}"
-    }
-
-    private fun disableCatalogKey(
-        addonBaseUrl: String,
-        type: String,
-        catalogId: String,
-        catalogName: String
-    ): String {
-        return "${addonBaseUrl}_${type}_${catalogId}_${catalogName}"
+        return homeCatalogKey(addonId, type, catalogId)
     }
 
     private fun CatalogDescriptor.isSearchOnlyCatalog(): Boolean {
@@ -654,6 +658,7 @@ class AddonManagerViewModel @Inject constructor(
     private data class QrCatalogEntry(
         val key: String,
         val disableKey: String,
+        val legacyDisableKey: String? = null,
         val catalogName: String,
         val addonName: String,
         val typeLabel: String,

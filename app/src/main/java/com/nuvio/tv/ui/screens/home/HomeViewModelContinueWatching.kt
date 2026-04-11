@@ -78,6 +78,9 @@ internal data class CwMetaSummary(
         val unavailableSeasons = candidates.groupBy { it.season }
             .filter { (_, eps) ->
                 val first = eps.minByOrNull { it.episode ?: Int.MAX_VALUE } ?: return@filter false
+                // Exclude if explicitly marked unavailable
+                if (first.available == false) return@filter true
+                // Exclude if release date is in the future
                 val released = first.released?.substringBefore('T')?.trim()
                 if (!released.isNullOrBlank()) {
                     try {
@@ -101,7 +104,8 @@ internal data class CwVideoSummary(
     val thumbnail: String?,
     val season: Int?,
     val episode: Int?,
-    val overview: String?
+    val overview: String?,
+    val available: Boolean? = null
 )
 
 private fun Meta.toCwSummary(): CwMetaSummary = CwMetaSummary(
@@ -122,7 +126,8 @@ private fun Meta.toCwSummary(): CwMetaSummary = CwMetaSummary(
             thumbnail = v.thumbnail,
             season = v.season,
             episode = v.episode,
-            overview = v.overview
+            overview = v.overview,
+            available = v.available
         )
     }
 )

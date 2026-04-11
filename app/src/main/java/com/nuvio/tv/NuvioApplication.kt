@@ -71,16 +71,22 @@ class NuvioApplication : Application(), ImageLoaderFactory {
 
         // Initialize the CloudStream NiceHTTP singleton's OkHttpClient.
         // Matches CloudStream's RequestsHelper.initClient() setup.
-        app.baseClient = OkHttpClient.Builder()
-            .cookieJar(extensionCookieJar)
-            .followRedirects(true)
-            .followSslRedirects(true)
-            .ignoreAllSSLErrors()
-            .cache(Cache(
-                directory = File(cacheDir, "http_cache"),
-                maxSize = 50L * 1024L * 1024L
-            ))
-            .build()
+        // Wrapped in try catch because java.lang.BootstrapMethodError 
+        // doesn't exist on API < 26 (e.g. Fire TV 4K Gen 1 running Android 7.1.2)
+        try {
+            app.baseClient = OkHttpClient.Builder()
+                .cookieJar(extensionCookieJar)
+                .followRedirects(true)
+                .followSslRedirects(true)
+                .ignoreAllSSLErrors()
+                .cache(Cache(
+                    directory = File(cacheDir, "http_cache"),
+                    maxSize = 50L * 1024L * 1024L
+                ))
+                .build()
+        } catch (e: Throwable) {
+            Log.w("NuvioApplication", "Failed to initialize NiceHttp client (API ${Build.VERSION.SDK_INT}): ${e.message}")
+        }
 
         // Set AcraApplication context early so CS3 stubs can access it
         AcraApplication.context = this

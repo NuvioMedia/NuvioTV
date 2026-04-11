@@ -3,8 +3,10 @@ package com.nuvio.tv.core.sync
 import android.util.Log
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.remote.supabase.SupabaseHomeCatalogSettingsBlob
+import com.nuvio.tv.domain.repository.AddonRepository
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -52,7 +55,9 @@ class HomeCatalogSettingsSyncService @Inject constructor(
     private val postgrest: Postgrest,
     private val authManager: AuthManager,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    private val addonRepository: AddonRepository,
+    private val collectionsDataStore: CollectionsDataStore
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val json = Json {
@@ -81,18 +86,8 @@ class HomeCatalogSettingsSyncService @Inject constructor(
     suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val profileId = profileManager.activeProfileId.value
-            val payload = layoutPreferenceDataStore.exportCatalogSettingsToSyncPayload()
-            val jsonElement = json.encodeToJsonElement(SyncHomeCatalogPayload.serializer(), payload)
-
-            val params = buildJsonObject {
-                put("p_profile_id", profileId)
-                put("p_settings_json", jsonElement)
-                put("p_platform", SETTINGS_SYNC_PLATFORM)
-            }
-
-            withJwtRefreshRetry {
-                postgrest.rpc("sync_push_home_catalog_settings", params)
-            }
+            val payload = loadLocalPayload()
+            pushPayload(profileId, payload)
 
             Log.d(TAG, "Pushed home catalog settings for profile $profileId")
             Result.success(Unit)
@@ -105,6 +100,22 @@ class HomeCatalogSettingsSyncService @Inject constructor(
     suspend fun pullFromRemote(): Result<Boolean> = withContext(Dispatchers.IO) {
         try {
             val profileId = profileManager.activeProfileId.value
+            val localState = layoutPreferenceDataStore.getHomeCatalogSettingsState()
+
+            if (localState.disabledKeys.any(::hasLegacyHomeCatalogDisabledKeyFormat)) {
+                val localPayload = loadLocalPayload()
+                if (localPayload.items.isNotEmpty()) {
+                    isSyncingFromRemote = true
+                    try {
+                        layoutPreferenceDataStore.applyCatalogSettingsFromRemote(localPayload)
+                    } finally {
+                        isSyncingFromRemote = false
+                    }
+                    pushPayload(profileId, localPayload)
+                    Log.i(TAG, "Migrated legacy home catalog keys from local state for profile $profileId")
+                    return@withContext Result.success(true)
+                }
+            }
 
             val params = buildJsonObject {
                 put("p_profile_id", profileId)
@@ -117,6 +128,7 @@ class HomeCatalogSettingsSyncService @Inject constructor(
             val rows = response.decodeList<SupabaseHomeCatalogSettingsBlob>()
             val blob = rows.firstOrNull()
             if (blob == null) {
+                seedRemoteFromLocalIfNeeded(profileId)
                 Log.d(TAG, "No remote home catalog settings for profile $profileId")
                 return@withContext Result.success(false)
             }
@@ -131,6 +143,7 @@ class HomeCatalogSettingsSyncService @Inject constructor(
             }
 
             if (remotePayload.items.isEmpty()) {
+                seedRemoteFromLocalIfNeeded(profileId)
                 Log.d(TAG, "Remote has empty items, preserving local")
                 return@withContext Result.success(false)
             }
@@ -179,5 +192,32 @@ class HomeCatalogSettingsSyncService @Inject constructor(
                     pushToRemote()
                 }
         }
+    }
+
+    private suspend fun loadLocalPayload(): SyncHomeCatalogPayload {
+        val addons = addonRepository.getInstalledAddons().first()
+        val collections = collectionsDataStore.getCurrentCollections()
+        return layoutPreferenceDataStore.exportCatalogSettingsToSyncPayload(addons, collections)
+    }
+
+    private suspend fun pushPayload(profileId: Int, payload: SyncHomeCatalogPayload) {
+        val jsonElement = json.encodeToJsonElement(SyncHomeCatalogPayload.serializer(), payload)
+
+        val params = buildJsonObject {
+            put("p_profile_id", profileId)
+            put("p_settings_json", jsonElement)
+            put("p_platform", SETTINGS_SYNC_PLATFORM)
+        }
+
+        withJwtRefreshRetry {
+            postgrest.rpc("sync_push_home_catalog_settings", params)
+        }
+    }
+
+    private suspend fun seedRemoteFromLocalIfNeeded(profileId: Int) {
+        val localPayload = loadLocalPayload()
+        if (localPayload.items.isEmpty()) return
+        pushPayload(profileId, localPayload)
+        Log.d(TAG, "Seeded remote home catalog settings from local state for profile $profileId")
     }
 }
