@@ -199,10 +199,27 @@ fun HomeScreen(
                 )
             }
 
+            !uiState.isLoading && !hasAnyContent -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.web_no_catalogs),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = NuvioColors.TextSecondary
+                    )
+                }
+            }
+
             else -> {
                 val shouldShowLoadingGate =
                     !hasReleasedStartupCwGate ||
-                        (!hasEnteredCatalogContent && !hasCatalogContent && !hasCollectionContent && !hasHeroContent)
+                        (uiState.isLoading &&
+                            !hasEnteredCatalogContent &&
+                            !hasCatalogContent &&
+                            !hasCollectionContent &&
+                            !hasHeroContent)
                 LaunchedEffect(shouldShowLoadingGate) {
                     if (shouldShowLoadingGate) {
                         showHomeContentWithAnimation = false
