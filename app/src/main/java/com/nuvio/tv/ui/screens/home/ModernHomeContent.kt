@@ -360,7 +360,7 @@ fun ModernHomeContent(
     // catalogs are expected to load).
     val hasCollections = visibleHomeRows.any { it is HomeRow.CollectionRow }
     val hasCatalogs = uiState.catalogRows.isNotEmpty()
-    if (hasCollections && !hasCatalogs && uiState.installedAddonsCount > 0) {
+    if (hasCollections && !hasCatalogs && uiState.installedAddonsCount > 0 && uiState.isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             LoadingIndicator()
         }

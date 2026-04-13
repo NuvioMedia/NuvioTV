@@ -113,6 +113,8 @@ fun SeasonTabs(
     val textSecondary = NuvioTheme.extendedColors.textSecondary
     val lazyListState = rememberLazyListState()
 
+    var suppressFocusSwitch by remember { mutableStateOf(false) }
+
     LaunchedEffect(sortedSeasons, selectedSeason) {
         val selectedIndex = sortedSeasons.indexOf(selectedSeason)
         if (selectedIndex < 0) return@LaunchedEffect
@@ -120,7 +122,9 @@ fun SeasonTabs(
         val visibleIndices = lazyListState.layoutInfo.visibleItemsInfo.map { it.index }
         if (selectedIndex in visibleIndices) return@LaunchedEffect
 
+        suppressFocusSwitch = true
         lazyListState.scrollToItem(selectedIndex)
+        suppressFocusSwitch = false
     }
 
     LazyRow(
@@ -157,7 +161,7 @@ fun SeasonTabs(
                     .onFocusChanged {
                     val nowFocused = it.isFocused
                     isFocused = nowFocused
-                    if (nowFocused && !isSelected) {
+                    if (nowFocused && !isSelected && !suppressFocusSwitch) {
                         onSeasonSelected(season)
                     }
                 }

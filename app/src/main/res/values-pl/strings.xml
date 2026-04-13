@@ -1479,4 +1479,30 @@
     <string name="collections_card_subtitle">Grupuj katalogi w folderach na ekranie głównym</string>
     <string name="collections_tab_all">Wszystko</string>
     <string name="collections_tab_combined">Połączone</string>
+
+    <!-- Load more -->
+    <string name="action_load_more">Załaduj więcej</string>
+
+    <!-- P2P -->
+    <string name="p2p_consent_title">Streaming P2P</string>
+    <string name="p2p_consent_body">Ten stream korzysta z technologii peer-to-peer (P2P). Włączając P2P, potwierdzasz i zgadzasz się, że:\n\n\u2022 Twój adres IP będzie widoczny dla innych uczestników sieci\n\u2022 Ponosisz wyłączną odpowiedzialność za treści, do których uzyskujesz dostęp\n\u2022 Potwierdzasz, że masz prawo do streamowania tych treści w swojej jurysdykcji\n\u2022 Nuvio nie hostuje, nie dystrybuuje ani nie kontroluje żadnych treści P2P\n\u2022 Nuvio nie ponosi odpowiedzialności za jakiekolwiek konsekwencje prawne wynikające z korzystania ze streamingu P2P\n\nKorzystasz z tej funkcji wyłącznie na własne ryzyko. P2P można wyłączyć w dowolnym momencie w Ustawieniach.</string>
+    <string name="p2p_consent_cancel">Anuluj</string>
+    <string name="p2p_consent_enable">Włącz P2P</string>
+    <string name="p2p_download_title">Pobieranie silnika P2P</string>
+    <string name="p2p_download_subtitle">Jednorazowe pobieranie wymagane do streamingu P2P.</string>
+    <string name="settings_p2p_title">Streaming P2P</string>
+    <string name="settings_p2p_subtitle">Zezwól na streamy peer-to-peer (torrent)</string>
+    <string name="settings_p2p_hide_stats_title">Ukryj statystyki torrentów</string>
+    <string name="settings_p2p_hide_stats_subtitle">Ukryj bufor, seedy, peery i prędkość pobierania podczas ładowania i odtwarzania</string>
+
+    <!-- Player fallback messages -->
+    <string name="player_loading_fallback_hevc_decoder">Inicjalizacja dekodera nie powiodła się — przełączanie na dekoder HEVC…</string>
+    <string name="player_loading_fallback_pcm_audio">Inicjalizacja ścieżki audio nie powiodła się — przełączanie na audio PCM…</string>
+
+    <!-- QR login -->
+    <string name="qr_login_scan_prompt">Zeskanuj QR i zaloguj się na telefonie</string>
+    <string name="qr_login_start_failed">Nie udało się rozpocząć logowania QR</string>
+    <string name="qr_login_signing_in">Logowanie…</string>
+    <string name="qr_login_success">Zalogowano pomyślnie</string>
+    <string name="qr_login_exchange_failed">Nie udało się dokończyć logowania QR</string>
 </resources>

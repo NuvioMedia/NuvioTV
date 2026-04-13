@@ -687,6 +687,11 @@
     <string name="qr_login_approved">Login approved. Finishing sign in…</string>
     <string name="qr_login_pending">Waiting for approval on your phone…</string>
     <string name="qr_login_expired">QR login expired. Generate a new code.</string>
+    <string name="qr_login_scan_prompt">Scan QR and sign in on your phone</string>
+    <string name="qr_login_start_failed">Failed to start QR login</string>
+    <string name="qr_login_signing_in">Signing you in…</string>
+    <string name="qr_login_success">Signed in successfully</string>
+    <string name="qr_login_exchange_failed">Could not complete QR sign in</string>
     <string name="trakt_code_expires">Code expires in %1$s</string>
     <string name="trakt_token_refreshes">Trakt access token refreshes in %1$s</string>
     <string name="trakt_login_instruction">Press Login to start Trakt device authentication. A QR code will appear here.</string>
@@ -847,9 +852,11 @@
     <string name="addon_remove">Remove</string>
     <string name="addon_manage_from_phone_title">Manage from phone</string>
     <string name="addon_manage_from_phone_subtitle">Scan a QR code to manage addons, catalogs, and collections from your phone</string>
+    <string name="addon_manage_collections_from_phone_subtitle">Scan a QR code to manage collections from your phone</string>
     <string name="addon_reorder_title">Reorder home catalogs</string>
     <string name="addon_reorder_subtitle">Controls catalog and collection row order on Home (Classic + Modern + Grid)</string>
     <string name="addon_qr_scan_instruction">Scan with your phone to manage addons, catalogs, and collections</string>
+    <string name="addon_qr_collections_scan_instruction">Scan with your phone to manage collections</string>
     <string name="addon_qr_close">Close</string>
     <string name="addon_confirm_title">Confirm addon &amp; catalog changes</string>
     <string name="addon_confirm_subtitle">The following changes were made from your phone:</string>

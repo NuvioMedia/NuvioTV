@@ -104,9 +104,9 @@ sealed class Screen(val route: String) {
             val encodedTitle = encode(title)
             val encodedStreamName = streamName?.let { encode(it) } ?: ""
             val encodedYear = year?.let { encode(it) } ?: ""
-            val encodedHeaders = headers?.entries?.joinToString("&") { (k, v) ->
-                "${encode(k)}=${encode(v)}"
-            }?.let { encode(it) } ?: ""
+            val encodedHeaders = headers?.let {
+                encode(org.json.JSONObject(it).toString())
+            } ?: ""
             val encodedContentId = contentId?.let { encode(it) } ?: ""
             val encodedContentType = contentType?.let { encode(it) } ?: ""
             val encodedContentName = contentName?.let { encode(it) } ?: ""

@@ -103,6 +103,7 @@ fun AddonManagerScreen(
     onNavigateToCollections: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val webConfigMode = viewModel.webConfigMode
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -115,6 +116,16 @@ fun AddonManagerScreen(
         uiState.installedAddons.any { addon ->
             addon.catalogs.any { catalog -> !catalog.isSearchOnlyCatalog() }
         }
+    }
+    val manageFromPhoneSubtitle = if (webConfigMode == com.nuvio.tv.core.server.AddonConfigServer.WebConfigMode.COLLECTIONS_ONLY) {
+        stringResource(R.string.addon_manage_collections_from_phone_subtitle)
+    } else {
+        stringResource(R.string.addon_manage_from_phone_subtitle)
+    }
+    val qrInstruction = if (webConfigMode == com.nuvio.tv.core.server.AddonConfigServer.WebConfigMode.COLLECTIONS_ONLY) {
+        stringResource(R.string.addon_qr_collections_scan_instruction)
+    } else {
+        stringResource(R.string.addon_qr_scan_instruction)
     }
 
     // When isEditing changes to true, focus the text field and show keyboard
@@ -320,20 +331,23 @@ fun AddonManagerScreen(
                     }
                 }
 
-                // Manage from phone card
-                item {
-                    ManageFromPhoneCard(onClick = viewModel::startQrMode)
-                }
+            }
 
-                if (hasHomeVisibleCatalogs) {
-                    item {
-                        CatalogOrderEntryCard(onClick = onNavigateToCatalogOrder)
-                    }
-                }
+            item {
+                ManageFromPhoneCard(
+                    subtitle = manageFromPhoneSubtitle,
+                    onClick = viewModel::startQrMode
+                )
+            }
 
+            if (!viewModel.isReadOnly && hasHomeVisibleCatalogs) {
                 item {
-                    CollectionsEntryCard(onClick = onNavigateToCollections)
+                    CatalogOrderEntryCard(onClick = onNavigateToCatalogOrder)
                 }
+            }
+
+            item {
+                CollectionsEntryCard(onClick = onNavigateToCollections)
             }
 
             item {
@@ -385,6 +399,7 @@ fun AddonManagerScreen(
                 QrCodeOverlay(
                     qrBitmap = uiState.qrCodeBitmap,
                     serverUrl = uiState.serverUrl,
+                    instruction = qrInstruction,
                     onClose = viewModel::stopQrMode,
                     hasPendingChange = uiState.pendingChange != null
                 )
@@ -463,7 +478,10 @@ private fun AddonMessageOverlay(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun ManageFromPhoneCard(onClick: () -> Unit) {
+private fun ManageFromPhoneCard(
+    subtitle: String,
+    onClick: () -> Unit
+) {
     var isFocused by remember { mutableStateOf(false) }
 
     Surface(
@@ -506,7 +524,7 @@ private fun ManageFromPhoneCard(onClick: () -> Unit) {
                         color = NuvioColors.TextPrimary
                     )
                     Text(
-                        text = stringResource(R.string.addon_manage_from_phone_subtitle),
+                        text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary
                     )
@@ -649,6 +667,7 @@ private fun CollectionsEntryCard(onClick: () -> Unit) {
 private fun QrCodeOverlay(
     qrBitmap: Bitmap?,
     serverUrl: String?,
+    instruction: String,
     onClose: () -> Unit,
     hasPendingChange: Boolean = false
 ) {
@@ -672,7 +691,7 @@ private fun QrCodeOverlay(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = stringResource(R.string.addon_qr_scan_instruction),
+                text = instruction,
                 style = MaterialTheme.typography.bodyMedium,
                 color = NuvioColors.TextSecondary,
                 textAlign = TextAlign.Center

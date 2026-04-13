@@ -2,6 +2,9 @@ package com.nuvio.tv.ui.screens.addon
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.core.sync.HomeCatalogSettingsSyncService
+import com.nuvio.tv.core.sync.homeCatalogKey
+import com.nuvio.tv.core.sync.homeLegacyDisabledCatalogKey
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.Addon
@@ -22,7 +25,8 @@ import javax.inject.Inject
 class CatalogOrderViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
     private val collectionsDataStore: CollectionsDataStore,
-    private val layoutPreferenceDataStore: LayoutPreferenceDataStore
+    private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
+    private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CatalogOrderUiState())
@@ -47,6 +51,7 @@ class CatalogOrderViewModel @Inject constructor(
         }
         viewModelScope.launch {
             layoutPreferenceDataStore.setDisabledHomeCatalogKeys(updatedDisabled.toList())
+            homeCatalogSettingsSyncService.triggerPush()
         }
     }
 
@@ -65,6 +70,7 @@ class CatalogOrderViewModel @Inject constructor(
 
         viewModelScope.launch {
             layoutPreferenceDataStore.setHomeCatalogOrderKeys(reordered)
+            homeCatalogSettingsSyncService.triggerPush()
         }
     }
 
@@ -136,7 +142,8 @@ class CatalogOrderViewModel @Inject constructor(
                 catalogName = displayName,
                 addonName = entry.addonName,
                 typeLabel = entry.typeLabel,
-                isDisabled = entry.disableKey in disabledKeys,
+                isDisabled = entry.disableKey in disabledKeys ||
+                    (entry.legacyDisableKey != null && entry.legacyDisableKey in disabledKeys),
                 canMoveUp = index > 0,
                 canMoveDown = index < effectiveOrder.lastIndex
             )
@@ -160,7 +167,12 @@ class CatalogOrderViewModel @Inject constructor(
                         entries.add(
                             CatalogOrderEntry(
                                 key = key,
-                                disableKey = disableKey(
+                                disableKey = homeCatalogKey(
+                                    addonId = addon.id,
+                                    type = catalog.apiType,
+                                    catalogId = catalog.id
+                                ),
+                                legacyDisableKey = homeLegacyDisabledCatalogKey(
                                     addonBaseUrl = addon.baseUrl,
                                     type = catalog.apiType,
                                     catalogId = catalog.id,
@@ -179,16 +191,7 @@ class CatalogOrderViewModel @Inject constructor(
     }
 
     private fun catalogKey(addonId: String, type: String, catalogId: String): String {
-        return "${addonId}_${type}_${catalogId}"
-    }
-
-    private fun disableKey(
-        addonBaseUrl: String,
-        type: String,
-        catalogId: String,
-        catalogName: String
-    ): String {
-        return "${addonBaseUrl}_${type}_${catalogId}_${catalogName}"
+        return homeCatalogKey(addonId, type, catalogId)
     }
 
     private fun CatalogDescriptor.isSearchOnlyCatalog(): Boolean {
@@ -215,6 +218,7 @@ data class CatalogOrderItem(
 private data class CatalogOrderEntry(
     val key: String,
     val disableKey: String,
+    val legacyDisableKey: String? = null,
     val catalogName: String,
     val addonName: String,
     val typeLabel: String

@@ -25,6 +25,8 @@
 # Keep Retrofit service interfaces (must preserve generic return types)
 -keep,allowobfuscation,allowshrinking interface retrofit2.Call
 -keep,allowobfuscation,allowshrinking class retrofit2.Response
+# NOTE: allowobfuscation here is fine for Retrofit, but superseded by the
+# broader kotlin.** keep rule below for DexClassLoader extension compatibility.
 -keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
 # Keep all project API interfaces
 -keep class com.nuvio.tv.data.remote.api.** { *; }
@@ -110,3 +112,21 @@
 -dontwarn javax.script.**
 -dontwarn okhttp3.internal.sse.**
 -dontwarn org.jsoup.helper.Re2jRegex
+
+# ── DexClassLoader runtime deps (CloudStream extensions) ─────────────────────
+# Extensions are DEX files loaded at runtime via DexClassLoader. They resolve
+# dependencies by fully-qualified name from the host classloader. R8 must not
+# rename or remove any class that extensions may reference.
+-keep class kotlin.** { *; }
+-keep class kotlinx.coroutines.** { *; }
+
+-keep class okhttp3.** { *; }
+-keepclassmembers class okhttp3.** { *; }
+-keep class okio.** { *; }
+-keepclassmembers class okio.** { *; }
+-keep class org.jsoup.** { *; }
+-keepclassmembers class org.jsoup.** { *; }
+-keep class com.fasterxml.jackson.** { *; }
+-keepclassmembers class com.fasterxml.jackson.** { *; }
+-dontwarn java.beans.ConstructorProperties
+-dontwarn java.beans.Transient

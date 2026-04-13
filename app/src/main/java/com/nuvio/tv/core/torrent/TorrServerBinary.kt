@@ -61,6 +61,10 @@ class TorrServerBinary @Inject constructor(
             return@withContext
         }
 
+        // Kill any orphaned TorrServer process that may be holding the port
+        // (e.g., from a previous app session that was force-killed).
+        killOrphanedProcess()
+
         if (!isBinaryAvailable) {
             throw TorrentException("TorrServer binary not found at ${binaryFile.absolutePath}")
         }
@@ -93,18 +97,36 @@ class TorrServerBinary @Inject constructor(
             start()
         }
 
-        // Wait for health check
+        // Wait for health check — also detect early process death so we
+        // don't spin for 15s if the binary crashed on launch.
         val deadline = System.currentTimeMillis() + STARTUP_TIMEOUT_MS
         while (System.currentTimeMillis() < deadline) {
             if (isRunning()) {
                 Log.d(TAG, "TorrServer started successfully")
                 return@withContext
             }
+            if (process?.isAlive == false) {
+                val exitCode = process?.exitValue() ?: -1
+                process = null
+                throw TorrentException("TorrServer process died on startup (exit code $exitCode)")
+            }
             delay(HEALTH_CHECK_INTERVAL_MS)
         }
 
         stop()
         throw TorrentException("TorrServer failed to start within ${STARTUP_TIMEOUT_MS / 1000}s")
+    }
+
+    private fun killOrphanedProcess() {
+        try {
+            // Try graceful shutdown in case an old instance is still responding
+            val request = Request.Builder().url("$baseUrl/shutdown").build()
+            healthClient.newCall(request).execute().close()
+            Thread.sleep(1000)
+            Log.d(TAG, "Shut down orphaned TorrServer instance")
+        } catch (_: Exception) {
+            // No orphan responding — nothing to do
+        }
     }
 
     fun stop() {

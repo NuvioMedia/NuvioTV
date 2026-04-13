@@ -17,11 +17,8 @@ object StreamAutoPlaySelector {
         return orderedAddons + pluginEntries
     }
 
-    private fun resolvePlayableUrl(stream: Stream): String? {
-        val url = stream.getStreamUrl() ?: return null
-
-        return url
-    }
+    private fun isPlayable(stream: Stream): Boolean =
+        stream.getStreamUrl() != null || stream.isTorrent()
 
 
 
@@ -57,14 +54,14 @@ object StreamAutoPlaySelector {
         val targetBingeGroup = preferredBingeGroup?.trim().orEmpty()
         if (preferBingeGroupInSelection && targetBingeGroup.isNotEmpty()) {
             val bingeGroupMatch = candidateStreams.firstOrNull { stream ->
-                stream.behaviorHints?.bingeGroup == targetBingeGroup && stream.getStreamUrl() != null
+                stream.behaviorHints?.bingeGroup == targetBingeGroup && isPlayable(stream)
             }
             if (bingeGroupMatch != null) return bingeGroupMatch
         }
 
         return when (mode) {
             StreamAutoPlayMode.MANUAL -> null
-            StreamAutoPlayMode.FIRST_STREAM -> candidateStreams.firstOrNull { it.getStreamUrl() != null }
+            StreamAutoPlayMode.FIRST_STREAM -> candidateStreams.firstOrNull { isPlayable(it) }
             StreamAutoPlayMode.REGEX_MATCH -> {
                 val pattern = regexPattern.trim()
  
@@ -87,14 +84,15 @@ object StreamAutoPlaySelector {
 
                 // 1. Build list of ALL regex‑matching streams
                 val matchingStreams = candidateStreams.filter { stream ->
-                    val url = stream.getStreamUrl() ?: return@filter false
+                    if (!isPlayable(stream)) return@filter false
 
                     val searchableText = buildString {
                         append(stream.addonName).append(' ')
                         append(stream.name.orEmpty()).append(' ')
                         append(stream.title.orEmpty()).append(' ')
                         append(stream.description.orEmpty()).append(' ')
-                        append(url)
+                        append(stream.getStreamUrl().orEmpty())
+                        if (stream.isTorrent()) append(' ').append(stream.infoHash.orEmpty())
                     }
 
                     // Must match include pattern
@@ -109,7 +107,7 @@ object StreamAutoPlaySelector {
                 }
 
                 if (matchingStreams.isEmpty()) return null
-                matchingStreams.firstOrNull { resolvePlayableUrl(it) != null }
+                matchingStreams.firstOrNull { isPlayable(it) }
             }
 
         }

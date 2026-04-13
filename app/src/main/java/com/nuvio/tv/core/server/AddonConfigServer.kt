@@ -10,11 +10,26 @@ import java.util.concurrent.ConcurrentHashMap
 
 class AddonConfigServer(
     private val context: Context,
+    private val webConfigMode: WebConfigMode,
     private val currentPageStateProvider: () -> PageState,
     private val onChangeProposed: (PendingAddonChange) -> Unit,
     private val logoProvider: (() -> ByteArray?)? = null,
     port: Int = 8080
 ) : NanoHTTPD(port) {
+
+    enum class WebConfigMode(
+        val allowAddonManagement: Boolean,
+        val allowCatalogManagement: Boolean
+    ) {
+        FULL(
+            allowAddonManagement = true,
+            allowCatalogManagement = true
+        ),
+        COLLECTIONS_ONLY(
+            allowAddonManagement = false,
+            allowCatalogManagement = false
+        )
+    }
 
     data class AddonInfo(
         val url: String,
@@ -107,7 +122,11 @@ class AddonConfigServer(
     }
 
     private fun serveWebPage(): Response {
-        return newFixedLengthResponse(Response.Status.OK, "text/html; charset=utf-8", AddonWebPage.getHtml(context))
+        return newFixedLengthResponse(
+            Response.Status.OK,
+            "text/html; charset=utf-8",
+            AddonWebPage.getHtml(context, webConfigMode)
+        )
     }
 
     private fun serveLogo(): Response {
@@ -161,12 +180,16 @@ class AddonConfigServer(
             val collectionsRaw = parsed["collections"]
             val collectionsJson = if (collectionsRaw != null) gson.toJson(collectionsRaw) else null
             val disabledCollectionKeys = parseStringList(parsed["disabledCollectionKeys"])
-            PendingAddonChange(
-                proposedUrls = urls,
-                proposedCatalogOrderKeys = catalogOrderKeys,
-                proposedDisabledCatalogKeys = disabledCatalogKeys,
-                proposedCollectionsJson = collectionsJson,
-                proposedDisabledCollectionKeys = disabledCollectionKeys
+            sanitizePendingAddonChange(
+                mode = webConfigMode,
+                proposedChange = PendingAddonChange(
+                    proposedUrls = urls,
+                    proposedCatalogOrderKeys = catalogOrderKeys,
+                    proposedDisabledCatalogKeys = disabledCatalogKeys,
+                    proposedCollectionsJson = collectionsJson,
+                    proposedDisabledCollectionKeys = disabledCollectionKeys
+                ),
+                currentState = currentPageStateProvider()
             )
         } catch (e: Exception) {
             val error = mapOf("error" to "Invalid request body")
@@ -204,6 +227,7 @@ class AddonConfigServer(
     companion object {
         fun startOnAvailablePort(
             context: Context,
+            webConfigMode: WebConfigMode = WebConfigMode.FULL,
             currentPageStateProvider: () -> PageState,
             onChangeProposed: (PendingAddonChange) -> Unit,
             logoProvider: (() -> ByteArray?)? = null,
@@ -212,7 +236,14 @@ class AddonConfigServer(
         ): AddonConfigServer? {
             for (port in startPort until startPort + maxAttempts) {
                 try {
-                    val server = AddonConfigServer(context, currentPageStateProvider, onChangeProposed, logoProvider, port)
+                    val server = AddonConfigServer(
+                        context = context,
+                        webConfigMode = webConfigMode,
+                        currentPageStateProvider = currentPageStateProvider,
+                        onChangeProposed = onChangeProposed,
+                        logoProvider = logoProvider,
+                        port = port
+                    )
                     server.start(SOCKET_READ_TIMEOUT, false)
                     return server
                 } catch (e: Exception) {
@@ -222,4 +253,34 @@ class AddonConfigServer(
             return null
         }
     }
+}
+
+internal fun sanitizePendingAddonChange(
+    mode: AddonConfigServer.WebConfigMode,
+    proposedChange: AddonConfigServer.PendingAddonChange,
+    currentState: AddonConfigServer.PageState
+): AddonConfigServer.PendingAddonChange {
+    if (mode.allowAddonManagement && mode.allowCatalogManagement) {
+        return proposedChange
+    }
+
+    return proposedChange.copy(
+        proposedUrls = if (mode.allowAddonManagement) {
+            proposedChange.proposedUrls
+        } else {
+            currentState.addons.map { it.url }
+        },
+        proposedCatalogOrderKeys = if (mode.allowCatalogManagement) {
+            proposedChange.proposedCatalogOrderKeys
+        } else {
+            currentState.catalogs.map { it.key }
+        },
+        proposedDisabledCatalogKeys = if (mode.allowCatalogManagement) {
+            proposedChange.proposedDisabledCatalogKeys
+        } else {
+            currentState.catalogs
+                .filter { it.isDisabled }
+                .map { it.disableKey }
+        }
+    )
 }
