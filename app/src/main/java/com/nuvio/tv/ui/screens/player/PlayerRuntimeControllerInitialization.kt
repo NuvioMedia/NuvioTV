@@ -102,6 +102,14 @@ internal fun PlayerRuntimeController.initializePlayer(
             hasTriedAudioPcmFallback = false
             hasTriedDv7HevcFallback = false
             mpvDelayStartAfterAfrSwitch = false
+            // For a new video, reset the translation pipeline so it doesn't carry over from the
+            // previous session. A libass pipeline restart (same video, libassPipelineSwitchInFlight=true)
+            // is exempt — it rebuilds the player for the same content and should preserve AI state.
+            if (!libassPipelineSwitchInFlight) {
+                translationManager.isEnabled = false
+                translationManager.reset()
+                firstBatchSuccessShown = false
+            }
             val playerSettings = playerSettingsDataStore.playerSettings.first()
             cachedDecoderPriority = playerSettings.decoderPriority
             val preferredAudioLanguages = resolvePreferredAudioLanguages(
@@ -122,7 +130,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                     frameRateMatchingMode = playerSettings.frameRateMatchingMode,
                     resizeMode = playerSettings.resizeMode,
                     tunnelingEnabled = playerSettings.tunnelingEnabled,
-                    autoTranslateSubtitles = playerSettings.autoTranslateSubtitles,
+                    // Preserve AI-translation state across player restarts (e.g. libass pipeline switch).
+                    autoTranslateSubtitles = translationManager.isEnabled,
                     subtitleTranslationAvailable = playerSettings.subtitleAiEnabled,
                     removeHearingImpaired = playerSettings.subtitleRemoveHearingImpaired,
                     loadingMessage = if (showLoadingStatus) context.getString(R.string.player_loading_detecting_format) else null
@@ -863,7 +872,6 @@ private class TranslatingTextOutput(
 
     private val handler = Handler(outputLooper)
     @Volatile private var lastCueGroup: CueGroup? = null
-    private val seenTexts = LinkedHashSet<String>()
     /** Called once on the playback thread when the first non-empty cue group arrives. */
     var onFirstCueOnPlaybackThread: (() -> Unit)? = null
     private var hasFiredfirstCue = false
@@ -878,7 +886,6 @@ private class TranslatingTextOutput(
             onFirstCueOnPlaybackThread = null
         }
         if (!manager.isEnabled) {
-            if (cues.isNotEmpty()) Log.d("SubtitleTranslation", "onCues: manager disabled, passing through ${cues.size} cues")
             delegate.onCues(cueGroup)
             return
         }
@@ -887,7 +894,6 @@ private class TranslatingTextOutput(
             return
         }
         val text = extractText(cues)
-        Log.d("SubtitleTranslation", "onCues: manager enabled, text=\"${text.take(80)}\"")
         if (text.isBlank()) {
             if (removeHearingImpairedProvider()) {
                 delegate.onCues(CueGroup(emptyList(), cueGroup.presentationTimeUs))
@@ -906,11 +912,11 @@ private class TranslatingTextOutput(
 
         val cached = manager.getCached(text)
         if (cached != null) {
-            // Already translated — show Hebrew instantly
+            // Already translated — show translated text instantly
             delegate.onCues(buildTranslated(cueGroup, cues, cached))
         } else {
-            // Show original while API translates, then replace once translation arrives
-            delegate.onCues(cueGroup)
+            // Hide original while translation is in-flight — show blank until translated text arrives
+            delegate.onCues(CueGroup(emptyList(), cueGroup.presentationTimeUs))
             val captured = cueGroup
             scope.launch {
                 val translated = manager.translate(text)
@@ -949,20 +955,23 @@ private class TranslatingTextOutput(
         if (cached != null) {
             delegate.onCues(buildTranslated(cues, cached))
         } else {
-            delegate.onCues(cues)
+            delegate.onCues(emptyList())
         }
     }
 
-    /** Mock: prefix each line with a Hebrew label so we can verify timing and pipeline. */
+    /** Mock: prefix each translated line with a marker so timing and pipeline can be verified. */
     private fun mockTranslate(text: String): String =
         text.split("\n").joinToString("\n") { line -> "[מוק] $line" }
 
     private fun extractText(cues: List<Cue>): String {
         val removeHI = removeHearingImpairedProvider()
-        return cues.mapNotNull { it.text?.toString()?.trim() }
+        val result = cues.mapNotNull { cue ->
+            cue.text?.toString()?.trim()
+        }
             .filter { it.isNotBlank() }
             .joinToString("\n")
             .let { if (removeHI) stripHearingImpaired(it) else it }
+        return result
     }
 
     private fun stripHearingImpaired(text: String): String =
@@ -993,7 +1002,14 @@ private class TranslatingTextOutput(
                 cue.text?.toString() ?: ""
             }
             lineIndex += originalLineCount
-            cue.buildUpon().setText(cueText).build()
+            // Wrap RTL text with RTL marks on both sides so Android's bidi algorithm
+            // anchors trailing punctuation (. ? !) to the left instead of the right.
+            val rtlAware = if (cueText.any { ch ->
+                val dir = Character.getDirectionality(ch)
+                dir == Character.DIRECTIONALITY_RIGHT_TO_LEFT ||
+                    dir == Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC
+            }) "\u200F$cueText\u200F" else cueText
+            cue.buildUpon().setText(rtlAware).build()
         }
     }
 }

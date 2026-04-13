@@ -101,6 +101,7 @@ internal fun SubtitleSelectionOverlay(
     subtitleDelayMs: Int,
     autoTranslateSubtitles: Boolean,
     translationAvailable: Boolean,
+    subtitleAiTargetLangCode: String,
     installedSubtitleAddonOrder: List<String>,
     isLoadingAddons: Boolean,
     onInternalTrackSelected: (Int) -> Unit,
@@ -122,6 +123,9 @@ internal fun SubtitleSelectionOverlay(
     val sessionSelectedAddonSubtitle = remember(visible) { selectedAddonSubtitle?.copy() }
     val sessionInstalledSubtitleAddonOrder = remember(visible) { installedSubtitleAddonOrder.toList() }
     val sessionIsLoadingAddons = remember(visible) { isLoadingAddons }
+    val sessionPreferredLanguageKeys = remember(visible) {
+        preferredOverlayLanguageOrder(sessionPreferredLanguage, sessionSecondaryPreferredLanguage)
+    }
     val languageItems = remember(visible) {
         buildSubtitleLanguageRailItems(
             internalTracks = sessionInternalTracks,
@@ -133,7 +137,8 @@ internal fun SubtitleSelectionOverlay(
         )
     }
     val sessionInitialLanguageKey = remember(visible) {
-        if (autoTranslateSubtitles && translationAvailable) SubtitleAiLanguageKey
+        val aiLangKey = subtitleAiTargetLangCode.lowercase().takeIf { it.isNotBlank() }
+        if (autoTranslateSubtitles && translationAvailable && aiLangKey != null) aiLangKey
         else selectedSubtitleLanguageKey(
             internalTracks = sessionInternalTracks,
             selectedInternalIndex = sessionSelectedInternalIndex,
@@ -141,7 +146,8 @@ internal fun SubtitleSelectionOverlay(
         )
     }
     val sessionInitialSelectedOptionId = remember(visible) {
-        if (autoTranslateSubtitles && translationAvailable) null
+        val aiLangKey = subtitleAiTargetLangCode.lowercase().takeIf { it.isNotBlank() }
+        if (autoTranslateSubtitles && translationAvailable && aiLangKey != null) "ai:$aiLangKey"
         else selectedSubtitleOptionId(
             internalTracks = sessionInternalTracks,
             selectedInternalIndex = sessionSelectedInternalIndex,
@@ -156,7 +162,9 @@ internal fun SubtitleSelectionOverlay(
             installedAddonOrder = sessionInstalledSubtitleAddonOrder,
             selectedOptionId = activeSelectedOptionId,
             builtInLabel = builtInLabel,
-            forcedLabel = forcedLabel
+            forcedLabel = forcedLabel,
+            translationAvailable = translationAvailable,
+            preferredLanguageKeys = sessionPreferredLanguageKeys
         )
     }
 
@@ -232,7 +240,7 @@ internal fun SubtitleSelectionOverlay(
     val languageItemRequesters = rememberFocusRequesterMap(languageItems.map { it.key })
     val optionItemRequesters = rememberFocusRequesterMap(subtitleOptions.map { it.id })
     val styleRequesters = rememberStyleFocusRequesters()
-    val optionRailVisible = selectedLanguageKey != SubtitleOffLanguageKey && selectedLanguageKey != SubtitleAiLanguageKey
+    val optionRailVisible = selectedLanguageKey != SubtitleOffLanguageKey
     val styleRailVisible = optionRailVisible && (revealStyleRail || selectedOptionId != null)
     val languageTargetKey: String? = remember(languageItems, lastFocusedLanguageKey, selectedLanguageKey) {
         lastFocusedLanguageKey?.takeIf { key -> languageItems.any { it.key == key } }
@@ -458,16 +466,6 @@ internal fun SubtitleSelectionOverlay(
                             revealStyleRail = false
                             onEvent(PlayerEvent.OnSetAutoTranslateSubtitles(false))
                             onDisableSubtitles()
-                        } else if (languageKey == SubtitleAiLanguageKey) {
-                            selectedOptionId = null
-                            revealStyleRail = false
-                            onEvent(PlayerEvent.OnSetAutoTranslateSubtitles(true))
-                            val englishTrack = sessionInternalTracks.firstOrNull {
-                                it.language?.startsWith("en", ignoreCase = true) == true
-                            }
-                            if (englishTrack != null) {
-                                onInternalTrackSelected(englishTrack.index)
-                            }
                         } else {
                             onEvent(PlayerEvent.OnSetAutoTranslateSubtitles(false))
                             val nextOptions = buildSessionOptions(languageKey, selectedOptionId)
@@ -538,6 +536,15 @@ internal fun SubtitleSelectionOverlay(
                             activeOptionFocusId = optionId
                             activeRail = OverlayFocusRail.OPTION
                             onAddonSubtitleSelected(subtitle)
+                            revealStyleRail = true
+                        },
+                        onAiSubtitleSelected = { optionId, targetLanguage ->
+                            selectedOptionId = optionId
+                            optionFocusMemory = optionFocusMemory + (selectedLanguageKey to optionId)
+                            styleEntryOptionId = optionId
+                            activeOptionFocusId = optionId
+                            activeRail = OverlayFocusRail.OPTION
+                            onEvent(PlayerEvent.OnSelectAiSubtitle(targetLanguage))
                             revealStyleRail = true
                         }
                     )
@@ -663,7 +670,8 @@ private fun SubtitleOptionsRail(
     onMoveLeft: () -> Unit,
     onMoveRight: () -> Unit,
     onInternalTrackSelected: (String, Int) -> Unit,
-    onAddonSubtitleSelected: (String, Subtitle) -> Unit
+    onAddonSubtitleSelected: (String, Subtitle) -> Unit,
+    onAiSubtitleSelected: (String, String) -> Unit
 ) {
     LaunchedEffect(focusToken) {
         if (focusToken <= 0) return@LaunchedEffect
@@ -745,6 +753,12 @@ private fun SubtitleOptionsRail(
                                     SubtitleOptionKind.ADDON -> {
                                         option.addonSubtitle?.let { subtitle ->
                                             onAddonSubtitleSelected(option.id, subtitle)
+                                        }
+                                    }
+
+                                    SubtitleOptionKind.AI -> {
+                                        option.targetLanguage?.let { lang ->
+                                            onAiSubtitleSelected(option.id, lang)
                                         }
                                     }
                                 }
@@ -1647,7 +1661,8 @@ private data class SubtitleLanguageRailItem(
 
 private enum class SubtitleOptionKind {
     INTERNAL,
-    ADDON
+    ADDON,
+    AI
 }
 
 private data class SubtitleOptionRailItem(
@@ -1658,7 +1673,8 @@ private data class SubtitleOptionRailItem(
     val meta: String?,
     val isSelected: Boolean,
     val internalTrackIndex: Int? = null,
-    val addonSubtitle: Subtitle? = null
+    val addonSubtitle: Subtitle? = null,
+    val targetLanguage: String? = null
 )
 
 private fun buildSubtitleLanguageRailItems(
@@ -1684,6 +1700,14 @@ private fun buildSubtitleLanguageRailItems(
         secondaryPreferredLanguage = secondaryPreferredLanguage
     )
 
+    // When translation is available AND there is at least one internal track (needed as source),
+    // ensure preferred languages appear in the rail and add 1 to represent the AI option.
+    if (translationAvailable && internalTracks.isNotEmpty()) {
+        preferredOrder.forEach { key ->
+            counts[key] = (counts[key] ?: 0) + 1
+        }
+    }
+
     val sortedItems = counts.entries
         .sortedWith(
             compareBy<Map.Entry<String, Int>>(
@@ -1702,17 +1726,13 @@ private fun buildSubtitleLanguageRailItems(
             )
         }
 
-    val aiItems = if (translationAvailable) listOf(
-        SubtitleLanguageRailItem(key = SubtitleAiLanguageKey, label = "AI", count = 0)
-    ) else emptyList()
-
     return listOf(
         SubtitleLanguageRailItem(
             key = SubtitleOffLanguageKey,
             label = noneLabel,
             count = 0
         )
-    ) + aiItems + sortedItems
+    ) + sortedItems
 }
 
 private fun preferredOverlayLanguageOrder(
@@ -1740,7 +1760,9 @@ private fun buildSubtitleOptionRailItems(
     installedAddonOrder: List<String>,
     selectedOptionId: String?,
     builtInLabel: String,
-    forcedLabel: String
+    forcedLabel: String,
+    translationAvailable: Boolean = false,
+    preferredLanguageKeys: List<String> = emptyList()
 ): List<SubtitleOptionRailItem> {
     if (selectedLanguageKey == SubtitleOffLanguageKey) return emptyList()
 
@@ -1785,7 +1807,21 @@ private fun buildSubtitleOptionRailItems(
             )
         }
 
-    return internalItems + addonItems
+    val aiItem = if (translationAvailable && selectedLanguageKey in preferredLanguageKeys && internalTracks.isNotEmpty()) {
+        listOf(
+            SubtitleOptionRailItem(
+                id = "ai:$selectedLanguageKey",
+                kind = SubtitleOptionKind.AI,
+                title = subtitleLanguageLabel(selectedLanguageKey),
+                sourceLabel = "AI",
+                meta = null,
+                isSelected = "ai:$selectedLanguageKey" == selectedOptionId,
+                targetLanguage = selectedLanguageKey
+            )
+        )
+    } else emptyList()
+
+    return aiItem + internalItems + addonItems
 }
 
 private fun selectedSubtitleLanguageKey(

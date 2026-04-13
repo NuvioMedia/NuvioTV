@@ -152,7 +152,6 @@ internal fun PlaybackSettingsSections(
     onSetSubtitleAiAutoSelect: (Boolean) -> Unit,
     onSetSubtitleRemoveHearingImpaired: (Boolean) -> Unit,
     onSaveSubtitleAiApiKey: (String) -> Unit,
-    onSetSubtitleAiTargetLanguage: (String) -> Unit,
     aiKeyServerState: com.nuvio.tv.ui.screens.settings.AiKeyServerState,
     onStartAiKeyServer: () -> Unit,
     onStopAiKeyServer: () -> Unit,
@@ -162,7 +161,6 @@ internal fun PlaybackSettingsSections(
     onSetHideTorrentStats: (Boolean) -> Unit = {}
 ) {
     var showAiKeyDialog by remember { mutableStateOf(false) }
-    var showAiTargetLangDialog by remember { mutableStateOf(false) }
     var generalExpanded by rememberSaveable { mutableStateOf(false) }
     var afrExpanded by rememberSaveable { mutableStateOf(false) }
     var streamExpanded by rememberSaveable { mutableStateOf(false) }
@@ -474,7 +472,6 @@ internal fun PlaybackSettingsSections(
                 onSetSubtitleAiEnabled = onSetSubtitleAiEnabled,
                 onSetSubtitleAiAutoSelect = onSetSubtitleAiAutoSelect,
                 onSetSubtitleRemoveHearingImpaired = onSetSubtitleRemoveHearingImpaired,
-                onShowAiTargetLangDialog = { showAiTargetLangDialog = true },
                 onShowAiKeyDialog = { showAiKeyDialog = true },
                 onStartAiKeyServer = onStartAiKeyServer,
                 onItemFocused = { focusedSection = PlaybackSection.AI_SUBTITLES },
@@ -522,13 +519,6 @@ internal fun PlaybackSettingsSections(
         )
     }
 
-    if (showAiTargetLangDialog) {
-        AiTargetLanguageDialog(
-            currentLanguage = playerSettings.subtitleTranslateTargetLanguage,
-            onSelect = { lang -> onSetSubtitleAiTargetLanguage(lang); showAiTargetLangDialog = false },
-            onDismiss = { showAiTargetLangDialog = false }
-        )
-    }
 
 }
 
@@ -970,74 +960,6 @@ internal fun AiKeyQrOverlay(
                         modifier = Modifier.padding(horizontal = 32.dp, vertical = 12.dp),
                         style = MaterialTheme.typography.bodyMedium
                     )
-                }
-            }
-        }
-    }
-}
-
-private val AI_TRANSLATION_LANGUAGES = listOf(
-    "Afrikaans", "Albanian", "Amharic", "Arabic", "Armenian", "Azerbaijani",
-    "Basque", "Belarusian", "Bengali", "Bosnian", "Bulgarian", "Catalan",
-    "Chinese (Simplified)", "Chinese (Traditional)", "Croatian", "Czech",
-    "Danish", "Dutch", "Estonian", "Filipino", "Finnish", "French",
-    "Galician", "Georgian", "German", "Greek", "Gujarati", "Hebrew",
-    "Hindi", "Hungarian", "Icelandic", "Indonesian", "Irish", "Italian",
-    "Japanese", "Kannada", "Kazakh", "Korean", "Latvian", "Lithuanian",
-    "Macedonian", "Malay", "Malayalam", "Maltese", "Marathi", "Mongolian",
-    "Nepali", "Norwegian", "Persian", "Polish", "Portuguese", "Punjabi",
-    "Romanian", "Russian", "Serbian", "Sinhala", "Slovak", "Slovenian",
-    "Somali", "Spanish", "Swahili", "Swedish", "Tamil", "Telugu", "Thai",
-    "Turkish", "Ukrainian", "Urdu", "Uzbek", "Vietnamese", "Welsh", "Zulu"
-)
-
-@Composable
-private fun AiTargetLanguageDialog(
-    currentLanguage: String,
-    onSelect: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    NuvioDialog(
-        onDismiss = onDismiss,
-        title = "Target Language",
-        subtitle = "Choose the language to translate subtitles into",
-        width = 500.dp
-    ) {
-        LazyColumn(
-            modifier = Modifier.heightIn(max = 400.dp)
-        ) {
-            items(AI_TRANSLATION_LANGUAGES) { language ->
-                val isSelected = language == currentLanguage
-                androidx.tv.material3.Surface(
-                    onClick = { onSelect(language) },
-                    colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(
-                        containerColor = if (isSelected) NuvioColors.FocusBackground else androidx.compose.ui.graphics.Color.Transparent,
-                        focusedContainerColor = NuvioColors.FocusBackground
-                    ),
-                    shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = language,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary
-                        )
-                        if (isSelected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = NuvioColors.Primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
                 }
             }
         }

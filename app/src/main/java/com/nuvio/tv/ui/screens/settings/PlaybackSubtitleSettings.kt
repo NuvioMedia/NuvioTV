@@ -343,7 +343,6 @@ internal fun LazyListScope.subtitleAiSettingsItems(
     onSetSubtitleAiEnabled: (Boolean) -> Unit,
     onSetSubtitleAiAutoSelect: (Boolean) -> Unit,
     onSetSubtitleRemoveHearingImpaired: (Boolean) -> Unit,
-    onShowAiTargetLangDialog: () -> Unit,
     onShowAiKeyDialog: () -> Unit,
     onStartAiKeyServer: () -> Unit,
     onItemFocused: () -> Unit = {},
@@ -370,16 +369,6 @@ internal fun LazyListScope.subtitleAiSettingsItems(
                 isChecked = playerSettings.subtitleAiAutoSelect,
                 onCheckedChange = onSetSubtitleAiAutoSelect,
                 onFocused = onItemFocused,
-                enabled = enabled
-            )
-        }
-
-        item(key = "subtitle_ai_target_language") {
-            SettingsActionRow(
-                title = stringResource(R.string.sub_ai_target_lang),
-                subtitle = stringResource(R.string.sub_ai_target_lang_sub),
-                value = playerSettings.subtitleTranslateTargetLanguage,
-                onClick = onShowAiTargetLangDialog,
                 enabled = enabled
             )
         }

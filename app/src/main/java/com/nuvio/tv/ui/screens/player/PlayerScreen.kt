@@ -1198,6 +1198,7 @@ fun PlayerScreen(
             subtitleDelayMs = uiState.subtitleDelayMs,
             autoTranslateSubtitles = uiState.autoTranslateSubtitles,
             translationAvailable = uiState.subtitleTranslationAvailable,
+            subtitleAiTargetLangCode = uiState.subtitleAiTargetLangCode,
             installedSubtitleAddonOrder = uiState.installedSubtitleAddonOrder,
             isLoadingAddons = uiState.isLoadingAddonSubtitles,
             onInternalTrackSelected = { viewModel.onEvent(PlayerEvent.OnSelectSubtitleTrack(it)) },

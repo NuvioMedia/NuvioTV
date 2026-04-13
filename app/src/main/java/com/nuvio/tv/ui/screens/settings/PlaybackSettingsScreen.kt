@@ -270,7 +270,6 @@ fun PlaybackSettingsContent(
                 onSetSubtitleAiAutoSelect = { enabled -> coroutineScope.launch { viewModel.setSubtitleAiAutoSelect(enabled) } },
                 onSetSubtitleRemoveHearingImpaired = { enabled -> coroutineScope.launch { viewModel.setSubtitleRemoveHearingImpaired(enabled) } },
                 onSaveSubtitleAiApiKey = { key -> coroutineScope.launch { viewModel.saveSubtitleAiApiKey(key) } },
-                onSetSubtitleAiTargetLanguage = { lang -> coroutineScope.launch { viewModel.setSubtitleAiTargetLanguage(lang) } },
                 aiKeyServerState = aiKeyServerState,
                 onStartAiKeyServer = { viewModel.startAiKeyServer() },
                 onStopAiKeyServer = { viewModel.stopAiKeyServer() },

@@ -77,7 +77,8 @@ class PlayerRuntimeController(
     }
 
     @Volatile internal var userAiApiKey: String = ""
-    @Volatile internal var userAiTargetLanguage: String = "Hebrew"
+    @Volatile internal var subtitleAiEnabled: Boolean = false
+    @Volatile internal var subtitleAiAutoSelect: Boolean = false
     @Volatile internal var firstBatchSuccessShown: Boolean = false
     private var aiToastJob: Job? = null
 
@@ -96,7 +97,7 @@ class PlayerRuntimeController(
                 if (SubtitleTranslationManager.MOCK_MODE) "" else userAiApiKey.trim()
             }
         )
-        SubtitleTranslationManager(service = service, targetLanguage = "Hebrew", scope = scope).also { mgr ->
+        SubtitleTranslationManager(service = service, targetLanguage = "", scope = scope).also { mgr ->
             mgr.onTranslatingChanged = { translating ->
                 _uiState.update { it.copy(subtitleTranslating = translating) }
             }
@@ -105,10 +106,10 @@ class PlayerRuntimeController(
                     subtitleTranslationError = if (success) null else error,
                     subtitleTranslatedCount = mgr.translatedCount
                 ) }
-                if (success && !firstBatchSuccessShown) {
+                if (success && !firstBatchSuccessShown && mgr.isEnabled) {
                     firstBatchSuccessShown = true
                     showAiToast(SubtitleAiToast.SUCCESS)
-                } else if (!success) {
+                } else if (!success && mgr.isEnabled) {
                     showAiToast(if (error == "RATE_LIMITED") SubtitleAiToast.RATE_LIMITED else SubtitleAiToast.ERROR)
                 }
             }

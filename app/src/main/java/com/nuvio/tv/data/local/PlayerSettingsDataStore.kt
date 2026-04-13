@@ -174,7 +174,6 @@ data class PlayerSettings(
     val secondaryPreferredAudioLanguage: String? = null,
     val loadingOverlayEnabled: Boolean = true,
     val autoTranslateSubtitles: Boolean = true,
-    val subtitleTranslateTargetLanguage: String = "Hebrew",
     val subtitleAiEnabled: Boolean = false,
     val subtitleAiAutoSelect: Boolean = false,
     val subtitleAiApiKey: String = "",
@@ -310,7 +309,6 @@ class PlayerSettingsDataStore @Inject constructor(
     private val secondaryPreferredAudioLanguageKey = stringPreferencesKey("secondary_preferred_audio_language")
     private val loadingOverlayEnabledKey = booleanPreferencesKey("loading_overlay_enabled")
     private val autoTranslateSubtitlesKey = booleanPreferencesKey("auto_translate_subtitles_v2")
-    private val subtitleTranslateTargetLanguageKey = stringPreferencesKey("subtitle_translate_target_language")
     private val subtitleAiEnabledKey = booleanPreferencesKey("subtitle_ai_enabled")
     private val subtitleAiAutoSelectKey = booleanPreferencesKey("subtitle_ai_auto_select")
     private val subtitleAiApiKeyKey = stringPreferencesKey("subtitle_ai_api_key")
@@ -466,7 +464,6 @@ class PlayerSettingsDataStore @Inject constructor(
                     ?.let(::normalizeSecondaryAudioLanguageCode),
                 loadingOverlayEnabled = prefs[loadingOverlayEnabledKey] ?: true,
                 autoTranslateSubtitles = prefs[autoTranslateSubtitlesKey] ?: true,
-                subtitleTranslateTargetLanguage = prefs[subtitleTranslateTargetLanguageKey] ?: "Hebrew",
                 subtitleAiEnabled = prefs[subtitleAiEnabledKey] ?: false,
                 subtitleAiAutoSelect = prefs[subtitleAiAutoSelectKey] ?: false,
                 subtitleAiApiKey = prefs[subtitleAiApiKeyKey] ?: "",
@@ -872,10 +869,6 @@ class PlayerSettingsDataStore @Inject constructor(
 
     suspend fun setSubtitleAiApiKey(key: String) {
         store().edit { prefs -> prefs[subtitleAiApiKeyKey] = key }
-    }
-
-    suspend fun setSubtitleTranslateTargetLanguage(language: String) {
-        store().edit { prefs -> prefs[subtitleTranslateTargetLanguageKey] = language }
     }
 
     suspend fun setSubtitleRemoveHearingImpaired(enabled: Boolean) {

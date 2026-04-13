@@ -178,10 +178,6 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setLibassRenderType(renderType)
     }
 
-    suspend fun setSubtitleAiTargetLanguage(language: String) {
-        playerSettingsDataStore.setSubtitleTranslateTargetLanguage(language)
-    }
-
     suspend fun setSubtitleAiEnabled(enabled: Boolean) {
         playerSettingsDataStore.setSubtitleAiEnabled(enabled)
     }

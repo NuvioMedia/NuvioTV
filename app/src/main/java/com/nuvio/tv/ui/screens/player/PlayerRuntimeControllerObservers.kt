@@ -185,10 +185,8 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
     scope.launch {
         playerSettingsDataStore.playerSettings.collect { settings ->
             userAiApiKey = settings.subtitleAiApiKey
-            userAiTargetLanguage = settings.subtitleTranslateTargetLanguage
-            translationManager.targetLanguage = settings.subtitleTranslateTargetLanguage
-            val langCode = languageNameToIsoCode(settings.subtitleTranslateTargetLanguage).uppercase()
-            _uiState.update { it.copy(subtitleAiTargetLangCode = langCode) }
+            subtitleAiEnabled = settings.subtitleAiEnabled
+            subtitleAiAutoSelect = settings.subtitleAiAutoSelect
             val currentState = _uiState.value
             val resolvedInternalPlayerEngine =
                 runtimeInternalPlayerEngineOverride ?: settings.internalPlayerEngine
@@ -291,7 +289,14 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                 lastSubtitlePreferredLanguage != settings.subtitleStyle.preferredLanguage ||
                     lastSubtitleSecondaryLanguage != settings.subtitleStyle.secondaryPreferredLanguage
             if (subtitlePreferenceChanged) {
-                if (!subtitleDisabledByPersistedPreference && !subtitleAddonRestoredByPersistedPreference) autoSubtitleSelected = false
+                // Don't reset autoSubtitleSelected if AI translation is already active — the
+                // settings observer fires on every emission (including the very first, where
+                // lastSubtitlePreferredLanguage is null), which would look like a language change
+                // and override an AI selection that was just made.
+                val aiActiveAndProtected = translationManager.isEnabled && subtitleAiAutoSelect
+                if (!subtitleDisabledByPersistedPreference && !subtitleAddonRestoredByPersistedPreference && !aiActiveAndProtected) {
+                    autoSubtitleSelected = false
+                }
                 lastSubtitlePreferredLanguage = settings.subtitleStyle.preferredLanguage
                 lastSubtitleSecondaryLanguage = settings.subtitleStyle.secondaryPreferredLanguage
                 tryAutoSelectPreferredSubtitleFromAvailableTracks()

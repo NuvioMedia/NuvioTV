@@ -154,7 +154,7 @@ data class PlayerUiState(
     val subtitleTranslatedCount: Int = 0,
     val subtitleTotalCount: Int = 0,
     val subtitleLookaheadUpToMs: Long = 0L,
-    val subtitleAiTargetLangCode: String = "HE",
+    val subtitleAiTargetLangCode: String = "",
     val subtitleAiToast: SubtitleAiToast? = null,
     val removeHearingImpaired: Boolean = false,
     // Torrent streaming state
@@ -272,6 +272,7 @@ sealed class PlayerEvent {
     data object OnShowStreamInfo : PlayerEvent()
     data object OnDismissStreamInfo : PlayerEvent()
     data class OnSetAutoTranslateSubtitles(val enabled: Boolean) : PlayerEvent()
+    data class OnSelectAiSubtitle(val targetLanguage: String) : PlayerEvent()
     data object OnToggleTorrentStats : PlayerEvent()
 }
 
