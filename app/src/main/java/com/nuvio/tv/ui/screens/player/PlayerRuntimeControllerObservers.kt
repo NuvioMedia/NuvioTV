@@ -100,7 +100,6 @@ internal fun PlayerRuntimeController.fetchAddonSubtitles() {
         
         try {
             val subtitles = fetchAddonSubtitlesNow()
-            Log.d(PlayerRuntimeController.TAG, "fetchAddonSubtitles done: ${subtitles.size} subs, persistedPref=${persistedTrackPreference?.subtitle?.javaClass?.simpleName}")
             _uiState.update { 
                 it.copy(
                     addonSubtitles = subtitles,
@@ -112,7 +111,6 @@ internal fun PlayerRuntimeController.fetchAddonSubtitles() {
                 val match = subtitles.firstOrNull { it.id == pendingAddon.id }
                     ?: subtitles.firstOrNull { PlayerSubtitleUtils.matchesLanguageCode(it.lang, pendingAddon.lang) }
                 if (match != null) {
-                    Log.d(PlayerRuntimeController.TAG, "fetchAddonSubtitles: re-applying restored addon id=${match.id}")
                     autoSubtitleSelected = true
                     selectAddonSubtitle(match)
                     _uiState.update { it.copy(selectedAddonSubtitle = match, selectedSubtitleTrackIndex = -1) }

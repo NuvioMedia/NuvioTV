@@ -1087,7 +1087,6 @@ private class SubtitleOffsetRenderer(
 
     private fun launchPreTranslation(manager: SubtitleTranslationManager, texts: List<String>, coveredUpToUs: Long) {
         val tScope = translationScope ?: return
-        Log.d("SubtitleTranslation", "Lookahead: pre-translating ${texts.size} cues up to ${coveredUpToUs / 1_000_000L}s")
         tScope.launch {
             manager.preTranslateWindow(texts)
             manager.onLookaheadAdvanced?.invoke(coveredUpToUs / 1000L, texts.size)
@@ -1109,7 +1108,6 @@ private class SubtitleOffsetRenderer(
                     val v = f.get(resolver) ?: continue
                     val count = extractFromCollectionOrMap(v, texts)
                     if (count > 0) {
-                        Log.d("SubtitleTranslation", "Lookahead: ${texts.size} texts from CuesResolver.$candidate (size=${if (v is Collection<*>) v.size else "?"})")
                         extracted = true
                         break
                     }
@@ -1152,7 +1150,6 @@ private class SubtitleOffsetRenderer(
                         if (!text.isNullOrBlank()) texts.add(text)
                     }
                 }
-                Log.d("SubtitleTranslation", "extractAllCueTexts: ${texts.size} texts from $fieldName ($count events)")
             } catch (e: Exception) {
                 Log.w("SubtitleTranslation", "extractAllCueTexts $fieldName: ${e.message}")
             }

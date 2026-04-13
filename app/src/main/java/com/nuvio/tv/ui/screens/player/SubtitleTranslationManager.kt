@@ -56,7 +56,6 @@ internal class SubtitleTranslationManager(
             }
 
             val texts = batch.map { it.text }
-            Log.d(TAG, "Processing batch of ${texts.size} items")
             val result = service.translateBatch(texts, targetLanguage)
             onBatchResult?.invoke(result.success, result.errorMessage)
 
@@ -74,7 +73,6 @@ internal class SubtitleTranslationManager(
     suspend fun translate(text: String): String {
         cache[text]?.let { return it }
 
-        Log.d(TAG, "Queuing for translation: \"${text.take(60)}\"")
         val deferred = CompletableDeferred<String>()
         if (pendingCount++ == 0) onTranslatingChanged?.invoke(true)
         queue.send(PendingItem(text, deferred))
@@ -104,11 +102,7 @@ internal class SubtitleTranslationManager(
      */
     suspend fun preTranslateWindow(texts: List<String>) {
         val uncached = texts.filter { !cache.containsKey(it) }
-        if (uncached.isEmpty()) {
-            Log.d(TAG, "preTranslateWindow: all ${texts.size} cues already cached")
-            return
-        }
-        Log.d(TAG, "preTranslateWindow: pre-translating ${uncached.size} cues in ${(uncached.size + 39) / 40} batch(es)")
+        if (uncached.isEmpty()) return
         uncached.chunked(40).forEach { chunk ->
             val result = service.translateBatch(chunk, targetLanguage)
             if (result.success) {
@@ -120,6 +114,5 @@ internal class SubtitleTranslationManager(
                 Log.w(TAG, "preTranslateWindow batch failed silently: ${result.errorMessage}")
             }
         }
-        Log.d(TAG, "preTranslateWindow: done, cache size=${cache.size}")
     }
 }

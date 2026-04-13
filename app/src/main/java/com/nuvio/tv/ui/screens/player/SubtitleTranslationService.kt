@@ -64,8 +64,6 @@ internal class SubtitleTranslationService(
         val NL = "\u23CE" // ⏎ — unlikely to appear in subtitle text
         val encoded = lines.map { it.replace("\n", NL) }
         val inputArray = JSONArray(encoded)
-        Log.d(TAG, "translateBatch: sending ${lines.size} lines to Gemini ($GEMINI_MODEL_ID)")
-
         val systemPrompt = "Translate movie subtitles naturally. Return ONLY a JSON array, same order and count. Preserve $NL as-is (line-break). No extra text."
 
         val body = JSONObject().apply {
@@ -106,8 +104,6 @@ internal class SubtitleTranslationService(
                     Log.e(TAG, "Empty response body (HTTP ${response.code})")
                     return@withContext TranslationResult(lines, false, "Empty response (${response.code})")
                 }
-                Log.d(TAG, "API response (${response.code}): $responseBody")
-
                 if (!response.isSuccessful) {
                     val errorMsg = if (response.code == 429) "RATE_LIMITED" else "HTTP ${response.code}: $responseBody"
                     return@withContext TranslationResult(lines, false, errorMsg)
@@ -137,7 +133,6 @@ internal class SubtitleTranslationService(
                     if (isRtl) "\u200F$line\u200F" else line
                 }
 
-                Log.d(TAG, "translateBatch success: $translated")
                 TranslationResult(translated, true)
             } catch (e: Exception) {
                 Log.e(TAG, "translateBatch exception: ${e.message}", e)

@@ -693,10 +693,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         is PlayerEvent.OnSelectAiSubtitle -> {
             autoSubtitleSelected = true
-            val started = triggerAiForLanguage(event.targetLanguage)
-            if (!started) {
-                Log.d(PlayerRuntimeController.TAG, "OnSelectAiSubtitle: no usable source track for lang=${event.targetLanguage}")
-            }
+            triggerAiForLanguage(event.targetLanguage)
         }
         is PlayerEvent.OnSelectAddonSubtitle -> {
             logSwitchTrace(
