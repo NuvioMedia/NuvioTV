@@ -77,7 +77,6 @@ private enum class PlaybackSection {
     STREAM_SELECTION,
     AUDIO_TRAILER,
     SUBTITLES,
-    AI_SUBTITLES,
     P2P
 }
 
@@ -148,25 +147,16 @@ internal fun PlaybackSettingsSections(
     onSetSubtitleOutlineEnabled: (Boolean) -> Unit,
     onSetUseLibass: (Boolean) -> Unit,
     onSetLibassRenderType: (com.nuvio.tv.data.local.LibassRenderType) -> Unit,
-    onSetSubtitleAiEnabled: (Boolean) -> Unit,
-    onSetSubtitleAiAutoSelect: (Boolean) -> Unit,
-    onSetSubtitleRemoveHearingImpaired: (Boolean) -> Unit,
-    onSaveSubtitleAiApiKey: (String) -> Unit,
-    aiKeyServerState: com.nuvio.tv.ui.screens.settings.AiKeyServerState,
-    onStartAiKeyServer: () -> Unit,
-    onStopAiKeyServer: () -> Unit,
     p2pEnabled: Boolean = false,
     onSetP2pEnabled: (Boolean) -> Unit = {},
     hideTorrentStats: Boolean = false,
     onSetHideTorrentStats: (Boolean) -> Unit = {}
 ) {
-    var showAiKeyDialog by remember { mutableStateOf(false) }
     var generalExpanded by rememberSaveable { mutableStateOf(false) }
     var afrExpanded by rememberSaveable { mutableStateOf(false) }
     var streamExpanded by rememberSaveable { mutableStateOf(false) }
     var audioTrailerExpanded by rememberSaveable { mutableStateOf(false) }
     var subtitlesExpanded by rememberSaveable { mutableStateOf(false) }
-    var aiSubtitlesExpanded by rememberSaveable { mutableStateOf(false) }
     var p2pExpanded by rememberSaveable { mutableStateOf(false) }
 
     val defaultGeneralHeaderFocus = remember { FocusRequester() }
@@ -174,7 +164,6 @@ internal fun PlaybackSettingsSections(
     val streamHeaderFocus = remember { FocusRequester() }
     val audioTrailerHeaderFocus = remember { FocusRequester() }
     val subtitlesHeaderFocus = remember { FocusRequester() }
-    val aiSubtitlesHeaderFocus = remember { FocusRequester() }
     val p2pHeaderFocus = remember { FocusRequester() }
     val generalHeaderFocus = initialFocusRequester ?: defaultGeneralHeaderFocus
 
@@ -191,8 +180,6 @@ internal fun PlaybackSettingsSections(
     val strSectionAudioDesc = stringResource(R.string.playback_section_audio_desc)
     val strSectionSubtitles = stringResource(R.string.playback_section_subtitles)
     val strSectionSubtitlesDesc = stringResource(R.string.playback_section_subtitles_desc)
-    val strSectionAiSubtitles = stringResource(R.string.playback_section_ai_subtitles)
-    val strSectionAiSubtitlesDesc = stringResource(R.string.playback_section_ai_subtitles_desc)
     val strSectionP2p = stringResource(R.string.settings_p2p_title)
     val strSectionP2pDesc = stringResource(R.string.settings_p2p_subtitle)
     val strHideTorrentStats = stringResource(R.string.settings_p2p_hide_stats_title)
@@ -459,27 +446,6 @@ internal fun PlaybackSettingsSections(
         }
 
         playbackCollapsibleSection(
-            keyPrefix = "ai_subtitles",
-            title = strSectionAiSubtitles,
-            description = strSectionAiSubtitlesDesc,
-            expanded = aiSubtitlesExpanded,
-            onToggle = { aiSubtitlesExpanded = !aiSubtitlesExpanded },
-            focusRequester = aiSubtitlesHeaderFocus,
-            onHeaderFocused = { focusedSection = PlaybackSection.AI_SUBTITLES }
-        ) {
-            subtitleAiSettingsItems(
-                playerSettings = playerSettings,
-                onSetSubtitleAiEnabled = onSetSubtitleAiEnabled,
-                onSetSubtitleAiAutoSelect = onSetSubtitleAiAutoSelect,
-                onSetSubtitleRemoveHearingImpaired = onSetSubtitleRemoveHearingImpaired,
-                onShowAiKeyDialog = { showAiKeyDialog = true },
-                onStartAiKeyServer = onStartAiKeyServer,
-                onItemFocused = { focusedSection = PlaybackSection.AI_SUBTITLES },
-                enabled = !generalUi.isExternalPlayer
-            )
-        }
-
-        playbackCollapsibleSection(
             keyPrefix = "p2p",
             title = strSectionP2p,
             description = strSectionP2pDesc,
@@ -510,15 +476,6 @@ internal fun PlaybackSettingsSections(
             }
         }
     }
-
-    if (showAiKeyDialog) {
-        AiApiKeyDialog(
-            currentKey = playerSettings.subtitleAiApiKey,
-            onSave = { key -> onSaveSubtitleAiApiKey(key); showAiKeyDialog = false },
-            onDismiss = { showAiKeyDialog = false }
-        )
-    }
-
 
 }
 

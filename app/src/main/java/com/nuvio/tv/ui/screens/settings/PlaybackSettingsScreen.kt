@@ -136,7 +136,6 @@ fun PlaybackSettingsContent(
     )
     val installedAddonNames by viewModel.installedAddonNames.collectAsStateWithLifecycle(initialValue = emptyList())
     val enabledPluginNames by viewModel.enabledPluginNames.collectAsStateWithLifecycle(initialValue = emptyList())
-    val aiKeyServerState by viewModel.aiKeyServerState.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
 
     // Dialog states
@@ -266,13 +265,6 @@ fun PlaybackSettingsContent(
                 onSetSubtitleOutlineEnabled = { enabled -> coroutineScope.launch { viewModel.setSubtitleOutlineEnabled(enabled) } },
                 onSetUseLibass = { enabled -> coroutineScope.launch { viewModel.setUseLibass(enabled) } },
                 onSetLibassRenderType = { renderType -> coroutineScope.launch { viewModel.setLibassRenderType(renderType) } },
-                onSetSubtitleAiEnabled = { enabled -> coroutineScope.launch { viewModel.setSubtitleAiEnabled(enabled) } },
-                onSetSubtitleAiAutoSelect = { enabled -> coroutineScope.launch { viewModel.setSubtitleAiAutoSelect(enabled) } },
-                onSetSubtitleRemoveHearingImpaired = { enabled -> coroutineScope.launch { viewModel.setSubtitleRemoveHearingImpaired(enabled) } },
-                onSaveSubtitleAiApiKey = { key -> coroutineScope.launch { viewModel.saveSubtitleAiApiKey(key) } },
-                aiKeyServerState = aiKeyServerState,
-                onStartAiKeyServer = { viewModel.startAiKeyServer() },
-                onStopAiKeyServer = { viewModel.stopAiKeyServer() },
                 p2pEnabled = torrentSettings.p2pEnabled,
                 onSetP2pEnabled = { enabled -> viewModel.setP2pEnabled(enabled) },
                 hideTorrentStats = torrentSettings.hideTorrentStats,
@@ -281,14 +273,6 @@ fun PlaybackSettingsContent(
         }
     } // end Column
 
-    if (aiKeyServerState.isActive) {
-        AiKeyQrOverlay(
-            qrBitmap = aiKeyServerState.qrBitmap,
-            serverUrl = aiKeyServerState.serverUrl,
-            keyReceived = aiKeyServerState.keyReceived,
-            onClose = { viewModel.stopAiKeyServer() }
-        )
-    }
     } // end Box
 
     PlaybackSettingsDialogsHost(
@@ -401,14 +385,15 @@ internal fun ToggleSettingsItem(
     isChecked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     onFocused: () -> Unit = {},
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val contentAlpha = if (enabled) 1f else 0.4f
 
     Card(
         onClick = { if (enabled) onCheckedChange(!isChecked) },
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .onFocusChanged { state ->
                 val nowFocused = state.isFocused

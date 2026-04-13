@@ -346,7 +346,8 @@ internal fun LazyListScope.subtitleAiSettingsItems(
     onShowAiKeyDialog: () -> Unit,
     onStartAiKeyServer: () -> Unit,
     onItemFocused: () -> Unit = {},
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    firstItemModifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier
 ) {
     item(key = "subtitle_ai_enabled") {
         ToggleSettingsItem(
@@ -356,7 +357,8 @@ internal fun LazyListScope.subtitleAiSettingsItems(
             isChecked = playerSettings.subtitleAiEnabled,
             onCheckedChange = onSetSubtitleAiEnabled,
             onFocused = onItemFocused,
-            enabled = enabled
+            enabled = enabled,
+            modifier = firstItemModifier
         )
     }
 

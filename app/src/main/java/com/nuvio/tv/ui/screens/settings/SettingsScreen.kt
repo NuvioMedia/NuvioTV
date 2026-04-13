@@ -57,6 +57,8 @@ import com.nuvio.tv.R
 import com.nuvio.tv.ui.screens.plugin.PluginScreenContent
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 internal enum class SettingsCategory {
     ACCOUNT,
@@ -74,6 +76,7 @@ internal enum class SettingsCategory {
 
 private enum class IntegrationSettingsSection {
     Hub,
+    AiSubtitles,
     Tmdb,
     MdbList,
     AnimeSkip
@@ -222,6 +225,7 @@ fun SettingsScreen(
     }
     val railContainerFocusRequester = remember { FocusRequester() }
     val integrationHubFocusRequester = remember { FocusRequester() }
+    val integrationAiSubtitlesFocusRequester = remember { FocusRequester() }
     val integrationTmdbFocusRequester = remember { FocusRequester() }
     val integrationMdbListFocusRequester = remember { FocusRequester() }
     val integrationAnimeSkipFocusRequester = remember { FocusRequester() }
@@ -410,6 +414,7 @@ fun SettingsScreen(
                                 null
                             },
                             hubFocusRequester = integrationHubFocusRequester,
+                            aiSubtitlesFocusRequester = integrationAiSubtitlesFocusRequester,
                             tmdbFocusRequester = integrationTmdbFocusRequester,
                             mdbListFocusRequester = integrationMdbListFocusRequester,
                             animeSkipFocusRequester = integrationAnimeSkipFocusRequester,
@@ -497,6 +502,7 @@ private fun IntegrationSettingsContent(
     onSelectSection: (IntegrationSettingsSection) -> Unit,
     initialFocusRequester: FocusRequester?,
     hubFocusRequester: FocusRequester,
+    aiSubtitlesFocusRequester: FocusRequester,
     tmdbFocusRequester: FocusRequester,
     mdbListFocusRequester: FocusRequester,
     animeSkipFocusRequester: FocusRequester,
@@ -511,6 +517,7 @@ private fun IntegrationSettingsContent(
         if (!autoFocusEnabled) return@LaunchedEffect
         val requester = when (selectedSection) {
             IntegrationSettingsSection.Hub -> hubEntryFocusRequester
+            IntegrationSettingsSection.AiSubtitles -> aiSubtitlesFocusRequester
             IntegrationSettingsSection.Tmdb -> tmdbFocusRequester
             IntegrationSettingsSection.MdbList -> mdbListFocusRequester
             IntegrationSettingsSection.AnimeSkip -> animeSkipFocusRequester
@@ -537,12 +544,19 @@ private fun IntegrationSettingsContent(
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        item(key = "integration_hub_ai_subtitles") {
+                            SettingsActionRow(
+                                title = stringResource(R.string.playback_section_ai_subtitles),
+                                subtitle = stringResource(R.string.playback_section_ai_subtitles_desc),
+                                onClick = { onSelectSection(IntegrationSettingsSection.AiSubtitles) },
+                                modifier = Modifier.focusRequester(hubEntryFocusRequester)
+                            )
+                        }
                         item(key = "integration_hub_tmdb") {
                             SettingsActionRow(
                                 title = "TMDB",
                                 subtitle = stringResource(R.string.settings_tmdb_subtitle),
-                                onClick = { onSelectSection(IntegrationSettingsSection.Tmdb) },
-                                modifier = Modifier.focusRequester(hubEntryFocusRequester)
+                                onClick = { onSelectSection(IntegrationSettingsSection.Tmdb) }
                             )
                         }
                         item(key = "integration_hub_mdblist") {
@@ -564,6 +578,12 @@ private fun IntegrationSettingsContent(
             }
         }
 
+        IntegrationSettingsSection.AiSubtitles -> {
+            AiSubtitlesIntegrationContent(
+                initialFocusRequester = aiSubtitlesFocusRequester
+            )
+        }
+
         IntegrationSettingsSection.Tmdb -> {
             TmdbSettingsContent(
                 initialFocusRequester = tmdbFocusRequester
@@ -581,5 +601,60 @@ private fun IntegrationSettingsContent(
                 initialFocusRequester = animeSkipFocusRequester
             )
         }
+    }
+}
+
+@Composable
+private fun AiSubtitlesIntegrationContent(
+    initialFocusRequester: FocusRequester? = null,
+    viewModel: PlaybackSettingsViewModel = hiltViewModel()
+) {
+    val playerSettings by viewModel.playerSettings.collectAsStateWithLifecycle(initialValue = com.nuvio.tv.data.local.PlayerSettings())
+    val aiKeyServerState by viewModel.aiKeyServerState.collectAsStateWithLifecycle()
+    val coroutineScope = rememberCoroutineScope()
+    var showAiKeyDialog by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        SettingsDetailHeader(
+            title = stringResource(R.string.playback_section_ai_subtitles),
+            subtitle = stringResource(R.string.playback_section_ai_subtitles_desc)
+        )
+        SettingsGroupCard(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                subtitleAiSettingsItems(
+                    playerSettings = playerSettings,
+                    onSetSubtitleAiEnabled = { enabled -> coroutineScope.launch { viewModel.setSubtitleAiEnabled(enabled) } },
+                    onSetSubtitleAiAutoSelect = { enabled -> coroutineScope.launch { viewModel.setSubtitleAiAutoSelect(enabled) } },
+                    onSetSubtitleRemoveHearingImpaired = { enabled -> coroutineScope.launch { viewModel.setSubtitleRemoveHearingImpaired(enabled) } },
+                    onShowAiKeyDialog = { showAiKeyDialog = true },
+                    onStartAiKeyServer = { viewModel.startAiKeyServer() },
+                    firstItemModifier = initialFocusRequester?.let {
+                        Modifier.focusRequester(it)
+                    } ?: Modifier
+                )
+            }
+        }
+    }
+
+    if (showAiKeyDialog) {
+        AiApiKeyDialog(
+            currentKey = playerSettings.subtitleAiApiKey,
+            onSave = { key -> coroutineScope.launch { viewModel.saveSubtitleAiApiKey(key) }; showAiKeyDialog = false },
+            onDismiss = { showAiKeyDialog = false }
+        )
+    }
+
+    if (aiKeyServerState.isActive) {
+        AiKeyQrOverlay(
+            qrBitmap = aiKeyServerState.qrBitmap,
+            serverUrl = aiKeyServerState.serverUrl,
+            keyReceived = aiKeyServerState.keyReceived,
+            onClose = { viewModel.stopAiKeyServer() }
+        )
     }
 }
