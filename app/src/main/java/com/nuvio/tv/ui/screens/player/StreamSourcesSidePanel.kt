@@ -227,7 +227,9 @@ internal fun StreamSourcesSidePanel(
                                 }
                             }
                     ) {
-                        itemsIndexed(uiState.sourceFilteredStreams) { index, stream ->
+                        itemsIndexed(uiState.sourceFilteredStreams, key = { index, stream ->
+                            stream.stableKey(index)
+                        }) { index, stream ->
                             StreamItem(
                                 stream = stream,
                                 focusRequester = streamsFocusRequester,

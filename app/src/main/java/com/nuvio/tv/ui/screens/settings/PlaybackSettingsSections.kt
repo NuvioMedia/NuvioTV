@@ -25,8 +25,10 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,6 +55,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.data.local.AddonSubtitleStartupMode
 import com.nuvio.tv.data.local.FrameRateMatchingMode
+import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.TrailerSettings
@@ -64,7 +67,8 @@ private enum class PlaybackSection {
     STREAM_SELECTION,
     AUDIO_TRAILER,
     SUBTITLES,
-    BUFFER_NETWORK
+    BUFFER_NETWORK,
+    P2P
 }
 
 private data class PlaybackGeneralUi(
@@ -73,7 +77,8 @@ private data class PlaybackGeneralUi(
 )
 
 private data class PlaybackStreamSelectionUi(
-    val playerPreferenceLabel: String
+    val playerPreferenceLabel: String,
+    val internalEngineLabel: String
 )
 
 private fun frameRateMatchingModeLabel(mode: FrameRateMatchingMode, off: String, onStart: String, onStartStop: String): String {
@@ -90,9 +95,11 @@ internal fun PlaybackSettingsSections(
     playerSettings: PlayerSettings,
     trailerSettings: TrailerSettings,
     onShowPlayerPreferenceDialog: () -> Unit,
+    onShowInternalPlayerEngineDialog: () -> Unit,
     onShowAudioLanguageDialog: () -> Unit,
     onShowSecondaryAudioLanguageDialog: () -> Unit,
     onShowDecoderPriorityDialog: () -> Unit,
+    onShowMpvHardwareDecodeModeDialog: () -> Unit,
     onShowLanguageDialog: () -> Unit,
     onShowSecondaryLanguageDialog: () -> Unit,
     onShowSubtitleStartupModeDialog: () -> Unit,
@@ -108,10 +115,12 @@ internal fun PlaybackSettingsSections(
     onShowReuseLastLinkCacheDialog: () -> Unit,
     onSetStreamAutoPlayNextEpisodeEnabled: (Boolean) -> Unit,
     onSetStreamAutoPlayPreferBingeGroupForNextEpisode: (Boolean) -> Unit,
+    onSetAutoSwitchInternalPlayerOnError: (Boolean) -> Unit,
     onSetNextEpisodeThresholdPercent: (Float) -> Unit,
     onSetNextEpisodeThresholdMinutesBeforeEnd: (Float) -> Unit,
     onSetStreamAutoPlayTimeoutSeconds: (Int) -> Unit,
     onSetReuseLastLinkEnabled: (Boolean) -> Unit,
+    onSetShowPlayerLoadingStatus: (Boolean) -> Unit,
     onSetLoadingOverlayEnabled: (Boolean) -> Unit,
     onSetPauseOverlayEnabled: (Boolean) -> Unit,
     onSetOsdClockEnabled: (Boolean) -> Unit,
@@ -140,6 +149,10 @@ internal fun PlaybackSettingsSections(
     onSetBufferBackBufferDurationMs: (Int) -> Unit,
     onResetBufferSettingsToDefaults: () -> Unit,
     onResetNetworkSettingsToDefaults: () -> Unit,
+    p2pEnabled: Boolean = false,
+    onSetP2pEnabled: (Boolean) -> Unit = {},
+    hideTorrentStats: Boolean = false,
+    onSetHideTorrentStats: (Boolean) -> Unit = {}
 ) {
     var generalExpanded by rememberSaveable { mutableStateOf(false) }
     var afrExpanded by rememberSaveable { mutableStateOf(false) }
@@ -147,12 +160,14 @@ internal fun PlaybackSettingsSections(
     var audioTrailerExpanded by rememberSaveable { mutableStateOf(false) }
     var subtitlesExpanded by rememberSaveable { mutableStateOf(false) }
     var bufferAndNetworkExpanded by rememberSaveable { mutableStateOf(false) }
+    var p2pExpanded by rememberSaveable { mutableStateOf(false) }
 
     val defaultGeneralHeaderFocus = remember { FocusRequester() }
     val afrHeaderFocus = remember { FocusRequester() }
     val streamHeaderFocus = remember { FocusRequester() }
     val audioTrailerHeaderFocus = remember { FocusRequester() }
     val subtitlesHeaderFocus = remember { FocusRequester() }
+    val p2pHeaderFocus = remember { FocusRequester() }
     val generalHeaderFocus = initialFocusRequester ?: defaultGeneralHeaderFocus
     val bufferAndNetworkHeaderFocus = remember { FocusRequester() }
 
@@ -169,6 +184,10 @@ internal fun PlaybackSettingsSections(
     val strSectionAudioDesc = stringResource(R.string.playback_section_audio_desc)
     val strSectionSubtitles = stringResource(R.string.playback_section_subtitles)
     val strSectionSubtitlesDesc = stringResource(R.string.playback_section_subtitles_desc)
+    val strSectionP2p = stringResource(R.string.settings_p2p_title)
+    val strSectionP2pDesc = stringResource(R.string.settings_p2p_subtitle)
+    val strHideTorrentStats = stringResource(R.string.settings_p2p_hide_stats_title)
+    val strHideTorrentStatsDesc = stringResource(R.string.settings_p2p_hide_stats_subtitle)
     val generalUi = PlaybackGeneralUi(
         isExternalPlayer = playerSettings.playerPreference == PlayerPreference.EXTERNAL,
         frameRateMatchingLabel = frameRateMatchingModeLabel(
@@ -183,6 +202,10 @@ internal fun PlaybackSettingsSections(
             PlayerPreference.INTERNAL -> stringResource(R.string.playback_player_internal)
             PlayerPreference.EXTERNAL -> stringResource(R.string.playback_player_external)
             PlayerPreference.ASK_EVERY_TIME -> stringResource(R.string.playback_player_ask)
+        },
+        internalEngineLabel = when (playerSettings.internalPlayerEngine) {
+            InternalPlayerEngine.EXOPLAYER -> stringResource(R.string.playback_engine_exoplayer)
+            InternalPlayerEngine.MVP_PLAYER -> stringResource(R.string.playback_engine_mvplayer)
         }
     )
 
@@ -204,6 +227,11 @@ internal fun PlaybackSettingsSections(
     LaunchedEffect(subtitlesExpanded, focusedSection) {
         if (!subtitlesExpanded && focusedSection == PlaybackSection.SUBTITLES) {
             subtitlesHeaderFocus.requestFocus()
+        }
+    }
+    LaunchedEffect(p2pExpanded, focusedSection) {
+        if (!p2pExpanded && focusedSection == PlaybackSection.P2P) {
+            p2pHeaderFocus.requestFocus()
         }
     }
 
@@ -314,6 +342,29 @@ internal fun PlaybackSettingsSections(
                 )
             }
 
+            item(key = "stream_internal_player_engine") {
+                NavigationSettingsItem(
+                    icon = Icons.Default.PlayArrow,
+                    title = stringResource(R.string.playback_internal_player_engine),
+                    subtitle = streamSelectionUi.internalEngineLabel,
+                    onClick = onShowInternalPlayerEngineDialog,
+                    onFocused = { focusedSection = PlaybackSection.STREAM_SELECTION },
+                    enabled = playerSettings.playerPreference != PlayerPreference.EXTERNAL
+                )
+            }
+
+            item(key = "stream_auto_switch_internal_player_on_error") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.SwapHoriz,
+                    title = stringResource(R.string.playback_auto_switch_internal_player_on_error),
+                    subtitle = stringResource(R.string.playback_auto_switch_internal_player_on_error_sub),
+                    isChecked = playerSettings.autoSwitchInternalPlayerOnError,
+                    onCheckedChange = onSetAutoSwitchInternalPlayerOnError,
+                    onFocused = { focusedSection = PlaybackSection.STREAM_SELECTION },
+                    enabled = playerSettings.playerPreference != PlayerPreference.EXTERNAL
+                )
+            }
+
             autoPlaySettingsItems(
                 playerSettings = playerSettings,
                 onShowModeDialog = onShowStreamAutoPlayModeDialog,
@@ -331,6 +382,17 @@ internal fun PlaybackSettingsSections(
                 onSetReuseLastLinkEnabled = onSetReuseLastLinkEnabled,
                 onItemFocused = { focusedSection = PlaybackSection.STREAM_SELECTION }
             )
+
+            item(key = "stream_show_loading_status") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.Info,
+                    title = stringResource(R.string.playback_show_loading_status),
+                    subtitle = stringResource(R.string.playback_show_loading_status_sub),
+                    isChecked = playerSettings.showPlayerLoadingStatus,
+                    onCheckedChange = onSetShowPlayerLoadingStatus,
+                    onFocused = { focusedSection = PlaybackSection.STREAM_SELECTION }
+                )
+            }
         }
 
         playbackCollapsibleSection(
@@ -348,6 +410,7 @@ internal fun PlaybackSettingsSections(
                 onShowAudioLanguageDialog = onShowAudioLanguageDialog,
                 onShowSecondaryAudioLanguageDialog = onShowSecondaryAudioLanguageDialog,
                 onShowDecoderPriorityDialog = onShowDecoderPriorityDialog,
+                onShowMpvHardwareDecodeModeDialog = onShowMpvHardwareDecodeModeDialog,
                 onSetTrailerEnabled = onSetTrailerEnabled,
                 onSetTrailerDelaySeconds = onSetTrailerDelaySeconds,
                 onSetSkipSilence = onSetSkipSilence,
@@ -409,6 +472,37 @@ internal fun PlaybackSettingsSections(
                 onSetParallelChunkSizeMb = onSetParallelChunkSizeMb,
                 onResetNetworkToDefaults = onResetNetworkSettingsToDefaults
             )
+        }
+
+        playbackCollapsibleSection(
+            keyPrefix = "p2p",
+            title = strSectionP2p,
+            description = strSectionP2pDesc,
+            expanded = p2pExpanded,
+            onToggle = { p2pExpanded = !p2pExpanded },
+            focusRequester = p2pHeaderFocus,
+            onHeaderFocused = { focusedSection = PlaybackSection.P2P }
+        ) {
+            item(key = "p2p_enabled") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.Info,
+                    title = strSectionP2p,
+                    subtitle = strSectionP2pDesc,
+                    isChecked = p2pEnabled,
+                    onCheckedChange = onSetP2pEnabled,
+                    onFocused = { focusedSection = PlaybackSection.P2P }
+                )
+            }
+            item(key = "p2p_hide_stats") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.Info,
+                    title = strHideTorrentStats,
+                    subtitle = strHideTorrentStatsDesc,
+                    isChecked = hideTorrentStats,
+                    onCheckedChange = onSetHideTorrentStats,
+                    onFocused = { focusedSection = PlaybackSection.P2P }
+                )
+            }
         }
     }
 }
@@ -533,6 +627,7 @@ internal fun PlaybackSettingsDialogsHost(
     installedAddonNames: List<String>,
     enabledPluginNames: List<String>,
     showPlayerPreferenceDialog: Boolean,
+    showInternalPlayerEngineDialog: Boolean,
     showLanguageDialog: Boolean,
     showSecondaryLanguageDialog: Boolean,
     showSubtitleStartupModeDialog: Boolean,
@@ -542,6 +637,7 @@ internal fun PlaybackSettingsDialogsHost(
     showAudioLanguageDialog: Boolean,
     showSecondaryAudioLanguageDialog: Boolean,
     showDecoderPriorityDialog: Boolean,
+    showMpvHardwareDecodeModeDialog: Boolean,
     showStreamAutoPlayModeDialog: Boolean,
     showStreamAutoPlaySourceDialog: Boolean,
     showStreamAutoPlayAddonSelectionDialog: Boolean,
@@ -551,6 +647,8 @@ internal fun PlaybackSettingsDialogsHost(
     showReuseLastLinkCacheDialog: Boolean,
     onSetPlayerPreference: (PlayerPreference) -> Unit,
     onDismissPlayerPreferenceDialog: () -> Unit,
+    onSetInternalPlayerEngine: (InternalPlayerEngine) -> Unit,
+    onDismissInternalPlayerEngineDialog: () -> Unit,
     onSetSubtitlePreferredLanguage: (String?) -> Unit,
     onSetSubtitleSecondaryLanguage: (String?) -> Unit,
     onSetAddonSubtitleStartupMode: (AddonSubtitleStartupMode) -> Unit,
@@ -560,6 +658,7 @@ internal fun PlaybackSettingsDialogsHost(
     onSetPreferredAudioLanguage: (String) -> Unit,
     onSetSecondaryPreferredAudioLanguage: (String?) -> Unit,
     onSetDecoderPriority: (Int) -> Unit,
+    onSetMpvHardwareDecodeMode: (com.nuvio.tv.data.local.MpvHardwareDecodeMode) -> Unit,
     onSetStreamAutoPlayMode: (com.nuvio.tv.data.local.StreamAutoPlayMode) -> Unit,
     onSetStreamAutoPlaySource: (com.nuvio.tv.data.local.StreamAutoPlaySource) -> Unit,
     onSetNextEpisodeThresholdMode: (com.nuvio.tv.data.local.NextEpisodeThresholdMode) -> Unit,
@@ -576,6 +675,7 @@ internal fun PlaybackSettingsDialogsHost(
     onDismissAudioLanguageDialog: () -> Unit,
     onDismissSecondaryAudioLanguageDialog: () -> Unit,
     onDismissDecoderPriorityDialog: () -> Unit,
+    onDismissMpvHardwareDecodeModeDialog: () -> Unit,
     onDismissStreamAutoPlayModeDialog: () -> Unit,
     onDismissStreamAutoPlaySourceDialog: () -> Unit,
     onDismissStreamRegexDialog: () -> Unit,
@@ -592,6 +692,17 @@ internal fun PlaybackSettingsDialogsHost(
                 onDismissPlayerPreferenceDialog()
             },
             onDismiss = onDismissPlayerPreferenceDialog
+        )
+    }
+
+    if (showInternalPlayerEngineDialog) {
+        InternalPlayerEngineDialog(
+            currentEngine = playerSettings.internalPlayerEngine,
+            onEngineSelected = { engine ->
+                onSetInternalPlayerEngine(engine)
+                onDismissInternalPlayerEngineDialog()
+            },
+            onDismiss = onDismissInternalPlayerEngineDialog
         )
     }
 
@@ -621,15 +732,19 @@ internal fun PlaybackSettingsDialogsHost(
         showAudioLanguageDialog = showAudioLanguageDialog,
         showSecondaryAudioLanguageDialog = showSecondaryAudioLanguageDialog,
         showDecoderPriorityDialog = showDecoderPriorityDialog,
+        showMpvHardwareDecodeModeDialog = showMpvHardwareDecodeModeDialog,
         selectedLanguage = playerSettings.preferredAudioLanguage,
         selectedSecondaryLanguage = playerSettings.secondaryPreferredAudioLanguage,
         selectedPriority = playerSettings.decoderPriority,
+        selectedMpvHardwareDecodeMode = playerSettings.mpvHardwareDecodeMode,
         onSetPreferredAudioLanguage = onSetPreferredAudioLanguage,
         onSetSecondaryPreferredAudioLanguage = onSetSecondaryPreferredAudioLanguage,
         onSetDecoderPriority = onSetDecoderPriority,
+        onSetMpvHardwareDecodeMode = onSetMpvHardwareDecodeMode,
         onDismissAudioLanguageDialog = onDismissAudioLanguageDialog,
         onDismissSecondaryAudioLanguageDialog = onDismissSecondaryAudioLanguageDialog,
-        onDismissDecoderPriorityDialog = onDismissDecoderPriorityDialog
+        onDismissDecoderPriorityDialog = onDismissDecoderPriorityDialog,
+        onDismissMpvHardwareDecodeModeDialog = onDismissMpvHardwareDecodeModeDialog
     )
 
     AutoPlaySettingsDialogs(
@@ -702,6 +817,101 @@ private fun PlayerPreferenceDialog(
 
                     Card(
                         onClick = { onPreferenceSelected(preference) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
+                        colors = CardDefaults.colors(
+                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
+                            focusedContainerColor = NuvioColors.FocusBackground
+                        ),
+                        shape = CardDefaults.shape(shape = RoundedCornerShape(10.dp)),
+                        scale = CardDefaults.scale(focusedScale = 1f)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = title,
+                                    color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = description,
+                                    color = NuvioColors.TextSecondary,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            if (isSelected) {
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = stringResource(R.string.cd_selected),
+                                    tint = NuvioColors.Primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InternalPlayerEngineDialog(
+    currentEngine: InternalPlayerEngine,
+    onEngineSelected: (InternalPlayerEngine) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    val options = listOf(
+        Triple(
+            InternalPlayerEngine.EXOPLAYER,
+            stringResource(R.string.playback_engine_exoplayer),
+            stringResource(R.string.playback_engine_exoplayer_desc)
+        ),
+        Triple(
+            InternalPlayerEngine.MVP_PLAYER,
+            stringResource(R.string.playback_engine_mvplayer),
+            stringResource(R.string.playback_engine_mvplayer_desc)
+        )
+    )
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.playback_internal_player_engine),
+        width = 420.dp,
+        suppressFirstKeyUp = false
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 320.dp)
+        ) {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                items(
+                    count = options.size,
+                    key = { index -> options[index].first.name }
+                ) { index ->
+                    val (engine, title, description) = options[index]
+                    val isSelected = engine == currentEngine
+
+                    Card(
+                        onClick = { onEngineSelected(engine) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),

@@ -43,6 +43,8 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -75,6 +77,7 @@ fun HeroCarousel(
 
     var activeIndex by remember { mutableIntStateOf(0) }
     var isFocused by remember { mutableStateOf(false) }
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     LaunchedEffect(activeIndex, isFocused) {
         if (!isFocused) return@LaunchedEffect
@@ -109,16 +112,18 @@ fun HeroCarousel(
                 if (event.type == KeyEventType.KeyDown) {
                     when (event.key) {
                         Key.DirectionLeft -> {
-                            if (activeIndex > 0) {
-                                activeIndex--
-                                true
-                            } else false
+                            if (isRtl) {
+                                if (activeIndex < items.size - 1) { activeIndex++; true } else false
+                            } else {
+                                if (activeIndex > 0) { activeIndex--; true } else false
+                            }
                         }
                         Key.DirectionRight -> {
-                            if (activeIndex < items.size - 1) {
-                                activeIndex++
-                                true
-                            } else false
+                            if (isRtl) {
+                                if (activeIndex > 0) { activeIndex--; true } else false
+                            } else {
+                                if (activeIndex < items.size - 1) { activeIndex++; true } else false
+                            }
                         }
                         else -> false
                     }

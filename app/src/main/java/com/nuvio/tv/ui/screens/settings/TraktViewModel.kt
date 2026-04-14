@@ -64,6 +64,7 @@ class TraktViewModel @Inject constructor(
     private val watchedItemsPreferences: WatchedItemsPreferences,
     private val watchedItemsSyncService: WatchedItemsSyncService,
     private val watchedSeriesStateHolder: WatchedSeriesStateHolder,
+    private val cwEnrichmentCache: com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TraktUiState())
@@ -129,6 +130,9 @@ class TraktViewModel @Inject constructor(
     fun onWatchProgressSourceSelected(source: WatchProgressSource) {
         viewModelScope.launch {
             traktSettingsDataStore.setWatchProgressSource(source)
+            // Clear CW cache so stale items from the previous source don't flash on screen.
+            cwEnrichmentCache.saveInProgressSnapshot(emptyList())
+            cwEnrichmentCache.saveNextUpSnapshot(emptyList())
             if (source == WatchProgressSource.TRAKT) {
                 watchedItemsPreferences.clearAll()
                 watchedSeriesStateHolder.update(emptySet())
@@ -204,6 +208,9 @@ class TraktViewModel @Inject constructor(
             pollJob?.cancel()
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             traktAuthService.revokeAndLogout()
+            // Clear CW cache so stale Trakt items don't flash on next launch.
+            cwEnrichmentCache.saveInProgressSnapshot(emptyList())
+            cwEnrichmentCache.saveNextUpSnapshot(emptyList())
             // Repopulate watched items from Nuvio sync now that Trakt is no
             // longer the source of truth.
             watchedSeriesStateHolder.update(emptySet())
@@ -290,6 +297,11 @@ class TraktViewModel @Inject constructor(
             else -> TraktConnectionMode.DISCONNECTED
         }
 
+        val previousState = _uiState.value
+        val connectedIdentityChanged = mode == TraktConnectionMode.CONNECTED &&
+            previousState.mode == TraktConnectionMode.CONNECTED &&
+            previousState.username != authState.username
+
         _uiState.update { current ->
             current.copy(
                 mode = mode,
@@ -301,12 +313,22 @@ class TraktViewModel @Inject constructor(
                 deviceCodeExpiresAtMillis = authState.expiresAt,
                 credentialsConfigured = traktAuthService.hasRequiredCredentials(),
                 isPolling = if (mode == TraktConnectionMode.CONNECTED) false else current.isPolling,
-                connectedStats = if (mode == TraktConnectionMode.CONNECTED) current.connectedStats else null,
-                isStatsLoading = if (mode == TraktConnectionMode.CONNECTED) current.isStatsLoading else false
+                connectedStats = if (mode == TraktConnectionMode.CONNECTED && !connectedIdentityChanged) {
+                    current.connectedStats
+                } else {
+                    null
+                },
+                isStatsLoading = if (mode == TraktConnectionMode.CONNECTED && !connectedIdentityChanged) {
+                    current.isStatsLoading
+                } else {
+                    false
+                }
             )
         }
 
-        if (mode == TraktConnectionMode.CONNECTED && lastMode == null) {
+        if (mode == TraktConnectionMode.CONNECTED && connectedIdentityChanged) {
+            loadConnectedStats(forceRefresh = true)
+        } else if (mode == TraktConnectionMode.CONNECTED && lastMode == null) {
             loadConnectedStats(forceRefresh = false)
         } else if (mode == TraktConnectionMode.CONNECTED &&
             (lastMode != TraktConnectionMode.CONNECTED || shouldAutoSyncNow())

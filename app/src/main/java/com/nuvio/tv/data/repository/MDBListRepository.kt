@@ -51,9 +51,75 @@ class MDBListRepository @Inject constructor(
     private val inFlightMutex = Mutex()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    /** Lightweight helper for home screen enrichment - fetches only the IMDb rating. */
+    suspend fun getImdbRatingForItem(itemId: String, itemType: String): Double? {
+        val settings = settingsDataStore.settings.first()
+        if (!settings.enabled) return null
+        val apiKey = settings.apiKey.trim()
+        if (apiKey.isBlank()) return null
+
+        val mediaType = normalizeMediaType(itemType)
+        val imdbId = resolveImdbId(
+            meta = Meta(
+                id = itemId,
+                type = when (normalizeMediaType(itemType)) {
+                    "show" -> com.nuvio.tv.domain.model.ContentType.SERIES
+                    else -> com.nuvio.tv.domain.model.ContentType.MOVIE
+                },
+                name = itemId,
+                poster = null,
+                posterShape = com.nuvio.tv.domain.model.PosterShape.POSTER,
+                background = null,
+                logo = null,
+                description = null,
+                releaseInfo = null,
+                imdbRating = null,
+                genres = emptyList(),
+                runtime = null,
+                director = emptyList(),
+                cast = emptyList(),
+                videos = emptyList(),
+                country = null,
+                awards = null,
+                language = null,
+                links = emptyList()
+            ),
+            fallbackItemId = itemId,
+            fallbackItemType = itemType,
+            mediaType = mediaType
+        ) ?: return null
+
+        val cacheKey = "$mediaType:$imdbId:imdb:${apiKey.hashCode()}"
+        val now = System.currentTimeMillis()
+        cache[cacheKey]?.let { cached ->
+            if (cached.expiresAtMs > now) return cached.result?.ratings?.imdb
+            cache.remove(cacheKey)
+        }
+
+        val deferred = inFlightMutex.withLock {
+            inFlight[cacheKey] ?: scope.async {
+                try {
+                    fetchRatings(
+                        imdbId = imdbId,
+                        mediaType = mediaType,
+                        apiKey = apiKey,
+                        providers = listOf(ProviderType.IMDB)
+                    ).also { result ->
+                        cache[cacheKey] = CacheEntry(
+                            result = result,
+                            expiresAtMs = System.currentTimeMillis() + cacheTtlMs
+                        )
+                    }
+                } finally {
+                    inFlightMutex.withLock { inFlight.remove(cacheKey) }
+                }
+            }.also { inFlight[cacheKey] = it }
+        }
+        return deferred.await()?.ratings?.imdb
+    }
+
     suspend fun getRatingsForMeta(
-        meta: Meta,
-        fallbackItemId: String,
+        meta: Meta,        fallbackItemId: String,
         fallbackItemType: String
     ): MDBListRatingsResult? {
         val settings = settingsDataStore.settings.first()

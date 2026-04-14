@@ -42,23 +42,22 @@ class WatchProgressPreferences @Inject constructor(
             val json = preferences[watchProgressKey] ?: "{}"
             val allItems = parseProgressMap(json)
 
-            val contentLevelEntries = allItems.entries
-                .filter { (key, progress) -> key == progress.contentId }
-                .associate { it.value.contentId to it.value }
-                .toMutableMap()
-
-            val latestEpisodeFallbacks = allItems.values
+            // Group all entries by contentId and pick the most recently watched.
+            // When lastWatched is equal (e.g. batch mark-as-watched), prefer the highest season/episode.
+            val latestByContent = allItems.values
                 .groupBy { it.contentId }
-                .mapValues { (_, items) -> items.maxByOrNull { it.lastWatched } }
-
-            latestEpisodeFallbacks.forEach { (contentId, latest) ->
-                if (contentLevelEntries[contentId] == null && latest != null) {
-                    contentLevelEntries[contentId] = latest
+                .mapValues { (_, items) ->
+                    items.maxWithOrNull(
+                        compareBy<WatchProgress> { it.lastWatched }
+                            .thenBy { it.season ?: 0 }
+                            .thenBy { it.episode ?: 0 }
+                    )
                 }
-            }
+                .values
+                .filterNotNull()
 
-            contentLevelEntries.values
-                .sortedByDescending { it.lastWatched }
+            val result = latestByContent.sortedByDescending { it.lastWatched }
+            result
         }
     }
 
@@ -85,7 +84,10 @@ class WatchProgressPreferences @Inject constructor(
         return store().data.map { preferences ->
             val json = preferences[watchProgressKey] ?: "{}"
             val map = parseProgressMap(json)
-            map[contentId]
+            // Try direct key first (movies), then find latest episode entry (series).
+            map[contentId] ?: map.values
+                .filter { it.contentId == contentId }
+                .maxByOrNull { it.lastWatched }
         }
     }
 
@@ -176,6 +178,23 @@ class WatchProgressPreferences @Inject constructor(
     }
 
     /**
+     * Remove watch progress for multiple episodes in a single DataStore transaction.
+     */
+    suspend fun removeProgressBatch(contentId: String, episodes: List<Pair<Int, Int>>) {
+        if (episodes.isEmpty()) return
+        store().edit { preferences ->
+            val json = preferences[watchProgressKey] ?: "{}"
+            val map = parseProgressMap(json).toMutableMap()
+            for ((season, episode) in episodes) {
+                map.remove("${contentId}_s${season}e${episode}")
+            }
+            map.remove(contentId)
+            Log.d(TAG, "removeProgressBatch contentId=$contentId removed=${episodes.size} episodes entriesAfter=${map.size}")
+            preferences[watchProgressKey] = gson.toJson(map)
+        }
+    }
+
+    /**
      * Mark content as completed
      */
     suspend fun markAsCompleted(progress: WatchProgress) {
@@ -196,6 +215,29 @@ class WatchProgressPreferences @Inject constructor(
             lastWatched = System.currentTimeMillis()
         )
         saveProgress(completedProgress)
+    }
+
+    /**
+     * Mark multiple items as completed in a single DataStore transaction.
+     */
+    suspend fun markAsCompletedBatch(progressList: List<WatchProgress>) {
+        if (progressList.isEmpty()) return
+        val rawEntries = getAllRawEntries()
+        val now = System.currentTimeMillis()
+        val completed = progressList.map { progress ->
+            val effectiveDuration = if (progress.duration <= 1L) {
+                val key = createKey(progress)
+                rawEntries[key]?.duration?.takeIf { it > 1L } ?: progress.duration
+            } else {
+                progress.duration
+            }
+            progress.copy(
+                position = effectiveDuration,
+                duration = effectiveDuration,
+                lastWatched = now
+            )
+        }
+        saveProgressBatch(completed)
     }
 
     /**
@@ -285,12 +327,12 @@ class WatchProgressPreferences @Inject constructor(
             val key = createKey(progress)
             map[key] = progress
 
+            // Remove legacy series-level mirror key if this is an episode entry.
+            // Mirror keys caused race conditions with stale progress data.
             if (progress.season != null && progress.episode != null) {
                 val seriesKey = progress.contentId
-                val existingSeriesProgress = map[seriesKey]
-
-                if (existingSeriesProgress == null || progress.lastWatched > existingSeriesProgress.lastWatched) {
-                    map[seriesKey] = progress.copy(videoId = progress.videoId)
+                if (seriesKey != key && map.containsKey(seriesKey)) {
+                    map.remove(seriesKey)
                 }
             }
         }
@@ -299,11 +341,11 @@ class WatchProgressPreferences @Inject constructor(
     private fun mergeDisplayMetadata(remote: WatchProgress, existing: WatchProgress?): WatchProgress {
         if (existing == null) return remote
         return remote.copy(
-            name = remote.name.takeIf { it.isNotBlank() } ?: existing.name,
-            poster = remote.poster ?: existing.poster,
-            backdrop = remote.backdrop ?: existing.backdrop,
-            logo = remote.logo ?: existing.logo,
-            episodeTitle = remote.episodeTitle ?: existing.episodeTitle,
+            name = existing.name.takeIf { it.isNotBlank() } ?: remote.name.takeIf { it.isNotBlank() } ?: existing.name,
+            poster = existing.poster ?: remote.poster,
+            backdrop = existing.backdrop ?: remote.backdrop,
+            logo = existing.logo ?: remote.logo,
+            episodeTitle = existing.episodeTitle ?: remote.episodeTitle,
             addonBaseUrl = remote.addonBaseUrl ?: existing.addonBaseUrl
         )
     }

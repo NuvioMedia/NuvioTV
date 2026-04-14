@@ -33,6 +33,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktUserSettingsResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktUserStatsResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktWatchedMovieItemDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktWatchedShowItemDto
+import com.nuvio.tv.data.remote.dto.trakt.TraktHiddenItemDto
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -114,6 +115,15 @@ interface TraktApi {
         @Header("Authorization") authorization: String,
         @Query("extended") extended: String? = null
     ): Response<List<TraktWatchedShowItemDto>>
+
+    @GET("users/hidden/{section}")
+    suspend fun getHiddenItems(
+        @Header("Authorization") authorization: String,
+        @Path("section") section: String,
+        @Query("type") type: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<List<TraktHiddenItemDto>>
 
     @GET("sync/history/episodes")
     suspend fun getEpisodeHistory(

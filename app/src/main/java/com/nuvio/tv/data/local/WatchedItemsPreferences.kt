@@ -79,6 +79,22 @@ class WatchedItemsPreferences @Inject constructor(
         }
     }
 
+    suspend fun markAsWatchedBatch(items: List<WatchedItem>) {
+        if (items.isEmpty()) return
+        store().edit { preferences ->
+            val current = preferences[watchedItemsKey] ?: emptySet()
+            val newKeys = items.map { Triple(it.contentId, it.season, it.episode) }.toSet()
+            val filtered = current.filterNot { json ->
+                runCatching {
+                    gson.fromJson(json, WatchedItem::class.java)
+                }.getOrNull()?.let { existing ->
+                    Triple(existing.contentId, existing.season, existing.episode) in newKeys
+                } ?: false
+            }
+            preferences[watchedItemsKey] = filtered.toSet() + items.map { gson.toJson(it) }
+        }
+    }
+
     suspend fun unmarkAsWatched(contentId: String, season: Int? = null, episode: Int? = null) {
         store().edit { preferences ->
             val current = preferences[watchedItemsKey] ?: emptySet()
@@ -89,6 +105,22 @@ class WatchedItemsPreferences @Inject constructor(
                     existing.contentId == contentId &&
                         existing.season == season &&
                         existing.episode == episode
+                } ?: false
+            }
+            preferences[watchedItemsKey] = filtered.toSet()
+        }
+    }
+
+    suspend fun unmarkAsWatchedBatch(contentId: String, episodes: List<Pair<Int, Int>>) {
+        if (episodes.isEmpty()) return
+        val removeKeys = episodes.map { (s, e) -> Triple(contentId, s, e) }.toSet()
+        store().edit { preferences ->
+            val current = preferences[watchedItemsKey] ?: emptySet()
+            val filtered = current.filterNot { json ->
+                runCatching {
+                    gson.fromJson(json, WatchedItem::class.java)
+                }.getOrNull()?.let { existing ->
+                    Triple(existing.contentId, existing.season, existing.episode) in removeKeys
                 } ?: false
             }
             preferences[watchedItemsKey] = filtered.toSet()

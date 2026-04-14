@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import kotlinx.coroutines.flow.first
+import org.json.JSONArray
 import org.json.JSONObject
 import java.security.MessageDigest
 import javax.inject.Inject
@@ -17,7 +18,10 @@ data class CachedStreamLink(
     val cachedAtMs: Long,
     val filename: String? = null,
     val videoHash: String? = null,
-    val videoSize: Long? = null
+    val videoSize: Long? = null,
+    val infoHash: String? = null,
+    val fileIdx: Int? = null,
+    val sources: List<String>? = null
 )
 
 @Singleton
@@ -39,7 +43,10 @@ class StreamLinkCacheDataStore @Inject constructor(
         headers: Map<String, String>?,
         filename: String? = null,
         videoHash: String? = null,
-        videoSize: Long? = null
+        videoSize: Long? = null,
+        infoHash: String? = null,
+        fileIdx: Int? = null,
+        sources: List<String>? = null
     ) {
         val payload = JSONObject().apply {
             put("url", url)
@@ -49,6 +56,9 @@ class StreamLinkCacheDataStore @Inject constructor(
             put("filename", filename)
             put("videoHash", videoHash)
             videoSize?.let { put("videoSize", it) }
+            infoHash?.let { put("infoHash", it) }
+            fileIdx?.let { put("fileIdx", it) }
+            sources?.let { put("sources", JSONArray(it)) }
         }.toString()
 
         store().edit { prefs ->
@@ -77,7 +87,17 @@ class StreamLinkCacheDataStore @Inject constructor(
 
             val url = json.optString("url", "")
             val streamName = json.optString("streamName", "")
-            if (url.isBlank() || streamName.isBlank()) return@runCatching null
+            val infoHash = json.optString("infoHash", "").ifBlank { null }
+            // Accept entry if it has either a real URL (HTTP stream) or an
+            // infoHash (torrent stream — URL is re-resolved on each playback).
+            if (streamName.isBlank() || (url.isBlank() && infoHash == null)) return@runCatching null
+
+            val sourcesJson = json.optJSONArray("sources")
+            val sources = sourcesJson?.let { arr ->
+                (0 until arr.length()).mapNotNull { i ->
+                    arr.optString(i).takeIf { it.isNotEmpty() }
+                }
+            }?.takeIf { it.isNotEmpty() }
 
             CachedStreamLink(
                 url = url,
@@ -86,7 +106,10 @@ class StreamLinkCacheDataStore @Inject constructor(
                 cachedAtMs = cachedAtMs,
                 filename = json.optString("filename", "").ifBlank { null },
                 videoHash = json.optString("videoHash", "").ifBlank { null },
-                videoSize = json.optLong("videoSize", -1L).takeIf { it >= 0L }
+                videoSize = json.optLong("videoSize", -1L).takeIf { it >= 0L },
+                infoHash = infoHash,
+                fileIdx = if (json.has("fileIdx")) json.optInt("fileIdx", -1).takeIf { it >= 0 } else null,
+                sources = sources
             )
         }.getOrNull()
 

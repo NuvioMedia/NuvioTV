@@ -29,6 +29,8 @@ class StartupSyncService @Inject constructor(
     private val authManager: AuthManager,
     private val pluginSyncService: PluginSyncService,
     private val addonSyncService: AddonSyncService,
+    private val collectionSyncService: CollectionSyncService,
+    private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService,
     private val watchProgressSyncService: WatchProgressSyncService,
     private val librarySyncService: LibrarySyncService,
     private val watchedItemsSyncService: WatchedItemsSyncService,
@@ -194,16 +196,17 @@ class StartupSyncService @Inject constructor(
 
             pluginManager.isSyncingFromRemote = true
             try {
-                val remotePluginUrls = pluginSyncService.getRemoteRepoUrls().getOrElse { throw it }
+                val remotePlugins = pluginSyncService.getRemoteRepoUrls().getOrElse { throw it }
                 pluginManager.reconcileWithRemoteRepoUrls(
-                    remoteUrls = remotePluginUrls,
+                    remotePlugins = remotePlugins,
                     removeMissingLocal = true
                 )
-                Log.d(TAG, "Pulled ${remotePluginUrls.size} plugin repos from remote for profile $profileId")
+                Log.d(TAG, "Pulled ${remotePlugins.size} plugin repos from remote for profile $profileId")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to pull plugins from remote, keeping local cache", e)
             } finally {
                 pluginManager.isSyncingFromRemote = false
+                pluginManager.flushPendingSync()
             }
 
             addonRepository.isSyncingFromRemote = true
@@ -220,12 +223,35 @@ class StartupSyncService @Inject constructor(
                 addonRepository.isSyncingFromRemote = false
             }
 
-            val isPrimaryProfile = profileManager.activeProfileId.value == 1
-            val isTraktConnected = isPrimaryProfile && traktAuthDataStore.isAuthenticated.first()
+            try {
+                collectionSyncService.pullFromRemote()
+                    .onSuccess { applied ->
+                        Log.d(TAG, "Collections pull completed for profile $profileId (applied=$applied)")
+                    }
+                    .onFailure { e ->
+                        Log.e(TAG, "Failed to pull collections from remote, keeping local", e)
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to pull collections from remote", e)
+            }
+
+            try {
+                homeCatalogSettingsSyncService.pullFromRemote()
+                    .onSuccess { applied ->
+                        Log.d(TAG, "Home catalog settings pull completed for profile $profileId (applied=$applied)")
+                    }
+                    .onFailure { e ->
+                        Log.e(TAG, "Failed to pull home catalog settings from remote, keeping local", e)
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to pull home catalog settings from remote", e)
+            }
+
+            val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
             val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync()
             Log.d(
                 TAG,
-                "Watch progress sync: isTraktConnected=$isTraktConnected isPrimaryProfile=$isPrimaryProfile shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
+                "Watch progress sync: isTraktConnected=$isTraktConnected shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
             )
             if (!isTraktConnected) {
                 // Pull library and watched items first — these are lightweight and critical.

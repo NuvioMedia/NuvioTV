@@ -4,6 +4,63 @@
     <string name="type_series">Series</string>
     <string name="type_unknown">Unknown</string>
 
+    <!-- WebConfigServers -->
+    <string name="web_manage_addons_title">Manage Addons</string>
+    <string name="web_manage_addons_subtitle">Manage addons, catalogs, and collections</string>
+    <string name="web_add_addon_url">Add addon by URL</string>
+    <string name="web_placeholder_url">https://example.com/manifest.json</string>
+    <string name="web_btn_add">Add</string>
+    <string name="web_installed_addons">Installed Addons</string>
+    <string name="web_no_addons">No addons installed</string>
+    <string name="web_home_catalogs">Home Catalogs and Collections</string>
+    <string name="web_no_catalogs">No home catalogs available</string>
+    <string name="web_btn_save">Save Changes</string>
+    <string name="web_connection_lost">Connection to TV lost</string>
+    <string name="web_btn_remove">Remove</string>
+    <string name="web_badge_new">New</string>
+    <string name="web_badge_disabled">Disabled</string>
+    <string name="web_btn_enable">Enable</string>
+    <string name="web_btn_disable">Disable</string>
+    <string name="web_error_addon_exists">This addon is already in the list</string>
+    <string name="web_status_waiting_tv">Waiting for TV</string>
+    <string name="web_status_msg_waiting_tv">Please confirm the changes on your TV to apply them.</string>
+    <string name="web_status_changes_applied">Changes Applied</string>
+    <string name="web_status_msg_addon_updated">Your addon configuration has been updated on the TV.</string>
+    <string name="web_status_msg_repo_updated">Your repository configuration has been updated on the TV.</string>
+    <string name="web_status_changes_rejected">Changes Rejected</string>
+    <string name="web_status_msg_changes_rejected">The changes were declined on the TV. Your list has been reverted.</string>
+    <string name="web_status_error">Something Went Wrong</string>
+    <string name="web_error_failed_save">Failed to save. Check your connection to the TV.</string>
+    <string name="web_btn_dismiss">Dismiss</string>
+    <string name="web_status_timeout">Timed Out</string>
+    <string name="web_status_msg_timeout">No response from the TV. Please try again.</string>
+    <string name="web_status_msg_connection_lost">The TV server is no longer reachable. The changes may have been applied.</string>
+    <string name="web_manage_repos_title">Manage Repositories</string>
+    <string name="web_manage_repos_subtitle">Manage your repositories</string>
+    <string name="web_add_repo_url">Add repository by URL</string>
+    <string name="web_installed">Installed</string>
+    <string name="web_no_repos">No repositories installed</string>
+    <string name="web_error_repo_exists">This repository is already in the list</string>
+    <string name="web_manage_collections_title">Manage Collections</string>
+    <string name="web_manage_collections_subtitle">Create and manage your custom collections</string>
+    <string name="web_status_msg_collections_updated">Your collections have been updated on the TV.</string>
+    <string name="web_tab_addons">Addons</string>
+    <string name="web_tab_home_layout">Home Layout</string>
+    <string name="web_tab_collections">Collections</string>
+    <string name="web_btn_enable_all">Enable All</string>
+    <string name="web_btn_disable_all">Disable All</string>
+    <string name="web_btn_show_all">Show All</string>
+    <string name="web_btn_hide_all">Hide All</string>
+    <string name="web_btn_new_collection">+ New Collection</string>
+    <string name="web_btn_export">Export</string>
+    <string name="web_btn_import">Import</string>
+    <string name="web_no_collections">No collections yet</string>
+    <string name="web_badge_collection">Collection</string>
+    <string name="web_import_collections_title">Import Collections</string>
+    <string name="web_import_tab_paste">Paste</string>
+    <string name="web_import_tab_file">File</string>
+    <string name="web_import_tab_url">URL</string>
+
     <!-- HomeScreen -->
     <string name="home_no_addons">No addons installed. Add one to get started.</string>
     <string name="home_no_catalog_addons">No catalog addons installed. Install a catalog addon to see content.</string>
@@ -67,6 +124,7 @@
     <!-- CatalogRowSection -->
     <string name="catalog_from_addon">from %1$s</string>
     <string name="action_see_all">See All</string>
+    <string name="action_load_more">Load More</string>
 
     <!-- HeroSection -->
     <string name="hero_creator">Creator: %1$s</string>
@@ -290,6 +348,11 @@
     <string name="playback_player_internal">Internal</string>
     <string name="playback_player_external">External</string>
     <string name="playback_player_ask">Ask every time</string>
+    <string name="playback_internal_player_engine">Internal Engine</string>
+    <string name="playback_engine_exoplayer">ExoPlayer</string>
+    <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
+    <string name="playback_auto_switch_internal_player_on_error">Auto-switch engine on startup error</string>
+    <string name="playback_auto_switch_internal_player_on_error_sub">If stream startup fails, switch between ExoPlayer and libmpv automatically.</string>
     <string name="playback_section_audio">Audio &amp; Trailer</string>
     <string name="playback_section_audio_desc">Trailer behavior and audio controls.</string>
     <string name="playback_section_subtitles">Subtitles</string>
@@ -306,6 +369,8 @@
     <string name="playback_resolution_matching_sub">Allow display mode changes to match video resolution.</string>
     <string name="playback_player_external_desc">Always open streams in an external app</string>
     <string name="playback_player_ask_desc">Choose the player each time</string>
+    <string name="playback_engine_exoplayer_desc">Best compatibility with current Nuvio features.</string>
+    <string name="playback_engine_mvplayer_desc">Uses libmpv with Nuvio OSD controls. Experimental.</string>
 
     <!-- PlaybackAudioSettings -->
     <string name="audio_trailer_section">Trailer</string>
@@ -315,6 +380,8 @@
     <string name="audio_section">Audio</string>
     <string name="audio_lang_default">Default (media file)</string>
     <string name="audio_lang_device">Device language</string>
+    <string name="audio_lang_original">Original language</string>
+    <string name="audio_lang_original_hint">Requires TMDB enrichment to be enabled</string>
     <string name="audio_preferred_lang">Preferred Audio Language</string>
     <string name="audio_skip_silence">Skip Silence</string>
     <string name="audio_skip_silence_sub">Skip silent portions of audio during playback</string>
@@ -327,6 +394,18 @@
     <string name="audio_tunneled">Tunneled Playback</string>
     <string name="audio_tunneled_sub">Hardware-level audio/video sync. May improve playback on some Android TV devices</string>
     <string name="audio_dv_sub">Map Dolby Vision Profile 7 to standard HEVC for devices without DV hardware support</string>
+    <string name="audio_mpv_hwdec_title">Hardware Decoding (MPV-only)</string>
+    <string name="audio_mpv_hwdec_dialog_subtitle">Select how libmpv should use hardware decoders.</string>
+    <string name="audio_mpv_hwdec_legacy_direct_copy">Legacy (direct -&gt; copy)</string>
+    <string name="audio_mpv_hwdec_legacy_direct_copy_desc">Previous default behavior: try direct hardware first, then copy-back.</string>
+    <string name="audio_mpv_hwdec_auto_safe">Auto (auto-safe)</string>
+    <string name="audio_mpv_hwdec_auto_safe_desc">Safer automatic mode with fallback when some hardware decoders fail.</string>
+    <string name="audio_mpv_hwdec_hardware_copy">Hardware (copy) (mediacodec-copy)</string>
+    <string name="audio_mpv_hwdec_hardware_copy_desc">Uses hardware decoding with copy-back to software memory.</string>
+    <string name="audio_mpv_hwdec_hardware_direct">Hardware (direct) (mediacodec)</string>
+    <string name="audio_mpv_hwdec_hardware_direct_desc">Uses direct hardware decoding. Fastest path on compatible devices.</string>
+    <string name="audio_mpv_hwdec_disabled">Disabled (no)</string>
+    <string name="audio_mpv_hwdec_disabled_desc">Disables hardware decoding and uses software decoding only.</string>
     <string name="audio_decoder_device_only_desc">Only use built-in hardware decoders. Most compatible but may not support all formats.</string>
     <string name="audio_decoder_prefer_device_desc">Use hardware decoders when available, fall back to FFmpeg. Recommended for most devices.</string>
     <string name="audio_decoder_prefer_app_desc">Use FFmpeg decoders when available. Better format support but higher CPU usage.</string>
@@ -566,7 +645,9 @@
     <string name="tmdb_basic_info_title">Basic Info</string>
     <string name="tmdb_basic_info_subtitle">Description, genres, and rating from TMDB</string>
     <string name="tmdb_details_title">Details</string>
-    <string name="tmdb_details_subtitle">Runtime, release date, country, and language from TMDB</string>
+    <string name="tmdb_details_subtitle">Runtime, status, country, and language from TMDB</string>
+    <string name="tmdb_release_dates_title">Release Dates</string>
+    <string name="tmdb_release_dates_subtitle">Release and air dates from TMDB</string>
     <string name="tmdb_credits_title">Credits</string>
     <string name="tmdb_credits_subtitle">Cast with photos, director, and writer from TMDB</string>
     <string name="tmdb_productions_title">Productions</string>
@@ -750,10 +831,10 @@
     <string name="addon_empty">No addons installed. Add one to get started.</string>
     <string name="addon_remove">Remove</string>
     <string name="addon_manage_from_phone_title">Manage from phone</string>
-    <string name="addon_manage_from_phone_subtitle">Scan a QR code to manage addons and Home catalogs from your phone</string>
+    <string name="addon_manage_from_phone_subtitle">Scan a QR code to manage addons, catalogs, and collections from your phone</string>
     <string name="addon_reorder_title">Reorder home catalogs</string>
-    <string name="addon_reorder_subtitle">Controls catalog row order on Home (Classic + Modern + Grid)</string>
-    <string name="addon_qr_scan_instruction">Scan with your phone to manage addons and catalogs</string>
+    <string name="addon_reorder_subtitle">Controls catalog and collection row order on Home (Classic + Modern + Grid)</string>
+    <string name="addon_qr_scan_instruction">Scan with your phone to manage addons, catalogs, and collections</string>
     <string name="addon_qr_close">Close</string>
     <string name="addon_confirm_title">Confirm addon &amp; catalog changes</string>
     <string name="addon_confirm_subtitle">The following changes were made from your phone:</string>
@@ -782,6 +863,16 @@
     <string name="stream_finding_source">Finding stream source</string>
     <string name="stream_type_torrent">Torrent</string>
     <string name="stream_type_youtube">YouTube</string>
+    <string name="p2p_consent_title">P2P Streaming</string>
+    <string name="p2p_consent_body">This stream uses peer-to-peer (P2P) technology. By enabling P2P, you acknowledge and agree that:\n\n\u2022 Your IP address will be visible to other peers in the network\n\u2022 You are solely responsible for the content you access\n\u2022 You confirm you have the legal right to stream this content in your jurisdiction\n\u2022 Nuvio does not host, distribute, or control any P2P content\n\u2022 Nuvio bears no liability for any legal consequences arising from your use of P2P streaming\n\nYou use this feature entirely at your own risk. P2P can be disabled anytime in Settings.</string>
+    <string name="p2p_consent_enable">Enable P2P</string>
+    <string name="p2p_consent_cancel">Cancel</string>
+    <string name="settings_p2p_title">P2P Streaming</string>
+    <string name="settings_p2p_subtitle">Allow peer-to-peer (torrent) streams</string>
+    <string name="settings_p2p_hide_stats_title">Hide torrent stats</string>
+    <string name="settings_p2p_hide_stats_subtitle">Hide buffer, seeds, peers and download speed during loading and playback</string>
+    <string name="p2p_download_title">Downloading P2P Engine</string>
+    <string name="p2p_download_subtitle">This is a one-time download required for P2P streaming.</string>
     <string name="stream_type_external">External</string>
     <string name="stream_player_picker_title">What player should be used?</string>
     <string name="stream_player_internal">Internal</string>
@@ -789,6 +880,22 @@
 
     <!-- PlayerScreen -->
     <string name="player_no_external_player">No external player found</string>
+    <string name="player_loading_preparing">Preparing stream…</string>
+    <string name="player_loading_detecting_format">Detecting stream format…</string>
+    <string name="player_loading_subtitles">Fetching subtitles…</string>
+    <string name="player_loading_subtitles_from">Fetching subtitles from %1$d addons…</string>
+    <string name="player_loading_subtitles_progress">Fetching subtitles… (%1$d / %2$d)</string>
+    <string name="player_loading_subtitles_addon">Subtitles: %1$s (%2$d / %3$d)</string>
+    <string name="player_loading_building">Building player…</string>
+    <string name="player_loading_starting">Starting stream…</string>
+    <string name="player_loading_buffering">Buffering…</string>
+    <string name="player_loading_fallback_pcm_audio">Audio track init failed - switching to PCM audio…</string>
+    <string name="player_loading_fallback_hevc_decoder">Decoder init failed - switching to HEVC decoder…</string>
+    <string name="player_engine_switching_title">Switching Player Engine</string>
+    <string name="player_engine_switching_message">Startup failed. Switching to %1$s…</string>
+    <string name="player_engine_switching_manual_message">Switching to %1$s...</string>
+    <string name="playback_show_loading_status">Show loading status</string>
+    <string name="playback_show_loading_status_sub">Display step-by-step progress while the player is initializing.</string>
 
     <!-- ParentalGuideOverlay -->
     <string name="parental_nudity">Nudity</string>
@@ -851,6 +958,9 @@
     <string name="player_aspect_fit_width">Fit Width</string>
     <string name="player_aspect_fit_height">Fit Height</string>
     <string name="player_aspect_crop">Crop</string>
+    <string name="player_aspect_tunneling_unavailable">Unavailable during tunneled playback</string>
+    <string name="player_aspect_mode_slight_zoom">Slight Zoom</string>
+    <string name="player_aspect_mode_cinema_zoom">Cinema Zoom</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
@@ -878,6 +988,7 @@
     <string name="subtitle_tab_style">Style</string>
     <string name="subtitle_tab_delay">Delay</string>
     <string name="subtitle_none">None</string>
+    <string name="subtitle_built_in">Built in</string>
     <string name="subtitle_all">All</string>
     <string name="subtitle_section_core">Core</string>
     <string name="subtitle_section_advanced">Advanced</string>
@@ -929,6 +1040,8 @@
     <string name="search_start_title">Start Searching</string>
     <string name="search_start_subtitle">Enter at least 2 characters</string>
     <string name="search_start_subtitle_no_discover">Discover is disabled. Enter at least 2 characters</string>
+    <string name="search_recent_title">Recent searches</string>
+    <string name="search_recent_clear">Clear history</string>
     <string name="search_voice_no_speech">No speech detected. Try again.</string>
     <string name="search_voice_mic_permission">Microphone permission is required for voice search.</string>
     <string name="search_voice_failed">Voice recognition failed. Try again.</string>
@@ -1076,6 +1189,10 @@
     <string name="plugin_confirm_total">Total repositories: %1$d</string>
     <string name="plugin_confirm_reject">Reject</string>
     <string name="plugin_confirm_confirm">Confirm</string>
+    <string name="plugin_risky_enable_title">Enable provider?</string>
+    <string name="plugin_risky_enable_message">%1$s is known to cause crashes on some content. Enable anyway?</string>
+    <string name="plugin_risky_enable_cancel">Cancel</string>
+    <string name="plugin_risky_enable_confirm">Enable</string>
     <string name="plugin_updated_format">Updated: %1$s</string>
     <string name="plugin_test_btn">Test</string>
     <string name="plugin_test_results">Test Results (%1$d streams)</string>
@@ -1267,6 +1384,7 @@
     <string name="cd_subtitles">Subtitles</string>
     <string name="cd_audio_tracks">Audio tracks</string>
     <string name="cd_sources">Sources</string>
+    <string name="cd_switch_player_engine">Switch player engine</string>
     <string name="cd_episodes">Episodes</string>
     <string name="cd_playback_speed">Playback speed</string>
     <string name="cd_aspect_ratio">Aspect ratio</string>
@@ -1281,10 +1399,13 @@
     <string name="cd_loading_logo">Loading logo</string>
     <string name="cd_move_up">Move up</string>
     <string name="cd_move_down">Move down</string>
+    <string name="cd_edit">Edit</string>
+    <string name="cd_delete">Delete</string>
     <string name="cd_qr_code">QR Code</string>
     <string name="cd_add">Add</string>
     <string name="cd_refresh">Refresh</string>
     <string name="cd_remove">Remove</string>
+    <string name="cd_preview">Preview</string>
     <string name="cd_test">Test</string>
     <string name="cd_unlink">Unlink</string>
     <string name="cd_nuvio_logo">NuvioTV</string>
@@ -1304,5 +1425,81 @@
     <string name="debug_signin_success">Signed in successfully</string>
     <string name="debug_generate_description">Debug-generated %1$s item #%2$d</string>
     <string name="debug_generate_result_failed">Failed: %1$s</string>
+
+    <!-- Collection Management -->
+    <string name="collections_header">Collections</string>
+    <string name="collections_empty">No collections yet. Create one to organize your catalogs.</string>
+    <string name="collections_new">New Collection</string>
+    <string name="collections_import">Import</string>
+    <string name="collections_export_file">Export File</string>
+    <string name="collections_saved_downloads">Saved to Downloads</string>
+    <string name="collections_export_failed">Export failed</string>
+    <string name="collections_import_header">Import Collections</string>
+    <string name="collections_import_description">Import collections from JSON. Catalogs from addons you don\'t have installed will show a warning.</string>
+    <string name="collections_cancel">Cancel</string>
+    <string name="collections_mode_paste">Paste JSON</string>
+    <string name="collections_mode_file">From File</string>
+    <string name="collections_mode_url">From URL</string>
+    <string name="collections_paste_clipboard">Paste from Clipboard</string>
+    <string name="collections_validate">Validate</string>
+    <string name="collections_paste_hint">Paste collections JSON here…</string>
+    <string name="collections_file_description">Reads nuvio-collections.json from the Downloads folder.</string>
+    <string name="collections_load_file">Load File</string>
+    <string name="collections_file_loaded">File loaded (%1$d characters)</string>
+    <string name="collections_fetch_url">Fetch URL</string>
+    <string name="collections_fetching">Fetching…</string>
+    <string name="collections_valid_json">Valid JSON</string>
+    <string name="collections_valid_summary">%1$d collection(s), %2$d folder(s)</string>
+    <string name="collections_confirm_import">Confirm Import</string>
+    <string name="collections_folder_count">%1$d folder(s)</string>
+
+    <!-- Collection Editor -->
+    <string name="collections_editor_row_title">Row Title</string>
+    <string name="collections_editor_save">Save</string>
+    <string name="collections_editor_backdrop">Backdrop Image</string>
+    <string name="collections_editor_pin_above">Pin Above Catalogs</string>
+    <string name="collections_editor_pin_above_desc">Show this collection above all regular home catalogs. Multiple pinned collections follow collection creation order.</string>
+    <string name="collections_editor_focus_glow">Focus Glow</string>
+    <string name="collections_editor_focus_glow_desc">Use the native TV glow on this collection\'s home-screen custom catalog cards</string>
+    <string name="collections_editor_view_mode">View Mode</string>
+    <string name="collections_editor_show_all_tab">Show \"All\" Tab</string>
+    <string name="collections_editor_show_all_tab_desc">Combine all catalogs into one tab</string>
+    <string name="collections_editor_folders">Folders</string>
+    <string name="collections_editor_add_folder">Add Folder</string>
+    <string name="collections_editor_edit_folder">Edit Folder</string>
+    <string name="collections_editor_folder_title">Folder Title</string>
+    <string name="collections_editor_cover">Cover</string>
+    <string name="collections_editor_cover_none">None</string>
+    <string name="collections_editor_cover_emoji">Emoji</string>
+    <string name="collections_editor_cover_image_url">Image URL</string>
+    <string name="collections_editor_focus_gif">Focus GIF</string>
+    <string name="collections_editor_play_gif">Play GIF on Focus</string>
+    <string name="collections_editor_tile_shape">Tile Shape</string>
+    <string name="collections_editor_hide_title">Hide Title</string>
+    <string name="collections_editor_hide_title_desc">Only show the cover image</string>
+    <string name="collections_editor_display">Display</string>
+    <string name="collections_editor_catalogs">Catalogs</string>
+    <string name="collections_editor_add_catalog">Add Catalog</string>
+    <string name="collections_editor_select_catalogs">Select Catalogs</string>
+    <string name="collections_editor_done">Done</string>
+    <string name="collections_editor_choose_emoji">Choose Emoji</string>
+    <string name="collections_editor_back">Back</string>
+    <string name="collections_editor_edit_collection">Edit Collection</string>
+    <string name="collections_editor_catalog_count">%1$d catalog(s)</string>
+    <string name="collections_editor_view_mode_tabs">Tabs</string>
+    <string name="collections_editor_view_mode_rows">Rows</string>
+    <string name="collections_editor_view_mode_follow">Follow Home Layout</string>
+    <string name="collections_editor_shape_poster">Poster</string>
+    <string name="collections_editor_shape_wide">Wide</string>
+    <string name="collections_editor_shape_square">Square</string>
+    <string name="collections_editor_addon_missing">Addon not installed: %1$s</string>
+    <string name="collections_editor_placeholder_name">Collection name</string>
+    <string name="collections_editor_placeholder_backdrop">Backdrop image URL (optional)</string>
+    <string name="collections_editor_placeholder_folder">Folder name</string>
+    <string name="collections_editor_placeholder_gif">Animated GIF URL (plays only while focused)</string>
+    <string name="collections_card_title">Collections</string>
+    <string name="collections_card_subtitle">Group catalogs into folders on your home screen</string>
+    <string name="collections_tab_all">All</string>
+    <string name="collections_tab_combined">Combined</string>
 
 </resources>

@@ -2,9 +2,11 @@ package com.nuvio.tv.ui.screens.addon
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.CatalogDescriptor
+import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +21,7 @@ import javax.inject.Inject
 @HiltViewModel
 class CatalogOrderViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
+    private val collectionsDataStore: CollectionsDataStore,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore
 ) : ViewModel() {
 
@@ -69,13 +72,17 @@ class CatalogOrderViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 addonRepository.getInstalledAddons(),
+                collectionsDataStore.collections,
                 layoutPreferenceDataStore.homeCatalogOrderKeys,
-                layoutPreferenceDataStore.disabledHomeCatalogKeys
-            ) { addons, savedOrderKeys, disabledKeys ->
+                layoutPreferenceDataStore.disabledHomeCatalogKeys,
+                layoutPreferenceDataStore.customCatalogTitles
+            ) { addons, collections, savedOrderKeys, disabledKeys, customTitles ->
                 buildOrderedCatalogItems(
                     addons = addons,
+                    collections = collections,
                     savedOrderKeys = savedOrderKeys,
-                    disabledKeys = disabledKeys.toSet()
+                    disabledKeys = disabledKeys.toSet(),
+                    customTitles = customTitles
                 )
             }.collectLatest { orderedItems ->
                 disabledKeysCache = orderedItems.filter { it.isDisabled }.map { it.disableKey }.toSet()
@@ -91,12 +98,24 @@ class CatalogOrderViewModel @Inject constructor(
 
     private fun buildOrderedCatalogItems(
         addons: List<Addon>,
+        collections: List<Collection> = emptyList(),
         savedOrderKeys: List<String>,
-        disabledKeys: Set<String>
+        disabledKeys: Set<String>,
+        customTitles: Map<String, String> = emptyMap()
     ): List<CatalogOrderItem> {
         val defaultEntries = buildDefaultCatalogEntries(addons)
-        val availableMap = defaultEntries.associateBy { it.key }
-        val defaultOrderKeys = defaultEntries.map { it.key }
+        val collectionEntries = collections.map { collection ->
+            CatalogOrderEntry(
+                key = "collection_${collection.id}",
+                disableKey = "collection_${collection.id}",
+                catalogName = collection.title,
+                addonName = "${collection.folders.size} folder${if (collection.folders.size != 1) "s" else ""}",
+                typeLabel = "collection"
+            )
+        }
+        val allEntries = defaultEntries + collectionEntries
+        val availableMap = allEntries.associateBy { it.key }
+        val defaultOrderKeys = allEntries.map { it.key }
 
         val savedValid = savedOrderKeys
             .asSequence()
@@ -110,10 +129,11 @@ class CatalogOrderViewModel @Inject constructor(
 
         return effectiveOrder.mapIndexedNotNull { index, key ->
             val entry = availableMap[key] ?: return@mapIndexedNotNull null
+            val displayName = customTitles[key]?.takeIf { it.isNotBlank() } ?: entry.catalogName
             CatalogOrderItem(
                 key = entry.key,
                 disableKey = entry.disableKey,
-                catalogName = entry.catalogName,
+                catalogName = displayName,
                 addonName = entry.addonName,
                 typeLabel = entry.typeLabel,
                 isDisabled = entry.disableKey in disabledKeys,

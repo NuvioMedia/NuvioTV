@@ -53,6 +53,9 @@
 # Keep server classes and their inner data classes (serialized with Gson)
 -keep class com.nuvio.tv.core.server.** { *; }
 
+# ── Torrent streaming (TorrServer) ─────────────────────────────────────────────
+-keep class com.nuvio.tv.core.torrent.** { *; }
+
 #── QuickJS ────────────────────────────────────────────────────────────────────
 # Keep quickjs-kt library classes for proper type conversion
 -keep class com.dokar.quickjs.** { *; }
@@ -83,7 +86,27 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
+# ── External extension compatibility stubs (loaded via DexClassLoader) ────────
+-keep class com.lagradost.cloudstream3.** { *; }
+-keepclassmembers class com.lagradost.cloudstream3.** { *; }
+-keep class com.lagradost.nicehttp.** { *; }
+-keepclassmembers class com.lagradost.nicehttp.** { *; }
+-keep class com.lagradost.api.** { *; }
+-keepclassmembers class com.lagradost.api.** { *; }
+
 # ── General ────────────────────────────────────────────────────────────────────
 # Keep line numbers for crash reports
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# MPV (native JNI callbacks)
+# Native code reflects into multiple classes/methods under is.xyz.mpv,
+# so keep the whole package to avoid JNI lookup crashes after R8.
+-keep class is.xyz.mpv.** { *; }
+
+# ── Missing class stubs (referenced by cloudstream3 / jsoup / newpipe) ────────
+-dontwarn org.mozilla.javascript.**
+-dontwarn com.google.re2j.**
+-dontwarn javax.script.**
+-dontwarn okhttp3.internal.sse.**
+-dontwarn org.jsoup.helper.Re2jRegex

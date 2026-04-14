@@ -12,6 +12,7 @@
     <string name="error_generic">Si è verificato un errore</string>
 
     <!-- ErrorState -->
+    <string name="action_retry">Riprova</string>
     <string name="error_state_generic_issue">Qualcosa è andato storto.</string>
     <string name="error_state_possible_fix">Possibile soluzione: %1$s</string>
     <string name="error_state_fix_retry_soon">riprova tra un attimo.</string>
@@ -44,14 +45,13 @@
     <string name="error_stream_tried_none">Addon stream provati: %1$s. Nessuno ha restituito stream per id=%2$s (tipo=%3$s).</string>
     <string name="error_stream_tried_generic">Addon stream provati: %1$s. Impossibile caricare gli stream per id=%2$s (tipo=%3$s).</string>
     <string name="error_stream_tried_issues">Addon stream provati: %1$s. Impossibile caricare gli stream per id=%2$s (tipo=%3$s). Problemi: %4$s.</string>
-    <string name="action_retry">Riprova</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Continua a guardare</string>
     <string name="cw_upcoming">In arrivo</string>
     <string name="cw_next_up">Prossimo episodio</string>
-    <string name="cw_new_episode">Nuovo Episodio</string>
-    <string name="cw_new_season">Nuova Stagione</string>
+    <string name="cw_new_episode">Nuovo episodio</string>
+    <string name="cw_new_season">Nuova stagione</string>
     <string name="cw_resume">Riprendi</string>
     <string name="cw_percent_watched">%1$d%% visto</string>
     <string name="cw_hours_min_left">%1$dh %2$dm rimanenti</string>
@@ -73,7 +73,7 @@
     <string name="hero_director">Regista: %1$s</string>
     <string name="hero_writer">Sceneggiatore: %1$s</string>
     <string name="hero_play">Riproduci</string>
-    <string name="hero_play_episode">Riproduci %1$dx%2$02d</string>
+    <string name="hero_play_episode">Riproduci S%1$d, E%2$d</string>
     <string name="hero_add_to_library">Aggiungi alla libreria</string>
     <string name="hero_remove_from_library">Rimuovi dalla libreria</string>
     <string name="hero_mark_watched">Segna come visto</string>
@@ -587,7 +587,7 @@
     <string name="trakt_connected_as">Connesso come %1$s</string>
     <string name="trakt_account_login">Accesso Account</string>
     <string name="trakt_awaiting_instruction">Vai su trakt.tv/activate e inserisci questo codice:</string>
-    <string name="trakt_waiting_approval">In attesa di approvazione...</string>
+    <string name="trakt_waiting_approval">In attesa di approvazione\u2026</string>
     <string name="qr_login_approved">Login Eseguito. Completamento accesso…</string>
     <string name="qr_login_pending">In attesa di approvazione dal tuo telefono…</string>
     <string name="qr_login_expired">Login Scaduto. Genera un nuovo QR Code.</string>
@@ -677,6 +677,7 @@
     <string name="profile_primary_label">Principale</string>
     <string name="profile_shares_primary">Condivide %1$s del principale</string>
     <string name="profile_edit_label">Modifica</string>
+    <string name="profile_edit_header">Modifica profilo</string>
     <string name="profile_add">Aggiungi profilo</string>
     <string name="profile_create_title">Crea profilo</string>
     <string name="profile_edit_title">Modifica profilo %1$s</string>
@@ -850,6 +851,9 @@
     <string name="player_aspect_fit_width">Adatta alla larghezza</string>
     <string name="player_aspect_fit_height">Adatta all\'altezza</string>
     <string name="player_aspect_crop">Taglia</string>
+    <string name="player_aspect_tunneling_unavailable">Non disponibile durante la riproduzione tunneled</string>
+    <string name="player_aspect_mode_slight_zoom">Zoom leggero</string>
+    <string name="player_aspect_mode_cinema_zoom">Zoom cinema</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
@@ -1082,7 +1086,7 @@
     <!-- ProfileSelectionScreen -->
     <string name="profile_selection_title">Chi sta guardando?</string>
     <string name="profile_selection_subtitle">Seleziona un profilo per continuare</string>
-    <string name="profile_selection_hint">Usa il tasto direzionale (D-pad) per scegliere un profilo</string>
+    <string name="profile_selection_hint">Tieni premuto per gestire il profilo</string>
     <string name="profile_selection_empty">Nessun profilo trovato</string>
     <string name="profile_selection_primary_badge">PRINCIPALE</string>
     <string name="profile_selection_options_title">Opzioni Profilo</string>
@@ -1150,7 +1154,7 @@
     <string name="addon_catalogs_types">Cataloghi: %1$d - Tipi: %2$s</string>
 
     <!-- PluginScreen -->
-    <string name="plugin_and_more">... e altri %1$d</string>
+    <string name="plugin_and_more">\u2026 e altri %1$d</string>
     <string name="plugin_providers_count">%1$d provider</string>
     <string name="plugin_enabled">Abilitato</string>
     <string name="plugin_disabled">Disabilitato</string>
@@ -1170,7 +1174,7 @@
     <string name="nav_library">Libreria</string>
     <string name="nav_addons">Addon</string>
     <string name="nav_settings">Impostazioni</string>
-    <string name="settings_rounded_ui">Interfaccia Smussata</string>
+    <string name="settings_rounded_ui">Interfaccia arrotondata</string>
     <string name="cd_expand_sidebar">Espandi barra laterale</string>
 
     <string name="update_checking">Controllo aggiornamenti…</string>
@@ -1180,7 +1184,128 @@
     <string name="update_open_settings">Apri Impostazioni</string>
     <string name="update_install">Installa</string>
     <string name="update_ignore">Ignora</string>
-
     <string name="watchlist_added">Aggiunto alla watchlist</string>
     <string name="watchlist_removed">Rimosso dalla watchlist</string>
+
+    <!-- Profile PIN errors -->
+    <string name="profile_pin_save_error">Impossibile salvare il PIN. Riprova.</string>
+    <string name="profile_pin_locked">Il profilo è bloccato. Riprova tra %1$ds.</string>
+    <string name="profile_pin_invalid">PIN non valido. Riprova.</string>
+    <string name="profile_pin_verify_error">Impossibile verificare il PIN. Riprova.</string>
+    <string name="profile_pin_incorrect">Il PIN attuale non è corretto.</string>
+
+    <!-- Account Screen -->
+    <string name="account_signin_create_title">Accedi / Crea account</string>
+    <string name="account_signin_create_desc">Usa email e password per creare o accedere al tuo account.</string>
+    <string name="account_generate_sync_desc">Crea un codice su questo dispositivo così altri dispositivi potranno collegarsi.</string>
+    <string name="account_enter_sync_desc">Collega questo dispositivo a un altro usando un codice di sincronizzazione.</string>
+    <string name="account_signed_in_as">Accesso eseguito come</string>
+    <string name="account_generate_sync_signed_in_desc">Crea un codice così altri dispositivi potranno sincronizzarsi con questo account.</string>
+    <string name="account_unknown_device">Dispositivo sconosciuto</string>
+
+    <!-- Sync screens -->
+    <string name="sync_claim_linking">Collegamento in corso\u2026</string>
+    <string name="sync_generate_generating">Generazione in corso\u2026</string>
+    <string name="sync_generate_code_btn">Genera codice</string>
+
+    <!-- Search -->
+    <string name="search_no_results_title">Nessun risultato</string>
+    <string name="search_no_results_subtitle">Prova a cercare con parole chiave diverse</string>
+    <string name="discover_disabled_title">Scopri è disattivato</string>
+    <string name="discover_disabled_subtitle">Abilita Scopri nelle impostazioni</string>
+
+    <!-- Library -->
+    <string name="library_list_create_dialog_title">Crea lista</string>
+    <string name="library_list_edit_dialog_title">Modifica lista</string>
+    <string name="library_sync_btn">Sincronizza</string>
+    <string name="library_syncing_btn">Sincronizzazione in corso\u2026</string>
+
+    <!-- Error messages (shared) -->
+    <string name="error_network_required">Connettiti al Wi-Fi o Ethernet per usare questa funzione</string>
+    <string name="error_server_ports_unavailable">Impossibile avviare il server. Tutte le porte sono in uso.</string>
+
+    <!-- Plugin errors -->
+    <string name="plugin_error_invalid_url">Inserisci un URL valido</string>
+    <string name="plugin_error_add_repo">Impossibile aggiungere il repository: %1$s</string>
+    <string name="plugin_error_refresh">Aggiornamento fallito: %1$s</string>
+    <string name="plugin_error_test">Test fallito: %1$s</string>
+    <string name="plugin_test_no_results">Nessun risultato trovato</string>
+    <string name="plugin_test_found_streams">Trovati %1$d stream</string>
+
+    <!-- Trakt errors -->
+    <string name="trakt_error_code_expired">Codice dispositivo scaduto. Ricomincia.</string>
+    <string name="trakt_error_code_used">Codice dispositivo già usato. Ricomincia.</string>
+    <string name="trakt_error_denied">Autorizzazione negata su Trakt.</string>
+
+    <!-- Account errors -->
+    <string name="account_error_signin_required">Accedi prima con un account.</string>
+
+    <!-- Search errors -->
+    <string name="search_error_no_catalogs">Nessun catalogo ricercabile trovato negli addon installati</string>
+
+    <!-- Home errors -->
+    <string name="home_error_no_addons">Nessun addon installato</string>
+    <string name="home_error_no_catalog_addons">Nessun addon catalogo installato</string>
+
+    <!-- Player errors -->
+    <string name="player_error_no_stream_url">Nessun URL dello stream fornito</string>
+
+    <!-- Playback subtitle settings -->
+    <string name="sub_mode_overlay_canvas_sub">Supporto HDR con rendering canvas. Potrebbe bloccare il thread UI.</string>
+    <string name="subtitle_style_weight">Peso</string>
+
+    <!-- Plugin screen -->
+    <string name="plugin_version">Versione %1$s</string>
+
+    <!-- Stream screen -->
+    <string name="stream_episode_label">S%1$d E%2$d</string>
+
+    <!-- Episode ratings -->
+    <string name="ratings_season_label">S%1$d</string>
+    <string name="ratings_episode_label">E%1$d</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_play">Riproduci</string>
+    <string name="cd_pause">Pausa</string>
+    <string name="cd_subtitles">Sottotitoli</string>
+    <string name="cd_audio_tracks">Tracce audio</string>
+    <string name="cd_sources">Sorgenti</string>
+    <string name="cd_episodes">Episodi</string>
+    <string name="cd_playback_speed">Velocità di riproduzione</string>
+    <string name="cd_aspect_ratio">Proporzioni</string>
+    <string name="cd_open_external_player">Apri in un lettore esterno</string>
+    <string name="cd_stream_info">Informazioni stream</string>
+    <string name="cd_more_actions">Altre azioni</string>
+    <string name="cd_close_more_actions">Chiudi altre azioni</string>
+    <string name="cd_back">Indietro</string>
+    <string name="cd_next_episode_thumbnail">Miniatura prossimo episodio</string>
+    <string name="cd_current">Corrente</string>
+    <string name="cd_loading_backdrop">Caricamento sfondo</string>
+    <string name="cd_loading_logo">Caricamento logo</string>
+    <string name="cd_move_up">Sposta su</string>
+    <string name="cd_move_down">Sposta giù</string>
+    <string name="cd_qr_code">Codice QR</string>
+    <string name="cd_add">Aggiungi</string>
+    <string name="cd_refresh">Aggiorna</string>
+    <string name="cd_remove">Rimuovi</string>
+    <string name="cd_test">Test</string>
+    <string name="cd_unlink">Scollega</string>
+    <string name="cd_nuvio_logo">NuvioTV</string>
+    <string name="cd_trakt_logo">Logo Trakt</string>
+    <string name="cd_trakt_qr">QR attivazione Trakt</string>
+    <string name="cd_imdb">IMDb</string>
+    <string name="cd_open_discover">Apri Scopri</string>
+    <string name="cd_voice_search">Ricerca vocale</string>
+    <string name="cd_donation_qr">Codice QR donazione</string>
+    <string name="cd_contributor_qr">Codice QR supporto contributore</string>
+    <string name="cd_expand">Espandi %1$s</string>
+    <string name="cd_collapse">Riduci %1$s</string>
+    <string name="cd_qr_login">Codice QR login</string>
+    <string name="cd_nuvio">Nuvio</string>
+
+    <!-- Debug -->
+    <string name="debug_signin_success">Accesso eseguito correttamente</string>
+    <string name="debug_generate_description">Debug-generato %1$s elemento #%2$d</string>
+    <string name="debug_generate_result_failed">Fallito: %1$s</string>
+
 </resources>

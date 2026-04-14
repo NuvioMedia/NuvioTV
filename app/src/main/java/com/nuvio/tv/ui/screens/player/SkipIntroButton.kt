@@ -62,12 +62,15 @@ fun SkipIntroButton(
     controlsVisible: Boolean,
     onSkip: () -> Unit,
     onDismiss: () -> Unit,
+    onHideControls: (() -> Unit)? = null,
     onVisibilityChanged: (Boolean) -> Unit = {},
     onFocused: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
+    upFocusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier
 ) {
+
     var lastType by remember { mutableStateOf(interval?.type) }
     if (interval != null) lastType = interval.type
     val shouldShow = interval != null && (!dismissed || controlsVisible)
@@ -138,20 +141,40 @@ fun SkipIntroButton(
             modifier = Modifier
                 .focusRequester(activeFocusRequester)
                 .then(
-                    if (downFocusRequester != null) {
-                        Modifier.focusProperties { down = downFocusRequester }
+                    if (downFocusRequester != null || upFocusRequester != null) {
+                        Modifier.focusProperties {
+                            downFocusRequester?.let { down = it }
+                            upFocusRequester?.let { up = it }
+                        }
                     } else {
                         Modifier
                     }
                 )
                 .onPreviewKeyEvent { keyEvent ->
-                    if (
-                        downFocusRequester != null &&
-                        keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN &&
-                        keyEvent.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
-                    ) {
-                        try { downFocusRequester.requestFocus() } catch (_: Exception) {}
-                        true
+                    if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
+                        when (keyEvent.nativeKeyEvent.keyCode) {
+                            android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                if (downFocusRequester != null) {
+                                    try { downFocusRequester.requestFocus() } catch (_: Exception) {}
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                                // Pressing UP from Skip Intro button navigates to upFocusRequester or hides controls
+                                if (upFocusRequester != null) {
+                                    try { upFocusRequester.requestFocus() } catch (_: Exception) {}
+                                    true
+                                } else if (onHideControls != null) {
+                                    onHideControls()
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            else -> false
+                        }
                     } else {
                         false
                     }
