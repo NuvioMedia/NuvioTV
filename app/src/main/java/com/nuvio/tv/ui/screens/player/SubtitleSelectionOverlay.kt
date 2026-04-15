@@ -1821,7 +1821,7 @@ private fun buildSubtitleOptionRailItems(
         )
     } else emptyList()
 
-    return aiItem + internalItems + addonItems
+    return internalItems + aiItem + addonItems
 }
 
 private fun selectedSubtitleLanguageKey(
