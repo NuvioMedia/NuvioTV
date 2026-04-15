@@ -1111,19 +1111,19 @@ private fun formatEpisodeRuntime(runtimeMinutes: Int): String {
 
 private fun formatEpisodeCardDate(isoDate: String): String {
     val locale = Locale.getDefault()
-    val bestPattern = DateFormat.getBestDateTimePattern(locale, "dMMMMy")
-    val outputFormat = SimpleDateFormat(bestPattern, locale)
+    val bestPattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMMy")
+    val formatter = java.time.format.DateTimeFormatter.ofPattern(bestPattern, locale)
+
     return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }
-        val date = inputFormat.parse(isoDate)
-        date?.let { outputFormat.format(it) }.orEmpty()
+        val localDate = java.time.Instant.parse(isoDate)
+            .atZone(java.time.ZoneOffset.UTC)
+            .toLocalDate()
+
+        formatter.format(localDate)
     } catch (_: Exception) {
         try {
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            val date = inputFormat.parse(isoDate)
-            date?.let { outputFormat.format(it) }.orEmpty()
+            val localDate = java.time.LocalDate.parse(isoDate.substringBefore('T'))
+            formatter.format(localDate)
         } catch (_: Exception) {
             ""
         }

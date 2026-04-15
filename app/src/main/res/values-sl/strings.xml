@@ -238,9 +238,9 @@
     <string name="about_supporters_contributors_subtitle">Javne zahvale in zasluge pri projektu</string>																				   
     <!-- SettingsScreen categories -->
     <string name="settings_account">Račun</string>
-    <string name="settings_account_subtitle">Stanje računa in sinhronizacije.</string>
+    <string name="settings_account_subtitle">Stanje računa in sinhronizacije</string>
     <string name="settings_profiles">Profili</string>
-    <string name="settings_profiles_subtitle">Upravljajte uporabniške profile.</string>
+    <string name="settings_profiles_subtitle">Upravljajte uporabniške profile</string>
     <string name="settings_layout">Postavitev</string>
     <string name="settings_layout_subtitle">Struktura domačega zaslona in slogi plakatov.</string>
     <string name="settings_plugins">Vtičniki</string>
@@ -269,8 +269,8 @@
     <string name="network_connection_offline">Brez povezave</string>
     <string name="settings_debug">Odpravljanje napak</string>
     <string name="settings_debug_subtitle">Razvojna orodja in zastavice funkcij.</string>																  
-    <string name="settings_plugins_section_subtitle">Upravljanje repozitorijev, ponudnikov in stanj vtičnikov.</string>
-    <string name="settings_account_section_subtitle">Stanje računa in sinhronizacije.</string>
+    <string name="settings_plugins_section_subtitle">Upravljanje repozitorijev, ponudnikov in stanj vtičnikov</string>
+    <string name="settings_account_section_subtitle">Stanje računa in sinhronizacije</string>
 	<string name="account_stat_addons">dodatki</string>
     <string name="account_stat_plugins">vtičniki</string>
     <string name="account_stat_library">knjižnica</string>

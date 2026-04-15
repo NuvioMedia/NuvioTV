@@ -15,6 +15,8 @@ import com.nuvio.tv.domain.model.MetaCompany
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PersonDetail
 import com.nuvio.tv.domain.model.PosterShape
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -36,6 +38,8 @@ class TmdbMetadataService @Inject constructor(
     // In-memory caches
     private val enrichmentCache = ConcurrentHashMap<String, TmdbEnrichment>()
     private val episodeCache = ConcurrentHashMap<String, Map<Pair<Int, Int>, TmdbEpisodeEnrichment>>()
+    private val enrichmentInFlight = ConcurrentHashMap<String, CompletableDeferred<TmdbEnrichment?>>()
+    private val episodeInFlight = ConcurrentHashMap<String, CompletableDeferred<Map<Pair<Int, Int>, TmdbEpisodeEnrichment>>>()
     private val personCache = ConcurrentHashMap<String, PersonDetail>()
     private val moreLikeThisCache = ConcurrentHashMap<String, List<MetaPreview>>()
     private val entityHeaderCache = ConcurrentHashMap<String, TmdbEntityHeader>()
@@ -51,8 +55,13 @@ class TmdbMetadataService @Inject constructor(
             val normalizedLanguage = normalizeTmdbLanguage(language)
             val cacheKey = "$tmdbId:${contentType.name}:$normalizedLanguage"
             enrichmentCache[cacheKey]?.let { return@withContext it }
+            enrichmentInFlight[cacheKey]?.let { return@withContext it.await() }
 
             val numericId = tmdbId.toIntOrNull() ?: return@withContext null
+            val requestDeferred = CompletableDeferred<TmdbEnrichment?>()
+            enrichmentInFlight.putIfAbsent(cacheKey, requestDeferred)?.let { existing ->
+                return@withContext existing.await()
+            }
             val tmdbType = when (contentType) {
                 ContentType.SERIES, ContentType.TV -> "tv"
                 else -> "movie"
@@ -294,10 +303,17 @@ class TmdbMetadataService @Inject constructor(
                     collectionName = collectionName
                 )
                 enrichmentCache[cacheKey] = enrichment
+                requestDeferred.complete(enrichment)
                 enrichment
+            } catch (e: CancellationException) {
+                requestDeferred.cancel(e)
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to fetch TMDB enrichment: ${e.message}", e)
+                requestDeferred.complete(null)
                 null
+            } finally {
+                enrichmentInFlight.remove(cacheKey, requestDeferred)
             }
         }
 
@@ -309,27 +325,41 @@ class TmdbMetadataService @Inject constructor(
         val normalizedLanguage = normalizeTmdbLanguage(language)
         val cacheKey = "$tmdbId:${seasonNumbers.sorted().joinToString(",")}:$normalizedLanguage"
         episodeCache[cacheKey]?.let { return@withContext it }
+        episodeInFlight[cacheKey]?.let { return@withContext it.await() }
 
         val numericId = tmdbId.toIntOrNull() ?: return@withContext emptyMap()
+        val requestDeferred = CompletableDeferred<Map<Pair<Int, Int>, TmdbEpisodeEnrichment>>()
+        episodeInFlight.putIfAbsent(cacheKey, requestDeferred)?.let { existing ->
+            return@withContext existing.await()
+        }
         val result = mutableMapOf<Pair<Int, Int>, TmdbEpisodeEnrichment>()
 
-        seasonNumbers.distinct().forEach { season ->
-            try {
-                val response = tmdbApi.getTvSeasonDetails(numericId, season, TMDB_API_KEY, normalizedLanguage)
-                val episodes = response.body()?.episodes.orEmpty()
-                episodes.forEach { ep ->
-                    val epNum = ep.episodeNumber ?: return@forEach
-                    result[season to epNum] = ep.toEnrichment()
+        try {
+            seasonNumbers.distinct().forEach { season ->
+                try {
+                    val response = tmdbApi.getTvSeasonDetails(numericId, season, TMDB_API_KEY, normalizedLanguage)
+                    val episodes = response.body()?.episodes.orEmpty()
+                    episodes.forEach { ep ->
+                        val epNum = ep.episodeNumber ?: return@forEach
+                        result[season to epNum] = ep.toEnrichment()
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to fetch TMDB season $season: ${e.message}")
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to fetch TMDB season $season: ${e.message}")
             }
-        }
 
-        if (result.isNotEmpty()) {
-            episodeCache[cacheKey] = result
+            val finalResult = result.toMap()
+            if (finalResult.isNotEmpty()) {
+                episodeCache[cacheKey] = finalResult
+            }
+            requestDeferred.complete(finalResult)
+            finalResult
+        } catch (e: CancellationException) {
+            requestDeferred.cancel(e)
+            throw e
+        } finally {
+            episodeInFlight.remove(cacheKey, requestDeferred)
         }
-        result
     }
 
     suspend fun fetchMoreLikeThis(

@@ -122,9 +122,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Tài khoản</string>
-    <string name="settings_account_subtitle">Tài khoản và trạng thái đồng bộ.</string>
+    <string name="settings_account_subtitle">Tài khoản và trạng thái đồng bộ</string>
     <string name="settings_profiles">Hồ sơ</string>
-    <string name="settings_profiles_subtitle">Quản lý hồ sơ người dùng.</string>
+    <string name="settings_profiles_subtitle">Quản lý hồ sơ người dùng</string>
     <string name="settings_layout">Bố cục</string>
     <string name="settings_layout_subtitle">Cấu trúc màn hình chính và kiểu poster.</string>
     <string name="settings_plugins">Plugin</string>
@@ -136,8 +136,8 @@
     <string name="settings_about_subtitle">Phiên bản và điều khoản.</string>
     <string name="settings_debug">Gỡ lỗi</string>
     <string name="settings_debug_subtitle">Công cụ nhà phát triển và cờ tính năng.</string>
-    <string name="settings_plugins_section_subtitle">Quản lý kho lưu trữ, nhà cung cấp và trạng thái plugin.</string>
-    <string name="settings_account_section_subtitle">Tài khoản và trạng thái đồng bộ.</string>
+    <string name="settings_plugins_section_subtitle">Quản lý kho lưu trữ, nhà cung cấp và trạng thái plugin</string>
+    <string name="settings_account_section_subtitle">Tài khoản và trạng thái đồng bộ</string>
     <string name="account_stat_addons">addon</string>
     <string name="account_stat_plugins">plugin</string>
     <string name="account_stat_library">thư viện</string>

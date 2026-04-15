@@ -28,9 +28,11 @@ data class Stream(
     fun getStreamUrl(): String? = url ?: externalUrl
 
     /**
-     * Returns true if this is a torrent stream
+     * Returns true if this is a torrent-only stream (no HTTP URL available).
+     * When both infoHash and url are present (e.g. debrid cached torrents),
+     * the HTTP url is preferred and this returns false.
      */
-    fun isTorrent(): Boolean = infoHash != null
+    fun isTorrent(): Boolean = infoHash != null && url.isNullOrBlank()
 
     /**
      * Returns true if this is a YouTube stream

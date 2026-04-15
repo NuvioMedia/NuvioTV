@@ -851,20 +851,23 @@ class TraktProgressService @Inject constructor(
         if (!force && !hasActivityChanged()) {
             return
         }
-        // Load dropped shows first so all downstream flows emit pre-filtered data.
-        ensureHiddenProgressShows(force = force)
 
-        if ((force || watchedMoviesStale) && hasLoadedWatchedMovies) {
-            getWatchedMoviesSnapshot(forceRefresh = true)
-        }
-
-        val needSeedsRefresh = force ||
-            (watchedShowSeedsStale && hasLoadedWatchedShowSeeds)
         coroutineScope {
+            val hiddenDeferred = async { ensureHiddenProgressShows(force = force) }
+
+            if ((force || watchedMoviesStale) && hasLoadedWatchedMovies) {
+                launch { getWatchedMoviesSnapshot(forceRefresh = true) }
+            }
+
+            val needSeedsRefresh = force ||
+                (watchedShowSeedsStale && hasLoadedWatchedShowSeeds)
             val progressDeferred = async { fetchAllProgressSnapshot(force = force) }
             val seedsDeferred = if (needSeedsRefresh) {
                 async { getWatchedShowSeedsSnapshot(forceRefresh = true) }
             } else null
+
+            // Wait for hidden shows before emitting progress so filters apply.
+            hiddenDeferred.await()
 
             val snapshot = progressDeferred.await()
             seedsDeferred?.await()
@@ -1430,14 +1433,21 @@ class TraktProgressService @Inject constructor(
         val (recentCompletedEpisodes, inProgressMovies, inProgressEpisodes) = coroutineScope {
             val historyDeferred = async { fetchRecentEpisodeHistorySnapshot() }
             val moviesDeferred = async {
-                getPlayback("movies", force = force, startAt = playbackStartAt)
-                    .mapNotNull { mapPlaybackMovie(it) }
+                val playback = getPlayback("movies", force = force, startAt = playbackStartAt)
+                playback.map { item -> async { mapPlaybackMovie(item) } }
+                    .awaitAll()
+                    .filterNotNull()
             }
             val episodesDeferred = async {
-                getPlayback("episodes", force = force, startAt = playbackStartAt)
-                    .mapNotNull { mapPlaybackEpisode(it, applyAddonRemap = true) }
+                val playback = getPlayback("episodes", force = force, startAt = playbackStartAt)
+                playback.map { item -> async { mapPlaybackEpisode(item, applyAddonRemap = true) } }
+                    .awaitAll()
+                    .filterNotNull()
             }
-            Triple(historyDeferred.await(), moviesDeferred.await(), episodesDeferred.await())
+            val history = historyDeferred.await()
+            val movies = moviesDeferred.await()
+            val episodes = episodesDeferred.await()
+            Triple(history, movies, episodes)
         }
 
         inProgressEpisodes.take(5).forEach { p ->
@@ -1513,7 +1523,9 @@ class TraktProgressService @Inject constructor(
             val items = response.body().orEmpty()
             if (items.isEmpty()) break
 
+            // Filter items first (cheap), then map in parallel (expensive).
             var shouldStop = false
+            val candidateItems = mutableListOf<TraktUserEpisodeHistoryItemDto>()
             for (item in items) {
                 val contentId = normalizeContentId(item.show?.ids)
                 if (contentId.isBlank()) continue
@@ -1525,11 +1537,22 @@ class TraktProgressService @Inject constructor(
                     continue
                 }
 
-                val mapped = mapEpisodeHistoryItem(item, applyAddonRemap = true) ?: continue
-                results.putIfAbsent(mapped.contentId, mapped)
-                if (results.size >= maxRecentEpisodeHistoryEntries) {
+                candidateItems.add(item)
+                if (results.size + candidateItems.size >= maxRecentEpisodeHistoryEntries) {
                     shouldStop = true
-                    continue
+                    break
+                }
+            }
+
+            // Map candidates in parallel to speed up videoId resolution.
+            if (candidateItems.isNotEmpty()) {
+                val mapped = coroutineScope {
+                    candidateItems.map { item ->
+                        async { mapEpisodeHistoryItem(item, applyAddonRemap = true) }
+                    }.awaitAll()
+                }
+                mapped.filterNotNull().forEach { progress ->
+                    results.putIfAbsent(progress.contentId, progress)
                 }
             }
 
@@ -1807,7 +1830,7 @@ class TraktProgressService @Inject constructor(
         episode: Int,
         episodeTitle: String?
     ): EpisodeMappingEntry? {
-        return runCatching {
+        return try {
             traktEpisodeMappingService.resolveAddonEpisodeMapping(
                 contentId = contentId,
                 contentType = "series",
@@ -1815,7 +1838,7 @@ class TraktProgressService @Inject constructor(
                 episode = episode,
                 episodeTitle = episodeTitle
             )
-        }.getOrElse { error ->
+        } catch (error: Exception) {
             Log.w(
                 TAG,
                 "resolveAddonEpisodeProgress failed for $contentId s=$season e=$episode",
@@ -1830,34 +1853,21 @@ class TraktProgressService @Inject constructor(
         season: Int,
         episode: Int
     ): String {
-        if (!hasLoadedRemoteProgress.value) {
-            return "$contentId:$season:$episode"
-        }
         val key = "$contentId:$season:$episode"
         episodeVideoIdCache[key]?.let { return it }
 
-        val candidates = buildList {
-            add(contentId)
-            if (contentId.startsWith("tmdb:")) add(contentId.substringAfter(':'))
-            if (contentId.startsWith("trakt:")) add(contentId.substringAfter(':'))
-        }.distinct()
-
-        for (candidate in candidates) {
-            for (type in listOf("series", "tv")) {
-                val result = withTimeoutOrNull(2500) {
-                    metaRepository.getMetaFromAllAddons(type = type, id = candidate)
-                        .first { it !is NetworkResult.Loading }
-                } ?: continue
-
-                val meta = (result as? NetworkResult.Success)?.data ?: continue
-                val videoId = meta.videos.firstOrNull {
-                    it.season == season && it.episode == episode
-                }?.id
-
-                if (!videoId.isNullOrBlank()) {
-                    episodeVideoIdCache[key] = videoId
-                    return videoId
-                }
+        // Check if metadata is already cached (from a previous hydrateMetadata cycle).
+        // If so, resolve videoId from it without a network call.
+        val existingMeta = metadataState.value[contentId]
+        if (existingMeta != null) {
+            val episodeMeta = existingMeta.episodes.entries.firstOrNull {
+                it.key.first == season && it.key.second == episode
+            }
+            // Use the video ID pattern that matches addon meta structure
+            val videoId = episodeMeta?.let { "$contentId:${it.key.first}:${it.key.second}" }
+            if (videoId != null) {
+                episodeVideoIdCache[key] = videoId
+                return videoId
             }
         }
 

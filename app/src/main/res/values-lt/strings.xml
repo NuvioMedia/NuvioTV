@@ -164,9 +164,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Paskyra</string>
-    <string name="settings_account_subtitle">Paskyros ir sinchronizavimo būsena.</string>
+    <string name="settings_account_subtitle">Paskyros ir sinchronizavimo būsena</string>
     <string name="settings_profiles">Profiliai</string>
-    <string name="settings_profiles_subtitle">Valdyti naudotojų profilius.</string>
+    <string name="settings_profiles_subtitle">Valdyti naudotojų profilius</string>
     <string name="settings_layout">Išdėstymas</string>
     <string name="settings_layout_subtitle">Pradinio ekrano struktūra ir plakatų stiliai.</string>
     <string name="settings_plugins">Įskiepiai</string>
@@ -178,8 +178,8 @@
     <string name="settings_about_subtitle">Versija ir politika.</string>
     <string name="settings_debug">Derinimas (Debug)</string>
     <string name="settings_debug_subtitle">Kūrėjo įrankiai ir funkcijų vėliavėlės.</string>
-    <string name="settings_plugins_section_subtitle">Valdyti repozitorijas, teikėjus ir įskiepių būsenas.</string>
-    <string name="settings_account_section_subtitle">Paskyros ir sinchronizavimo būsena.</string>
+    <string name="settings_plugins_section_subtitle">Valdyti repozitorijas, teikėjus ir įskiepių būsenas</string>
+    <string name="settings_account_section_subtitle">Paskyros ir sinchronizavimo būsena</string>
     <string name="account_stat_addons">priedai</string>
     <string name="account_stat_plugins">įskiepiai</string>
     <string name="account_stat_library">biblioteka</string>

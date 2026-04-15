@@ -63,6 +63,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -109,7 +110,9 @@ import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.core.player.ExternalPlayerLauncher
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.local.StreamAutoPlayMode
+import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.theme.NuvioColors
 import android.text.format.DateFormat
@@ -141,7 +144,6 @@ fun PlayerScreen(
     val nextEpisodeFocusRequester = remember { FocusRequester() }
     var subtitleDelayAutoSyncFocused by remember { mutableStateOf(false) }
     var subtitleTimingConsumeNextConfirmKeyUp by remember { mutableStateOf(false) }
-    var exoPlayerView by remember { mutableStateOf<PlayerView?>(null) }
     val exitPlayer: () -> Unit = {
         viewModel.stopAndRelease()
         onBackPress(uiState.currentVideoId, uiState.currentSeason, uiState.currentEpisode, uiState.streamAutoPlayMode != StreamAutoPlayMode.MANUAL)
@@ -545,114 +547,22 @@ fun PlayerScreen(
     ) {
         // Video Player
         if (uiState.internalPlayerEngine == InternalPlayerEngine.MVP_PLAYER) {
-            AndroidView(
-                factory = { context ->
-                    NuvioMpvSurfaceView(context).also { view ->
-                        viewModel.attachMpvView(view)
-                    }
-                },
-                update = { view ->
-                    viewModel.attachMpvView(view)
-                    view.keepScreenOn = uiState.isPlaying || uiState.isBuffering
-                    view.applyAspectMode(uiState.aspectMode)
-                    view.applySubtitleStyle(uiState.subtitleStyle)
-                },
+            MpvPlayerSurface(
+                viewModel = viewModel,
+                isPlaying = uiState.isPlaying,
+                isBuffering = uiState.isBuffering,
+                aspectMode = uiState.aspectMode,
+                subtitleStyle = uiState.subtitleStyle,
                 modifier = Modifier.fillMaxSize()
             )
-            DisposableEffect(Unit) {
-                onDispose {
-                    viewModel.attachMpvView(null)
-                }
-            }
         } else {
             viewModel.exoPlayer?.let { player ->
-                val subtitleStyle = uiState.subtitleStyle
-                val aspectMode = uiState.aspectMode
-
-                DisposableEffect(player, exoPlayerView, aspectMode) {
-                    val boundView = exoPlayerView
-                    if (boundView == null) {
-                        onDispose { }
-                    } else {
-                        val listener = object : androidx.media3.common.Player.Listener {
-                            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
-                                boundView.post { applyExoAspectMode(boundView, aspectMode) }
-                            }
-
-                            override fun onRenderedFirstFrame() {
-                                boundView.post { applyExoAspectMode(boundView, aspectMode) }
-                            }
-                        }
-                        player.addListener(listener)
-                        boundView.post { applyExoAspectMode(boundView, aspectMode) }
-                        onDispose {
-                            player.removeListener(listener)
-                        }
-                    }
-                }
-
-                AndroidView(
-                    factory = { context ->
-                        PlayerView(context).apply {
-                            this.player = player
-                            useController = false
-                            keepScreenOn = false
-                            setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
-                            exoPlayerView = this
-                        }
-                    },
-                    update = { playerView ->
-                        exoPlayerView = playerView
-                        // Keep device awake only while playback is active (or buffering), not when paused.
-                        playerView.keepScreenOn = uiState.isPlaying || uiState.isBuffering
-                        playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        applyExoAspectMode(playerView, aspectMode)
-                        playerView.subtitleView?.apply {
-                            // Calculate font size based on percentage (100% = 24sp base)
-                            val baseFontSize = 24f
-                            val scaledFontSize = baseFontSize * (subtitleStyle.size / 100f)
-                            setFixedTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, scaledFontSize)
-                            setApplyEmbeddedFontSizes(false)
-
-                            // Apply bold style via typeface
-                            val typeface = if (subtitleStyle.bold) {
-                                android.graphics.Typeface.DEFAULT_BOLD
-                            } else {
-                                android.graphics.Typeface.DEFAULT
-                            }
-
-                            // Calculate edge type based on outline setting
-                            val edgeType = if (subtitleStyle.outlineEnabled) {
-                                androidx.media3.ui.CaptionStyleCompat.EDGE_TYPE_OUTLINE
-                            } else {
-                                androidx.media3.ui.CaptionStyleCompat.EDGE_TYPE_NONE
-                            }
-
-                            setStyle(
-                                androidx.media3.ui.CaptionStyleCompat(
-                                    subtitleStyle.textColor,
-                                    subtitleStyle.backgroundColor,
-                                    android.graphics.Color.TRANSPARENT, // Window color
-                                    edgeType,
-                                    subtitleStyle.outlineColor,
-                                    typeface
-                                )
-                            )
-
-                            setApplyEmbeddedStyles(false)
-
-                            // Apply vertical offset (-20 = very bottom, 0 = default, 50 = middle)
-                            // Convert percentage to fraction for bottom padding
-                            val bottomPaddingFraction = (0.06f + (subtitleStyle.verticalOffset / 250f)).coerceIn(0f, 0.4f)
-                            setBottomPaddingFraction(bottomPaddingFraction)
-
-                            // Also apply explicit bottom padding based on view height for stronger offset effect
-                            post {
-                                val extraPadding = (height * (subtitleStyle.verticalOffset / 400f)).toInt().coerceAtLeast(0)
-                                setPadding(paddingLeft, paddingTop, paddingRight, extraPadding)
-                            }
-                        }
-                    },
+                ExoPlayerSurface(
+                    player = player,
+                    isPlaying = uiState.isPlaying,
+                    isBuffering = uiState.isBuffering,
+                    aspectMode = uiState.aspectMode,
+                    subtitleStyle = uiState.subtitleStyle,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -866,9 +776,8 @@ fun PlayerScreen(
                 .padding(end = 28.dp, top = 24.dp)
                 .zIndex(2.15f)
         ) {
-            PlayerClockOverlay(
-                currentPosition = uiState.currentPosition,
-                duration = uiState.duration,
+            PlayerClockOverlayHost(
+                viewModel = viewModel,
                 playbackSpeed = uiState.playbackSpeed
             )
         }
@@ -1046,7 +955,7 @@ fun PlayerScreen(
             exit = fadeOut(animationSpec = tween(150)),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            SeekOverlay(uiState = uiState)
+            SeekOverlayHost(viewModel = viewModel)
         }
 
         // Episodes/streams side panel (slides in from right)
@@ -1230,9 +1139,9 @@ fun PlayerScreen(
             captureKeys = false,
             contentPadding = PaddingValues(top = 44.dp)
         ) {
-            SubtitleTimingDialog(
+            SubtitleTimingDialogHost(
+                viewModel = viewModel,
                 modifier = Modifier.align(Alignment.TopCenter),
-                currentPositionMs = uiState.currentPosition,
                 selectedAddonSubtitle = uiState.selectedAddonSubtitle,
                 cues = uiState.subtitleAutoSyncCues,
                 capturedVideoMs = uiState.subtitleAutoSyncCapturedVideoMs,
@@ -1254,6 +1163,188 @@ fun PlayerScreen(
             )
         }
 
+    }
+}
+
+@Composable
+private fun MpvPlayerSurface(
+    viewModel: PlayerViewModel,
+    isPlaying: Boolean,
+    isBuffering: Boolean,
+    aspectMode: AspectMode,
+    subtitleStyle: SubtitleStyleSettings,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val mpvView = remember(context) {
+        NuvioMpvSurfaceView(context)
+    }
+
+    AndroidView(
+        factory = { mpvView },
+        modifier = modifier
+    )
+
+    DisposableEffect(viewModel, mpvView) {
+        viewModel.attachMpvView(mpvView)
+        onDispose {
+            viewModel.attachMpvView(null)
+        }
+    }
+
+    LaunchedEffect(mpvView, isPlaying, isBuffering) {
+        val shouldKeepScreenOn = isPlaying || isBuffering
+        if (mpvView.keepScreenOn != shouldKeepScreenOn) {
+            mpvView.keepScreenOn = shouldKeepScreenOn
+        }
+    }
+
+    LaunchedEffect(mpvView, aspectMode) {
+        mpvView.applyAspectMode(aspectMode)
+    }
+
+    LaunchedEffect(mpvView, subtitleStyle) {
+        mpvView.applySubtitleStyle(subtitleStyle)
+    }
+}
+
+@Composable
+private fun ExoPlayerSurface(
+    player: androidx.media3.common.Player,
+    isPlaying: Boolean,
+    isBuffering: Boolean,
+    aspectMode: AspectMode,
+    subtitleStyle: SubtitleStyleSettings,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val latestAspectMode by rememberUpdatedState(aspectMode)
+    val playerView = remember(context, player) {
+        PlayerView(context).apply {
+            useController = false
+            keepScreenOn = false
+            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+            enableComposeSurfaceSyncWorkaroundIfAvailable()
+            this.player = player
+        }
+    }
+
+    AndroidView(
+        factory = { playerView },
+        modifier = modifier
+    )
+
+    DisposableEffect(playerView, player) {
+        if (playerView.player !== player) {
+            playerView.player = player
+        }
+        onDispose {
+            if (playerView.player === player) {
+                playerView.player = null
+            }
+        }
+    }
+
+    DisposableEffect(player, playerView) {
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                playerView.post {
+                    playerView.applyExoAspectModeIfNeeded(latestAspectMode)
+                }
+            }
+
+            override fun onRenderedFirstFrame() {
+                playerView.post {
+                    playerView.applyExoAspectModeIfNeeded(latestAspectMode)
+                }
+            }
+        }
+        player.addListener(listener)
+        playerView.post {
+            playerView.applyExoAspectModeIfNeeded(latestAspectMode)
+        }
+        onDispose {
+            player.removeListener(listener)
+        }
+    }
+
+    LaunchedEffect(playerView, isPlaying, isBuffering) {
+        val shouldKeepScreenOn = isPlaying || isBuffering
+        if (playerView.keepScreenOn != shouldKeepScreenOn) {
+            playerView.keepScreenOn = shouldKeepScreenOn
+        }
+    }
+
+    LaunchedEffect(playerView, aspectMode) {
+        playerView.applyExoAspectModeIfNeeded(aspectMode)
+    }
+
+    LaunchedEffect(playerView, subtitleStyle) {
+        playerView.applySubtitleStyleIfNeeded(subtitleStyle)
+    }
+}
+
+private fun PlayerView.enableComposeSurfaceSyncWorkaroundIfAvailable() {
+    runCatching {
+        javaClass
+            .getMethod("setEnableComposeSurfaceSyncWorkaround", java.lang.Boolean.TYPE)
+            .invoke(this, true)
+    }
+}
+
+private fun PlayerView.applyExoAspectModeIfNeeded(mode: AspectMode) {
+    if (getTag(R.id.player_view_aspect_mode_tag) == mode) {
+        return
+    }
+    setTag(R.id.player_view_aspect_mode_tag, mode)
+    applyExoAspectMode(this, mode)
+}
+
+private fun PlayerView.applySubtitleStyleIfNeeded(subtitleStyle: SubtitleStyleSettings) {
+    if (getTag(R.id.player_view_subtitle_style_tag) == subtitleStyle) {
+        return
+    }
+    setTag(R.id.player_view_subtitle_style_tag, subtitleStyle)
+    subtitleView?.apply {
+        val baseFontSize = 24f
+        val scaledFontSize = baseFontSize * (subtitleStyle.size / 100f)
+        setFixedTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, scaledFontSize)
+        setApplyEmbeddedFontSizes(false)
+
+        val typeface = if (subtitleStyle.bold) {
+            android.graphics.Typeface.DEFAULT_BOLD
+        } else {
+            android.graphics.Typeface.DEFAULT
+        }
+
+        val edgeType = if (subtitleStyle.outlineEnabled) {
+            androidx.media3.ui.CaptionStyleCompat.EDGE_TYPE_OUTLINE
+        } else {
+            androidx.media3.ui.CaptionStyleCompat.EDGE_TYPE_NONE
+        }
+
+        setStyle(
+            androidx.media3.ui.CaptionStyleCompat(
+                subtitleStyle.textColor,
+                subtitleStyle.backgroundColor,
+                android.graphics.Color.TRANSPARENT,
+                edgeType,
+                subtitleStyle.outlineColor,
+                typeface
+            )
+        )
+
+        setApplyEmbeddedStyles(false)
+
+        val bottomPaddingFraction =
+            (0.06f + (subtitleStyle.verticalOffset / 250f)).coerceIn(0f, 0.4f)
+        setBottomPaddingFraction(bottomPaddingFraction)
+
+        post {
+            val extraPadding = (height * (subtitleStyle.verticalOffset / 400f)).toInt().coerceAtLeast(0)
+            setPadding(paddingLeft, paddingTop, paddingRight, extraPadding)
+        }
     }
 }
 
@@ -1405,21 +1496,14 @@ private fun PlayerControlsOverlay(
 
             // Progress bar — always LTR regardless of locale
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            ProgressBar(
-                currentPosition = uiState.pendingPreviewSeekPosition ?: uiState.currentPosition,
-                duration = uiState.duration,
-                onSeekPreview = { delta ->
-                    viewModel.onEvent(PlayerEvent.OnPreviewSeekBy(delta))
-                },
-                onSeekCommit = {
-                    viewModel.onEvent(PlayerEvent.OnCommitPreviewSeek)
-                },
-                focusRequester = progressBarFocusRequester,
-                upFocusRequester = progressBarUpFocusRequester,
-                downFocusRequester = playPauseFocusRequester,
-                onUpKey = onHideControls,
-                onFocused = onResetHideTimer
-            )
+                PlayerControlsProgressBarHost(
+                    viewModel = viewModel,
+                    focusRequester = progressBarFocusRequester,
+                    upFocusRequester = progressBarUpFocusRequester,
+                    downFocusRequester = playPauseFocusRequester,
+                    onUpKey = onHideControls,
+                    onFocused = onResetHideTimer
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -1593,15 +1677,50 @@ private fun PlayerControlsOverlay(
                 }
 
                 // Right side - Time display only
-                Text(
-                    text = "${formatTime(uiState.currentPosition)} / ${formatTime(uiState.duration)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.9f)
-                )
+                PlayerControlsTimeTextHost(viewModel = viewModel)
             }
             }
         }
     }
+}
+
+@Composable
+private fun PlayerControlsProgressBarHost(
+    viewModel: PlayerViewModel,
+    focusRequester: FocusRequester,
+    upFocusRequester: FocusRequester? = null,
+    downFocusRequester: FocusRequester? = null,
+    onUpKey: (() -> Unit)? = null,
+    onFocused: (() -> Unit)? = null
+) {
+    val playbackTimeline by viewModel.playbackTimeline.collectAsState()
+
+    ProgressBar(
+        currentPosition = playbackTimeline.currentPosition,
+        duration = playbackTimeline.duration,
+        onSeekPreview = { delta ->
+            viewModel.onEvent(PlayerEvent.OnPreviewSeekBy(delta))
+        },
+        onSeekCommit = {
+            viewModel.onEvent(PlayerEvent.OnCommitPreviewSeek)
+        },
+        focusRequester = focusRequester,
+        upFocusRequester = upFocusRequester,
+        downFocusRequester = downFocusRequester,
+        onUpKey = onUpKey,
+        onFocused = onFocused
+    )
+}
+
+@Composable
+private fun PlayerControlsTimeTextHost(viewModel: PlayerViewModel) {
+    val playbackTimeline by viewModel.playbackTimeline.collectAsState()
+
+    Text(
+        text = "${formatTime(playbackTimeline.currentPosition)} / ${formatTime(playbackTimeline.duration)}",
+        style = MaterialTheme.typography.bodyMedium,
+        color = Color.White.copy(alpha = 0.9f)
+    )
 }
 
 @Composable
@@ -1796,7 +1915,10 @@ private fun ProgressBar(
 }
 
 @Composable
-private fun SeekOverlay(uiState: PlayerUiState) {
+private fun SeekOverlay(
+    currentPosition: Long,
+    duration: Long
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1804,8 +1926,8 @@ private fun SeekOverlay(uiState: PlayerUiState) {
     ) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             ProgressBar(
-                currentPosition = uiState.currentPosition,
-                duration = uiState.duration,
+                currentPosition = currentPosition,
+                duration = duration,
                 onSeekPreview = {},
                 onSeekCommit = {}
             )
@@ -1819,12 +1941,22 @@ private fun SeekOverlay(uiState: PlayerUiState) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "${formatTime(uiState.currentPosition)} / ${formatTime(uiState.duration)}",
+                text = "${formatTime(currentPosition)} / ${formatTime(duration)}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.9f)
             )
         }
     }
+}
+
+@Composable
+private fun SeekOverlayHost(viewModel: PlayerViewModel) {
+    val playbackTimeline by viewModel.playbackTimeline.collectAsState()
+
+    SeekOverlay(
+        currentPosition = playbackTimeline.currentPosition,
+        duration = playbackTimeline.duration
+    )
 }
 
 @Composable
@@ -1874,6 +2006,46 @@ private fun PlayerClockOverlay(
             color = Color.White.copy(alpha = 0.78f)
         )
     }
+}
+
+@Composable
+private fun PlayerClockOverlayHost(viewModel: PlayerViewModel, playbackSpeed: Float) {
+    val playbackTimeline by viewModel.playbackTimeline.collectAsState()
+
+    PlayerClockOverlay(
+        currentPosition = playbackTimeline.currentPosition,
+        duration = playbackTimeline.duration,
+        playbackSpeed = playbackSpeed
+    )
+}
+
+@Composable
+private fun SubtitleTimingDialogHost(
+    viewModel: PlayerViewModel,
+    modifier: Modifier = Modifier,
+    selectedAddonSubtitle: Subtitle?,
+    cues: List<SubtitleSyncCue>,
+    capturedVideoMs: Long?,
+    statusMessage: String?,
+    errorMessage: String?,
+    isLoadingCues: Boolean,
+    onCaptureNow: () -> Unit,
+    onCueSelected: (SubtitleSyncCue) -> Unit
+) {
+    val playbackTimeline by viewModel.playbackTimeline.collectAsState()
+
+    SubtitleTimingDialog(
+        modifier = modifier,
+        currentPositionMs = playbackTimeline.currentPosition,
+        selectedAddonSubtitle = selectedAddonSubtitle,
+        cues = cues,
+        capturedVideoMs = capturedVideoMs,
+        statusMessage = statusMessage,
+        errorMessage = errorMessage,
+        isLoadingCues = isLoadingCues,
+        onCaptureNow = onCaptureNow,
+        onCueSelected = onCueSelected
+    )
 }
 
 @Composable

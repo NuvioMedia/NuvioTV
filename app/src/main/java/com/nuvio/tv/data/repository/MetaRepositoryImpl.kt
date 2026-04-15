@@ -211,7 +211,10 @@ class MetaRepositoryImpl @Inject constructor(
                                 }
                                 Log.d(TAG, "Meta response was null addonId=${addon.id} type=$candidateType id=$id")
                             }
-                            else -> { /* try next */ }
+                            is NetworkResult.Error -> {
+                                /* try next */
+                            }
+                            NetworkResult.Loading -> { /* try next */ }
                         }
                     }
                     null

@@ -122,9 +122,9 @@
 
 <!-- SettingsScreen categories -->
 <string name="settings_account">Account</string>
-<string name="settings_account_subtitle">Account- en synchronisatiestatus.</string>
+<string name="settings_account_subtitle">Account- en synchronisatiestatus</string>
 <string name="settings_profiles">Profielen</string>
-<string name="settings_profiles_subtitle">Beheer gebruikersprofielen.</string>
+<string name="settings_profiles_subtitle">Beheer gebruikersprofielen</string>
 <string name="settings_layout">Indeling</string>
 <string name="settings_layout_subtitle">Startpagina-indeling en posterstijlen.</string>
 <string name="settings_plugins">Plugins</string>
@@ -136,8 +136,8 @@
 <string name="settings_about_subtitle">Versie en beleid.</string>
 <string name="settings_debug">Debug</string>
 <string name="settings_debug_subtitle">Ontwikkelaarstools en feature flags.</string>
-<string name="settings_plugins_section_subtitle">Beheer repositories, providers en pluginstatussen.</string>
-<string name="settings_account_section_subtitle">Account- en synchronisatiestatus.</string>
+<string name="settings_plugins_section_subtitle">Beheer repositories, providers en pluginstatussen</string>
+<string name="settings_account_section_subtitle">Account- en synchronisatiestatus</string>
 <string name="account_stat_addons">addons</string>
 <string name="account_stat_plugins">plugins</string>
 <string name="account_stat_library">bibliotheek</string>

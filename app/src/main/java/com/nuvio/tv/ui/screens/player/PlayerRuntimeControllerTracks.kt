@@ -101,7 +101,21 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                 for (i in 0 until trackGroup.length) {
                     val format = trackGroup.getTrackFormat(i)
                     // Skip addon subtitle tracks — they are managed separately
-                    if (format.id?.contains(PlayerRuntimeController.ADDON_SUBTITLE_TRACK_ID_PREFIX) == true) continue
+                    if (format.id?.contains(PlayerRuntimeController.ADDON_SUBTITLE_TRACK_ID_PREFIX) == true) {
+                        // Detect if ExoPlayer auto-selected an addon track (e.g. via
+                        // preferredTextLanguage) so we can keep selectedAddonSubtitle in sync.
+                        if (trackGroup.isTrackSelected(i)) {
+                            val trackId = format.id ?: ""
+                            val matchedAddon = _uiState.value.addonSubtitles.firstOrNull { subtitle ->
+                                trackId == buildAddonSubtitleTrackId(subtitle)
+                            }
+                            if (matchedAddon != null && _uiState.value.selectedAddonSubtitle?.id != matchedAddon.id) {
+                                _uiState.update { it.copy(selectedAddonSubtitle = matchedAddon, selectedSubtitleTrackIndex = -1) }
+                                if (!autoSubtitleSelected) autoSubtitleSelected = true
+                            }
+                        }
+                        continue
+                    }
                     val isSelected = trackGroup.isTrackSelected(i)
                     if (isSelected) selectedSubtitleIndex = subtitleTracks.size
                     

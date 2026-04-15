@@ -193,9 +193,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Konto</string>
-    <string name="settings_account_subtitle">Konto und Synchronisierungsstatus.</string>
+    <string name="settings_account_subtitle">Konto und Synchronisierungsstatus</string>
     <string name="settings_profiles">Profile</string>
-    <string name="settings_profiles_subtitle">Benutzerprofile verwalten.</string>
+    <string name="settings_profiles_subtitle">Benutzerprofile verwalten</string>
     <string name="settings_layout">Layout</string>
     <string name="settings_layout_subtitle">Startseite-Struktur und Poster-Stile.</string>
     <string name="settings_plugins">Plugins</string>
@@ -224,8 +224,8 @@
 <string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Debugging</string>
     <string name="settings_debug_subtitle">Entwicklertools und Feature-Flags.</string>
-    <string name="settings_plugins_section_subtitle">Repositorys, Anbieter und Plugin-Status verwalten.</string>
-    <string name="settings_account_section_subtitle">Konto und Synchronisierungsstatus.</string>
+    <string name="settings_plugins_section_subtitle">Repositorys, Anbieter und Plugin-Status verwalten</string>
+    <string name="settings_account_section_subtitle">Konto und Synchronisierungsstatus</string>
     <string name="account_stat_addons">Add-ons</string>
     <string name="account_stat_plugins">Plugins</string>
     <string name="account_stat_library">Bibliothek</string>

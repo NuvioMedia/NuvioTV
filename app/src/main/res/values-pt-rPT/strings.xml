@@ -170,9 +170,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Conta</string>
-    <string name="settings_account_subtitle">Estado da conta e sincronização.</string>
+    <string name="settings_account_subtitle">Estado da conta e sincronização</string>
     <string name="settings_profiles">Perfis</string>
-    <string name="settings_profiles_subtitle">Gerir perfis de utilizador.</string>
+    <string name="settings_profiles_subtitle">Gerir perfis de utilizador</string>
     <string name="settings_layout">Layout</string>
     <string name="settings_layout_subtitle">Estrutura do ecrã inicial e estilos de póster.</string>
     <string name="settings_plugins">Plugins</string>
@@ -201,8 +201,8 @@
     <string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Debug</string>
     <string name="settings_debug_subtitle">Ferramentas de programador e feature flags.</string>
-    <string name="settings_plugins_section_subtitle">Gerir repositórios, fornecedores e estado dos plugins.</string>
-    <string name="settings_account_section_subtitle">Estado da conta e sincronização.</string>
+    <string name="settings_plugins_section_subtitle">Gerir repositórios, fornecedores e estado dos plugins</string>
+    <string name="settings_account_section_subtitle">Estado da conta e sincronização</string>
     <string name="account_stat_addons">addons</string>
     <string name="account_stat_plugins">plugins</string>
     <string name="account_stat_library">biblioteca</string>

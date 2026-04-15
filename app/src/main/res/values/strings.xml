@@ -251,9 +251,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Account</string>
-    <string name="settings_account_subtitle">Account and sync status.</string>
+    <string name="settings_account_subtitle">Account and sync status</string>
     <string name="settings_profiles">Profiles</string>
-    <string name="settings_profiles_subtitle">Manage user profiles.</string>
+    <string name="settings_profiles_subtitle">Manage user profiles</string>
     <string name="settings_layout">Layout</string>
     <string name="settings_layout_subtitle">Home structure and poster styles.</string>
     <string name="settings_plugins">Plugins</string>
@@ -282,15 +282,15 @@
     <string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Debug</string>
     <string name="settings_debug_subtitle">Developer tools and feature flags.</string>
-    <string name="settings_plugins_section_subtitle">Manage repositories, providers, and plugin states.</string>
-    <string name="settings_account_section_subtitle">Account and sync status.</string>
+    <string name="settings_plugins_section_subtitle">Manage repositories, providers, and plugin states</string>
+    <string name="settings_account_section_subtitle">Account and sync status</string>
     <string name="account_stat_addons">addons</string>
     <string name="account_stat_plugins">plugins</string>
     <string name="account_stat_library">library</string>
     <string name="account_stat_progress">progress</string>
     <string name="account_stat_watched">watched</string>
     <string name="settings_integrations_section">Integrations</string>
-    <string name="settings_integrations_section_subtitle">Choose TMDB or MDBList</string>
+    <string name="settings_integrations_section_subtitle">Manage available integrations</string>
     <string name="settings_tmdb_subtitle">Metadata enrichment controls</string>
     <string name="settings_mdblist_subtitle">External ratings providers</string>
     <string name="settings_animeskip_subtitle">Anime intro/outro skip timestamps</string>

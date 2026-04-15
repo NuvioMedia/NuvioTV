@@ -677,6 +677,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
         stopTorrentStream()
         switchToEpisodeStreamCommon(stream, forcedTargetVideo)
         launchTorrentSourceStream(stream, infoHash, loadSavedProgress = true)
+        persistTorrentStreamForReuse(stream)
         return
     }
 

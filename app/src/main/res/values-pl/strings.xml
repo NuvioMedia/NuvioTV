@@ -123,9 +123,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Konto</string>
-    <string name="settings_account_subtitle">Status konta i synchronizacji.</string>
+    <string name="settings_account_subtitle">Status konta i synchronizacji</string>
     <string name="settings_profiles">Profile</string>
-    <string name="settings_profiles_subtitle">Zarządzaj profilami użytkowników.</string>
+    <string name="settings_profiles_subtitle">Zarządzaj profilami użytkowników</string>
     <string name="settings_layout">Układ</string>
     <string name="settings_layout_subtitle">Struktura strony głównej i style kart.</string>
     <string name="settings_plugins">Wtyczki</string>
@@ -137,8 +137,8 @@
     <string name="settings_about_subtitle">Wersja i polityki.</string>
     <string name="settings_debug">Debug</string>
     <string name="settings_debug_subtitle">Narzędzia deweloperskie i flagi funkcji.</string>
-    <string name="settings_plugins_section_subtitle">Zarządzaj repozytoriami, dostawcami i stanami wtyczek.</string>
-    <string name="settings_account_section_subtitle">Status konta i synchronizacji.</string>
+    <string name="settings_plugins_section_subtitle">Zarządzaj repozytoriami, dostawcami i stanami wtyczek</string>
+    <string name="settings_account_section_subtitle">Status konta i synchronizacji</string>
     <string name="account_stat_addons">dodatki</string>
     <string name="account_stat_plugins">wtyczki</string>
     <string name="account_stat_library">biblioteka</string>

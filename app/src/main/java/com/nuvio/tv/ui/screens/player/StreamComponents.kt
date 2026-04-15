@@ -38,6 +38,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.key
@@ -244,6 +245,10 @@ internal fun AddonFilterChips(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
         modifier = Modifier
+            .focusRestorer {
+                val idx = selectedIndex.coerceIn(0, focusRequesters.lastIndex)
+                focusRequesters[idx]
+            }
             .onFocusChanged { chipRowHasFocus = it.hasFocus }
             .onKeyEvent { event ->
                 if (event.nativeKeyEvent.action != android.view.KeyEvent.ACTION_DOWN) return@onKeyEvent false

@@ -146,7 +146,8 @@ fun ModernHomeContent(
     onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> },
     onItemFocus: (MetaPreview) -> Unit = {},
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
-    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
+    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit,
+    rowBuildCache: ModernCarouselRowBuildCache = remember { ModernCarouselRowBuildCache() }
 ) {
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val isSidebarExpanded = LocalSidebarExpanded.current
@@ -196,7 +197,6 @@ fun ModernHomeContent(
     val strUpcoming = stringResource(R.string.cw_upcoming)
     val strTypeMovie = stringResource(R.string.type_movie)
     val strTypeSeries = stringResource(R.string.type_series)
-    val rowBuildCache = remember { ModernCarouselRowBuildCache() }
     val context = LocalContext.current
     val carouselRows = remember(
         uiState.continueWatchingItems,
