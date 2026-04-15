@@ -189,7 +189,7 @@
     <string name="account_stat_progress">pågående</string>
     <string name="account_stat_watched">sedd</string>
     <string name="settings_integrations_section">Integrationer</string>
-    <string name="settings_integrations_section_subtitle">Välj TMDB eller MDBList inställningar</string>
+    <string name="settings_integrations_section_subtitle">Hantera tillgängliga integrationer</string>
     <string name="settings_tmdb_subtitle">Metadataberikning</string>
     <string name="settings_mdblist_subtitle">Externa betygsläggare</string>
     <string name="settings_animeskip_subtitle">Tidsstämplar för att hoppa över anime-intro/outro</string>

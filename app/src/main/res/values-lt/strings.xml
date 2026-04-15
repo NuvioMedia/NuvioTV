@@ -171,7 +171,7 @@
     <string name="settings_layout_subtitle">Pradinio ekrano struktūra ir plakatų stiliai.</string>
     <string name="settings_plugins">Įskiepiai</string>
     <string name="settings_plugins_subtitle">Repozitorijos ir teikėjai.</string>
-    <string name="settings_integration">Integracija</string>
+    <string name="settings_integration">Integracijos</string>
     <string name="settings_playback">Atkūrimas</string>
     <string name="settings_playback_subtitle">Grotuvas, subtitrai ir automatinis paleidimas.</string>
     <string name="settings_trakt_subtitle">Atidaryti „Trakt“ ryšio ekraną.</string>
@@ -186,7 +186,7 @@
     <string name="account_stat_progress">pažanga</string>
     <string name="account_stat_watched">žiūrėta</string>
     <string name="settings_integrations_section">Integracijos</string>
-    <string name="settings_integrations_section_subtitle">Pasirinkite TMDB arba MDBList</string>
+    <string name="settings_integrations_section_subtitle">Tvarkyti turimas integracijas</string>
     <string name="settings_tmdb_subtitle">Metaduomenų praturtinimo valdikliai</string>
     <string name="settings_mdblist_subtitle">Išoriniai įvertinimų teikėjai</string>
     <string name="settings_animeskip_subtitle">„Anime Skip“ intro/outro praleidimo laiko žymos</string>

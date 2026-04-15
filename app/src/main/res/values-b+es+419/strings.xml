@@ -258,7 +258,7 @@
     <string name="settings_layout_subtitle">Estructura de inicio y estilos de pósteres.</string>
     <string name="settings_plugins">Plugins</string>
     <string name="settings_plugins_subtitle">Repositorios y proveedores.</string>
-    <string name="settings_integration">Integración</string>
+    <string name="settings_integration">Integraciones</string>
     <string name="settings_playback">Reproducción</string>
     <string name="settings_playback_subtitle">Reproductor, subtítulos y auto-reproducción.</string>
     <string name="settings_trakt_subtitle">Abrir pantalla de conexión con Trakt.</string>
@@ -290,7 +290,7 @@
     <string name="account_stat_progress">progreso</string>
     <string name="account_stat_watched">vistos</string>
     <string name="settings_integrations_section">Integraciones</string>
-    <string name="settings_integrations_section_subtitle">Elegir configuraciones de TMDB o MDBList</string>
+    <string name="settings_integrations_section_subtitle">Administrar integraciones disponibles</string>
     <string name="settings_tmdb_subtitle">Controles de enriquecimiento de metadatos</string>
     <string name="settings_mdblist_subtitle">Proveedores de calificaciones externos</string>
     <string name="settings_animeskip_subtitle">Marcas de tiempo para omitir intro/outro de anime</string>

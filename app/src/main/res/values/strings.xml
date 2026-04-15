@@ -258,7 +258,7 @@
     <string name="settings_layout_subtitle">Home structure and poster styles.</string>
     <string name="settings_plugins">Plugins</string>
     <string name="settings_plugins_subtitle">Repositories and providers.</string>
-    <string name="settings_integration">Integration</string>
+    <string name="settings_integration">Integrations</string>
     <string name="settings_playback">Playback</string>
     <string name="settings_playback_subtitle">Player, subtitles, and auto-play.</string>
     <string name="settings_trakt_subtitle">Open Trakt connection screen.</string>

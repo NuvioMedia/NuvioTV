@@ -144,7 +144,7 @@
     <string name="account_stat_progress">tiến độ</string>
     <string name="account_stat_watched">đã xem</string>
     <string name="settings_integrations_section">Tích hợp</string>
-    <string name="settings_integrations_section_subtitle">Chọn TMDB hoặc MDBList</string>
+    <string name="settings_integrations_section_subtitle">Quản lý các tích hợp có sẵn</string>
     <string name="settings_tmdb_subtitle">Tuỳ chỉnh bổ sung metadata</string>
     <string name="settings_mdblist_subtitle">Nhà cung cấp xếp hạng bên ngoài</string>
     <string name="settings_animeskip_subtitle">Dấu thời gian bỏ qua intro/outro anime</string>

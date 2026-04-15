@@ -237,7 +237,7 @@
     <string name="settings_layout_subtitle">Ana sayfa düzeni ve poster stilleri.</string>
     <string name="settings_plugins">Uzantılar</string>
     <string name="settings_plugins_subtitle">Depolar ve sağlayıcılar.</string>
-    <string name="settings_integration">Entegrasyon</string>
+    <string name="settings_integration">Entegrasyonlar</string>
     <string name="settings_playback">Oynatma</string>
     <string name="settings_playback_subtitle">Oynatıcı, altyazılar ve otomatik oynatma.</string>
     <string name="settings_trakt_subtitle">Trakt bağlantı ekranını aç.</string>
@@ -269,7 +269,7 @@
     <string name="account_stat_progress">ilerleme</string>
     <string name="account_stat_watched">izlenen</string>
     <string name="settings_integrations_section">Entegrasyonlar</string>
-    <string name="settings_integrations_section_subtitle">TMDB veya MDBList ayarlarını seçin</string>
+    <string name="settings_integrations_section_subtitle">Mevcut entegrasyonları yönet</string>
     <string name="settings_tmdb_subtitle">Meta veri zenginleştirme kontrolleri</string>
     <string name="settings_mdblist_subtitle">Harici değerlendirme sağlayıcıları</string>
     <string name="settings_animeskip_subtitle">Anime jeneriklerini (intro/outro) otomatik atlama ayarları</string>

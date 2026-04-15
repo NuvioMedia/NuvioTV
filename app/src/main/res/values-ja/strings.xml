@@ -233,7 +233,7 @@
     <string name="account_stat_progress">進行状況</string>
     <string name="account_stat_watched">視聴済み</string>
     <string name="settings_integrations_section">連携</string>
-    <string name="settings_integrations_section_subtitle">TMDBまたはMDBListの設定</string>
+    <string name="settings_integrations_section_subtitle">利用可能な連携を管理</string>
     <string name="settings_tmdb_subtitle">メタデータ補完の設定</string>
     <string name="settings_mdblist_subtitle">外部評価プロバイダー</string>
     <string name="settings_animeskip_subtitle">アニメのイントロ/アウトロスキップのタイムスタンプ</string>

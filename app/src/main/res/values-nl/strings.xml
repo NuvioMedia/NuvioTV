@@ -144,7 +144,7 @@
 <string name="account_stat_progress">voortgang</string>
 <string name="account_stat_watched">bekeken</string>
 <string name="settings_integrations_section">Integraties</string>
-<string name="settings_integrations_section_subtitle">Kies TMDB of MDBList</string>
+<string name="settings_integrations_section_subtitle">Beheer beschikbare integraties</string>
 <string name="settings_tmdb_subtitle">Instellingen voor metadata-verrijking</string>
 <string name="settings_mdblist_subtitle">Externe beoordelingsproviders</string>
 <string name="settings_animeskip_subtitle">Tijdstempels voor intro-/outro-overslaan bij anime</string>

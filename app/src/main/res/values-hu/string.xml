@@ -200,7 +200,7 @@
     <string name="settings_layout_subtitle">Kezdőlap szerkezete és poszter stílusok.</string>
     <string name="settings_plugins">Beépülő modulok</string>
     <string name="settings_plugins_subtitle">Tárhelyek és szolgáltatók.</string>
-    <string name="settings_integration">Integráció</string>
+    <string name="settings_integration">Integrációk</string>
     <string name="settings_playback">Lejátszás</string>
     <string name="settings_playback_subtitle">Lejátszó, feliratok és automatikus lejátszás.</string>
     <string name="settings_trakt_subtitle">Trakt kapcsolat beállítása.</string>
@@ -232,7 +232,7 @@
     <string name="account_stat_progress">folyamatban</string>
     <string name="account_stat_watched">megnézve</string>
     <string name="settings_integrations_section">Integrációk</string>
-    <string name="settings_integrations_section_subtitle">TMDB vagy MDBList beállítások</string>
+    <string name="settings_integrations_section_subtitle">Elérhető integrációk kezelése</string>
     <string name="settings_tmdb_subtitle">Metaadat-bővítési beállítások</string>
     <string name="settings_mdblist_subtitle">Külső értékelési szolgáltatók</string>
     <string name="settings_animeskip_subtitle">Anime intro/outro átugrási időbélyegek</string>

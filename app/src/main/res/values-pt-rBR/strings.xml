@@ -290,7 +290,7 @@
     <string name="account_stat_progress">progresso</string>
     <string name="account_stat_watched">assistidos</string>
     <string name="settings_integrations_section">Integrações</string>
-    <string name="settings_integrations_section_subtitle">Configurar TMDB ou MDBList</string>
+    <string name="settings_integrations_section_subtitle">Gerenciar integrações disponíveis</string>
     <string name="settings_tmdb_subtitle">Enriquecimento de metadados</string>
     <string name="settings_mdblist_subtitle">Provedores de avaliações externas</string>
     <string name="settings_animeskip_subtitle">Pular introduções/créditos de animes</string>
