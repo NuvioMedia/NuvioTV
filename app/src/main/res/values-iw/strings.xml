@@ -1022,8 +1022,8 @@
     <string name="sub_ai_enabled_sub">תרגום כתוביות מובנות באמצעות AI</string>
     <string name="sub_ai_target_lang">שפת יעד</string>
     <string name="sub_ai_target_lang_sub">שפה לתרגום הכתוביות אליה</string>
-    <string name="sub_ai_auto_select">בחירה אוטומטית של AI</string>
-    <string name="sub_ai_auto_select_sub">הפעל תרגום AI אוטומטית בתחילת ניגון</string>
+    <string name="sub_ai_auto_select">העדף כתוביות AI על פני תוספים</string>
+    <string name="sub_ai_auto_select_sub">הפעל תרגום AI אוטומטית בתחילת ניגון כאשר אין כתוביות מובנות זמינות</string>
     <string name="sub_remove_hearing_impaired">הסרת הערות לקויי שמיעה</string>
     <string name="sub_remove_hearing_impaired_sub">הסר [תיאורי צלילים] מכתוביות מתורגמות על ידי AI</string>
     <string name="sub_ai_api_key">מפתח Gemini API</string>

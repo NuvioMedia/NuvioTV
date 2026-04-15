@@ -428,8 +428,8 @@
     <string name="sub_ai_enabled_sub">Translate built-in subtitles using AI</string>
     <string name="sub_ai_target_lang">Target Language</string>
     <string name="sub_ai_target_lang_sub">Language to translate subtitles into</string>
-    <string name="sub_ai_auto_select">Auto select AI</string>
-    <string name="sub_ai_auto_select_sub">Automatically activate AI translation on playback start</string>
+    <string name="sub_ai_auto_select">Prefer AI subtitles over addons</string>
+    <string name="sub_ai_auto_select_sub">Automatically activate AI translation on playback start when no built-in subtitle is available</string>
     <string name="sub_remove_hearing_impaired">Remove Hearing Impaired Annotations</string>
     <string name="sub_remove_hearing_impaired_sub">Strip [sound descriptions] from AI-translated subtitles</string>
     <string name="sub_ai_api_key">Gemini API Key</string>
