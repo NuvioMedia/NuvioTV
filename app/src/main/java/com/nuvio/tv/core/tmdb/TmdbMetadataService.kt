@@ -300,7 +300,9 @@ class TmdbMetadataService @Inject constructor(
                     countries = countries,
                     language = language,
                     collectionId = collectionId,
-                    collectionName = collectionName
+                    collectionName = collectionName,
+                    budget = details?.budget,
+                    revenue = details?.revenue
                 )
                 enrichmentCache[cacheKey] = enrichment
                 requestDeferred.complete(enrichment)
@@ -1145,7 +1147,9 @@ data class TmdbEnrichment(
     val countries: List<String>?,
     val language: String?,
     val collectionId: Int?,
-    val collectionName: String?
+    val collectionName: String?,
+    val budget: Long?,
+    val revenue: Long?
 )
 
 data class TmdbEpisodeEnrichment(

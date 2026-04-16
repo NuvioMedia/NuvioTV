@@ -322,6 +322,50 @@ fun HeroContentSection(
                     }
 
                     MetaInfoRow(meta = meta, hideImdbRating = hideMetaInfoImdb, showFullReleaseDate = showFullReleaseDate)
+
+                    if (meta.budget != null && meta.budget > 0) {
+                        val formatCurrency = remember {
+                            { amount: Long ->
+                                when {
+                                    amount >= 1_000_000_000 -> "\$${String.format(java.util.Locale.US, "%.1f", amount / 1_000_000_000.0)}B"
+                                    amount >= 1_000_000 -> "\$${String.format(java.util.Locale.US, "%.0f", amount / 1_000_000.0)}M"
+                                    else -> java.text.NumberFormat.getCurrencyInstance(java.util.Locale.US).apply { maximumFractionDigits = 0 }.format(amount)
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(24.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Budget",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = NuvioTheme.extendedColors.textSecondary
+                                )
+                                Text(
+                                    text = formatCurrency(meta.budget),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = NuvioColors.TextPrimary
+                                )
+                            }
+                            if (meta.revenue != null && meta.revenue > 0) {
+                                Column {
+                                    Text(
+                                        text = "Revenue",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = NuvioTheme.extendedColors.textSecondary
+                                    )
+                                    Text(
+                                        text = formatCurrency(meta.revenue),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = NuvioColors.TextPrimary
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -625,6 +669,7 @@ private fun MetaInfoRow(
     val secondaryItems = remember(runtimeText, meta.country, meta.language) {
         buildList<String> {
             runtimeText?.takeIf { it.isNotBlank() }?.let { add(it) }
+
             meta.country?.trim()?.takeIf { it.isNotBlank() }?.let { add(normalizeCountryLabel(it)) }
             meta.language?.trim()?.takeIf { it.isNotBlank() }?.let { add(it.uppercase()) }
         }

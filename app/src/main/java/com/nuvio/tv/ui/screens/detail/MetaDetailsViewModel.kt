@@ -1100,7 +1100,9 @@ class MetaDetailsViewModel @Inject constructor(
                 status = enrichment.status ?: updated.status,
                 ageRating = enrichment.ageRating ?: updated.ageRating,
                 country = enrichment.countries?.joinToString(", ") ?: updated.country,
-                language = enrichment.language ?: updated.language
+                language = enrichment.language ?: updated.language,
+                budget = enrichment.budget ?: updated.budget,
+                revenue = enrichment.revenue ?: updated.revenue
             )
         }
 
