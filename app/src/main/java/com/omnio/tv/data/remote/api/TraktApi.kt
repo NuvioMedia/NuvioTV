@@ -1,0 +1,298 @@
+package com.omnio.tv.data.remote.api
+
+import com.omnio.tv.data.remote.dto.trakt.TraktDeviceCodeRequestDto
+import com.omnio.tv.data.remote.dto.trakt.TraktDeviceCodeResponseDto
+import com.omnio.tv.data.remote.dto.trakt.TraktDeviceTokenRequestDto
+import com.omnio.tv.data.remote.dto.trakt.TraktLastActivitiesResponseDto
+import com.omnio.tv.data.remote.dto.trakt.TraktHistoryRemoveRequestDto
+import com.omnio.tv.data.remote.dto.trakt.TraktHistoryRemoveResponseDto
+import com.omnio.tv.data.remote.dto.trakt.TraktHistoryAddRequestDto
+import com.omnio.tv.data.remote.dto.trakt.TraktHistoryAddResponseDto
+import com.omnio.tv.data.remote.dto.trakt.TraktHistoryItemDto
+import com.omnio.tv.data.remote.dto.trakt.TraktCommentDto
+import com.omnio.tv.data.remote.dto.trakt.TraktCreateOrUpdateListRequestDto
+import com.omnio.tv.data.remote.dto.trakt.TraktListItemDto
+import com.omnio.tv.data.remote.dto.trakt.TraktListItemsMutationRequestDto
+import com.omnio.tv.data.remote.dto.trakt.TraktListItemsMutationResponseDto
+import com.omnio.tv.data.remote.dto.trakt.TraktListSummaryDto
+import com.omnio.tv.data.remote.dto.trakt.TraktMovieDto
+import com.omnio.tv.data.remote.dto.trakt.TraktPlaybackItemDto
+import com.omnio.tv.data.remote.dto.trakt.TraktReorderListsRequestDto
+import com.omnio.tv.data.remote.dto.trakt.TraktReorderListsResponseDto
+import com.omnio.tv.data.remote.dto.trakt.TraktRefreshTokenRequestDto
+import com.omnio.tv.data.remote.dto.trakt.TraktRevokeRequestDto
+import com.omnio.tv.data.remote.dto.trakt.TraktScrobbleRequestDto
+import com.omnio.tv.data.remote.dto.trakt.TraktScrobbleResponseDto
+import com.omnio.tv.data.remote.dto.trakt.TraktSearchResultDto
+import com.omnio.tv.data.remote.dto.trakt.TraktSeasonDto
+import com.omnio.tv.data.remote.dto.trakt.TraktShowDto
+import com.omnio.tv.data.remote.dto.trakt.TraktShowProgressResponseDto
+import com.omnio.tv.data.remote.dto.trakt.TraktTokenResponseDto
+import com.omnio.tv.data.remote.dto.trakt.TraktUserEpisodeHistoryItemDto
+import com.omnio.tv.data.remote.dto.trakt.TraktUserSettingsResponseDto
+import com.omnio.tv.data.remote.dto.trakt.TraktUserStatsResponseDto
+import com.omnio.tv.data.remote.dto.trakt.TraktWatchedMovieItemDto
+import com.omnio.tv.data.remote.dto.trakt.TraktWatchedShowItemDto
+import com.omnio.tv.data.remote.dto.trakt.TraktHiddenItemDto
+import retrofit2.Response
+import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.GET
+import retrofit2.http.Header
+import retrofit2.http.HTTP
+import retrofit2.http.POST
+import retrofit2.http.Path
+import retrofit2.http.PUT
+import retrofit2.http.Query
+
+interface TraktApi {
+
+    @POST("oauth/device/code")
+    suspend fun requestDeviceCode(
+        @Body body: TraktDeviceCodeRequestDto
+    ): Response<TraktDeviceCodeResponseDto>
+
+    @POST("oauth/device/token")
+    suspend fun requestDeviceToken(
+        @Body body: TraktDeviceTokenRequestDto
+    ): Response<TraktTokenResponseDto>
+
+    @POST("oauth/token")
+    suspend fun refreshToken(
+        @Body body: TraktRefreshTokenRequestDto
+    ): Response<TraktTokenResponseDto>
+
+    @POST("oauth/revoke")
+    suspend fun revokeToken(
+        @Body body: TraktRevokeRequestDto
+    ): Response<Unit>
+
+    @GET("users/settings")
+    suspend fun getUserSettings(
+        @Header("Authorization") authorization: String
+    ): Response<TraktUserSettingsResponseDto>
+
+    @GET("users/{id}/stats")
+    suspend fun getUserStats(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String
+    ): Response<TraktUserStatsResponseDto>
+
+    @POST("scrobble/start")
+    suspend fun scrobbleStart(
+        @Header("Authorization") authorization: String,
+        @Body body: TraktScrobbleRequestDto
+    ): Response<TraktScrobbleResponseDto>
+
+    @POST("scrobble/stop")
+    suspend fun scrobbleStop(
+        @Header("Authorization") authorization: String,
+        @Body body: TraktScrobbleRequestDto
+    ): Response<TraktScrobbleResponseDto>
+
+    @GET("sync/last_activities")
+    suspend fun getLastActivities(
+        @Header("Authorization") authorization: String
+    ): Response<TraktLastActivitiesResponseDto>
+
+    @GET("sync/playback/{type}")
+    suspend fun getPlayback(
+        @Header("Authorization") authorization: String,
+        @Path("type") type: String,
+        @Query("start_at") startAt: String? = null,
+        @Query("end_at") endAt: String? = null
+    ): Response<List<TraktPlaybackItemDto>>
+
+    @GET("sync/watched/{type}")
+    suspend fun getWatched(
+        @Header("Authorization") authorization: String,
+        @Path("type") type: String,
+        @Query("extended") extended: String? = null
+    ): Response<List<TraktWatchedMovieItemDto>>
+
+    @GET("sync/watched/shows")
+    suspend fun getWatchedShows(
+        @Header("Authorization") authorization: String,
+        @Query("extended") extended: String? = null
+    ): Response<List<TraktWatchedShowItemDto>>
+
+    @GET("users/hidden/{section}")
+    suspend fun getHiddenItems(
+        @Header("Authorization") authorization: String,
+        @Path("section") section: String,
+        @Query("type") type: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<List<TraktHiddenItemDto>>
+
+    @GET("sync/history/episodes")
+    suspend fun getEpisodeHistory(
+        @Header("Authorization") authorization: String,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100,
+        @Query("start_at") startAt: String? = null,
+        @Query("end_at") endAt: String? = null
+    ): Response<List<TraktUserEpisodeHistoryItemDto>>
+
+    @POST("sync/history")
+    suspend fun addHistory(
+        @Header("Authorization") authorization: String,
+        @Body body: TraktHistoryAddRequestDto
+    ): Response<TraktHistoryAddResponseDto>
+
+    @GET("sync/history/{type}/{id}")
+    suspend fun getHistoryById(
+        @Header("Authorization") authorization: String,
+        @Path("type") type: String,
+        @Path("id") id: String
+    ): Response<List<TraktHistoryItemDto>>
+
+    @GET("shows/{id}/progress/watched")
+    suspend fun getShowProgressWatched(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Query("hidden") hidden: Boolean = false,
+        @Query("specials") specials: Boolean = false,
+        @Query("count_specials") countSpecials: Boolean = false
+    ): Response<TraktShowProgressResponseDto>
+
+    @GET("shows/{id}/seasons")
+    suspend fun getShowSeasons(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Query("extended") extended: String? = null
+    ): Response<List<TraktSeasonDto>>
+
+    @GET("movies/{id}/comments/{sort}")
+    suspend fun getMovieComments(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Path("sort") sort: String = "likes",
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 10
+    ): Response<List<TraktCommentDto>>
+
+    @GET("shows/{id}/comments/{sort}")
+    suspend fun getShowComments(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Path("sort") sort: String = "likes",
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 10
+    ): Response<List<TraktCommentDto>>
+
+    @GET("movies/{id}/related")
+    suspend fun getMovieRelated(
+        @Header("Authorization") authorization: String? = null,
+        @Path("id") id: String,
+        @Query("extended") extended: String = "full,images",
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Response<List<TraktMovieDto>>
+
+    @GET("shows/{id}/related")
+    suspend fun getShowRelated(
+        @Header("Authorization") authorization: String? = null,
+        @Path("id") id: String,
+        @Query("extended") extended: String = "full,images",
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Response<List<TraktShowDto>>
+
+    @GET("search/{id_type}/{id}")
+    suspend fun searchById(
+        @Header("Authorization") authorization: String,
+        @Path("id_type") idType: String,
+        @Path("id") id: String,
+        @Query("type") type: String
+    ): Response<List<TraktSearchResultDto>>
+
+    @DELETE("sync/playback/{id}")
+    suspend fun deletePlayback(
+        @Header("Authorization") authorization: String,
+        @Path("id") playbackId: Long
+    ): Response<Unit>
+
+    @HTTP(method = "POST", path = "sync/history/remove", hasBody = true)
+    suspend fun removeHistory(
+        @Header("Authorization") authorization: String,
+        @Body body: TraktHistoryRemoveRequestDto
+    ): Response<TraktHistoryRemoveResponseDto>
+
+    @GET("users/{id}/lists")
+    suspend fun getUserLists(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String
+    ): Response<List<TraktListSummaryDto>>
+
+    @POST("users/{id}/lists")
+    suspend fun createUserList(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Body body: TraktCreateOrUpdateListRequestDto
+    ): Response<TraktListSummaryDto>
+
+    @PUT("users/{id}/lists/{list_id}")
+    suspend fun updateUserList(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Path("list_id") listId: String,
+        @Body body: TraktCreateOrUpdateListRequestDto
+    ): Response<TraktListSummaryDto>
+
+    @DELETE("users/{id}/lists/{list_id}")
+    suspend fun deleteUserList(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Path("list_id") listId: String
+    ): Response<Unit>
+
+    @POST("users/{id}/lists/reorder")
+    suspend fun reorderUserLists(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Body body: TraktReorderListsRequestDto
+    ): Response<TraktReorderListsResponseDto>
+
+    @GET("users/{id}/lists/{list_id}/items/{type}")
+    suspend fun getUserListItems(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Path("list_id") listId: String,
+        @Path("type") type: String
+    ): Response<List<TraktListItemDto>>
+
+    @POST("users/{id}/lists/{list_id}/items")
+    suspend fun addUserListItems(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Path("list_id") listId: String,
+        @Body body: TraktListItemsMutationRequestDto
+    ): Response<TraktListItemsMutationResponseDto>
+
+    @POST("users/{id}/lists/{list_id}/items/remove")
+    suspend fun removeUserListItems(
+        @Header("Authorization") authorization: String,
+        @Path("id") id: String,
+        @Path("list_id") listId: String,
+        @Body body: TraktListItemsMutationRequestDto
+    ): Response<TraktListItemsMutationResponseDto>
+
+    @GET("sync/watchlist/{type}")
+    suspend fun getWatchlist(
+        @Header("Authorization") authorization: String,
+        @Path("type") type: String
+    ): Response<List<TraktListItemDto>>
+
+    @POST("sync/watchlist")
+    suspend fun addToWatchlist(
+        @Header("Authorization") authorization: String,
+        @Body body: TraktListItemsMutationRequestDto
+    ): Response<TraktListItemsMutationResponseDto>
+
+    @POST("sync/watchlist/remove")
+    suspend fun removeFromWatchlist(
+        @Header("Authorization") authorization: String,
+        @Body body: TraktListItemsMutationRequestDto
+    ): Response<TraktListItemsMutationResponseDto>
+}

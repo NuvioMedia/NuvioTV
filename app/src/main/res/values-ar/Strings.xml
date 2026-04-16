@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Nuvio</string>
+    <string name="app_name">Omnio</string>
     <string name="type_movie">فيلم</string>
     <string name="type_series">مسلسل</string>
     <string name="type_unknown">غير معروف</string>
@@ -7,7 +7,7 @@
     <!-- HomeScreen -->
     <string name="home_no_addons">لا توجد إضافات مثبتة. أضف إضافة واحدة للبدء.</string>
     <string name="home_no_catalog_addons">لا توجد إضافات قوائم عرض مثبتة. ثبت واحدة لعرض المحتوى.</string>
-    <string name="auth_notice_nuvio_logged_out">تم تسجيل خروجك من Nuvio. يرجى تسجيل الدخول مرة أخرى.</string>
+    <string name="auth_notice_omnio_logged_out">تم تسجيل خروجك من Omnio. يرجى تسجيل الدخول مرة أخرى.</string>
     <string name="auth_notice_trakt_logged_out">تم تسجيل خروجك من Trakt. يرجى إعادة الاتصال.</string>
     <string name="error_generic">حدث خطأ</string>
 
@@ -248,12 +248,12 @@
 
     <!-- SupportersContributorsScreen -->
     <string name="supporters_contributors_title">الداعمون &amp; المساهمون</string>
-    <string name="supporters_contributors_subtitle">الأشخاص الداعمون لـ Nuvio والمساهمون في بنائه عبر التلفاز والهاتف.</string>
+    <string name="supporters_contributors_subtitle">الأشخاص الداعمون لـ Omnio والمساهمون في بنائه عبر التلفاز والهاتف.</string>
     <string name="supporters_contributors_supporters_copy">يساعد الداعمون والمتبرعون في استمرار المشروع وتمويل البنية التحتية وإفساح المجال للميزات الطموحة.</string>
-    <string name="supporters_contributors_donate_copy">سيبقى Nuvio مجانياً ومفتوح المصدر. إذا كنت ترغب في دعم المشروع، يمكنك المساعدة في تغطية تكاليف الوقت والبنية التحتية.</string>
-    <string name="supporters_contributors_donate_button">التبرع لـ Nuvio</string>
+    <string name="supporters_contributors_donate_copy">سيبقى Omnio مجانياً ومفتوح المصدر. إذا كنت ترغب في دعم المشروع، يمكنك المساعدة في تغطية تكاليف الوقت والبنية التحتية.</string>
+    <string name="supporters_contributors_donate_button">التبرع لـ Omnio</string>
     <string name="supporters_contributors_qr_title">امسح للتبرع</string>
-    <string name="supporters_contributors_qr_subtitle">افتح الرابط على هاتفك وادعم Nuvio عبر Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">افتح الرابط على هاتفك وادعم Omnio عبر Ko-fi.</string>
     <string name="supporters_contributors_qr_hint">وجه كاميرتك نحو رمز QR أو استخدم الزر أدناه.</string>
     <string name="supporters_contributors_back_button">العودة للتفاصيل</string>
     <string name="supporters_tab">الداعمون</string>
@@ -598,13 +598,13 @@
     <string name="trakt_watch_progress_title">مستوى المشاهدة</string>
     <string name="trakt_watch_progress_subtitle">اختر مصدر مستوى المشاهدة الذي يتحكم في الاستئناف ومتابعة المشاهدة</string>
     <string name="trakt_watch_progress_dialog_title">مستوى المشاهدة</string>
-    <string name="trakt_watch_progress_dialog_subtitle">اختر ما إذا كان الاستئناف ومتابعة المشاهدة سيستخدم Trakt أم مزامنة Nuvio، بينما تظل سجلات Trakt مفعلة.</string>
+    <string name="trakt_watch_progress_dialog_subtitle">اختر ما إذا كان الاستئناف ومتابعة المشاهدة سيستخدم Trakt أم مزامنة Omnio، بينما تظل سجلات Trakt مفعلة.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
-    <string name="trakt_watch_progress_source_nuvio">مزامنة Nuvio</string>
+    <string name="trakt_watch_progress_source_omnio">مزامنة Omnio</string>
     <string name="trakt_setting_on">مفعل</string>
     <string name="trakt_setting_off">معطل</string>
     <string name="trakt_watch_progress_trakt_selected">تم تعيين مصدر مستوى المشاهدة إلى Trakt</string>
-    <string name="trakt_watch_progress_nuvio_selected">تم تعيين مصدر مستوى المشاهدة إلى مزامنة Nuvio</string>
+    <string name="trakt_watch_progress_omnio_selected">تم تعيين مصدر مستوى المشاهدة إلى مزامنة Omnio</string>
     <string name="trakt_continue_watching_window">نافذة متابعة المشاهدة</string>
     <string name="trakt_continue_watching_subtitle">تاريخ Trakt المعتمد لمتابعة المشاهدة</string>
     <string name="trakt_unaired_next_up">الحلقات التالية التي لم تعرض بعد</string>
@@ -626,7 +626,7 @@
     <string name="trakt_stat_watched_hours">ساعات المشاهدة</string>
     <string name="trakt_disconnect">قطع الاتصال</string>
     <string name="trakt_disconnect_title">قطع اتصال Trakt؟</string>
-    <string name="trakt_disconnect_subtitle">سيؤدي هذا لقطع اتصال حساب Trakt عن Nuvio.</string>
+    <string name="trakt_disconnect_subtitle">سيؤدي هذا لقطع اتصال حساب Trakt عن Omnio.</string>
     <string name="trakt_login">تسجيل الدخول</string>
     <string name="trakt_retry">إعادة المحاولة</string>
     <string name="trakt_back">رجوع</string>
@@ -731,7 +731,7 @@
     <string name="profile_pin_overlay_set_support">سيكون هذا الرمز مطلوباً قبل فتح هذا الملف الشخصي.</string>
     <string name="profile_pin_overlay_confirm_support">أعد إدخال نفس الـ 4 أرقام لإنهاء الإعداد.</string>
     <string name="profile_pin_overlay_mismatch">رموز PIN غير متطابقة. أدخل رمزاً جديداً مرة أخرى.</string>
-    <string name="profile_pin_overlay_forgot_hint">نسيت رمز PIN؟ أعد تعيينه من حساب Nuvio الخاص بك على موقع nuvio.</string>
+    <string name="profile_pin_overlay_forgot_hint">نسيت رمز PIN؟ أعد تعيينه من حساب Omnio الخاص بك على موقع omnio.</string>
     <string name="profile_pin_overlay_back_hint">اضغط رجوع للإلغاء</string>
 
 
@@ -991,7 +991,7 @@
     <string name="library_delete_subtitle">سيؤدي هذا لحذف القائمة وجميع عناصرها من Trakt.</string>
     <string name="library_delete_confirm">حذف</string>
     <string name="library_source_local">محلي</string>
-    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_omnio">NUVIO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">جاري مزامنة المكتبة\u2026</string>
     <string name="library_type_all">الكل</string>
@@ -1014,8 +1014,8 @@
 
     <!-- AuthSignInScreen -->
     <string name="auth_signin_title">تسجيل الدخول</string>
-    <string name="auth_signin_tv_disabled">إدخال البريد/كلمة السر على التلفاز معطل. تابع عبر رمز QR.</string>
-    <string name="auth_signin_qr_btn">المتابعة عبر QR</string>
+    <string name="auth_signin_tv_enabled">إدخال البريد/كلمة السر على التلفاز معطل. تابع عبر رمز QR.</string>
+    <string name="auth_signin_hint">المتابعة عبر QR</string>
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">الدخول برمز QR</string>
@@ -1105,7 +1105,7 @@
     <string name="catalog_see_all_empty_subtitle">جرب فئة أخرى أو تفقدها لاحقاً</string>
 
     <!-- LayoutSelectionScreen -->
-    <string name="layout_selection_welcome">مرحباً بك في Nuvio</string>
+    <string name="layout_selection_welcome">مرحباً بك في Omnio</string>
     <string name="layout_selection_subtitle">اختر تنسيق شاشتك الرئيسية</string>
     <string name="layout_selection_continue">متابعة</string>
 
@@ -1117,7 +1117,7 @@
     <string name="update_unknown_sources">اسمح بتثبيت التطبيقات من مصادر غير معروفة للمتابعة.</string>
     <!-- AccountScreen -->
     <string name="account_title">الحساب</string>
-    <string name="account_sign_in_description">سجل دخولك لمزامنة مكتبتك، وتقدم المشاهدة، والإضافات، والملحقات عبر أجهزتك. تستخدم مزامنة المكتبة Nuvio Sync عندما يكون Trakt غير متصل، ويمكن لمستوى المشاهدة استخدام Trakt أو مزامنة Nuvio.</string>
+    <string name="account_sign_in_description">سجل دخولك لمزامنة مكتبتك، وتقدم المشاهدة، والإضافات، والملحقات عبر أجهزتك. تستخدم مزامنة المكتبة Omnio Sync عندما يكون Trakt غير متصل، ويمكن لمستوى المشاهدة استخدام Trakt أو مزامنة Omnio.</string>
     <string name="account_sync_code_title">رمز المزامنة</string>
     <string name="account_sync_code_description">المزامنة عبر الأجهزة دون إنشاء حساب.</string>
     <string name="account_linked_devices">الأجهزة المرتبطة (%1$d)</string>

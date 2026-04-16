@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Nuvio</string>
+    <string name="app_name">Omnio</string>
     <string name="type_movie">映画</string>
     <string name="type_series">シリーズ</string>
     <string name="type_unknown">不明</string>
@@ -7,7 +7,7 @@
     <!-- HomeScreen -->
     <string name="home_no_addons">アドオンがインストールされていません。追加して始めましょう</string>
     <string name="home_no_catalog_addons">カタログアドオンがインストールされていません。コンテンツを表示するにはカタログアドオンをインストールしてください</string>
-    <string name="auth_notice_nuvio_logged_out">Nuvioからサインアウトされました。再度サインインしてください</string>
+    <string name="auth_notice_omnio_logged_out">Omnioからサインアウトされました。再度サインインしてください</string>
     <string name="auth_notice_trakt_logged_out">Traktからサインアウトされました。再接続してください</string>
     <string name="error_generic">エラーが発生しました</string>
 
@@ -248,12 +248,12 @@
 
     <!-- SupportersContributorsScreen -->
     <string name="supporters_contributors_title">サポーター &amp; 貢献者</string>
-    <string name="supporters_contributors_subtitle">Nuvioを支援するサポーターとTV・モバイルで開発する貢献者</string>
+    <string name="supporters_contributors_subtitle">Omnioを支援するサポーターとTV・モバイルで開発する貢献者</string>
     <string name="supporters_contributors_supporters_copy">サポーターと寄付者はプロジェクトの継続を支え、インフラを維持し、新機能の実現を後押しします</string>
-    <string name="supporters_contributors_donate_copy">Nuvioは無料のオープンソースプロジェクトです。サポートしたい方は、開発・インフラの維持にご協力いただけます</string>
-    <string name="supporters_contributors_donate_button">Nuvioに寄付</string>
+    <string name="supporters_contributors_donate_copy">Omnioは無料のオープンソースプロジェクトです。サポートしたい方は、開発・インフラの維持にご協力いただけます</string>
+    <string name="supporters_contributors_donate_button">Omnioに寄付</string>
     <string name="supporters_contributors_qr_title">QRをスキャンして寄付</string>
-    <string name="supporters_contributors_qr_subtitle">スマートフォンでリンクを開き、Ko-fiでNuvioをサポート</string>
+    <string name="supporters_contributors_qr_subtitle">スマートフォンでリンクを開き、Ko-fiでOmnioをサポート</string>
     <string name="supporters_contributors_qr_hint">カメラをQRコードに向けるか、下のボタンを使用してください</string>
     <string name="supporters_contributors_back_button">詳細に戻る</string>
     <string name="supporters_tab">サポーター</string>
@@ -598,13 +598,13 @@
     <string name="trakt_watch_progress_title">視聴進行状況</string>
     <string name="trakt_watch_progress_subtitle">再開と「視聴を続ける」を管理する進行状況ソースを選択</string>
     <string name="trakt_watch_progress_dialog_title">視聴進行状況</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Traktのスクロブルが有効な間、再開と視聴を続けるにTraktとNuvio Syncのどちらを使用するか選択してください</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Traktのスクロブルが有効な間、再開と視聴を続けるにTraktとOmnio Syncのどちらを使用するか選択してください</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
-    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_source_omnio">Omnio Sync</string>
     <string name="trakt_setting_on">オン</string>
     <string name="trakt_setting_off">オフ</string>
     <string name="trakt_watch_progress_trakt_selected">視聴進行状況ソースをTraktに設定しました</string>
-    <string name="trakt_watch_progress_nuvio_selected">視聴進行状況ソースをNuvio Syncに設定しました</string>
+    <string name="trakt_watch_progress_omnio_selected">視聴進行状況ソースをOmnio Syncに設定しました</string>
     <string name="trakt_continue_watching_window">視聴継続ウィンドウ</string>
     <string name="trakt_continue_watching_subtitle">「視聴を続ける」に表示するTraktの履歴期間</string>
     <string name="trakt_unaired_next_up">未放送の次のエピソード</string>
@@ -626,7 +626,7 @@
     <string name="trakt_stat_watched_hours">視聴時間</string>
     <string name="trakt_disconnect">切断</string>
     <string name="trakt_disconnect_title">Traktを切断しますか？</string>
-    <string name="trakt_disconnect_subtitle">NuvioからTraktアカウントが切断されます</string>
+    <string name="trakt_disconnect_subtitle">OmnioからTraktアカウントが切断されます</string>
     <string name="trakt_login">ログイン</string>
     <string name="trakt_retry">再試行</string>
     <string name="trakt_back">戻る</string>
@@ -731,7 +731,7 @@
     <string name="profile_pin_overlay_set_support">このプロフィールを開く前にPINの入力が必要になります</string>
     <string name="profile_pin_overlay_confirm_support">設定を完了するには同じ4桁を再入力してください</string>
     <string name="profile_pin_overlay_mismatch">PINが一致しませんでした。もう一度新しいPINを入力してください</string>
-    <string name="profile_pin_overlay_forgot_hint">PINを忘れた場合はNuvioウェブサイトのアカウントページからリセットできます</string>
+    <string name="profile_pin_overlay_forgot_hint">PINを忘れた場合はOmnioウェブサイトのアカウントページからリセットできます</string>
     <string name="profile_pin_overlay_back_hint">戻るボタンでキャンセル</string>
 
     
@@ -991,7 +991,7 @@
     <string name="library_delete_subtitle">Traktからリストとすべてのリストアイテムが削除されます</string>
     <string name="library_delete_confirm">削除</string>
     <string name="library_source_local">ローカル</string>
-    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_omnio">NUVIO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">ライブラリを同期中\u2026</string>
     <string name="library_type_all">すべて</string>
@@ -1014,8 +1014,8 @@
 
     <!-- AuthSignInScreen -->
     <string name="auth_signin_title">サインイン</string>
-    <string name="auth_signin_tv_disabled">TVでのメール/パスワード入力は無効です。QRサインインで続けてください</string>
-    <string name="auth_signin_qr_btn">QRで続ける</string>
+    <string name="auth_signin_tv_enabled">TVでのメール/パスワード入力は無効です。QRサインインで続けてください</string>
+    <string name="auth_signin_hint">QRで続ける</string>
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">QRでサインイン</string>
@@ -1105,7 +1105,7 @@
     <string name="catalog_see_all_empty_subtitle">別のカタログを試すか、後でもう一度ご確認ください</string>
 
     <!-- LayoutSelectionScreen -->
-    <string name="layout_selection_welcome">Nuvioへようこそ</string>
+    <string name="layout_selection_welcome">Omnioへようこそ</string>
     <string name="layout_selection_subtitle">ホーム画面のレイアウトを選択</string>
     <string name="layout_selection_continue">続ける</string>
 
@@ -1117,7 +1117,7 @@
     <string name="update_unknown_sources">続けるには不明なソースからのインストールを許可してください</string>
     <!-- AccountScreen -->
     <string name="account_title">アカウント</string>
-    <string name="account_sign_in_description">サインインしてデバイス間でライブラリ、視聴進行状況、アドオン、プラグインを同期。ライブラリ同期はTraktが接続されていない場合はNuvio Syncを使用し、視聴進行状況はTraktまたはNuvio Syncのどちらかを使用できます</string>
+    <string name="account_sign_in_description">サインインしてデバイス間でライブラリ、視聴進行状況、アドオン、プラグインを同期。ライブラリ同期はTraktが接続されていない場合はOmnio Syncを使用し、視聴進行状況はTraktまたはOmnio Syncのどちらかを使用できます</string>
     <string name="account_sync_code_title">同期コード</string>
     <string name="account_sync_code_description">アカウントを作成せずにデバイス間で同期</string>
     <string name="account_linked_devices">リンク済みデバイス (%1$d)</string>

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Nuvio</string>
+    <string name="app_name">Omnio</string>
     <string name="type_movie">Film</string>
     <string name="type_series">Serie TV</string>
     <string name="type_unknown">Sconosciuto</string>
@@ -7,7 +7,7 @@
     <!-- HomeScreen -->
     <string name="home_no_addons">Nessun addon installato. Aggiungine uno per iniziare.</string>
     <string name="home_no_catalog_addons">Nessun catalogo installato. Installane uno per vedere i contenuti.</string>
-    <string name="auth_notice_nuvio_logged_out">Sei stato disconnesso da Nuvio. Accedi di nuovo.</string>
+    <string name="auth_notice_omnio_logged_out">Sei stato disconnesso da Omnio. Accedi di nuovo.</string>
     <string name="auth_notice_trakt_logged_out">Sei stato disconnesso da Trakt. Riconnettiti.</string>
     <string name="error_generic">Si è verificato un errore</string>
 
@@ -248,12 +248,12 @@
 
     <!-- SupportersContributorsScreen -->
     <string name="supporters_contributors_title">Sostenitori &amp; Collaboratori</string>
-    <string name="supporters_contributors_subtitle">Le persone che sostengono Nuvio e i collaboratori che lo sviluppano su TV e mobile.</string>
+    <string name="supporters_contributors_subtitle">Le persone che sostengono Omnio e i collaboratori che lo sviluppano su TV e mobile.</string>
     <string name="supporters_contributors_supporters_copy">Sostenitori e donatori aiutano a mantenere il progetto vivo, a pagare le infrastrutture e a fare spazio per feature ambiziose.</string>
-    <string name="supporters_contributors_donate_copy">Nuvio è gratuito e open source. Se vuoi supportare il progetto, puoi aiutare a coprire il tempo e l\'infrastruttura dietro allo stesso.</string>
-    <string name="supporters_contributors_donate_button">Dona a Nuvio</string>
+    <string name="supporters_contributors_donate_copy">Omnio è gratuito e open source. Se vuoi supportare il progetto, puoi aiutare a coprire il tempo e l\'infrastruttura dietro allo stesso.</string>
+    <string name="supporters_contributors_donate_button">Dona a Omnio</string>
     <string name="supporters_contributors_qr_title">Scansiona per donare</string>
-    <string name="supporters_contributors_qr_subtitle">Apri il link sul tuo telefono e supporta Nuvio tramite Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Apri il link sul tuo telefono e supporta Omnio tramite Ko-fi.</string>
     <string name="supporters_contributors_qr_hint">Punta la fotocamera verso il QR code o usa il bottone in basso.</string>
     <string name="supporters_contributors_back_button">Torna ai dettagli</string>
     <string name="supporters_tab">Sostenitori</string>
@@ -598,13 +598,13 @@
     <string name="trakt_watch_progress_title">Avanzamento visione</string>
     <string name="trakt_watch_progress_subtitle">Scegli quale origine usa Riprendi e Continua a guardare</string>
     <string name="trakt_watch_progress_dialog_title">Avanzamento visione</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Scegli se Riprendi e Continua a guardare devono usare Trakt o Nuvio Sync, mantenendo attivo lo scrobble su Trakt.</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Scegli se Riprendi e Continua a guardare devono usare Trakt o Omnio Sync, mantenendo attivo lo scrobble su Trakt.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
-    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_source_omnio">Omnio Sync</string>
     <string name="trakt_setting_on">Attivo</string>
     <string name="trakt_setting_off">Disattivo</string>
     <string name="trakt_watch_progress_trakt_selected">Origine avanzamento impostata su Trakt</string>
-    <string name="trakt_watch_progress_nuvio_selected">Origine avanzamento impostata su Nuvio Sync</string>
+    <string name="trakt_watch_progress_omnio_selected">Origine avanzamento impostata su Omnio Sync</string>
     <string name="trakt_comments_title">Commenti</string>
     <string name="trakt_comments_subtitle">Mostra le recensioni Trakt nelle pagine dei metadati</string>
     <string name="trakt_comments_dialog_title">Commenti</string>
@@ -626,7 +626,7 @@
     <string name="trakt_stat_watched_hours">Ore di visione</string>
     <string name="trakt_disconnect">Disconnetti</string>
     <string name="trakt_disconnect_title">Disconnettere Trakt?</string>
-    <string name="trakt_disconnect_subtitle">Questo disconnetterà il tuo account Trakt da Nuvio.</string>
+    <string name="trakt_disconnect_subtitle">Questo disconnetterà il tuo account Trakt da Omnio.</string>
     <string name="trakt_login">Accedi</string>
     <string name="trakt_retry">Riprova</string>
     <string name="trakt_back">Indietro</string>
@@ -732,7 +732,7 @@
     <string name="profile_pin_overlay_set_support">Questo PIN sarà richiesto prima di aprire questo profilo.</string>
     <string name="profile_pin_overlay_confirm_support">Reinserisci le stesse 4 cifre per completare l\'impostazione.</string>
     <string name="profile_pin_overlay_mismatch">I PIN non coincidono. Inserisci di nuovo un nuovo PIN.</string>
-    <string name="profile_pin_overlay_forgot_hint">PIN dimenticato? Reimpostalo dall\'account Nuvio sul sito.</string>
+    <string name="profile_pin_overlay_forgot_hint">PIN dimenticato? Reimpostalo dall\'account Omnio sul sito.</string>
     <string name="profile_pin_overlay_back_hint">Premi indietro per annullare</string>
     
 
@@ -995,7 +995,7 @@
     <string name="library_delete_subtitle">Questo rimuoverà la lista e tutti gli elementi da Trakt.</string>
     <string name="library_delete_confirm">Elimina</string>
     <string name="library_source_local">LOCALE</string>
-    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_omnio">NUVIO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Sincronizzazione libreria\u2026</string>
     <string name="library_type_all">Tutto</string>
@@ -1018,8 +1018,8 @@
 
     <!-- AuthSignInScreen -->
     <string name="auth_signin_title">Accedi</string>
-    <string name="auth_signin_tv_disabled">L\'inserimento di email/password su TV è disabilitato. Continua con l\'accesso tramite QR Code.</string>
-    <string name="auth_signin_qr_btn">Continua con QR Code</string>
+    <string name="auth_signin_tv_enabled">L\'inserimento di email/password su TV è disabilitato. Continua con l\'accesso tramite QR Code.</string>
+    <string name="auth_signin_hint">Continua con QR Code</string>
 
     <!-- AuthQrSignInScreen -->
   <string name="auth_qr_title">Accedi con QR Code</string>
@@ -1109,7 +1109,7 @@
     <string name="catalog_see_all_empty_subtitle">Prova un catalogo diverso o ricontrolla più tardi</string>
 
     <!-- LayoutSelectionScreen -->
-    <string name="layout_selection_welcome">Benvenuto su Nuvio</string>
+    <string name="layout_selection_welcome">Benvenuto su Omnio</string>
     <string name="layout_selection_subtitle">Scegli il layout della tua schermata home</string>
     <string name="layout_selection_continue">Continua</string>
 
@@ -1121,7 +1121,7 @@
     <string name="update_unknown_sources">Consenti l\'installazione da sorgenti sconosciute per continuare.</string>
     <!-- AccountScreen -->
     <string name="account_title">Account</string>
-    <string name="account_sign_in_description">Accedi per sincronizzare libreria, avanzamento visione, addon e plugin tra i dispositivi. La libreria usa Nuvio Sync quando Trakt non è collegato; l\'avanzamento visione può usare Trakt o Nuvio Sync.</string>
+    <string name="account_sign_in_description">Accedi per sincronizzare libreria, avanzamento visione, addon e plugin tra i dispositivi. La libreria usa Omnio Sync quando Trakt non è collegato; l\'avanzamento visione può usare Trakt o Omnio Sync.</string>
     <string name="account_sync_code_title">Codice di sincronizzazione</string>
     <string name="account_sync_code_description">Sincronizza su tutti i dispositivi senza creare un account.</string>
     <string name="account_linked_devices">Dispositivi collegati (%1$d)</string>
@@ -1290,7 +1290,7 @@
     <string name="cd_remove">Rimuovi</string>
     <string name="cd_test">Test</string>
     <string name="cd_unlink">Scollega</string>
-    <string name="cd_nuvio_logo">NuvioTV</string>
+    <string name="cd_omnio_logo">OmnioTV</string>
     <string name="cd_trakt_logo">Logo Trakt</string>
     <string name="cd_trakt_qr">QR attivazione Trakt</string>
     <string name="cd_imdb">IMDb</string>
@@ -1301,7 +1301,7 @@
     <string name="cd_expand">Espandi %1$s</string>
     <string name="cd_collapse">Riduci %1$s</string>
     <string name="cd_qr_login">Codice QR login</string>
-    <string name="cd_nuvio">Nuvio</string>
+    <string name="cd_omnio">Omnio</string>
 
     <!-- Debug -->
     <string name="debug_signin_success">Accesso eseguito correttamente</string>

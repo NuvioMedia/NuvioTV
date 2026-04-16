@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "My Application"
+rootProject.name = "OmnioTV"
 include(":app")
 include(":baselineprofile")

@@ -403,7 +403,7 @@
     <string name="trakt_stat_watched_hours">Hodiny sledovania</string>
     <string name="trakt_disconnect">Odpojiť</string>
     <string name="trakt_disconnect_title">Odpojiť Trakt?</string>
-    <string name="trakt_disconnect_subtitle">Týmto odpojíte svoj Trakt účet od Nuvio.</string>
+    <string name="trakt_disconnect_subtitle">Týmto odpojíte svoj Trakt účet od Omnio.</string>
     <string name="trakt_login">Prihlásiť sa</string>
     <string name="trakt_retry">Skúsiť znova</string>
     <string name="trakt_back">Späť</string>
@@ -599,8 +599,8 @@
 
     <!-- AuthSignInScreen -->
     <string name="auth_signin_title">Prihlásiť sa</string>
-    <string name="auth_signin_tv_disabled">Zadávanie emailu/hesla na TV je vypnuté. Pokračujte prihlásením cez QR.</string>
-    <string name="auth_signin_qr_btn">Pokračovať cez QR</string>
+    <string name="auth_signin_tv_enabled">Zadávanie emailu/hesla na TV je vypnuté. Pokračujte prihlásením cez QR.</string>
+    <string name="auth_signin_hint">Pokračovať cez QR</string>
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">Prihlásiť sa cez QR</string>
@@ -670,7 +670,7 @@
     <string name="catalog_see_all_empty_subtitle">Skúste iný katalóg alebo sa vráťte neskôr</string>
 
     <!-- LayoutSelectionScreen -->
-    <string name="layout_selection_welcome">Vitajte v Nuvio</string>
+    <string name="layout_selection_welcome">Vitajte v Omnio</string>
     <string name="layout_selection_subtitle">Vyberte rozloženie domovskej obrazovky</string>
     <string name="layout_selection_continue">Pokračovať</string>
 

@@ -1,12 +1,12 @@
 <resources>
-	<string name="app_name">Nuvio</string>									  
+	<string name="app_name">Omnio</string>									  
     <string name="type_movie">Film</string>
     <string name="type_series">Serija</string>
 	<string name="type_unknown">Neznano</string>
     <!-- HomeScreen -->
     <string name="home_no_addons">Ni nameščenih dodatkov. Dodajte enega za začetek.</string>
     <string name="home_no_catalog_addons">Nameščen ni noben dodatek za katalog. Namestite dodatek za katalog, da vidite vsebino.</string>
-    <string name="auth_notice_nuvio_logged_out">Odjavljeni ste bili iz storitve Nuvio. Prosimo, prijavite se znova.</string>
+    <string name="auth_notice_omnio_logged_out">Odjavljeni ste bili iz storitve Omnio. Prosimo, prijavite se znova.</string>
     <string name="auth_notice_trakt_logged_out">Odjavljeni ste bili iz storitve Trakt. Prosimo, ponovno se povežite.</string>
     <string name="error_generic">Prišlo je do napake</string>
 	<!-- ErrorState -->
@@ -349,12 +349,12 @@
 	<string name="action_close">Zapri</string>										  
 	<!-- SupportersContributorsScreen -->										 
 	<string name="supporters_contributors_title">Podporniki &amp; soustvarjalci</string>
-    <string name="supporters_contributors_subtitle">Ljudje, ki podpirajo Nuvio, in soustvarjalci, ki ga gradijo za TV in mobilne naprave.</string>
+    <string name="supporters_contributors_subtitle">Ljudje, ki podpirajo Omnio, in soustvarjalci, ki ga gradijo za TV in mobilne naprave.</string>
     <string name="supporters_contributors_supporters_copy">Podporniki in donatorji pomagajo ohranjati projekt pri življenju, financirajo infrastrukturo in omogočajo ambiciozne funkcije.</string>
-    <string name="supporters_contributors_donate_copy">Nuvio bo ostal brezplačen in odprtokoden. Če želite podpreti projekt, lahko pomagate pokriti porabljen čas in infrastrukturo, ki stoji za njim.</string>
-    <string name="supporters_contributors_donate_button">Donirajte za Nuvio</string>
+    <string name="supporters_contributors_donate_copy">Omnio bo ostal brezplačen in odprtokoden. Če želite podpreti projekt, lahko pomagate pokriti porabljen čas in infrastrukturo, ki stoji za njim.</string>
+    <string name="supporters_contributors_donate_button">Donirajte za Omnio</string>
     <string name="supporters_contributors_qr_title">Skenirajte za donacijo</string>
-    <string name="supporters_contributors_qr_subtitle">Odprite povezavo na telefonu in podprite Nuvio prek Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Odprite povezavo na telefonu in podprite Omnio prek Ko-fi.</string>
     <string name="supporters_contributors_qr_hint">Usmerite kamero v QR kodo ali uporabite spodnji gumb.</string>
     <string name="supporters_contributors_back_button">Nazaj na podrobnosti</string>
     <string name="supporters_tab">Podporniki</string>
@@ -761,13 +761,13 @@
     <string name="trakt_watch_progress_title">Napredek gledanja</string>
     <string name="trakt_watch_progress_subtitle">Izberite, kateri vir napredka omogoča nadaljevanje predvajanja in nadaljnje gledanje</string>
     <string name="trakt_watch_progress_dialog_title">Napredek gledanja</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Izberite, ali naj nadaljevanje predvajanja in nadaljnje gledanje uporablja Trakt ali Nuvio Sync, medtem ko beleženje na Trakt (scrobbling) ostane aktivno.</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Izberite, ali naj nadaljevanje predvajanja in nadaljnje gledanje uporablja Trakt ali Omnio Sync, medtem ko beleženje na Trakt (scrobbling) ostane aktivno.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
-    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_source_omnio">Omnio Sync</string>
 	<string name="trakt_setting_on">Vklopljeno</string>
     <string name="trakt_setting_off">Izklopljeno</string>										 
     <string name="trakt_watch_progress_trakt_selected">Vir napredka gledanja je nastavljen na Trakt</string>
-    <string name="trakt_watch_progress_nuvio_selected">Vir napredka gledanja je nastavljen na Nuvio Sync</string>
+    <string name="trakt_watch_progress_omnio_selected">Vir napredka gledanja je nastavljen na Omnio Sync</string>
     <string name="trakt_continue_watching_window">Časovni okvir za nadaljnje gledanje</string>
     <string name="trakt_continue_watching_subtitle">Zgodovina Trakt, ki se upošteva za nadaljnje gledanje</string>
     <string name="trakt_unaired_next_up">Naslednje epizode, ki še niso izdane</string>
@@ -788,7 +788,7 @@
     <string name="trakt_stat_watched_hours">Ure gledanja</string>
     <string name="trakt_disconnect">Prekini povezavo</string>
     <string name="trakt_disconnect_title">Prekinitev povezave s Trakt?</string>
-    <string name="trakt_disconnect_subtitle">To bo prekinilo povezavo vašega Trakt računa z Nuvio.</string>
+    <string name="trakt_disconnect_subtitle">To bo prekinilo povezavo vašega Trakt računa z Omnio.</string>
     <string name="trakt_login">Prijava</string>
     <string name="trakt_retry">Poskusi znova</string>
     <string name="trakt_back">Nazaj</string>
@@ -892,7 +892,7 @@
     <string name="profile_pin_overlay_set_support">Ta koda PIN bo zahtevana pred odpiranjem tega profila.</string>
     <string name="profile_pin_overlay_confirm_support">Ponovno vnesite iste 4 števke, da dokončate namestitev.</string>
     <string name="profile_pin_overlay_mismatch">Kodi PIN se nista ujemali. Ponovno vnesite novo kodo PIN.</string>
-    <string name="profile_pin_overlay_forgot_hint">Ste pozabili kodo PIN? Ponastavite jo v svojem računu Nuvio na spletni strani Nuvio.</string>
+    <string name="profile_pin_overlay_forgot_hint">Ste pozabili kodo PIN? Ponastavite jo v svojem računu Omnio na spletni strani Omnio.</string>
     <string name="profile_pin_overlay_back_hint">Pritisnite nazaj za preklic</string>															
 	<!-- AddonManagerScreen -->
     <string name="addon_title">Dodatki</string>
@@ -1350,7 +1350,7 @@
     <string name="library_delete_subtitle">To odstrani seznam in vse elemente seznama iz Trakt.</string>
     <string name="library_delete_confirm">Izbriši</string>
     <string name="library_source_local">LOKALNO</string>
-	<string name="library_source_nuvio">NUVIO</string>
+	<string name="library_source_omnio">NUVIO</string>
     <string name="library_source_trakt">TRAKT</string>																 
 	<string name="library_syncing_library">Sinhroniziranje knjižnice\u2026</string>
 	<string name="library_type_all">Vse</string>
@@ -1373,8 +1373,8 @@
 
     <!-- AuthSignInScreen -->
     <string name="auth_signin_title">Prijava</string>
-    <string name="auth_signin_tv_disabled">Vnos e-pošte/gesla na TV je onemogočen. Nadaljujte s prijavo QR.</string>
-    <string name="auth_signin_qr_btn">Nadaljuj s QR</string>
+    <string name="auth_signin_tv_enabled">Vnos e-pošte/gesla na TV je onemogočen. Nadaljujte s prijavo QR.</string>
+    <string name="auth_signin_hint">Nadaljuj s QR</string>
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">Prijava s QR kodo</string>
@@ -1467,7 +1467,7 @@
     <string name="catalog_see_all_empty_subtitle">Poskusite z drugim katalogom ali preverite kasneje</string>
 
     <!-- LayoutSelectionScreen -->
-    <string name="layout_selection_welcome">Dobrodošli v Nuvio</string>
+    <string name="layout_selection_welcome">Dobrodošli v Omnio</string>
     <string name="layout_selection_subtitle">Izberite postavitev vašega domačega zaslona</string>
     <string name="layout_selection_continue">Nadaljuj</string>
 

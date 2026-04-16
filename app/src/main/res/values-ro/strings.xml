@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Nuvio</string>
+    <string name="app_name">Omnio</string>
     <string name="type_movie">Film</string>
     <string name="type_series">Serial</string>
 
@@ -445,7 +445,7 @@
     <string name="trakt_stat_watched_hours">Ore vizionate</string>
     <string name="trakt_disconnect">Deconectare</string>
     <string name="trakt_disconnect_title">Deconectare Trakt?</string>
-    <string name="trakt_disconnect_subtitle">Aceasta va deconecta contul tău Trakt de Nuvio.</string>
+    <string name="trakt_disconnect_subtitle">Aceasta va deconecta contul tău Trakt de Omnio.</string>
     <string name="trakt_login">Autentificare</string>
     <string name="trakt_retry">Reîncercare</string>
     <string name="trakt_back">Înapoi</string>
@@ -691,8 +691,8 @@
 
     <!-- AuthSignInScreen -->
     <string name="auth_signin_title">Autentificare</string>
-    <string name="auth_signin_tv_disabled">Introducerea de e‑mail/parolă pe TV este dezactivată. Continuați cu autentificarea prin QR.</string>
-    <string name="auth_signin_qr_btn">Continuați cu QR</string>
+    <string name="auth_signin_tv_enabled">Introducerea de e‑mail/parolă pe TV este dezactivată. Continuați cu autentificarea prin QR.</string>
+    <string name="auth_signin_hint">Continuați cu QR</string>
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">Autentificare cu QR</string>
@@ -774,7 +774,7 @@
     <string name="catalog_see_all_empty_subtitle">Încearcă un catalog diferit sau revino mai târziu</string>
 
     <!-- LayoutSelectionScreen -->
-    <string name="layout_selection_welcome">Bine ai venit la Nuvio</string>
+    <string name="layout_selection_welcome">Bine ai venit la Omnio</string>
     <string name="layout_selection_subtitle">Alege aspectul ecranului de pornire</string>
     <string name="layout_selection_continue">Continuă</string>
 

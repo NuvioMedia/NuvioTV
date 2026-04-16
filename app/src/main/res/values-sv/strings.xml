@@ -6,7 +6,7 @@
     <!-- HomeScreen -->
     <string name="home_no_addons">Inga tillägg installerade. Lägg till ett tillägg för att komma igång.</string>
     <string name="home_no_catalog_addons">Inga tillägg med kataloger installerade. Installera ett katalogtillägg för att se innehåll.</string>
-    <string name="auth_notice_nuvio_logged_out">Du har loggats ut från Nuvio. Logga in igen.</string>
+    <string name="auth_notice_omnio_logged_out">Du har loggats ut från Omnio. Logga in igen.</string>
     <string name="auth_notice_trakt_logged_out">Du har loggats ut från Trakt. Anslut igen.</string>
     <string name="error_generic">Ett fel uppstod</string>
 
@@ -205,12 +205,12 @@
 
     <!-- SupportersContributorsScreen -->
     <string name="supporters_contributors_title">Supportrar &amp; bidragsgivare</string>
-    <string name="supporters_contributors_subtitle">Människorna bakom Nuvio och bidragsgivarna som bygger det för TV och mobil.</string>
+    <string name="supporters_contributors_subtitle">Människorna bakom Omnio och bidragsgivarna som bygger det för TV och mobil.</string>
     <string name="supporters_contributors_supporters_copy">Supportrar och donatorer hjälper projektet framåt, finansierar infrastruktur och skapar utrymme för ambitiösa funktioner.</string>
-    <string name="supporters_contributors_donate_copy">Nuvio förblir gratis och öppen källkod. Om du vill stödja projektet kan du hjälpa till att täcka tiden och infrastrukturen bakom det.</string>
-    <string name="supporters_contributors_donate_button">Donera till Nuvio</string>
+    <string name="supporters_contributors_donate_copy">Omnio förblir gratis och öppen källkod. Om du vill stödja projektet kan du hjälpa till att täcka tiden och infrastrukturen bakom det.</string>
+    <string name="supporters_contributors_donate_button">Donera till Omnio</string>
     <string name="supporters_contributors_qr_title">Skanna för att donera</string>
-    <string name="supporters_contributors_qr_subtitle">Öppna länken på din telefon och stöd Nuvio via Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Öppna länken på din telefon och stöd Omnio via Ko-fi.</string>
     <string name="supporters_contributors_qr_hint">Rikta kameran mot QR-koden eller använd knappen nedan.</string>
     <string name="supporters_contributors_back_button">Tillbaka till detaljer</string>
     <string name="supporters_tab">Supportrar</string>
@@ -545,11 +545,11 @@
     <string name="trakt_watch_progress_title">Tittarframsteg</string>
     <string name="trakt_watch_progress_subtitle">Välj vilken framstegskälla som styr återupptagning och fortsätt titta</string>
     <string name="trakt_watch_progress_dialog_title">Tittarframsteg</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Välj om återupptagning och fortsätt titta ska använda Trakt eller Nuvio Sync medan Trakt-scrobbling förblir aktiv.</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Välj om återupptagning och fortsätt titta ska använda Trakt eller Omnio Sync medan Trakt-scrobbling förblir aktiv.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
-    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_source_omnio">Omnio Sync</string>
     <string name="trakt_watch_progress_trakt_selected">Tittarframstegskälla satt till Trakt</string>
-    <string name="trakt_watch_progress_nuvio_selected">Tittarframstegskälla satt till Nuvio Sync</string>
+    <string name="trakt_watch_progress_omnio_selected">Tittarframstegskälla satt till Omnio Sync</string>
     <string name="trakt_continue_watching_window">Fortsätt titta-fönster</string>
     <string name="trakt_continue_watching_subtitle">Trakt-historik som beaktas för fortsätt titta</string>
     <string name="trakt_unaired_next_up">Osända nästa avsnitt</string>
@@ -565,7 +565,7 @@
     <string name="trakt_stat_watched_hours">Tittade timmar</string>
     <string name="trakt_disconnect">Koppla från</string>
     <string name="trakt_disconnect_title">Koppla från Trakt?</string>
-    <string name="trakt_disconnect_subtitle">Detta kopplar från ditt Trakt-konto från Nuvio.</string>
+    <string name="trakt_disconnect_subtitle">Detta kopplar från ditt Trakt-konto från Omnio.</string>
     <string name="trakt_login">Logga in</string>
     <string name="trakt_retry">Försök igen</string>
     <string name="trakt_back">Tillbaka</string>
@@ -870,7 +870,7 @@
     <string name="library_delete_subtitle">Detta tar bort listan och alla listobjekt från Trakt.</string>
     <string name="library_delete_confirm">Radera</string>
     <string name="library_source_local">LOKAL</string>
-    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_omnio">NUVIO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Synkroniserar bibliotek\u2026</string>
     <string name="library_type_all">Alla</string>
@@ -893,8 +893,8 @@
 
     <!-- AuthSignInScreen -->
     <string name="auth_signin_title">Logga in</string>
-    <string name="auth_signin_tv_disabled">E-post-/lösenordsinmatning på TV är inaktiverad. Fortsätt med QR-inloggning.</string>
-    <string name="auth_signin_qr_btn">Fortsätt med QR</string>
+    <string name="auth_signin_tv_enabled">E-post-/lösenordsinmatning på TV är inaktiverad. Fortsätt med QR-inloggning.</string>
+    <string name="auth_signin_hint">Fortsätt med QR</string>
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">Logga in med QR</string>
@@ -981,7 +981,7 @@
     <string name="catalog_see_all_empty_subtitle">Prova en annan katalog eller kom tillbaka senare</string>
 
     <!-- LayoutSelectionScreen -->
-    <string name="layout_selection_welcome">Välkommen till Nuvio</string>
+    <string name="layout_selection_welcome">Välkommen till Omnio</string>
     <string name="layout_selection_subtitle">Välj din hemskärmslayout</string>
     <string name="layout_selection_continue">Fortsätt</string>
 
@@ -993,7 +993,7 @@
     <string name="update_unknown_sources">Tillåt installation från okända källor för att fortsätta.</string>
     <!-- AccountScreen -->
     <string name="account_title">Konto</string>
-    <string name="account_sign_in_description">Logga in för att synkronisera ditt bibliotek, tittarframsteg, tillägg och plugins mellan enheter. Bibliotekssynk använder Nuvio Sync när Trakt inte är anslutet, och tittarframsteg kan använda antingen Trakt eller Nuvio Sync.</string>
+    <string name="account_sign_in_description">Logga in för att synkronisera ditt bibliotek, tittarframsteg, tillägg och plugins mellan enheter. Bibliotekssynk använder Omnio Sync när Trakt inte är anslutet, och tittarframsteg kan använda antingen Trakt eller Omnio Sync.</string>
     <string name="account_sync_code_title">Synkkod</string>
     <string name="account_sync_code_description">Synkronisera mellan enheter utan att skapa ett konto.</string>
     <string name="account_linked_devices">Länkade enheter (%1$d)</string>
@@ -1183,7 +1183,7 @@
     <string name="profile_pin_overlay_set_support">Denna PIN krävs innan denna profil öppnas.</string>
     <string name="profile_pin_overlay_confirm_support">Ange samma 4 siffror igen för att slutföra.</string>
     <string name="profile_pin_overlay_mismatch">PIN-koderna matchade inte. Ange en ny PIN igen.</string>
-    <string name="profile_pin_overlay_forgot_hint">Glömt PIN? Återställ den från ditt Nuvio-konto på Nuvios webbplats.</string>
+    <string name="profile_pin_overlay_forgot_hint">Glömt PIN? Återställ den från ditt Omnio-konto på Omnios webbplats.</string>
     <string name="profile_pin_overlay_back_hint">Tryck tillbaka för att avbryta</string>
 
     <!-- Missing: Debug library -->

@@ -1,0 +1,1133 @@
+package com.omnio.tv.ui.screens.detail
+
+import android.view.KeyEvent as AndroidKeyEvent
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListPrefetchStrategy
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.tv.material3.Border
+import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.omnio.tv.R
+import com.omnio.tv.domain.model.Video
+import com.omnio.tv.ui.components.OmnioDialog
+import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.ui.theme.OmnioTheme
+import android.text.format.DateFormat
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
+import com.omnio.tv.ui.util.localizeEpisodeTitle
+
+private const val EPISODE_CARD_CONTENT_TYPE = "episode_card"
+private const val EPISODE_SCROLL_REPEAT_THROTTLE_MS = 80L
+
+@OptIn(ExperimentalTvMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
+@Composable
+fun SeasonTabs(
+    seasons: List<Int>,
+    selectedSeason: Int,
+    onSeasonSelected: (Int) -> Unit,
+    onSeasonLongPress: (Int) -> Unit = {},
+    selectedTabFocusRequester: FocusRequester,
+    downFocusRequester: FocusRequester? = null
+) {
+    // Move season 0 (specials) to the end
+    val sortedSeasons = remember(seasons) {
+        val regularSeasons = seasons.filter { it > 0 }.sorted()
+        val specials = seasons.filter { it == 0 }
+        regularSeasons + specials
+    }
+
+    val tabShape = remember { RoundedCornerShape(20.dp) }
+    val tabBorder = CardDefaults.border(
+        focusedBorder = Border(
+            border = BorderStroke(2.dp, OmnioColors.FocusRing),
+            shape = RoundedCornerShape(20.dp)
+        )
+    )
+    val tabScale = CardDefaults.scale(focusedScale = 1.0f)
+    val typography = MaterialTheme.typography
+    val tabTextStyle = remember(typography) { typography.titleMedium }
+    val textSecondary = OmnioTheme.extendedColors.textSecondary
+    val lazyListState = rememberLazyListState()
+
+    LaunchedEffect(sortedSeasons, selectedSeason) {
+        val selectedIndex = sortedSeasons.indexOf(selectedSeason)
+        if (selectedIndex < 0) return@LaunchedEffect
+
+        val visibleIndices = lazyListState.layoutInfo.visibleItemsInfo.map { it.index }
+        if (selectedIndex in visibleIndices) return@LaunchedEffect
+
+        lazyListState.scrollToItem(selectedIndex)
+    }
+
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .focusRestorer(selectedTabFocusRequester),
+        state = lazyListState,
+        contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(sortedSeasons, key = { it }) { season ->
+            val isSelected = season == selectedSeason
+            var isFocused by remember { mutableStateOf(false) }
+            var longPressTriggered by remember { mutableStateOf(false) }
+
+            Card(
+                onClick = {
+                    if (longPressTriggered) {
+                        longPressTriggered = false
+                    } else {
+                        onSeasonSelected(season)
+                    }
+                },
+                modifier = Modifier
+                    .then(if (isSelected) Modifier.focusRequester(selectedTabFocusRequester) else Modifier)
+                    .focusProperties {
+                        if (isSelected && downFocusRequester != null) {
+                            down = downFocusRequester
+                        }
+                    }
+                    .onFocusChanged {
+                    val nowFocused = it.isFocused
+                    isFocused = nowFocused
+                    if (nowFocused && !isSelected) {
+                        onSeasonSelected(season)
+                    }
+                }
+                    .onPreviewKeyEvent { event ->
+                        val native = event.nativeKeyEvent
+                        if (native.action == AndroidKeyEvent.ACTION_DOWN) {
+                            if (native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
+                                longPressTriggered = true
+                                onSeasonLongPress(season)
+                                return@onPreviewKeyEvent true
+                            }
+                            val isLongPress = native.isLongPress || native.repeatCount > 0
+                            if (isLongPress && isSelectKey(native.keyCode)) {
+                                longPressTriggered = true
+                                onSeasonLongPress(season)
+                                return@onPreviewKeyEvent true
+                            }
+                        }
+                        if (native.action == AndroidKeyEvent.ACTION_UP &&
+                            longPressTriggered &&
+                            isSelectKey(native.keyCode)
+                        ) {
+                            longPressTriggered = false
+                            return@onPreviewKeyEvent true
+                        }
+                        false
+                    },
+                shape = CardDefaults.shape(shape = tabShape),
+                colors = CardDefaults.colors(
+                    containerColor = if (isSelected) OmnioColors.SurfaceVariant else OmnioColors.BackgroundCard,
+                    focusedContainerColor = OmnioColors.Secondary
+                ),
+                border = tabBorder,
+                scale = tabScale
+            ) {
+                Text(
+                    text = if (season == 0) stringResource(R.string.episodes_specials) else stringResource(R.string.episodes_season, season),
+                    style = tabTextStyle,
+                    color = when {
+                        isFocused -> OmnioColors.OnSecondary
+                        isSelected -> OmnioColors.TextPrimary
+                        else -> textSecondary
+                    },
+                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 20.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+fun EpisodesRow(
+    episodes: List<Video>,
+    episodeProgressMap: Map<Pair<Int, Int>, com.omnio.tv.domain.model.WatchProgress> = emptyMap(),
+    episodeRatings: Map<Pair<Int, Int>, Double> = emptyMap(),
+    watchedEpisodes: Set<Pair<Int, Int>> = emptySet(),
+    episodeWatchedPendingKeys: Set<String> = emptySet(),
+    blurUnwatchedEpisodes: Boolean = false,
+    onEpisodeClick: (Video) -> Unit,
+    onEpisodeManualPlayClick: (Video) -> Unit = onEpisodeClick,
+    onToggleEpisodeWatched: (Video) -> Unit,
+    showManualPlayOption: Boolean = false,
+    onMarkSeasonWatched: (Int) -> Unit = {},
+    onMarkSeasonUnwatched: (Int) -> Unit = {},
+    isSeasonFullyWatched: Boolean = false,
+    selectedSeason: Int = 1,
+    onMarkPreviousEpisodesWatched: (Video) -> Unit = {},
+    upFocusRequester: FocusRequester,
+    downFocusRequester: FocusRequester? = null,
+    episodeFocusRequesters: MutableMap<String, FocusRequester> = mutableMapOf(),
+    restoreEpisodeId: String? = null,
+    restoreFocusToken: Int = 0,
+    onRestoreFocusHandled: () -> Unit = {},
+    onEpisodeFocused: (episodeId: String) -> Unit = {},
+    scrollToEpisodeId: String? = null,
+    onScrollToEpisodeHandled: () -> Unit = {}
+) {
+    val dedupedEpisodes = remember(episodes) { episodes.distinctBy { it.id } }
+    val restoreTargetRequester = restoreEpisodeId?.let { episodeFocusRequesters[it] }
+    var optionsEpisode by remember { mutableStateOf<Video?>(null) }
+    val cardMetrics = rememberEpisodeCardMetrics()
+    val density = LocalDensity.current
+    val rowPrefetchStrategy = remember { LazyListPrefetchStrategy(nestedPrefetchItemCount = 2) }
+    val lazyListState = rememberLazyListState(prefetchStrategy = rowPrefetchStrategy)
+    var lastHorizontalKeyRepeatTime by remember { mutableStateOf(0L) }
+    val episodeIds = remember(dedupedEpisodes) { dedupedEpisodes.mapTo(mutableSetOf()) { it.id } }
+    val context = LocalContext.current
+    val imdbLogoRequest = remember(context) {
+        ImageRequest.Builder(context)
+            .data(R.raw.imdb_logo_2016)
+            .crossfade(false)
+            .build()
+    }
+
+    LaunchedEffect(episodeIds, episodeFocusRequesters) {
+        episodeFocusRequesters.keys.retainAll(episodeIds)
+    }
+
+    LaunchedEffect(restoreFocusToken, restoreEpisodeId, restoreTargetRequester, dedupedEpisodes) {
+        if (restoreFocusToken <= 0 || restoreEpisodeId.isNullOrBlank()) return@LaunchedEffect
+        if (dedupedEpisodes.none { it.id == restoreEpisodeId }) return@LaunchedEffect
+        val index = dedupedEpisodes.indexOfFirst { it.id == restoreEpisodeId }
+        if (index >= 0) {
+            val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
+            lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
+        }
+        restoreTargetRequester?.requestFocusAfterFrames()
+    }
+
+    LaunchedEffect(scrollToEpisodeId, dedupedEpisodes) {
+        if (scrollToEpisodeId.isNullOrBlank()) return@LaunchedEffect
+        val index = dedupedEpisodes.indexOfFirst { it.id == scrollToEpisodeId }
+        if (index < 0) return@LaunchedEffect
+        val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
+        lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
+        onScrollToEpisodeHandled()
+    }
+
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .onPreviewKeyEvent { event ->
+                val native = event.nativeKeyEvent
+                val isHorizontalKey = native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_LEFT ||
+                    native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_RIGHT
+                if (
+                    isHorizontalKey &&
+                    native.action == AndroidKeyEvent.ACTION_DOWN &&
+                    native.repeatCount > 0
+                ) {
+                    val now = System.currentTimeMillis()
+                    if (now - lastHorizontalKeyRepeatTime < EPISODE_SCROLL_REPEAT_THROTTLE_MS) {
+                        return@onPreviewKeyEvent true
+                    }
+                    lastHorizontalKeyRepeatTime = now
+                }
+                false
+            },
+        state = lazyListState,
+        contentPadding = PaddingValues(
+            horizontal = cardMetrics.rowHorizontalPadding,
+            vertical = cardMetrics.rowVerticalPadding
+        ),
+        horizontalArrangement = Arrangement.spacedBy(cardMetrics.itemSpacing)
+    ) {
+        items(
+            items = dedupedEpisodes,
+            key = { it.id },
+            contentType = { EPISODE_CARD_CONTENT_TYPE }
+        ) { episode ->
+            val seasonEp = remember(episode.season, episode.episode) { episode.season?.let { s -> episode.episode?.let { e -> s to e } } }
+            val progress = remember(seasonEp, episodeProgressMap) { seasonEp?.let { episodeProgressMap[it] } }
+            val imdbRating = remember(seasonEp, episodeRatings) { seasonEp?.let { episodeRatings[it] } }
+            val isMarkedWatched = remember(seasonEp, watchedEpisodes) { seasonEp?.let { watchedEpisodes.contains(it) } ?: false }
+            val episodeFocusRequester = remember(episode.id) { episodeFocusRequesters.getOrPut(episode.id) { FocusRequester() } }
+            val episodeOnClick = remember(episode.id) { { onEpisodeClick(episode) } }
+            val episodeOnLongPress = remember(episode.id) { { optionsEpisode = episode } }
+            val episodeOnFocused = remember(episode.id) { { onEpisodeFocused(episode.id) } }
+            val isRestoreTarget = episode.id == restoreEpisodeId
+            val episodeOnFocusRestored = remember(isRestoreTarget, onRestoreFocusHandled) {
+                if (isRestoreTarget) onRestoreFocusHandled else null
+            }
+            EpisodeCard(
+                episode = episode,
+                watchProgress = progress,
+                imdbRating = imdbRating,
+                isMarkedWatched = isMarkedWatched,
+                blurUnwatched = blurUnwatchedEpisodes,
+                cardMetrics = cardMetrics,
+                onClick = episodeOnClick,
+                onLongPress = episodeOnLongPress,
+                upFocusRequester = upFocusRequester,
+                downFocusRequester = downFocusRequester,
+                imdbLogoRequest = imdbLogoRequest,
+                focusRequester = episodeFocusRequester,
+                onFocused = episodeOnFocused,
+                onFocusRestored = episodeOnFocusRestored
+            )
+        }
+    }
+
+    optionsEpisode?.let { selectedEpisode ->
+        val selectedWatched = selectedEpisode.season?.let { season ->
+            selectedEpisode.episode?.let { episode ->
+                episodeProgressMap[season to episode]?.isCompleted() == true
+                    || watchedEpisodes.contains(season to episode)
+            }
+        } ?: false
+        val isPending = episodeWatchedPendingKeys.contains(episodePendingKey(selectedEpisode))
+        val firstEpisodeInSeason = dedupedEpisodes.minByOrNull { it.episode ?: Int.MAX_VALUE }
+        val hasPreviousEpisodes = selectedEpisode.episode != null &&
+            firstEpisodeInSeason?.episode != null &&
+            selectedEpisode.episode > firstEpisodeInSeason.episode
+
+        EpisodeOptionsDialog(
+            episode = selectedEpisode,
+            isWatched = selectedWatched,
+            isPending = isPending,
+            isSeasonFullyWatched = isSeasonFullyWatched,
+            hasPreviousEpisodes = hasPreviousEpisodes,
+            onDismiss = { optionsEpisode = null },
+            onPlay = {
+                onEpisodeClick(selectedEpisode)
+                optionsEpisode = null
+            },
+            onPlayManually = {
+                onEpisodeManualPlayClick(selectedEpisode)
+                optionsEpisode = null
+            },
+            showPlayManually = showManualPlayOption,
+            onToggleWatched = {
+                onToggleEpisodeWatched(selectedEpisode)
+                optionsEpisode = null
+            },
+            onMarkSeasonWatched = {
+                onMarkSeasonWatched(selectedSeason)
+                optionsEpisode = null
+            },
+            onMarkSeasonUnwatched = {
+                onMarkSeasonUnwatched(selectedSeason)
+                optionsEpisode = null
+            },
+            onMarkPreviousEpisodesWatched = {
+                onMarkPreviousEpisodesWatched(selectedEpisode)
+                optionsEpisode = null
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun EpisodeCard(
+    episode: Video,
+    watchProgress: com.omnio.tv.domain.model.WatchProgress? = null,
+    imdbRating: Double? = null,
+    isMarkedWatched: Boolean = false,
+    blurUnwatched: Boolean = false,
+    cardMetrics: EpisodeCardMetrics,
+    imdbLogoRequest: ImageRequest,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit,
+    upFocusRequester: FocusRequester,
+    downFocusRequester: FocusRequester? = null,
+    focusRequester: FocusRequester,
+    onFocused: (() -> Unit)? = null,
+    onFocusRestored: (() -> Unit)? = null
+) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val formattedDate = remember(episode.released) {
+        episode.released?.let(::formatEpisodeCardDate).orEmpty()
+    }
+    val runtimeLabel = remember(episode.runtime) {
+        episode.runtime?.takeIf { it > 0 }?.let(::formatEpisodeRuntime)
+    }
+    val ratingLabel = remember(imdbRating) {
+        imdbRating?.takeIf { it > 0.0 }?.let { String.format(Locale.US, "%.1f", it) }
+    }
+    val description = remember(episode.overview) { episode.overview?.trim().orEmpty() }
+    val isWatched = remember(watchProgress, isMarkedWatched) { watchProgress?.isCompleted() == true || isMarkedWatched }
+    val shouldBlur = remember(blurUnwatched, isWatched) { blurUnwatched && !isWatched }
+    val progressPercent = remember(watchProgress) { watchProgress?.progressPercentage ?: 0f }
+    val showProgress = remember(progressPercent) { progressPercent >= 0.02f && progressPercent < 0.85f }
+    val showCompletedBadge = isWatched
+    val showNotStartedBadge = remember(showCompletedBadge, progressPercent) { !showCompletedBadge && progressPercent < 0.02f }
+    val isUnavailable = remember(episode.available) { episode.available == false }
+    val cardBgColor = OmnioColors.BackgroundCard
+    val isFocusedState = remember { mutableStateOf(false) }
+    val cardCornerRadius = remember(cardMetrics.cornerRadius, density) {
+        with(density) { cardMetrics.cornerRadius.toPx() }
+    }
+    var isFocused by isFocusedState
+    var longPressTriggered by remember { mutableStateOf(false) }
+    val shape = remember(cardMetrics.cornerRadius) { RoundedCornerShape(cardMetrics.cornerRadius) }
+    val thumbnailWidthPx = remember(cardMetrics.cardWidth, density) {
+        with(density) { cardMetrics.cardWidth.roundToPx() }
+    }
+    val thumbnailHeightPx = remember(cardMetrics.cardHeight, density) {
+        with(density) { cardMetrics.cardHeight.roundToPx() }
+    }
+    val overlayBrush = remember {
+        Brush.verticalGradient(
+            colorStops = arrayOf(
+                0.0f to Color.Transparent,
+                0.15f to Color.Black.copy(alpha = 0.08f),
+                0.35f to Color.Black.copy(alpha = 0.28f),
+                0.60f to Color.Black.copy(alpha = 0.72f),
+                0.85f to Color.Black.copy(alpha = 0.90f),
+                1.0f to Color.Black.copy(alpha = 0.96f)
+            )
+        )
+    }
+    val typography = MaterialTheme.typography
+    val episodeBadgeStyle = remember(typography, cardMetrics) {
+        typography.labelSmall.copy(
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = cardMetrics.episodeBadgeLetterSpacing,
+            color = Color.White.copy(alpha = 0.9f)
+        )
+    }
+    val titleStyle = remember(typography, cardMetrics) {
+        typography.titleMedium.copy(
+            fontWeight = FontWeight.ExtraBold,
+            lineHeight = cardMetrics.titleLineHeight
+        )
+    }
+    val descriptionStyle = remember(typography, cardMetrics) {
+        typography.bodySmall.copy(
+            color = Color.White.copy(alpha = 0.9f),
+            lineHeight = cardMetrics.descriptionLineHeight
+        )
+    }
+    val textSecondary = OmnioColors.TextSecondary
+    val metaLabelStyle = remember(typography, textSecondary) {
+        typography.labelSmall.copy(color = textSecondary)
+    }
+    val ratingStyle = remember(typography) {
+        typography.labelSmall.copy(
+            color = Color(0xFFF5C518),
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+    val badgeBgColor = remember { Color.Black.copy(alpha = 0.42f) }
+    val badgeShape = remember(cardMetrics.episodeBadgeCornerRadius) { RoundedCornerShape(cardMetrics.episodeBadgeCornerRadius) }
+    val progressBgColor = remember { Color.Black.copy(alpha = 0.45f) }
+    val notStartedBadgeColor = remember(textSecondary) { textSecondary.copy(alpha = 0.9f) }
+    val thumbnailRequest = remember(context, episode.thumbnail, thumbnailWidthPx, thumbnailHeightPx, shouldBlur) {
+        ImageRequest.Builder(context)
+            .data(episode.thumbnail)
+            .crossfade(false)
+            .size(width = thumbnailWidthPx, height = thumbnailHeightPx)
+            .apply {
+                if (shouldBlur) {
+                    transformations(com.omnio.tv.ui.util.BlurTransformation())
+                }
+            }
+            .build()
+    }
+    val strCdWatched = stringResource(R.string.episodes_cd_watched)
+    val strEpisode = stringResource(R.string.episodes_episode)
+    val strUnavailable = stringResource(R.string.episodes_unavailable)
+    val episodeCode = remember(episode.episode, strEpisode) {
+        val prefix = strEpisode.uppercase(Locale.getDefault())
+        episode.episode?.let { number -> "$prefix $number" } ?: prefix
+    }
+
+    val primaryColor = OmnioColors.Primary
+    val textPrimary = OmnioColors.TextPrimary
+    val focusRing = OmnioColors.FocusRing
+    val cardShape = CardDefaults.shape(shape = shape)
+    val cardColors = CardDefaults.colors(
+        containerColor = Color.Transparent,
+        focusedContainerColor = Color.Transparent
+    )
+    val cardBorder = CardDefaults.border(
+        focusedBorder = Border(
+            border = BorderStroke(2.dp, focusRing),
+            shape = shape
+        )
+    )
+    val cardScale = CardDefaults.scale(focusedScale = 1.0f)
+    val cardGlow = CardDefaults.glow()
+
+    Card(
+        onClick = {
+            if (longPressTriggered) {
+                longPressTriggered = false
+            } else {
+                onClick()
+            }
+        },
+        modifier = Modifier
+            .width(cardMetrics.cardWidth)
+            .focusRequester(focusRequester)
+            .onFocusChanged {
+                isFocused = it.isFocused
+                if (it.isFocused) {
+                    onFocused?.invoke()
+                    onFocusRestored?.invoke()
+                }
+            }
+            .onPreviewKeyEvent { event ->
+                val native = event.nativeKeyEvent
+                if (native.action == AndroidKeyEvent.ACTION_DOWN) {
+                    if (native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
+                        longPressTriggered = true
+                        onLongPress()
+                        return@onPreviewKeyEvent true
+                    }
+                    val isLongPress = native.isLongPress || native.repeatCount > 0
+                    if (isLongPress && isSelectKey(native.keyCode)) {
+                        longPressTriggered = true
+                        onLongPress()
+                        return@onPreviewKeyEvent true
+                    }
+                }
+                if (native.action == AndroidKeyEvent.ACTION_UP &&
+                    longPressTriggered &&
+                    isSelectKey(native.keyCode)
+                ) {
+                    longPressTriggered = false
+                    return@onPreviewKeyEvent true
+                }
+                false
+            }
+            .focusProperties {
+                up = upFocusRequester
+                if (downFocusRequester != null) {
+                    down = downFocusRequester
+                }
+            },
+        shape = cardShape,
+        colors = cardColors,
+        border = cardBorder,
+        scale = cardScale,
+        glow = cardGlow
+    ) {
+        Box(
+            modifier = Modifier
+                .width(cardMetrics.cardWidth)
+                .height(cardMetrics.cardHeight)
+        ) {
+            val bgPainter = remember(cardBgColor) { androidx.compose.ui.graphics.painter.ColorPainter(cardBgColor) }
+            AsyncImage(
+                model = thumbnailRequest,
+                contentDescription = episode.title.localizeEpisodeTitle(context),
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                placeholder = bgPainter,
+                error = bgPainter,
+                fallback = bgPainter
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .drawWithCache {
+                        val startY = size.height * 0.40f
+                        val localBrush = Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.0f to Color.Transparent,
+                                0.15f to Color.Black.copy(alpha = 0.08f),
+                                0.35f to Color.Black.copy(alpha = 0.28f),
+                                0.60f to Color.Black.copy(alpha = 0.72f),
+                                0.85f to Color.Black.copy(alpha = 0.90f),
+                                1.0f to Color.Black.copy(alpha = 0.96f)
+                            ),
+                            startY = startY,
+                            endY = size.height
+                        )
+                        onDrawBehind {
+                            drawRect(
+                                brush = localBrush,
+                                topLeft = androidx.compose.ui.geometry.Offset(0f, startY),
+                                size = androidx.compose.ui.geometry.Size(size.width, size.height - startY),
+                                alpha = if (isFocusedState.value) 1f else 0.94f
+                            )
+                        }
+                    }
+            )
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .padding(
+                        start = cardMetrics.contentPadding,
+                        end = cardMetrics.contentPadding,
+                        top = cardMetrics.contentPadding,
+                        bottom = cardMetrics.contentBottomPadding
+                    ),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = badgeBgColor,
+                            shape = badgeShape
+                        )
+                        .padding(
+                            horizontal = cardMetrics.episodeBadgeHorizontalPadding,
+                            vertical = cardMetrics.episodeBadgeVerticalPadding
+                        )
+                ) {
+                    Text(
+                        text = episodeCode,
+                        style = episodeBadgeStyle,
+                        maxLines = 1
+                    )
+                }
+
+                Text(
+                    text = episode.title.localizeEpisodeTitle(context),
+                    style = titleStyle,
+                    color = textPrimary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                if (description.isNotBlank()) {
+                    Text(
+                        text = description,
+                        style = descriptionStyle,
+                        maxLines = cardMetrics.descriptionMaxLines,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                if (isUnavailable || runtimeLabel != null || ratingLabel != null || formattedDate.isNotBlank()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (isUnavailable) {
+                            Text(
+                                text = strUnavailable,
+                                style = metaLabelStyle,
+                                color = Color(0xFFFFB74D),
+                                maxLines = 1
+                            )
+                        }
+
+                        runtimeLabel?.let { runtime ->
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Schedule,
+                                    contentDescription = null,
+                                    tint = textSecondary,
+                                    modifier = Modifier.size(cardMetrics.metadataIconSize)
+                                )
+                                Text(
+                                    text = runtime,
+                                    style = metaLabelStyle,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+
+                        ratingLabel?.let { rating ->
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AsyncImage(
+                                    model = imdbLogoRequest,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .width(cardMetrics.imdbLogoWidth)
+                                        .height(cardMetrics.imdbLogoHeight),
+                                    contentScale = ContentScale.Fit
+                                )
+                                Text(
+                                    text = rating,
+                                    style = ratingStyle,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+
+                        if (formattedDate.isNotBlank()) {
+                            Text(
+                                text = formattedDate,
+                                style = metaLabelStyle,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.End,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (showProgress) {
+                val progressBarRadius = cardMetrics.progressBarHeight / 2
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(
+                            start = cardMetrics.contentPadding,
+                            end = cardMetrics.contentPadding,
+                            bottom = cardMetrics.contentPadding * 0.5f
+                        )
+                        .fillMaxWidth()
+                        .height(cardMetrics.progressBarHeight)
+                        .drawWithCache {
+                            val r = progressBarRadius.toPx()
+                            val cr = androidx.compose.ui.geometry.CornerRadius(r)
+                            val fillWidth = size.width * progressPercent
+                            onDrawBehind {
+                                drawRoundRect(color = progressBgColor, cornerRadius = cr)
+                                drawRoundRect(
+                                    color = primaryColor,
+                                    size = androidx.compose.ui.geometry.Size(fillWidth, size.height),
+                                    cornerRadius = cr
+                                )
+                            }
+                        }
+                )
+            }
+
+            if (showCompletedBadge) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(
+                            start = cardMetrics.statusBadgeInset,
+                            top = cardMetrics.statusBadgeInset
+                        )
+                        .size(cardMetrics.statusBadgeSize)
+                        .background(primaryColor, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = strCdWatched,
+                        tint = Color.White,
+                        modifier = Modifier.size(cardMetrics.statusIconSize)
+                    )
+                }
+            }
+
+            if (isUnavailable) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(
+                            end = cardMetrics.statusBadgeInset,
+                            top = cardMetrics.statusBadgeInset
+                        )
+                        .background(
+                            color = Color(0xCC5D4037),
+                            shape = badgeShape
+                        )
+                        .padding(
+                            horizontal = cardMetrics.episodeBadgeHorizontalPadding,
+                            vertical = cardMetrics.episodeBadgeVerticalPadding
+                        )
+                ) {
+                    Text(
+                        text = strUnavailable.uppercase(Locale.getDefault()),
+                        style = episodeBadgeStyle,
+                        maxLines = 1
+                    )
+                }
+            } else if (showNotStartedBadge) {
+                val dashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(7f, 5f), 0f) }
+                Canvas(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(
+                            start = cardMetrics.statusBadgeInset,
+                            top = cardMetrics.statusBadgeInset
+                        )
+                        .size(cardMetrics.statusBadgeSize)
+                ) {
+                    drawCircle(
+                        color = notStartedBadgeColor,
+                        style = Stroke(
+                            width = 2.dp.toPx(),
+                            pathEffect = dashEffect
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun EpisodeOptionsDialog(
+    episode: Video,
+    isWatched: Boolean,
+    isPending: Boolean,
+    isSeasonFullyWatched: Boolean = false,
+    hasPreviousEpisodes: Boolean = false,
+    onDismiss: () -> Unit,
+    onPlay: () -> Unit,
+    onPlayManually: () -> Unit = {},
+    showPlayManually: Boolean = false,
+    onToggleWatched: () -> Unit,
+    onMarkSeasonWatched: () -> Unit = {},
+    onMarkSeasonUnwatched: () -> Unit = {},
+    onMarkPreviousEpisodesWatched: () -> Unit = {}
+) {
+    val primaryFocusRequester = remember { FocusRequester() }
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        primaryFocusRequester.requestFocus()
+    }
+
+    OmnioDialog(
+        onDismiss = onDismiss,
+        title = episode.title.localizeEpisodeTitle(context),
+        subtitle = stringResource(R.string.episodes_dialog_subtitle)
+    ) {
+        Button(
+            onClick = onToggleWatched,
+            enabled = !isPending,
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(primaryFocusRequester),
+            colors = ButtonDefaults.colors(
+                containerColor = OmnioColors.BackgroundCard,
+                contentColor = OmnioColors.TextPrimary
+            )
+        ) {
+            Text(if (isWatched) stringResource(R.string.episodes_mark_unwatched) else stringResource(R.string.episodes_mark_watched))
+        }
+
+        Button(
+            onClick = if (isSeasonFullyWatched) onMarkSeasonUnwatched else onMarkSeasonWatched,
+            colors = ButtonDefaults.colors(
+                containerColor = OmnioColors.BackgroundCard,
+                contentColor = OmnioColors.TextPrimary
+            ),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(if (isSeasonFullyWatched) stringResource(R.string.episodes_mark_season_unwatched) else stringResource(R.string.episodes_mark_season_watched))
+        }
+
+        if (hasPreviousEpisodes) {
+            Button(
+                onClick = onMarkPreviousEpisodesWatched,
+                colors = ButtonDefaults.colors(
+                    containerColor = OmnioColors.BackgroundCard,
+                    contentColor = OmnioColors.TextPrimary
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.episodes_mark_previous_watched))
+            }
+        }
+
+        Button(
+            onClick = onPlay,
+            colors = ButtonDefaults.colors(
+                containerColor = OmnioColors.BackgroundCard,
+                contentColor = OmnioColors.TextPrimary
+            ),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.episodes_play))
+        }
+
+        if (showPlayManually) {
+            Button(
+                onClick = onPlayManually,
+                colors = ButtonDefaults.colors(
+                    containerColor = OmnioColors.BackgroundCard,
+                    contentColor = OmnioColors.TextPrimary
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.play_manually))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun SeasonOptionsDialog(
+    season: Int,
+    isFullyWatched: Boolean,
+    onDismiss: () -> Unit,
+    onMarkSeasonWatched: () -> Unit,
+    onMarkSeasonUnwatched: () -> Unit
+) {
+    val primaryFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        primaryFocusRequester.requestFocus()
+    }
+
+    OmnioDialog(
+        onDismiss = onDismiss,
+        title = if (season == 0) stringResource(R.string.episodes_specials) else stringResource(R.string.episodes_season, season),
+        subtitle = stringResource(R.string.episodes_season_actions)
+    ) {
+        Button(
+            onClick = if (isFullyWatched) onMarkSeasonUnwatched else onMarkSeasonWatched,
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(primaryFocusRequester),
+            colors = ButtonDefaults.colors(
+                containerColor = OmnioColors.BackgroundCard,
+                contentColor = OmnioColors.TextPrimary
+            )
+        ) {
+            Text(if (isFullyWatched) stringResource(R.string.episodes_mark_season_unwatched) else stringResource(R.string.episodes_mark_season_watched))
+        }
+    }
+}
+
+private data class EpisodeCardMetrics(
+    val rowHorizontalPadding: Dp,
+    val rowVerticalPadding: Dp,
+    val itemSpacing: Dp,
+    val cardWidth: Dp,
+    val cardHeight: Dp,
+    val cornerRadius: Dp,
+    val contentPadding: Dp,
+    val contentBottomPadding: Dp,
+    val episodeBadgeHorizontalPadding: Dp,
+    val episodeBadgeVerticalPadding: Dp,
+    val episodeBadgeCornerRadius: Dp,
+    val episodeBadgeLetterSpacing: androidx.compose.ui.unit.TextUnit,
+    val titleLineHeight: androidx.compose.ui.unit.TextUnit,
+    val descriptionLineHeight: androidx.compose.ui.unit.TextUnit,
+    val descriptionMaxLines: Int,
+    val metadataIconSize: Dp,
+    val imdbLogoWidth: Dp,
+    val imdbLogoHeight: Dp,
+    val progressBarHeight: Dp,
+    val statusBadgeSize: Dp,
+    val statusIconSize: Dp,
+    val statusBadgeInset: Dp
+)
+
+@Composable
+private fun rememberEpisodeCardMetrics(): EpisodeCardMetrics {
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    return remember(screenWidthDp) {
+        when {
+            screenWidthDp >= 1300 -> EpisodeCardMetrics(
+                rowHorizontalPadding = 56.dp,
+                rowVerticalPadding = 18.dp,
+                itemSpacing = 20.dp,
+                cardWidth = 400.dp,
+                cardHeight = 263.dp,
+                cornerRadius = 20.dp,
+                contentPadding = 20.dp,
+                contentBottomPadding = 24.dp,
+                episodeBadgeHorizontalPadding = 10.dp,
+                episodeBadgeVerticalPadding = 5.dp,
+                episodeBadgeCornerRadius = 8.dp,
+                episodeBadgeLetterSpacing = 1.0.sp,
+                titleLineHeight = 28.sp,
+                descriptionLineHeight = 22.sp,
+                descriptionMaxLines = 4,
+                metadataIconSize = 16.dp,
+                imdbLogoWidth = 28.dp,
+                imdbLogoHeight = 14.dp,
+                progressBarHeight = 4.dp,
+                statusBadgeSize = 32.dp,
+                statusIconSize = 20.dp,
+                statusBadgeInset = 16.dp
+            )
+
+            screenWidthDp >= 1000 -> EpisodeCardMetrics(
+                rowHorizontalPadding = 52.dp,
+                rowVerticalPadding = 18.dp,
+                itemSpacing = 18.dp,
+                cardWidth = 360.dp,
+                cardHeight = 235.dp,
+                cornerRadius = 18.dp,
+                contentPadding = 18.dp,
+                contentBottomPadding = 22.dp,
+                episodeBadgeHorizontalPadding = 9.dp,
+                episodeBadgeVerticalPadding = 4.dp,
+                episodeBadgeCornerRadius = 7.dp,
+                episodeBadgeLetterSpacing = 0.9.sp,
+                titleLineHeight = 25.sp,
+                descriptionLineHeight = 20.sp,
+                descriptionMaxLines = 4,
+                metadataIconSize = 15.dp,
+                imdbLogoWidth = 26.dp,
+                imdbLogoHeight = 13.dp,
+                progressBarHeight = 4.dp,
+                statusBadgeSize = 28.dp,
+                statusIconSize = 18.dp,
+                statusBadgeInset = 14.dp
+            )
+
+            screenWidthDp >= 760 -> EpisodeCardMetrics(
+                rowHorizontalPadding = 48.dp,
+                rowVerticalPadding = 16.dp,
+                itemSpacing = 16.dp,
+                cardWidth = 320.dp,
+                cardHeight = 207.dp,
+                cornerRadius = 16.dp,
+                contentPadding = 16.dp,
+                contentBottomPadding = 20.dp,
+                episodeBadgeHorizontalPadding = 8.dp,
+                episodeBadgeVerticalPadding = 4.dp,
+                episodeBadgeCornerRadius = 6.dp,
+                episodeBadgeLetterSpacing = 0.9.sp,
+                titleLineHeight = 22.sp,
+                descriptionLineHeight = 18.sp,
+                descriptionMaxLines = 3,
+                metadataIconSize = 14.dp,
+                imdbLogoWidth = 24.dp,
+                imdbLogoHeight = 12.dp,
+                progressBarHeight = 4.dp,
+                statusBadgeSize = 24.dp,
+                statusIconSize = 16.dp,
+                statusBadgeInset = 12.dp
+            )
+
+            else -> EpisodeCardMetrics(
+                rowHorizontalPadding = 32.dp,
+                rowVerticalPadding = 14.dp,
+                itemSpacing = 14.dp,
+                cardWidth = 280.dp,
+                cardHeight = 179.dp,
+                cornerRadius = 16.dp,
+                contentPadding = 14.dp,
+                contentBottomPadding = 16.dp,
+                episodeBadgeHorizontalPadding = 7.dp,
+                episodeBadgeVerticalPadding = 3.dp,
+                episodeBadgeCornerRadius = 5.dp,
+                episodeBadgeLetterSpacing = 0.8.sp,
+                titleLineHeight = 19.sp,
+                descriptionLineHeight = 16.sp,
+                descriptionMaxLines = 3,
+                metadataIconSize = 13.dp,
+                imdbLogoWidth = 22.dp,
+                imdbLogoHeight = 11.dp,
+                progressBarHeight = 4.dp,
+                statusBadgeSize = 22.dp,
+                statusIconSize = 14.dp,
+                statusBadgeInset = 10.dp
+            )
+        }
+    }
+}
+
+private fun formatEpisodeRuntime(runtimeMinutes: Int): String {
+    if (runtimeMinutes <= 0) return ""
+    val hours = runtimeMinutes / 60
+    val minutes = runtimeMinutes % 60
+    return when {
+        hours > 0 && minutes > 0 -> "${hours}h ${minutes}m"
+        hours > 0 -> "${hours}h"
+        else -> "${minutes}m"
+    }
+}
+
+private fun formatEpisodeCardDate(isoDate: String): String {
+    val locale = Locale.getDefault()
+    val bestPattern = DateFormat.getBestDateTimePattern(locale, "dMMMMy")
+    val outputFormat = SimpleDateFormat(bestPattern, locale)
+    return try {
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        val date = inputFormat.parse(isoDate)
+        date?.let { outputFormat.format(it) }.orEmpty()
+    } catch (_: Exception) {
+        try {
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val date = inputFormat.parse(isoDate)
+            date?.let { outputFormat.format(it) }.orEmpty()
+        } catch (_: Exception) {
+            ""
+        }
+    }
+}
+
+private fun isSelectKey(keyCode: Int): Boolean {
+    return keyCode == AndroidKeyEvent.KEYCODE_DPAD_CENTER ||
+        keyCode == AndroidKeyEvent.KEYCODE_ENTER ||
+        keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER
+}
+
+private fun episodePendingKey(video: Video): String {
+    return "${video.id}:${video.season ?: -1}:${video.episode ?: -1}"
+}

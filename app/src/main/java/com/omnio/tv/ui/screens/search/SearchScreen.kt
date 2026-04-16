@@ -1,0 +1,813 @@
+package com.omnio.tv.ui.screens.search
+
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.view.KeyEvent
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.focusGroup
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Text
+import com.omnio.tv.ui.components.CatalogRowSection
+import com.omnio.tv.ui.components.EmptyScreenState
+import com.omnio.tv.ui.components.ErrorState
+import com.omnio.tv.ui.components.LoadingIndicator
+import com.omnio.tv.ui.components.PosterCardDefaults
+import com.omnio.tv.ui.components.PosterCardStyle
+import com.omnio.tv.ui.theme.OmnioColors
+import android.view.inputmethod.CompletionInfo
+import android.view.inputmethod.InputMethodManager
+import androidx.compose.ui.platform.LocalView
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+import androidx.compose.ui.res.stringResource
+import com.omnio.tv.R
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun SearchScreen(
+    viewModel: SearchViewModel = hiltViewModel(),
+    onNavigateToDetail: (String, String, String) -> Unit,
+    onNavigateToSeeAll: (catalogId: String, addonId: String, type: String) -> Unit = { _, _, _ -> },
+    onOpenDiscover: () -> Unit = {}
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val watchedMovieIds by viewModel.watchedMovieIds.collectAsState()
+    val watchedSeriesIds by viewModel.watchedSeriesIds.collectAsState()
+    val context = LocalContext.current
+    val view = LocalView.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val strVoiceNoSpeech = stringResource(R.string.search_voice_no_speech)
+    val strVoiceMicPermission = stringResource(R.string.search_voice_mic_permission)
+    val strVoiceFailed = stringResource(R.string.search_voice_failed)
+    val strVoiceUnavailable = stringResource(R.string.search_voice_unavailable)
+    val voiceFocusRequester = remember { FocusRequester() }
+    val searchFocusRequester = remember { FocusRequester() }
+    val discoverFirstItemFocusRequester = remember { FocusRequester() }
+    var isSearchFieldFocused by remember { mutableStateOf(false) }
+    var isRecentSearchSectionFocused by remember { mutableStateOf(false) }
+    var focusResults by remember { mutableStateOf(false) }
+    var pendingFocusMoveToResultsQuery by remember { mutableStateOf<String?>(null) }
+    var pendingFocusMoveSawSearching by remember { mutableStateOf(false) }
+    var pendingFocusMoveHadExistingSearchRows by remember { mutableStateOf(false) }
+    var isVoiceListening by remember { mutableStateOf(false) }
+    var discoverFocusedItemIndex by rememberSaveable { mutableStateOf(0) }
+    var restoreDiscoverFocus by rememberSaveable { mutableStateOf(false) }
+    var pendingDiscoverRestoreOnResume by rememberSaveable { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val coroutineScope = rememberCoroutineScope()
+    val onVoiceQueryResultState = rememberUpdatedState<(String) -> Unit> { recognized ->
+        if (recognized.isNotBlank()) {
+            viewModel.onEvent(SearchEvent.QueryChanged(recognized))
+            viewModel.onEvent(SearchEvent.SubmitSearch)
+            focusResults = false
+            pendingFocusMoveToResultsQuery = recognized
+            pendingFocusMoveSawSearching = false
+            pendingFocusMoveHadExistingSearchRows =
+                uiState.submittedQuery.trim().length >= 2 && uiState.catalogRows.any { it.items.isNotEmpty() }
+        } else {
+            Toast.makeText(context, strVoiceNoSpeech, Toast.LENGTH_SHORT).show()
+        }
+    }
+    val isVoiceSearchAvailable = remember(context) { SpeechRecognizer.isRecognitionAvailable(context) }
+    val speechRecognizer = remember(context, isVoiceSearchAvailable) {
+        if (isVoiceSearchAvailable) {
+            runCatching { SpeechRecognizer.createSpeechRecognizer(context) }.getOrNull()
+        } else {
+            null
+        }
+    }
+    val hasRecordAudioPermission by remember(context) {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+        )
+    }
+    var recordAudioPermissionGranted by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val requestAudioPermission = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        recordAudioPermissionGranted = granted
+        if (granted) {
+            isVoiceListening = true
+            speechRecognizer?.startListening(
+                Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                    putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to search")
+                }
+            )
+        } else {
+            Toast.makeText(context, strVoiceMicPermission, Toast.LENGTH_SHORT).show()
+        }
+    }
+    LaunchedEffect(hasRecordAudioPermission) {
+        recordAudioPermissionGranted = hasRecordAudioPermission
+    }
+    DisposableEffect(speechRecognizer) {
+        val listener = object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) = Unit
+            override fun onBeginningOfSpeech() = Unit
+            override fun onRmsChanged(rmsdB: Float) = Unit
+            override fun onBufferReceived(buffer: ByteArray?) = Unit
+            override fun onEndOfSpeech() = Unit
+            override fun onEvent(eventType: Int, params: Bundle?) = Unit
+
+            override fun onError(error: Int) {
+                isVoiceListening = false
+                if (error != SpeechRecognizer.ERROR_CLIENT) {
+                    Toast.makeText(context, strVoiceFailed, Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onResults(results: Bundle?) {
+                isVoiceListening = false
+                val recognized = results
+                    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    ?.firstOrNull()
+                    .orEmpty()
+                    .trim()
+                onVoiceQueryResultState.value(recognized)
+            }
+
+            override fun onPartialResults(partialResults: Bundle?) = Unit
+        }
+
+        speechRecognizer?.setRecognitionListener(listener)
+        onDispose {
+            speechRecognizer?.setRecognitionListener(null)
+            speechRecognizer?.destroy()
+        }
+    }
+    val topInputFocusRequester = remember(isVoiceSearchAvailable) {
+        if (isVoiceSearchAvailable) voiceFocusRequester else searchFocusRequester
+    }
+    val launchVoiceSearch: () -> Unit = {
+        if (!isVoiceSearchAvailable || speechRecognizer == null) {
+            Toast.makeText(context, strVoiceUnavailable, Toast.LENGTH_SHORT).show()
+        } else if (!recordAudioPermissionGranted) {
+            requestAudioPermission.launch(Manifest.permission.RECORD_AUDIO)
+        } else {
+            isVoiceListening = true
+            runCatching {
+                speechRecognizer.startListening(
+                    Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+                        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                        putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to search")
+                    }
+                )
+            }.onFailure {
+                isVoiceListening = false
+                Toast.makeText(context, strVoiceUnavailable, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val posterCardStyle = remember(uiState.posterCardWidthDp, uiState.posterCardCornerRadiusDp) {
+        val computedHeightDp = (uiState.posterCardWidthDp * 1.5f).roundToInt()
+        PosterCardStyle(
+            width = uiState.posterCardWidthDp.dp,
+            height = computedHeightDp.dp,
+            cornerRadius = uiState.posterCardCornerRadiusDp.dp,
+            focusedBorderWidth = PosterCardDefaults.Style.focusedBorderWidth,
+            focusedScale = PosterCardDefaults.Style.focusedScale
+        )
+    }
+
+    val trimmedQuery = remember(uiState.query) { uiState.query.trim() }
+    val trimmedSubmittedQuery = remember(uiState.submittedQuery) { uiState.submittedQuery.trim() }
+    val isDiscoverMode = remember(uiState.discoverEnabled, trimmedSubmittedQuery) {
+        uiState.discoverEnabled && trimmedSubmittedQuery.isEmpty()
+    }
+    val hasPendingUnsubmittedQuery = remember(isDiscoverMode, trimmedQuery, trimmedSubmittedQuery) {
+        !isDiscoverMode && trimmedQuery.length >= 2 && trimmedQuery != trimmedSubmittedQuery
+    }
+    val showRecentSearches = remember(
+        trimmedQuery,
+        uiState.recentSearches
+    ) {
+        trimmedQuery.isEmpty() &&
+            uiState.recentSearches.isNotEmpty()
+    }
+    val canMoveToResults = remember(
+        isDiscoverMode,
+        uiState.discoverResults,
+        trimmedSubmittedQuery,
+        uiState.catalogRows
+    ) {
+        if (isDiscoverMode) false else trimmedSubmittedQuery.length >= 2 && uiState.catalogRows.any { it.items.isNotEmpty() }
+    }
+    val submitCurrentQuery: (String) -> Unit = { submittedQuery ->
+        viewModel.onEvent(SearchEvent.SubmitSearch)
+        focusResults = false
+        if (submittedQuery.length >= 2) {
+            pendingFocusMoveToResultsQuery = submittedQuery
+            pendingFocusMoveSawSearching = false
+            pendingFocusMoveHadExistingSearchRows =
+                trimmedSubmittedQuery.length >= 2 && uiState.catalogRows.any { row -> row.items.isNotEmpty() }
+        } else {
+            pendingFocusMoveToResultsQuery = null
+            pendingFocusMoveSawSearching = false
+            pendingFocusMoveHadExistingSearchRows = false
+        }
+    }
+    val handleQueryChanged: (String) -> Unit = { nextQuery ->
+        val previousQuery = uiState.query.trim()
+        val trimmedNextQuery = nextQuery.trim()
+        val selectedSuggestion = trimmedNextQuery.length >= 2 &&
+            trimmedNextQuery != trimmedSubmittedQuery &&
+            uiState.suggestions.any { it.equals(trimmedNextQuery, ignoreCase = true) } &&
+            trimmedNextQuery.startsWith(previousQuery, ignoreCase = true) &&
+            trimmedNextQuery.length - previousQuery.length > 1
+
+        focusResults = false
+        pendingFocusMoveToResultsQuery = null
+        pendingFocusMoveSawSearching = false
+        pendingFocusMoveHadExistingSearchRows = false
+        viewModel.onEvent(SearchEvent.QueryChanged(nextQuery))
+        if (selectedSuggestion) {
+            submitCurrentQuery(trimmedNextQuery)
+        }
+    }
+    val submitRecentSearch: (String) -> Unit = { recentQuery ->
+        val trimmedRecentQuery = recentQuery.trim()
+        if (trimmedRecentQuery.isNotEmpty()) {
+            viewModel.onEvent(SearchEvent.QueryChanged(trimmedRecentQuery))
+            submitCurrentQuery(trimmedRecentQuery)
+        }
+    }
+
+    LaunchedEffect(focusResults, isDiscoverMode, uiState.discoverResults.size) {
+        if (focusResults && isDiscoverMode && uiState.discoverResults.isNotEmpty()) {
+            delay(100)
+            runCatching { discoverFirstItemFocusRequester.requestFocus() }
+            focusResults = false
+            pendingFocusMoveToResultsQuery = null
+            pendingFocusMoveSawSearching = false
+            pendingFocusMoveHadExistingSearchRows = false
+        }
+    }
+
+    LaunchedEffect(
+        pendingFocusMoveToResultsQuery,
+        pendingFocusMoveSawSearching,
+        pendingFocusMoveHadExistingSearchRows,
+        uiState.isSearching,
+        uiState.submittedQuery,
+        canMoveToResults,
+        isDiscoverMode
+    ) {
+        val pendingQuery = pendingFocusMoveToResultsQuery ?: return@LaunchedEffect
+        val currentSubmittedQuery = uiState.submittedQuery.trim()
+        if (currentSubmittedQuery != pendingQuery) return@LaunchedEffect
+
+        if (uiState.isSearching) {
+            pendingFocusMoveSawSearching = true
+            return@LaunchedEffect
+        }
+
+        val shouldRequireSeenSearching = pendingFocusMoveHadExistingSearchRows
+        if ((shouldRequireSeenSearching && !pendingFocusMoveSawSearching) || !canMoveToResults) {
+            return@LaunchedEffect
+        }
+
+        if (isDiscoverMode) {
+            focusResults = true
+        } else {
+            // Use explicit first-item focus for deterministic landing on row 1 / column 1.
+            delay(80)
+            focusResults = true
+        }
+        pendingFocusMoveToResultsQuery = null
+        pendingFocusMoveSawSearching = false
+        pendingFocusMoveHadExistingSearchRows = false
+    }
+
+    LaunchedEffect(Unit) {
+        repeat(2) { withFrameNanos { } }
+        runCatching { topInputFocusRequester.requestFocus() }
+    }
+
+    // Push search suggestions to the native keyboard suggestion bar
+    LaunchedEffect(uiState.suggestions) {
+        val imm = context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            ?: return@LaunchedEffect
+        val reversed = uiState.suggestions.asReversed()
+        val completions = reversed.mapIndexed { index, name ->
+            CompletionInfo(index.toLong(), index, name)
+        }.toTypedArray()
+        imm.displayCompletions(view, completions)
+    }
+
+    val latestPendingDiscoverRestore by rememberUpdatedState(pendingDiscoverRestoreOnResume)
+    val latestShouldKeepSearchFocus by rememberUpdatedState(
+        focusResults || uiState.isSearching || isVoiceListening
+    )
+    val latestVoiceSearchAvailable by rememberUpdatedState(isVoiceSearchAvailable)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                if (latestPendingDiscoverRestore) {
+                    restoreDiscoverFocus = true
+                    pendingDiscoverRestoreOnResume = false
+                } else if (!latestShouldKeepSearchFocus) {
+                    coroutineScope.launch {
+                        repeat(2) { withFrameNanos { } }
+                        runCatching {
+                            if (latestVoiceSearchAvailable) {
+                                voiceFocusRequester.requestFocus()
+                            } else {
+                                searchFocusRequester.requestFocus()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        if (isDiscoverMode) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 10.dp)
+            ) {
+                SearchInputField(
+                    query = uiState.query,
+                    canMoveToResults = canMoveToResults,
+                    voiceFocusRequester = if (isVoiceSearchAvailable) voiceFocusRequester else null,
+                    searchFocusRequester = searchFocusRequester,
+                    onSearchFieldFocusChanged = { focused -> isSearchFieldFocused = focused },
+                    onQueryChanged = handleQueryChanged,
+                    onSubmit = {
+                        submitCurrentQuery(uiState.query.trim())
+                    },
+                    showVoiceSearch = isVoiceSearchAvailable,
+                    isVoiceListening = isVoiceListening,
+                    onVoiceSearch = launchVoiceSearch,
+                    onMoveToResults = { focusResults = true },
+                    onOpenDiscover = onOpenDiscover,
+                    keyboardController = keyboardController
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (showRecentSearches) {
+                    RecentSearchesSection(
+                        recentSearches = uiState.recentSearches,
+                        onSearchSelected = submitRecentSearch,
+                        onClearHistory = {
+                            viewModel.onEvent(SearchEvent.ClearRecentSearches)
+                        },
+                        onSectionFocusChanged = { focused -> isRecentSearchSectionFocused = focused },
+                        modifier = Modifier.padding(horizontal = 52.dp)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        EmptyScreenState(
+                            title = stringResource(R.string.search_start_title),
+                            subtitle = stringResource(R.string.search_start_subtitle),
+                            icon = Icons.Default.Search
+                        )
+                    }
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    SearchInputField(
+                        query = uiState.query,
+                        canMoveToResults = canMoveToResults,
+                        voiceFocusRequester = if (isVoiceSearchAvailable) voiceFocusRequester else null,
+                        searchFocusRequester = searchFocusRequester,
+                        onSearchFieldFocusChanged = { focused -> isSearchFieldFocused = focused },
+                        onQueryChanged = handleQueryChanged,
+                        onSubmit = {
+                            submitCurrentQuery(uiState.query.trim())
+                        },
+                        showVoiceSearch = isVoiceSearchAvailable,
+                        isVoiceListening = isVoiceListening,
+                        onVoiceSearch = launchVoiceSearch,
+                        onMoveToResults = {
+                            focusResults = true
+                        },
+                        onOpenDiscover = onOpenDiscover,
+                        keyboardController = keyboardController
+                    )
+                }
+
+                if ((trimmedSubmittedQuery.length < 2 || hasPendingUnsubmittedQuery) && !showRecentSearches) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.search_keyboard_hint),
+                            style = androidx.tv.material3.MaterialTheme.typography.bodySmall,
+                            color = OmnioColors.TextSecondary,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 52.dp)
+                        )
+                    }
+                }
+
+                when {
+                    trimmedSubmittedQuery.length < 2 && !hasPendingUnsubmittedQuery -> {
+                        item {
+                            if (showRecentSearches) {
+                                RecentSearchesSection(
+                                    recentSearches = uiState.recentSearches,
+                                    onSearchSelected = submitRecentSearch,
+                                    onClearHistory = {
+                                        viewModel.onEvent(SearchEvent.ClearRecentSearches)
+                                    },
+                                    onSectionFocusChanged = { focused ->
+                                        isRecentSearchSectionFocused = focused
+                                    }
+                                )
+                            } else {
+                                EmptyScreenState(
+                                    title = stringResource(R.string.search_start_title),
+                                    subtitle = if (uiState.discoverEnabled) {
+                                        stringResource(R.string.search_start_subtitle)
+                                    } else {
+                                        stringResource(R.string.search_start_subtitle_no_discover)
+                                    },
+                                    icon = Icons.Default.Search
+                                )
+                            }
+                        }
+                    }
+
+                    uiState.isSearching && uiState.catalogRows.isEmpty() -> {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 80.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LoadingIndicator()
+                            }
+                        }
+                    }
+
+                    uiState.error != null && uiState.catalogRows.isEmpty() -> {
+                        item {
+                            ErrorState(
+                                message = uiState.error ?: "Search failed",
+                                onRetry = { viewModel.onEvent(SearchEvent.Retry) }
+                            )
+                        }
+                    }
+
+                    uiState.catalogRows.isEmpty() || uiState.catalogRows.none { it.items.isNotEmpty() } -> {
+                        item {
+                            EmptyScreenState(
+                                title = stringResource(R.string.search_no_results_title),
+                                subtitle = stringResource(R.string.search_no_results_subtitle),
+                                icon = Icons.Default.Search
+                            )
+                        }
+                    }
+
+                    else -> {
+                        val visibleCatalogRows = uiState.catalogRows.filter { it.items.isNotEmpty() }
+
+                        itemsIndexed(
+                            items = visibleCatalogRows,
+                            key = { index, item ->
+                                "${item.addonId}_${item.type}_${item.catalogId}_${trimmedSubmittedQuery}_$index"
+                            }
+                        ) { index, catalogRow ->
+                            val hasEnoughForSeeAll = catalogRow.items.size >= 15
+                            val truncatedRow = if (hasEnoughForSeeAll) {
+                                catalogRow.copy(items = catalogRow.items.take(14))
+                            } else catalogRow
+                            CatalogRowSection(
+                                catalogRow = truncatedRow,
+                                showSeeAll = hasEnoughForSeeAll,
+                                showPosterLabels = uiState.posterLabelsEnabled,
+                                showAddonName = uiState.catalogAddonNameEnabled,
+                                showCatalogTypeSuffix = uiState.catalogTypeSuffixEnabled,
+                                enableRowFocusRestorer = false,
+                                isItemWatched = { item ->
+                                    val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
+                                    if (isSeries) item.id in watchedSeriesIds else item.id in watchedMovieIds
+                                },
+                                focusedItemIndex = if (focusResults && index == 0) 0 else -1,
+                                onItemFocused = {
+                                    if (focusResults) {
+                                        focusResults = false
+                                    }
+                                },
+                                onItemClick = { id, type, addonBaseUrl ->
+                                    onNavigateToDetail(id, type, addonBaseUrl)
+                                },
+                                onSeeAll = {
+                                    onNavigateToSeeAll(
+                                        catalogRow.catalogId,
+                                        catalogRow.addonId,
+                                        catalogRow.apiType
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun RecentSearchesSection(
+    recentSearches: List<String>,
+    onSearchSelected: (String) -> Unit,
+    onClearHistory: () -> Unit,
+    onSectionFocusChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .focusGroup()
+            .onFocusChanged { state ->
+                onSectionFocusChanged(state.hasFocus || state.isFocused)
+            },
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.search_recent_title),
+                style = androidx.tv.material3.MaterialTheme.typography.titleMedium,
+                color = OmnioColors.TextPrimary
+            )
+            Button(
+                onClick = onClearHistory,
+                colors = ButtonDefaults.colors(
+                    containerColor = OmnioColors.BackgroundCard,
+                    contentColor = OmnioColors.TextPrimary,
+                    focusedContainerColor = OmnioColors.FocusBackground,
+                    focusedContentColor = OmnioColors.Primary
+                ),
+                shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+            ) {
+                Text(text = stringResource(R.string.search_recent_clear))
+            }
+        }
+
+        recentSearches.forEach { recentQuery ->
+            Button(
+                onClick = { onSearchSelected(recentQuery) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.colors(
+                    containerColor = OmnioColors.BackgroundCard,
+                    contentColor = OmnioColors.TextPrimary,
+                    focusedContainerColor = OmnioColors.FocusBackground,
+                    focusedContentColor = OmnioColors.Primary
+                ),
+                shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+            ) {
+                Text(
+                    text = recentQuery,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchInputField(
+    query: String,
+    canMoveToResults: Boolean,
+    voiceFocusRequester: FocusRequester?,
+    searchFocusRequester: FocusRequester,
+    onSearchFieldFocusChanged: (Boolean) -> Unit,
+    onQueryChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+    showVoiceSearch: Boolean,
+    isVoiceListening: Boolean,
+    onVoiceSearch: () -> Unit,
+    onMoveToResults: () -> Unit,
+    onOpenDiscover: () -> Unit,
+    keyboardController: androidx.compose.ui.platform.SoftwareKeyboardController?
+) {
+    var isDiscoverButtonFocused by remember { mutableStateOf(false) }
+    var isVoiceButtonFocused by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 48.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(
+            onClick = onOpenDiscover,
+            modifier = Modifier
+                .onFocusChanged { isDiscoverButtonFocused = it.isFocused }
+                .size(56.dp)
+                .border(
+                    width = if (isDiscoverButtonFocused) 2.dp else 1.dp,
+                    color = if (isDiscoverButtonFocused) OmnioColors.FocusRing else OmnioColors.Border,
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .background(
+                    color = OmnioColors.BackgroundCard,
+                    shape = RoundedCornerShape(12.dp)
+                )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Explore,
+                contentDescription = stringResource(R.string.cd_open_discover),
+                tint = OmnioColors.TextPrimary
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        if (showVoiceSearch) {
+            IconButton(
+                onClick = onVoiceSearch,
+                modifier = Modifier
+                    .then(
+                        if (voiceFocusRequester != null) {
+                            Modifier.focusRequester(voiceFocusRequester)
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .onFocusChanged { isVoiceButtonFocused = it.isFocused }
+                    .size(56.dp)
+                    .border(
+                        width = if (isVoiceButtonFocused || isVoiceListening) 2.dp else 1.dp,
+                        color = if (isVoiceListening) OmnioColors.Primary else if (isVoiceButtonFocused) OmnioColors.FocusRing else OmnioColors.Border,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .background(
+                        color = if (isVoiceListening) OmnioColors.Primary.copy(alpha = 0.2f) else OmnioColors.BackgroundCard,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = stringResource(R.string.cd_voice_search),
+                    tint = if (isVoiceListening) OmnioColors.Primary else OmnioColors.TextPrimary
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+        }
+
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChanged,
+            modifier = Modifier
+                .weight(1f)
+                .focusRequester(searchFocusRequester)
+                .onFocusChanged { focusState ->
+                    onSearchFieldFocusChanged(focusState.isFocused)
+                }
+                .onPreviewKeyEvent { keyEvent ->
+                    when (keyEvent.nativeKeyEvent.keyCode) {
+                        KeyEvent.KEYCODE_ENTER,
+                        KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                            if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                                onSubmit()
+                            }
+                            return@onPreviewKeyEvent true
+                        }
+
+                        KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            if (canMoveToResults) {
+                                if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                                    onMoveToResults()
+                                }
+                                return@onPreviewKeyEvent true
+                            }
+                        }
+                    }
+                    false
+                },
+            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    onSubmit()
+                    keyboardController?.hide()
+                }
+            ),
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.search_placeholder),
+                    color = OmnioColors.TextTertiary
+                )
+            },
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = OmnioColors.BackgroundCard,
+                unfocusedContainerColor = OmnioColors.BackgroundCard,
+                focusedIndicatorColor = OmnioColors.FocusRing,
+                unfocusedIndicatorColor = OmnioColors.Border,
+                focusedTextColor = OmnioColors.TextPrimary,
+                unfocusedTextColor = OmnioColors.TextPrimary,
+                cursorColor = OmnioColors.FocusRing
+            )
+        )
+    }
+}

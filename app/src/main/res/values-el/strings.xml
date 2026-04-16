@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Nuvio</string>
+    <string name="app_name">Omnio</string>
     <string name="type_movie">Ταινία</string>
     <string name="type_series">Σειρά</string>
     <string name="type_unknown">Άγνωστο</string>
@@ -7,7 +7,7 @@
     <!-- HomeScreen -->
     <string name="home_no_addons">Δεν έχετε εγκαταστήσει πρόσθετα. Προσθέστε ένα για να ξεκινήσετε.</string>
     <string name="home_no_catalog_addons">Δεν έχετε εγκαταστήσει πρόσθετα καταλόγου. Εγκαταστήστε ένα πρόσθετο καταλόγου για να δείτε περιεχόμενο.</string>
-    <string name="auth_notice_nuvio_logged_out">Έχετε αποσυνδεθεί από το Nuvio. Συνδεθείτε ξανά.</string>
+    <string name="auth_notice_omnio_logged_out">Έχετε αποσυνδεθεί από το Omnio. Συνδεθείτε ξανά.</string>
     <string name="auth_notice_trakt_logged_out">Έχετε αποσυνδεθεί από το Trakt. Συνδεθείτε ξανά.</string>
     <string name="error_generic">Προέκυψε σφάλμα</string>
 
@@ -248,12 +248,12 @@
 
     <!-- SupportersContributorsScreen -->
     <string name="supporters_contributors_title">Υποστηρικτές &amp; Συνεισφέροντες</string>
-    <string name="supporters_contributors_subtitle">Οι άνθρωποι που υποστηρίζουν το Nuvio και οι συνεισφέροντες που το χτίζουν σε TV και κινητά.</string>
+    <string name="supporters_contributors_subtitle">Οι άνθρωποι που υποστηρίζουν το Omnio και οι συνεισφέροντες που το χτίζουν σε TV και κινητά.</string>
     <string name="supporters_contributors_supporters_copy">Οι υποστηρικτές και δωρητές βοηθούν να συνεχίζεται το έργο, χρηματοδοτούν την υποδομή και ανοίγουν χώρο για φιλόδοξα χαρακτηριστικά.</string>
-    <string name="supporters_contributors_donate_copy">Το Nuvio θα παραμείνει δωρεάν και ανοιχτού κώδικα. Αν θέλετε να υποστηρίξετε το έργο, μπορείτε να βοηθήσετε στην κάλυψη του χρόνου και της υποδομής πίσω από αυτό.</string>
-    <string name="supporters_contributors_donate_button">Δωρεά στο Nuvio</string>
+    <string name="supporters_contributors_donate_copy">Το Omnio θα παραμείνει δωρεάν και ανοιχτού κώδικα. Αν θέλετε να υποστηρίξετε το έργο, μπορείτε να βοηθήσετε στην κάλυψη του χρόνου και της υποδομής πίσω από αυτό.</string>
+    <string name="supporters_contributors_donate_button">Δωρεά στο Omnio</string>
     <string name="supporters_contributors_qr_title">Σάρωση για δωρεά</string>
-    <string name="supporters_contributors_qr_subtitle">Ανοίξτε τον σύνδεσμο στο κινητό σας και υποστηρίξτε το Nuvio μέσω Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Ανοίξτε τον σύνδεσμο στο κινητό σας και υποστηρίξτε το Omnio μέσω Ko-fi.</string>
     <string name="supporters_contributors_qr_hint">Στρέψτε την κάμερα στο QR code ή χρησιμοποιήστε το κουμπί παρακάτω.</string>
     <string name="supporters_contributors_back_button">Επιστροφή σε λεπτομέρειες</string>
     <string name="supporters_tab">Υποστηρικτές</string>
@@ -598,13 +598,13 @@
     <string name="trakt_watch_progress_title">Πρόοδος παρακολούθησης</string>
     <string name="trakt_watch_progress_subtitle">Επιλέξτε ποια πηγή θα τροφοδοτεί την επανάληψη και τη Συνέχεια παρακολούθησης</string>
     <string name="trakt_watch_progress_dialog_title">Πρόοδος παρακολούθησης</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Επιλέξτε αν η επανάληψη και η Συνέχεια παρακολούθησης θα χρησιμοποιούν Trakt ή Nuvio Sync ενώ το scrobbling Trakt παραμένει ενεργό.</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Επιλέξτε αν η επανάληψη και η Συνέχεια παρακολούθησης θα χρησιμοποιούν Trakt ή Omnio Sync ενώ το scrobbling Trakt παραμένει ενεργό.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
-    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_source_omnio">Omnio Sync</string>
     <string name="trakt_setting_on">Ενεργό</string>
     <string name="trakt_setting_off">Απενεργοποιημένο</string>
     <string name="trakt_watch_progress_trakt_selected">Η πηγή προόδου ορίστηκε σε Trakt</string>
-    <string name="trakt_watch_progress_nuvio_selected">Η πηγή προόδου ορίστηκε σε Nuvio Sync</string>
+    <string name="trakt_watch_progress_omnio_selected">Η πηγή προόδου ορίστηκε σε Omnio Sync</string>
     <string name="trakt_continue_watching_window">Παράθυρο Συνέχεια παρακολούθησης</string>
     <string name="trakt_continue_watching_subtitle">Ιστορικό Trakt που λαμβάνεται υπόψη για Συνέχεια παρακολούθησης</string>
     <string name="trakt_unaired_next_up">Επόμενα επεισόδια που δεν έχουν προβληθεί</string>
@@ -626,7 +626,7 @@
     <string name="trakt_stat_watched_hours">Ώρες παρακολούθησης</string>
     <string name="trakt_disconnect">Αποσύνδεση</string>
     <string name="trakt_disconnect_title">Αποσύνδεση Trakt;</string>
-    <string name="trakt_disconnect_subtitle">Αυτό θα αποσυνδέσει τον λογαριασμό σας Trakt από το Nuvio.</string>
+    <string name="trakt_disconnect_subtitle">Αυτό θα αποσυνδέσει τον λογαριασμό σας Trakt από το Omnio.</string>
     <string name="trakt_login">Σύνδεση</string>
     <string name="trakt_retry">Δοκιμή ξανά</string>
     <string name="trakt_back">Πίσω</string>
@@ -731,7 +731,7 @@
     <string name="profile_pin_overlay_set_support">Αυτό το PIN θα απαιτείται πριν το άνοιγμα του προφίλ.</string>
     <string name="profile_pin_overlay_confirm_support">Εισάγετε ξανά τα ίδια 4 ψηφία για ολοκλήρωση.</string>
     <string name="profile_pin_overlay_mismatch">Τα PIN δεν ταιριάζουν. Εισάγετε νέο PIN ξανά.</string>
-    <string name="profile_pin_overlay_forgot_hint">Ξεχάσατε το PIN; Επαναφέρετέ το από τον λογαριασμό Nuvio στην ιστοσελίδα nuvio.</string>
+    <string name="profile_pin_overlay_forgot_hint">Ξεχάσατε το PIN; Επαναφέρετέ το από τον λογαριασμό Omnio στην ιστοσελίδα omnio.</string>
     <string name="profile_pin_overlay_back_hint">Πατήστε πίσω για ακύρωση</string>
 
   
@@ -991,7 +991,7 @@
     <string name="library_delete_subtitle">Αυτό θα διαγράψει τη λίστα και όλα τα στοιχεία της από το Trakt.</string>
     <string name="library_delete_confirm">Διαγραφή</string>
     <string name="library_source_local">LOCAL</string>
-    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_omnio">NUVIO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Συγχρονισμός βιβλιοθήκης…</string>
     <string name="library_type_all">Όλα</string>
@@ -1014,8 +1014,8 @@
 
     <!-- AuthSignInScreen -->
     <string name="auth_signin_title">Σύνδεση</string>
-    <string name="auth_signin_tv_disabled">Η εισαγωγή email/κωδικού στην TV είναι απενεργοποιημένη. Συνεχίστε με QR σύνδεση.</string>
-    <string name="auth_signin_qr_btn">Συνέχεια με QR</string>
+    <string name="auth_signin_tv_enabled">Η εισαγωγή email/κωδικού στην TV είναι απενεργοποιημένη. Συνεχίστε με QR σύνδεση.</string>
+    <string name="auth_signin_hint">Συνέχεια με QR</string>
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">Σύνδεση με QR</string>
@@ -1105,7 +1105,7 @@
     <string name="catalog_see_all_empty_subtitle">Δοκιμάστε διαφορετικό κατάλογο ή ελέγξτε αργότερα</string>
 
     <!-- LayoutSelectionScreen -->
-    <string name="layout_selection_welcome">Καλώς ήρθατε στο Nuvio</string>
+    <string name="layout_selection_welcome">Καλώς ήρθατε στο Omnio</string>
     <string name="layout_selection_subtitle">Επιλέξτε τη διάταξη αρχικής οθόνης</string>
     <string name="layout_selection_continue">Συνέχεια</string>
 
@@ -1117,7 +1117,7 @@
     <string name="update_unknown_sources">Επιτρέψτε εγκαταστάσεις από άγνωστες πηγές για να συνεχίσετε.</string>
     <!-- AccountScreen -->
     <string name="account_title">Λογαριασμός</string>
-    <string name="account_sign_in_description">Συνδεθείτε για να συγχρονίσετε τη βιβλιοθήκη, την πρόοδο, τα πρόσθετα και τα πρόσθετα σε όλες τις συσκευές. Ο συγχρονισμός βιβλιοθήκης χρησιμοποιεί Nuvio Sync όταν δεν είναι συνδεδεμένο το Trakt, ενώ η πρόοδος μπορεί να χρησιμοποιεί είτε Trakt είτε Nuvio Sync.</string>
+    <string name="account_sign_in_description">Συνδεθείτε για να συγχρονίσετε τη βιβλιοθήκη, την πρόοδο, τα πρόσθετα και τα πρόσθετα σε όλες τις συσκευές. Ο συγχρονισμός βιβλιοθήκης χρησιμοποιεί Omnio Sync όταν δεν είναι συνδεδεμένο το Trakt, ενώ η πρόοδος μπορεί να χρησιμοποιεί είτε Trakt είτε Omnio Sync.</string>
     <string name="account_sync_code_title">Κωδικός συγχρονισμού</string>
     <string name="account_sync_code_description">Συγχρονισμός συσκευών χωρίς δημιουργία λογαριασμού.</string>
     <string name="account_linked_devices">Συνδεδεμένες συσκευές (%1$d)</string>

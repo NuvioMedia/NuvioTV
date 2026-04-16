@@ -1,12 +1,12 @@
 <resources>
-    <string name="app_name">Nuvio</string>
+    <string name="app_name">Omnio</string>
     <string name="type_movie">Film</string>
     <string name="type_series">Seriál</string>
     <string name="type_unknown">Neznámé</string>
 
     <string name="home_no_addons">Žádné doplňky nejsou nainstalovány. Přidejte jeden pro začátek.</string>
     <string name="home_no_catalog_addons">Žádné katalogové doplňky. Nainstalujte katalogový doplněk pro zobrazení obsahu.</string>
-    <string name="auth_notice_nuvio_logged_out">Byli jste odhlášeni z Nuvio. Přihlaste se prosím znovu.</string>
+    <string name="auth_notice_omnio_logged_out">Byli jste odhlášeni z Omnio. Přihlaste se prosím znovu.</string>
     <string name="auth_notice_trakt_logged_out">Byli jste odhlášeni z Trakt. Připojte se prosím znovu.</string>
     <string name="error_generic">Vyskytla se chyba</string>
 
@@ -233,12 +233,12 @@
     <string name="action_close">Zavřít</string>
 
     <string name="supporters_contributors_title">Podporovatelé a přispěvatelé</string>
-    <string name="supporters_contributors_subtitle">Lidé podporující Nuvio a přispěvatelé, kteří ho vytvářejí pro TV a mobily.</string>
+    <string name="supporters_contributors_subtitle">Lidé podporující Omnio a přispěvatelé, kteří ho vytvářejí pro TV a mobily.</string>
     <string name="supporters_contributors_supporters_copy">Podporovatelé a dárci pomáhají udržovat projekt v chodu, financovat infrastrukturu a tvořit prostor pro ambiciózní funkce.</string>
-    <string name="supporters_contributors_donate_copy">Nuvio zůstane zdarma a open source. Pokud chcete projekt podpořit, můžete pomoci pokrýt čas a infrastrukturu za ním.</string>
-    <string name="supporters_contributors_donate_button">Podpořit Nuvio</string>
+    <string name="supporters_contributors_donate_copy">Omnio zůstane zdarma a open source. Pokud chcete projekt podpořit, můžete pomoci pokrýt čas a infrastrukturu za ním.</string>
+    <string name="supporters_contributors_donate_button">Podpořit Omnio</string>
     <string name="supporters_contributors_qr_title">Naskenujte pro darování</string>
-    <string name="supporters_contributors_qr_subtitle">Otevřete odkaz v telefonu a podpořte Nuvio přes Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Otevřete odkaz v telefonu a podpořte Omnio přes Ko-fi.</string>
     <string name="supporters_contributors_qr_hint">Namiřte fotoaparát na QR kód nebo použijte tlačítko níže.</string>
     <string name="supporters_contributors_back_button">Zpět na detaily</string>
     <string name="supporters_tab">Podporovatelé</string>
@@ -574,13 +574,13 @@
     <string name="trakt_watch_progress_title">Postup sledování</string>
     <string name="trakt_watch_progress_subtitle">Vyberte, který zdroj ovlivní pokračování ve sledování</string>
     <string name="trakt_watch_progress_dialog_title">Postup sledování</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Vyberte, zda má pokračování používat Trakt nebo Nuvio Sync (odesílání do Traktu zůstane aktivní).</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Vyberte, zda má pokračování používat Trakt nebo Omnio Sync (odesílání do Traktu zůstane aktivní).</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
-    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_source_omnio">Omnio Sync</string>
     <string name="trakt_setting_on">Zapnuto</string>
     <string name="trakt_setting_off">Vypnuto</string>
     <string name="trakt_watch_progress_trakt_selected">Zdroj postupu nastaven na Trakt</string>
-    <string name="trakt_watch_progress_nuvio_selected">Zdroj postupu nastaven na Nuvio Sync</string>
+    <string name="trakt_watch_progress_omnio_selected">Zdroj postupu nastaven na Omnio Sync</string>
     <string name="trakt_continue_watching_window">Okno pokračování ve sledování</string>
     <string name="trakt_continue_watching_subtitle">Trakt historie zahrnutá do pokračování</string>
     <string name="trakt_unaired_next_up">Nevysílané epizody</string>
@@ -602,7 +602,7 @@
     <string name="trakt_stat_watched_hours">Hodiny sledování</string>
     <string name="trakt_disconnect">Odpojit</string>
     <string name="trakt_disconnect_title">Odpojit Trakt?</string>
-    <string name="trakt_disconnect_subtitle">Tímto odpojíte svůj Trakt účet od Nuvio.</string>
+    <string name="trakt_disconnect_subtitle">Tímto odpojíte svůj Trakt účet od Omnio.</string>
     <string name="trakt_login">Přihlásit se</string>
     <string name="trakt_retry">Zkusit znovu</string>
     <string name="trakt_back">Zpět</string>
@@ -705,7 +705,7 @@
     <string name="profile_pin_overlay_set_support">Tento PIN bude vyžadován před otevřením tohoto profilu.</string>
     <string name="profile_pin_overlay_confirm_support">Zadejte stejné 4 číslice znovu pro dokončení nastavení.</string>
     <string name="profile_pin_overlay_mismatch">PINy se neshodují. Zadejte nový PIN znovu.</string>
-    <string name="profile_pin_overlay_forgot_hint">Zapomněli jste PIN? Resetujte si ho v účtu Nuvio na webových stránkách nuvio.</string>
+    <string name="profile_pin_overlay_forgot_hint">Zapomněli jste PIN? Resetujte si ho v účtu Omnio na webových stránkách omnio.</string>
     <string name="profile_pin_overlay_back_hint">Stiskněte zpět pro zrušení</string>
 
     <string name="addon_title">Doplňky</string>
@@ -947,7 +947,7 @@
     <string name="library_delete_subtitle">Tímto odstraníte seznam a všechny položky seznamu z Trakt.</string>
     <string name="library_delete_confirm">Odstranit</string>
     <string name="library_source_local">LOKÁLNÍ</string>
-    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_omnio">NUVIO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Synchronizuje se knihovna…</string>
     <string name="library_type_all">Vše</string>
@@ -968,8 +968,8 @@
     <string name="account_sign_out">Odhlásit se</string>
 
     <string name="auth_signin_title">Přihlásit se</string>
-    <string name="auth_signin_tv_disabled">Zadávání emailu/hesla na TV je vypnuto. Pokračujte přihlášením přes QR.</string>
-    <string name="auth_signin_qr_btn">Pokračovat přes QR</string>
+    <string name="auth_signin_tv_enabled">Zadávání emailu/hesla na TV je vypnuto. Pokračujte přihlášením přes QR.</string>
+    <string name="auth_signin_hint">Pokračovat přes QR</string>
 
     <string name="auth_qr_title">Přihlásit se přes QR</string>
     <string name="auth_qr_account_login">Přihlášení do účtu</string>
@@ -1051,7 +1051,7 @@
     <string name="catalog_see_all_empty_title">Žádné položky nejsou dostupné</string>
     <string name="catalog_see_all_empty_subtitle">Zkuste jiný katalog nebo se vraťte později</string>
 
-    <string name="layout_selection_welcome">Vítejte v Nuvio</string>
+    <string name="layout_selection_welcome">Vítejte v Omnio</string>
     <string name="layout_selection_subtitle">Vyberte rozložení domovské obrazovky</string>
     <string name="layout_selection_continue">Pokračovat</string>
 
@@ -1061,7 +1061,7 @@
     <string name="update_downloading_ellipsis">Stahuje se…</string>
     <string name="update_unknown_sources">Povolte instalace z neznámých zdrojů, abyste mohli pokračovat.</string>
     <string name="account_title">Účet</string>
-    <string name="account_sign_in_description">Přihlaste se pro synchronizaci knihovny, postupu sledování, doplňků a pluginů mezi zařízeními. Knihovna používá Nuvio Sync, pokud není Trakt připojen. Postup sledování může používat Trakt nebo Nuvio Sync.</string>
+    <string name="account_sign_in_description">Přihlaste se pro synchronizaci knihovny, postupu sledování, doplňků a pluginů mezi zařízeními. Knihovna používá Omnio Sync, pokud není Trakt připojen. Postup sledování může používat Trakt nebo Omnio Sync.</string>
     <string name="account_sync_code_title">Sync kód</string>
     <string name="account_sync_code_description">Synchronizujte zařízení bez vytváření účtu.</string>
     <string name="account_linked_devices">Propojená zařízení (%1$d)</string>

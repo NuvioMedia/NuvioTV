@@ -1,0 +1,96 @@
+package com.omnio.tv.ui.screens.detail
+
+import com.omnio.tv.domain.model.Meta
+import com.omnio.tv.domain.model.MetaPreview
+import com.omnio.tv.domain.model.NextToWatch
+import com.omnio.tv.domain.model.TraktCommentReview
+import com.omnio.tv.domain.model.Video
+import com.omnio.tv.domain.model.WatchProgress
+import com.omnio.tv.domain.model.LibraryListTab
+import com.omnio.tv.domain.model.LibrarySourceMode
+import com.omnio.tv.domain.model.MDBListRatings
+
+enum class MoreLikeThisSource {
+    TMDB,
+    TRAKT
+}
+
+data class MetaDetailsUiState(
+    val isLoading: Boolean = true,
+    val meta: Meta? = null,
+    val error: String? = null,
+    val selectedSeason: Int = 1,
+    val seasons: List<Int> = emptyList(),
+    val episodesForSeason: List<Video> = emptyList(),
+    val isInLibrary: Boolean = false,
+    val nextToWatch: NextToWatch? = null,
+    val episodeProgressMap: Map<Pair<Int, Int>, WatchProgress> = emptyMap(),
+    val trailerUrl: String? = null,
+    val trailerAudioUrl: String? = null,
+    val isTrailerPlaying: Boolean = false,
+    val isTrailerLoading: Boolean = false,
+    val showTrailerControls: Boolean = false,
+    val hideLogoDuringTrailer: Boolean = false,
+    val trailerButtonEnabled: Boolean = false,
+    val librarySourceMode: LibrarySourceMode = LibrarySourceMode.LOCAL,
+    val libraryListTabs: List<LibraryListTab> = emptyList(),
+    val isInWatchlist: Boolean = false,
+    val showListPicker: Boolean = false,
+    val pickerMembership: Map<String, Boolean> = emptyMap(),
+    val pickerPending: Boolean = false,
+    val pickerError: String? = null,
+    val isMovieWatched: Boolean = false,
+    val isMovieWatchedPending: Boolean = false,
+    val watchedEpisodes: Set<Pair<Int, Int>> = emptySet(),
+    val episodeWatchedPendingKeys: Set<String> = emptySet(),
+    val blurUnwatchedEpisodes: Boolean = false,
+    val showFullReleaseDate: Boolean = true,
+    val moreLikeThis: List<MetaPreview> = emptyList(),
+    val moreLikeThisSource: MoreLikeThisSource? = null,
+    val collection: List<MetaPreview> = emptyList(),
+    val collectionName: String? = null,
+    val episodeImdbRatings: Map<Pair<Int, Int>, Double> = emptyMap(),
+    val isEpisodeRatingsLoading: Boolean = false,
+    val episodeRatingsError: String? = null,
+    val mdbListRatings: MDBListRatings? = null,
+    val showMdbListImdb: Boolean = false,
+    val comments: List<TraktCommentReview> = emptyList(),
+    val commentsCurrentPage: Int = 0,
+    val commentsPageCount: Int = 0,
+    val isCommentsLoading: Boolean = false,
+    val isCommentsLoadingMore: Boolean = false,
+    val commentsError: String? = null,
+    val shouldShowCommentsSection: Boolean = false,
+    val selectedComment: TraktCommentReview? = null,
+    val userMessage: String? = null,
+    val userMessageIsError: Boolean = false
+)
+
+sealed class MetaDetailsEvent {
+    data class OnSeasonSelected(val season: Int) : MetaDetailsEvent()
+    data class OnEpisodeClick(val video: Video) : MetaDetailsEvent()
+    data object OnPlayClick : MetaDetailsEvent()
+    data object OnToggleLibrary : MetaDetailsEvent()
+    data object OnRetry : MetaDetailsEvent()
+    data object OnRetryComments : MetaDetailsEvent()
+    data object OnLoadMoreComments : MetaDetailsEvent()
+    data class OnCommentSelected(val review: TraktCommentReview) : MetaDetailsEvent()
+    data class OnAdvanceCommentOverlay(val direction: Int) : MetaDetailsEvent()
+    data object OnDismissCommentOverlay : MetaDetailsEvent()
+    data object OnBackPress : MetaDetailsEvent()
+    data object OnUserInteraction : MetaDetailsEvent()
+    data object OnPlayButtonFocused : MetaDetailsEvent()
+    data object OnTrailerButtonClick : MetaDetailsEvent()
+    data object OnTrailerEnded : MetaDetailsEvent()
+    data object OnToggleMovieWatched : MetaDetailsEvent()
+    data class OnToggleEpisodeWatched(val video: Video) : MetaDetailsEvent()
+    data class OnMarkSeasonWatched(val season: Int) : MetaDetailsEvent()
+    data class OnMarkSeasonUnwatched(val season: Int) : MetaDetailsEvent()
+    data class OnMarkPreviousEpisodesWatched(val video: Video) : MetaDetailsEvent()
+    data object OnLibraryLongPress : MetaDetailsEvent()
+    data class OnPickerMembershipToggled(val listKey: String) : MetaDetailsEvent()
+    data object OnPickerSave : MetaDetailsEvent()
+    data object OnPickerDismiss : MetaDetailsEvent()
+    data object OnClearMessage : MetaDetailsEvent()
+    data object OnLifecyclePause : MetaDetailsEvent()
+}

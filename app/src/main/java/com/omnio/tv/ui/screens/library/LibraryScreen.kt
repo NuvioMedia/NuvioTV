@@ -1,0 +1,1051 @@
+package com.omnio.tv.ui.screens.library
+
+import android.view.KeyEvent as AndroidKeyEvent
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.focusable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.Icon
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import com.omnio.tv.domain.model.LibraryListTab
+import com.omnio.tv.domain.model.LibrarySourceMode
+import com.omnio.tv.domain.model.PosterShape
+import com.omnio.tv.domain.model.TraktListPrivacy
+import com.omnio.tv.ui.components.EmptyScreenState
+import com.omnio.tv.ui.components.GridContentCard
+import com.omnio.tv.ui.components.PosterCardDefaults
+import com.omnio.tv.ui.components.LoadingIndicator
+import com.omnio.tv.ui.components.OmnioDialog
+import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.ui.theme.OmnioTheme
+import com.omnio.tv.ui.util.formatAddonTypeLabel
+import com.omnio.tv.ui.util.localizedGenreLabel
+import kotlinx.coroutines.delay
+import androidx.compose.ui.res.stringResource
+import com.omnio.tv.R
+
+private const val KEY_REPEAT_THROTTLE_MS = 80L
+
+@Composable
+private fun localizedTypeLabel(key: String): String = when (key.lowercase()) {
+    LibraryTypeTab.ALL_KEY -> stringResource(R.string.library_type_all)
+    "movie" -> stringResource(R.string.type_movie)
+    "series" -> stringResource(R.string.type_series)
+    else -> formatAddonTypeLabel(key)
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun LibraryScreen(
+    viewModel: LibraryViewModel = hiltViewModel(),
+    showBuiltInHeader: Boolean = true,
+    onNavigateToDetail: (String, String, String?) -> Unit
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val watchedMovieIds by viewModel.watchedMovieIds.collectAsState()
+    val watchedSeriesIds by viewModel.watchedSeriesIds.collectAsState()
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var expandedPicker by remember { mutableStateOf<String?>(null) }
+    val primaryFocusRequester = remember { FocusRequester() }
+    val gridState = rememberLazyGridState()
+    var pendingPrimaryFocus by remember { mutableStateOf(true) }
+    var lastFocusedPosterKey by rememberSaveable { mutableStateOf<String?>(null) }
+    val visibleItemKeys = remember(uiState.visibleItems) {
+        uiState.visibleItems.map { "${it.type}:${it.id}" }
+    }
+    val visibleItemIndexByKey = remember(visibleItemKeys) {
+        visibleItemKeys.withIndex().associate { (index, key) -> key to index }
+    }
+    val posterFocusRequesters = remember(visibleItemKeys) {
+        visibleItemKeys.associateWith { FocusRequester() }
+    }
+    val firstVisiblePosterKey = visibleItemKeys.firstOrNull()
+    val posterCardStyle = PosterCardDefaults.Style
+
+    LaunchedEffect(uiState.isLoading) {
+        if (uiState.isLoading) {
+            pendingPrimaryFocus = true
+        }
+    }
+
+    LaunchedEffect(uiState.isLoading, uiState.sourceMode, uiState.listTabs.size) {
+        if (!uiState.isLoading && pendingPrimaryFocus) {
+            val restoreKey = lastFocusedPosterKey
+            val restoreIndex = restoreKey?.let { visibleItemIndexByKey[it] }
+            val restoreRequester = restoreKey?.let { posterFocusRequesters[it] }
+
+            var focused = false
+            if (restoreIndex != null && restoreRequester != null) {
+                runCatching { gridState.scrollToItem(restoreIndex) }
+                focused = runCatching { restoreRequester.requestFocus() }.isSuccess
+                if (!focused) {
+                    delay(16)
+                    focused = runCatching { restoreRequester.requestFocus() }.isSuccess
+                }
+            }
+
+            if (!focused) {
+                focused = runCatching { primaryFocusRequester.requestFocus() }.isSuccess
+            }
+            if (!focused) {
+                delay(16)
+                runCatching { primaryFocusRequester.requestFocus() }
+            }
+            pendingPrimaryFocus = false
+        }
+    }
+
+    LaunchedEffect(uiState.sortSelectionVersion, firstVisiblePosterKey) {
+        if (uiState.sortSelectionVersion <= 0L) return@LaunchedEffect
+        val targetKey = firstVisiblePosterKey ?: return@LaunchedEffect
+        runCatching { gridState.scrollToItem(0) }
+        var focused = false
+        repeat(6) {
+            focused = posterFocusRequesters[targetKey]
+                ?.let { requester -> runCatching { requester.requestFocus() }.isSuccess }
+                ?: false
+            if (focused) return@LaunchedEffect
+            delay(24)
+        }
+    }
+
+    if (uiState.isLoading) {
+        val loadingFocusRequester = remember { FocusRequester() }
+        LaunchedEffect(uiState.isLoading) {
+            loadingFocusRequester.requestFocus()
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize(),
+            contentAlignment = androidx.compose.ui.Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .focusRequester(loadingFocusRequester)
+                    .focusable()
+            )
+            Column(
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                LoadingIndicator()
+                Text(
+                    text = stringResource(R.string.library_syncing),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OmnioColors.TextSecondary
+                )
+            }
+        }
+        return
+    }
+
+    val lastKeyRepeatTime = remember { longArrayOf(0L) }
+
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = posterCardStyle.width),
+        state = gridState,
+        modifier = Modifier
+            .fillMaxSize()
+            .onPreviewKeyEvent { event ->
+                val native = event.nativeKeyEvent
+                if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {
+                    val now = System.currentTimeMillis()
+                    if (now - lastKeyRepeatTime[0] < KEY_REPEAT_THROTTLE_MS) {
+                        return@onPreviewKeyEvent true
+                    }
+                    lastKeyRepeatTime[0] = now
+                }
+                false
+            },
+        contentPadding = PaddingValues(start = 48.dp, end = 48.dp, top = 24.dp, bottom = 32.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.library_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = if (showBuiltInHeader) OmnioColors.TextPrimary else Color.Transparent,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.5.sp
+                )
+                Text(
+                    text = when {
+                        uiState.sourceMode == LibrarySourceMode.TRAKT -> "TRAKT"
+                        uiState.isNuvioAccount -> "NUVIO"
+                        else -> stringResource(R.string.library_source_local)
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (showBuiltInHeader) OmnioColors.TextTertiary else Color.Transparent,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 2.sp
+                )
+            }
+        }
+
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            LibrarySelectorsRow(
+                sourceMode = uiState.sourceMode,
+                listTabs = uiState.listTabs,
+                typeTabs = uiState.availableTypeTabs,
+                sortOptions = uiState.availableSortOptions,
+                genres = uiState.availableGenres,
+                years = uiState.availableYears,
+                selectedListKey = uiState.selectedListKey,
+                selectedTypeTab = uiState.selectedTypeTab,
+                selectedSortOption = uiState.selectedSortOption,
+                selectedGenre = uiState.selectedGenre,
+                selectedYear = uiState.selectedYear,
+                primaryFocusRequester = primaryFocusRequester,
+                expandedPicker = expandedPicker,
+                onExpandedChange = { picker, shouldExpand ->
+                    expandedPicker = if (shouldExpand) picker else null
+                },
+                onSelectList = { key ->
+                    viewModel.onSelectListTab(key)
+                    expandedPicker = null
+                },
+                onSelectType = { type ->
+                    viewModel.onSelectTypeTab(type)
+                    expandedPicker = null
+                },
+                onSelectSort = { sort ->
+                    viewModel.onSelectSortOption(sort)
+                    expandedPicker = null
+                },
+                onSelectGenre = { key ->
+                    viewModel.onSelectGenre(key)
+                    expandedPicker = null
+                },
+                onSelectYear = { key ->
+                    viewModel.onSelectYear(key)
+                    expandedPicker = null
+                }
+            )
+        }
+
+        if (uiState.sourceMode == LibrarySourceMode.TRAKT) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                LibraryActionsRow(
+                    pending = uiState.pendingOperation,
+                    isSyncing = uiState.isSyncing,
+                    onManageLists = viewModel::onOpenManageLists,
+                    onRefresh = viewModel::onRefresh
+                )
+            }
+        }
+
+        if (uiState.visibleItems.isEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                val selectedTypeLabel = uiState.selectedTypeTab?.let { localizedTypeLabel(it.key) }?.lowercase() ?: stringResource(R.string.library_type_items)
+                val title = when (uiState.sourceMode) {
+                    LibrarySourceMode.LOCAL -> stringResource(R.string.library_empty_local_title, selectedTypeLabel)
+                    LibrarySourceMode.TRAKT -> stringResource(R.string.library_empty_trakt_title, selectedTypeLabel)
+                }
+                val subtitle = when (uiState.sourceMode) {
+                    LibrarySourceMode.LOCAL -> stringResource(R.string.library_empty_local_subtitle)
+                    LibrarySourceMode.TRAKT -> stringResource(R.string.library_empty_trakt_subtitle)
+                }
+                EmptyScreenState(
+                    title = title,
+                    subtitle = subtitle,
+                    icon = Icons.Default.BookmarkBorder
+                )
+            }
+        }
+
+        items(uiState.visibleItems, key = { "${it.type}:${it.id}" }) { item ->
+            val focusKey = "${item.type}:${item.id}"
+            val isSeries = item.type.equals("series", ignoreCase = true) || item.type.equals("tv", ignoreCase = true)
+            GridContentCard(
+                item = item.toMetaPreview().copy(posterShape = PosterShape.POSTER),
+                posterCardStyle = posterCardStyle,
+                isWatched = if (isSeries) item.id in watchedSeriesIds else item.id in watchedMovieIds,
+                focusRequester = posterFocusRequesters[focusKey],
+                showLabel = true,
+                onFocused = {
+                    lastFocusedPosterKey = focusKey
+                },
+                onClick = {
+                    lastFocusedPosterKey = focusKey
+                    onNavigateToDetail(item.id, item.type, item.addonBaseUrl)
+                }
+            )
+        }
+
+        item(span = { GridItemSpan(maxLineSpan) }) { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+
+    if (uiState.showManageDialog && uiState.sourceMode == LibrarySourceMode.TRAKT) {
+        ManageListsDialog(
+            tabs = uiState.listTabs,
+            selectedKey = uiState.manageSelectedListKey,
+            errorMessage = uiState.errorMessage,
+            pending = uiState.pendingOperation,
+            onSelect = viewModel::onSelectManageList,
+            onCreate = viewModel::onStartCreateList,
+            onEdit = viewModel::onStartEditList,
+            onMoveUp = viewModel::onMoveSelectedListUp,
+            onMoveDown = viewModel::onMoveSelectedListDown,
+            onDelete = { showDeleteConfirm = true },
+            onDismiss = viewModel::onCloseManageLists
+        )
+    }
+
+    if (showDeleteConfirm) {
+        ConfirmDeleteDialog(
+            pending = uiState.pendingOperation,
+            onConfirm = {
+                showDeleteConfirm = false
+                viewModel.onDeleteSelectedList()
+            },
+            onCancel = { showDeleteConfirm = false }
+        )
+    }
+
+    val listEditor = uiState.listEditorState
+    if (listEditor != null && uiState.showManageDialog) {
+        ListEditorDialog(
+            state = listEditor,
+            pending = uiState.pendingOperation,
+            onNameChanged = viewModel::onUpdateEditorName,
+            onDescriptionChanged = viewModel::onUpdateEditorDescription,
+            onPrivacyChanged = viewModel::onUpdateEditorPrivacy,
+            onSave = viewModel::onSubmitEditor,
+            onCancel = viewModel::onCancelEditor
+        )
+    }
+
+    val transientMessage = uiState.transientMessage
+    if (!transientMessage.isNullOrBlank()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize(),
+            contentAlignment = androidx.compose.ui.Alignment.TopCenter
+        ) {
+            Text(
+                text = transientMessage,
+                style = MaterialTheme.typography.bodyMedium,
+                color = OmnioColors.TextPrimary,
+                modifier = Modifier
+                    .padding(top = 24.dp)
+                    .background(OmnioColors.BackgroundElevated, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 18.dp, vertical = 10.dp)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun LibrarySelectorsRow(
+    sourceMode: LibrarySourceMode,
+    listTabs: List<LibraryListTab>,
+    typeTabs: List<LibraryTypeTab>,
+    sortOptions: List<LibrarySortOption>,
+    genres: List<FilterOption>,
+    years: List<FilterOption>,
+    selectedListKey: String?,
+    selectedTypeTab: LibraryTypeTab?,
+    selectedSortOption: LibrarySortOption,
+    selectedGenre: String?,
+    selectedYear: String?,
+    primaryFocusRequester: FocusRequester,
+    expandedPicker: String?,
+    onExpandedChange: (String, Boolean) -> Unit,
+    onSelectList: (String) -> Unit,
+    onSelectType: (LibraryTypeTab) -> Unit,
+    onSelectSort: (LibrarySortOption) -> Unit,
+    onSelectGenre: (String?) -> Unit,
+    onSelectYear: (String?) -> Unit
+) {
+    val selectedListLabel = listTabs.firstOrNull { it.key == selectedListKey }?.title ?: "Select"
+    val selectedTypeLabel = selectedTypeTab?.let {
+        if (it.key == LibraryTypeTab.ALL_KEY) stringResource(R.string.library_type_all) else localizedTypeLabel(it.key)
+    } ?: stringResource(R.string.library_type_all)
+    val selectedSortLabel = stringResource(selectedSortOption.labelResId)
+    val allLabel = stringResource(R.string.library_type_all)
+    val selectedGenreLabel = selectedGenre?.let { localizedGenreLabel(it) } ?: allLabel
+    val selectedYearLabel = selectedYear ?: allLabel
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (sourceMode == LibrarySourceMode.TRAKT) {
+                LibraryDropdownPicker(
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(primaryFocusRequester),
+                    title = stringResource(R.string.library_filter_list),
+                    value = selectedListLabel,
+                    selectedValue = selectedListKey,
+                    expanded = expandedPicker == "list",
+                    options = listTabs.map { LibraryOption(it.title, it.key) },
+                    onExpandedChange = { onExpandedChange("list", it) },
+                    onSelect = { onSelectList(it.value) }
+                )
+            }
+
+            LibraryDropdownPicker(
+                modifier = if (sourceMode == LibrarySourceMode.TRAKT) {
+                    Modifier.weight(1f)
+                } else {
+                    Modifier
+                        .weight(1f)
+                        .focusRequester(primaryFocusRequester)
+                },
+                title = stringResource(R.string.library_filter_type),
+                value = selectedTypeLabel,
+                selectedValue = selectedTypeTab?.key,
+                expanded = expandedPicker == "type",
+                options = typeTabs.map {
+                    val label = if (it.key == LibraryTypeTab.ALL_KEY) it.label else {
+                        val countPart = it.label.substringAfterLast("(", "").removeSuffix(")")
+                        val localizedName = localizedTypeLabel(it.key)
+                        if (countPart.isNotBlank()) "$localizedName ($countPart)" else localizedName
+                    }
+                    LibraryOption(label, it.key)
+                },
+                onExpandedChange = { onExpandedChange("type", it) },
+                onSelect = { option ->
+                    typeTabs.firstOrNull { it.key == option.value }?.let(onSelectType)
+                }
+            )
+
+            if (sortOptions.isNotEmpty()) {
+                LibraryDropdownPicker(
+                    modifier = Modifier.weight(1f),
+                    title = stringResource(R.string.library_filter_sort),
+                    value = selectedSortLabel,
+                    selectedValue = selectedSortOption.key,
+                    expanded = expandedPicker == "sort",
+                    options = sortOptions.map { LibraryOption(stringResource(it.labelResId), it.key) },
+                    onExpandedChange = { onExpandedChange("sort", it) },
+                    onSelect = { option ->
+                        sortOptions.firstOrNull { it.key == option.value }?.let(onSelectSort)
+                    }
+                )
+            }
+        }
+
+        if (genres.isNotEmpty() || years.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (genres.isNotEmpty()) {
+                    val genreAllOption = LibraryOption(allLabel, "__all__")
+                    LibraryDropdownPicker(
+                        modifier = Modifier.weight(1f),
+                        title = stringResource(R.string.library_filter_genre),
+                        value = selectedGenreLabel,
+                        selectedValue = selectedGenre ?: "__all__",
+                        expanded = expandedPicker == "genre",
+                        options = listOf(genreAllOption) + genres.map {
+                            LibraryOption("${localizedGenreLabel(it.label)} (${it.count})", it.key)
+                        },
+                        onExpandedChange = { onExpandedChange("genre", it) },
+                        onSelect = { option ->
+                            onSelectGenre(if (option.value == "__all__") null else option.value)
+                        }
+                    )
+                }
+
+                if (years.isNotEmpty()) {
+                    val yearAllOption = LibraryOption(allLabel, "__all__")
+                    LibraryDropdownPicker(
+                        modifier = Modifier.weight(1f),
+                        title = stringResource(R.string.library_filter_year),
+                        value = selectedYearLabel,
+                        selectedValue = selectedYear ?: "__all__",
+                        expanded = expandedPicker == "year",
+                        options = listOf(yearAllOption) + years.map {
+                            LibraryOption("${it.label} (${it.count})", it.key)
+                        },
+                        onExpandedChange = { onExpandedChange("year", it) },
+                        onSelect = { option ->
+                            onSelectYear(if (option.value == "__all__") null else option.value)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun LibraryDropdownPicker(
+    modifier: Modifier = Modifier,
+    title: String,
+    value: String,
+    selectedValue: String?,
+    expanded: Boolean,
+    options: List<LibraryOption>,
+    onExpandedChange: (Boolean) -> Unit,
+    onSelect: (LibraryOption) -> Unit
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    var anchorSize by remember { mutableStateOf(IntSize.Zero) }
+    var focusedOptionValue by remember(expanded) { mutableStateOf<String?>(null) }
+
+    Box(modifier = modifier) {
+        Card(
+            onClick = { onExpandedChange(!expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .onSizeChanged { anchorSize = it }
+                .onFocusChanged { isFocused = it.isFocused },
+            shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
+            colors = CardDefaults.colors(
+                containerColor = OmnioColors.BackgroundCard,
+                focusedContainerColor = OmnioColors.FocusBackground
+            ),
+            border = CardDefaults.border(
+                border = androidx.tv.material3.Border(
+                    border = BorderStroke(1.dp, OmnioColors.Border),
+                    shape = RoundedCornerShape(14.dp)
+                ),
+                focusedBorder = androidx.tv.material3.Border(
+                    border = BorderStroke(2.dp, OmnioColors.FocusRing),
+                    shape = RoundedCornerShape(14.dp)
+                )
+            ),
+            scale = CardDefaults.scale(
+                focusedScale = 1.0f,
+                pressedScale = 1.0f
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = OmnioColors.TextTertiary
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = OmnioColors.TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Icon(
+                        imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = if (expanded) stringResource(R.string.cd_collapse, title) else stringResource(R.string.cd_expand, title),
+                        tint = if (isFocused) OmnioColors.FocusRing else OmnioColors.TextSecondary
+                    )
+                }
+            }
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = {
+                focusedOptionValue = null
+                onExpandedChange(false)
+            },
+            modifier = Modifier
+                .width(with(LocalDensity.current) { anchorSize.width.toDp() })
+                .heightIn(max = 320.dp),
+            shape = RoundedCornerShape(14.dp),
+            containerColor = OmnioColors.BackgroundCard,
+            tonalElevation = 0.dp,
+            shadowElevation = 8.dp,
+            border = BorderStroke(1.dp, OmnioColors.Border)
+        ) {
+            options.forEach { option ->
+                val isSelected = option.value == selectedValue
+                val isOptionFocused = option.value == focusedOptionValue
+                val itemTextColor = when {
+                    isOptionFocused -> OmnioColors.OnSecondary
+                    isSelected -> OmnioColors.TextPrimary
+                    else -> OmnioColors.TextPrimary
+                }
+                val itemBackgroundColor = when {
+                    isOptionFocused -> OmnioColors.Secondary
+                    isSelected -> OmnioColors.FocusBackground
+                    else -> Color.Transparent
+                }
+
+                DropdownMenuItem(
+                    modifier = Modifier
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .background(
+                            color = itemBackgroundColor,
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        .onFocusChanged { state ->
+                            val hasFocus = state.isFocused || state.hasFocus
+                            focusedOptionValue = when {
+                                hasFocus -> option.value
+                                focusedOptionValue == option.value -> null
+                                else -> focusedOptionValue
+                            }
+                        },
+                    text = {
+                        Text(
+                            text = option.label,
+                            color = itemTextColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    onClick = { onSelect(option) },
+                    colors = MenuDefaults.itemColors(
+                        textColor = itemTextColor,
+                        disabledTextColor = OmnioColors.TextDisabled
+                    )
+                )
+            }
+        }
+    }
+}
+
+private data class LibraryOption(
+    val label: String,
+    val value: String
+)
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun LibraryActionsRow(
+    pending: Boolean,
+    isSyncing: Boolean,
+    onManageLists: () -> Unit,
+    onRefresh: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Button(
+            onClick = onManageLists,
+            enabled = !pending && !isSyncing,
+            colors = ButtonDefaults.colors(
+                containerColor = OmnioColors.BackgroundCard,
+                contentColor = OmnioColors.TextPrimary
+            )
+        ) {
+            Text(stringResource(R.string.library_manage_lists))
+        }
+        Button(
+            onClick = onRefresh,
+            enabled = !pending && !isSyncing,
+            colors = ButtonDefaults.colors(
+                containerColor = OmnioColors.BackgroundCard,
+                contentColor = OmnioColors.TextPrimary
+            )
+        ) {
+            Text(if (isSyncing) stringResource(R.string.library_syncing_btn) else stringResource(R.string.library_sync_btn))
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun ManageListsDialog(
+    tabs: List<LibraryListTab>,
+    selectedKey: String?,
+    errorMessage: String?,
+    pending: Boolean,
+    onSelect: (String) -> Unit,
+    onCreate: () -> Unit,
+    onEdit: () -> Unit,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val personalTabs = remember(tabs) { tabs.filter { it.type == LibraryListTab.Type.PERSONAL } }
+    val firstFocusRequester = remember { FocusRequester() }
+    val closeFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(personalTabs.size) {
+        val target = if (personalTabs.isNotEmpty()) firstFocusRequester else closeFocusRequester
+        val focused = runCatching { target.requestFocus() }.isSuccess
+        if (!focused) {
+            delay(16)
+            runCatching { target.requestFocus() }
+        }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .width(620.dp)
+                .background(OmnioColors.BackgroundElevated, RoundedCornerShape(16.dp))
+                .padding(24.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text(
+                    text = stringResource(R.string.library_manage_trakt_lists),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = OmnioColors.TextPrimary
+                )
+
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFFFFB6B6)
+                    )
+                }
+
+                if (personalTabs.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.library_no_lists),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = OmnioTheme.extendedColors.textSecondary
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(personalTabs, key = { it.key }) { tab ->
+                            val selected = tab.key == selectedKey
+                            Button(
+                                onClick = { onSelect(tab.key) },
+                                enabled = !pending,
+                                modifier = if (tab.key == personalTabs.firstOrNull()?.key) {
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .focusRequester(firstFocusRequester)
+                                } else {
+                                    Modifier.fillMaxWidth()
+                                },
+                                colors = ButtonDefaults.colors(
+                                    containerColor = if (selected) OmnioColors.FocusBackground else OmnioColors.BackgroundCard,
+                                    contentColor = OmnioColors.TextPrimary
+                                )
+                            ) {
+                                Text(
+                                    text = tab.title,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(
+                        onClick = onCreate,
+                        enabled = !pending,
+                        colors = ButtonDefaults.colors(
+                            containerColor = OmnioColors.BackgroundCard,
+                            contentColor = OmnioColors.TextPrimary
+                        )
+                    ) { Text(stringResource(R.string.library_list_create)) }
+                    Button(
+                        onClick = onEdit,
+                        enabled = !pending && selectedKey != null,
+                        colors = ButtonDefaults.colors(
+                            containerColor = OmnioColors.BackgroundCard,
+                            contentColor = OmnioColors.TextPrimary
+                        )
+                    ) { Text(stringResource(R.string.library_list_edit)) }
+                    Button(
+                        onClick = onMoveUp,
+                        enabled = !pending && selectedKey != null,
+                        colors = ButtonDefaults.colors(
+                            containerColor = OmnioColors.BackgroundCard,
+                            contentColor = OmnioColors.TextPrimary
+                        )
+                    ) { Text(stringResource(R.string.library_list_move_up)) }
+                    Button(
+                        onClick = onMoveDown,
+                        enabled = !pending && selectedKey != null,
+                        colors = ButtonDefaults.colors(
+                            containerColor = OmnioColors.BackgroundCard,
+                            contentColor = OmnioColors.TextPrimary
+                        )
+                    ) { Text(stringResource(R.string.library_list_move_down)) }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(
+                        onClick = onDelete,
+                        enabled = !pending && selectedKey != null,
+                        colors = ButtonDefaults.colors(
+                            containerColor = Color(0xFF4A2323),
+                            contentColor = OmnioColors.TextPrimary
+                        )
+                    ) { Text(stringResource(R.string.library_list_delete)) }
+                    Button(
+                        onClick = onDismiss,
+                        enabled = !pending,
+                        modifier = Modifier.focusRequester(closeFocusRequester),
+                        colors = ButtonDefaults.colors(
+                            containerColor = OmnioColors.BackgroundCard,
+                            contentColor = OmnioColors.TextPrimary
+                        )
+                    ) { Text(stringResource(R.string.library_list_close)) }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun ListEditorDialog(
+    state: LibraryListEditorState,
+    pending: Boolean,
+    onNameChanged: (String) -> Unit,
+    onDescriptionChanged: (String) -> Unit,
+    onPrivacyChanged: (TraktListPrivacy) -> Unit,
+    onSave: () -> Unit,
+    onCancel: () -> Unit
+) {
+    val nameFocusRequester = remember { FocusRequester() }
+    val descriptionFocusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var nameEditing by remember { mutableStateOf(false) }
+    var descriptionEditing by remember { mutableStateOf(false) }
+
+    fun isSelectKey(keyCode: Int): Boolean {
+        return keyCode == AndroidKeyEvent.KEYCODE_DPAD_CENTER ||
+            keyCode == AndroidKeyEvent.KEYCODE_ENTER ||
+            keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER
+    }
+
+    LaunchedEffect(Unit) {
+        nameFocusRequester.requestFocus()
+    }
+
+    OmnioDialog(
+        onDismiss = onCancel,
+        title = if (state.mode == LibraryListEditorState.Mode.CREATE) stringResource(R.string.library_list_create_dialog_title) else stringResource(R.string.library_list_edit_dialog_title),
+        width = 560.dp
+    ) {
+        androidx.compose.material3.OutlinedTextField(
+            value = state.name,
+            onValueChange = onNameChanged,
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(nameFocusRequester)
+                .onFocusChanged {
+                    if (!it.isFocused) {
+                        nameEditing = false
+                    }
+                }
+                .onPreviewKeyEvent { event ->
+                    val native = event.nativeKeyEvent
+                    if (native.action == AndroidKeyEvent.ACTION_DOWN && isSelectKey(native.keyCode)) {
+                        nameEditing = true
+                        descriptionEditing = false
+                        keyboardController?.show()
+                    }
+                    false
+                },
+            enabled = !pending,
+            readOnly = !nameEditing,
+            singleLine = true,
+            maxLines = 1,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    nameEditing = false
+                    keyboardController?.hide()
+                }
+            ),
+            label = { androidx.compose.material3.Text(stringResource(R.string.library_list_name_label)) },
+            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                focusedTextColor = OmnioColors.TextPrimary,
+                unfocusedTextColor = OmnioColors.TextPrimary,
+                focusedContainerColor = OmnioColors.BackgroundCard,
+                unfocusedContainerColor = OmnioColors.BackgroundCard,
+                focusedBorderColor = OmnioColors.FocusRing,
+                unfocusedBorderColor = OmnioColors.Border,
+                focusedLabelColor = OmnioColors.TextSecondary,
+                unfocusedLabelColor = OmnioColors.TextTertiary,
+                cursorColor = OmnioColors.FocusRing
+            )
+        )
+
+        androidx.compose.material3.OutlinedTextField(
+            value = state.description,
+            onValueChange = onDescriptionChanged,
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(descriptionFocusRequester)
+                .onFocusChanged {
+                    if (!it.isFocused) {
+                        descriptionEditing = false
+                    }
+                }
+                .onPreviewKeyEvent { event ->
+                    val native = event.nativeKeyEvent
+                    if (native.action == AndroidKeyEvent.ACTION_DOWN && isSelectKey(native.keyCode)) {
+                        descriptionEditing = true
+                        nameEditing = false
+                        keyboardController?.show()
+                    }
+                    false
+                },
+            enabled = !pending,
+            readOnly = !descriptionEditing,
+            minLines = 3,
+            maxLines = 5,
+            label = { androidx.compose.material3.Text(stringResource(R.string.library_list_description_label)) },
+            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                focusedTextColor = OmnioColors.TextPrimary,
+                unfocusedTextColor = OmnioColors.TextPrimary,
+                focusedContainerColor = OmnioColors.BackgroundCard,
+                unfocusedContainerColor = OmnioColors.BackgroundCard,
+                focusedBorderColor = OmnioColors.FocusRing,
+                unfocusedBorderColor = OmnioColors.Border,
+                focusedLabelColor = OmnioColors.TextSecondary,
+                unfocusedLabelColor = OmnioColors.TextTertiary,
+                cursorColor = OmnioColors.FocusRing
+            )
+        )
+
+        Text(
+            text = stringResource(R.string.library_list_privacy),
+            style = MaterialTheme.typography.bodyMedium,
+            color = OmnioTheme.extendedColors.textSecondary
+        )
+
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(TraktListPrivacy.entries.toList(), key = { it.name }) { privacy ->
+                val selected = privacy == state.privacy
+                Button(
+                    onClick = { onPrivacyChanged(privacy) },
+                    enabled = !pending,
+                    colors = ButtonDefaults.colors(
+                        containerColor = if (selected) OmnioColors.FocusBackground else OmnioColors.BackgroundCard,
+                        contentColor = OmnioColors.TextPrimary
+                    )
+                ) {
+                    Text(privacy.apiValue.replaceFirstChar { it.uppercase() })
+                }
+            }
+        }
+
+        Button(
+            onClick = onSave,
+            enabled = !pending,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.colors(
+                containerColor = OmnioColors.BackgroundCard,
+                contentColor = OmnioColors.TextPrimary
+            )
+        ) {
+            Text(if (pending) stringResource(R.string.action_saving) else stringResource(R.string.action_save))
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun ConfirmDeleteDialog(
+    pending: Boolean,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit
+) {
+    OmnioDialog(
+        onDismiss = onCancel,
+        title = stringResource(R.string.library_delete_title),
+        subtitle = stringResource(R.string.library_delete_subtitle),
+        width = 420.dp
+    ) {
+        Button(
+            onClick = onConfirm,
+            enabled = !pending,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.colors(
+                containerColor = Color(0xFF4A2323),
+                contentColor = OmnioColors.TextPrimary
+            )
+        ) {
+            Text(stringResource(R.string.library_list_delete))
+        }
+    }
+}

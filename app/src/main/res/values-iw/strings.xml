@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Nuvio</string>
+    <string name="app_name">Omnio</string>
     <string name="type_movie">סרט</string>
     <string name="type_series">סדרה</string>
     <string name="type_unknown">לא ידוע</string>
@@ -8,7 +8,7 @@
     <!-- HomeScreen -->
     <string name="home_no_addons">אין תוספים מותקנים. הוסף אחד כדי להתחיל.</string>
     <string name="home_no_catalog_addons">אין תוספי קטלוג מותקנים. התקן תוסף קטלוג כדי לראות תוכן.</string>
-    <string name="auth_notice_nuvio_logged_out">יצאת מחשבון Nuvio. אנא התחבר מחדש.</string>
+    <string name="auth_notice_omnio_logged_out">יצאת מחשבון Omnio. אנא התחבר מחדש.</string>
     <string name="auth_notice_trakt_logged_out">יצאת מחשבון Trakt. אנא התחבר מחדש.</string>
     <string name="error_generic">אירעה שגיאה</string>
 
@@ -222,12 +222,12 @@
 
     <!-- SupportersContributorsScreen -->
     <string name="supporters_contributors_title">תומכים ותורמים</string>
-    <string name="supporters_contributors_subtitle">האנשים שתומכים ב-Nuvio והתורמים הבונים אותו בטלוויזיה ובנייד.</string>
+    <string name="supporters_contributors_subtitle">האנשים שתומכים ב-Omnio והתורמים הבונים אותו בטלוויזיה ובנייד.</string>
     <string name="supporters_contributors_supporters_copy">תומכים ותורמים עוזרים לשמור את הפרויקט בתנועה, מממנים תשתיות ומאפשרים פיצ׳רים שאפתניים.</string>
-    <string name="supporters_contributors_donate_copy">Nuvio ישאר חינמי וקוד פתוח. אם ברצונך לתמוך בפרויקט, תוכל לעזור לכסות את הזמן והתשתית שמאחוריו.</string>
-    <string name="supporters_contributors_donate_button">תרום ל-Nuvio</string>
+    <string name="supporters_contributors_donate_copy">Omnio ישאר חינמי וקוד פתוח. אם ברצונך לתמוך בפרויקט, תוכל לעזור לכסות את הזמן והתשתית שמאחוריו.</string>
+    <string name="supporters_contributors_donate_button">תרום ל-Omnio</string>
     <string name="supporters_contributors_qr_title">סרוק לתרומה</string>
-    <string name="supporters_contributors_qr_subtitle">פתח את הקישור בטלפון שלך ותמוך ב-Nuvio דרך Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">פתח את הקישור בטלפון שלך ותמוך ב-Omnio דרך Ko-fi.</string>
     <string name="supporters_contributors_qr_hint">כוון את המצלמה לקוד ה-QR או השתמש בכפתור למטה.</string>
     <string name="supporters_contributors_back_button">חזור לפרטים</string>
     <string name="supporters_tab">תומכים</string>
@@ -420,11 +420,11 @@
     <string name="trakt_watch_progress_title">התקדמות צפייה</string>
     <string name="trakt_watch_progress_subtitle">בחר מקור התקדמות שמניע המשך וצפייה מתמשכת</string>
     <string name="trakt_watch_progress_dialog_title">התקדמות צפייה</string>
-    <string name="trakt_watch_progress_dialog_subtitle">בחר אם המשך וצפייה מתמשכת ישתמשו ב-Trakt או ב-Nuvio Sync כאשר סקרובלינג Trakt פעיל.</string>
+    <string name="trakt_watch_progress_dialog_subtitle">בחר אם המשך וצפייה מתמשכת ישתמשו ב-Trakt או ב-Omnio Sync כאשר סקרובלינג Trakt פעיל.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
-    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_source_omnio">Omnio Sync</string>
     <string name="trakt_watch_progress_trakt_selected">מקור התקדמות צפייה הוגדר ל-Trakt</string>
-    <string name="trakt_watch_progress_nuvio_selected">מקור התקדמות צפייה הוגדר ל-Nuvio Sync</string>
+    <string name="trakt_watch_progress_omnio_selected">מקור התקדמות צפייה הוגדר ל-Omnio Sync</string>
     <string name="trakt_continue_watching_window">חלון המשך צפייה</string>
     <string name="trakt_continue_watching_subtitle">היסטוריית Trakt הנחשבת להמשך צפייה</string>
     <string name="trakt_unaired_next_up">פרקים הבאים שטרם שודרו</string>
@@ -440,7 +440,7 @@
     <string name="trakt_stat_watched_hours">שעות צפייה</string>
     <string name="trakt_disconnect">נתק</string>
     <string name="trakt_disconnect_title">לנתק Trakt?</string>
-    <string name="trakt_disconnect_subtitle">פעולה זו תנתק את חשבון Trakt שלך מ-Nuvio.</string>
+    <string name="trakt_disconnect_subtitle">פעולה זו תנתק את חשבון Trakt שלך מ-Omnio.</string>
     <string name="trakt_login">התחבר</string>
     <string name="trakt_retry">נסה שוב</string>
     <string name="trakt_back">חזרה</string>
@@ -728,7 +728,7 @@
     <string name="account_signed_in_label">מחובר</string>
     <string name="account_total_label">סה״כ</string>
     <string name="account_sign_out">התנתק</string>
-    <string name="account_sign_in_description">התחבר לסנכרון הספרייה, התקדמות הצפייה, התוספים והפלאגינים בין מכשירים. סנכרון הספרייה משתמש ב-Nuvio Sync כאשר Trakt לא מחובר, והתקדמות הצפייה יכולה להשתמש ב-Trakt או ב-Nuvio Sync.</string>
+    <string name="account_sign_in_description">התחבר לסנכרון הספרייה, התקדמות הצפייה, התוספים והפלאגינים בין מכשירים. סנכרון הספרייה משתמש ב-Omnio Sync כאשר Trakt לא מחובר, והתקדמות הצפייה יכולה להשתמש ב-Trakt או ב-Omnio Sync.</string>
     <string name="account_sync_code_title">קוד סנכרון</string>
     <string name="account_sync_code_description">סנכרן בין מכשירים ללא יצירת חשבון.</string>
     <string name="account_linked_devices">מכשירים מקושרים (%1$d)</string>
@@ -737,8 +737,8 @@
 
     <!-- AuthSignInScreen -->
     <string name="auth_signin_title">התחברות</string>
-    <string name="auth_signin_tv_disabled">הזנת אימייל/סיסמה בטלוויזיה מושבתת. המשך עם כניסת QR.</string>
-    <string name="auth_signin_qr_btn">המשך עם QR</string>
+    <string name="auth_signin_tv_enabled">הזנת אימייל/סיסמה בטלוויזיה מושבתת. המשך עם כניסת QR.</string>
+    <string name="auth_signin_hint">המשך עם QR</string>
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">התחבר עם QR</string>
@@ -831,7 +831,7 @@
     <string name="catalog_see_all_empty_subtitle">נסה קטלוג אחר או חזור מאוחר יותר</string>
 
     <!-- LayoutSelectionScreen -->
-    <string name="layout_selection_welcome">ברוך הבא ל-Nuvio</string>
+    <string name="layout_selection_welcome">ברוך הבא ל-Omnio</string>
     <string name="layout_selection_subtitle">בחר את פריסת מסך הבית שלך</string>
     <string name="layout_selection_continue">המשך</string>
 

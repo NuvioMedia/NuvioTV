@@ -15,7 +15,7 @@
         android:required="false" />
 
     <application
-        android:name=".NuvioApplication"
+        android:name=".OmnioApplication"
         android:allowBackup="true"
         android:banner="@mipmap/banner"
         android:icon="@mipmap/ic_launcher"

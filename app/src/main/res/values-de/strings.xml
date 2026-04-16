@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Nuvio</string>
+    <string name="app_name">Omnio</string>
     <string name="type_movie">Film</string>
     <string name="type_series">Serie</string>
     <string name="type_unknown">Unbekannt</string>
@@ -7,7 +7,7 @@
     <!-- HomeScreen -->
     <string name="home_no_addons">Keine Add-ons installiert. Fügen Sie eines hinzu, um zu beginnen.</string>
     <string name="home_no_catalog_addons">Keine Katalog-Add-ons installiert. Installieren Sie ein Katalog-Add-on, um Inhalte anzuzeigen.</string>
-	<string name="auth_notice_nuvio_logged_out">Du wurdest von Nuvio abgemeldet. Bitte logge dich erneut ein.</string>
+	<string name="auth_notice_omnio_logged_out">Du wurdest von Omnio abgemeldet. Bitte logge dich erneut ein.</string>
     <string name="auth_notice_trakt_logged_out">Du wurdest von Trakt abgemeldet. Bitte logge dich erneut ein.</string>
     <string name="error_generic">Ein Fehler ist aufgetreten</string>
 
@@ -248,12 +248,12 @@
 
     <!-- SupportersContributorsScreen -->
     <string name="supporters_contributors_title">Unterstützer und Mitwirkende</string>
-    <string name="supporters_contributors_subtitle">Die Menschen, die Nuvio unterstützen, und die Mitwirkenden, die es für TV und Smartphones entwickeln.</string>
+    <string name="supporters_contributors_subtitle">Die Menschen, die Omnio unterstützen, und die Mitwirkenden, die es für TV und Smartphones entwickeln.</string>
     <string name="supporters_contributors_supporters_copy">Unterstützer und Spender tragen dazu bei, das Projekt am Laufen zu halten, die Infrastruktur zu finanzieren und Raum für ambitionierte Funktionen zu schaffen.</string>
-    <string name="supporters_contributors_donate_copy">Nuvio bleibt kostenlos und Open Source. Wenn Sie das Projekt unterstützen möchten, können Sie dazu beitragen, die damit verbundenen Zeit- und Infrastrukturkosten zu decken.</string>
-    <string name="supporters_contributors_donate_button">Spenden Sie an Nuvio</string>
+    <string name="supporters_contributors_donate_copy">Omnio bleibt kostenlos und Open Source. Wenn Sie das Projekt unterstützen möchten, können Sie dazu beitragen, die damit verbundenen Zeit- und Infrastrukturkosten zu decken.</string>
+    <string name="supporters_contributors_donate_button">Spenden Sie an Omnio</string>
     <string name="supporters_contributors_qr_title">Zum Spenden scannen</string>
-    <string name="supporters_contributors_qr_subtitle">Öffnen Sie den Link auf Ihrem Smartphone und unterstützen Sie Nuvio über Ko-fi.</string>
+    <string name="supporters_contributors_qr_subtitle">Öffnen Sie den Link auf Ihrem Smartphone und unterstützen Sie Omnio über Ko-fi.</string>
     <string name="supporters_contributors_qr_hint">Richten Sie Ihre Kamera auf den QR-Code oder verwenden Sie die Schaltfläche unten.</string>
     <string name="supporters_contributors_back_button">Zurück zu den Details</string>
     <string name="supporters_tab">Unterstützer</string>
@@ -598,13 +598,13 @@
     <string name="trakt_watch_progress_title">Fortschritt anzeigen</string>
     <string name="trakt_watch_progress_subtitle">Wählen Sie die Fortschrittsquelle für „Weiterschauen”</string>
     <string name="trakt_watch_progress_dialog_title">Fortschritt anzeigen</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Wählen Sie aus, ob zum Fortsetzen und Weitersehen Trakt oder Nuvio Sync verwendet werden soll, während Trakt Scrobbling aktiv bleibt.</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Wählen Sie aus, ob zum Fortsetzen und Weitersehen Trakt oder Omnio Sync verwendet werden soll, während Trakt Scrobbling aktiv bleibt.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
-    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_watch_progress_source_omnio">Omnio Sync</string>
     <string name="trakt_setting_on">An</string>
     <string name="trakt_setting_off">Aus</string> 
 	<string name="trakt_watch_progress_trakt_selected">Quelle für Fortschrittsanzeige auf Trakt eingestellt</string>
-    <string name="trakt_watch_progress_nuvio_selected">Quelle für den Fortschritt beim Ansehen auf Nuvio Sync eingestellt</string>
+    <string name="trakt_watch_progress_omnio_selected">Quelle für den Fortschritt beim Ansehen auf Omnio Sync eingestellt</string>
     <string name="trakt_continue_watching_window">„Weiterschauen” Zeitrahmen</string>
     <string name="trakt_continue_watching_subtitle">Trakt-Verlauf für „Weiterschauen” berücksichtigt</string>
     <string name="trakt_unaired_next_up">„Kommende Folgen” (unausgestrahlt)</string>
@@ -626,7 +626,7 @@
     <string name="trakt_stat_watched_hours">Gesehene Stunden</string>
     <string name="trakt_disconnect">Trennen</string>
     <string name="trakt_disconnect_title">Trakt trennen?</string>
-    <string name="trakt_disconnect_subtitle">Dadurch wird Ihr Trakt-Konto von Nuvio getrennt.</string>
+    <string name="trakt_disconnect_subtitle">Dadurch wird Ihr Trakt-Konto von Omnio getrennt.</string>
     <string name="trakt_login">Anmelden</string>
     <string name="trakt_retry">Wiederholen</string>
     <string name="trakt_back">Zurück</string>
@@ -731,7 +731,7 @@
     <string name="profile_pin_overlay_set_support">Diese PIN wird benötigt, bevor dieses Profil geöffnet werden kann.</string>
     <string name="profile_pin_overlay_confirm_support">Gib dieselben 4 Ziffern erneut ein, um die Einrichtung abzuschließen.</string>
     <string name="profile_pin_overlay_mismatch">Die PINs stimmen nicht überein. Gib erneut eine neue PIN ein.</string>
-    <string name="profile_pin_overlay_forgot_hint">PIN vergessen? Setze sie über dein Nuvio-Konto auf der Nuvio-Website zurück.</string>
+    <string name="profile_pin_overlay_forgot_hint">PIN vergessen? Setze sie über dein Omnio-Konto auf der Omnio-Website zurück.</string>
     <string name="profile_pin_overlay_back_hint">Zurück drücken, um abzubrechen</string>	
 
 
@@ -980,8 +980,8 @@
 
     <!-- AuthSignInScreen -->
     <string name="auth_signin_title">Anmelden</string>
-    <string name="auth_signin_tv_disabled">Die Eingabe von E-Mail-Adresse/Passwort auf dem Fernseher ist deaktiviert. Fahren Sie mit der QR-Anmeldung fort.</string>
-    <string name="auth_signin_qr_btn">Mit QR fortfahren</string>
+    <string name="auth_signin_tv_enabled">Die Eingabe von E-Mail-Adresse/Passwort auf dem Fernseher ist deaktiviert. Fahren Sie mit der QR-Anmeldung fort.</string>
+    <string name="auth_signin_hint">Mit QR fortfahren</string>
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">Mit QR anmelden</string>
@@ -1071,7 +1071,7 @@
     <string name="catalog_see_all_empty_subtitle">Versuchen Sie es mit einem anderen Katalog oder schauen Sie später noch einmal vorbei</string>
 
     <!-- LayoutSelectionScreen -->
-    <string name="layout_selection_welcome">Willkommen bei Nuvio</string>
+    <string name="layout_selection_welcome">Willkommen bei Omnio</string>
     <string name="layout_selection_subtitle">Wählen Sie Ihr Startbildschirm-Layout aus</string>
     <string name="layout_selection_continue">Weiter</string>
 
@@ -1083,7 +1083,7 @@
     <string name="update_unknown_sources">Installationen aus unbekannten Quellen zulassen, um fortzufahren.</string>
     <!-- AccountScreen -->
     <string name="account_title">Konto</string>
-    <string name="account_sign_in_description">Melden Sie sich an, um Ihre Bibliothek, Ihren Fortschritt, Add-ons und Plugins auf allen Geräten zu synchronisieren. Die Bibliothekssynchronisierung verwendet Nuvio Sync, wenn Trakt nicht verbunden ist, und der Fortschritt kann entweder mit Trakt oder Nuvio Sync angezeigt werden.</string>
+    <string name="account_sign_in_description">Melden Sie sich an, um Ihre Bibliothek, Ihren Fortschritt, Add-ons und Plugins auf allen Geräten zu synchronisieren. Die Bibliothekssynchronisierung verwendet Omnio Sync, wenn Trakt nicht verbunden ist, und der Fortschritt kann entweder mit Trakt oder Omnio Sync angezeigt werden.</string>
     <string name="account_sync_code_title">Synchronisierungscode</string>
     <string name="account_sync_code_description">Synchronisieren Sie Geräte, ohne ein Konto zu erstellen.</string>
     <string name="account_linked_devices">Verbundene Geräte (%1$d)</string>

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Nuvio</string>
+    <string name="app_name">Omnio</string>
     <string name="type_movie">Phim</string>
     <string name="type_series">Chương trình TV</string>
     <string name="type_unknown">Không xác định</string>
@@ -479,7 +479,7 @@
     <string name="trakt_stat_watched_hours">Giờ đã xem</string>
     <string name="trakt_disconnect">Ngắt kết nối</string>
     <string name="trakt_disconnect_title">Ngắt kết nối Trakt?</string>
-    <string name="trakt_disconnect_subtitle">Thao tác này sẽ ngắt kết nối tài khoản Trakt khỏi Nuvio.</string>
+    <string name="trakt_disconnect_subtitle">Thao tác này sẽ ngắt kết nối tài khoản Trakt khỏi Omnio.</string>
     <string name="trakt_login">Đăng nhập</string>
     <string name="trakt_retry">Thử lại</string>
     <string name="trakt_back">Quay lại</string>
@@ -738,8 +738,8 @@
 
     <!-- AuthSignInScreen -->
     <string name="auth_signin_title">Đăng nhập</string>
-    <string name="auth_signin_tv_disabled">Nhập email/mật khẩu trên TV đã bị tắt. Tiếp tục bằng đăng nhập QR.</string>
-    <string name="auth_signin_qr_btn">Tiếp tục bằng QR</string>
+    <string name="auth_signin_tv_enabled">Nhập email/mật khẩu trên TV đã bị tắt. Tiếp tục bằng đăng nhập QR.</string>
+    <string name="auth_signin_hint">Tiếp tục bằng QR</string>
 
     <!-- AuthQrSignInScreen -->
     <string name="auth_qr_title">Đăng nhập bằng QR</string>
@@ -821,7 +821,7 @@
     <string name="catalog_see_all_empty_subtitle">Thử danh mục khác hoặc quay lại sau</string>
 
     <!-- LayoutSelectionScreen -->
-    <string name="layout_selection_welcome">Chào mừng đến Nuvio</string>
+    <string name="layout_selection_welcome">Chào mừng đến Omnio</string>
     <string name="layout_selection_subtitle">Chọn bố cục màn hình chính</string>
     <string name="layout_selection_continue">Tiếp tục</string>
 
