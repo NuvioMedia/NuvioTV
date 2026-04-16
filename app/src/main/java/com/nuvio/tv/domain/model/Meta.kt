@@ -44,7 +44,9 @@ data class Meta(
     val hasLandscapePoster: Boolean? = null,
     val hasLogo: Boolean? = null,
     val hasLinks: Boolean? = null,
-    val hasVideos: Boolean? = null
+    val hasVideos: Boolean? = null,
+    val budget: Long? = null,
+    val revenue: Long? = null
 ) {
     val apiType: String
         get() = type.toApiString(rawType)
