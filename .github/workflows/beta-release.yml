@@ -91,18 +91,18 @@ jobs:
       - name: Prepare signing config
         if: ${{ inputs.release_mode != 'dry_run' }}
         env:
-          RELEASE_KEYSTORE_BASE64: ${{ secrets.NUVIO_RELEASE_KEYSTORE_BASE64 }}
-          RELEASE_KEY_ALIAS: ${{ secrets.NUVIO_RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.NUVIO_RELEASE_KEY_PASSWORD }}
-          RELEASE_STORE_PASSWORD: ${{ secrets.NUVIO_RELEASE_STORE_PASSWORD }}
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.OMNIO_RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEY_ALIAS: ${{ secrets.OMNIO_RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.OMNIO_RELEASE_KEY_PASSWORD }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.OMNIO_RELEASE_STORE_PASSWORD }}
         run: |
           if [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
-            echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nuviotv.jks"
+            echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/omniotv.jks"
             {
-              echo "NUVIO_RELEASE_STORE_FILE=$RUNNER_TEMP/nuviotv.jks"
-              echo "NUVIO_RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS"
-              echo "NUVIO_RELEASE_KEY_PASSWORD=$RELEASE_KEY_PASSWORD"
-              echo "NUVIO_RELEASE_STORE_PASSWORD=$RELEASE_STORE_PASSWORD"
+              echo "OMNIO_RELEASE_STORE_FILE=$RUNNER_TEMP/omniotv.jks"
+              echo "OMNIO_RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS"
+              echo "OMNIO_RELEASE_KEY_PASSWORD=$RELEASE_KEY_PASSWORD"
+              echo "OMNIO_RELEASE_STORE_PASSWORD=$RELEASE_STORE_PASSWORD"
             } >> "$GITHUB_ENV"
           else
             echo "CI_USE_DEBUG_SIGNING=true" >> "$GITHUB_ENV"

@@ -27,7 +27,7 @@ jobs:
             const inputs = context.payload.inputs || {};
 
             const dryRun = String(inputs.dry_run || "false").toLowerCase() === "true";
-            const closeMarker = "<!-- nuviotv-bot:close-unlabeled -->";
+            const closeMarker = "<!-- omniotv-bot:close-unlabeled -->";
 
             const items = await github.paginate(github.rest.search.issuesAndPullRequests, {
               q: `repo:${owner}/${repo} is:issue is:open no:label`,

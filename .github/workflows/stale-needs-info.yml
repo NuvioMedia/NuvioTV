@@ -23,8 +23,8 @@ jobs:
             const WARN_AFTER_DAYS = 14;
             const CLOSE_AFTER_DAYS = 21;
 
-            const warnMarker = "<!-- nuviotv-bot:stale-warning -->";
-            const closeMarker = "<!-- nuviotv-bot:stale-close -->";
+            const warnMarker = "<!-- omniotv-bot:stale-warning -->";
+            const closeMarker = "<!-- omniotv-bot:stale-close -->";
 
             const now = Date.now();
             const warnCutoff = now - WARN_AFTER_DAYS * 24 * 60 * 60 * 1000;
@@ -72,4 +72,3 @@ jobs:
                 await github.rest.issues.createComment({ owner, repo, issue_number, body });
               }
             }
-

@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve NuvioTV.
+Thanks for helping improve OmnioTV.
 
 ## PR policy
 

@@ -129,7 +129,7 @@ jobs:
                 });
               }
 
-              const marker = "<!-- nuviotv-bot:needs-info -->";
+              const marker = "<!-- omniotv-bot:needs-info -->";
               const commentBody =
                 `${marker}\n` +
                 `Thanks for the report. Could you add a bit more detail so we can reproduce it?\n\n` +
