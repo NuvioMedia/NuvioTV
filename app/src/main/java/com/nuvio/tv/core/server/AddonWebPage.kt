@@ -7,7 +7,10 @@ import java.util.Locale
 
 object AddonWebPage {
 
-    fun getHtml(baseContext: Context): String {
+    fun getHtml(
+        baseContext: Context,
+        webConfigMode: AddonConfigServer.WebConfigMode = AddonConfigServer.WebConfigMode.FULL
+    ): String {
         val tag = baseContext.getSharedPreferences("app_locale", Context.MODE_PRIVATE)
             .getString("locale_tag", null)
         val context = if (!tag.isNullOrEmpty()) {
@@ -15,13 +18,88 @@ object AddonWebPage {
             config.setLocale(Locale.forLanguageTag(tag))
             baseContext.createConfigurationContext(config)
         } else baseContext
+        val isCollectionsOnly = webConfigMode == AddonConfigServer.WebConfigMode.COLLECTIONS_ONLY
+        val pageTitle = if (isCollectionsOnly) {
+            context.getString(R.string.web_manage_collections_title)
+        } else {
+            context.getString(R.string.web_manage_addons_title)
+        }
+        val pageSubtitle = if (isCollectionsOnly) {
+            context.getString(R.string.web_manage_collections_subtitle)
+        } else {
+            context.getString(R.string.web_manage_addons_subtitle)
+        }
+        val successStatusMessage = if (isCollectionsOnly) {
+            context.getString(R.string.web_status_msg_collections_updated)
+        } else {
+            context.getString(R.string.web_status_msg_addon_updated)
+        }
+        val allowAddonManagement = webConfigMode.allowAddonManagement
+        val allowCatalogManagement = webConfigMode.allowCatalogManagement
+        val defaultTab = when {
+            allowAddonManagement -> "addons"
+            allowCatalogManagement -> "catalogs"
+            else -> "collections"
+        }
+        val tabsHtml = if (isCollectionsOnly) {
+            """
+  <div class="tabs">
+    <button class="tab active" type="button" onclick="switchTab('collections')">${context.getString(R.string.web_tab_collections)}</button>
+  </div>
+"""
+        } else {
+            """
+  <div class="tabs">
+    <button class="tab active" type="button" onclick="switchTab('addons')">${context.getString(R.string.web_tab_addons)}</button>
+    <button class="tab" type="button" onclick="switchTab('catalogs')">${context.getString(R.string.web_tab_home_layout)}</button>
+    <button class="tab" type="button" onclick="switchTab('collections')">${context.getString(R.string.web_tab_collections)}</button>
+  </div>
+"""
+        }
+        val addonsTabHtml = if (allowAddonManagement) {
+            """
+  <div class="tab-content active" id="tab-addons">
+    <div class="add-section">
+      <label>${context.getString(R.string.web_add_addon_url)}</label>
+      <div class="add-row">
+        <input type="url" id="addonUrl" placeholder="${context.getString(R.string.web_placeholder_url)}" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button class="btn" id="addBtn" onclick="addAddon()">${context.getString(R.string.web_btn_add)}</button>
+      </div>
+      <div class="add-error" id="addError"></div>
+    </div>
+
+    <div class="section-label">${context.getString(R.string.web_installed_addons)}</div>
+    <ul class="addon-list" id="addonList"></ul>
+    <div class="empty-state" id="emptyState">${context.getString(R.string.web_no_addons)}</div>
+  </div>
+"""
+        } else {
+            ""
+        }
+        val catalogsTabHtml = if (allowCatalogManagement) {
+            """
+  <div class="tab-content" id="tab-catalogs">
+    <div class="section-block">
+      <div class="section-label">${context.getString(R.string.web_home_catalogs)}</div>
+      <div class="add-section" style="display:flex;gap:0.5rem">
+        <button class="btn" onclick="enableAllCatalogs()" style="flex:1">${context.getString(R.string.web_btn_enable_all)}</button>
+        <button class="btn" onclick="disableAllCatalogs()" style="flex:1">${context.getString(R.string.web_btn_disable_all)}</button>
+      </div>
+      <ul class="addon-list" id="catalogList"></ul>
+      <div class="empty-state" id="catalogEmptyState">${context.getString(R.string.web_no_catalogs)}</div>
+    </div>
+  </div>
+"""
+        } else {
+            ""
+        }
         return """
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>${context.getString(R.string.app_name)} - ${context.getString(R.string.web_manage_addons_title)}</title>
+<title>${context.getString(R.string.app_name)} - $pageTitle</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   * {
@@ -867,43 +945,16 @@ object AddonWebPage {
 <div class="page">
   <div class="header">
     <img src="/logo.png" alt="NuvioTV" class="header-logo">
-    <p>${context.getString(R.string.web_manage_addons_subtitle)}</p>
+    <p>$pageSubtitle</p>
   </div>
 
-  <div class="tabs">
-    <button class="tab active" type="button" onclick="switchTab('addons')">${context.getString(R.string.web_tab_addons)}</button>
-    <button class="tab" type="button" onclick="switchTab('catalogs')">${context.getString(R.string.web_tab_home_layout)}</button>
-    <button class="tab" type="button" onclick="switchTab('collections')">${context.getString(R.string.web_tab_collections)}</button>
-  </div>
+  $tabsHtml
 
-  <div class="tab-content active" id="tab-addons">
-    <div class="add-section">
-      <label>${context.getString(R.string.web_add_addon_url)}</label>
-      <div class="add-row">
-        <input type="url" id="addonUrl" placeholder="${context.getString(R.string.web_placeholder_url)}" autocomplete="off" autocapitalize="off" spellcheck="false">
-        <button class="btn" id="addBtn" onclick="addAddon()">${context.getString(R.string.web_btn_add)}</button>
-      </div>
-      <div class="add-error" id="addError"></div>
-    </div>
+  $addonsTabHtml
 
-    <div class="section-label">${context.getString(R.string.web_installed_addons)}</div>
-    <ul class="addon-list" id="addonList"></ul>
-    <div class="empty-state" id="emptyState">${context.getString(R.string.web_no_addons)}</div>
-  </div>
+  $catalogsTabHtml
 
-  <div class="tab-content" id="tab-catalogs">
-    <div class="section-block">
-      <div class="section-label">${context.getString(R.string.web_home_catalogs)}</div>
-      <div class="add-section" style="display:flex;gap:0.5rem">
-        <button class="btn" onclick="enableAllCatalogs()" style="flex:1">${context.getString(R.string.web_btn_enable_all)}</button>
-        <button class="btn" onclick="disableAllCatalogs()" style="flex:1">${context.getString(R.string.web_btn_disable_all)}</button>
-      </div>
-      <ul class="addon-list" id="catalogList"></ul>
-      <div class="empty-state" id="catalogEmptyState">${context.getString(R.string.web_no_catalogs)}</div>
-    </div>
-  </div>
-
-  <div class="tab-content" id="tab-collections">
+  <div class="tab-content${if (defaultTab == "collections") " active" else ""}" id="tab-collections">
     <div class="section-block">
       <div class="section-label">${context.getString(R.string.web_tab_collections)}</div>
       <div class="add-section" style="display:flex;gap:0.5rem">
@@ -1008,17 +1059,23 @@ var i18n = {
 };
 var connectionLost = false;
 var consecutiveErrors = 0;
-var activeTab = 'addons';
+var allowAddonManagement = ${allowAddonManagement.toString().lowercase()};
+var allowCatalogManagement = ${allowCatalogManagement.toString().lowercase()};
+var availableTabs = ${if (isCollectionsOnly) "['collections']" else "['addons','catalogs','collections']"};
+var successStatusMessage = '${successStatusMessage.replace("'", "\\'")}';
+var activeTab = '$defaultTab';
 
 function switchTab(tab) {
+  if (availableTabs.indexOf(tab) < 0) return;
   activeTab = tab;
   document.querySelectorAll('.tab').forEach(function(t, i) {
-    t.classList.toggle('active', ['addons','catalogs','collections'][i] === tab);
+    t.classList.toggle('active', availableTabs[i] === tab);
   });
   document.querySelectorAll('.tab-content').forEach(function(tc) {
     tc.classList.remove('active');
   });
-  document.getElementById('tab-' + tab).classList.add('active');
+  var target = document.getElementById('tab-' + tab);
+  if (target) target.classList.add('active');
 }
 
 function buildUnifiedCatalogList() {
@@ -1202,8 +1259,10 @@ function setConnectionLost(lost) {
 }
 
 function renderAddons() {
+  if (!allowAddonManagement) return;
   var list = document.getElementById('addonList');
   var empty = document.getElementById('emptyState');
+  if (!list || !empty) return;
   list.innerHTML = '';
   if (addons.length === 0) {
     empty.style.display = 'block';
@@ -1242,8 +1301,10 @@ function renderAddons() {
 }
 
 function renderCatalogs() {
+  if (!allowCatalogManagement) return;
   var list = document.getElementById('catalogList');
   var empty = document.getElementById('catalogEmptyState');
+  if (!list || !empty) return;
   list.innerHTML = '';
 
   if (catalogs.length === 0) {
@@ -1296,6 +1357,7 @@ function renderCatalogs() {
 }
 
 function moveAddon(index, direction) {
+  if (!allowAddonManagement) return;
   var newIndex = index + direction;
   if (newIndex < 0 || newIndex >= addons.length) return;
   var item = addons.splice(index, 1)[0];
@@ -1304,6 +1366,7 @@ function moveAddon(index, direction) {
 }
 
 function moveCatalog(index, direction) {
+  if (!allowCatalogManagement) return;
   var newIndex = index + direction;
   if (newIndex < 0 || newIndex >= catalogs.length) return;
   var item = catalogs.splice(index, 1)[0];
@@ -1312,6 +1375,7 @@ function moveCatalog(index, direction) {
 }
 
 function moveCatalogToTop(index) {
+  if (!allowCatalogManagement) return;
   if (index <= 0) return;
   var item = catalogs.splice(index, 1)[0];
   catalogs.unshift(item);
@@ -1319,6 +1383,7 @@ function moveCatalogToTop(index) {
 }
 
 function moveCatalogToBottom(index) {
+  if (!allowCatalogManagement) return;
   if (index >= catalogs.length - 1) return;
   var item = catalogs.splice(index, 1)[0];
   catalogs.push(item);
@@ -1326,6 +1391,7 @@ function moveCatalogToBottom(index) {
 }
 
 function toggleCatalog(index) {
+  if (!allowCatalogManagement) return;
   var item = catalogs[index];
   if (!item) return;
   item.isDisabled = !item.isDisabled;
@@ -1340,6 +1406,7 @@ function toggleCatalog(index) {
 }
 
 function enableAllCatalogs() {
+  if (!allowCatalogManagement) return;
   catalogs.forEach(function(item) {
     item.isDisabled = false;
     if (item.isCollection) {
@@ -1352,6 +1419,7 @@ function enableAllCatalogs() {
 }
 
 function disableAllCatalogs() {
+  if (!allowCatalogManagement) return;
   catalogs.forEach(function(item) {
     item.isDisabled = true;
     if (item.isCollection) {
@@ -1384,6 +1452,7 @@ function disableAllCollections() {
 }
 
 async function addAddon() {
+  if (!allowAddonManagement) return;
   const input = document.getElementById('addonUrl');
   const errorEl = document.getElementById('addError');
   let url = input.value.trim();
@@ -1414,6 +1483,7 @@ async function addAddon() {
 }
 
 function removeAddon(index) {
+  if (!allowAddonManagement) return;
   addons.splice(index, 1);
   renderAddons();
 }
@@ -1470,7 +1540,7 @@ function showSuccessStatus() {
   content.innerHTML =
     '<div class="status-icon"><div class="status-svg"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div></div>' +
     '<div class="status-title">${context.getString(R.string.web_status_changes_applied).replace("'", "\\'")}</div>' +
-    '<div class="status-message">${context.getString(R.string.web_status_msg_addon_updated).replace("'", "\\'")}</div>';
+    '<div class="status-message">' + escapeHtml(successStatusMessage) + '</div>';
   content.className = 'status-content status-success';
   setTimeout(dismissStatus, 2500);
 }

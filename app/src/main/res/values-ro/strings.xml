@@ -116,9 +116,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Cont</string>
-    <string name="settings_account_subtitle">Starea contului și sincronizării.</string>
+    <string name="settings_account_subtitle">Starea contului și sincronizării</string>
     <string name="settings_profiles">Profile</string>
-    <string name="settings_profiles_subtitle">Gestionează profilurile utilizatorilor.</string>
+    <string name="settings_profiles_subtitle">Gestionează profilurile utilizatorilor</string>
     <string name="settings_layout">Aranjament</string>
     <string name="settings_layout_subtitle">Structura paginii principale și stilurile afișajului.</string>
     <string name="settings_plugins">Plugin-uri</string>
@@ -130,8 +130,8 @@
     <string name="settings_about_subtitle">Versiune și politici.</string>
     <string name="settings_debug">Depanare</string>
     <string name="settings_debug_subtitle">Instrumente pentru dezvoltatori și steaguri de funcționalitate.</string>
-    <string name="settings_plugins_section_subtitle">Gestionează depozitele, furnizorii și stările pluginurilor.</string>
-    <string name="settings_account_section_subtitle">Statutul contului și sincronizării.</string>
+    <string name="settings_plugins_section_subtitle">Gestionează depozitele, furnizorii și stările pluginurilor</string>
+    <string name="settings_account_section_subtitle">Statutul contului și sincronizării</string>
     <string name="account_stat_addons">add-on-uri</string>
     <string name="account_stat_plugins">pluginuri</string>
     <string name="account_stat_library">bibliotecă</string>

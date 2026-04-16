@@ -6,7 +6,8 @@ import androidx.compose.runtime.Immutable
 data class CollectionCatalogSource(
     val addonId: String,
     val type: String,
-    val catalogId: String
+    val catalogId: String,
+    val genre: String? = null
 )
 
 @Immutable

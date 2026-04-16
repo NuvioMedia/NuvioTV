@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.collection
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -66,6 +68,7 @@ import androidx.tv.material3.Switch
 import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import com.nuvio.tv.domain.model.CollectionCatalogSource
 import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.FolderViewMode
 import com.nuvio.tv.domain.model.PosterShape
@@ -607,6 +610,34 @@ private fun FolderEditorContent(
         return
     }
 
+    val genrePickerIndex = uiState.genrePickerSourceIndex
+    val genrePickerSource = genrePickerIndex?.let { folder.catalogSources.getOrNull(it) }
+    val genrePickerCatalog = genrePickerSource?.let { source ->
+        uiState.availableCatalogs.find {
+            it.addonId == source.addonId && it.type == source.type && it.catalogId == source.catalogId
+        }
+    }
+
+    if (
+        genrePickerIndex != null &&
+        genrePickerSource != null &&
+        genrePickerCatalog != null &&
+        genrePickerCatalog.genreOptions.isNotEmpty()
+    ) {
+        GenrePickerContent(
+            title = genrePickerCatalog.catalogName,
+            selectedGenre = genrePickerSource.genre,
+            genreOptions = genrePickerCatalog.genreOptions,
+            allowAll = !genrePickerCatalog.genreRequired,
+            onSelect = { genre ->
+                viewModel.updateCatalogSourceGenre(genrePickerIndex, genre)
+                viewModel.hideGenrePicker()
+            },
+            onBack = { viewModel.hideGenrePicker() }
+        )
+        return
+    }
+
     val titleFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
@@ -955,6 +986,12 @@ private fun FolderEditorContent(
                 val isMissing = catalog == null
                 val sourceKey = "${source.addonId}_${source.type}_${source.catalogId}"
                 val removeFocusRequester = catalogFocusRequesters.getOrPut(sourceKey) { FocusRequester() }
+                val genreLabel = source.genre ?: if (catalog?.genreRequired == true) {
+                    stringResource(R.string.collections_editor_select_genre)
+                } else {
+                    stringResource(R.string.collections_editor_all_genres)
+                }
+                val hasGenreOptions = catalog?.genreOptions?.isNotEmpty() == true
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     colors = SurfaceDefaults.colors(containerColor = NuvioColors.BackgroundCard),
@@ -982,6 +1019,51 @@ private fun FolderEditorContent(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = if (isMissing) NuvioColors.Error.copy(alpha = 0.7f) else NuvioColors.TextTertiary
                             )
+                            if (hasGenreOptions) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(CircleShape)
+                                            .background(NuvioColors.BackgroundElevated)
+                                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.collections_editor_genre_filter),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = NuvioColors.TextSecondary
+                                        )
+                                    }
+                                    Text(
+                                        text = genreLabel,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = NuvioColors.TextSecondary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Button(
+                                        onClick = { viewModel.showGenrePicker(index) },
+                                        colors = ButtonDefaults.colors(
+                                            containerColor = NuvioColors.BackgroundElevated,
+                                            contentColor = NuvioColors.TextSecondary,
+                                            focusedContainerColor = NuvioColors.FocusBackground,
+                                            focusedContentColor = NuvioColors.Primary
+                                        ),
+                                        border = ButtonDefaults.border(
+                                            focusedBorder = Border(
+                                                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                                shape = RoundedCornerShape(12.dp)
+                                            )
+                                        ),
+                                        shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+                                    ) {
+                                        Text(stringResource(R.string.collections_editor_choose_genre))
+                                    }
+                                }
+                            }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                             Button(
@@ -1131,8 +1213,13 @@ private fun CatalogPickerContent(
                                 style = MaterialTheme.typography.titleSmall,
                                 color = NuvioColors.TextPrimary
                             )
+                            val supportingGenreText = when {
+                                catalog.genreRequired -> stringResource(R.string.collections_editor_genre_required)
+                                catalog.genreOptions.isNotEmpty() -> stringResource(R.string.collections_editor_genre_optional)
+                                else -> null
+                            }
                             Text(
-                                text = "${catalog.type} - ${catalog.addonName}",
+                                text = listOfNotNull("${catalog.type} - ${catalog.addonName}", supportingGenreText).joinToString(" • "),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = NuvioColors.TextTertiary
                             )
@@ -1152,6 +1239,135 @@ private fun CatalogPickerContent(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun GenrePickerContent(
+    title: String,
+    selectedGenre: String?,
+    genreOptions: List<String>,
+    allowAll: Boolean,
+    onSelect: (String?) -> Unit,
+    onBack: () -> Unit
+) {
+    val firstOptionFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(title, selectedGenre, genreOptions) {
+        repeat(5) { androidx.compose.runtime.withFrameNanos { } }
+        try { firstOptionFocusRequester.requestFocus() } catch (_: Exception) {}
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 48.dp, start = 48.dp, end = 48.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(R.string.collections_editor_genre_filter),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = NuvioColors.TextPrimary
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioColors.TextSecondary
+                )
+            }
+            NuvioButton(onClick = onBack) { Text(stringResource(R.string.collections_editor_back)) }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 48.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            var optionIndex = 0
+            if (allowAll) {
+                item(key = "genre_all") {
+                    GenrePickerOptionCard(
+                        title = stringResource(R.string.collections_editor_all_genres),
+                        selected = selectedGenre == null,
+                        onClick = { onSelect(null) },
+                        modifier = Modifier.focusRequester(firstOptionFocusRequester)
+                    )
+                }
+                optionIndex += 1
+            }
+
+            itemsIndexed(
+                items = genreOptions,
+                key = { _, genre -> genre }
+            ) { index, genre ->
+                val useFirstRequester = optionIndex == 0 && index == 0
+                GenrePickerOptionCard(
+                    title = genre,
+                    selected = selectedGenre == genre,
+                    onClick = { onSelect(genre) },
+                    modifier = if (useFirstRequester) Modifier.focusRequester(firstOptionFocusRequester) else Modifier
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun GenrePickerOptionCard(
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.colors(
+            containerColor = if (selected) NuvioColors.Secondary.copy(alpha = 0.15f) else NuvioColors.BackgroundCard,
+            focusedContainerColor = NuvioColors.FocusBackground
+        ),
+        border = CardDefaults.border(
+            border = if (selected) Border(
+                border = BorderStroke(1.dp, NuvioColors.Secondary.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(12.dp)
+            ) else Border.None,
+            focusedBorder = Border(
+                border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                shape = RoundedCornerShape(12.dp)
+            )
+        ),
+        shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+        scale = CardDefaults.scale(focusedScale = 1.01f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = NuvioColors.TextPrimary
+            )
+            if (selected) {
+                Text(
+                    text = stringResource(R.string.cd_selected),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NuvioColors.Secondary
+                )
             }
         }
     }

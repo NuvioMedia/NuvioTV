@@ -92,6 +92,9 @@ class HomeViewModel @Inject constructor(
 
     internal val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    /** True once the CW pipeline has completed its first emission (items or empty). */
+    internal val _initialCwResolved = MutableStateFlow(false)
+    val initialCwResolved: StateFlow<Boolean> = _initialCwResolved.asStateFlow()
     val effectiveAutoplayEnabled = playerSettingsDataStore.playerSettings
         .map(StreamAutoPlayPolicy::isEffectivelyEnabled)
         .distinctUntilChanged()
@@ -111,7 +114,9 @@ class HomeViewModel @Inject constructor(
     val enrichingItemId: StateFlow<String?> = _enrichingItemId.asStateFlow()
     internal fun setEnrichingItemId(id: String?) { _enrichingItemId.value = id }
 
+    internal val catalogStateLock = Any()
     internal val catalogsMap = linkedMapOf<String, CatalogRow>()
+    internal val catalogItemKeyIndex = mutableMapOf<String, MutableSet<String>>()
     internal val catalogOrder = mutableListOf<String>()
     internal var addonsCache: List<Addon> = emptyList()
     internal var collectionsCache: List<Collection> = emptyList()
@@ -159,6 +164,9 @@ class HomeViewModel @Inject constructor(
     internal val cwNextUpNegativeCacheTimestamps = Collections.synchronizedMap(mutableMapOf<String, Long>())
     internal val discoveredOlderNextUpItems = Collections.synchronizedList(mutableListOf<ContinueWatchingItem.NextUp>())
     internal val cwLastProcessedNextUpContentIds = Collections.synchronizedSet(mutableSetOf<String>())
+    internal val cwEnrichedNextUpOverlay = Collections.synchronizedMap(mutableMapOf<String, NextUpInfo>())
+    /** In-memory cache of enriched InProgress items per contentId+episode key. */
+    internal val cwEnrichedInProgressOverlay = Collections.synchronizedMap(mutableMapOf<String, ContinueWatchingItem.InProgress>())
     internal val fullyWatchedSeriesIds get() = watchedSeriesStateHolder
     internal var tmdbEnrichFocusJob: Job? = null
     internal var pendingTmdbEnrichItemId: String? = null
@@ -195,7 +203,9 @@ class HomeViewModel @Inject constructor(
         observeTmdbSettings()
         observeMdbListSettings()
         observeBlurUnwatchedEpisodes()
+        observeMemoryOnlyVerticalScroll()
         observeStartupAuthNotice()
+        observeProgressSourceChanges()
         loadContinueWatching()
         observeCollections()
         observeInstalledAddons()
@@ -205,7 +215,23 @@ class HomeViewModel @Inject constructor(
             profileManager.activeProfileId.collect { newId ->
                 if (newId != previousProfileId) {
                     previousProfileId = newId
+                    // Clear all in-memory CW caches so data from the previous
+                    // profile doesn't leak into the new one.
+                    cwMetaCache.clear()
+                    cwMetaNegativeCacheTimestamps.clear()
+                    cwBadgeEpisodeCache.clear()
+                    cwTmdbIdCache.clear()
+                    cwNextUpResolutionCache.clear()
+                    cwNextUpNegativeCacheTimestamps.clear()
+                    discoveredOlderNextUpItems.clear()
+                    cwLastProcessedNextUpContentIds.clear()
+                    cwEnrichedNextUpOverlay.clear()
+                    cwEnrichedInProgressOverlay.clear()
                     _uiState.update { it.copy(continueWatchingItems = emptyList()) }
+                    loadContinueWatching()
+                    // Clear watched badges so they don't leak between profiles.
+                    watchedSeriesStateHolder.update(emptySet())
+                    _uiState.update { it.copy(movieWatchedStatus = emptyMap()) }
                 }
             }
         }
@@ -243,6 +269,16 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun observeMemoryOnlyVerticalScroll() {
+        viewModelScope.launch {
+            layoutPreferenceDataStore.memoryOnlyVerticalScroll
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    _uiState.update { it.copy(memoryOnlyVerticalScroll = enabled) }
+                }
+        }
+    }
+
     fun requestTrailerPreview(item: MetaPreview) = requestTrailerPreviewPipeline(item)
 
     fun requestTrailerPreview(
@@ -275,6 +311,38 @@ class HomeViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .collectLatest { settings ->
                     currentMdbListSettings = settings
+                }
+        }
+    }
+
+    /**
+     * When the watch-progress source changes (e.g. Trakt login/logout, or
+     * switching between Trakt and Nuvio Sync), clear the CW disk cache and
+     * in-memory state so items from the old source don't leak into the new one.
+     */
+    private fun observeProgressSourceChanges() {
+        viewModelScope.launch {
+            var previousSource: com.nuvio.tv.data.local.WatchProgressSource? = null
+            traktSettingsDataStore.watchProgressSource
+                .distinctUntilChanged()
+                .collect { source ->
+                    if (previousSource != null && previousSource != source) {
+                        // Source changed — clear CW caches to prevent mixing.
+                        cwMetaCache.clear()
+                        cwEnrichedNextUpOverlay.clear()
+                        cwEnrichedInProgressOverlay.clear()
+                        discoveredOlderNextUpItems.clear()
+                        cwLastProcessedNextUpContentIds.clear()
+                        _uiState.update { it.copy(continueWatchingItems = emptyList()) }
+                        // Clear disk cache for current profile.
+                        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            runCatching { cwEnrichmentCache.saveNextUpSnapshot(emptyList()) }
+                            runCatching { cwEnrichmentCache.saveInProgressSnapshot(emptyList()) }
+                        }
+                        // Reload CW from fresh source.
+                        loadContinueWatching()
+                    }
+                    previousSource = source
                 }
         }
     }
@@ -420,6 +488,7 @@ class HomeViewModel @Inject constructor(
                         state.copy(continueWatchingItems = items)
                     } else state
                 }
+                _initialCwResolved.value = true
             }
         }
         loadContinueWatchingPipeline()
@@ -456,7 +525,7 @@ class HomeViewModel @Inject constructor(
             val debounceMs = when {
                 // First render: use minimal debounce to show content ASAP while still
                 // batching near-simultaneous arrivals.
-                !hasRenderedFirstCatalog && catalogsMap.isNotEmpty() -> {
+                !hasRenderedFirstCatalog && hasAnyCatalogRows() -> {
                     hasRenderedFirstCatalog = true
                     50L
                 }

@@ -127,7 +127,8 @@ internal fun PlayerRuntimeController.switchInternalPlayerEngineManually() {
 
 private fun PlayerRuntimeController.isStartupPhaseForEngineFailover(): Boolean {
     val state = _uiState.value
-    return !hasRenderedFirstFrame && (state.showLoadingOverlay || state.isBuffering || state.currentPosition <= 0L)
+    val currentPosition = currentPlaybackPositionMs()?.coerceAtLeast(0L) ?: playbackTimeline.value.currentPosition
+    return !hasRenderedFirstFrame && (state.showLoadingOverlay || state.isBuffering || currentPosition <= 0L)
 }
 
 private fun PlayerRuntimeController.targetEngineLabel(targetEngine: InternalPlayerEngine): String {

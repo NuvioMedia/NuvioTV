@@ -98,10 +98,10 @@
     <string name="error_meta_tried_none">Addons consultados: %1$s. Nenhum forneceu informações para id=%2$s (tipo=%3$s).</string>
     <string name="error_meta_tried_generic">Addons consultados: %1$s. Não foi possível carregar informações para id=%2$s (tipo=%3$s).</string>
     <string name="error_meta_tried_issues">Addons consultados: %1$s. Falha ao carregar id=%2$s (tipo=%3$s). Erros: %4$s.</string>
-    <string name="error_stream_no_supported_addon">Nenhum addon instalado oferece suporte a streams para "%1$s".</string>
-    <string name="error_stream_tried_none">Addons de stream testados: %1$s. Nenhum deles retornou streams para id=%2$s (tipo=%3$s).</string>
-    <string name="error_stream_tried_generic">Addons de stream testados: %1$s. Não foi possível carregar streams para id=%2$s (tipo=%3$s).</string>
-    <string name="error_stream_tried_issues">Addons de stream testados: %1$s. Não foi possível carregar streams para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Nenhum addon instalado oferece suporte a fontes para "%1$s".</string>
+    <string name="error_stream_tried_none">Addons de fonte testados: %1$s. Nenhum deles retornou fontess para id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_generic">Addons de fonte testados: %1$s. Não foi possível carregar fontess para id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_issues">Addons de fonte testados: %1$s. Não foi possível carregar fontes para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
    
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Continuar assistindo</string>
@@ -124,6 +124,7 @@
     <!-- CatalogRowSection -->
     <string name="catalog_from_addon">via %1$s</string>
     <string name="action_see_all">Ver tudo</string>
+    <string name="action_load_more">Carregar Mais</string>
 
     <!-- HeroSection -->
     <string name="hero_creator">Criação: %1$s</string>
@@ -250,9 +251,9 @@
         
     <!-- SettingsScreen categories -->
     <string name="settings_account">Conta</string>
-    <string name="settings_account_subtitle">Status da conta e sincronização.</string>
+    <string name="settings_account_subtitle">Status da conta e sincronização</string>
     <string name="settings_profiles">Perfis</string>
-    <string name="settings_profiles_subtitle">Gerenciar perfis de usuário.</string>
+    <string name="settings_profiles_subtitle">Gerenciar perfis de usuário</string>
     <string name="settings_layout">Layout</string>
     <string name="settings_layout_subtitle">Estrutura da home e estilo dos pôsteres.</string>
     <string name="settings_plugins">Plugins</string>
@@ -281,8 +282,8 @@
     <string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Depuração</string>
     <string name="settings_debug_subtitle">Ferramentas de desenvolvedor e recursos avançados.</string>
-    <string name="settings_plugins_section_subtitle">Gerenciar repositórios, provedores e extensões.</string>
-    <string name="settings_account_section_subtitle">Status da conta e sincronização.</string>
+    <string name="settings_plugins_section_subtitle">Gerenciar repositórios, provedores e extensões</string>
+    <string name="settings_account_section_subtitle">Status da conta e sincronização</string>
     <string name="account_stat_addons">addons</string>
     <string name="account_stat_plugins">plugins</string>
     <string name="account_stat_library">biblioteca</string>
@@ -671,6 +672,11 @@
     <string name="qr_login_approved">Login aprovado. Finalizando acesso…</string>
     <string name="qr_login_pending">Aguardando aprovação no seu celular…</string>
     <string name="qr_login_expired">O QR Code expirou. Gere um novo código.</string>
+    <string name="qr_login_scan_prompt">Escaneie o QR e entre pelo celular</string>
+    <string name="qr_login_start_failed">Falha ao iniciar login por QR</string>
+    <string name="qr_login_signing_in">Entrando…</string>
+    <string name="qr_login_success">Login realizado com sucesso</string>
+    <string name="qr_login_exchange_failed">Não foi possível concluir login por QR</string>
     <string name="trakt_code_expires">O código expira em %1$s</string>
     <string name="trakt_token_refreshes">O token de acesso renova em %1$s</string>
     <string name="trakt_login_instruction">Clique em Login para iniciar a autenticação. Um QR Code aparecerá.</string>
@@ -830,10 +836,12 @@
     <string name="addon_empty">Nenhum addon instalado. Adicione um para começar.</string>
     <string name="addon_remove">Remover</string>
     <string name="addon_manage_from_phone_title">Gerenciar pelo celular</string>
-    <string name="addon_manage_from_phone_subtitle">Use o QR Code para gerenciar addons e a Home.</string>
+    <string name="addon_manage_from_phone_subtitle">Escaneie um QR para gerenciar addons, catálogos e coleções pelo celular</string>
+    <string name="addon_manage_collections_from_phone_subtitle">Escaneie um QR para gerenciar coleções pelo celular</string>
     <string name="addon_reorder_title">Reordenar Home</string>
-    <string name="addon_reorder_subtitle">Ajuste a ordem dos catálogos na tela inicial.</string>
-    <string name="addon_qr_scan_instruction">Escaneie com seu celular para gerenciar o app.</string>
+    <string name="addon_reorder_subtitle">Controla a ordem dos catálogos e coleções na Home (Clássico + Moderno + Grade)</string>
+    <string name="addon_qr_scan_instruction">Escaneie com seu celular para gerenciar addons, catálogos e coleções</string>
+    <string name="addon_qr_collections_scan_instruction">Escaneie com seu celular para gerenciar coleções</string>
     <string name="addon_qr_close">Fechar</string>
     <string name="addon_confirm_title">Confirmar alterações</string>
     <string name="addon_confirm_subtitle">Confira as mudanças feitas pelo celular:</string>
@@ -862,6 +870,16 @@
     <string name="stream_finding_source">Buscando fontes…</string>
     <string name="stream_type_torrent">Torrent</string>
     <string name="stream_type_youtube">YouTube</string>
+    <string name="p2p_consent_title">Fontes P2P</string>
+    <string name="p2p_consent_body">Esta fonte usa tecnologia peer-to-peer (P2P). Ao habilitar o P2P, você reconhece e concorda que:\n\n\u2022 Seu endereço IP ficará visível para outros peers na rede\n\u2022 Você é o único responsável pelo conteúdo que acessa\n\u2022 Você confirma que possui o direito legal de transmitir este conteúdo em sua jurisdição\n\u2022 O Nuvio não hospeda, distribui ou controla nenhum conteúdo P2P\n\u2022 O Nuvio não se responsabiliza por quaisquer consequências legais decorrentes do uso de streaming P2P\n\nVocê usa este recurso inteiramente por sua conta e risco. O P2P pode ser desativado a qualquer momento nas Configurações.</string>
+    <string name="p2p_consent_enable">Ativar P2P</string>
+    <string name="p2p_consent_cancel">Cancelar</string>
+    <string name="settings_p2p_title">Fonte P2P</string>
+    <string name="settings_p2p_subtitle">Permitir Fonte peer-to-peer (torrent)</string>
+    <string name="settings_p2p_hide_stats_title">Ocultar estatísticas do torrent</string>
+    <string name="settings_p2p_hide_stats_subtitle">Ocultar buffer, seeds, peers e velocidade de download durante o carregamento e reprodução</string>
+    <string name="p2p_download_title">Baixando motor P2P</string>
+    <string name="p2p_download_subtitle">Este é um download único necessário para fonte P2P.</string>
     <string name="stream_type_external">Link Externo</string>
     <string name="stream_player_picker_title">Qual player deseja usar?</string>
     <string name="stream_player_internal">Player Interno</string>
@@ -869,14 +887,14 @@
 
     <!-- PlayerScreen -->
     <string name="player_no_external_player">Nenhum player externo encontrado</string>
-    <string name="player_loading_preparing">Preparando stream…</string>
-    <string name="player_loading_detecting_format">Detectando formato do stream…</string>
+    <string name="player_loading_preparing">Preparando fonte…</string>
+    <string name="player_loading_detecting_format">Detectando formato do vídeo…</string>
     <string name="player_loading_subtitles">Carregando legendas…</string>
     <string name="player_loading_subtitles_from">Carregando legendas de %1$d addons…</string>
     <string name="player_loading_subtitles_progress">Carregando legendas… (%1$d / %2$d)</string>
     <string name="player_loading_subtitles_addon">Legendas: %1$s (%2$d / %3$d)</string>
     <string name="player_loading_building">Construindo player…</string>
-    <string name="player_loading_starting">Iniciando stream…</string>
+    <string name="player_loading_starting">Iniciando vídeo…</string>
     <string name="player_loading_buffering">Bufferizando…</string>
     <string name="player_loading_fallback_pcm_audio">Falha ao iniciar faixa de áudio - alternando para PCM…</string>
     <string name="player_loading_fallback_hevc_decoder">Falha ao iniciar decodificador - alternando para HEVC…</string>
@@ -963,7 +981,7 @@
     <string name="audio_mix_range_saved">Faixa: %1$d dB a %2$d dB (salvo)</string>
     <string name="audio_mix_unavailable">Amplificação não disponível neste dispositivo</string>
 
-  <!-- SubtitleDialog / SubtitleStyleSidePanel -->
+    <!-- SubtitleDialog / SubtitleStyleSidePanel -->
     <string name="subtitle_dialog_title">Legendas</string>
     <string name="subtitle_no_builtin">Sem legendas embutidas</string>
     <string name="subtitle_loading_addon">Carregando legendas dos addons…</string>
@@ -999,7 +1017,7 @@
     <string name="subtitle_style_defaults">Padrões</string>
     <string name="subtitle_style_on">Ligado</string>
     <string name="subtitle_style_off">Desligado</string>
-    <string name="panel_failed_load_streams">Falha ao carregar streams</string>
+    <string name="panel_failed_load_streams">Falha ao carregar fontes</string>
     <string name="panel_failed_load_episodes">Falha ao carregar episódios</string>
 
     <!-- PauseOverlay -->
@@ -1333,7 +1351,7 @@
     <string name="plugin_error_refresh">Falha ao atualizar: %1$s</string>
     <string name="plugin_error_test">Teste falhou: %1$s</string>
     <string name="plugin_test_no_results">Nenhum resultado encontrado</string>
-    <string name="plugin_test_found_streams">%1$d streams encontrados</string>
+    <string name="plugin_test_found_streams">%1$d fontes encontradas</string>
 
     <!-- Trakt errors -->
     <string name="trakt_error_code_expired">Código do dispositivo expirado. Inicie novamente.</string>
@@ -1351,7 +1369,7 @@
     <string name="home_error_no_catalog_addons">Nenhum addon de catálogo instalado</string>
 
     <!-- Player errors -->
-    <string name="player_error_no_stream_url">Nenhuma URL de stream fornecida</string>
+    <string name="player_error_no_stream_url">Nenhuma URL de fonte fornecida</string>
 
     <!-- Playback subtitle settings -->
     <string name="sub_mode_overlay_canvas_sub">Suporte HDR com renderização em canvas. Pode bloquear a interface.</string>
@@ -1373,12 +1391,12 @@
     <string name="cd_subtitles">Legendas</string>
     <string name="cd_audio_tracks">Faixas de áudio</string>
     <string name="cd_sources">Fontes</string>
-    <string name="cd_switch_player_engine">Alternar motor do player</string>
+    <string name="cd_switch_player_engine">Mudando player</string>
     <string name="cd_episodes">Episódios</string>
     <string name="cd_playback_speed">Velocidade de reprodução</string>
     <string name="cd_aspect_ratio">Proporção da tela</string>
     <string name="cd_open_external_player">Abrir em player externo</string>
-    <string name="cd_stream_info">Informações do stream</string>
+    <string name="cd_stream_info">Informações da fonte</string>
     <string name="cd_more_actions">Mais ações</string>
     <string name="cd_close_more_actions">Fechar ações</string>
     <string name="cd_back">Voltar</string>
@@ -1394,8 +1412,8 @@
     <string name="cd_add">Adicionar</string>
     <string name="cd_refresh">Atualizar</string>
     <string name="cd_remove">Remover</string>
-    <string name="cd_test">Testar</string>
     <string name="cd_preview">Pré-visualizar</string>
+    <string name="cd_test">Testar</string>
     <string name="cd_unlink">Desvincular</string>
     <string name="cd_nuvio_logo">NuvioTV</string>
     <string name="cd_trakt_logo">Logo Trakt</string>

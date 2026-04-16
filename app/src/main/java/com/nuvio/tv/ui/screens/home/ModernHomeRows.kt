@@ -827,13 +827,20 @@ private fun ModernCarouselCard(
     var landscapeLogoLoadFailed by remember(effectiveLogoUrl) { mutableStateOf(false) }
     val shouldPlayTrailerInCard = playTrailerInExpandedCard && !trailerPreviewUrl.isNullOrBlank()
     val isVerticalRowsScrolling = LocalVerticalRowsScrolling.current
-    val imageCacheKey = "${imageUrl}_${requestWidthPx}x${requestHeightPx}"
-    val isImageCached = remember(imageModel) {
-        context.imageLoader.memoryCache?.get(MemoryCache.Key(imageCacheKey)) != null
-    }
 
-    val safeImageModel = if (isVerticalRowsScrolling && !isImageCached) null else imageModel
-    val hasImage = !imageUrl.isNullOrBlank() && safeImageModel != null
+    val scrollAwareImageModel = if (!isVerticalRowsScrolling || imageModel == null) {
+        imageModel
+    } else {
+        remember(imageModel) {
+            (imageModel as? ImageRequest)?.newBuilder()
+                ?.memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                ?.diskCachePolicy(coil.request.CachePolicy.DISABLED)
+                ?.networkCachePolicy(coil.request.CachePolicy.DISABLED)
+                ?.build()
+                ?: imageModel
+        }
+    }
+    val hasImage = !imageUrl.isNullOrBlank()
     val hasLandscapeLogo =
         (useLandscapeOverlayTreatment || isBackdropExpanded) &&
             !effectiveLogoUrl.isNullOrBlank() &&
@@ -939,7 +946,7 @@ private fun ModernCarouselCard(
                 Box(modifier = mediaLayerModifier) {
                     if (hasImage) {
                         AsyncImage(
-                            model = safeImageModel,
+                            model = scrollAwareImageModel,
                             contentDescription = item.title,
                             modifier = Modifier.fillMaxSize(),
                             placeholder = backgroundPainter,

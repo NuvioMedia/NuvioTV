@@ -81,6 +81,9 @@ class PlayerViewModel @Inject constructor(
     val uiState: StateFlow<PlayerUiState>
         get() = controller.uiState
 
+    val playbackTimeline: StateFlow<PlaybackTimelineState>
+        get() = controller.playbackTimeline
+
     val exoPlayer: ExoPlayer?
         get() = controller.exoPlayer
 

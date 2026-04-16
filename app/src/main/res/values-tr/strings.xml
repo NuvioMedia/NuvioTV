@@ -230,9 +230,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Hesap</string>
-    <string name="settings_account_subtitle">Hesap ve senkronizasyon durumu.</string>
+    <string name="settings_account_subtitle">Hesap ve senkronizasyon durumu</string>
     <string name="settings_profiles">Profiller</string>
-    <string name="settings_profiles_subtitle">Kullanıcı profillerini yönetin.</string>
+    <string name="settings_profiles_subtitle">Kullanıcı profillerini yönetin</string>
     <string name="settings_layout">Düzen</string>
     <string name="settings_layout_subtitle">Ana sayfa düzeni ve poster stilleri.</string>
     <string name="settings_plugins">Uzantılar</string>
@@ -261,8 +261,8 @@
     <string name="network_connection_offline">Çevrimdışı</string>
     <string name="settings_debug">Hata Ayıklama</string>
     <string name="settings_debug_subtitle">Geliştirici araçları ve özellik bayrakları.</string>
-    <string name="settings_plugins_section_subtitle">Depoları, sağlayıcıları ve eklenti durumlarını yönetin.</string>
-    <string name="settings_account_section_subtitle">Hesap ve senkronizasyon durumu.</string>
+    <string name="settings_plugins_section_subtitle">Depoları, sağlayıcıları ve eklenti durumlarını yönetin</string>
+    <string name="settings_account_section_subtitle">Hesap ve senkronizasyon durumu</string>
     <string name="account_stat_addons">eklentiler</string>
     <string name="account_stat_plugins">uzantılar</string>
     <string name="account_stat_library">kütüphane</string>

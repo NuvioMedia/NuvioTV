@@ -19,7 +19,6 @@ import com.nuvio.tv.domain.model.ScraperManifestInfo
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -34,6 +33,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.security.MessageDigest
@@ -47,6 +47,7 @@ private const val TAG = "PluginManager"
 private const val MAX_CONCURRENT_SCRAPERS = 5
 private const val MAX_RESULT_ITEMS = 150
 private const val MAX_RESPONSE_SIZE = 5 * 1024 * 1024L
+private const val SCRAPER_TIMEOUT_MS = 30_000L
 private const val MANIFEST_SUFFIX = "/manifest.json"
 
 @Singleton
@@ -782,18 +783,25 @@ class PluginManager @Inject constructor(
             val settings = dataStore.getScraperSettings(scraper.id)
             
             Log.d(TAG, "Executing scraper: ${scraper.name}")
-            val results = withContext(Dispatchers.IO + NonCancellable) {
-                runtime.executePlugin(
-                    code = code,
-                    tmdbId = tmdbId,
-                    mediaType = mediaType,
-                    season = season,
-                    episode = episode,
-                    scraperId = scraper.id,
-                    scraperSettings = settings
-                )
+            val results = withTimeoutOrNull(SCRAPER_TIMEOUT_MS) {
+                withContext(Dispatchers.IO) {
+                    runtime.executePlugin(
+                        code = code,
+                        tmdbId = tmdbId,
+                        mediaType = mediaType,
+                        season = season,
+                        episode = episode,
+                        scraperId = scraper.id,
+                        scraperSettings = settings
+                    )
+                }
             }
-            
+
+            if (results == null) {
+                Log.w(TAG, "Scraper ${scraper.name} timed out after ${SCRAPER_TIMEOUT_MS}ms")
+                return emptyList()
+            }
+
             Log.d(TAG, "Scraper ${scraper.name} returned ${results.size} results")
             results.map { it.copy(provider = scraper.name) }
 
@@ -812,7 +820,13 @@ class PluginManager @Inject constructor(
     ): List<LocalScraperResult> {
         return try {
             Log.d(TAG, "Executing DEX scraper: ${scraper.name}")
-            val results = externalExtensionRunner.execute(scraper.id, tmdbId, mediaType, season, episode)
+            val results = withTimeoutOrNull(SCRAPER_TIMEOUT_MS) {
+                externalExtensionRunner.execute(scraper.id, tmdbId, mediaType, season, episode)
+            }
+            if (results == null) {
+                Log.w(TAG, "DEX scraper ${scraper.name} timed out after ${SCRAPER_TIMEOUT_MS}ms")
+                return emptyList()
+            }
             Log.d(TAG, "DEX scraper ${scraper.name} returned ${results.size} results")
             results.map { it.copy(provider = scraper.name) }
         } catch (e: Exception) {

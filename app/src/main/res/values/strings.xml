@@ -251,9 +251,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Account</string>
-    <string name="settings_account_subtitle">Account and sync status.</string>
+    <string name="settings_account_subtitle">Account and sync status</string>
     <string name="settings_profiles">Profiles</string>
-    <string name="settings_profiles_subtitle">Manage user profiles.</string>
+    <string name="settings_profiles_subtitle">Manage user profiles</string>
     <string name="settings_layout">Layout</string>
     <string name="settings_layout_subtitle">Home structure and poster styles.</string>
     <string name="settings_plugins">Plugins</string>
@@ -282,15 +282,15 @@
     <string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Debug</string>
     <string name="settings_debug_subtitle">Developer tools and feature flags.</string>
-    <string name="settings_plugins_section_subtitle">Manage repositories, providers, and plugin states.</string>
-    <string name="settings_account_section_subtitle">Account and sync status.</string>
+    <string name="settings_plugins_section_subtitle">Manage repositories, providers, and plugin states</string>
+    <string name="settings_account_section_subtitle">Account and sync status</string>
     <string name="account_stat_addons">addons</string>
     <string name="account_stat_plugins">plugins</string>
     <string name="account_stat_library">library</string>
     <string name="account_stat_progress">progress</string>
     <string name="account_stat_watched">watched</string>
     <string name="settings_integrations_section">Integrations</string>
-    <string name="settings_integrations_section_subtitle">Choose TMDB or MDBList</string>
+    <string name="settings_integrations_section_subtitle">Manage available integrations</string>
     <string name="settings_tmdb_subtitle">Metadata enrichment controls</string>
     <string name="settings_mdblist_subtitle">External ratings providers</string>
     <string name="settings_animeskip_subtitle">Anime intro/outro skip timestamps</string>
@@ -578,6 +578,8 @@
     <string name="layout_preset_balanced">Balanced</string>
     <string name="layout_preset_comfort">Comfort</string>
     <string name="layout_preset_large">Large</string>
+    <string name="layout_memory_only_scroll">Memory-Only Vertical Scroll</string>
+    <string name="layout_memory_only_scroll_sub">Skip loading new images while scrolling vertically.</string>
     <string name="layout_preset_sharp">Sharp</string>
     <string name="layout_preset_subtle">Subtle</string>
     <string name="layout_preset_classic">Classic</string>
@@ -672,6 +674,11 @@
     <string name="qr_login_approved">Login approved. Finishing sign in…</string>
     <string name="qr_login_pending">Waiting for approval on your phone…</string>
     <string name="qr_login_expired">QR login expired. Generate a new code.</string>
+    <string name="qr_login_scan_prompt">Scan QR and sign in on your phone</string>
+    <string name="qr_login_start_failed">Failed to start QR login</string>
+    <string name="qr_login_signing_in">Signing you in…</string>
+    <string name="qr_login_success">Signed in successfully</string>
+    <string name="qr_login_exchange_failed">Could not complete QR sign in</string>
     <string name="trakt_code_expires">Code expires in %1$s</string>
     <string name="trakt_token_refreshes">Trakt access token refreshes in %1$s</string>
     <string name="trakt_login_instruction">Press Login to start Trakt device authentication. A QR code will appear here.</string>
@@ -832,9 +839,11 @@
     <string name="addon_remove">Remove</string>
     <string name="addon_manage_from_phone_title">Manage from phone</string>
     <string name="addon_manage_from_phone_subtitle">Scan a QR code to manage addons, catalogs, and collections from your phone</string>
+    <string name="addon_manage_collections_from_phone_subtitle">Scan a QR code to manage collections from your phone</string>
     <string name="addon_reorder_title">Reorder home catalogs</string>
     <string name="addon_reorder_subtitle">Controls catalog and collection row order on Home (Classic + Modern + Grid)</string>
     <string name="addon_qr_scan_instruction">Scan with your phone to manage addons, catalogs, and collections</string>
+    <string name="addon_qr_collections_scan_instruction">Scan with your phone to manage collections</string>
     <string name="addon_qr_close">Close</string>
     <string name="addon_confirm_title">Confirm addon &amp; catalog changes</string>
     <string name="addon_confirm_subtitle">The following changes were made from your phone:</string>
@@ -1497,6 +1506,12 @@
     <string name="collections_editor_placeholder_backdrop">Backdrop image URL (optional)</string>
     <string name="collections_editor_placeholder_folder">Folder name</string>
     <string name="collections_editor_placeholder_gif">Animated GIF URL (plays only while focused)</string>
+    <string name="collections_editor_genre_filter">Genre Filter</string>
+    <string name="collections_editor_choose_genre">Choose</string>
+    <string name="collections_editor_select_genre">Select genre</string>
+    <string name="collections_editor_all_genres">All genres</string>
+    <string name="collections_editor_genre_required">Genre required</string>
+    <string name="collections_editor_genre_optional">Genre filter available</string>
     <string name="collections_card_title">Collections</string>
     <string name="collections_card_subtitle">Group catalogs into folders on your home screen</string>
     <string name="collections_tab_all">All</string>

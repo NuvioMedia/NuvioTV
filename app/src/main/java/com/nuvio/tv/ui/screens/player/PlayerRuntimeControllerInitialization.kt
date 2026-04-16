@@ -350,11 +350,11 @@ internal fun PlayerRuntimeController.initializePlayer(
                             lastKnownDuration = playerDuration
                         }
                         val isBuffering = playbackState == Player.STATE_BUFFERING
+                        updatePlaybackTimeline(duration = playerDuration.coerceAtLeast(0L))
                         _uiState.update { 
                             it.copy(
                                 isBuffering = isBuffering,
-                                playbackEnded = playbackState == Player.STATE_ENDED,
-                                duration = playerDuration.coerceAtLeast(0L)
+                                playbackEnded = playbackState == Player.STATE_ENDED
                             )
                         }
 
@@ -838,3 +838,4 @@ private class SubtitleOffsetRenderer(
         super.render(adjustedPositionUs, elapsedRealtimeUs)
     }
 }
+

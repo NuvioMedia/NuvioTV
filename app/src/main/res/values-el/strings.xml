@@ -193,9 +193,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Λογαριασμός</string>
-    <string name="settings_account_subtitle">Κατάσταση λογαριασμού και συγχρονισμού.</string>
+    <string name="settings_account_subtitle">Κατάσταση λογαριασμού και συγχρονισμού</string>
     <string name="settings_profiles">Προφίλ</string>
-    <string name="settings_profiles_subtitle">Διαχείριση προφίλ χρηστών.</string>
+    <string name="settings_profiles_subtitle">Διαχείριση προφίλ χρηστών</string>
     <string name="settings_layout">Διάταξη</string>
     <string name="settings_layout_subtitle">Δομή αρχικής οθόνης και στυλ αφισών.</string>
     <string name="settings_plugins">Πρόσθετα</string>
@@ -224,8 +224,8 @@
     <string name="network_connection_offline">Εκτός σύνδεσης</string>
     <string name="settings_debug">Debug</string>
     <string name="settings_debug_subtitle">Εργαλεία προγραμματιστή και σημαίες χαρακτηριστικών.</string>
-    <string name="settings_plugins_section_subtitle">Διαχείριση αποθετηρίων, παρόχων και καταστάσεων πρόσθετων.</string>
-    <string name="settings_account_section_subtitle">Κατάσταση λογαριασμού και συγχρονισμού.</string>
+    <string name="settings_plugins_section_subtitle">Διαχείριση αποθετηρίων, παρόχων και καταστάσεων πρόσθετων</string>
+    <string name="settings_account_section_subtitle">Κατάσταση λογαριασμού και συγχρονισμού</string>
     <string name="account_stat_addons">πρόσθετα</string>
     <string name="account_stat_plugins">πρόσθετα</string>
     <string name="account_stat_library">βιβλιοθήκη</string>

@@ -61,6 +61,12 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 
+/**
+ * When true, vertical scrolling is in progress and image loading should be
+ * restricted to memory cache only (no disk / network) to keep the scroll smooth.
+ */
+val LocalVerticalScrollSuppressImages = androidx.compose.runtime.compositionLocalOf { false }
+
 private const val BACKDROP_ASPECT_RATIO = 16f / 9f
 private const val TRAILER_PREVIEW_REQUEST_FOCUS_DEBOUNCE_MS = 140L
 private val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
@@ -208,6 +214,19 @@ fun ContentCard(
                 .size(width = requestWidthPx, height = requestHeightPx)
                 .build()
         }
+        val isSuppressingImages = LocalVerticalScrollSuppressImages.current
+        val scrollAwareImageModel = if (!isSuppressingImages || imageModel == null) {
+            imageModel
+        } else {
+            remember(imageModel) {
+                (imageModel as? ImageRequest)?.newBuilder()
+                    ?.memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                    ?.diskCachePolicy(coil.request.CachePolicy.DISABLED)
+                    ?.networkCachePolicy(coil.request.CachePolicy.DISABLED)
+                    ?.build()
+                    ?: imageModel
+            }
+        }
         val logoRequestHeightPx = remember(density) {
             with(density) { 48.dp.roundToPx() }
         }
@@ -309,7 +328,7 @@ fun ContentCard(
             ) {
                 if (!imageUrl.isNullOrBlank()) {
                     AsyncImage(
-                        model = imageModel,
+                        model = scrollAwareImageModel,
                         contentDescription = item.name,
                         modifier = Modifier.fillMaxSize(),
                         placeholder = backgroundPainter,

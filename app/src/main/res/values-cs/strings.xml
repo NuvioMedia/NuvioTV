@@ -180,9 +180,9 @@
     <string name="about_supporters_contributors_subtitle">Veřejné uznání a poděkování</string>
 
     <string name="settings_account">Účet</string>
-    <string name="settings_account_subtitle">Účet a stav synchronizace.</string>
+    <string name="settings_account_subtitle">Účet a stav synchronizace</string>
     <string name="settings_profiles">Profily</string>
-    <string name="settings_profiles_subtitle">Spravovat uživatelské profily.</string>
+    <string name="settings_profiles_subtitle">Spravovat uživatelské profily</string>
     <string name="settings_layout">Rozložení</string>
     <string name="settings_layout_subtitle">Domovská obrazovka a styly posterů.</string>
     <string name="settings_plugins">Pluginy</string>
@@ -211,8 +211,8 @@
     <string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Debug</string>
     <string name="settings_debug_subtitle">Nástroje pro vývojáře a funkční přepínače.</string>
-    <string name="settings_plugins_section_subtitle">Spravovat repozitáře, poskytovatele a stavy pluginů.</string>
-    <string name="settings_account_section_subtitle">Účet a stav synchronizace.</string>
+    <string name="settings_plugins_section_subtitle">Spravovat repozitáře, poskytovatele a stavy pluginů</string>
+    <string name="settings_account_section_subtitle">Účet a stav synchronizace</string>
     <string name="account_stat_addons">doplňky</string>
     <string name="account_stat_plugins">pluginy</string>
     <string name="account_stat_library">knihovna</string>

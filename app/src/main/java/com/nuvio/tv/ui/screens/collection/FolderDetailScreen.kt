@@ -99,6 +99,8 @@ fun FolderDetailScreen(
     }
 
     val enrichingItemId by viewModel.enrichingItemId.collectAsStateWithLifecycle()
+    val trailerPreviewUrls by viewModel.trailerPreviewUrls.collectAsStateWithLifecycle()
+    val trailerPreviewAudioUrls by viewModel.trailerPreviewAudioUrls.collectAsStateWithLifecycle()
 
     if (uiState.viewMode == FolderViewMode.FOLLOW_LAYOUT) {
         FollowLayoutContent(
@@ -109,7 +111,10 @@ fun FolderDetailScreen(
             onLoadMoreCatalog = viewModel::loadMoreForCatalog,
             onSaveFocusState = viewModel::saveFollowLayoutFocusState,
             onSaveGridFocusState = viewModel::saveFollowLayoutGridFocusState,
-            onItemFocus = viewModel::onItemFocused
+            onItemFocus = viewModel::onItemFocused,
+            trailerPreviewUrls = trailerPreviewUrls,
+            trailerPreviewAudioUrls = trailerPreviewAudioUrls,
+            onRequestTrailerPreview = viewModel::requestTrailerPreview
         )
     } else {
         Column(
@@ -592,7 +597,10 @@ private fun FollowLayoutContent(
     onLoadMoreCatalog: (String, String, String) -> Unit = { _, _, _ -> },
     onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit,
     onSaveGridFocusState: (Int, Int, String?) -> Unit,
-    onItemFocus: (MetaPreview) -> Unit = {}
+    onItemFocus: (MetaPreview) -> Unit = {},
+    trailerPreviewUrls: Map<String, String> = emptyMap(),
+    trailerPreviewAudioUrls: Map<String, String> = emptyMap(),
+    onRequestTrailerPreview: (String, String, String?, String) -> Unit = { _, _, _, _ -> }
 ) {
     val homeState = uiState.followLayoutHomeState
 
@@ -652,11 +660,11 @@ private fun FollowLayoutContent(
             uiState = homeState,
             focusState = focusState,
             enrichingItemId = enrichingItemId,
-            trailerPreviewUrls = emptyMap(),
-            trailerPreviewAudioUrls = emptyMap(),
+            trailerPreviewUrls = trailerPreviewUrls,
+            trailerPreviewAudioUrls = trailerPreviewAudioUrls,
             onNavigateToDetail = onNavigateToDetail,
             onContinueWatchingClick = noOpCwClick,
-            onRequestTrailerPreview = { _, _, _, _ -> },
+            onRequestTrailerPreview = onRequestTrailerPreview,
             onLoadMoreCatalog = onLoadMoreCatalog,
             onRemoveContinueWatching = noOpRemoveCw,
             isCatalogItemWatched = isItemWatched,

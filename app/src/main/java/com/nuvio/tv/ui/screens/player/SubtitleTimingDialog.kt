@@ -58,6 +58,7 @@ private val ASS_OVERRIDE_TAG_REGEX = Regex("""\{\\[^{}]*\}""")
 
 @Composable
 internal fun SubtitleTimingDialog(
+    modifier: Modifier = Modifier,
     currentPositionMs: Long,
     selectedAddonSubtitle: Subtitle?,
     cues: List<SubtitleSyncCue>,
@@ -96,7 +97,7 @@ internal fun SubtitleTimingDialog(
     }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth(if (stage == SyncStage.PICK_LINE) 0.94f else 0.6f)
             .clip(RoundedCornerShape(24.dp))
             .background(

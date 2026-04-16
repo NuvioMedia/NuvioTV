@@ -222,6 +222,7 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
     }
 }
 
+@OptIn(FlowPreview::class)
 internal fun HomeViewModel.observeModernHomePresentationPipeline() {
     viewModelScope.launch {
         uiState
@@ -235,6 +236,7 @@ internal fun HomeViewModel.observeModernHomePresentationPipeline() {
                 )
             }
             .distinctUntilChanged()
+            .debounce(80)
             .collectLatest { input ->
                 val shouldWarmStart = uiState.value.modernHomePresentation.rows.isEmpty()
                 val visibleCatalogRowCount = input.catalogRows.count { it.items.isNotEmpty() }
@@ -488,6 +490,7 @@ internal fun HomeViewModel.preloadAdjacentItemPipeline(item: MetaPreview) {
             (_uiState.value.homeLayout != HomeLayout.MODERN || currentTmdbSettings.modernHomeEnabled)
         delay(HomeViewModel.EXTERNAL_META_PREFETCH_ADJACENT_DEBOUNCE_MS)
         if (pendingAdjacentPrefetchItemId != item.id) return@launch
+
         if (item.id in prefetchedTmdbIds || item.id in prefetchedExternalMetaIds) return@launch
 
         try {
@@ -564,18 +567,7 @@ private fun HomeViewModel.updateCatalogItemWithTmdb(itemId: String, enrichment: 
         return merged
     }
 
-    catalogsMap.forEach { (key, row) ->
-        val idx = row.items.indexOfFirst { it.id == itemId }
-        if (idx >= 0) {
-            val merged = mergeItem(row.items[idx])
-            if (merged != row.items[idx]) {
-                val mutableItems = row.items.toMutableList()
-                mutableItems[idx] = merged
-                catalogsMap[key] = row.copy(items = mutableItems)
-                truncatedRowCache.remove(key)
-            }
-        }
-    }
+    updateIndexedCatalogItem(itemId, ::mergeItem)
 
     _uiState.update { state ->
         var changed = false
@@ -598,17 +590,8 @@ private fun HomeViewModel.updateCatalogItemWithTmdb(itemId: String, enrichment: 
 }
 
 internal fun HomeViewModel.updateCatalogItemImdbRating(itemId: String, rating: Float) {
-    catalogsMap.forEach { (key, row) ->
-        val idx = row.items.indexOfFirst { it.id == itemId }
-        if (idx >= 0) {
-            val updated = row.items[idx].copy(imdbRating = rating)
-            if (updated != row.items[idx]) {
-                val mutableItems = row.items.toMutableList()
-                mutableItems[idx] = updated
-                catalogsMap[key] = row.copy(items = mutableItems)
-                truncatedRowCache.remove(key)
-            }
-        }
+    updateIndexedCatalogItem(itemId) { currentItem ->
+        currentItem.copy(imdbRating = rating)
     }
     _uiState.update { state ->
         var changed = false
@@ -647,18 +630,7 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
         trailerYtIds = if (incomingTrailerYtIds.isNotEmpty()) incomingTrailerYtIds else currentItem.trailerYtIds
     )
 
-    catalogsMap.forEach { (key, row) ->
-        val itemIndex = row.items.indexOfFirst { it.id == itemId }
-        if (itemIndex >= 0) {
-            val merged = mergeItem(row.items[itemIndex])
-            if (merged != row.items[itemIndex]) {
-                val mutableItems = row.items.toMutableList()
-                mutableItems[itemIndex] = merged
-                catalogsMap[key] = row.copy(items = mutableItems)
-                truncatedRowCache.remove(key)
-            }
-        }
-    }
+    updateIndexedCatalogItem(itemId, ::mergeItem)
 
     _uiState.update { state ->
         var changed = false
@@ -690,9 +662,7 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
         // Bump version so any in-flight pipeline for this item treats itself as stale
         // and won't overwrite the retry result with a negative cache entry.
         if (activeTrailerPreviewItemId == itemId) trailerPreviewRequestVersion++
-        val currentItem = catalogsMap.values.firstNotNullOfOrNull { row ->
-            row.items.firstOrNull { it.id == itemId }
-        } ?: return
+        val currentItem = findCatalogItemById(itemId) ?: return
         requestTrailerPreviewPipeline(currentItem)
     }
 }

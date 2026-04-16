@@ -48,7 +48,7 @@ internal fun PlayerRuntimeController.dismissSubtitleTimingDialog() {
 }
 
 internal fun PlayerRuntimeController.captureSubtitleAutoSyncTime() {
-    val capturePositionMs = _exoPlayer?.currentPosition ?: _uiState.value.currentPosition
+    val capturePositionMs = currentPlaybackPositionMs()?.coerceAtLeast(0L) ?: 0L
     _uiState.update {
         it.copy(
             subtitleAutoSyncCapturedVideoMs = capturePositionMs,
@@ -60,7 +60,7 @@ internal fun PlayerRuntimeController.captureSubtitleAutoSyncTime() {
 
 internal fun PlayerRuntimeController.applySubtitleAutoSyncCue(cueStartTimeMs: Long) {
     val capturePositionMs =
-        _uiState.value.subtitleAutoSyncCapturedVideoMs ?: _exoPlayer?.currentPosition ?: return
+        _uiState.value.subtitleAutoSyncCapturedVideoMs ?: currentPlaybackPositionMs() ?: return
     val newDelayMs = (capturePositionMs - cueStartTimeMs - AUTO_SYNC_REACTION_COMPENSATION_MS)
         .toInt()
         .coerceIn(SUBTITLE_DELAY_MIN_MS, SUBTITLE_DELAY_MAX_MS)

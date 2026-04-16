@@ -61,10 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
@@ -146,7 +143,8 @@ fun ModernHomeContent(
     onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> },
     onItemFocus: (MetaPreview) -> Unit = {},
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
-    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
+    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit,
+    rowBuildCache: ModernCarouselRowBuildCache = remember { ModernCarouselRowBuildCache() }
 ) {
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val isSidebarExpanded = LocalSidebarExpanded.current
@@ -196,7 +194,6 @@ fun ModernHomeContent(
     val strUpcoming = stringResource(R.string.cw_upcoming)
     val strTypeMovie = stringResource(R.string.type_movie)
     val strTypeSeries = stringResource(R.string.type_series)
-    val rowBuildCache = remember { ModernCarouselRowBuildCache() }
     val context = LocalContext.current
     val carouselRows = remember(
         uiState.continueWatchingItems,
@@ -360,7 +357,7 @@ fun ModernHomeContent(
     // catalogs are expected to load).
     val hasCollections = visibleHomeRows.any { it is HomeRow.CollectionRow }
     val hasCatalogs = uiState.catalogRows.isNotEmpty()
-    if (hasCollections && !hasCatalogs && uiState.installedAddonsCount > 0) {
+    if (hasCollections && !hasCatalogs && uiState.installedAddonsCount > 0 && uiState.isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             LoadingIndicator()
         }
@@ -441,7 +438,6 @@ fun ModernHomeContent(
 
     // Tag JankStats with key UI states so jank reports are actionable.
     val currentView = LocalView.current
-    val focusManager = LocalFocusManager.current
     val metricsHolder = PerformanceMetricsState.getHolderForHierarchy(currentView)
     LaunchedEffect(isVerticalRowsScrolling) {
         metricsHolder.state?.putState("HomeScrolling", isVerticalRowsScrolling.toString())
@@ -953,7 +949,10 @@ fun ModernHomeContent(
                 .fillMaxWidth(MODERN_HERO_TEXT_WIDTH_FRACTION)
         )
 
-        CompositionLocalProvider(LocalBringIntoViewSpec provides verticalRowBringIntoViewSpec) {
+        CompositionLocalProvider(
+            LocalBringIntoViewSpec provides verticalRowBringIntoViewSpec,
+            LocalVerticalRowsScrolling provides (uiState.memoryOnlyVerticalScroll && isVerticalRowsScrolling)
+        ) {
             LazyColumn(
                 state = verticalRowListState,
                 modifier = Modifier
@@ -967,8 +966,6 @@ fun ModernHomeContent(
                     .focusRestorer { focusRestorerRequester }
                     .onPreviewKeyEvent { event ->
                         val native = event.nativeKeyEvent
-                       
-                    
                         if (native.action == AndroidKeyEvent.ACTION_DOWN &&
                             native.repeatCount > 0 &&
                             (native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_DOWN ||
@@ -984,17 +981,6 @@ fun ModernHomeContent(
                                 return@onPreviewKeyEvent true // consume, too soon
                             }
                             lastKeyRepeatDispatchRef.set(now)
-                            val direction = when (native.keyCode) {
-                                AndroidKeyEvent.KEYCODE_DPAD_DOWN -> FocusDirection.Down
-                                AndroidKeyEvent.KEYCODE_DPAD_UP -> FocusDirection.Up
-                                AndroidKeyEvent.KEYCODE_DPAD_LEFT -> FocusDirection.Left
-                                AndroidKeyEvent.KEYCODE_DPAD_RIGHT -> FocusDirection.Right
-                                else -> null
-                            }
-                            if (direction != null) {
-                                focusManager.moveFocus(direction)
-                            }
-                            return@onPreviewKeyEvent true
                         }
                         false
                     },

@@ -174,16 +174,16 @@ internal class ModernHomeUiCaches {
 }
 
 @Stable
-internal class ModernCarouselRowBuildCache {
+class ModernCarouselRowBuildCache {
     var continueWatchingItems: List<ContinueWatchingItem> = emptyList()
     var continueWatchingTitle: String = ""
     var continueWatchingAirsDateTemplate: String = ""
     var continueWatchingUpcomingLabel: String = ""
     var continueWatchingUseLandscapePosters: Boolean = false
     var continueWatchingRow: HeroCarouselRow? = null
-    val catalogRows = mutableMapOf<String, ModernCatalogRowBuildCacheEntry>()
+    internal val catalogRows = mutableMapOf<String, ModernCatalogRowBuildCacheEntry>()
     // per-item cache: rowKey -> (itemId -> cached carousel item + source MetaPreview)
-    val catalogItemCache = mutableMapOf<String, MutableMap<String, CachedCarouselItem>>()
+    internal val catalogItemCache = mutableMapOf<String, MutableMap<String, CachedCarouselItem>>()
 }
 
 internal data class CachedCarouselItem(

@@ -196,7 +196,8 @@ class CollectionsDataStore @Inject constructor(
     private data class SerializableCatalogSource(
         val addonId: String,
         val type: String,
-        val catalogId: String
+        val catalogId: String,
+        val genre: String? = null
     )
 
     private fun Collection.toSerializable() = SerializableCollection(
@@ -221,7 +222,8 @@ class CollectionsDataStore @Inject constructor(
                     SerializableCatalogSource(
                         addonId = source.addonId,
                         type = source.type,
-                        catalogId = source.catalogId
+                        catalogId = source.catalogId,
+                        genre = source.genre
                     )
                 }
             )
@@ -250,7 +252,8 @@ class CollectionsDataStore @Inject constructor(
                     CollectionCatalogSource(
                         addonId = source.addonId,
                         type = source.type,
-                        catalogId = source.catalogId
+                        catalogId = source.catalogId,
+                        genre = source.genre
                     )
                 }
             )

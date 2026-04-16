@@ -5,8 +5,10 @@ package com.nuvio.tv.ui.screens.plugin
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -57,6 +59,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -995,13 +998,34 @@ private fun RepositoryCard(
     val enabledCount = repoScrapers.count { it.enabled }
     val allEnabled = repoScrapers.isNotEmpty() && enabledCount == repoScrapers.size
     val anyEnabled = enabledCount > 0
+    var isToggleFocused by remember { mutableStateOf(false) }
+    var isRefreshFocused by remember { mutableStateOf(false) }
+    var isRemoveFocused by remember { mutableStateOf(false) }
+    val isCardFocused = isToggleFocused || isRefreshFocused || isRemoveFocused
+    val cardBorderColor by animateColorAsState(
+        targetValue = if (isCardFocused) NuvioColors.FocusRing else Color.Transparent,
+        label = "repositoryCardBorder"
+    )
+    val cardScale by animateFloatAsState(
+        targetValue = if (isCardFocused) 1.01f else 1f,
+        label = "repositoryCardScale"
+    )
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = cardScale
+                scaleY = cardScale
+            }
             .background(
                 color = NuvioColors.BackgroundCard,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(18.dp)
+            )
+            .border(
+                width = if (isCardFocused) 2.dp else 0.dp,
+                color = cardBorderColor,
+                shape = RoundedCornerShape(18.dp)
             )
     ) {
         Row(
@@ -1037,6 +1061,7 @@ private fun RepositoryCard(
                 if (repoScrapers.isNotEmpty()) {
                     Surface(
                         onClick = { onToggleAll(!anyEnabled) },
+                        modifier = Modifier.onFocusChanged { isToggleFocused = it.isFocused },
                         colors = ClickableSurfaceDefaults.colors(
                             containerColor = NuvioColors.Surface,
                             focusedContainerColor = NuvioColors.FocusBackground
@@ -1075,6 +1100,7 @@ private fun RepositoryCard(
                 Button(
                     onClick = onRefresh,
                     enabled = !isLoading,
+                    modifier = Modifier.onFocusChanged { isRefreshFocused = it.isFocused },
                     colors = ButtonDefaults.colors(
                         containerColor = NuvioColors.Surface,
                         contentColor = NuvioColors.TextSecondary,
@@ -1092,6 +1118,7 @@ private fun RepositoryCard(
                 Button(
                     onClick = onRemove,
                     enabled = !isLoading,
+                    modifier = Modifier.onFocusChanged { isRemoveFocused = it.isFocused },
                     colors = ButtonDefaults.colors(
                         containerColor = NuvioColors.Surface,
                         contentColor = NuvioColors.TextSecondary,
@@ -1121,6 +1148,17 @@ private fun ScraperCard(
     isReadOnly: Boolean = false
 ) {
     var showResults by remember { mutableStateOf(false) }
+    var isTestFocused by remember { mutableStateOf(false) }
+    var isToggleFocused by remember { mutableStateOf(false) }
+    val isCardFocused = isTestFocused || isToggleFocused
+    val cardBorderColor by animateColorAsState(
+        targetValue = if (isCardFocused) NuvioColors.FocusRing else Color.Transparent,
+        label = "scraperCardBorder"
+    )
+    val cardScale by animateFloatAsState(
+        targetValue = if (isCardFocused) 1.01f else 1f,
+        label = "scraperCardScale"
+    )
 
     LaunchedEffect(testResults, testDiagnostics) {
         showResults = testResults != null || testDiagnostics != null
@@ -1130,9 +1168,18 @@ private fun ScraperCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = cardScale
+                scaleY = cardScale
+            }
             .background(
                 color = NuvioColors.BackgroundCard,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(18.dp)
+            )
+            .border(
+                width = if (isCardFocused) 2.dp else 0.dp,
+                color = cardBorderColor,
+                shape = RoundedCornerShape(18.dp)
             )
     ) {
         Column(
@@ -1179,6 +1226,7 @@ private fun ScraperCard(
                     Button(
                         onClick = onTest,
                         enabled = !isTesting && scraper.enabled,
+                        modifier = Modifier.onFocusChanged { isTestFocused = it.isFocused },
                         colors = ButtonDefaults.colors(
                             containerColor = NuvioColors.Surface,
                             contentColor = NuvioColors.TextPrimary,
@@ -1202,14 +1250,36 @@ private fun ScraperCard(
 
                     // Enable toggle
                     if (!isReadOnly) {
-                        Switch(
-                            checked = scraper.enabled,
-                            onCheckedChange = onToggle,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = NuvioColors.Secondary,
-                                checkedTrackColor = NuvioColors.Secondary.copy(alpha = 0.3f)
-                            )
-                        )
+                        Surface(
+                            onClick = { onToggle(!scraper.enabled) },
+                            modifier = Modifier.onFocusChanged { isToggleFocused = it.isFocused },
+                            colors = ClickableSurfaceDefaults.colors(
+                                containerColor = NuvioColors.Surface,
+                                focusedContainerColor = NuvioColors.FocusBackground
+                            ),
+                            border = ClickableSurfaceDefaults.border(
+                                focusedBorder = Border(
+                                    border = BorderStroke(2.dp, NuvioColors.FocusRing),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                            ),
+                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Switch(
+                                    checked = scraper.enabled,
+                                    onCheckedChange = null,
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = NuvioColors.Secondary,
+                                        checkedTrackColor = NuvioColors.Secondary.copy(alpha = 0.3f)
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             }

@@ -87,7 +87,8 @@ class CatalogRepositoryImpl @Inject constructor(
                     hasMore = supportsSkip && items.isNotEmpty(),
                     currentPage = if (effectiveSkipStep > 0) skip / effectiveSkipStep else 0,
                     supportsSkip = supportsSkip,
-                    skipStep = effectiveSkipStep
+                    skipStep = effectiveSkipStep,
+                    extraArgs = extraArgs
                 )
                 catalogCache[cacheKey] = catalogRow
                 // Only emit fresh data if it differs from cache

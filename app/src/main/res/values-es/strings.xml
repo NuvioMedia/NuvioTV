@@ -161,9 +161,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Cuenta</string>
-    <string name="settings_account_subtitle">Estado de la cuenta y sincronización.</string>
+    <string name="settings_account_subtitle">Estado de la cuenta y sincronización</string>
     <string name="settings_profiles">Perfiles</string>
-    <string name="settings_profiles_subtitle">Administra perfiles de usuario.</string>
+    <string name="settings_profiles_subtitle">Administra perfiles de usuario</string>
     <string name="settings_layout">Diseño</string>
     <string name="settings_layout_subtitle">Estructura del inicio y estilos de pósters.</string>
     <string name="settings_plugins">Complementos</string>
@@ -175,8 +175,8 @@
     <string name="settings_about_subtitle">Versión y políticas.</string>
     <string name="settings_debug">Depuración</string>
     <string name="settings_debug_subtitle">Herramientas de desarrollador y marcas de características.</string>
-    <string name="settings_plugins_section_subtitle">Administra repositorios, proveedores y estados de complementos.</string>
-    <string name="settings_account_section_subtitle">Estado de la cuenta y sincronización.</string>
+    <string name="settings_plugins_section_subtitle">Administra repositorios, proveedores y estados de complementos</string>
+    <string name="settings_account_section_subtitle">Estado de la cuenta y sincronización</string>
     <string name="account_stat_addons">complementos</string>
     <string name="account_stat_plugins">complementos</string>
     <string name="account_stat_library">biblioteca</string>

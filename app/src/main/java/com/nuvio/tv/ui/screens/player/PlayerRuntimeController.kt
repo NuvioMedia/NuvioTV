@@ -198,6 +198,25 @@ class PlayerRuntimeController(
     )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
+    internal val _playbackTimeline = MutableStateFlow(PlaybackTimelineState())
+    val playbackTimeline: StateFlow<PlaybackTimelineState> = _playbackTimeline.asStateFlow()
+
+    internal fun updatePlaybackTimeline(
+        currentPosition: Long = _playbackTimeline.value.currentPosition,
+        duration: Long = _playbackTimeline.value.duration
+    ) {
+        _playbackTimeline.update {
+            it.copy(
+                currentPosition = currentPosition.coerceAtLeast(0L),
+                duration = duration.coerceAtLeast(0L)
+            )
+        }
+    }
+
+    internal fun resetPlaybackTimeline() {
+        _playbackTimeline.value = PlaybackTimelineState()
+    }
+
     internal var _exoPlayer: ExoPlayer? = null
     val exoPlayer: ExoPlayer?
         get() = _exoPlayer

@@ -123,9 +123,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Konto</string>
-    <string name="settings_account_subtitle">Status konta i synchronizacji.</string>
+    <string name="settings_account_subtitle">Status konta i synchronizacji</string>
     <string name="settings_profiles">Profile</string>
-    <string name="settings_profiles_subtitle">Zarządzaj profilami użytkowników.</string>
+    <string name="settings_profiles_subtitle">Zarządzaj profilami użytkowników</string>
     <string name="settings_layout">Układ</string>
     <string name="settings_layout_subtitle">Struktura strony głównej i style kart.</string>
     <string name="settings_plugins">Wtyczki</string>
@@ -137,8 +137,8 @@
     <string name="settings_about_subtitle">Wersja i polityki.</string>
     <string name="settings_debug">Debug</string>
     <string name="settings_debug_subtitle">Narzędzia deweloperskie i flagi funkcji.</string>
-    <string name="settings_plugins_section_subtitle">Zarządzaj repozytoriami, dostawcami i stanami wtyczek.</string>
-    <string name="settings_account_section_subtitle">Status konta i synchronizacji.</string>
+    <string name="settings_plugins_section_subtitle">Zarządzaj repozytoriami, dostawcami i stanami wtyczek</string>
+    <string name="settings_account_section_subtitle">Status konta i synchronizacji</string>
     <string name="account_stat_addons">dodatki</string>
     <string name="account_stat_plugins">wtyczki</string>
     <string name="account_stat_library">biblioteka</string>
@@ -400,6 +400,8 @@
     <string name="layout_preset_balanced">Zrównoważony</string>
     <string name="layout_preset_comfort">Komfortowy</string>
     <string name="layout_preset_large">Duży</string>
+    <string name="layout_memory_only_scroll">Scroll tylko z pamięci</string>
+    <string name="layout_memory_only_scroll_sub">Pomijaj ładowanie nowych obrazków podczas przewijania w pionie.</string>
     <string name="layout_preset_sharp">Ostry</string>
     <string name="layout_preset_subtle">Subtelny</string>
     <string name="layout_preset_classic">Klasyczny</string>
@@ -598,9 +600,11 @@
     <string name="addon_remove">Usuń</string>
     <string name="addon_manage_from_phone_title">Zarządzaj z telefonu</string>
     <string name="addon_manage_from_phone_subtitle">Zeskanuj kod QR, aby zarządzać dodatkami, katalogami i kolekcjami z telefonu</string>
+    <string name="addon_manage_collections_from_phone_subtitle">Zeskanuj kod QR, aby zarządzać kolekcjami z telefonu</string>
     <string name="addon_reorder_title">Zmień kolejność katalogów</string>
     <string name="addon_reorder_subtitle">Kontroluje kolejność wierszy katalogów i kolekcji na ekranie głównym</string>
     <string name="addon_qr_scan_instruction">Zeskanuj telefonem, aby zarządzać dodatkami, katalogami i kolekcjami</string>
+    <string name="addon_qr_collections_scan_instruction">Zeskanuj telefonem, aby zarządzać kolekcjami</string>
     <string name="addon_qr_close">Zamknij</string>
     <string name="addon_confirm_title">Potwierdź zmiany dodatków i katalogów</string>
     <string name="addon_confirm_subtitle">Następujące zmiany zostały wprowadzone z telefonu:</string>
@@ -1475,8 +1479,40 @@
     <string name="collections_editor_placeholder_backdrop">URL obrazu tła (opcjonalnie)</string>
     <string name="collections_editor_placeholder_folder">Nazwa folderu</string>
     <string name="collections_editor_placeholder_gif">URL animowanego GIF (odtwarzany przy zaznaczeniu)</string>
+    <string name="collections_editor_genre_filter">Filtr gatunku</string>
+    <string name="collections_editor_choose_genre">Wybierz</string>
+    <string name="collections_editor_select_genre">Wybierz gatunek</string>
+    <string name="collections_editor_all_genres">Wszystkie gatunki</string>
+    <string name="collections_editor_genre_required">Gatunek wymagany</string>
+    <string name="collections_editor_genre_optional">Filtr gatunku dostępny</string>
     <string name="collections_card_title">Kolekcje</string>
     <string name="collections_card_subtitle">Grupuj katalogi w folderach na ekranie głównym</string>
     <string name="collections_tab_all">Wszystko</string>
     <string name="collections_tab_combined">Połączone</string>
+
+    <!-- Load more -->
+    <string name="action_load_more">Załaduj więcej</string>
+
+    <!-- P2P -->
+    <string name="p2p_consent_title">Streaming P2P</string>
+    <string name="p2p_consent_body">Ten stream korzysta z technologii peer-to-peer (P2P). Włączając P2P, potwierdzasz i zgadzasz się, że:\n\n\u2022 Twój adres IP będzie widoczny dla innych uczestników sieci\n\u2022 Ponosisz wyłączną odpowiedzialność za treści, do których uzyskujesz dostęp\n\u2022 Potwierdzasz, że masz prawo do streamowania tych treści w swojej jurysdykcji\n\u2022 Nuvio nie hostuje, nie dystrybuuje ani nie kontroluje żadnych treści P2P\n\u2022 Nuvio nie ponosi odpowiedzialności za jakiekolwiek konsekwencje prawne wynikające z korzystania ze streamingu P2P\n\nKorzystasz z tej funkcji wyłącznie na własne ryzyko. P2P można wyłączyć w dowolnym momencie w Ustawieniach.</string>
+    <string name="p2p_consent_cancel">Anuluj</string>
+    <string name="p2p_consent_enable">Włącz P2P</string>
+    <string name="p2p_download_title">Pobieranie silnika P2P</string>
+    <string name="p2p_download_subtitle">Jednorazowe pobieranie wymagane do streamingu P2P.</string>
+    <string name="settings_p2p_title">Streaming P2P</string>
+    <string name="settings_p2p_subtitle">Zezwól na streamy peer-to-peer (torrent)</string>
+    <string name="settings_p2p_hide_stats_title">Ukryj statystyki torrentów</string>
+    <string name="settings_p2p_hide_stats_subtitle">Ukryj bufor, seedy, peery i prędkość pobierania podczas ładowania i odtwarzania</string>
+
+    <!-- Player fallback messages -->
+    <string name="player_loading_fallback_hevc_decoder">Inicjalizacja dekodera nie powiodła się — przełączanie na dekoder HEVC…</string>
+    <string name="player_loading_fallback_pcm_audio">Inicjalizacja ścieżki audio nie powiodła się — przełączanie na audio PCM…</string>
+
+    <!-- QR login -->
+    <string name="qr_login_scan_prompt">Zeskanuj QR i zaloguj się na telefonie</string>
+    <string name="qr_login_start_failed">Nie udało się rozpocząć logowania QR</string>
+    <string name="qr_login_signing_in">Logowanie…</string>
+    <string name="qr_login_success">Zalogowano pomyślnie</string>
+    <string name="qr_login_exchange_failed">Nie udało się dokończyć logowania QR</string>
 </resources>

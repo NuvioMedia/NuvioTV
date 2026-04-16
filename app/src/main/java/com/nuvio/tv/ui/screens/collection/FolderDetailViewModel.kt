@@ -4,11 +4,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.data.local.CollectionsDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.CollectionCatalogSource
 import com.nuvio.tv.domain.model.CollectionFolder
+import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.FolderViewMode
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.domain.model.MetaPreview
@@ -40,8 +42,22 @@ data class FolderDetailUiState(
     val collectionTitle: String = "",
     val viewMode: FolderViewMode = FolderViewMode.TABBED_GRID,
     val homeLayout: HomeLayout = HomeLayout.MODERN,
+    val posterLabelsEnabled: Boolean = true,
+    val catalogAddonNameEnabled: Boolean = true,
+    val catalogTypeSuffixEnabled: Boolean = true,
+    val hideUnreleasedContent: Boolean = false,
+    val showFullReleaseDate: Boolean = true,
     val modernLandscapePostersEnabled: Boolean = false,
     val modernHeroFullScreenBackdropEnabled: Boolean = false,
+    val focusedPosterBackdropExpandEnabled: Boolean = false,
+    val focusedPosterBackdropExpandDelaySeconds: Int = 3,
+    val focusedPosterBackdropTrailerEnabled: Boolean = false,
+    val focusedPosterBackdropTrailerMuted: Boolean = true,
+    val focusedPosterBackdropTrailerPlaybackTarget: FocusedPosterTrailerPlaybackTarget =
+        FocusedPosterTrailerPlaybackTarget.HERO_MEDIA,
+    val posterCardWidthDp: Int = 126,
+    val posterCardHeightDp: Int = 189,
+    val posterCardCornerRadiusDp: Int = 12,
     val tabs: List<FolderTab> = emptyList(),
     val selectedTabIndex: Int = 0,
     val isLoading: Boolean = true,
@@ -80,7 +96,8 @@ class FolderDetailViewModel @Inject constructor(
     private val tmdbSettingsDataStore: com.nuvio.tv.data.local.TmdbSettingsDataStore,
     private val mdbListRepository: com.nuvio.tv.data.repository.MDBListRepository,
     private val mdbListSettingsDataStore: com.nuvio.tv.data.local.MDBListSettingsDataStore,
-    private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository
+    private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository,
+    private val trailerService: TrailerService
 ) : ViewModel() {
 
     private val collectionId: String = savedStateHandle["collectionId"] ?: ""
@@ -94,6 +111,14 @@ class FolderDetailViewModel @Inject constructor(
     private val enrichedItemIds = java.util.Collections.synchronizedSet(mutableSetOf<String>())
     private val _enrichingItemId = MutableStateFlow<String?>(null)
     val enrichingItemId: StateFlow<String?> = _enrichingItemId.asStateFlow()
+    private val _trailerPreviewUrls = MutableStateFlow<Map<String, String>>(emptyMap())
+    val trailerPreviewUrls: StateFlow<Map<String, String>> = _trailerPreviewUrls.asStateFlow()
+    private val _trailerPreviewAudioUrls = MutableStateFlow<Map<String, String>>(emptyMap())
+    val trailerPreviewAudioUrls: StateFlow<Map<String, String>> = _trailerPreviewAudioUrls.asStateFlow()
+    private val trailerPreviewLoadingIds = mutableSetOf<String>()
+    private val trailerPreviewNegativeCache = mutableSetOf<String>()
+    private var activeTrailerPreviewItemId: String? = null
+    private var trailerPreviewRequestVersion: Long = 0L
 
     private val _rowsFocusState = MutableStateFlow(com.nuvio.tv.ui.screens.home.HomeScreenFocusState())
     val rowsFocusState: StateFlow<com.nuvio.tv.ui.screens.home.HomeScreenFocusState> = _rowsFocusState.asStateFlow()
@@ -165,8 +190,22 @@ class FolderDetailViewModel @Inject constructor(
 
             val addons = addonRepository.getInstalledAddons().first()
             val homeLayout = layoutPreferenceDataStore.selectedLayout.first()
+            val posterLabelsEnabled = layoutPreferenceDataStore.posterLabelsEnabled.first()
+            val catalogAddonNameEnabled = layoutPreferenceDataStore.catalogAddonNameEnabled.first()
+            val catalogTypeSuffixEnabled = layoutPreferenceDataStore.catalogTypeSuffixEnabled.first()
+            val hideUnreleasedContent = layoutPreferenceDataStore.hideUnreleasedContent.first()
+            val showFullReleaseDate = layoutPreferenceDataStore.showFullReleaseDate.first()
             val modernLandscapePosters = layoutPreferenceDataStore.modernLandscapePostersEnabled.first()
             val modernFullScreenBackdrop = layoutPreferenceDataStore.modernHeroFullScreenBackdropEnabled.first()
+            val focusedPosterBackdropExpandEnabled = layoutPreferenceDataStore.focusedPosterBackdropExpandEnabled.first()
+            val focusedPosterBackdropExpandDelaySeconds = layoutPreferenceDataStore.focusedPosterBackdropExpandDelaySeconds.first()
+            val focusedPosterBackdropTrailerEnabled = layoutPreferenceDataStore.focusedPosterBackdropTrailerEnabled.first()
+            val focusedPosterBackdropTrailerMuted = layoutPreferenceDataStore.focusedPosterBackdropTrailerMuted.first()
+            val focusedPosterBackdropTrailerPlaybackTarget =
+                layoutPreferenceDataStore.focusedPosterBackdropTrailerPlaybackTarget.first()
+            val posterCardWidthDp = layoutPreferenceDataStore.posterCardWidthDp.first()
+            val posterCardHeightDp = layoutPreferenceDataStore.posterCardHeightDp.first()
+            val posterCardCornerRadiusDp = layoutPreferenceDataStore.posterCardCornerRadiusDp.first()
             val showAll = (collection?.showAllTab ?: true) && folder.catalogSources.size >= 2
 
             val sourceTabs = folder.catalogSources.map { source ->
@@ -190,8 +229,21 @@ class FolderDetailViewModel @Inject constructor(
                     collectionTitle = collection?.title ?: "",
                     viewMode = collection?.viewMode ?: FolderViewMode.TABBED_GRID,
                     homeLayout = homeLayout,
+                    posterLabelsEnabled = posterLabelsEnabled,
+                    catalogAddonNameEnabled = catalogAddonNameEnabled,
+                    catalogTypeSuffixEnabled = catalogTypeSuffixEnabled,
+                    hideUnreleasedContent = hideUnreleasedContent,
+                    showFullReleaseDate = showFullReleaseDate,
                     modernLandscapePostersEnabled = modernLandscapePosters,
                     modernHeroFullScreenBackdropEnabled = modernFullScreenBackdrop,
+                    focusedPosterBackdropExpandEnabled = focusedPosterBackdropExpandEnabled,
+                    focusedPosterBackdropExpandDelaySeconds = focusedPosterBackdropExpandDelaySeconds,
+                    focusedPosterBackdropTrailerEnabled = focusedPosterBackdropTrailerEnabled,
+                    focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
+                    focusedPosterBackdropTrailerPlaybackTarget = focusedPosterBackdropTrailerPlaybackTarget,
+                    posterCardWidthDp = posterCardWidthDp,
+                    posterCardHeightDp = posterCardHeightDp,
+                    posterCardCornerRadiusDp = posterCardCornerRadiusDp,
                     tabs = tabs,
                     isLoading = false
                 )
@@ -279,11 +331,21 @@ class FolderDetailViewModel @Inject constructor(
                 heroSectionEnabled = false,
                 isLoading = anyLoading,
                 homeLayout = s.homeLayout,
+                posterLabelsEnabled = if (s.homeLayout == HomeLayout.MODERN) false else s.posterLabelsEnabled,
                 modernLandscapePostersEnabled = s.modernLandscapePostersEnabled,
                 modernHeroFullScreenBackdropEnabled = s.modernHeroFullScreenBackdropEnabled,
-                catalogAddonNameEnabled = false,
-                catalogTypeSuffixEnabled = true,
-                posterLabelsEnabled = true,
+                catalogAddonNameEnabled = s.catalogAddonNameEnabled,
+                catalogTypeSuffixEnabled = s.catalogTypeSuffixEnabled,
+                focusedPosterBackdropExpandEnabled = s.focusedPosterBackdropExpandEnabled,
+                focusedPosterBackdropExpandDelaySeconds = s.focusedPosterBackdropExpandDelaySeconds,
+                focusedPosterBackdropTrailerEnabled = s.focusedPosterBackdropTrailerEnabled,
+                focusedPosterBackdropTrailerMuted = s.focusedPosterBackdropTrailerMuted,
+                focusedPosterBackdropTrailerPlaybackTarget = s.focusedPosterBackdropTrailerPlaybackTarget,
+                posterCardWidthDp = s.posterCardWidthDp,
+                posterCardHeightDp = s.posterCardHeightDp,
+                posterCardCornerRadiusDp = s.posterCardCornerRadiusDp,
+                hideUnreleasedContent = s.hideUnreleasedContent,
+                showFullReleaseDate = s.showFullReleaseDate,
                 movieWatchedStatus = s.movieWatchedStatus
             ))
         }
@@ -339,6 +401,7 @@ class FolderDetailViewModel @Inject constructor(
 
             val supportsSkip = catalog?.supportsExtra("skip") ?: false
             val skipStep = catalog?.skipStep() ?: 100
+            val extraArgs = buildCatalogExtraArgs(source)
 
             catalogRepository.getCatalog(
                 addonBaseUrl = effectiveAddon.baseUrl,
@@ -349,6 +412,7 @@ class FolderDetailViewModel @Inject constructor(
                 type = source.type,
                 skip = 0,
                 skipStep = skipStep,
+                extraArgs = extraArgs,
                 supportsSkip = supportsSkip
             ).collect { result ->
                 when (result) {
@@ -427,6 +491,7 @@ class FolderDetailViewModel @Inject constructor(
                 type = row.apiType,
                 skip = nextSkip,
                 skipStep = row.skipStep,
+                extraArgs = row.extraArgs,
                 supportsSkip = row.supportsSkip
             ).collect { result ->
                 when (result) {
@@ -560,12 +625,18 @@ class FolderDetailViewModel @Inject constructor(
             "series" -> "Series"
             else -> source.type.replaceFirstChar { it.uppercase() }
         }
-        val name = if (!catalogName.isNullOrBlank()) {
+        val baseName = if (!catalogName.isNullOrBlank()) {
             catalogName.replaceFirstChar { it.uppercase() }
         } else {
             typeLabel
         }
+        val name = source.genre?.takeIf { it.isNotBlank() }?.let { "$baseName · $it" } ?: baseName
         return name to typeLabel
+    }
+
+    private fun buildCatalogExtraArgs(source: CollectionCatalogSource): Map<String, String> {
+        val genre = source.genre?.takeIf { it.isNotBlank() } ?: return emptyMap()
+        return mapOf("genre" to genre)
     }
 
     fun onItemFocused(item: MetaPreview) {
@@ -684,6 +755,55 @@ class FolderDetailViewModel @Inject constructor(
             if (_enrichingItemId.value == item.id) _enrichingItemId.value = null
             rebuildFollowLayoutState()
         }
+    }
+
+    fun requestTrailerPreview(itemId: String, title: String, releaseInfo: String?, apiType: String) {
+        if (activeTrailerPreviewItemId != itemId) {
+            activeTrailerPreviewItemId = itemId
+            trailerPreviewRequestVersion++
+        }
+        if (itemId in trailerPreviewNegativeCache) return
+        if (_trailerPreviewUrls.value.containsKey(itemId)) return
+        if (!trailerPreviewLoadingIds.add(itemId)) return
+
+        val requestVersion = trailerPreviewRequestVersion
+        viewModelScope.launch {
+            val tmdbId = runCatching { tmdbService.ensureTmdbId(itemId, apiType) }.getOrNull()
+            val trailerSource = trailerService.getTrailerPlaybackSource(
+                title = title,
+                year = extractYear(releaseInfo),
+                tmdbId = tmdbId,
+                type = apiType
+            )
+
+            val isLatestFocusedItem =
+                activeTrailerPreviewItemId == itemId && trailerPreviewRequestVersion == requestVersion
+            if (!isLatestFocusedItem) {
+                trailerPreviewLoadingIds.remove(itemId)
+                return@launch
+            }
+
+            if (trailerSource?.videoUrl.isNullOrBlank()) {
+                trailerPreviewNegativeCache.add(itemId)
+                _trailerPreviewUrls.update { it - itemId }
+                _trailerPreviewAudioUrls.update { it - itemId }
+            } else {
+                _trailerPreviewUrls.update { it + (itemId to trailerSource.videoUrl) }
+                val audioUrl = trailerSource.audioUrl
+                if (audioUrl.isNullOrBlank()) {
+                    _trailerPreviewAudioUrls.update { it - itemId }
+                } else {
+                    _trailerPreviewAudioUrls.update { it + (itemId to audioUrl) }
+                }
+            }
+
+            trailerPreviewLoadingIds.remove(itemId)
+        }
+    }
+
+    private fun extractYear(releaseInfo: String?): String? {
+        if (releaseInfo.isNullOrBlank()) return null
+        return Regex("\\b(19|20)\\d{2}\\b").find(releaseInfo)?.value
     }
 
     private fun updateItemInTabs(itemId: String, transform: (MetaPreview) -> MetaPreview) {

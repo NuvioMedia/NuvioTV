@@ -250,9 +250,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Аккаунт</string>
-    <string name="settings_account_subtitle">Статус аккаунта и синхронизации.</string>
+    <string name="settings_account_subtitle">Статус аккаунта и синхронизации</string>
     <string name="settings_profiles">Профили</string>
-    <string name="settings_profiles_subtitle">Управление профилями пользователей.</string>
+    <string name="settings_profiles_subtitle">Управление профилями пользователей</string>
     <string name="settings_layout">Интерфейс</string>
     <string name="settings_layout_subtitle">Структура главного экрана и стиль постеров.</string>
     <string name="settings_plugins">Плагины</string>
@@ -281,8 +281,8 @@
     <string name="network_connection_offline">Не в сети</string>
     <string name="settings_debug">Отладка</string>
     <string name="settings_debug_subtitle">Инструменты разработчика и скрытые функции.</string>
-    <string name="settings_plugins_section_subtitle">Управление репозиториями, провайдерами и состоянием плагинов.</string>
-    <string name="settings_account_section_subtitle">Аккаунт и статус синхронизации.</string>
+    <string name="settings_plugins_section_subtitle">Управление репозиториями, провайдерами и состоянием плагинов</string>
+    <string name="settings_account_section_subtitle">Аккаунт и статус синхронизации</string>
     <string name="account_stat_addons">аддоны</string>
     <string name="account_stat_plugins">плагины</string>
     <string name="account_stat_library">библиотека</string>

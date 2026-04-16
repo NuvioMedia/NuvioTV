@@ -283,6 +283,15 @@ private fun PlayerRuntimeController.applySelectedStreamState(
         filename = currentFilename,
         responseHeaders = currentStreamResponseHeaders
     )
+    applyStreamMetadata(stream)
+}
+
+/**
+ * Apply stream metadata that is common to both HTTP and torrent paths.
+ * Ensures binge-group, addon info, and video hints are always set regardless
+ * of stream type — critical for next-episode binge matching.
+ */
+private fun PlayerRuntimeController.applyStreamMetadata(stream: Stream) {
     currentStreamBingeGroup = stream.behaviorHints?.bingeGroup
     currentVideoHash = stream.behaviorHints?.videoHash
     currentVideoSize = stream.behaviorHints?.videoSize
@@ -314,7 +323,8 @@ private fun PlayerRuntimeController.persistSelectedStreamForReuse(
             headers = headers,
             filename = currentFilename,
             videoHash = currentVideoHash,
-            videoSize = currentVideoSize
+            videoSize = currentVideoSize,
+            bingeGroup = stream.behaviorHints?.bingeGroup
         )
     }
 }
@@ -338,7 +348,8 @@ private fun PlayerRuntimeController.persistTorrentStreamForReuse(stream: Stream)
             videoSize = stream.behaviorHints?.videoSize,
             infoHash = infoHash,
             fileIdx = stream.fileIdx,
-            sources = stream.sources
+            sources = stream.sources,
+            bingeGroup = stream.behaviorHints?.bingeGroup
         )
     }
 }
@@ -376,6 +387,8 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
                 isTorrentStream = true
             )
         }
+        applyStreamMetadata(stream)
+        currentFilename = stream.behaviorHints?.filename ?: navigationArgs.filename
         showStreamSourceIndicator(stream)
         resetNextEpisodeCardState(clearEpisode = false)
         launchTorrentSourceStream(stream, infoHash, loadSavedProgress = true)
@@ -664,6 +677,7 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
         stopTorrentStream()
         switchToEpisodeStreamCommon(stream, forcedTargetVideo)
         launchTorrentSourceStream(stream, infoHash, loadSavedProgress = true)
+        persistTorrentStreamForReuse(stream)
         return
     }
 
@@ -780,6 +794,9 @@ private fun PlayerRuntimeController.switchToEpisodeStreamCommon(
 
     resetLoadingOverlayForNewStream()
     releasePlayer(flushPlaybackState = false)
+
+    applyStreamMetadata(stream)
+    currentFilename = stream.behaviorHints?.filename ?: navigationArgs.filename
 
     persistedTrackPreference = null
     subtitleDisabledByPersistedPreference = false

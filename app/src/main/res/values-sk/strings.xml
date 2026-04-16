@@ -87,9 +87,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Účet</string>
-    <string name="settings_account_subtitle">Účet a stav synchronizácie.</string>
+    <string name="settings_account_subtitle">Účet a stav synchronizácie</string>
     <string name="settings_profiles">Profily</string>
-    <string name="settings_profiles_subtitle">Spravovať používateľské profily.</string>
+    <string name="settings_profiles_subtitle">Spravovať používateľské profily</string>
     <string name="settings_layout">Rozloženie</string>
     <string name="settings_layout_subtitle">Domáca obrazovka a štýly posterov.</string>
     <string name="settings_plugins">Pluginy</string>
@@ -101,8 +101,8 @@
     <string name="settings_about_subtitle">Verzia a zásady.</string>
     <string name="settings_debug">Debug</string>
     <string name="settings_debug_subtitle">Nástroje pre vývojárov a funkčné prepínače.</string>
-    <string name="settings_plugins_section_subtitle">Spravovať repozitáre, poskytovateľov a stavy pluginov.</string>
-    <string name="settings_account_section_subtitle">Účet a stav synchronizácie.</string>
+    <string name="settings_plugins_section_subtitle">Spravovať repozitáre, poskytovateľov a stavy pluginov</string>
+    <string name="settings_account_section_subtitle">Účet a stav synchronizácie</string>
     <string name="settings_integrations_section">Integrácie</string>
     <string name="settings_integrations_section_subtitle">Vyberte nastavenia TMDB alebo MDBList</string>
     <string name="settings_tmdb_subtitle">Ovládanie obohatenia metadát</string>
