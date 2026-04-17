@@ -109,7 +109,17 @@ internal fun PlayerRuntimeController.initializePlayer(
             )
             mpvPreferredAudioLanguages = preferredAudioLanguages
             mpvHardwareDecodeModeSetting = playerSettings.mpvHardwareDecodeMode
-            val effectiveInternalPlayerEngine = overrideInternalPlayerEngine ?: playerSettings.internalPlayerEngine
+            var effectiveInternalPlayerEngine = overrideInternalPlayerEngine ?: playerSettings.internalPlayerEngine
+            if (effectiveInternalPlayerEngine == InternalPlayerEngine.AUTO) {
+                // Determine if anime
+                val effectiveId = (contentId ?: currentVideoId ?: "").lowercase()
+                val isAnime = effectiveId.startsWith("kitsu:") ||
+                              effectiveId.startsWith("mal:") ||
+                              effectiveId.startsWith("anilist:") ||
+                              (currentStreamUrl.contains("/anime/"))
+
+                effectiveInternalPlayerEngine = if (isAnime) InternalPlayerEngine.MVP_PLAYER else InternalPlayerEngine.EXOPLAYER
+            }
             runtimeInternalPlayerEngineOverride = overrideInternalPlayerEngine
             currentInternalPlayerEngine = effectiveInternalPlayerEngine
             val showLoadingStatus = playerSettings.showPlayerLoadingStatus

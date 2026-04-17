@@ -253,7 +253,8 @@ enum class PlayerPreference {
 
 enum class InternalPlayerEngine {
     EXOPLAYER,
-    MVP_PLAYER
+    MVP_PLAYER,
+    AUTO
 }
 
 /**

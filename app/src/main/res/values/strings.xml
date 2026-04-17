@@ -369,6 +369,8 @@
     <string name="playback_resolution_matching_sub">Allow display mode changes to match video resolution.</string>
     <string name="playback_player_external_desc">Always open streams in an external app</string>
     <string name="playback_player_ask_desc">Choose the player each time</string>
+    <string name="playback_player_auto">Auto (Best for Content)</string>
+    <string name="playback_player_auto_desc">ExoPlayer for Movies &amp; TV Shows · MPV for Anime</string>
     <string name="playback_engine_exoplayer_desc">Best compatibility with current Nuvio features.</string>
     <string name="playback_engine_mvplayer_desc">Uses libmpv with Nuvio OSD controls. Experimental.</string>
 
