@@ -28,6 +28,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.text.TextOutput
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.extractor.DefaultExtractorsFactory
+import androidx.media3.extractor.text.DefaultSubtitleParserFactory
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import androidx.media3.extractor.ts.TsExtractor
 import androidx.media3.session.MediaSession
@@ -246,7 +247,7 @@ internal fun PlayerRuntimeController.initializePlayer(
             val buildDefaultPlayer = {
                 mediaSourceFactory.configureSubtitleParsing(
                     extractorsFactory = null,
-                    subtitleParserFactory = null
+                    subtitleParserFactory = DefaultSubtitleParserFactory()
                 )
                 val playerDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, headers)
                 ExoPlayer.Builder(context)
