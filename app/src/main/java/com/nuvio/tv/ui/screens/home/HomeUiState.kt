@@ -52,6 +52,7 @@ data class HomeUiState(
     val gridItems: List<GridItem> = emptyList(),
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true,
+    val memoryOnlyVerticalScroll: Boolean = false,
     val blurUnwatchedEpisodes: Boolean = false,
     val startupAuthNotice: StartupAuthNotice? = null,
     val homeRows: List<HomeRow> = emptyList()
@@ -66,7 +67,8 @@ sealed class ContinueWatchingItem {
         val episodeThumbnail: String? = null,
         val episodeImdbRating: Float? = null,
         val genres: List<String> = emptyList(),
-        val releaseInfo: String? = null
+        val releaseInfo: String? = null,
+        val contentLanguage: String? = null
     ) : ContinueWatchingItem()
 
     @Immutable
@@ -99,7 +101,8 @@ data class NextUpInfo(
     val isReleaseAlert: Boolean = false,
     val isNewSeasonRelease: Boolean = false,
     val seedSeason: Int? = null,
-    val seedEpisode: Int? = null
+    val seedEpisode: Int? = null,
+    val contentLanguage: String? = null
 )
 
 @Immutable
@@ -144,6 +147,8 @@ sealed class GridItem {
     @Immutable
     data class CollectionFolder(
         val collectionId: String,
+        val collectionTitle: String,
+        val focusGlowEnabled: Boolean,
         val folder: com.nuvio.tv.domain.model.CollectionFolder
     ) : GridItem()
 }

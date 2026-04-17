@@ -14,8 +14,12 @@ import com.nuvio.tv.data.remote.api.TmdbNetworkDetailsResponse
 import com.nuvio.tv.domain.model.ContentType
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -55,6 +59,51 @@ class TmdbMetadataServiceTest {
         assertNotNull(enrichment)
         assertEquals(55, enrichment?.productionCompanies?.firstOrNull()?.tmdbId)
         assertEquals(77, enrichment?.networks?.firstOrNull()?.tmdbId)
+    }
+
+    @Test
+    fun `fetchEnrichment deduplicates concurrent requests for same key`() = runTest {
+        val api = mockk<TmdbApi>()
+        val gate = CompletableDeferred<Unit>()
+        var detailsCalls = 0
+        var creditsCalls = 0
+        var imagesCalls = 0
+        var releaseCalls = 0
+
+        coEvery { api.getMovieDetails(any(), any(), any()) } coAnswers {
+            detailsCalls += 1
+            gate.await()
+            Response.success(TmdbDetailsResponse(id = 10, title = "Movie"))
+        }
+        coEvery { api.getMovieCredits(any(), any(), any()) } coAnswers {
+            creditsCalls += 1
+            Response.success(TmdbCreditsResponse())
+        }
+        coEvery { api.getMovieImages(any(), any(), any()) } coAnswers {
+            imagesCalls += 1
+            Response.success(TmdbImagesResponse())
+        }
+        coEvery { api.getMovieReleaseDates(any(), any()) } coAnswers {
+            releaseCalls += 1
+            Response.success(TmdbMovieReleaseDatesResponse())
+        }
+
+        val service = TmdbMetadataService(api)
+
+        val first = async { service.fetchEnrichment(tmdbId = "10", contentType = ContentType.MOVIE, language = "en") }
+        val second = async { service.fetchEnrichment(tmdbId = "10", contentType = ContentType.MOVIE, language = "en") }
+
+        yield()
+        assertEquals(1, detailsCalls)
+
+        gate.complete(Unit)
+        val results = awaitAll(first, second)
+
+        assertEquals(1, detailsCalls)
+        assertEquals(1, creditsCalls)
+        assertEquals(1, imagesCalls)
+        assertEquals(1, releaseCalls)
+        assertEquals(results[0], results[1])
     }
 
     @Test

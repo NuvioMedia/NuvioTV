@@ -173,6 +173,7 @@ class CollectionsDataStore @Inject constructor(
         val title: String,
         val backdropImageUrl: String? = null,
         val pinToTop: Boolean = false,
+        val focusGlowEnabled: Boolean? = null,
         val viewMode: String = "TABBED_GRID",
         val showAllTab: Boolean = true,
         val folders: List<SerializableFolder> = emptyList()
@@ -183,6 +184,8 @@ class CollectionsDataStore @Inject constructor(
         val id: String,
         val title: String,
         val coverImageUrl: String? = null,
+        val focusGifUrl: String? = null,
+        val focusGifEnabled: Boolean? = null,
         val coverEmoji: String? = null,
         val tileShape: String = "SQUARE",
         val hideTitle: Boolean = false,
@@ -193,7 +196,8 @@ class CollectionsDataStore @Inject constructor(
     private data class SerializableCatalogSource(
         val addonId: String,
         val type: String,
-        val catalogId: String
+        val catalogId: String,
+        val genre: String? = null
     )
 
     private fun Collection.toSerializable() = SerializableCollection(
@@ -201,6 +205,7 @@ class CollectionsDataStore @Inject constructor(
         title = title,
         backdropImageUrl = backdropImageUrl,
         pinToTop = pinToTop,
+        focusGlowEnabled = focusGlowEnabled,
         viewMode = viewMode.name,
         showAllTab = showAllTab,
         folders = folders.map { folder ->
@@ -208,6 +213,8 @@ class CollectionsDataStore @Inject constructor(
                 id = folder.id,
                 title = folder.title,
                 coverImageUrl = folder.coverImageUrl,
+                focusGifUrl = folder.focusGifUrl,
+                focusGifEnabled = folder.focusGifEnabled,
                 coverEmoji = folder.coverEmoji,
                 tileShape = folder.tileShape.name,
                 hideTitle = folder.hideTitle,
@@ -215,7 +222,8 @@ class CollectionsDataStore @Inject constructor(
                     SerializableCatalogSource(
                         addonId = source.addonId,
                         type = source.type,
-                        catalogId = source.catalogId
+                        catalogId = source.catalogId,
+                        genre = source.genre
                     )
                 }
             )
@@ -227,6 +235,7 @@ class CollectionsDataStore @Inject constructor(
         title = title,
         backdropImageUrl = backdropImageUrl,
         pinToTop = pinToTop,
+        focusGlowEnabled = focusGlowEnabled ?: true,
         viewMode = FolderViewMode.fromString(viewMode),
         showAllTab = showAllTab,
         folders = folders.map { folder ->
@@ -234,6 +243,8 @@ class CollectionsDataStore @Inject constructor(
                 id = folder.id,
                 title = folder.title,
                 coverImageUrl = folder.coverImageUrl,
+                focusGifUrl = folder.focusGifUrl,
+                focusGifEnabled = folder.focusGifEnabled ?: true,
                 coverEmoji = folder.coverEmoji,
                 tileShape = PosterShape.fromString(folder.tileShape),
                 hideTitle = folder.hideTitle,
@@ -241,7 +252,8 @@ class CollectionsDataStore @Inject constructor(
                     CollectionCatalogSource(
                         addonId = source.addonId,
                         type = source.type,
-                        catalogId = source.catalogId
+                        catalogId = source.catalogId,
+                        genre = source.genre
                     )
                 }
             )

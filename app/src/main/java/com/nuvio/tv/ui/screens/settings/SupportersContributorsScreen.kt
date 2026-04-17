@@ -1246,7 +1246,7 @@ private data class ContributorSupportLink(
 
 private val contributorSupportLinks = mapOf(
     "skoruppa" to ContributorSupportLink(
-        kofiUrl = "https://buymeacoffee.com/skoruppa"
+        kofiUrl = "https://ko-fi.com/skoruppa"
     ),
     "crisszollo" to ContributorSupportLink(
         kofiUrl = "https://ko-fi.com/crisszollo"

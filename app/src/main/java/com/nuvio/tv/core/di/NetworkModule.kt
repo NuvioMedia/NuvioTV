@@ -74,6 +74,17 @@ object NetworkModule {
             .cache(Cache(File(context.cacheDir, "http_cache"), 50L * 1024 * 1024)) // 50 MB disk cache
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
+            // Prevent OkHttp from caching error responses (4xx/5xx).
+            .addNetworkInterceptor { chain ->
+                val response = chain.proceed(chain.request())
+                if (!response.isSuccessful) {
+                    response.newBuilder()
+                        .header("Cache-Control", "no-store")
+                        .build()
+                } else {
+                    response
+                }
+            }
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC
                         else HttpLoggingInterceptor.Level.NONE

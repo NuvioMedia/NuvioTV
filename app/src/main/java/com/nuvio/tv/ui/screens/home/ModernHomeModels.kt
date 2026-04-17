@@ -75,7 +75,10 @@ sealed class ModernPayload {
         val collectionId: String,
         val collectionTitle: String,
         val folderId: String,
-        val posterShape: PosterShape
+        val posterShape: PosterShape,
+        val focusGlowEnabled: Boolean,
+        val focusGifEnabled: Boolean,
+        val focusGifUrl: String?
     ) : ModernPayload()
 }
 
@@ -157,6 +160,12 @@ internal data class ModernCatalogRowBuildCacheEntry(
     val mappedRow: HeroCarouselRow
 )
 
+internal data class ModernCollectionRowBuildCacheEntry(
+    val source: Collection,
+    val useLandscapePosters: Boolean,
+    val mappedRow: HeroCarouselRow
+)
+
 @Stable
 internal class ModernHomeUiCaches {
     val focusedItemByRow = mutableMapOf<String, Int>()
@@ -171,16 +180,17 @@ internal class ModernHomeUiCaches {
 }
 
 @Stable
-internal class ModernCarouselRowBuildCache {
+class ModernCarouselRowBuildCache {
     var continueWatchingItems: List<ContinueWatchingItem> = emptyList()
     var continueWatchingTitle: String = ""
     var continueWatchingAirsDateTemplate: String = ""
     var continueWatchingUpcomingLabel: String = ""
     var continueWatchingUseLandscapePosters: Boolean = false
     var continueWatchingRow: HeroCarouselRow? = null
-    val catalogRows = mutableMapOf<String, ModernCatalogRowBuildCacheEntry>()
+    internal val catalogRows = mutableMapOf<String, ModernCatalogRowBuildCacheEntry>()
+    internal val collectionRows = mutableMapOf<String, ModernCollectionRowBuildCacheEntry>()
     // per-item cache: rowKey -> (itemId -> cached carousel item + source MetaPreview)
-    val catalogItemCache = mutableMapOf<String, MutableMap<String, CachedCarouselItem>>()
+    internal val catalogItemCache = mutableMapOf<String, MutableMap<String, CachedCarouselItem>>()
 }
 
 internal data class CachedCarouselItem(
@@ -203,7 +213,9 @@ internal fun ModernCarouselItem.catalogCardMetrics(
     landscapeCardWidth: androidx.compose.ui.unit.Dp,
     landscapeCardHeight: androidx.compose.ui.unit.Dp
 ): ModernCatalogCardMetrics {
-    if (useLandscapePosters) {
+    // Collection folders define their own tile shape — never override with
+    // the global landscape-posters toggle.
+    if (useLandscapePosters && payload !is ModernPayload.CollectionFolder) {
         return ModernCatalogCardMetrics(
             width = landscapeCardWidth,
             height = landscapeCardHeight
@@ -471,14 +483,14 @@ internal fun buildCollectionFolderItem(
 
     return ModernCarouselItem(
         key = "collection_${collection.id}_${folder.id}_$occurrence",
-        title = folder.title,
-        subtitle = collection.title,
+        title = if (folder.hideTitle) "" else folder.title,
+        subtitle = if (folder.hideTitle) null else collection.title,
         imageUrl = heroImageUrl,
         heroPreview = HeroPreview(
-            title = title,
+            title = if (folder.hideTitle) "" else title,
             logo = null,
             description = null,
-            contentTypeText = collection.title,
+            contentTypeText = null,
             yearText = null,
             imdbText = null,
             genres = emptyList(),
@@ -491,7 +503,10 @@ internal fun buildCollectionFolderItem(
             collectionId = collection.id,
             collectionTitle = collection.title,
             folderId = folder.id,
-            posterShape = folder.tileShape
+            posterShape = folder.tileShape,
+            focusGlowEnabled = collection.focusGlowEnabled,
+            focusGifEnabled = folder.focusGifEnabled,
+            focusGifUrl = folder.focusGifUrl
         )
     )
 }

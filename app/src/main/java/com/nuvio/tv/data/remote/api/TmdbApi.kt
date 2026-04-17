@@ -175,7 +175,32 @@ interface TmdbApi {
         @Query("first_air_date.lte") firstAirDateLte: String? = null,
         @Query("vote_count.gte") voteCountGte: Int? = null
     ): Response<TmdbDiscoverResponse>
+
+    @GET("movie/{movie_id}/alternative_titles")
+    suspend fun getMovieAlternativeTitles(
+        @Path("movie_id") movieId: Int,
+        @Query("api_key") apiKey: String
+    ): Response<TmdbAlternativeTitlesResponse>
+
+    @GET("tv/{tv_id}/alternative_titles")
+    suspend fun getTvAlternativeTitles(
+        @Path("tv_id") tvId: Int,
+        @Query("api_key") apiKey: String
+    ): Response<TmdbAlternativeTitlesResponse>
 }
+
+@JsonClass(generateAdapter = true)
+data class TmdbAlternativeTitlesResponse(
+    @Json(name = "titles") val movieTitles: List<TmdbAlternativeTitle>? = null,
+    @Json(name = "results") val tvTitles: List<TmdbAlternativeTitle>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbAlternativeTitle(
+    @Json(name = "iso_3166_1") val countryCode: String? = null,
+    @Json(name = "title") val title: String? = null,
+    @Json(name = "type") val type: String? = null
+)
 
 @JsonClass(generateAdapter = true)
 data class TmdbFindResponse(
@@ -225,6 +250,8 @@ data class TmdbDetailsResponse(
     @Json(name = "id") val id: Int,
     @Json(name = "title") val title: String? = null,
     @Json(name = "name") val name: String? = null,
+    @Json(name = "original_title") val originalTitle: String? = null,
+    @Json(name = "original_name") val originalName: String? = null,
     @Json(name = "overview") val overview: String? = null,
     @Json(name = "genres") val genres: List<TmdbGenre>? = null,
     @Json(name = "created_by") val createdBy: List<TmdbCreatedBy>? = null,

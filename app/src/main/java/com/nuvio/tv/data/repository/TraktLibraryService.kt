@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.repository
 
+import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.remote.api.TraktApi
 import com.nuvio.tv.data.remote.dto.trakt.TraktCreateOrUpdateListRequestDto
@@ -23,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -44,7 +46,8 @@ import javax.inject.Singleton
 class TraktLibraryService @Inject constructor(
     private val traktApi: TraktApi,
     private val traktAuthService: TraktAuthService,
-    private val metaRepository: MetaRepository
+    private val metaRepository: MetaRepository,
+    private val profileManager: ProfileManager
 ) {
     private data class LibraryMetadata(
         val name: String?,
@@ -78,6 +81,16 @@ class TraktLibraryService @Inject constructor(
     private val metadataHydrationLimit = 500
     private val listFetchConcurrency = 3
     private val metadataFetchSemaphore = Semaphore(5)
+
+    init {
+        scope.launch {
+            profileManager.activeProfileId
+                .collectLatest {
+                    resetProfileScopedState()
+                    refresh(force = true)
+                }
+        }
+    }
 
     fun observeListTabs(): Flow<List<LibraryListTab>> {
         return snapshotState
@@ -323,6 +336,18 @@ class TraktLibraryService @Inject constructor(
         refresh(force = true)
     }
 
+
+    private suspend fun resetProfileScopedState() {
+        refreshMutex.withLock {
+            snapshotState.value = Snapshot()
+            metadataState.value = emptyMap()
+            refreshingState.value = false
+            lastRefreshMs = 0L
+            metadataMutex.withLock {
+                inFlightMetadataKeys.clear()
+            }
+        }
+    }
     suspend fun ensureFresh() {
         refresh(force = false)
     }

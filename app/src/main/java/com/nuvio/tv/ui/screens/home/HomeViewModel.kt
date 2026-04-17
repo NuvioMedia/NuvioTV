@@ -73,7 +73,8 @@ class HomeViewModel @Inject constructor(
     internal val trailerService: TrailerService,
     internal val watchedItemsPreferences: WatchedItemsPreferences,
     internal val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
-    internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache
+    internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache,
+    private val profileManager: com.nuvio.tv.core.profile.ProfileManager
 ) : ViewModel() {
     companion object {
         internal const val TAG = "HomeViewModel"
@@ -83,7 +84,7 @@ class HomeViewModel @Inject constructor(
         private const val MAX_RECENT_PROGRESS_ITEMS = 300
         private const val MAX_NEXT_UP_LOOKUPS = 24
         private const val MAX_NEXT_UP_CONCURRENCY = 4
-        private const val MAX_CATALOG_LOAD_CONCURRENCY = 4
+        private const val MAX_CATALOG_LOAD_CONCURRENCY = 8
         internal const val EXTERNAL_META_PREFETCH_FOCUS_DEBOUNCE_MS = 220L
         internal const val EXTERNAL_META_PREFETCH_ADJACENT_DEBOUNCE_MS = 120L
         internal const val MAX_POSTER_STATUS_OBSERVERS = 24
@@ -91,6 +92,9 @@ class HomeViewModel @Inject constructor(
 
     internal val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    /** True once the CW pipeline has completed its first emission (items or empty). */
+    internal val _initialCwResolved = MutableStateFlow(false)
+    val initialCwResolved: StateFlow<Boolean> = _initialCwResolved.asStateFlow()
     val effectiveAutoplayEnabled = playerSettingsDataStore.playerSettings
         .map(StreamAutoPlayPolicy::isEffectivelyEnabled)
         .distinctUntilChanged()
@@ -110,12 +114,15 @@ class HomeViewModel @Inject constructor(
     val enrichingItemId: StateFlow<String?> = _enrichingItemId.asStateFlow()
     internal fun setEnrichingItemId(id: String?) { _enrichingItemId.value = id }
 
+    internal val catalogStateLock = Any()
     internal val catalogsMap = linkedMapOf<String, CatalogRow>()
+    internal val catalogItemKeyIndex = mutableMapOf<String, MutableSet<String>>()
     internal val catalogOrder = mutableListOf<String>()
     internal var addonsCache: List<Addon> = emptyList()
     internal var collectionsCache: List<Collection> = emptyList()
     internal var homeCatalogOrderKeys: List<String> = emptyList()
     internal var disabledHomeCatalogKeys: Set<String> = emptySet()
+    internal var customCatalogTitles: Map<String, String> = emptyMap()
     internal var currentHeroCatalogKeys: List<String> = emptyList()
     internal var catalogUpdateJob: Job? = null
     internal var hasRenderedFirstCatalog = false
@@ -156,6 +163,10 @@ class HomeViewModel @Inject constructor(
     internal val cwNextUpResolutionCache = Collections.synchronizedMap(mutableMapOf<String, NextUpResolution?>())
     internal val cwNextUpNegativeCacheTimestamps = Collections.synchronizedMap(mutableMapOf<String, Long>())
     internal val discoveredOlderNextUpItems = Collections.synchronizedList(mutableListOf<ContinueWatchingItem.NextUp>())
+    internal val cwLastProcessedNextUpContentIds = Collections.synchronizedSet(mutableSetOf<String>())
+    internal val cwEnrichedNextUpOverlay = Collections.synchronizedMap(mutableMapOf<String, NextUpInfo>())
+    /** In-memory cache of enriched InProgress items per contentId+episode key. */
+    internal val cwEnrichedInProgressOverlay = Collections.synchronizedMap(mutableMapOf<String, ContinueWatchingItem.InProgress>())
     internal val fullyWatchedSeriesIds get() = watchedSeriesStateHolder
     internal var tmdbEnrichFocusJob: Job? = null
     internal var pendingTmdbEnrichItemId: String? = null
@@ -187,14 +198,43 @@ class HomeViewModel @Inject constructor(
         observeExternalMetaPrefetchPreference()
         loadHomeCatalogOrderPreference()
         loadDisabledHomeCatalogPreference()
+        loadCustomCatalogTitles()
         observeLibraryState()
         observeTmdbSettings()
         observeMdbListSettings()
         observeBlurUnwatchedEpisodes()
+        observeMemoryOnlyVerticalScroll()
         observeStartupAuthNotice()
+        observeProgressSourceChanges()
         loadContinueWatching()
         observeCollections()
         observeInstalledAddons()
+        // Clear CW state when profile changes so items don't leak between profiles.
+        viewModelScope.launch {
+            var previousProfileId = profileManager.activeProfileId.value
+            profileManager.activeProfileId.collect { newId ->
+                if (newId != previousProfileId) {
+                    previousProfileId = newId
+                    // Clear all in-memory CW caches so data from the previous
+                    // profile doesn't leak into the new one.
+                    cwMetaCache.clear()
+                    cwMetaNegativeCacheTimestamps.clear()
+                    cwBadgeEpisodeCache.clear()
+                    cwTmdbIdCache.clear()
+                    cwNextUpResolutionCache.clear()
+                    cwNextUpNegativeCacheTimestamps.clear()
+                    discoveredOlderNextUpItems.clear()
+                    cwLastProcessedNextUpContentIds.clear()
+                    cwEnrichedNextUpOverlay.clear()
+                    cwEnrichedInProgressOverlay.clear()
+                    _uiState.update { it.copy(continueWatchingItems = emptyList()) }
+                    loadContinueWatching()
+                    // Clear watched badges so they don't leak between profiles.
+                    watchedSeriesStateHolder.update(emptySet())
+                    _uiState.update { it.copy(movieWatchedStatus = emptyMap()) }
+                }
+            }
+        }
         viewModelScope.launch {
             delay(STARTUP_GRACE_PERIOD_MS)
             startupGracePeriodActive = false
@@ -229,6 +269,16 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun observeMemoryOnlyVerticalScroll() {
+        viewModelScope.launch {
+            layoutPreferenceDataStore.memoryOnlyVerticalScroll
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    _uiState.update { it.copy(memoryOnlyVerticalScroll = enabled) }
+                }
+        }
+    }
+
     fun requestTrailerPreview(item: MetaPreview) = requestTrailerPreviewPipeline(item)
 
     fun requestTrailerPreview(
@@ -251,6 +301,8 @@ class HomeViewModel @Inject constructor(
 
     private fun loadDisabledHomeCatalogPreference() = loadDisabledHomeCatalogPreferencePipeline()
 
+    private fun loadCustomCatalogTitles() = loadCustomCatalogTitlesPipeline()
+
     private fun observeTmdbSettings() = observeTmdbSettingsPipeline()
 
     private fun observeMdbListSettings() {
@@ -259,6 +311,38 @@ class HomeViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .collectLatest { settings ->
                     currentMdbListSettings = settings
+                }
+        }
+    }
+
+    /**
+     * When the watch-progress source changes (e.g. Trakt login/logout, or
+     * switching between Trakt and Nuvio Sync), clear the CW disk cache and
+     * in-memory state so items from the old source don't leak into the new one.
+     */
+    private fun observeProgressSourceChanges() {
+        viewModelScope.launch {
+            var previousSource: com.nuvio.tv.data.local.WatchProgressSource? = null
+            traktSettingsDataStore.watchProgressSource
+                .distinctUntilChanged()
+                .collect { source ->
+                    if (previousSource != null && previousSource != source) {
+                        // Source changed — clear CW caches to prevent mixing.
+                        cwMetaCache.clear()
+                        cwEnrichedNextUpOverlay.clear()
+                        cwEnrichedInProgressOverlay.clear()
+                        discoveredOlderNextUpItems.clear()
+                        cwLastProcessedNextUpContentIds.clear()
+                        _uiState.update { it.copy(continueWatchingItems = emptyList()) }
+                        // Clear disk cache for current profile.
+                        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            runCatching { cwEnrichmentCache.saveNextUpSnapshot(emptyList()) }
+                            runCatching { cwEnrichmentCache.saveInProgressSnapshot(emptyList()) }
+                        }
+                        // Reload CW from fresh source.
+                        loadContinueWatching()
+                    }
+                    previousSource = source
                 }
         }
     }
@@ -404,6 +488,7 @@ class HomeViewModel @Inject constructor(
                         state.copy(continueWatchingItems = items)
                     } else state
                 }
+                _initialCwResolved.value = true
             }
         }
         loadContinueWatchingPipeline()
@@ -440,7 +525,7 @@ class HomeViewModel @Inject constructor(
             val debounceMs = when {
                 // First render: use minimal debounce to show content ASAP while still
                 // batching near-simultaneous arrivals.
-                !hasRenderedFirstCatalog && catalogsMap.isNotEmpty() -> {
+                !hasRenderedFirstCatalog && hasAnyCatalogRows() -> {
                     hasRenderedFirstCatalog = true
                     50L
                 }
@@ -484,6 +569,11 @@ class HomeViewModel @Inject constructor(
     /**
      * Saves the current focus and scroll state for restoration when returning to this screen.
      */
+    // When true, the next saveFocusState call is suppressed and the flag
+    // is reset.  Used during layout switches to prevent the outgoing
+    // layout's onDispose from poisoning the incoming layout's focus state.
+    internal var suppressFocusSave: Boolean = false
+
     fun saveFocusState(
         verticalScrollIndex: Int,
         verticalScrollOffset: Int,
@@ -491,6 +581,10 @@ class HomeViewModel @Inject constructor(
         focusedItemIndex: Int,
         catalogRowScrollStates: Map<String, Int>
     ) {
+        if (suppressFocusSave) {
+            suppressFocusSave = false
+            return
+        }
         val nextState = HomeScreenFocusState(
             verticalScrollIndex = verticalScrollIndex,
             verticalScrollOffset = verticalScrollOffset,

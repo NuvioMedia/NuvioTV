@@ -285,7 +285,7 @@ class AccountViewModel @Inject constructor(
                             qrLoginCode = result.code,
                             qrLoginUrl = result.webUrl,
                             qrLoginBitmap = qrBitmap,
-                            qrLoginStatus = "Scan QR and sign in on your phone",
+                            qrLoginStatus = context.getString(R.string.qr_login_scan_prompt),
                             qrLoginExpiresAtMillis = expiresAtMillis,
                             qrLoginPollIntervalSeconds = result.pollIntervalSeconds.coerceAtLeast(2)
                         )
@@ -297,7 +297,7 @@ class AccountViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             error = userFriendlyError(e),
-                            qrLoginStatus = "Failed to start QR login"
+                            qrLoginStatus = context.getString(R.string.qr_login_start_failed)
                         )
                     }
                 }
@@ -316,21 +316,21 @@ class AccountViewModel @Inject constructor(
             val current = _uiState.value
             val code = current.qrLoginCode ?: return@launch
             val nonce = current.qrLoginNonce ?: return@launch
-            _uiState.update { it.copy(isLoading = true, error = null, qrLoginStatus = "Signing you in...") }
+            _uiState.update { it.copy(isLoading = true, error = null, qrLoginStatus = context.getString(R.string.qr_login_signing_in)) }
             authManager.exchangeTvLoginSession(code = code, deviceNonce = nonce).fold(
                 onSuccess = {
                     pullRemoteData().onFailure { e ->
                         Log.e("AccountViewModel", "exchangeQrLogin: pullRemoteData failed, continuing", e)
                     }
                     loadConnectedStats()
-                    _uiState.update { it.copy(isLoading = false, qrLoginStatus = "Signed in successfully") }
+                    _uiState.update { it.copy(isLoading = false, qrLoginStatus = context.getString(R.string.qr_login_success)) }
                 },
                 onFailure = { e ->
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             error = userFriendlyError(e),
-                            qrLoginStatus = "Could not complete QR sign in"
+                            qrLoginStatus = context.getString(R.string.qr_login_exchange_failed)
                         )
                     }
                 }
@@ -581,12 +581,13 @@ class AccountViewModel @Inject constructor(
         try {
             profileSettingsSyncService.pullCurrentProfileFromRemote()
             pluginManager.isSyncingFromRemote = true
-            val remotePluginUrls = pluginSyncService.getRemoteRepoUrls().getOrElse { throw it }
+            val remotePlugins = pluginSyncService.getRemoteRepoUrls().getOrElse { throw it }
             pluginManager.reconcileWithRemoteRepoUrls(
-                remoteUrls = remotePluginUrls,
+                remotePlugins = remotePlugins,
                 removeMissingLocal = true
             )
             pluginManager.isSyncingFromRemote = false
+            pluginManager.flushPendingSync()
 
             addonRepository.isSyncingFromRemote = true
             val remoteAddonUrls = addonSyncService.getRemoteAddonUrls().getOrElse { throw it }
@@ -596,12 +597,11 @@ class AccountViewModel @Inject constructor(
             )
             addonRepository.isSyncingFromRemote = false
 
-            val isPrimaryProfile = profileManager.activeProfileId.value == 1
-            val isTraktConnected = isPrimaryProfile && traktAuthDataStore.isAuthenticated.first()
+            val isTraktConnected = traktAuthDataStore.isEffectivelyAuthenticated.first()
             val shouldUseSupabaseWatchProgressSync = watchProgressSyncService.shouldUseSupabaseWatchProgressSync()
             Log.d(
                 "AccountViewModel",
-                "pullRemoteData: isTraktConnected=$isTraktConnected isPrimaryProfile=$isPrimaryProfile shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
+                "pullRemoteData: isTraktConnected=$isTraktConnected shouldUseSupabaseWatchProgressSync=$shouldUseSupabaseWatchProgressSync"
             )
             if (!isTraktConnected) {
                 watchProgressRepository.isSyncingFromRemote = true

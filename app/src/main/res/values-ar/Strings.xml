@@ -4,6 +4,63 @@
     <string name="type_series">مسلسل</string>
     <string name="type_unknown">غير معروف</string>
 
+    <!-- WebConfigServers -->
+    <string name="web_manage_addons_title">إدارة الإضافات</string>
+    <string name="web_manage_addons_subtitle">إدارة الإضافات، والقوائم، والمجموعات</string>
+    <string name="web_add_addon_url">أضف إضافة عبر الرابط</string>
+    <string name="web_placeholder_url">https://example.com/manifest.json</string>
+    <string name="web_btn_add">إضافة</string>
+    <string name="web_installed_addons">الإضافات المثبتة</string>
+    <string name="web_no_addons">لا توجد إضافات مثبتة</string>
+    <string name="web_home_catalogs">القوائم والمجموعات الرئيسية</string>
+    <string name="web_no_catalogs">لا توجد قوائم رئيسية متاحة</string>
+    <string name="web_btn_save">حفظ التغييرات</string>
+    <string name="web_connection_lost">فُقد الاتصال بالتلفاز</string>
+    <string name="web_btn_remove">إزالة</string>
+    <string name="web_badge_new">جديد</string>
+    <string name="web_badge_disabled">معطل</string>
+    <string name="web_btn_enable">تفعيل</string>
+    <string name="web_btn_disable">تعطيل</string>
+    <string name="web_error_addon_exists">هذه الإضافة موجودة مسبقاً في القائمة</string>
+    <string name="web_status_waiting_tv">في انتظار التلفاز</string>
+    <string name="web_status_msg_waiting_tv">يرجى تأكيد التغييرات على التلفاز لتطبيقها.</string>
+    <string name="web_status_changes_applied">تم تطبيق التغييرات</string>
+    <string name="web_status_msg_addon_updated">تم تحديث إعدادات الإضافات على التلفاز.</string>
+    <string name="web_status_msg_repo_updated">تم تحديث إعدادات مستودعك على التلفاز.</string>
+    <string name="web_status_changes_rejected">تم رفض التغييرات</string>
+    <string name="web_status_msg_changes_rejected">تم رفض التغييرات على التلفاز. تمت استعادة قائمتك إلى ما كانت عليه.</string>
+    <string name="web_status_error">حدث خطأ ما</string>
+    <string name="web_error_failed_save">فشل الحفظ. تحقق من اتصالك بالتلفاز.</string>
+    <string name="web_btn_dismiss">تجاهل</string>
+    <string name="web_status_timeout">انتهت المهلة</string>
+    <string name="web_status_msg_timeout">لا توجد استجابة من التلفاز. يرجى إعادة المحاولة .</string>
+    <string name="web_status_msg_connection_lost">لم يعد من الممكن الوصول إلى خادم التلفاز. ربما تم تطبيق التغييرات.</string>
+    <string name="web_manage_repos_title">إدارة المستودعات</string>
+    <string name="web_manage_repos_subtitle">إدارة مستودعاتك</string>
+    <string name="web_add_repo_url">إضافة مستودع عبر الرابط</string>
+    <string name="web_installed">مثبت</string>
+    <string name="web_no_repos">لا توجد مستودعات مثبتة</string>
+    <string name="web_error_repo_exists">هذا المستودع موجود بالفعل في القائمة</string>
+    <string name="web_manage_collections_title">إدارة المجموعات</string>
+    <string name="web_manage_collections_subtitle">إنشاء وإدارة مجموعاتك الخاصة</string>
+    <string name="web_status_msg_collections_updated">تم تحديث مجموعاتك على التلفاز.</string>
+    <string name="web_tab_addons">الإضافات</string>
+    <string name="web_tab_home_layout">تنسيق الواجهة الرئيسية</string>
+    <string name="web_tab_collections">المجموعات</string>
+    <string name="web_btn_enable_all">تفعيل الكل</string>
+    <string name="web_btn_disable_all">تعطيل الكل</string>
+    <string name="web_btn_show_all">إظهار الكل</string>
+    <string name="web_btn_hide_all">إخفاء الكل</string>
+    <string name="web_btn_new_collection">+ مجموعة جديدة</string>
+    <string name="web_btn_export">تصدير</string>
+    <string name="web_btn_import">استيراد</string>
+    <string name="web_no_collections">لا توجد مجموعات بعد</string>
+    <string name="web_badge_collection">مجموعة</string>
+    <string name="web_import_collections_title">استيراد المجموعات</string>
+    <string name="web_import_tab_paste">لصق</string>
+    <string name="web_import_tab_file">ملف</string>
+    <string name="web_import_tab_url">رابط</string>
+
     <!-- HomeScreen -->
     <string name="home_no_addons">لا توجد إضافات مثبتة. أضف إضافة واحدة للبدء.</string>
     <string name="home_no_catalog_addons">لا توجد إضافات قوائم عرض مثبتة. ثبت واحدة لعرض المحتوى.</string>
@@ -67,6 +124,7 @@
     <!-- CatalogRowSection -->
     <string name="catalog_from_addon">من %1$s</string>
     <string name="action_see_all">عرض الكل</string>
+    <string name="action_load_more">تحميل المزيد</string>    
 
     <!-- HeroSection -->
     <string name="hero_creator">المؤلف: %1$s</string>
@@ -193,9 +251,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">الحساب</string>
-    <string name="settings_account_subtitle">الحساب وحالة المزامنة.</string>
+    <string name="settings_account_subtitle">الحساب وحالة المزامنة</string>
     <string name="settings_profiles">المستخدمين</string>
-    <string name="settings_profiles_subtitle">إدارة ملفات المستخدمين.</string>
+    <string name="settings_profiles_subtitle">إدارة ملفات المستخدمين</string>
     <string name="settings_layout">واجهة العرض</string>
     <string name="settings_layout_subtitle">تنظيم الواجهة الرئيسية وشكل البطاقات.</string>
     <string name="settings_plugins">الملحقات</string>
@@ -224,8 +282,8 @@
     <string name="network_connection_offline">غير متصل</string>
     <string name="settings_debug">معالجة الأخطاء</string>
     <string name="settings_debug_subtitle">أدوات المطورين والميزات التجريبية.</string>
-    <string name="settings_plugins_section_subtitle">إدارة المستودعات، المصادر، والملحقات.</string>
-    <string name="settings_account_section_subtitle">الحساب وحالة المزامنة.</string>
+    <string name="settings_plugins_section_subtitle">إدارة المستودعات، المصادر، والملحقات</string>
+    <string name="settings_account_section_subtitle">الحساب وحالة المزامنة</string>
     <string name="account_stat_addons">إضافات</string>
     <string name="account_stat_plugins">ملحقات</string>
     <string name="account_stat_library">مكتبة</string>
@@ -290,6 +348,13 @@
     <string name="playback_player_internal">داخلي</string>
     <string name="playback_player_external">خارجي</string>
     <string name="playback_player_ask">السؤال في كل مرة</string>
+    <string name="playback_internal_player_engine">محرك التشغيل الداخلي</string>
+    <string name="playback_engine_exoplayer">ExoPlayer</string>
+    <string name="playback_engine_mvplayer">Libmpv (تجريبي)</string>
+    <string name="playback_auto_switch_internal_player_on_error">التبديل التلقائي لمحرك التشغيل عند خطأ بالتشغيل</string>
+    <string name="playback_auto_switch_internal_player_on_error_sub">إذا فشل بدء التشغيل، سيتم التبديل بين ExoPlayer و libmpv تلقائياً.</string>
+    <string name="playback_engine_exoplayer_desc">أفضل توافق مع ميزات Nuvio الحالية.</string>
+    <string name="playback_engine_mvplayer_desc">يستخدم libmpv مع عناصر تحكم Nuvio (OSD). تجريبي.</string>
     <string name="playback_section_audio">الصوت &amp; الاعلان</string>
     <string name="playback_section_audio_desc">إعدادات الاعلان وضبط الصوت.</string>
     <string name="playback_section_subtitles">الترجمة</string>
@@ -315,6 +380,20 @@
     <string name="audio_section">الصوت</string>
     <string name="audio_lang_default">تلقائي (داخل الملف)</string>
     <string name="audio_lang_device">لغة الجهاز</string>
+    <string name="audio_lang_original">اللغة الأصلية</string>
+    <string name="audio_lang_original_hint">يتطلب تفعيل إثراء بيانات TMDB</string>
+    <string name="audio_mpv_hwdec_title">فك التشفير العتادي (الجهاز) (MPV فقط)</string>
+    <string name="audio_mpv_hwdec_dialog_subtitle">اختر كيف ينبغي لـ libmpv استخدام أدوات فك التشفير بالجهاز.</string>
+    <string name="audio_mpv_hwdec_legacy_direct_copy">قديم (مباشر -&gt; نسخ)</string>
+    <string name="audio_mpv_hwdec_legacy_direct_copy_desc">السلوك الافتراضي السابق: تجربة الفك بالعتاد أولاً، ثم النسخ العكسي.</string>
+    <string name="audio_mpv_hwdec_auto_safe">تلقائي (آمن تلقائياً)</string>
+    <string name="audio_mpv_hwdec_auto_safe_desc">وضع تلقائي أكثر أماناً مع بديل عند فشل بعض أدوات فك التشفير العتادية.</string>
+    <string name="audio_mpv_hwdec_hardware_copy">عتادي (نسخ) (mediacodec-copy)</string>
+    <string name="audio_mpv_hwdec_hardware_copy_desc">يستخدم فك التشفير العتادي مع النسخ العكسي إلى ذاكرة البرامج.</string>
+    <string name="audio_mpv_hwdec_hardware_direct">عتادي (مباشر) (mediacodec)</string>
+    <string name="audio_mpv_hwdec_hardware_direct_desc">يستخدم فك التشفير العتادي المباشر. أسرع مسار على الأجهزة المتوافقة.</string>
+    <string name="audio_mpv_hwdec_disabled">معطل (لا)</string>
+    <string name="audio_mpv_hwdec_disabled_desc">يعطل فك التشفير العتادي ويستخدم فك التشفير البرمجي فقط.</string>
     <string name="audio_preferred_lang">لغة الصوت المفضلة</string>
     <string name="audio_skip_silence">تخطي الصمت</string>
     <string name="audio_skip_silence_sub">تخطي الأجزاء الصامتة من الصوت أثناء التشغيل</string>
@@ -565,6 +644,8 @@
     <string name="tmdb_artwork_subtitle">الشعارات وصور الخلفية من TMDB</string>
     <string name="tmdb_basic_info_title">معلومات أساسية</string>
     <string name="tmdb_basic_info_subtitle">الوصف، التصنيفات، والتقييم من TMDB</string>
+    <string name="tmdb_release_dates_title">تواريخ الإصدار</string>
+    <string name="tmdb_release_dates_subtitle">تواريخ الإصدار والعرض من TMDB</string>
     <string name="tmdb_details_title">التفاصيل</string>
     <string name="tmdb_details_subtitle">مدة العرض، تاريخ الإصدار، الدولة، واللغة من TMDB</string>
     <string name="tmdb_credits_title">طاقم العمل</string>
@@ -579,7 +660,7 @@
     <string name="tmdb_more_like_this_subtitle">خلفيات توصيات TMDB في صفحة التفاصيل</string>
     <string name="tmdb_collections_title">سلاسل الأفلام</string>
     <string name="tmdb_collections_subtitle">سلاسل أفلام TMDB بترتيب الإصدار</string>
-
+    
     <string name="tmdb_language_dialog_title">لغة TMDB</string>
 
     <!-- TraktScreen -->
@@ -591,6 +672,11 @@
     <string name="qr_login_approved">تمت الموافقة على الدخول. جاري إنهاء تسجيل الدخول…</string>
     <string name="qr_login_pending">بانتظار الموافقة على هاتفك…</string>
     <string name="qr_login_expired">انتهت صلاحية تسجيل الدخول عبر QR. قم بإنشاء رمز جديد.</string>
+    <string name="qr_login_scan_prompt">امسح رمز QR وسجل الدخول من هاتفك</string>
+    <string name="qr_login_start_failed">فشل بدء تسجيل الدخول عبر رمز QR</string>
+    <string name="qr_login_signing_in">جاري تسجيل الدخول…</string>
+    <string name="qr_login_success">تم تسجيل الدخول بنجاح</string>
+    <string name="qr_login_exchange_failed">تعذر إكمال تسجيل الدخول عبر رمز QR</string>
     <string name="trakt_code_expires">تنتهي صلاحية الرمز خلال %1$s</string>
     <string name="trakt_token_refreshes">يتجدد رمز وصول Trakt خلال %1$s</string>
     <string name="trakt_login_instruction">اضغط تسجيل دخول لبدء مصادقة جهاز Trakt. سيظهر رمز QR هنا.</string>
@@ -677,6 +763,7 @@
     <string name="profile_primary_label">أساسي</string>
     <string name="profile_shares_primary">يشارك الملف الرئيسي %1$s</string>
     <string name="profile_edit_label">تعديل</string>
+    <string name="profile_edit_header">تعديل الملف الشخصي</string>
     <string name="profile_add">إضافة ملف شخصي</string>
     <string name="profile_create_title">إنشاء ملف شخصي</string>
     <string name="profile_edit_title">تعديل الملف الشخصي %1$s</string>
@@ -750,9 +837,11 @@
     <string name="addon_remove">إزالة</string>
     <string name="addon_manage_from_phone_title">الإدارة من الهاتف</string>
     <string name="addon_manage_from_phone_subtitle">امسح رمز QR لإدارة الإضافات والقوائم الرئيسية من هاتفك</string>
+    <string name="addon_manage_collections_from_phone_subtitle">امسح رمز QR لإدارة المجموعات من هاتفك</string>
     <string name="addon_reorder_title">إعادة ترتيب القوائم الرئيسية</string>
     <string name="addon_reorder_subtitle">يتحكم في ترتيب صفوف القوائم في الواجهة (كلاسيكي + حديث + شبكي)</string>
     <string name="addon_qr_scan_instruction">امسح بهاتفك لإدارة الإضافات والقوائم</string>
+    <string name="addon_qr_collections_scan_instruction">امسح بهاتفك لإدارة المجموعات</string>
     <string name="addon_qr_close">إغلاق</string>
     <string name="addon_confirm_title">تأكيد تغييرات &amp; الإضافات والقوائم</string>
     <string name="addon_confirm_subtitle">تم إجراء التغييرات التالية من هاتفك:</string>
@@ -781,6 +870,16 @@
     <string name="stream_finding_source">جاري البحث عن مصدر</string>
     <string name="stream_type_torrent">تورنت</string>
     <string name="stream_type_youtube">يوتيوب</string>
+    <string name="p2p_consent_title">التورنت P2P</string>
+    <string name="p2p_consent_body">يستخدم هذا البث تقنية الند للند (P2P). بتفعيل P2P، أنت تقر وتوافق على الآتي:\n\n\u2022 سيكون عنوان IP الخاص بك مرئياً للأقران الآخرين في الشبكة\n\u2022 أنت وحدك المسؤول عن المحتوى الذي تصل إليه\n\u2022 أنت تؤكد أن لديك الحق القانوني لبث هذا المحتوى في ولايتك القضائية\n\u2022 لا تستضيف Nuvio أو توزع أو تتحكم في أي محتوى P2P\n\u2022 لا تتحمل Nuvio أي مسؤولية عن أي عواقب قانونية تنشأ عن استخدامك لبث P2P\n\nأنت تستخدم هذه الميزة على مسؤوليتك الخاصة بالكامل. يمكن تعطيل P2P في أي وقت من الإعدادات.</string>
+    <string name="p2p_consent_enable">تفعيل التورنت</string>
+    <string name="p2p_consent_cancel">إلغاء</string>
+    <string name="settings_p2p_title">تشغيل ملفات التورنت</string>
+    <string name="settings_p2p_subtitle">السماح بتشغيل ملفات التورنت</string>
+    <string name="settings_p2p_hide_stats_title">إخفاء إحصائيات التورنت</string>
+    <string name="settings_p2p_hide_stats_subtitle">إخفاء التخزين المؤقت، والمزودين، وعدد المتصلين، وسرعة التنزيل أثناء التحميل والتشغيل</string>
+    <string name="p2p_download_title">جاري تنزيل محرك التورنت</string>
+    <string name="p2p_download_subtitle">هذا التنزيل مطلوب لمرة واحدة فقط لتشغيل التورنت.</string>
     <string name="stream_type_external">خارجي</string>
     <string name="stream_player_picker_title">ما هو المشغل الذي تود استخدامه؟</string>
     <string name="stream_player_internal">داخلي</string>
@@ -788,6 +887,22 @@
 
     <!-- PlayerScreen -->
     <string name="player_no_external_player">لم يتم العثور على مشغل خارجي</string>
+    <string name="player_loading_preparing">يتم تجهيز المصدر…</string>
+    <string name="player_loading_detecting_format">يتم التعرف على صيغة المصدر…</string>
+    <string name="player_loading_subtitles">جاري جلب الترجمات…</string>
+    <string name="player_loading_subtitles_from">جاري جلب الترجمات من %1$d إضافات…</string>
+    <string name="player_loading_subtitles_progress">جاري جلب الترجمات… (%1$d / %2$d)</string>
+    <string name="player_loading_subtitles_addon">الترجمات: %1$s (%2$d / %3$d)</string>
+    <string name="player_loading_building">يتم بناء المشغل…</string>
+    <string name="player_loading_starting">يتم بدء المصدر…</string>
+    <string name="player_loading_buffering">تحميل التخزين المؤقت…</string>
+    <string name="player_loading_fallback_pcm_audio">فشل بدء مسار الصوت - جاري التبديل إلى صوت PCM…</string>
+    <string name="player_loading_fallback_hevc_decoder">فشل بدء فك التشفير - جاري التبديل إلى فك تشفير HEVC…</string>
+    <string name="player_engine_switching_title">جاري تبديل محرك المشغل</string>
+    <string name="player_engine_switching_message">فشل بدء التشغيل. جاري التبديل إلى %1$s…</string>
+    <string name="player_engine_switching_manual_message">جاري التبديل إلى %1$s...</string>
+    <string name="playback_show_loading_status">إظهار حالة التحميل</string>
+    <string name="playback_show_loading_status_sub">عرض خطوات التقدم أثناء تهيئة المشغل.</string>
 
     <!-- ParentalGuideOverlay -->
     <string name="parental_nudity">عري</string>
@@ -850,6 +965,9 @@
     <string name="player_aspect_fit_width">ملائمة العرض</string>
     <string name="player_aspect_fit_height">ملائمة الارتفاع</string>
     <string name="player_aspect_crop">مقصوص</string>
+    <string name="player_aspect_tunneling_unavailable">غير متاح أثناء التمرير المباشر (Tunneled playback)</string>
+    <string name="player_aspect_mode_slight_zoom">تكبير طفيف</string>
+    <string name="player_aspect_mode_cinema_zoom">تكبير سينمائي</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">الصوت</string>
@@ -877,6 +995,7 @@
     <string name="subtitle_tab_style">النمط</string>
     <string name="subtitle_tab_delay">التأخير</string>
     <string name="subtitle_none">بدون</string>
+    <string name="subtitle_built_in">مدمجة</string>
     <string name="subtitle_all">الكل</string>
     <string name="subtitle_section_core">الأساس</string>
     <string name="subtitle_section_advanced">متقدم</string>
@@ -928,6 +1047,8 @@
     <string name="search_start_title">ابدأ البحث</string>
     <string name="search_start_subtitle">أدخل حرفين على الأقل</string>
     <string name="search_start_subtitle_no_discover">ميزة "استكشاف" معطلة. أدخل حرفين على الأقل</string>
+    <string name="search_recent_title">سجل البحث</string>
+    <string name="search_recent_clear">مسح السجل</string>
     <string name="search_voice_no_speech">لم يتم رصد صوت. حاول مجدداً.</string>
     <string name="search_voice_mic_permission">إذن الميكروفون مطلوب للبحث الصوتي.</string>
     <string name="search_voice_failed">فشل التعرف على الصوت. حاول مجدداً.</string>
@@ -1075,6 +1196,10 @@
     <string name="plugin_confirm_total">إجمالي المستودعات: %1$d</string>
     <string name="plugin_confirm_reject">رفض</string>
     <string name="plugin_confirm_confirm">تأكيد</string>
+    <string name="plugin_risky_enable_title">تفعيل المصدر؟</string>
+    <string name="plugin_risky_enable_message">يُعرف %1$s بتسببه في أعطال في بعض المحتوى. هل تريد تفعيله على أي حال؟</string>
+    <string name="plugin_risky_enable_cancel">إلغاء</string>
+    <string name="plugin_risky_enable_confirm">تفعيل</string>
     <string name="plugin_updated_format">تاريخ التحديث: %1$s</string>
     <string name="plugin_test_btn">اختبار</string>
     <string name="plugin_test_results">نتائج الاختبار (%1$d مصدر بث)</string>
@@ -1182,4 +1307,206 @@
     <string name="update_ignore">تجاهل</string>
     <string name="watchlist_added">تمت الإضافة لقائمة المشاهدة</string>
     <string name="watchlist_removed">تمت الإزالة من قائمة المشاهدة</string>
+
+    <!-- Profile PIN errors -->
+    <string name="profile_pin_save_error">تعذر حفظ رمز PIN. حاول مجدداً.</string>
+    <string name="profile_pin_locked">الملف الشخصي مقفل. حاول مجدداً بعد %1$d ثوان.</string>
+    <string name="profile_pin_invalid">رمز PIN غير صالح. حاول مجدداً.</string>
+    <string name="profile_pin_verify_error">تعذر التحقق من رمز PIN. حاول مجدداً.</string>
+    <string name="profile_pin_incorrect">رمز PIN الحالي غير صحيح.</string>
+
+    <!-- Account Screen -->
+    <string name="account_signin_create_title">تسجيل الدخول / إنشاء حساب</string>
+    <string name="account_signin_create_desc">استخدم البريد الإلكتروني وكلمة المرور لإنشاء أو تسجيل الدخول إلى حسابك.</string>
+    <string name="account_generate_sync_desc">أنشئ رمزاً على هذا الجهاز لتتمكن الأجهزة الأخرى من الارتباط به.</string>
+    <string name="account_enter_sync_desc">اربط هذا الجهاز بجهاز آخر باستخدام رمز مزامنة.</string>
+    <string name="account_signed_in_as">تم تسجيل الدخول باسم</string>
+    <string name="account_generate_sync_signed_in_desc">أنشئ رمزاً لتتمكن الأجهزة الأخرى من المزامنة مع هذا الحساب.</string>
+    <string name="account_unknown_device">جهاز غير معروف</string>
+
+    <!-- Sync screens -->
+    <string name="sync_claim_linking">جاري الربط\u2026</string>
+    <string name="sync_generate_generating">جاري الإنشاء\u2026</string>
+    <string name="sync_generate_code_btn">إنشاء الرمز</string>
+
+    <!-- Search -->
+    <string name="search_no_results_title">لا توجد نتائج</string>
+    <string name="search_no_results_subtitle">جرب البحث بكلمات مفتاحية مختلفة</string>
+    <string name="discover_disabled_title">ميزة "استكشاف" معطلة</string>
+    <string name="discover_disabled_subtitle">قم بتفعيل ميزة "استكشاف" من الإعدادات</string>
+
+    <!-- Library -->
+    <string name="library_list_create_dialog_title">إنشاء قائمة</string>
+    <string name="library_list_edit_dialog_title">تعديل القائمة</string>
+    <string name="library_sync_btn">مزامنة</string>
+    <string name="library_syncing_btn">جاري المزامنة\u2026</string>
+
+    <!-- Error messages (shared) -->
+    <string name="error_network_required">اتصل بشبكة انترنت لاستخدام هذه الميزة</string>
+    <string name="error_server_ports_unavailable">تعذر بدء الخادم. جميع المنافذ قيد الاستخدام.</string>
+
+    <!-- Plugin errors -->
+    <string name="plugin_error_invalid_url">يرجى إدخال رابط صالح</string>
+    <string name="plugin_error_add_repo">فشل إضافة المستودع: %1$s</string>
+    <string name="plugin_error_refresh">فشل التحديث: %1$s</string>
+    <string name="plugin_error_test">فشل الاختبار: %1$s</string>
+    <string name="plugin_test_no_results">لم يتم العثور على نتائج</string>
+    <string name="plugin_test_found_streams">تم العثور على %1$d مصادر</string>
+
+    <!-- Trakt errors -->
+    <string name="trakt_error_code_expired">انتهت صلاحية رمز الجهاز. ابدأ من جديد.</string>
+    <string name="trakt_error_code_used">رمز الجهاز مستخدم بالفعل. ابدأ من جديد.</string>
+    <string name="trakt_error_denied">تم رفض التفويض من Trakt.</string>
+
+    <!-- Account errors -->
+    <string name="account_error_signin_required">قم بتسجيل الدخول بحساب أولاً.</string>
+
+    <!-- Search errors -->
+    <string name="search_error_no_catalogs">لم يتم العثور على قوائم قابلة للبحث في الإضافات المثبتة</string>
+
+    <!-- Home errors -->
+    <string name="home_error_no_addons">لا توجد إضافات مثبتة</string>
+    <string name="home_error_no_catalog_addons">لا توجد إضافات قوائم مثبتة</string>
+
+    <!-- Player errors -->
+    <string name="player_error_no_stream_url">لم يتم توفير رابط للمصدر</string>
+
+    <!-- Playback subtitle settings -->
+    <string name="sub_mode_overlay_canvas_sub">HDR support with canvas rendering. May block UI thread.</string>
+    <string name="subtitle_style_weight">الوزن</string>
+
+    <!-- Plugin screen -->
+    <string name="plugin_version">الإصدار %1$s</string>
+
+    <!-- Stream screen -->
+    <string name="stream_episode_label">S%1$d E%2$d</string>
+
+    <!-- Episode ratings -->
+    <string name="ratings_season_label">S%1$d</string>
+    <string name="ratings_episode_label">E%1$d</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_play">تشغيل</string>
+    <string name="cd_pause">إيقاف مؤقت</string>
+    <string name="cd_subtitles">الترجمات</string>
+    <string name="cd_audio_tracks">المسارات الصوتية</string>
+    <string name="cd_sources">المصادر</string>
+    <string name="cd_switch_player_engine">تبديل محرك المشغل</string>
+    <string name="cd_episodes">الحلقات</string>
+    <string name="cd_playback_speed">سرعة التشغيل</string>
+    <string name="cd_aspect_ratio">نسبة العرض</string>
+    <string name="cd_open_external_player">فتح في مشغل خارجي</string>
+    <string name="cd_stream_info">معلومات المصدر</string>
+    <string name="cd_more_actions">إجراءات إضافية</string>
+    <string name="cd_close_more_actions">إغلاق الإجراءات الإضافية</string>
+    <string name="cd_back">رجوع</string>
+    <string name="cd_next_episode_thumbnail">الصورة المصغرة للحلقة التالية</string>
+    <string name="cd_current">الحالي</string>
+    <string name="cd_loading_backdrop">جاري تحميل الخلفية</string>
+    <string name="cd_loading_logo">جاري تحميل الشعار</string>
+    <string name="cd_move_up">تحريك للأعلى</string>
+    <string name="cd_move_down">تحريك للأسفل</string>
+    <string name="cd_edit">تعديل</string>
+    <string name="cd_delete">حذف</string>
+    <string name="cd_qr_code">رمز QR</string>
+    <string name="cd_add">إضافة</string>
+    <string name="cd_refresh">تحديث</string>
+    <string name="cd_remove">إزالة</string>
+    <string name="cd_preview">معاينة</string>
+    <string name="cd_test">اختبار</string>
+    <string name="cd_unlink">إلغاء الارتباط</string>
+    <string name="cd_nuvio_logo">NuvioTV</string>
+    <string name="cd_trakt_logo">شعار Trakt</string>
+    <string name="cd_trakt_qr">رمز QR لتفعيل Trakt</string>
+    <string name="cd_imdb">IMDb</string>
+    <string name="cd_open_discover">فتح الاستكشاف</string>
+    <string name="cd_voice_search">بحث صوتي</string>
+    <string name="cd_donation_qr">رمز QR للتبرع</string>
+    <string name="cd_contributor_qr">رمز QR لدعم المساهمين</string>
+    <string name="cd_expand">توسيع %1$s</string>
+    <string name="cd_collapse">طي %1$s</string>
+    <string name="cd_qr_login">رمز QR لتسجيل الدخول</string>
+    <string name="cd_nuvio">Nuvio</string>
+
+    <!-- Debug -->
+    <string name="debug_signin_success">تم تسجيل الدخول بنجاح</string>
+    <string name="debug_generate_description">Debug-generated %1$s item #%2$d</string>
+    <string name="debug_generate_result_failed">فشل: %1$s</string>
+
+    <!-- Collection Management -->
+    <string name="collections_header">المجموعات</string>
+    <string name="collections_empty">لا توجد مجموعات بعد. أنشئ واحدة لتنظيم قوائمك.</string>
+    <string name="collections_new">مجموعة جديدة</string>
+    <string name="collections_import">استيراد</string>
+    <string name="collections_export_file">تصدير كملف</string>
+    <string name="collections_saved_downloads">تم الحفظ في التنزيلات</string>
+    <string name="collections_export_failed">فشل التصدير</string>
+    <string name="collections_import_header">استيراد المجموعات</string>
+    <string name="collections_import_description">استيراد المجموعات من ملف JSON. القوائم من الإضافات غير المثبتة لديك ستعرض تحذيراً.</string>
+    <string name="collections_cancel">إلغاء</string>
+    <string name="collections_mode_paste">لصق JSON</string>
+    <string name="collections_mode_file">من ملف</string>
+    <string name="collections_mode_url">من رابط</string>
+    <string name="collections_paste_clipboard">لصق من الحافظة</string>
+    <string name="collections_validate">تحقق</string>
+    <string name="collections_paste_hint">الصق ملف JSON للمجموعات هنا…</string>
+    <string name="collections_file_description">يقرأ nuvio-collections.json من مجلد التنزيلات.</string>
+    <string name="collections_load_file">تحميل الملف</string>
+    <string name="collections_file_loaded">تم تحميل الملف (%1$d حرفاً)</string>
+    <string name="collections_fetch_url">جلب من الرابط</string>
+    <string name="collections_fetching">جاري الجلب…</string>
+    <string name="collections_valid_json">ملف JSON صالح</string>
+    <string name="collections_valid_summary">%1$d مجموعة، %2$d مجلد</string>
+    <string name="collections_confirm_import">تأكيد الاستيراد</string>
+    <string name="collections_folder_count">%1$d مجلد</string>
+
+    <!-- Collection Editor -->
+    <string name="collections_editor_row_title">عنوان الصف</string>
+    <string name="collections_editor_save">حفظ</string>
+    <string name="collections_editor_backdrop">صورة الخلفية</string>
+    <string name="collections_editor_pin_above">تثبيت أعلى القوائم</string>
+    <string name="collections_editor_pin_above_desc">تثبيت هذه المجموعة فوق جميع قوائم الصفحة الرئيسية.يتم ترتيب المجموعات المثبّتة المتعددة حسب تاريخ إنشاء المجموعات.</string>
+    <string name="collections_editor_focus_glow">توهج المحدد</string>
+    <string name="collections_editor_focus_glow_desc">استخدام اعدادات توهج التلفاز الافتراضي لبطاقات هذه المجموعة المخصصة على الشاشة الرئيسية</string>
+    <string name="collections_editor_view_mode">نمط العرض</string>
+    <string name="collections_editor_show_all_tab">إظهار علامة تبويب "الكل"</string>
+    <string name="collections_editor_show_all_tab_desc">دمج جميع القوائم في علامة تبويب واحدة</string>
+    <string name="collections_editor_folders">المجلدات</string>
+    <string name="collections_editor_add_folder">إضافة مجلد</string>
+    <string name="collections_editor_edit_folder">تعديل المجلد</string>
+    <string name="collections_editor_folder_title">عنوان المجلد</string>
+    <string name="collections_editor_cover">الغلاف</string>
+    <string name="collections_editor_cover_none">بدون</string>
+    <string name="collections_editor_cover_emoji">رمز تعبيري (Emoji)</string>
+    <string name="collections_editor_cover_image_url">رابط الصورة</string>
+    <string name="collections_editor_focus_gif">صورة GIF عند التحديد</string>
+    <string name="collections_editor_play_gif">تشغيل GIF عند التحديد</string>
+    <string name="collections_editor_tile_shape">شكل البطاقة</string>
+    <string name="collections_editor_hide_title">إخفاء العنوان</string>
+    <string name="collections_editor_hide_title_desc">عرض صورة الغلاف فقط</string>
+    <string name="collections_editor_display">العرض</string>
+    <string name="collections_editor_catalogs">القوائم</string>
+    <string name="collections_editor_add_catalog">إضافة قائمة</string>
+    <string name="collections_editor_select_catalogs">تحديد القوائم</string>
+    <string name="collections_editor_done">تم</string>
+    <string name="collections_editor_choose_emoji">اختيار رمز تعبيري</string>
+    <string name="collections_editor_back">رجوع</string>
+    <string name="collections_editor_edit_collection">تعديل المجموعة</string>
+    <string name="collections_editor_catalog_count">%1$d قائمة</string>
+    <string name="collections_editor_view_mode_tabs">علامات تبويب</string>
+    <string name="collections_editor_view_mode_rows">صفوف</string>
+    <string name="collections_editor_view_mode_follow">اتباع تنسيق الرئيسية</string>
+    <string name="collections_editor_shape_poster">بطاقة (Poster)</string>
+    <string name="collections_editor_shape_wide">عريض</string>
+    <string name="collections_editor_shape_square">مربع</string>
+    <string name="collections_editor_addon_missing">الإضافة غير مثبتة: %1$s</string>
+    <string name="collections_editor_placeholder_name">اسم المجموعة</string>
+    <string name="collections_editor_placeholder_backdrop">رابط صورة الخلفية (اختياري)</string>
+    <string name="collections_editor_placeholder_folder">اسم المجلد</string>
+    <string name="collections_editor_placeholder_gif">رابط صورة GIF متحركة (تعمل فقط أثناء التحديد)</string>
+    <string name="collections_card_title">المجموعات</string>
+    <string name="collections_card_subtitle">تجميع القوائم في مجلدات على شاشتك الرئيسية</string>
+    <string name="collections_tab_all">الكل</string>
+    <string name="collections_tab_combined">مجتمعة</string>
+
 </resources>

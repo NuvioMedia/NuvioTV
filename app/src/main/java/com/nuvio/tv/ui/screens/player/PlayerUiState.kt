@@ -19,10 +19,6 @@ data class PlayerUiState(
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = true,
     val playbackEnded: Boolean = false,
-    val playbackCompletionReadyToExit: Boolean = false,
-    val exitPlayerReady: Boolean = false,
-    val currentPosition: Long = 0L,
-    val duration: Long = 0L,
     val title: String = "",
     val contentName: String? = null, // Series/show name (for series content)
     val releaseYear: String? = null, // Release year for movies
@@ -40,6 +36,7 @@ data class PlayerUiState(
     val loadingOverlayEnabled: Boolean = true,
     val showLoadingOverlay: Boolean = true,
     val loadingMessage: String? = null,
+    val loadingProgress: Float? = null,
     val pauseOverlayEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
     val showPauseOverlay: Boolean = false,
@@ -53,8 +50,15 @@ data class PlayerUiState(
     val showAudioOverlay: Boolean = false,
     val showSubtitleOverlay: Boolean = false,
     val showSubtitleStylePanel: Boolean = false,
+    val showSubtitleTimingDialog: Boolean = false,
     val showSubtitleDelayOverlay: Boolean = false,
     val subtitleDelayMs: Int = 0,
+    val subtitleAutoSyncCues: List<SubtitleSyncCue> = emptyList(),
+    val subtitleAutoSyncCapturedVideoMs: Long? = null,
+    val subtitleAutoSyncStatus: String? = null,
+    val subtitleAutoSyncError: String? = null,
+    val subtitleAutoSyncLoading: Boolean = false,
+    val subtitleAutoSyncLoadedTrackKey: String? = null,
     val showSpeedDialog: Boolean = false,
     val showMoreDialog: Boolean = false,
     val showTraktRatingDialog: Boolean = false,
@@ -80,6 +84,7 @@ data class PlayerUiState(
     val episodes: List<Video> = emptyList(),
     val currentSeason: Int? = null,
     val currentEpisode: Int? = null,
+    val currentVideoId: String? = null,
     val currentEpisodeTitle: String? = null,
     val blurUnwatchedEpisodes: Boolean = false,
     val episodeWatchProgressMap: Map<Pair<Int, Int>, WatchProgress> = emptyMap(),
@@ -143,7 +148,27 @@ data class PlayerUiState(
     val aspectRatioIndicatorText: String = "",
     // Stream info overlay
     val showStreamInfoOverlay: Boolean = false,
-    val streamInfoData: StreamInfoData? = null
+    val streamInfoData: StreamInfoData? = null,
+    // Torrent streaming state
+    val isTorrentStream: Boolean = false,
+    val torrentDownloadSpeed: Long = 0L,
+    val torrentUploadSpeed: Long = 0L,
+    val torrentPeers: Int = 0,
+    val torrentSeeds: Int = 0,
+    val torrentBufferProgress: Float = 0f,
+    val torrentTotalProgress: Float = 0f,
+    val showTorrentStats: Boolean = false,
+    // Torrent mid-playback rebuffering (shown on the buffering spinner, not loading overlay)
+    val torrentBufferingMessage: String? = null,
+    val torrentBufferingProgress: Float = 0f,
+    // When true, suppress all torrent stats text (buffer, seeds, peers, speed)
+    // from loading overlay, rebuffering indicator, and corner overlay.
+    val hideTorrentStats: Boolean = true
+)
+
+data class PlaybackTimelineState(
+    val currentPosition: Long = 0L,
+    val duration: Long = 0L
 )
 
 data class TrackInfo(
@@ -170,6 +195,11 @@ data class NextEpisodeInfo(
     val unairedMessage: String?
 )
 
+data class SubtitleSyncCue(
+    val startTimeMs: Long,
+    val text: String
+)
+
 sealed class PlayerEvent {
     data object OnPlayPause : PlayerEvent()
     data object OnSeekForward : PlayerEvent()
@@ -190,9 +220,14 @@ sealed class PlayerEvent {
     data object OnShowSubtitleOverlay : PlayerEvent()
     data object OnOpenSubtitleStylePanel : PlayerEvent()
     data object OnDismissSubtitleStylePanel : PlayerEvent()
+    data object OnShowSubtitleTimingDialog : PlayerEvent()
+    data object OnDismissSubtitleTimingDialog : PlayerEvent()
+    data object OnCaptureSubtitleAutoSyncTime : PlayerEvent()
+    data class OnApplySubtitleAutoSyncCue(val cueStartTimeMs: Long) : PlayerEvent()
+    data object OnReloadSubtitleAutoSyncCues : PlayerEvent()
     data object OnShowSubtitleDelayOverlay : PlayerEvent()
     data object OnHideSubtitleDelayOverlay : PlayerEvent()
-    data class OnAdjustSubtitleDelay(val deltaMs: Int) : PlayerEvent()
+    data class OnAdjustSubtitleDelay(val deltaMs: Int, val showOverlay: Boolean = true) : PlayerEvent()
     data object OnShowSpeedDialog : PlayerEvent()
     data object OnShowMoreDialog : PlayerEvent()
     data object OnDismissMoreDialog : PlayerEvent()
@@ -235,6 +270,7 @@ sealed class PlayerEvent {
     data object OnSwitchInternalPlayerEngine : PlayerEvent()
     data object OnShowStreamInfo : PlayerEvent()
     data object OnDismissStreamInfo : PlayerEvent()
+    data object OnToggleTorrentStats : PlayerEvent()
 }
 
 data class ParentalWarning(

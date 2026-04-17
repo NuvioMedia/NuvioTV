@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.exoplayer.ExoPlayer
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.core.torrent.TorrentService
+import com.nuvio.tv.core.torrent.TorrentSettings
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
 import com.nuvio.tv.data.repository.ParentalGuideRepository
@@ -17,6 +19,9 @@ import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.MetaRepository
 import com.nuvio.tv.domain.repository.StreamRepository
 import com.nuvio.tv.domain.repository.WatchProgressRepository
+import com.nuvio.tv.core.tmdb.TmdbService
+import com.nuvio.tv.core.tmdb.TmdbMetadataService
+import com.nuvio.tv.data.local.TmdbSettingsDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.StateFlow
@@ -41,6 +46,11 @@ class PlayerViewModel @Inject constructor(
     private val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     private val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
     private val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
+    private val torrentService: TorrentService,
+    private val torrentSettings: TorrentSettings,
+    private val tmdbService: TmdbService,
+    private val tmdbMetadataService: TmdbMetadataService,
+    private val tmdbSettingsDataStore: TmdbSettingsDataStore,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -62,12 +72,20 @@ class PlayerViewModel @Inject constructor(
         layoutPreferenceDataStore = layoutPreferenceDataStore,
         watchedItemsPreferences = watchedItemsPreferences,
         trackPreferenceDataStore = trackPreferenceDataStore,
+        torrentService = torrentService,
+        torrentSettings = torrentSettings,
+        tmdbService = tmdbService,
+        tmdbMetadataService = tmdbMetadataService,
+        tmdbSettingsDataStore = tmdbSettingsDataStore,
         savedStateHandle = savedStateHandle,
         scope = viewModelScope
     )
 
     val uiState: StateFlow<PlayerUiState>
         get() = controller.uiState
+
+    val playbackTimeline: StateFlow<PlaybackTimelineState>
+        get() = controller.playbackTimeline
 
     val exoPlayer: ExoPlayer?
         get() = controller.exoPlayer

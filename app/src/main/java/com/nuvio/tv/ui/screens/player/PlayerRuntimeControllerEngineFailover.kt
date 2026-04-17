@@ -34,11 +34,9 @@ internal fun PlayerRuntimeController.maybeAutoSwitchInternalPlayerOnStartupError
     val switchMessage = context.getString(R.string.player_engine_switching_message, targetEngineLabel)
 
     hidePlayerEngineSwitchInfoJob?.cancel()
+    showRecoveryOverlay()
     _uiState.update {
         it.copy(
-            error = null,
-            showPauseOverlay = false,
-            showLoadingOverlay = it.loadingOverlayEnabled,
             internalPlayerEngine = targetEngine,
             showPlayerEngineSwitchInfo = true,
             playerEngineSwitchInfoText = switchMessage
@@ -129,7 +127,8 @@ internal fun PlayerRuntimeController.switchInternalPlayerEngineManually() {
 
 private fun PlayerRuntimeController.isStartupPhaseForEngineFailover(): Boolean {
     val state = _uiState.value
-    return !hasRenderedFirstFrame && (state.showLoadingOverlay || state.isBuffering || state.currentPosition <= 0L)
+    val currentPosition = currentPlaybackPositionMs()?.coerceAtLeast(0L) ?: playbackTimeline.value.currentPosition
+    return !hasRenderedFirstFrame && (state.showLoadingOverlay || state.isBuffering || currentPosition <= 0L)
 }
 
 private fun PlayerRuntimeController.targetEngineLabel(targetEngine: InternalPlayerEngine): String {

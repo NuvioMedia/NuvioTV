@@ -17,7 +17,10 @@ data class Stream(
     val externalUrl: String?,
     val behaviorHints: StreamBehaviorHints?,
     val addonName: String,
-    val addonLogo: String?
+    val addonLogo: String?,
+    val sources: List<String>? = null,
+    val quality: String? = null,
+    val qualityValue: Int = -1
 ) {
     /**
      * Returns the primary stream source URL
@@ -25,9 +28,11 @@ data class Stream(
     fun getStreamUrl(): String? = url ?: externalUrl
 
     /**
-     * Returns true if this is a torrent stream
+     * Returns true if this is a torrent-only stream (no HTTP URL available).
+     * When both infoHash and url are present (e.g. debrid cached torrents),
+     * the HTTP url is preferred and this returns false.
      */
-    fun isTorrent(): Boolean = infoHash != null
+    fun isTorrent(): Boolean = infoHash != null && url.isNullOrBlank()
 
     /**
      * Returns true if this is a YouTube stream
@@ -48,6 +53,26 @@ data class Stream(
      * Returns a display description for the stream
      */
     fun getDisplayDescription(): String? = description ?: title
+
+    /**
+     * Returns a stable key for use in LazyColumn/LazyRow.
+     * Incorporates all content-identifying fields so the key doesn't change
+     * when the list recomposes or items shift position. The [occurrence] parameter
+     * disambiguates genuine duplicates (same addon+url+name+title).
+     */
+    fun stableKey(occurrence: Int = 0): String = buildString {
+        append(addonName)
+        append('\u0000')
+        append(url ?: infoHash ?: ytId ?: externalUrl ?: "")
+        append('\u0000')
+        append(name ?: "")
+        append('\u0000')
+        append(title ?: "")
+        if (occurrence > 0) {
+            append('\u0000')
+            append(occurrence)
+        }
+    }
 }
 
 @Immutable

@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -53,11 +54,17 @@ class AddonRepositoryImpl @Inject constructor(
 
     private fun canonicalizeUrl(url: String): String {
         val trimmed = url.trim().trimEnd('/')
-        return if (trimmed.endsWith(MANIFEST_SUFFIX, ignoreCase = true)) {
-            trimmed.dropLast(MANIFEST_SUFFIX.length).trimEnd('/')
+        // Separate path from query string so we can detect /manifest.json
+        // even when the URL carries query parameters (e.g. configurable addons).
+        val queryStart = trimmed.indexOf('?')
+        val path = if (queryStart >= 0) trimmed.substring(0, queryStart) else trimmed
+        val query = if (queryStart >= 0) trimmed.substring(queryStart) else ""
+        val cleanPath = if (path.endsWith(MANIFEST_SUFFIX, ignoreCase = true)) {
+            path.dropLast(MANIFEST_SUFFIX.length).trimEnd('/')
         } else {
-            trimmed
+            path.trimEnd('/')
         }
+        return cleanPath + query
     }
 
     private fun normalizeUrl(url: String): String = canonicalizeUrl(url).lowercase()
@@ -138,11 +145,15 @@ class AddonRepositoryImpl @Inject constructor(
     }
 
     override fun getInstalledAddons(): Flow<List<Addon>> =
-        preferences.installedAddonUrls.flatMapLatest { urls ->
+        combine(
+            preferences.installedAddonUrls,
+            preferences.userSetNames
+        ) { urls, names -> urls to names }
+        .flatMapLatest { (urls, userNames) ->
             flow {
                 val cached = urls.mapNotNull { manifestCache[canonicalizeUrl(it)] }
                 if (cached.isNotEmpty()) {
-                    emit(applyDisplayNames(cached))
+                    emit(applyDisplayNames(cached, userNames))
                 }
 
                 val hasCacheMiss = cached.size < urls.size
@@ -160,7 +171,7 @@ class AddonRepositoryImpl @Inject constructor(
                     }
 
                     if (fresh != cached) {
-                        emit(applyDisplayNames(fresh))
+                        emit(applyDisplayNames(fresh, userNames))
                     }
                 } else if (isCacheStale() && urls.isNotEmpty()) {
                     scheduleManifestRefresh(urls)
@@ -170,7 +181,10 @@ class AddonRepositoryImpl @Inject constructor(
 
     override suspend fun fetchAddon(baseUrl: String): NetworkResult<Addon> {
         val cleanBaseUrl = canonicalizeUrl(baseUrl)
-        val manifestUrl = "$cleanBaseUrl/manifest.json"
+        val queryStart = cleanBaseUrl.indexOf('?')
+        val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl
+        val baseQuery = if (queryStart >= 0) cleanBaseUrl.substring(queryStart) else ""
+        val manifestUrl = "$basePath/manifest.json$baseQuery"
 
         return when (val result = safeApiCall { api.getManifest(manifestUrl) }) {
             is NetworkResult.Success -> {
@@ -259,21 +273,33 @@ class AddonRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun applyDisplayNames(addons: List<Addon>): List<Addon> {
+    private fun applyDisplayNames(addons: List<Addon>, userSetNames: Map<String, String>): List<Addon> {
+        val withUserNames = addons.map { addon ->
+            val userSetName = userSetNames[canonicalizeUrl(addon.baseUrl)]
+            if (!userSetName.isNullOrBlank() && userSetName != addon.name) {
+                addon.copy(displayName = userSetName)
+            } else {
+                addon
+            }
+        }
+
+        val unrenamed = withUserNames.filter { it.displayName == it.name }
         val nameCounts = mutableMapOf<String, Int>()
-        for (addon in addons) {
+        for (addon in unrenamed) {
             nameCounts[addon.name] = (nameCounts[addon.name] ?: 0) + 1
         }
 
         val nameCounters = mutableMapOf<String, Int>()
-        return addons.map { addon ->
-            if ((nameCounts[addon.name] ?: 0) <= 1) {
-                addon.copy(displayName = addon.name)
+        return withUserNames.map { addon ->
+            if (addon.displayName != addon.name) {
+                addon
+            } else if ((nameCounts[addon.name] ?: 0) <= 1) {
+                addon
             } else {
                 val occurrence = (nameCounters[addon.name] ?: 0) + 1
                 nameCounters[addon.name] = occurrence
                 if (occurrence == 1) {
-                    addon.copy(displayName = addon.name)
+                    addon
                 } else {
                     addon.copy(displayName = "${addon.name} ($occurrence)")
                 }

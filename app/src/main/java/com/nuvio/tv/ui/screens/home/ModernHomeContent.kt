@@ -93,14 +93,15 @@ import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.decode.SvgDecoder
 import coil.imageLoader
+import coil.memory.MemoryCache
 import coil.request.ImageRequest
-import com.nuvio.tv.domain.model.CatalogRow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.ContinueWatchingCard
+import com.nuvio.tv.ui.components.HeroCarousel
+import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.ContinueWatchingOptionsDialog
 import com.nuvio.tv.ui.components.MonochromePosterPlaceholder
 import com.nuvio.tv.ui.components.TrailerPlayer
@@ -109,6 +110,7 @@ import com.nuvio.tv.LocalContentFocusRequester
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
 import android.view.KeyEvent as AndroidKeyEvent
+import kotlin.math.abs
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 
@@ -164,227 +166,44 @@ fun ModernHomeContent(
     val effectiveExpandEnabled =
         (uiState.focusedPosterBackdropExpandEnabled && expandControlAvailable) ||
             landscapeExpandedCardMode
-    val showCatalogTypeSuffixInModern = uiState.catalogTypeSuffixEnabled
-    val showFullReleaseDate = uiState.showFullReleaseDate
     val shouldActivateFocusedPosterFlow =
         effectiveExpandEnabled ||
             (effectiveAutoplayEnabled &&
                 trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA)
-    val visibleHomeRows = remember(uiState.homeRows, uiState.catalogRows) {
-        if (uiState.homeRows.isNotEmpty()) {
-            uiState.homeRows
-        } else {
-            uiState.catalogRows.filter { it.items.isNotEmpty() }.map { HomeRow.Catalog(it) }
+    val presentation = uiState.modernHomePresentation
+    val carouselRows = presentation.rows
+
+    // Show spinner when collections are ready but catalogs haven't arrived
+    // yet — prevents collections from grabbing focus before catalogs
+    // appear above them.  Only waits when addons are installed (meaning
+    // catalogs are expected to load).
+    val hasCollections = remember(uiState.homeRows) {
+        uiState.homeRows.any { it is HomeRow.CollectionRow }
+    }
+    val hasCatalogs = uiState.catalogRows.isNotEmpty()
+    if (hasCollections && !hasCatalogs && uiState.installedAddonsCount > 0 && uiState.isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            LoadingIndicator()
         }
+        return
     }
-    val visibleCatalogRows = remember(visibleHomeRows) {
-        visibleHomeRows.filterIsInstance<HomeRow.Catalog>().map { it.row }
-    }
-    val strContinueWatching = stringResource(R.string.continue_watching)
-    val strAirsDate = stringResource(R.string.cw_airs_date)
-    val strUpcoming = stringResource(R.string.cw_upcoming)
-    val strTypeMovie = stringResource(R.string.type_movie)
-    val strTypeSeries = stringResource(R.string.type_series)
-    val rowBuildCache = remember { ModernCarouselRowBuildCache() }
-    val context = LocalContext.current
-    val carouselRows = remember(
-        uiState.continueWatchingItems,
-        visibleHomeRows,
-        useLandscapePosters,
-        showCatalogTypeSuffixInModern,
-        strTypeMovie,
-        strTypeSeries
-    ) {
-        buildList {
-            val activeCatalogKeys = LinkedHashSet<String>(visibleCatalogRows.size)
-            if (uiState.continueWatchingItems.isNotEmpty()) {
-                val reuseContinueWatchingRow =
-                    rowBuildCache.continueWatchingRow != null &&
-                        rowBuildCache.continueWatchingItems == uiState.continueWatchingItems &&
-                        rowBuildCache.continueWatchingTitle == strContinueWatching &&
-                        rowBuildCache.continueWatchingAirsDateTemplate == strAirsDate &&
-                        rowBuildCache.continueWatchingUpcomingLabel == strUpcoming &&
-                        rowBuildCache.continueWatchingUseLandscapePosters == useLandscapePosters
-                val continueWatchingRow = if (reuseContinueWatchingRow) {
-                    checkNotNull(rowBuildCache.continueWatchingRow)
-                } else {
-                    HeroCarouselRow(
-                        key = "continue_watching",
-                        title = strContinueWatching,
-                        globalRowIndex = -1,
-                        items = uiState.continueWatchingItems.map { item ->
-                            buildContinueWatchingItem(
-                                item = item,
-                                useLandscapePosters = useLandscapePosters,
-                                airsDateTemplate = strAirsDate,
-                                upcomingLabel = strUpcoming,
-                                context = context
-                            )
-                        }
-                    )
-                }
-                rowBuildCache.continueWatchingItems = uiState.continueWatchingItems
-                rowBuildCache.continueWatchingTitle = strContinueWatching
-                rowBuildCache.continueWatchingAirsDateTemplate = strAirsDate
-                rowBuildCache.continueWatchingUpcomingLabel = strUpcoming
-                rowBuildCache.continueWatchingUseLandscapePosters = useLandscapePosters
-                rowBuildCache.continueWatchingRow = continueWatchingRow
-                add(continueWatchingRow)
-            } else {
-                rowBuildCache.continueWatchingItems = emptyList()
-                rowBuildCache.continueWatchingRow = null
+
+    if (carouselRows.isEmpty()) {
+        // No carousel rows but hero items may exist — show standalone hero
+        if (uiState.heroSectionEnabled && uiState.heroItems.isNotEmpty()) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                HeroCarousel(
+                    items = uiState.heroItems,
+                    onItemClick = { item ->
+                        onNavigateToDetail(item.id, item.apiType, "")
+                    },
+                    onItemFocus = onItemFocus
+                )
             }
-
-            visibleHomeRows.forEachIndexed { index, homeRow ->
-                when (homeRow) {
-                    is HomeRow.Catalog -> {
-                        val row = homeRow.row
-                        val rowKey = catalogRowKey(row)
-                        activeCatalogKeys += rowKey
-                        val cached = rowBuildCache.catalogRows[rowKey]
-                        val canReuseMappedRow =
-                            cached != null &&
-                                cached.source == row &&
-                                cached.useLandscapePosters == useLandscapePosters &&
-                                cached.showCatalogTypeSuffix == showCatalogTypeSuffixInModern
-
-                        val mappedRow = if (canReuseMappedRow) {
-                            val cachedMappedRow = checkNotNull(cached).mappedRow
-                            if (cachedMappedRow.globalRowIndex == index) {
-                                cachedMappedRow
-                            } else {
-                                cachedMappedRow.copy(globalRowIndex = index)
-                            }
-                        } else {
-                            val rowItemOccurrenceCounts = mutableMapOf<String, Int>()
-                            val rowItemCache = rowBuildCache.catalogItemCache.getOrPut(rowKey) { mutableMapOf() }
-                            HeroCarouselRow(
-                                key = rowKey,
-                                title = catalogRowTitle(
-                                    row = row,
-                                    showCatalogTypeSuffix = showCatalogTypeSuffixInModern,
-                                    strTypeMovie = strTypeMovie,
-                                    strTypeSeries = strTypeSeries
-                                ),
-                                globalRowIndex = index,
-                                catalogId = row.catalogId,
-                                addonId = row.addonId,
-                                apiType = row.apiType,
-                                supportsSkip = row.supportsSkip,
-                                hasMore = row.hasMore,
-                                isLoading = row.isLoading,
-                                items = row.items.map { item ->
-                                    val occurrence = rowItemOccurrenceCounts.getOrDefault(item.id, 0)
-                                    rowItemOccurrenceCounts[item.id] = occurrence + 1
-                                    val cacheKey = "${item.id}_$occurrence"
-                                    val cachedItem = rowItemCache[cacheKey]
-                                    if (cachedItem != null &&
-                                        cachedItem.source == item &&
-                                        cachedItem.useLandscapePosters == useLandscapePosters &&
-                                        cachedItem.showFullReleaseDate == showFullReleaseDate
-                                    ) {
-                                        cachedItem.carouselItem
-                                    } else {
-                                        val built = buildCatalogItem(
-                                            item = item,
-                                            row = row,
-                                            useLandscapePosters = useLandscapePosters,
-                                            occurrence = occurrence,
-                                            strTypeMovie = strTypeMovie,
-                                            strTypeSeries = strTypeSeries,
-                                            showFullReleaseDate = showFullReleaseDate
-                                        )
-                                        rowItemCache[cacheKey] = CachedCarouselItem(
-                                            source = item,
-                                            useLandscapePosters = useLandscapePosters,
-                                            showFullReleaseDate = showFullReleaseDate,
-                                            carouselItem = built
-                                        )
-                                        built
-                                    }
-                                }
-                            )
-                        }
-
-                        rowBuildCache.catalogRows[rowKey] = ModernCatalogRowBuildCacheEntry(
-                            source = row,
-                            useLandscapePosters = useLandscapePosters,
-                            showCatalogTypeSuffix = showCatalogTypeSuffixInModern,
-                            mappedRow = mappedRow
-                        )
-                        add(mappedRow)
-                    }
-
-                    is HomeRow.CollectionRow -> {
-                        val collection = homeRow.collection
-                        val occurrenceCounts = mutableMapOf<String, Int>()
-                        add(
-                            HeroCarouselRow(
-                                key = "collection_${collection.id}",
-                                title = collection.title,
-                                globalRowIndex = index,
-                                items = collection.folders.map { folder ->
-                                    val occurrence = occurrenceCounts.getOrDefault(folder.id, 0)
-                                    occurrenceCounts[folder.id] = occurrence + 1
-                                    buildCollectionFolderItem(
-                                        collection = collection,
-                                        folder = folder,
-                                        useLandscapePosters = useLandscapePosters,
-                                        occurrence = occurrence
-                                    )
-                                }
-                            )
-                        )
-                    }
-                }
-            }
-            rowBuildCache.catalogRows.keys.retainAll(activeCatalogKeys)
-            rowBuildCache.catalogItemCache.keys.retainAll(activeCatalogKeys)
         }
+        return
     }
-
-    if (carouselRows.isEmpty()) return
-    val carouselLookups = remember(carouselRows) {
-        val rowIndexByKey = LinkedHashMap<String, Int>(carouselRows.size)
-        val rowByKey = LinkedHashMap<String, HeroCarouselRow>(carouselRows.size)
-        val rowKeyByGlobalRowIdx = LinkedHashMap<Int, String>(carouselRows.size)
-        val firstHeroPreviewByRowMap = LinkedHashMap<String, HeroPreview>(carouselRows.size)
-        val fallbackBackdropByRowMap = LinkedHashMap<String, String>(carouselRows.size)
-        val activeRowKeys = LinkedHashSet<String>(carouselRows.size)
-        val activeItemKeysByRow = LinkedHashMap<String, Set<String>>(carouselRows.size)
-        val activeCatalogItemIds = LinkedHashSet<String>()
-
-        carouselRows.forEachIndexed { index, row ->
-            rowIndexByKey[row.key] = index
-            rowByKey[row.key] = row
-            rowKeyByGlobalRowIdx[row.globalRowIndex] = row.key
-            activeRowKeys += row.key
-
-            row.items.firstOrNull()?.heroPreview?.let { firstHeroPreviewByRowMap[row.key] = it }
-            row.items.firstNotNullOfOrNull { it.heroPreview.backdrop }?.let { fallbackBackdropByRowMap[row.key] = it }
-
-            val itemKeys = LinkedHashSet<String>(row.items.size)
-            row.items.forEach { item ->
-                itemKeys += item.key
-                val payload = item.payload
-                if (payload is ModernPayload.Catalog) {
-                    activeCatalogItemIds += payload.itemId
-                }
-            }
-            activeItemKeysByRow[row.key] = itemKeys
-        }
-
-        CarouselRowLookups(
-            rowIndexByKey = rowIndexByKey,
-            rowByKey = rowByKey,
-            rowKeyByGlobalRowIndex = rowKeyByGlobalRowIdx,
-            firstHeroPreviewByRow = firstHeroPreviewByRowMap,
-            fallbackBackdropByRow = fallbackBackdropByRowMap,
-            activeRowKeys = activeRowKeys,
-            activeItemKeysByRow = activeItemKeysByRow,
-            activeCatalogItemIds = activeCatalogItemIds
-        )
-    }
+    val carouselLookups = presentation.lookups
     val rowIndexByKey = carouselLookups.rowIndexByKey
     val rowByKey = carouselLookups.rowByKey
     val rowKeyByGlobalRowIndex = carouselLookups.rowKeyByGlobalRowIndex
@@ -426,6 +245,9 @@ fun ModernHomeContent(
     }
     var activeRowKey by remember { mutableStateOf<String?>(null) }
     var activeItemIndex by remember { mutableIntStateOf(0) }
+    // Tracks the row key that was auto-selected on initial load.
+    // Used to detect if the user has manually navigated away.
+    var initialAutoSelectedKey by remember { mutableStateOf<String?>(null) }
     var pendingRowFocusKey by remember { mutableStateOf<String?>(null) }
     var pendingRowFocusIndex by remember { mutableStateOf<Int?>(null) }
     var pendingRowFocusNonce by remember { mutableIntStateOf(0) }
@@ -486,6 +308,8 @@ fun ModernHomeContent(
         if (selection.focusKey == lastRequestedTrailerFocusKey) {
             return@LaunchedEffect
         }
+        delay(150)
+        if (focusedCatalogSelection?.focusKey != selection.focusKey) return@LaunchedEffect
         onRequestTrailerPreview(
             selection.payload.itemId,
             selection.payload.trailerTitle,
@@ -544,7 +368,26 @@ fun ModernHomeContent(
 
         val hadActiveRow = focusHolder.activeRowKey != null
         val existingActive = focusHolder.activeRowKey?.let(rowByKey::get)
-        val resolvedActive = existingActive ?: carouselRows.first()
+        val firstRow = carouselRows.first()
+        // When new rows appear before the auto-selected row (e.g., catalogs
+        // load after collections), move focus to the new first row — but only
+        // if the user hasn't manually navigated away from the initial position.
+        // Detect if the auto-selected row is stale: new rows appeared
+        // above it (e.g., catalogs loaded after collections) and the user
+        // hasn't manually navigated away from the initial selection.
+        val userStillOnAutoSelected = initialAutoSelectedKey != null &&
+            focusHolder.activeRowKey == initialAutoSelectedKey
+        val autoSelectedStale = hadActiveRow && existingActive != null &&
+            existingActive.key != firstRow.key &&
+            rowIndexByKey.getOrDefault(existingActive.key, 0) > 0 &&
+            !restoredFromSavedState &&
+            !focusState.hasSavedFocus &&
+            userStillOnAutoSelected
+        val resolvedActive = when {
+            autoSelectedStale -> firstRow
+            existingActive != null -> existingActive
+            else -> firstRow
+        }
         val resolvedIndex = focusedItemByRow[resolvedActive.key]
             ?.coerceIn(0, (resolvedActive.items.size - 1).coerceAtLeast(0))
             ?: 0
@@ -555,7 +398,8 @@ fun ModernHomeContent(
         focusedItemByRow[resolvedActive.key] = resolvedIndex
         heroItem = resolvedActive.items.getOrNull(resolvedIndex)?.heroPreview
             ?: resolvedActive.items.firstOrNull()?.heroPreview
-        if (!focusState.hasSavedFocus && (!hadActiveRow || existingActive == null)) {
+        if (!focusState.hasSavedFocus && (!hadActiveRow || existingActive == null || autoSelectedStale)) {
+            initialAutoSelectedKey = resolvedActive.key
             pendingRowFocusKey = resolvedActive.key
             pendingRowFocusIndex = resolvedIndex
             pendingRowFocusNonce++
@@ -892,7 +736,48 @@ fun ModernHomeContent(
                 .fillMaxWidth(MODERN_HERO_TEXT_WIDTH_FRACTION)
         )
 
-        CompositionLocalProvider(LocalBringIntoViewSpec provides verticalRowBringIntoViewSpec) {
+        val verticalPrefetchContext = LocalContext.current
+        val verticalPrefetchImageLoader = verticalPrefetchContext.imageLoader
+        val verticalPrefetchDensity = LocalDensity.current
+        LaunchedEffect(verticalPrefetchImageLoader, verticalPrefetchDensity) {
+            val prefetchAheadRows = 2
+            val prefetchItemsPerRow = 8
+            snapshotFlow {
+                verticalRowListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            }.distinctUntilChanged().collect { lastVisibleRowIndex ->
+                val rows = carouselRows
+                for (rowOffset in 1..prefetchAheadRows) {
+                    val row = rows.getOrNull(lastVisibleRowIndex + rowOffset) ?: continue
+                    for (i in 0 until minOf(prefetchItemsPerRow, row.items.size)) {
+                        val item = row.items[i]
+                        val url = item.imageUrl ?: continue
+                        val metrics = item.catalogCardMetrics(
+                            useLandscapePosters = useLandscapePosters,
+                            portraitCardWidth = portraitCatalogCardWidth,
+                            portraitCardHeight = portraitCatalogCardHeight,
+                            landscapeCardWidth = landscapeCatalogCardWidth,
+                            landscapeCardHeight = landscapeCatalogCardHeight
+                        )
+                        val wPx = with(verticalPrefetchDensity) { metrics.width.roundToPx() }
+                        val hPx = with(verticalPrefetchDensity) { metrics.height.roundToPx() }
+                        val cacheKey = "${url}_${wPx}x${hPx}"
+                        if (verticalPrefetchImageLoader.memoryCache?.get(MemoryCache.Key(cacheKey)) != null) continue
+                        verticalPrefetchImageLoader.enqueue(
+                            ImageRequest.Builder(verticalPrefetchContext)
+                                .data(url)
+                                .memoryCacheKey(cacheKey)
+                                .size(width = wPx, height = hPx)
+                                .build()
+                        )
+                    }
+                }
+            }
+        }
+
+        CompositionLocalProvider(
+            LocalBringIntoViewSpec provides verticalRowBringIntoViewSpec,
+            LocalVerticalRowsScrolling provides (uiState.memoryOnlyVerticalScroll && isVerticalRowsScrolling)
+        ) {
             LazyColumn(
                 state = verticalRowListState,
                 modifier = Modifier
@@ -974,6 +859,11 @@ fun ModernHomeContent(
                                         if (lastFocusedContinueWatchingIndexRef.get() != index) {
                                             lastFocusedContinueWatchingIndexRef.set(index)
                                         }
+                                    }
+                                    // Clear catalog selection when focusing any
+                                    // non-catalog row (CW, collection) so stale
+                                    // trailer requests don't fire in the hero.
+                                    if (isContinueWatchingRow || row.items.getOrNull(index)?.payload is ModernPayload.CollectionFolder) {
                                         if (focusedCatalogSelection != null) {
                                             focusedCatalogSelection = null
                                         }
@@ -1034,7 +924,19 @@ fun ModernHomeContent(
                                 onNavigateToFolderDetail = onNavigateToFolderDetail,
                                 onLoadMoreCatalog = onLoadMoreCatalog,
                                 onBackdropInteraction = remember(Unit) { { expansionInteractionNonce++ } },
-                                onExpandedCatalogFocusKeyChange = remember(Unit) { { expandedCatalogFocusKey = it } }
+                                onExpandedCatalogFocusKeyChange = remember(Unit) { { expandedCatalogFocusKey = it } },
+                                onGetVerticalFocusRequester = { _, isDown ->
+                                    val currentRowIndex = rowIndexByKey[row.key] ?: return@ModernRowSection FocusRequester.Default
+                                    val targetRowIndex = if (isDown) currentRowIndex + 1 else currentRowIndex - 1
+                                    val targetRow = latestCarouselRows.getOrNull(targetRowIndex) ?: return@ModernRowSection FocusRequester.Default
+
+                                    val targetSavedIndex = (focusedItemByRow[targetRow.key] ?: 0)
+                                        .coerceIn(0, (targetRow.items.size - 1).coerceAtLeast(0))
+                                    val targetItemKey = targetRow.items.getOrNull(targetSavedIndex)?.key
+                                    if (targetItemKey != null) {
+                                        uiCaches.requesterFor(targetRow.key, targetItemKey)
+                                    } else FocusRequester.Default
+                                }
                             )
                 }
             }

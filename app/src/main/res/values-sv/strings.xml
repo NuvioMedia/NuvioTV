@@ -131,6 +131,15 @@
     <string name="series_status_rumored">Ryktas</string>
     <string name="series_status_in_production">I produktion</string>
     <string name="series_status_post_production">Efterproduktion</string>
+    <string name="movie_status_ended">Avslutad</string>
+    <string name="movie_status_continuing">Pågående</string>
+    <string name="movie_status_current">Aktuell</string>
+    <string name="movie_status_cancelled">Inställd</string>
+    <string name="movie_status_released">Släppt</string>
+    <string name="movie_status_planned">Planerad</string>
+    <string name="movie_status_rumored">Ryktas</string>
+    <string name="movie_status_in_production">I produktion</string>
+    <string name="movie_status_post_production">Efterproduktion</string>
     <string name="detail_lists_fallback">Listor</string>
     <string name="detail_lists_subtitle">Välj vilka listor som ska inkludera denna titel.</string>
     <string name="action_save">Spara</string>
@@ -167,9 +176,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Konto</string>
-    <string name="settings_account_subtitle">Konto och synkroniseringsstatus.</string>
+    <string name="settings_account_subtitle">Konto och synkroniseringsstatus</string>
     <string name="settings_profiles">Profiler</string>
-    <string name="settings_profiles_subtitle">Hantera användarprofiler.</string>
+    <string name="settings_profiles_subtitle">Hantera användarprofiler</string>
     <string name="settings_layout">Layout</string>
     <string name="settings_layout_subtitle">Hemstruktur och affischstilar.</string>
     <string name="settings_plugins">Plugins</string>
@@ -181,8 +190,8 @@
     <string name="settings_about_subtitle">Version och policyer.</string>
     <string name="settings_debug">Debug</string>
     <string name="settings_debug_subtitle">Utvecklarverktyg och funktionsflaggor.</string>
-    <string name="settings_plugins_section_subtitle">Hantera arkiv, leverantörer, och plugin-status.</string>
-    <string name="settings_account_section_subtitle">Konto och synkroniseringsstatus.</string>
+    <string name="settings_plugins_section_subtitle">Hantera arkiv, leverantörer, och plugin-status</string>
+    <string name="settings_account_section_subtitle">Konto och synkroniseringsstatus</string>
     <string name="account_stat_addons">tillägg</string>
     <string name="account_stat_plugins">plugins</string>
     <string name="account_stat_library">bibliotek</string>

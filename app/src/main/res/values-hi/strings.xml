@@ -128,6 +128,15 @@
     <string name="series_status_rumored">अफवाह</string>
     <string name="series_status_in_production">प्रोडक्शन में</string>
     <string name="series_status_post_production">पोस्ट प्रोडक्शन</string>
+    <string name="movie_status_ended">समाप्त</string>
+    <string name="movie_status_continuing">जारी</string>
+    <string name="movie_status_current">वर्तमान</string>
+    <string name="movie_status_cancelled">रद्द</string>
+    <string name="movie_status_released">रिलीज़</string>
+    <string name="movie_status_planned">योजना में</string>
+    <string name="movie_status_rumored">अफवाह</string>
+    <string name="movie_status_in_production">प्रोडक्शन में</string>
+    <string name="movie_status_post_production">पोस्ट प्रोडक्शन</string>
     <string name="detail_lists_fallback">लिस्ट्स</string>
     <string name="detail_lists_subtitle">चुनें कि इस टाइटल को किन लिस्ट्स में शामिल करना है।</string>
     <string name="action_save">सेव</string>

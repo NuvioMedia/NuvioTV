@@ -33,6 +33,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -89,6 +90,12 @@ internal fun DiscoverSection(
     val filteredCatalogs = uiState.discoverCatalogs.filter { it.type == uiState.selectedDiscoverType }
     val genres = selectedCatalog?.genres.orEmpty()
     var expandedPicker by remember { mutableStateOf<String?>(null) }
+    val filterFocusRequester = remember { FocusRequester() }
+    var gridHasFocus by remember { mutableStateOf(false) }
+
+    androidx.activity.compose.BackHandler(enabled = gridHasFocus) {
+        try { filterFocusRequester.requestFocus() } catch (_: Exception) {}
+    }
 
     val strTypeMovie = stringResource(R.string.type_movie)
     val strTypeSeries = stringResource(R.string.type_series)
@@ -122,7 +129,7 @@ internal fun DiscoverSection(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             DiscoverDropdownPicker(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).focusRequester(filterFocusRequester),
                 title = stringResource(R.string.discover_filter_type),
                 value = selectedTypeLabel,
                 selectedValue = uiState.selectedDiscoverType,
@@ -206,6 +213,7 @@ internal fun DiscoverSection(
             }
 
             uiState.discoverResults.isNotEmpty() -> {
+                Box(modifier = Modifier.onFocusChanged { gridHasFocus = it.hasFocus }) {
                 DiscoverGrid(
                     items = uiState.discoverResults,
                     posterCardStyle = posterCardStyle,
@@ -227,9 +235,10 @@ internal fun DiscoverSection(
                             item.apiType,
                             selectedCatalog?.addonBaseUrl ?: ""
                         )
-                    }
+                    },
+                    filterKey = "${uiState.selectedDiscoverType}|${uiState.selectedDiscoverCatalogKey}|${uiState.selectedDiscoverGenre}"
                 )
-
+                }
             }
 
             uiState.discoverInitialized && selectedCatalog == null -> {
@@ -413,11 +422,17 @@ internal fun DiscoverGrid(
     canLoadMore: Boolean,
     isLoadingMore: Boolean,
     onLoadMore: () -> Unit,
-    onItemClick: (Int, MetaPreview) -> Unit
+    onItemClick: (Int, MetaPreview) -> Unit,
+    filterKey: String = ""
 ) {
     val restoreFocusRequester = remember { FocusRequester() }
     val gridState = rememberLazyGridState()
     var pendingFocusOnNewItemIndex by remember { mutableStateOf<Int?>(null) }
+
+    // Scroll to top when the filter combination changes.
+    LaunchedEffect(filterKey) {
+        gridState.scrollToItem(0, 0)
+    }
     var localRestoreFocusedItemIndex by remember { mutableStateOf(-1) }
     var localShouldRestoreFocusedItem by remember { mutableStateOf(false) }
     val effectiveFocusedItemIndex = if (localShouldRestoreFocusedItem) {
@@ -477,6 +492,16 @@ internal fun DiscoverGrid(
         pendingFocusOnNewItemIndex = null
         localRestoreFocusedItemIndex = targetIndex
         localShouldRestoreFocusedItem = true
+    }
+
+    // Infinite scroll: auto-load more when the user scrolls near the end.
+    val shouldAutoLoad = canLoadMore && !isLoadingMore && items.isNotEmpty()
+    LaunchedEffect(gridState.firstVisibleItemIndex, items.size, shouldAutoLoad) {
+        if (!shouldAutoLoad) return@LaunchedEffect
+        val lastVisible = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: return@LaunchedEffect
+        if (lastVisible >= items.size - 6) {
+            onLoadMore()
+        }
     }
 
     LazyVerticalGrid(
@@ -577,6 +602,7 @@ private fun DiscoverActionCard(
         onClick = onClick,
         modifier = modifier
             .width(posterCardStyle.width)
+            .focusProperties { canFocus = actionType != DiscoverGridAction.Loading }
             .onPreviewKeyEvent { event ->
                 actionType != DiscoverGridAction.None &&
                     event.nativeKeyEvent.action == AndroidKeyEvent.ACTION_DOWN &&
@@ -612,12 +638,16 @@ private fun DiscoverActionCard(
                 .aspectRatio(posterCardStyle.aspectRatio),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = NuvioColors.TextPrimary,
-                textAlign = TextAlign.Center
-            )
+            if (actionType == DiscoverGridAction.Loading) {
+                LoadingIndicator()
+            } else {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = NuvioColors.TextPrimary,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }

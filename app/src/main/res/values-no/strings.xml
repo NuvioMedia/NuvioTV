@@ -155,6 +155,15 @@
     <string name="series_status_rumored">Ryktet</string>
     <string name="series_status_in_production">I produksjon</string>
     <string name="series_status_post_production">Postproduksjon</string>
+    <string name="movie_status_ended">Avsluttet</string>
+    <string name="movie_status_continuing">Pågår</string>
+    <string name="movie_status_current">Gjeldende</string>
+    <string name="movie_status_cancelled">Kansellert</string>
+    <string name="movie_status_released">Utgitt</string>
+    <string name="movie_status_planned">Planlagt</string>
+    <string name="movie_status_rumored">Ryktet</string>
+    <string name="movie_status_in_production">I produksjon</string>
+    <string name="movie_status_post_production">Postproduksjon</string>
     <string name="detail_lists_fallback">Lister</string>
     <string name="detail_lists_subtitle">Velg hvilke lister som skal inneholde denne tittelen.</string>
     <string name="action_save">Lagre</string>
@@ -191,9 +200,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Konto</string>
-    <string name="settings_account_subtitle">Kontostatus og synkroniseringsstatus.</string>
+    <string name="settings_account_subtitle">Kontostatus og synkroniseringsstatus</string>
     <string name="settings_profiles">Profiler</string>
-    <string name="settings_profiles_subtitle">Administrer brukerprofiler.</string>
+    <string name="settings_profiles_subtitle">Administrer brukerprofiler</string>
     <string name="settings_layout">Oppsett</string>
     <string name="settings_layout_subtitle">Hjemmestruktur og plakatstiler.</string>
     <string name="settings_plugins">Programtillegg</string>
@@ -222,8 +231,8 @@
     <string name="network_connection_offline">Frakoblet</string>
     <string name="settings_debug">Feilsøking</string>
     <string name="settings_debug_subtitle">Utviklerverktøy og funksjonsflagg.</string>
-    <string name="settings_plugins_section_subtitle">Administrer lagrer, leverandører og programtilleggstilstander.</string>
-    <string name="settings_account_section_subtitle">Kontostatus og synkroniseringsstatus.</string>
+    <string name="settings_plugins_section_subtitle">Administrer lagrer, leverandører og programtilleggstilstander</string>
+    <string name="settings_account_section_subtitle">Kontostatus og synkroniseringsstatus</string>
     <string name="account_stat_addons">tillegg</string>
     <string name="account_stat_plugins">programtillegg</string>
     <string name="account_stat_library">bibliotek</string>

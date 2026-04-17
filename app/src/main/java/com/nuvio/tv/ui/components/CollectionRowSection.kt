@@ -1,3 +1,8 @@
+@file:OptIn(
+    androidx.compose.ui.ExperimentalComposeUiApi::class,
+    androidx.tv.material3.ExperimentalTvMaterial3Api::class
+)
+
 package com.nuvio.tv.ui.components
 
 import androidx.compose.foundation.BorderStroke
@@ -17,11 +22,14 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,7 +70,41 @@ fun CollectionRowSection(
     val currentOnItemFocused by rememberUpdatedState(onItemFocused)
     val currentOnFolderFocused by rememberUpdatedState(onFolderFocused)
     val rowFocusRequester = remember { FocusRequester() }
+    val itemFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    var lastRequestedFocusKey by remember { mutableStateOf<String?>(null) }
     var lastFocusedItemIndex by remember { mutableIntStateOf(-1) }
+
+    fun folderFocusKey(index: Int, folder: CollectionFolder): String {
+        return "collection_${collection.id}_folder_${folder.id}"
+    }
+
+    // Clean up stale focus requesters when folders change
+    LaunchedEffect(collection.folders) {
+        val validKeys = collection.folders.mapIndexedTo(mutableSetOf()) { index, folder ->
+            folderFocusKey(index, folder)
+        }
+        itemFocusRequesters.keys.retainAll(validKeys)
+        if (lastRequestedFocusKey !in validKeys) {
+            lastRequestedFocusKey = null
+        }
+    }
+
+    // Request focus on the target item when focusedItemIndex is set
+    LaunchedEffect(focusedItemIndex, collection.folders) {
+        if (focusedItemIndex >= 0 && focusedItemIndex < collection.folders.size) {
+            val targetFolder = collection.folders[focusedItemIndex]
+            val targetKey = folderFocusKey(focusedItemIndex, targetFolder)
+            if (lastRequestedFocusKey == targetKey) return@LaunchedEffect
+            val requester = itemFocusRequesters.getOrPut(targetKey) { FocusRequester() }
+            repeat(2) { withFrameNanos { } }
+            val focused = runCatching { requester.requestFocus() }.isSuccess
+            if (focused) {
+                lastRequestedFocusKey = targetKey
+            }
+        } else {
+            lastRequestedFocusKey = null
+        }
+    }
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -86,17 +128,33 @@ fun CollectionRowSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(rowFocusRequester)
-                .focusRestorer(),
+                .then(
+                    if (focusedItemIndex < 0 && collection.folders.isNotEmpty()) {
+                        Modifier.focusRestorer {
+                            val fallbackIndex = listState.firstVisibleItemIndex
+                                .coerceIn(0, (collection.folders.size - 1).coerceAtLeast(0))
+                            val fallbackFolder = collection.folders.getOrNull(fallbackIndex)
+                            if (fallbackFolder != null) {
+                                itemFocusRequesters.getOrPut(folderFocusKey(fallbackIndex, fallbackFolder)) { FocusRequester() }
+                            } else {
+                                rowFocusRequester
+                            }
+                        }
+                    } else {
+                        Modifier.focusRestorer()
+                    }
+                ),
             contentPadding = PaddingValues(start = 48.dp, end = 200.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             itemsIndexed(
                 items = collection.folders,
-                key = { _, folder -> "collection_${collection.id}_folder_${folder.id}" },
+                key = { index, folder -> folderFocusKey(index, folder) },
                 contentType = { _, _ -> "collection_folder" }
             ) { index, folder ->
                 FolderCard(
                     folder = folder,
+                    collection = collection,
                     onClick = { onFolderClick(collection.id, folder.id) },
                     onFocused = {
                         if (lastFocusedItemIndex != index) {
@@ -104,7 +162,10 @@ fun CollectionRowSection(
                             currentOnItemFocused(index)
                         }
                         currentOnFolderFocused(collection, folder)
-                    }
+                    },
+                    focusRequester = itemFocusRequesters.getOrPut(
+                        folderFocusKey(index, folder)
+                    ) { FocusRequester() }
                 )
             }
         }
@@ -115,12 +176,15 @@ fun CollectionRowSection(
 @Composable
 private fun FolderCard(
     folder: CollectionFolder,
+    collection: Collection,
     onClick: () -> Unit,
     onFocused: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    focusRequester: FocusRequester = remember { FocusRequester() }
 ) {
     val tileWidth: Dp
     val tileHeight: Dp
+    var isFocused by remember { mutableStateOf(false) }
     when (folder.tileShape) {
         PosterShape.POSTER -> { tileWidth = 126.dp; tileHeight = 189.dp }
         PosterShape.LANDSCAPE -> { tileWidth = 224.dp; tileHeight = 126.dp }
@@ -128,13 +192,22 @@ private fun FolderCard(
     }
 
     val shape = RoundedCornerShape(12.dp)
+    val cardGlow = rememberArtworkBackedCardGlow(
+        imageUrl = folder.coverImageUrl,
+        fallbackSeed = "${collection.title}:${folder.title}:${folder.coverEmoji.orEmpty()}",
+        enabled = collection.focusGlowEnabled
+    )
 
     Card(
         onClick = onClick,
         modifier = modifier
             .width(tileWidth)
             .height(tileHeight)
-            .onFocusChanged { if (it.isFocused) onFocused() },
+            .focusRequester(focusRequester)
+            .onFocusChanged {
+                isFocused = it.isFocused
+                if (it.isFocused) onFocused()
+            },
         shape = CardDefaults.shape(shape = shape),
         colors = CardDefaults.colors(
             containerColor = NuvioColors.BackgroundCard,
@@ -146,12 +219,14 @@ private fun FolderCard(
                 shape = shape
             )
         ),
-        scale = CardDefaults.scale(focusedScale = 1.05f)
+        scale = CardDefaults.scale(focusedScale = 1.05f),
+        glow = cardGlow
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            if (!folder.coverImageUrl.isNullOrBlank()) {
+            val activeImageUrl = collectionFolderCardImageUrl(folder, isFocused)
+            if (!activeImageUrl.isNullOrBlank()) {
                 AsyncImage(
-                    model = folder.coverImageUrl,
+                    model = activeImageUrl,
                     contentDescription = folder.title,
                     modifier = Modifier
                         .fillMaxSize()

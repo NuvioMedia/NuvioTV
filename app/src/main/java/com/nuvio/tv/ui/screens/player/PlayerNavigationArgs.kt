@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import androidx.lifecycle.SavedStateHandle
+import org.json.JSONArray
 import java.net.URLDecoder
 
 internal data class PlayerNavigationArgs(
@@ -26,8 +27,26 @@ internal data class PlayerNavigationArgs(
     val startFromBeginning: Boolean,
     val addonName: String?,
     val addonLogo: String?,
-    val streamDescription: String?
+    val streamDescription: String?,
+    val infoHash: String?,
+    val fileIdx: Int?,
+    val sourcesJson: String?,
+    val contentLanguage: String?
 ) {
+    val torrentTrackers: List<String>
+        get() {
+            val json = sourcesJson ?: return emptyList()
+            return try {
+                val arr = JSONArray(json)
+                (0 until arr.length())
+                    .mapNotNull { arr.optString(it) }
+                    .filter { it.startsWith("tracker:") }
+                    .map { it.removePrefix("tracker:") }
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+
     companion object {
         fun from(savedStateHandle: SavedStateHandle): PlayerNavigationArgs {
             fun decodedOrNull(key: String): String? {
@@ -59,7 +78,11 @@ internal data class PlayerNavigationArgs(
                 startFromBeginning = savedStateHandle.get<String>("startFromBeginning")?.toBooleanStrictOrNull() == true,
                 addonName = decodedOrNull("addonName"),
                 addonLogo = decodedOrNull("addonLogo"),
-                streamDescription = decodedOrNull("streamDescription")
+                streamDescription = decodedOrNull("streamDescription"),
+                infoHash = savedStateHandle.get<String>("infoHash")?.takeIf { it.isNotEmpty() },
+                fileIdx = savedStateHandle.get<String>("fileIdx")?.toIntOrNull(),
+                sourcesJson = decodedOrNull("sources"),
+                contentLanguage = decodedOrNull("contentLanguage")
             )
         }
     }

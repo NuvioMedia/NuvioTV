@@ -3,6 +3,8 @@ package com.nuvio.tv.core.tmdb
 import android.util.Log
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.data.remote.api.TmdbApi
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -27,6 +29,9 @@ class TmdbService @Inject constructor(
     
     // Cache: TMDB ID -> IMDB ID  
     private val tmdbToImdbCache = ConcurrentHashMap<Int, String>()
+
+    private val imdbToTmdbInFlight = ConcurrentHashMap<String, CompletableDeferred<Int?>>()
+    private val tmdbToImdbInFlight = ConcurrentHashMap<String, CompletableDeferred<String?>>()
     
     // Mutex for thread-safe cache operations
     private val cacheMutex = Mutex()
@@ -51,6 +56,13 @@ class TmdbService @Inject constructor(
             return@withContext cached
         }
         
+        val normalizedType = normalizeMediaType(mediaType)
+        val requestKey = "$imdbId:$normalizedType"
+        val requestDeferred = CompletableDeferred<Int?>()
+        imdbToTmdbInFlight.putIfAbsent(requestKey, requestDeferred)?.let { existing ->
+            return@withContext existing.await()
+        }
+
         try {
             Log.d(TAG, "Looking up TMDB ID for IMDB: $imdbId (type: $mediaType)")
             
@@ -62,13 +74,17 @@ class TmdbService @Inject constructor(
             
             if (!response.isSuccessful) {
                 Log.e(TAG, "TMDB API error: ${response.code()} - ${response.message()}")
+                requestDeferred.complete(null)
                 return@withContext null
             }
             
-            val body = response.body() ?: return@withContext null
+            val body = response.body()
+            if (body == null) {
+                requestDeferred.complete(null)
+                return@withContext null
+            }
             
             // Determine which results to use based on media type
-            val normalizedType = normalizeMediaType(mediaType)
             val result = when (normalizedType) {
                 "movie" -> body.movieResults?.firstOrNull()
                 "tv", "series" -> body.tvResults?.firstOrNull()
@@ -83,16 +99,25 @@ class TmdbService @Inject constructor(
                     imdbToTmdbCache[imdbId] = found.id
                     tmdbToImdbCache[found.id] = imdbId
                 }
-                
+
+                requestDeferred.complete(found.id)
+                 
                 return@withContext found.id
             }
             
             Log.w(TAG, "No TMDB result found for IMDB: $imdbId")
+            requestDeferred.complete(null)
             null
             
+        } catch (e: CancellationException) {
+            requestDeferred.cancel(e)
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Error looking up TMDB ID for $imdbId: ${e.message}", e)
+            requestDeferred.complete(null)
             null
+        } finally {
+            imdbToTmdbInFlight.remove(requestKey, requestDeferred)
         }
     }
     
@@ -110,10 +135,16 @@ class TmdbService @Inject constructor(
             return@withContext cached
         }
         
+        val normalizedType = normalizeMediaType(mediaType)
+        val requestKey = "$tmdbId:$normalizedType"
+        val requestDeferred = CompletableDeferred<String?>()
+        tmdbToImdbInFlight.putIfAbsent(requestKey, requestDeferred)?.let { existing ->
+            return@withContext existing.await()
+        }
+
         try {
             Log.d(TAG, "Looking up IMDB ID for TMDB: $tmdbId (type: $mediaType)")
             
-            val normalizedType = normalizeMediaType(mediaType)
             val response = when (normalizedType) {
                 "movie" -> tmdbApi.getMovieExternalIds(tmdbId, TMDB_API_KEY)
                 "tv", "series" -> tmdbApi.getTvExternalIds(tmdbId, TMDB_API_KEY)
@@ -122,10 +153,15 @@ class TmdbService @Inject constructor(
             
             if (!response.isSuccessful) {
                 Log.e(TAG, "TMDB API error: ${response.code()} - ${response.message()}")
+                requestDeferred.complete(null)
                 return@withContext null
             }
             
-            val body = response.body() ?: return@withContext null
+            val body = response.body()
+            if (body == null) {
+                requestDeferred.complete(null)
+                return@withContext null
+            }
             
             body.imdbId?.let { imdbId ->
                 Log.d(TAG, "Found IMDB ID: $imdbId for TMDB: $tmdbId")
@@ -135,16 +171,25 @@ class TmdbService @Inject constructor(
                     tmdbToImdbCache[tmdbId] = imdbId
                     imdbToTmdbCache[imdbId] = tmdbId
                 }
-                
+
+                requestDeferred.complete(imdbId)
+                 
                 return@withContext imdbId
             }
             
             Log.w(TAG, "No IMDB ID found for TMDB: $tmdbId")
+            requestDeferred.complete(null)
             null
             
+        } catch (e: CancellationException) {
+            requestDeferred.cancel(e)
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Error looking up IMDB ID for $tmdbId: ${e.message}", e)
+            requestDeferred.complete(null)
             null
+        } finally {
+            tmdbToImdbInFlight.remove(requestKey, requestDeferred)
         }
     }
     
@@ -203,6 +248,8 @@ class TmdbService @Inject constructor(
     fun clearCache() {
         imdbToTmdbCache.clear()
         tmdbToImdbCache.clear()
+        imdbToTmdbInFlight.clear()
+        tmdbToImdbInFlight.clear()
         Log.d(TAG, "Cache cleared")
     }
     
@@ -213,6 +260,9 @@ class TmdbService @Inject constructor(
         imdbToTmdbCache[imdbId] = tmdbId
         tmdbToImdbCache[tmdbId] = imdbId
     }
+
+    /** Returns the cached TMDB ID for an IMDB ID without making any network call. */
+    fun cachedTmdbId(imdbId: String): Int? = imdbToTmdbCache[imdbId]
 
     fun apiKey(): String = TMDB_API_KEY
 }

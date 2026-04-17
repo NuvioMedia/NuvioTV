@@ -131,6 +131,15 @@
     <string name="series_status_rumored">שמועה</string>
     <string name="series_status_in_production">בהפקה</string>
     <string name="series_status_post_production">בעריכה</string>
+    <string name="movie_status_ended">הסתיים</string>
+    <string name="movie_status_continuing">מתמשך</string>
+    <string name="movie_status_current">שוטף</string>
+    <string name="movie_status_cancelled">בוטל</string>
+    <string name="movie_status_released">שוחרר</string>
+    <string name="movie_status_planned">מתוכנן</string>
+    <string name="movie_status_rumored">שמועה</string>
+    <string name="movie_status_in_production">בהפקה</string>
+    <string name="movie_status_post_production">בעריכה</string>
     <string name="detail_lists_fallback">רשימות</string>
     <string name="detail_lists_subtitle">בחר אילו רשימות יכללו כותרת זו.</string>
     <string name="action_save">שמור</string>
@@ -167,9 +176,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">חשבון</string>
-    <string name="settings_account_subtitle">מצב חשבון וסנכרון.</string>
+    <string name="settings_account_subtitle">מצב חשבון וסנכרון</string>
     <string name="settings_profiles">פרופילים</string>
-    <string name="settings_profiles_subtitle">ניהול פרופילי משתמש.</string>
+    <string name="settings_profiles_subtitle">ניהול פרופילי משתמש</string>
     <string name="settings_layout">פריסה</string>
     <string name="settings_layout_subtitle">מבנה בית וסגנונות פוסטרים.</string>
     <string name="settings_plugins">תוספים</string>
@@ -198,8 +207,8 @@
     <string name="network_connection_offline">אין חיבור</string>
     <string name="settings_debug">ניפוי שגיאות</string>
     <string name="settings_debug_subtitle">כלי מפתחים ודגלי פיצ׳רים.</string>
-    <string name="settings_plugins_section_subtitle">ניהול מאגרים, ספקים ומצבי תוספים.</string>
-    <string name="settings_account_section_subtitle">מצב חשבון וסנכרון.</string>
+    <string name="settings_plugins_section_subtitle">ניהול מאגרים, ספקים ומצבי תוספים</string>
+    <string name="settings_account_section_subtitle">מצב חשבון וסנכרון</string>
     <string name="account_stat_addons">תוספים</string>
     <string name="account_stat_plugins">פלאגינים</string>
     <string name="account_stat_library">ספרייה</string>

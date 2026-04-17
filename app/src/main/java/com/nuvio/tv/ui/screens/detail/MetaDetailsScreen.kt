@@ -211,8 +211,9 @@ fun MetaDetailsScreen(
         episodeName: String?,
         genres: String?,
         year: String?,
-        runtime: Int?
-    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _ -> },
+        runtime: Int?,
+        contentLanguage: String?
+    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> },
     onPlayManuallyClick: (
         videoId: String,
         contentType: String,
@@ -226,8 +227,9 @@ fun MetaDetailsScreen(
         episodeName: String?,
         genres: String?,
         year: String?,
-        runtime: Int?
-    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _ -> }
+        runtime: Int?,
+        contentLanguage: String?
+    ) -> Unit = { _, _, _, _, _, _, _, _, _, _, _, _, _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val effectiveAutoplayEnabled by viewModel.effectiveAutoplayEnabled.collectAsStateWithLifecycle(
@@ -427,6 +429,7 @@ fun MetaDetailsScreen(
                     episodeRatingsError = uiState.episodeRatingsError,
                     mdbListRatings = uiState.mdbListRatings,
                     showMdbListImdb = uiState.showMdbListImdb,
+                    tmdbRating = uiState.tmdbRating,
                     comments = uiState.comments,
                     commentsCurrentPage = uiState.commentsCurrentPage,
                     commentsPageCount = uiState.commentsPageCount,
@@ -450,7 +453,8 @@ fun MetaDetailsScreen(
                             video.title,
                             null,
                             null,
-                            video.runtime
+                            video.runtime,
+                            meta.language
                         )
                     },
                     onEpisodeManualPlayClick = { video ->
@@ -467,7 +471,8 @@ fun MetaDetailsScreen(
                             video.title,
                             null,
                             null,
-                            video.runtime
+                            video.runtime,
+                            meta.language
                         )
                     },
                     onPlayClick = { videoId ->
@@ -484,7 +489,8 @@ fun MetaDetailsScreen(
                             null,
                             genresString,
                             yearString,
-                            null
+                            null,
+                            meta.language
                         )
                     },
                     onPlayManuallyClick = { videoId ->
@@ -501,7 +507,8 @@ fun MetaDetailsScreen(
                             null,
                             genresString,
                             yearString,
-                            null
+                            null,
+                            meta.language
                         )
                     },
                     showManualPlayOption = effectiveAutoplayEnabled,
@@ -691,6 +698,7 @@ private fun MetaDetailsContent(
     episodeRatingsError: String?,
     mdbListRatings: MDBListRatings?,
     showMdbListImdb: Boolean,
+    tmdbRating: Float?,
     comments: List<TraktCommentReview>,
     commentsCurrentPage: Int,
     commentsPageCount: Int,
@@ -1364,6 +1372,7 @@ private fun MetaDetailsContent(
                         onToggleMovieWatched = onToggleMovieWatched,
                         mdbListRatings = mdbListRatings,
                         hideMetaInfoImdb = showMdbListImdb,
+                        tmdbRating = if (mdbListRatings?.isEmpty() != false) tmdbRating else null,
                         showFullReleaseDate = showFullReleaseDate,
                         trailerAvailable = trailerButtonEnabled && !trailerUrl.isNullOrBlank(),
                         onTrailerClick = onTrailerButtonClick,
@@ -1400,6 +1409,7 @@ private fun MetaDetailsContent(
                             onSeasonSelected = onSeasonSelected,
                             onSeasonLongPress = { seasonOptionsDialogSeason = it },
                             selectedTabFocusRequester = selectedSeasonFocusRequester,
+                            upFocusRequester = heroPlayFocusRequester,
                             downFocusRequester = seasonDownFocusRequester
                         )
                     }
@@ -1465,7 +1475,7 @@ private fun MetaDetailsContent(
                         PeopleSectionTabs(
                             activeTab = activePeopleTab,
                             tabs = peopleTabItems,
-                            upFocusRequester = seasonDownFocusRequester,
+                            upFocusRequester = seasonDownFocusRequester ?: heroPlayFocusRequester,
                             ratingsDownFocusRequester = ratingsContentFocusRequester,
                             onTabFocused = { tab ->
                                 activePeopleTab = tab
@@ -1495,7 +1505,7 @@ private fun MetaDetailsContent(
                                     cast = normalCastMembers,
                                     title = if (hasPeopleTabs) "" else strTabCast,
                                     leadingCast = directorWriterMembers,
-                                    upFocusRequester = if (hasPeopleTabs) castTabFocusRequester else seasonDownFocusRequester,
+                                    upFocusRequester = if (hasPeopleTabs) castTabFocusRequester else seasonDownFocusRequester ?: heroPlayFocusRequester,
                                     sectionFocusRequester = castSectionFocusRequester,
                                     restorePersonId = if (pendingRestoreType == RestoreTarget.CAST_MEMBER) pendingRestoreCastPersonId else null,
                                     restoreFocusToken = if (pendingRestoreType == RestoreTarget.CAST_MEMBER) restoreFocusToken else 0,
@@ -1519,7 +1529,7 @@ private fun MetaDetailsContent(
                                 MoreLikeThisSection(
                                     items = moreLikeThis,
                                     sourceLabel = moreLikeThisSourceLabel,
-                                    upFocusRequester = if (hasPeopleTabs) moreLikeTabFocusRequester else seasonDownFocusRequester,
+                                    upFocusRequester = if (hasPeopleTabs) moreLikeTabFocusRequester else seasonDownFocusRequester ?: heroPlayFocusRequester,
                                     sectionFocusRequester = moreLikeSectionFocusRequester,
                                     restoreItemId = if (pendingRestoreType == RestoreTarget.MORE_LIKE_THIS) pendingRestoreMoreLikeItemId else null,
                                     restoreFocusToken = if (pendingRestoreType == RestoreTarget.MORE_LIKE_THIS) restoreFocusToken else 0,
@@ -1536,7 +1546,7 @@ private fun MetaDetailsContent(
                             PeopleSectionTab.COLLECTION -> {
                                 CollectionSection(
                                     items = collection,
-                                    upFocusRequester = if (hasPeopleTabs) collectionTabFocusRequester else seasonDownFocusRequester,
+                                    upFocusRequester = if (hasPeopleTabs) collectionTabFocusRequester else seasonDownFocusRequester ?: heroPlayFocusRequester,
                                     sectionFocusRequester = collectionSectionFocusRequester,
                                     restoreItemId = if (pendingRestoreType == RestoreTarget.COLLECTION) pendingRestoreCollectionItemId else null,
                                     restoreFocusToken = if (pendingRestoreType == RestoreTarget.COLLECTION) restoreFocusToken else 0,
@@ -1560,7 +1570,7 @@ private fun MetaDetailsContent(
                                     upFocusRequester = if (hasPeopleTabs) {
                                         ratingsTabFocusRequester
                                     } else {
-                                        seasonDownFocusRequester ?: selectedSeasonFocusRequester
+                                        seasonDownFocusRequester ?: heroPlayFocusRequester
                                     },
                                     firstItemFocusRequester = ratingsContentFocusRequester,
                                     modifier = Modifier.heightIn(min = if (!hasItemsBelow) castSectionHeight else 0.dp)

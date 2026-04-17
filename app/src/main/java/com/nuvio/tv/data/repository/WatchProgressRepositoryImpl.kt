@@ -18,6 +18,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -94,7 +96,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
         syncJob?.cancel()
         syncJob = syncScope.launch {
             delay(2000)
-            watchProgressSyncService.pushToRemote()
+            withContext(NonCancellable) {
+                watchProgressSyncService.pushToRemote()
+            }
         }
     }
 
@@ -105,7 +109,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
         watchedItemsSyncJob?.cancel()
         watchedItemsSyncJob = syncScope.launch {
             delay(2000)
-            watchedItemsSyncService.pushToRemote()
+            withContext(NonCancellable) {
+                watchedItemsSyncService.pushToRemote()
+            }
         }
     }
 
@@ -345,15 +351,42 @@ class WatchProgressRepositoryImpl @Inject constructor(
                         mergeNextUpSeeds(canonicalSeeds, optimisticSeeds)
                     }
                 } else {
-                    watchProgressPreferences.allProgress.map { items ->
-                        items.filter { progress ->
-                            progress.isCompleted() &&
-                                progress.contentType.equals("series", ignoreCase = true) &&
-                                progress.season != null &&
-                                progress.episode != null &&
-                                progress.season != 0 &&
-                                !isMalformedNextUpSeedContentId(progress.contentId)
-                        }
+                    // Use watched items (fully synced with pagination) to build seeds
+                    // instead of watch progress (limited to 1000 entries).
+                    watchedItemsPreferences.allItems.map { items ->
+                        items
+                            .filter { item ->
+                                (item.contentType.equals("series", ignoreCase = true) ||
+                                    item.contentType.equals("tv", ignoreCase = true)) &&
+                                    item.season != null &&
+                                    item.episode != null &&
+                                    item.season != 0 &&
+                                    !isMalformedNextUpSeedContentId(item.contentId)
+                            }
+                            .groupBy { it.contentId }
+                            .mapNotNull { (_, episodes) ->
+                                val latest = episodes.maxWithOrNull(
+                                    compareBy<WatchedItem> { it.watchedAt }
+                                        .thenBy { it.season ?: 0 }
+                                        .thenBy { it.episode ?: 0 }
+                                ) ?: return@mapNotNull null
+                                WatchProgress(
+                                    contentId = latest.contentId,
+                                    contentType = latest.contentType,
+                                    name = latest.title,
+                                    poster = null,
+                                    backdrop = null,
+                                    logo = null,
+                                    videoId = latest.contentId,
+                                    season = latest.season,
+                                    episode = latest.episode,
+                                    episodeTitle = null,
+                                    position = 1L,
+                                    duration = 1L,
+                                    lastWatched = latest.watchedAt,
+                                    progressPercent = 100f
+                                )
+                            }
                     }
                 }
             }
@@ -535,7 +568,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
         watchProgressPreferences.saveProgress(progress)
 
         if (syncRemote && authManager.isAuthenticated) {
-            syncScope.launch {
+            syncScope.launch(NonCancellable) {
                 watchProgressSyncService.pushSingleToRemote(progressKey(progress), progress)
                     .onFailure { error ->
                         Log.w(TAG, "Failed single progress push; falling back to full sync next cycle", error)
@@ -561,8 +594,10 @@ class WatchProgressRepositoryImpl @Inject constructor(
     override suspend fun saveProgressBatch(progressList: List<WatchProgress>, syncRemote: Boolean) {
         if (progressList.isEmpty()) return
         if (shouldUseTraktProgress()) {
-            progressList.forEach { progress ->
-                traktProgressService.applyOptimisticProgress(progress)
+            if (syncRemote) {
+                progressList.forEach { progress ->
+                    traktProgressService.applyOptimisticProgress(progress)
+                }
             }
             watchProgressPreferences.saveProgressBatch(progressList)
             return

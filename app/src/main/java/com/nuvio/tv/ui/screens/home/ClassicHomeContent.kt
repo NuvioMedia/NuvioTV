@@ -18,6 +18,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.delay
+
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -28,10 +30,16 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.Collection
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
 import com.nuvio.tv.ui.components.CatalogRowSection
 import com.nuvio.tv.ui.components.CollectionRowSection
 import com.nuvio.tv.ui.components.ContinueWatchingSection
 import com.nuvio.tv.ui.components.HeroCarousel
+import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.LocalVerticalScrollSuppressImages
 import com.nuvio.tv.ui.components.PosterCardStyle
 
 /** Minimum interval between processed key repeat events to prevent HWUI overload. */
@@ -39,7 +47,8 @@ private const val KEY_REPEAT_THROTTLE_MS = 80L
 
 private class FocusSnapshot(
     var rowIndex: Int,
-    var itemIndex: Int
+    var itemIndex: Int,
+    var rowKey: String? = null
 )
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -62,6 +71,7 @@ fun ClassicHomeContent(
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     onRequestTrailerPreview: (MetaPreview) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {},
+    catalogSeeAllLabel: String? = null,
     onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
 ) {
 
@@ -75,6 +85,10 @@ fun ClassicHomeContent(
         initialFirstVisibleItemScrollOffset = focusState.verticalScrollOffset,
         prefetchStrategy = nestedPrefetchStrategy
     )
+    val isVerticalScrolling by remember(columnListState) {
+        androidx.compose.runtime.derivedStateOf { columnListState.isScrollInProgress }
+    }
+    val suppressImages = uiState.memoryOnlyVerticalScroll && isVerticalScrolling
 
     LaunchedEffect(focusState.verticalScrollIndex, focusState.verticalScrollOffset) {
         val targetIndex = focusState.verticalScrollIndex
@@ -145,12 +159,24 @@ fun ClassicHomeContent(
 
     val heroVisible = uiState.heroSectionEnabled && uiState.heroItems.isNotEmpty()
 
-    LaunchedEffect(shouldRequestInitialFocus, heroVisible, uiState.heroItems.size) {
+    val heroExpected = uiState.heroSectionEnabled
+    val heroResolved = !heroExpected || heroVisible
+    var heroDeferTimedOut by remember { mutableStateOf(false) }
+    LaunchedEffect(shouldRequestInitialFocus, heroExpected) {
+        if (!shouldRequestInitialFocus || !heroExpected) return@LaunchedEffect
+        delay(2000)
+        heroDeferTimedOut = true
+    }
+    val deferContentFocus = shouldRequestInitialFocus && !heroResolved && !heroDeferTimedOut
+
+    LaunchedEffect(shouldRequestInitialFocus, heroVisible) {
         if (!shouldRequestInitialFocus || !heroVisible) return@LaunchedEffect
-        repeat(2) { withFrameNanos { } }
-        try {
-            heroFocusRequester.requestFocus()
-        } catch (_: IllegalStateException) {
+        columnListState.scrollToItem(0)
+        repeat(8) {
+            withFrameNanos { }
+            val focused = runCatching { heroFocusRequester.requestFocus(); true }
+                .getOrDefault(false)
+            if (focused) return@LaunchedEffect
         }
     }
 
@@ -158,6 +184,21 @@ fun ClassicHomeContent(
     var lastKeyRepeatTime by remember { mutableStateOf(0L) }
     val contentFocusRequester = LocalContentFocusRequester.current
 
+    if (deferContentFocus) {
+        // Show spinner while waiting for hero data to arrive — prevents
+        // content rows from claiming focus before the hero is ready.
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            LoadingIndicator()
+        }
+        return
+    }
+
+    androidx.compose.runtime.CompositionLocalProvider(
+        LocalVerticalScrollSuppressImages provides suppressImages
+    ) {
     LazyColumn(
         state = columnListState,
         modifier = Modifier
@@ -267,7 +308,9 @@ fun ClassicHomeContent(
                 is HomeRow.Catalog -> {
                     val catalogRow = homeRow.row
                     val catalogKey = "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}"
-                    val shouldRestoreFocus = restoringFocus && index == focusState.focusedRowIndex
+                    // Match by saved row key first, fall back to index
+                    val shouldRestoreFocus = restoringFocus &&
+                        (currentFocusSnapshot.rowKey == catalogKey || index == focusState.focusedRowIndex)
                     val shouldInitialFocusFirstCatalogRow =
                         shouldRequestInitialFocus &&
                             !heroVisible &&
@@ -302,6 +345,7 @@ fun ClassicHomeContent(
                         onItemFocus = onItemFocus,
                         isItemWatched = isCatalogItemWatched,
                         onItemLongPress = onCatalogItemLongPress,
+                        seeAllLabel = catalogSeeAllLabel,
                         onItemClick = { id, type, addonBaseUrl ->
                             onNavigateToDetail(id, type, addonBaseUrl)
                         },
@@ -320,12 +364,21 @@ fun ClassicHomeContent(
                             if (restoringFocus) restoringFocus = false
                             currentFocusSnapshot.rowIndex = index
                             currentFocusSnapshot.itemIndex = itemIndex
+                            currentFocusSnapshot.rowKey = catalogKey
                         }
                     )
                 }
 
                 is HomeRow.CollectionRow -> {
                     val collectionKey = "collection_${homeRow.collection.id}"
+                    // Match by saved row key first, fall back to index
+                    val shouldRestoreCollectionFocus = restoringFocus &&
+                        (currentFocusSnapshot.rowKey == collectionKey || index == focusState.focusedRowIndex)
+                    val collectionFocusedItemIndex = if (shouldRestoreCollectionFocus) {
+                        focusState.focusedItemIndex
+                    } else {
+                        -1
+                    }
                     val listState = rowStates.getOrPut(collectionKey) {
                         LazyListState(
                             firstVisibleItemIndex = focusState.catalogRowScrollStates[collectionKey] ?: 0
@@ -336,14 +389,17 @@ fun ClassicHomeContent(
                         collection = homeRow.collection,
                         onFolderClick = onNavigateToFolderDetail,
                         listState = listState,
+                        focusedItemIndex = collectionFocusedItemIndex,
                         onItemFocused = { itemIndex ->
                             if (restoringFocus) restoringFocus = false
                             currentFocusSnapshot.rowIndex = index
                             currentFocusSnapshot.itemIndex = itemIndex
+                            currentFocusSnapshot.rowKey = collectionKey
                         }
                     )
                 }
             }
         }
     }
+    } // CompositionLocalProvider
 }

@@ -364,8 +364,7 @@ fun SearchScreen(
     LaunchedEffect(uiState.suggestions) {
         val imm = context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? InputMethodManager
             ?: return@LaunchedEffect
-        val reversed = uiState.suggestions.asReversed()
-        val completions = reversed.mapIndexed { index, name ->
+        val completions = uiState.suggestions.mapIndexed { index, name ->
             CompletionInfo(index.toLong(), index, name)
         }.toTypedArray()
         imm.displayCompletions(view, completions)
@@ -784,7 +783,10 @@ private fun SearchInputField(
                     }
                     false
                 },
-            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+            keyboardOptions = KeyboardOptions.Default.copy(
+                 imeAction = ImeAction.Done,
+                 autoCorrectEnabled = false
+             ),
             keyboardActions = KeyboardActions(
                 onDone = {
                     onSubmit()

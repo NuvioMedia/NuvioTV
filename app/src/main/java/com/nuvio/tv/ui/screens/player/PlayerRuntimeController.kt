@@ -7,6 +7,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.core.torrent.TorrentService
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
@@ -34,6 +35,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicLong
 
@@ -55,6 +59,11 @@ class PlayerRuntimeController(
     internal val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     internal val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
     internal val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
+    internal val torrentService: TorrentService,
+    internal val torrentSettings: com.nuvio.tv.core.torrent.TorrentSettings,
+    internal val tmdbService: com.nuvio.tv.core.tmdb.TmdbService,
+    internal val tmdbMetadataService: com.nuvio.tv.core.tmdb.TmdbMetadataService,
+    internal val tmdbSettingsDataStore: com.nuvio.tv.data.local.TmdbSettingsDataStore,
     savedStateHandle: SavedStateHandle,
     internal val scope: CoroutineScope
 ) {
@@ -145,18 +154,29 @@ class PlayerRuntimeController(
     internal var currentAddonName: String? = navigationArgs.addonName
     internal var currentAddonLogo: String? = navigationArgs.addonLogo
     internal var currentStreamDescription: String? = navigationArgs.streamDescription
+    internal val contentLanguage: String? = navigationArgs.contentLanguage
     internal var currentVideoCodec: String? = null
     internal var currentVideoWidth: Int? = null
     internal var currentVideoHeight: Int? = null
     internal var currentVideoBitrate: Int? = null
-    internal var currentStreamUrl: String = initialStreamUrl
-    internal var currentStreamMimeType: String? =
-        PlayerMediaSourceFactory.inferMimeType(
-            url = initialStreamUrl,
-            filename = currentFilename
+    internal var currentStreamUrl: String
+    internal var currentStreamResponseHeaders: Map<String, String> = emptyMap()
+    internal var currentStreamMimeType: String?
+    internal var currentHeaders: Map<String, String>
+
+    init {
+        val (cleanInitialUrl, mergedInitialHeaders) = PlayerMediaSourceFactory.extractUserInfoAuth(
+            initialStreamUrl,
+            PlayerMediaSourceFactory.sanitizeHeaders(PlayerMediaSourceFactory.parseHeaders(headersJson))
         )
-    internal var currentHeaders: Map<String, String> =
-        PlayerMediaSourceFactory.sanitizeHeaders(PlayerMediaSourceFactory.parseHeaders(headersJson))
+        currentStreamUrl = cleanInitialUrl
+        currentStreamMimeType = PlayerMediaSourceFactory.inferMimeType(
+            url = cleanInitialUrl,
+            filename = currentFilename,
+            responseHeaders = currentStreamResponseHeaders
+        )
+        currentHeaders = mergedInitialHeaders
+    }
 
     fun getCurrentStreamUrl(): String = currentStreamUrl
     fun getCurrentHeaders(): Map<String, String> = currentHeaders
@@ -183,16 +203,35 @@ class PlayerRuntimeController(
             showLoadingOverlay = true,
             currentSeason = currentSeason,
             currentEpisode = currentEpisode,
+            currentVideoId = currentVideoId,
             currentEpisodeTitle = currentEpisodeTitle
         )
     )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
+    internal val _playbackTimeline = MutableStateFlow(PlaybackTimelineState())
+    val playbackTimeline: StateFlow<PlaybackTimelineState> = _playbackTimeline.asStateFlow()
+
+    internal fun updatePlaybackTimeline(
+        currentPosition: Long = _playbackTimeline.value.currentPosition,
+        duration: Long = _playbackTimeline.value.duration
+    ) {
+        _playbackTimeline.update {
+            it.copy(
+                currentPosition = currentPosition.coerceAtLeast(0L),
+                duration = duration.coerceAtLeast(0L)
+            )
+        }
+    }
+
+    internal fun resetPlaybackTimeline() {
+        _playbackTimeline.value = PlaybackTimelineState()
+    }
+
     internal var _exoPlayer: ExoPlayer? = null
     val exoPlayer: ExoPlayer?
         get() = _exoPlayer
     internal var playbackSpeedAwareAudioOutputProvider: PlaybackSpeedAwareAudioOutputProvider? = null
-    internal var isReleasingPlayer: Boolean = false
 
     internal var progressJob: Job? = null
     internal var hideControlsJob: Job? = null
@@ -205,6 +244,7 @@ class PlayerRuntimeController(
     internal var hideStreamSourceIndicatorJob: Job? = null
     internal var hidePlayerEngineSwitchInfoJob: Job? = null
     internal var hideSubtitleDelayOverlayJob: Job? = null
+    internal var subtitleAutoSyncLoadJob: Job? = null
     internal var nextEpisodeAutoPlayJob: Job? = null
     internal var sourceStreamsJob: Job? = null
     internal var sourceChipErrorDismissJob: Job? = null
@@ -282,6 +322,12 @@ class PlayerRuntimeController(
     internal var pendingPreviewSeekPosition: Long? = null
     internal var pendingResumeProgress: WatchProgress? = null
     internal var hasRetriedCurrentStreamAfter416: Boolean = false
+    internal var isReleasingPlayer: Boolean = false
+    internal var cachedDecoderPriority: Int = 1
+    internal var hasTriedAudioPcmFallback: Boolean = false
+    internal var hasTriedDv7HevcFallback: Boolean = false
+    internal var forceDv7ToHevc: Boolean = false
+    internal var startupRetryCount: Int = 0
     internal var errorRetryCount: Int = 0
     internal var errorRetryJob: Job? = null
     internal var currentScrobbleItem: TraktScrobbleItem? = null
@@ -300,13 +346,29 @@ class PlayerRuntimeController(
     internal var libassPipelineSwitchInFlight: Boolean = false
     internal var hasDetectedAssSsaTrackForCurrentStream: Boolean = false
     internal var libassPipelineDecisionStreamUrl: String? = null
+    internal var torrentStreamJob: Job? = null
+    internal var torrentStateObserverJob: Job? = null
+    internal var isTorrentStream: Boolean = navigationArgs.infoHash != null
+    internal var currentInfoHash: String? = navigationArgs.infoHash
+    internal var currentFileIdx: Int? = navigationArgs.fileIdx
+    internal var currentTorrentSources: List<String>? =
+        navigationArgs.sourcesJson?.let { raw ->
+            runCatching {
+                val arr = org.json.JSONArray(raw)
+                (0 until arr.length()).mapNotNull { i ->
+                    arr.optString(i).takeIf { s -> s.isNotEmpty() }
+                }
+            }.getOrNull()?.takeIf { it.isNotEmpty() }
+        }
+
     internal var episodeStreamsJob: Job? = null
     internal var episodeStreamsCacheRequestKey: String? = null
-    internal val streamCacheKey: String? by lazy {
-        val type = contentType?.lowercase()
-        val vid = currentVideoId
-        if (type.isNullOrBlank() || vid.isNullOrBlank()) null else "$type|$vid"
-    }
+    internal val streamCacheKey: String?
+        get() {
+            val type = contentType?.lowercase()
+            val vid = currentVideoId
+            return if (type.isNullOrBlank() || vid.isNullOrBlank()) null else "$type|$vid"
+        }
 
     init {
         if (!navigationArgs.startFromBeginning) {
@@ -317,11 +379,21 @@ class PlayerRuntimeController(
         fetchMetaDetails(contentId, contentType)
         observeBlurUnwatchedEpisodes()
         observeEpisodeWatchProgress()
+        observeTorrentSettings()
+    }
+
+    private fun observeTorrentSettings() {
+        scope.launch {
+            torrentSettings.settings.collect { settings ->
+                _uiState.update { it.copy(hideTorrentStats = settings.hideTorrentStats) }
+            }
+        }
     }
     
 
     fun onCleared() {
         releasePlayer()
+        stopTorrentStream()
         mediaSourceFactory.shutdown()
         sourceChipErrorDismissJob?.cancel()
     }

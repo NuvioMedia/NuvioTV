@@ -193,9 +193,9 @@
 
     <!-- SettingsScreen categories -->
     <string name="settings_account">Fiók</string>
-    <string name="settings_account_subtitle">Fiókadatok és szinkronizálási állapot.</string>
+    <string name="settings_account_subtitle">Fiókadatok és szinkronizálási állapot</string>
     <string name="settings_profiles">Profilok</string>
-    <string name="settings_profiles_subtitle">Felhasználói profilok kezelése.</string>
+    <string name="settings_profiles_subtitle">Felhasználói profilok kezelése</string>
     <string name="settings_layout">Elrendezés</string>
     <string name="settings_layout_subtitle">Kezdőlap szerkezete és poszter stílusok.</string>
     <string name="settings_plugins">Beépülő modulok</string>
@@ -224,8 +224,8 @@
     <string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Hibakeresés</string>
     <string name="settings_debug_subtitle">Fejlesztői eszközök és tesztfunkciók.</string>
-    <string name="settings_plugins_section_subtitle">Tárhelyek, szolgáltatók és beépülő modulok kezelése.</string>
-    <string name="settings_account_section_subtitle">Fiók és szinkronizálási állapot.</string>
+    <string name="settings_plugins_section_subtitle">Tárhelyek, szolgáltatók és beépülő modulok kezelése</string>
+    <string name="settings_account_section_subtitle">Fiók és szinkronizálási állapot</string>
     <string name="account_stat_addons">bővítmény</string>
     <string name="account_stat_plugins">beépülő modul</string>
     <string name="account_stat_library">könyvtár</string>

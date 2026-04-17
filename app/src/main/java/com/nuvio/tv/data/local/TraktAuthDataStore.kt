@@ -1,26 +1,18 @@
 package com.nuvio.tv.data.local
 
-import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.remote.dto.trakt.TraktDeviceCodeResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktTokenResponseDto
-import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
-
-private val Context.traktAuthDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "trakt_auth_store"
-)
 
 private const val TRAKT_ACCESS_TOKEN_MAX_LIFETIME_SECONDS = 86_400
 
@@ -48,10 +40,15 @@ data class TraktAuthState(
 }
 
 @Singleton
+@OptIn(ExperimentalCoroutinesApi::class)
 class TraktAuthDataStore @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val factory: ProfileDataStoreFactory,
     private val profileManager: ProfileManager
 ) {
+    companion object {
+        private const val FEATURE = "trakt_auth_store"
+    }
+
     private val accessTokenKey = stringPreferencesKey("access_token")
     private val refreshTokenKey = stringPreferencesKey("refresh_token")
     private val tokenTypeKey = stringPreferencesKey("token_type")
@@ -67,34 +64,34 @@ class TraktAuthDataStore @Inject constructor(
     private val expiresAtKey = longPreferencesKey("expires_at")
     private val pollIntervalKey = intPreferencesKey("poll_interval")
 
-    val state: Flow<TraktAuthState> = context.traktAuthDataStore.data.map { preferences ->
-        TraktAuthState(
-            accessToken = preferences[accessTokenKey],
-            refreshToken = preferences[refreshTokenKey],
-            tokenType = preferences[tokenTypeKey],
-            createdAt = preferences[createdAtKey],
-            expiresIn = preferences[expiresInKey]?.let(::normalizeTraktTokenLifetimeSeconds),
-            username = preferences[usernameKey],
-            userSlug = preferences[userSlugKey],
-            deviceCode = preferences[deviceCodeKey],
-            userCode = preferences[userCodeKey],
-            verificationUrl = preferences[verificationUrlKey],
-            expiresAt = preferences[expiresAtKey],
-            pollInterval = preferences[pollIntervalKey]
-        )
+    private fun store(profileId: Int = profileManager.activeProfileId.value) =
+        factory.get(profileId, FEATURE)
+
+    val state: Flow<TraktAuthState> = profileManager.activeProfileId.flatMapLatest { profileId ->
+        store(profileId).data.map { preferences ->
+            TraktAuthState(
+                accessToken = preferences[accessTokenKey],
+                refreshToken = preferences[refreshTokenKey],
+                tokenType = preferences[tokenTypeKey],
+                createdAt = preferences[createdAtKey],
+                expiresIn = preferences[expiresInKey]?.let(::normalizeTraktTokenLifetimeSeconds),
+                username = preferences[usernameKey],
+                userSlug = preferences[userSlugKey],
+                deviceCode = preferences[deviceCodeKey],
+                userCode = preferences[userCodeKey],
+                verificationUrl = preferences[verificationUrlKey],
+                expiresAt = preferences[expiresAtKey],
+                pollInterval = preferences[pollIntervalKey]
+            )
+        }
     }
 
     val isAuthenticated: Flow<Boolean> = state.map { it.isAuthenticated }
 
-    val isEffectivelyAuthenticated: Flow<Boolean> = combine(
-        isAuthenticated,
-        profileManager.activeProfileId
-    ) { authenticated, profileId ->
-        authenticated && profileId == 1
-    }
+    val isEffectivelyAuthenticated: Flow<Boolean> = isAuthenticated
 
     suspend fun saveToken(token: TraktTokenResponseDto) {
-        context.traktAuthDataStore.edit { preferences ->
+        store().edit { preferences ->
             preferences[accessTokenKey] = token.accessToken
             preferences[refreshTokenKey] = token.refreshToken
             preferences[tokenTypeKey] = token.tokenType
@@ -104,7 +101,7 @@ class TraktAuthDataStore @Inject constructor(
     }
 
     suspend fun saveUser(username: String?, userSlug: String?) {
-        context.traktAuthDataStore.edit { preferences ->
+        store().edit { preferences ->
             if (username.isNullOrBlank()) {
                 preferences.remove(usernameKey)
             } else {
@@ -120,7 +117,7 @@ class TraktAuthDataStore @Inject constructor(
 
     suspend fun saveDeviceFlow(data: TraktDeviceCodeResponseDto) {
         val now = System.currentTimeMillis()
-        context.traktAuthDataStore.edit { preferences ->
+        store().edit { preferences ->
             preferences[deviceCodeKey] = data.deviceCode
             preferences[userCodeKey] = data.userCode
             preferences[verificationUrlKey] = data.verificationUrl
@@ -130,13 +127,13 @@ class TraktAuthDataStore @Inject constructor(
     }
 
     suspend fun updatePollInterval(seconds: Int) {
-        context.traktAuthDataStore.edit { preferences ->
+        store().edit { preferences ->
             preferences[pollIntervalKey] = seconds
         }
     }
 
     suspend fun clearDeviceFlow() {
-        context.traktAuthDataStore.edit { preferences ->
+        store().edit { preferences ->
             preferences.remove(deviceCodeKey)
             preferences.remove(userCodeKey)
             preferences.remove(verificationUrlKey)
@@ -146,7 +143,7 @@ class TraktAuthDataStore @Inject constructor(
     }
 
     suspend fun clearAuth() {
-        context.traktAuthDataStore.edit { preferences ->
+        store().edit { preferences ->
             preferences.remove(accessTokenKey)
             preferences.remove(refreshTokenKey)
             preferences.remove(tokenTypeKey)

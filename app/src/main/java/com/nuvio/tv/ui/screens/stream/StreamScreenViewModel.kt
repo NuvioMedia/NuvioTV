@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.core.torrent.TorrentSettings
 import com.nuvio.tv.core.player.StreamAutoPlayPolicy
 import com.nuvio.tv.core.player.StreamAutoPlaySelector
 import com.nuvio.tv.data.local.PlayerPreference
@@ -40,6 +41,7 @@ import javax.inject.Inject
 private const val TAG = "StreamScreenViewModel"
 private const val EMBEDDED_STREAM_GROUP_NAME = "Embedded Streams"
 private const val EMBEDDED_STREAM_FALLBACK_NAME = "Embed Stream"
+private const val DIRECT_AUTOPLAY_HARD_TIMEOUT_MS = 45_000L
 
 @HiltViewModel
 class StreamScreenViewModel @Inject constructor(
@@ -50,6 +52,7 @@ class StreamScreenViewModel @Inject constructor(
     private val metaRepository: MetaRepository,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val streamLinkCacheDataStore: StreamLinkCacheDataStore,
+    private val torrentSettings: TorrentSettings,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private var autoPlayHandledForSession = false
@@ -72,6 +75,7 @@ class StreamScreenViewModel @Inject constructor(
     private val year: String? = savedStateHandle.getOptionalString("year")
     private val contentId: String? = savedStateHandle.getOptionalString("contentId")
     private val contentName: String? = savedStateHandle.getOptionalString("contentName")
+    private val contentLanguage: String? = savedStateHandle.getOptionalString("contentLanguage")
     private val manualSelection: Boolean = savedStateHandle.get<String>("manualSelection")
         ?.toBooleanStrictOrNull()
         ?: false
@@ -98,6 +102,12 @@ class StreamScreenViewModel @Inject constructor(
     val playerPreference = playerSettingsDataStore.playerSettings
         .map { it.playerPreference }
         .distinctUntilChanged()
+
+    val p2pEnabled = torrentSettings.settings
+        .map { it.p2pEnabled }
+        .distinctUntilChanged()
+
+    fun enableP2p() = torrentSettings.setP2pEnabled(true)
 
     private inline fun updateUiStateIfChanged(
         transform: (StreamScreenUiState) -> StreamScreenUiState
@@ -144,10 +154,14 @@ class StreamScreenViewModel @Inject constructor(
                     return
                 }
                 autoPlayHandledForSession = true
+                directAutoPlayFlowEnabledForSession = false
                 updateUiStateIfChanged {
                     it.copy(
                         autoPlayStream = null,
-                        autoPlayPlaybackInfo = null
+                        autoPlayPlaybackInfo = null,
+                        isDirectAutoPlayFlow = false,
+                        showDirectAutoPlayOverlay = false,
+                        directAutoPlayMessage = null
                     )
                 }
             }
@@ -210,16 +224,17 @@ class StreamScreenViewModel @Inject constructor(
                 if (cached != null) {
                     autoPlayHandledForSession = true
                     resolvedAutoPlayTarget = true
+                    val isCachedTorrent = cached.infoHash != null
                     updateUiStateIfChanged {
                         it.copy(
                             autoPlayPlaybackInfo = StreamPlaybackInfo(
-                                url = cached.url,
+                                url = cached.url.takeIf { u -> u.isNotBlank() },
                                 title = title,
                                 streamName = cached.streamName,
                                 year = year,
                                 isExternal = false,
-                                isTorrent = false,
-                                infoHash = null,
+                                isTorrent = isCachedTorrent,
+                                infoHash = cached.infoHash,
                                 ytId = null,
                                 headers = cached.headers,
                                 contentId = contentId ?: videoId.substringBefore(":"),
@@ -232,10 +247,13 @@ class StreamScreenViewModel @Inject constructor(
                                 season = season,
                                 episode = episode,
                                 episodeTitle = episodeName,
-                                bingeGroup = null,
+                                bingeGroup = cached.bingeGroup,
                                 filename = cached.filename,
                                 videoHash = cached.videoHash,
-                                videoSize = cached.videoSize
+                                videoSize = cached.videoSize,
+                                fileIdx = cached.fileIdx,
+                                sources = cached.sources,
+                                contentLanguage = contentLanguage
                             )
                         )
                     }
@@ -258,9 +276,17 @@ class StreamScreenViewModel @Inject constructor(
                     addonStreamGroups,
                     installedAddonOrder
                 )
-                val allStreams = orderedAddonStreams.flatMap { it.streams }
+                
+                val allStreams = orderedAddonStreams.flatMap { addonStreams ->
+                    addonStreams.streams.sortedByDescending { it.qualityValue }
+                }
                 val availableAddons = orderedAddonStreams.map { it.addonName }
-                val selectedAutoPlayStream = if (autoPlayHandledForSession || !isAllLoaded) {
+                // For FIRST_STREAM mode, run the selector as soon as any
+                // addon returns results (don't wait for all addons or the
+                // timeout). Other modes still wait for the full result set.
+                val shouldAutoSelect = !autoPlayHandledForSession && !resolvedAutoPlayTarget &&
+                    (isAllLoaded || playerSettings.streamAutoPlayMode == StreamAutoPlayMode.FIRST_STREAM)
+                val selectedAutoPlayStream = if (!shouldAutoSelect) {
                     null
                 } else {
                     StreamAutoPlaySelector.selectAutoPlayStream(
@@ -295,7 +321,12 @@ class StreamScreenViewModel @Inject constructor(
                             existing = _uiState.value.sourceChips,
                             succeededNames = orderedAddonStreams.map { it.addonName }
                         ),
-                        autoPlayStream = selectedAutoPlayStream,
+                        // Preserve an already-resolved stream: the post-collect
+                        // "isAllLoaded=true" pass re-runs the selector with
+                        // shouldAutoSelect=false once a target is resolved, and
+                        // would otherwise clobber the real pick with null before
+                        // Compose observes it.
+                        autoPlayStream = selectedAutoPlayStream ?: it.autoPlayStream,
                         error = null,
                         showDirectAutoPlayOverlay = if (directAutoPlayFlowEnabledForSession) {
                             true
@@ -345,7 +376,6 @@ class StreamScreenViewModel @Inject constructor(
                         is NetworkResult.Success -> {
                             lastSuccessData = result.data
                             applySuccess(result.data, isAllLoaded = false)
-                            // After timeout, auto-select on first result that arrives
                             if (timeoutElapsed && !autoSelectTriggered) {
                                 autoSelectTriggered = true
                                 applySuccess(result.data, isAllLoaded = true)
@@ -406,6 +436,37 @@ class StreamScreenViewModel @Inject constructor(
             if (!autoSelectTriggered && lastSuccessData != null) {
                 autoSelectTriggered = true
                 applySuccess(lastSuccessData!!, isAllLoaded = true)
+            }
+
+            // Hard wall-clock fallback: if the upstream stream flow never terminates
+            // (e.g. a scraper hangs and keeps the plugin channelFlow open), the direct
+            // autoplay overlay would otherwise stay visible indefinitely. Force a
+            // teardown so the user lands in the manual stream list with whatever
+            // results have already arrived.
+            if (directFlowActive) {
+                delay(DIRECT_AUTOPLAY_HARD_TIMEOUT_MS)
+                if (directAutoPlayFlowEnabledForSession && !resolvedAutoPlayTarget) {
+                    Log.w(TAG, "Direct autoplay hard timeout reached; falling back to manual selection")
+                    lastSuccessData?.let {
+                        if (!autoSelectTriggered) {
+                            autoSelectTriggered = true
+                            applySuccess(it, isAllLoaded = true)
+                        }
+                    }
+                    if (!resolvedAutoPlayTarget) {
+                        directAutoPlayFlowEnabledForSession = false
+                        updateUiStateIfChanged {
+                            it.copy(
+                                isLoading = false,
+                                isDirectAutoPlayFlow = false,
+                                showDirectAutoPlayOverlay = false,
+                                directAutoPlayMessage = null
+                            )
+                        }
+                        streamLoadInner.cancel()
+                        markRemainingSourceChipsAsError()
+                    }
+                }
             }
         }
     }
@@ -658,7 +719,10 @@ class StreamScreenViewModel @Inject constructor(
             videoSize = stream.behaviorHints?.videoSize,
             addonName = stream.addonName,
             addonLogo = stream.addonLogo,
-            streamDescription = stream.description
+            streamDescription = stream.description,
+            fileIdx = stream.fileIdx,
+            sources = stream.sources,
+            contentLanguage = contentLanguage
         )
 
         val url = playbackInfo.url
@@ -671,7 +735,8 @@ class StreamScreenViewModel @Inject constructor(
                     headers = playbackInfo.headers,
                     filename = playbackInfo.filename,
                     videoHash = playbackInfo.videoHash,
-                    videoSize = playbackInfo.videoSize
+                    videoSize = playbackInfo.videoSize,
+                    bingeGroup = playbackInfo.bingeGroup
                 )
             }
         }
@@ -714,5 +779,8 @@ data class StreamPlaybackInfo(
     val videoSize: Long? = null,
     val addonName: String? = null,
     val addonLogo: String? = null,
-    val streamDescription: String? = null
+    val streamDescription: String? = null,
+    val fileIdx: Int? = null,
+    val sources: List<String>? = null,
+    val contentLanguage: String? = null
 )

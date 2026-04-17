@@ -59,6 +59,7 @@ fun CatalogRowSection(
     onItemClick: (String, String, String) -> Unit,
     onSeeAll: () -> Unit = {},
     showSeeAll: Boolean = catalogRow.items.size >= 15,
+    seeAllLabel: String? = null,
     posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
     showPosterLabels: Boolean = true,
     showAddonName: Boolean = true,
@@ -228,6 +229,18 @@ fun CatalogRowSection(
                 )
             }
 
+            if (!showSeeAll && catalogRow.isLoading) {
+                item(key = "${catalogRow.type}_${catalogRow.catalogId}_loading") {
+                    Box(
+                        modifier = Modifier
+                            .width(posterCardStyle.width)
+                            .height(posterCardStyle.height),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LoadingIndicator()
+                    }
+                }
+            }
             if (showSeeAll) {
                 item(key = "${catalogRow.type}_${catalogRow.catalogId}_see_all") {
                     Card(
@@ -259,13 +272,13 @@ fun CatalogRowSection(
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = stringResource(R.string.action_see_all),
+                                    contentDescription = seeAllLabel ?: stringResource(R.string.action_see_all),
                                     modifier = Modifier.size(32.dp),
                                     tint = NuvioColors.TextSecondary
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = stringResource(R.string.action_see_all),
+                                    text = seeAllLabel ?: stringResource(R.string.action_see_all),
                                     style = MaterialTheme.typography.titleSmall,
                                     color = NuvioColors.TextSecondary
                                 )

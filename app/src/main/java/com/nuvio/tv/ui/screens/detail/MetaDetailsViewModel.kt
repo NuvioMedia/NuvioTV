@@ -454,6 +454,7 @@ class MetaDetailsViewModel @Inject constructor(
                     episodeRatingsError = null,
                     mdbListRatings = null,
                     showMdbListImdb = false,
+                    tmdbRating = null,
                     moreLikeThis = emptyList(),
                     moreLikeThisSource = null,
                     collection = emptyList(),
@@ -546,7 +547,10 @@ class MetaDetailsViewModel @Inject constructor(
             .toIntOrNull()
             ?: return raw
 
-        return tmdbService.tmdbToImdb(tmdbNumericId, itemType)
+        // Use a short timeout so a blocked TMDB API doesn't stall the detail screen.
+        return kotlinx.coroutines.withTimeoutOrNull(5_000L) {
+            tmdbService.tmdbToImdb(tmdbNumericId, itemType)
+        }
             ?.takeIf { it.isNotBlank() }
             ?: raw
     }
@@ -1088,7 +1092,11 @@ class MetaDetailsViewModel @Inject constructor(
             if (enrichment.genres.isNotEmpty()) {
                 updated = updated.copy(genres = enrichment.genres)
             }
-            updated = updated.copy(imdbRating = enrichment.rating?.toFloat() ?: updated.imdbRating)
+        }
+
+        // Store TMDB rating separately so it can be shown with its own icon on the details screen.
+        if (enrichment?.rating != null) {
+            _uiState.update { it.copy(tmdbRating = enrichment.rating.toFloat()) }
         }
 
         if (enrichment != null && settings.useDetails) {
@@ -1144,7 +1152,7 @@ class MetaDetailsViewModel @Inject constructor(
                     video.copy(
                         title = ep?.title ?: video.title,
                         overview = ep?.overview ?: video.overview,
-                        released = ep?.airDate ?: video.released,
+                        released = if (settings.useReleaseDates) ep?.airDate ?: video.released else video.released,
                         thumbnail = ep?.thumbnail ?: video.thumbnail,
                         runtime = ep?.runtimeMinutes
                     )

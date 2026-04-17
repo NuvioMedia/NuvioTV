@@ -6,7 +6,8 @@ import androidx.compose.runtime.Immutable
 data class CollectionCatalogSource(
     val addonId: String,
     val type: String,
-    val catalogId: String
+    val catalogId: String,
+    val genre: String? = null
 )
 
 @Immutable
@@ -14,6 +15,8 @@ data class CollectionFolder(
     val id: String,
     val title: String,
     val coverImageUrl: String? = null,
+    val focusGifUrl: String? = null,
+    val focusGifEnabled: Boolean = true,
     val coverEmoji: String? = null,
     val tileShape: PosterShape = PosterShape.SQUARE,
     val hideTitle: Boolean = false,
@@ -26,6 +29,7 @@ data class Collection(
     val title: String,
     val backdropImageUrl: String? = null,
     val pinToTop: Boolean = false,
+    val focusGlowEnabled: Boolean = true,
     val viewMode: FolderViewMode = FolderViewMode.TABBED_GRID,
     val showAllTab: Boolean = true,
     val folders: List<CollectionFolder> = emptyList()
