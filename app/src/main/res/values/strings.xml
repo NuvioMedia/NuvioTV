@@ -206,6 +206,7 @@
     <string name="tmdb_entity_empty_title">No titles found</string>
     <string name="tmdb_entity_empty_subtitle">TMDB does not currently have browseable titles for this selection.</string>
     <string name="episodes_unavailable">Unavailable</string>
+    <!-- Status labels for series (some languages need gendered forms) -->
     <string name="series_status_ended">Ended</string>
     <string name="series_status_continuing">Ongoing</string>
     <string name="series_status_current">Current</string>
@@ -215,6 +216,16 @@
     <string name="series_status_rumored">Rumored</string>
     <string name="series_status_in_production">In Production</string>
     <string name="series_status_post_production">Post Production</string>
+    <!-- Status labels for movies (allows gendered translations in languages that need it) -->
+    <string name="movie_status_ended">Ended</string>
+    <string name="movie_status_continuing">Ongoing</string>
+    <string name="movie_status_current">Current</string>
+    <string name="movie_status_cancelled">Cancelled</string>
+    <string name="movie_status_released">Released</string>
+    <string name="movie_status_planned">Planned</string>
+    <string name="movie_status_rumored">Rumored</string>
+    <string name="movie_status_in_production">In Production</string>
+    <string name="movie_status_post_production">Post Production</string>
     <string name="detail_lists_fallback">Lists</string>
     <string name="detail_lists_subtitle">Select which lists should include this title.</string>
     <string name="action_save">Save</string>

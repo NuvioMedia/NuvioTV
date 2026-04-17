@@ -149,6 +149,15 @@
     <string name="series_status_rumored">Spekuluje se</string>
     <string name="series_status_in_production">V produkci</string>
     <string name="series_status_post_production">Postprodukce</string>
+    <string name="movie_status_ended">Ukončeno</string>
+    <string name="movie_status_continuing">Pokračuje</string>
+    <string name="movie_status_current">Aktuální</string>
+    <string name="movie_status_cancelled">Zrušeno</string>
+    <string name="movie_status_released">Vydáno</string>
+    <string name="movie_status_planned">Plánováno</string>
+    <string name="movie_status_rumored">Spekuluje se</string>
+    <string name="movie_status_in_production">V produkci</string>
+    <string name="movie_status_post_production">Postprodukce</string>
     <string name="detail_lists_fallback">Seznamy</string>
     <string name="detail_lists_subtitle">Vyberte, do kterých seznamů má být tento titul zařazen.</string>
     <string name="action_save">Uložit</string>

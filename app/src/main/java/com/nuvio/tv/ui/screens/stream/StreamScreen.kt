@@ -367,7 +367,8 @@ private fun StreamBackdrop(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer { alpha = imageAlpha },
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopEnd
             )
         }
 

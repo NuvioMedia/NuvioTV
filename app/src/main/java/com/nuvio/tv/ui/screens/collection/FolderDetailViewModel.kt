@@ -657,20 +657,14 @@ class FolderDetailViewModel @Inject constructor(
         enrichFocusJob = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.delay(350)
             val tmdbSettings = tmdbSettingsDataStore.settings.first()
-            val mdbSettings = mdbListSettingsDataStore.settings.first()
             val homeLayout = _uiState.value.homeLayout
             val tmdbEnabled = tmdbSettings.enabled &&
                 (homeLayout != HomeLayout.MODERN || tmdbSettings.modernHomeEnabled)
-            val mdbEnabled = mdbSettings.enabled && mdbSettings.apiKey.isNotBlank()
             val externalMetaEnabled = layoutPreferenceDataStore.preferExternalMetaAddonDetail.first()
-            if (!tmdbEnabled && !mdbEnabled && !externalMetaEnabled) {
+            if (!tmdbEnabled && !externalMetaEnabled) {
                 if (_enrichingItemId.value == item.id) _enrichingItemId.value = null
                 return@launch
             }
-
-            val mdbRating = if (mdbEnabled) {
-                runCatching { mdbListRepository.getImdbRatingForItem(item.id, item.apiType) }.getOrNull()
-            } else null
 
             var enrichment: com.nuvio.tv.core.tmdb.TmdbEnrichment? = null
             if (tmdbEnabled) {
@@ -686,13 +680,12 @@ class FolderDetailViewModel @Inject constructor(
                 }
             }
 
-            if (enrichment == null && mdbRating == null && !externalMetaEnabled) return@launch
+            if (enrichment == null && !externalMetaEnabled) return@launch
             enrichedItemIds.add(item.id)
 
-            // Apply TMDB + MDB enrichment if available.
-            if (enrichment != null || mdbRating != null) {
+            // Apply TMDB enrichment if available.
+            if (enrichment != null) {
                 val finalEnrichment = enrichment
-                val finalMdbRating = mdbRating
 
                 updateItemInTabs(item.id) { merged ->
                     var result = merged
@@ -701,8 +694,7 @@ class FolderDetailViewModel @Inject constructor(
                         result = result.copy(
                             name = finalEnrichment.localizedTitle ?: result.name,
                             description = finalEnrichment.description ?: result.description,
-                            genres = if (finalEnrichment.genres.isNotEmpty()) finalEnrichment.genres else result.genres,
-                            imdbRating = finalEnrichment.rating?.toFloat() ?: result.imdbRating
+                            genres = if (finalEnrichment.genres.isNotEmpty()) finalEnrichment.genres else result.genres
                         )
                     }
                     if (tmdbSettings.useArtwork) {
@@ -723,9 +715,6 @@ class FolderDetailViewModel @Inject constructor(
                             status = finalEnrichment.status ?: result.status
                         )
                     }
-                }
-                if (finalMdbRating != null && result.imdbRating == null) {
-                    result = result.copy(imdbRating = finalMdbRating.toFloat())
                 }
                 result
             }

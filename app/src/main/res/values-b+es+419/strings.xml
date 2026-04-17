@@ -215,6 +215,15 @@
     <string name="series_status_rumored">Rumoreada</string>
     <string name="series_status_in_production">En producción</string>
     <string name="series_status_post_production">Postproducción</string>
+    <string name="movie_status_ended">Finalizada</string>
+    <string name="movie_status_continuing">En emisión</string>
+    <string name="movie_status_current">Actual</string>
+    <string name="movie_status_cancelled">Cancelada</string>
+    <string name="movie_status_released">Estrenada</string>
+    <string name="movie_status_planned">Planeada</string>
+    <string name="movie_status_rumored">Rumoreada</string>
+    <string name="movie_status_in_production">En producción</string>
+    <string name="movie_status_post_production">Postproducción</string>
     <string name="detail_lists_fallback">Listas</string>
     <string name="detail_lists_subtitle">Selecciona en qué listas incluir este título.</string>
     <string name="action_save">Guardar</string>

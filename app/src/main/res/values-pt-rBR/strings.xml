@@ -207,7 +207,7 @@
     <string name="tmdb_entity_empty_subtitle">O TMDB não possui títulos disponíveis para esta seleção.</string>
     <string name="episodes_unavailable">Indisponível</string>
     <string name="series_status_ended">Encerrada</string>
-    <string name="series_status_continuing">Continua</string>
+    <string name="series_status_continuing">Em andamento</string>
     <string name="series_status_current">Em exibição</string>
     <string name="series_status_cancelled">Cancelada</string>
     <string name="series_status_released">Lançada</string>
@@ -215,6 +215,15 @@
     <string name="series_status_rumored">Rumores</string>
     <string name="series_status_in_production">Em produção</string>
     <string name="series_status_post_production">Pós-produção</string>
+    <string name="movie_status_ended">Encerrada</string>
+    <string name="movie_status_continuing">Continua</string>
+    <string name="movie_status_current">Em exibição</string>
+    <string name="movie_status_cancelled">Cancelada</string>
+    <string name="movie_status_released">Lançado</string>
+    <string name="movie_status_planned">Planejado</string>
+    <string name="movie_status_rumored">Rumores</string>
+    <string name="movie_status_in_production">Em produção</string>
+    <string name="movie_status_post_production">Pós-produção</string>
     <string name="detail_lists_fallback">Listas</string>
     <string name="detail_lists_subtitle">Selecione em quais listas este título deve aparecer.</string>
     <string name="action_save">Salvar</string>
@@ -578,6 +587,8 @@
     <string name="layout_preset_balanced">Equilibrado</string>
     <string name="layout_preset_comfort">Confortável</string>
     <string name="layout_preset_large">Grande</string>
+    <string name="layout_memory_only_scroll">Rolagem vertical apenas em memória</string>
+    <string name="layout_memory_only_scroll_sub">Ignorar carregamento de novas imagens durante a rolagem vertical.</string>
     <string name="layout_preset_sharp">Quadrado</string>
     <string name="layout_preset_subtle">Sutil</string>
     <string name="layout_preset_classic">Clássico</string>
@@ -1504,6 +1515,12 @@
      <string name="collections_editor_placeholder_backdrop">URL da imagem de fundo (opcional)</string>
     <string name="collections_editor_placeholder_folder">Nome da pasta</string>
     <string name="collections_editor_placeholder_gif">URL do GIF animado (reproduz apenas ao focar)</string>
+    <string name="collections_editor_genre_filter">Filtrar por Gênero</string>
+    <string name="collections_editor_choose_genre">Escolha</string>
+    <string name="collections_editor_select_genre">Selecione o gênero</string>
+    <string name="collections_editor_all_genres">Todos os gêneros</string>
+    <string name="collections_editor_genre_required">Gênero obrigatório</string>
+    <string name="collections_editor_genre_optional">Filtro de gênero disponível</string>
     <string name="collections_card_title">Coleções</string>
     <string name="collections_card_subtitle">Agrupe catálogos em pastas na tela inicial</string>
     <string name="collections_tab_all">Tudo</string>

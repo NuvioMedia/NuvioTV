@@ -207,6 +207,15 @@
     <string name="series_status_in_production">V produkciji</string>
     <string name="series_status_post_production">Postprodukcija</string>
     <string name="detail_lists_fallback">Seznami</string>
+    <string name="movie_status_ended">Končano</string>
+    <string name="movie_status_continuing">V teku</string>
+    <string name="movie_status_current">Trenutno</string>
+    <string name="movie_status_cancelled">Preklicano</string>
+    <string name="movie_status_released">Izdano</string>
+    <string name="movie_status_planned">Načrtovano</string>
+    <string name="movie_status_rumored">Govorice</string>
+    <string name="movie_status_in_production">V produkciji</string>
+    <string name="movie_status_post_production">Postprodukcija</string>
     <string name="detail_lists_subtitle">Izberite, na katere sezname naj bo vključen ta naslov.</string>
     <string name="action_save">Shrani</string>
     <string name="action_saving">Shranjevanje…</string>

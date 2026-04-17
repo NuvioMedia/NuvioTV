@@ -684,11 +684,16 @@ private fun GridCollectionFolderCard(
         fallbackSeed = "$collectionTitle:${folder.title}:${folder.coverEmoji.orEmpty()}",
         enabled = focusGlowEnabled
     )
+    val folderAspectRatio = when (folder.tileShape) {
+        PosterShape.LANDSCAPE -> 16f / 9f
+        PosterShape.SQUARE -> 1f
+        PosterShape.POSTER -> posterCardStyle.aspectRatio
+    }
     Card(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(posterCardStyle.aspectRatio)
+            .aspectRatio(folderAspectRatio)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged {
                 isFocused = it.isFocused

@@ -128,6 +128,15 @@
     <string name="series_status_rumored">Sklinda gandai</string>
     <string name="series_status_in_production">Gaminamas</string>
     <string name="series_status_post_production">Po gamybos (Post Production)</string>
+    <string name="movie_status_ended">Baigtas</string>
+    <string name="movie_status_continuing">Tęsiamas</string>
+    <string name="movie_status_current">Dabartinis</string>
+    <string name="movie_status_cancelled">Atšauktas</string>
+    <string name="movie_status_released">Išleistas</string>
+    <string name="movie_status_planned">Planuojamas</string>
+    <string name="movie_status_rumored">Sklinda gandai</string>
+    <string name="movie_status_in_production">Gaminamas</string>
+    <string name="movie_status_post_production">Po gamybos (Post Production)</string>
     <string name="detail_lists_fallback">Sąrašai</string>
     <string name="detail_lists_subtitle">Pasirinkite, į kuriuos sąrašus įtraukti šį pavadinimą.</string>
     <string name="action_save">Išsaugoti</string>

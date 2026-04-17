@@ -18,6 +18,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -94,7 +96,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
         syncJob?.cancel()
         syncJob = syncScope.launch {
             delay(2000)
-            watchProgressSyncService.pushToRemote()
+            withContext(NonCancellable) {
+                watchProgressSyncService.pushToRemote()
+            }
         }
     }
 
@@ -105,7 +109,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
         watchedItemsSyncJob?.cancel()
         watchedItemsSyncJob = syncScope.launch {
             delay(2000)
-            watchedItemsSyncService.pushToRemote()
+            withContext(NonCancellable) {
+                watchedItemsSyncService.pushToRemote()
+            }
         }
     }
 
@@ -562,7 +568,7 @@ class WatchProgressRepositoryImpl @Inject constructor(
         watchProgressPreferences.saveProgress(progress)
 
         if (syncRemote && authManager.isAuthenticated) {
-            syncScope.launch {
+            syncScope.launch(NonCancellable) {
                 watchProgressSyncService.pushSingleToRemote(progressKey(progress), progress)
                     .onFailure { error ->
                         Log.w(TAG, "Failed single progress push; falling back to full sync next cycle", error)

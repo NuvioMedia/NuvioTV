@@ -563,8 +563,7 @@ private fun ModernHomeRoute(
             { item -> viewModel.onItemFocus(item) }
         },
         onPreloadAdjacentItem = preloadAdjacentItem,
-        onSaveFocusState = saveModernFocusState,
-        rowBuildCache = viewModel.modernCarouselRowBuildCache
+        onSaveFocusState = saveModernFocusState
     )
 }
 

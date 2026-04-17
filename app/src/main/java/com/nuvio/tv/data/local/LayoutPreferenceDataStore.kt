@@ -234,7 +234,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     val memoryOnlyVerticalScroll: Flow<Boolean> = profileFlow { prefs ->
-        prefs[memoryOnlyVerticalScrollKey] ?: false
+        prefs[memoryOnlyVerticalScrollKey] ?: true
     }
 
     suspend fun setMemoryOnlyVerticalScroll(enabled: Boolean) {

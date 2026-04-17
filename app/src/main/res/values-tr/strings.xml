@@ -194,6 +194,15 @@
     <string name="series_status_rumored">Söylenti</string>
     <string name="series_status_in_production">Yapım Aşamasında</string>
     <string name="series_status_post_production">Post Prodüksiyon</string>
+    <string name="movie_status_ended">Sona Erdi</string>
+    <string name="movie_status_continuing">Devam Ediyor</string>
+    <string name="movie_status_current">Güncel</string>
+    <string name="movie_status_cancelled">İptal Edildi</string>
+    <string name="movie_status_released">Yayınlandı</string>
+    <string name="movie_status_planned">Planlanıyor</string>
+    <string name="movie_status_rumored">Söylenti</string>
+    <string name="movie_status_in_production">Yapım Aşamasında</string>
+    <string name="movie_status_post_production">Post Prodüksiyon</string>
     <string name="detail_lists_fallback">Listeler</string>
     <string name="detail_lists_subtitle">Bu içeriğin hangi listelerde yer alacağını seçin.</string>
     <string name="action_save">Kaydet</string>

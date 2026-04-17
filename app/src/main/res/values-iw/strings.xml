@@ -131,6 +131,15 @@
     <string name="series_status_rumored">שמועה</string>
     <string name="series_status_in_production">בהפקה</string>
     <string name="series_status_post_production">בעריכה</string>
+    <string name="movie_status_ended">הסתיים</string>
+    <string name="movie_status_continuing">מתמשך</string>
+    <string name="movie_status_current">שוטף</string>
+    <string name="movie_status_cancelled">בוטל</string>
+    <string name="movie_status_released">שוחרר</string>
+    <string name="movie_status_planned">מתוכנן</string>
+    <string name="movie_status_rumored">שמועה</string>
+    <string name="movie_status_in_production">בהפקה</string>
+    <string name="movie_status_post_production">בעריכה</string>
     <string name="detail_lists_fallback">רשימות</string>
     <string name="detail_lists_subtitle">בחר אילו רשימות יכללו כותרת זו.</string>
     <string name="action_save">שמור</string>

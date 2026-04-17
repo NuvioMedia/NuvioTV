@@ -155,6 +155,15 @@
     <string name="series_status_rumored">Solo voci</string>
     <string name="series_status_in_production">In produzione</string>
     <string name="series_status_post_production">Post-produzione</string>
+    <string name="movie_status_ended">Concluso</string>
+    <string name="movie_status_continuing">In corso</string>
+    <string name="movie_status_current">In corso</string>
+    <string name="movie_status_cancelled">Cancellato</string>
+    <string name="movie_status_released">Uscito</string>
+    <string name="movie_status_planned">Pianificato</string>
+    <string name="movie_status_rumored">Solo voci</string>
+    <string name="movie_status_in_production">In produzione</string>
+    <string name="movie_status_post_production">Post-produzione</string>
     <string name="detail_section_network">Network</string>
     <string name="detail_section_production">Produzione</string>
     <string name="detail_lists_fallback">Liste</string>

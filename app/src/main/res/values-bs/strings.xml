@@ -1,0 +1,1518 @@
+<resources>
+    <string name="app_name">Nuvio</string>
+    <string name="type_movie">Film</string>
+    <string name="type_series">Serija</string>
+    <string name="type_unknown">Nepoznato</string>
+
+    <!-- WebConfigServers -->
+    <string name="web_manage_addons_title">Upravljaj Addonima</string>
+    <string name="web_manage_addons_subtitle">Upravljaj addonima, katalozima i kolekcijama</string>
+    <string name="web_add_addon_url">Dodaj addon preko URL-a</string>
+    <string name="web_placeholder_url">https://example.com/manifest.json</string>
+    <string name="web_btn_add">Dodaj</string>
+    <string name="web_installed_addons">Instalirani Addoni</string>
+    <string name="web_no_addons">Nema instaliranih addona</string>
+    <string name="web_home_catalogs">Početni Katalozi i Kolekcije</string>
+    <string name="web_no_catalogs">Nema dostupnih početnih kataloga</string>
+    <string name="web_btn_save">Spremi Promjene</string>
+    <string name="web_connection_lost">Veza sa TV-om prekinuta</string>
+    <string name="web_btn_remove">Ukloni</string>
+    <string name="web_badge_new">Novo</string>
+    <string name="web_badge_disabled">Onemogućeno</string>
+    <string name="web_btn_enable">Omogući</string>
+    <string name="web_btn_disable">Onemogući</string>
+    <string name="web_error_addon_exists">Ovaj addon je već na listi</string>
+    <string name="web_status_waiting_tv">Čekanje na TV</string>
+    <string name="web_status_msg_waiting_tv">Molimo potvrdite promjene na vašem TV-u da biste ih primijenili.</string>
+    <string name="web_status_changes_applied">Promjene Primijenjene</string>
+    <string name="web_status_msg_addon_updated">Vaša konfiguracija addona je ažurirana na TV-u.</string>
+    <string name="web_status_msg_repo_updated">Konfiguracija vašeg repozitorija je ažurirana na TV-u.</string>
+    <string name="web_status_changes_rejected">Promjene Odbijene</string>
+    <string name="web_status_msg_changes_rejected">Promjene su odbijene na TV-u. Vaša lista je vraćena na prethodno stanje.</string>
+    <string name="web_status_error">Nešto je pošlo po zlu</string>
+    <string name="web_error_failed_save">Spremanje nije uspjelo. Provjerite vezu sa TV-om.</string>
+    <string name="web_btn_dismiss">Zatvori</string>
+    <string name="web_status_timeout">Isteklo Vrijeme</string>
+    <string name="web_status_msg_timeout">Nema odgovora od TV-a. Molimo pokušajte ponovo.</string>
+    <string name="web_status_msg_connection_lost">TV server više nije dostupan. Promjene su možda primijenjene.</string>
+    <string name="web_manage_repos_title">Upravljaj Repozitorijima</string>
+    <string name="web_manage_repos_subtitle">Upravljaj svojim repozitorijima</string>
+    <string name="web_add_repo_url">Dodaj repozitorij preko URL-a</string>
+    <string name="web_installed">Instalirano</string>
+    <string name="web_no_repos">Nema instaliranih repozitorija</string>
+    <string name="web_error_repo_exists">Ovaj repozitorij je već na listi</string>
+    <string name="web_manage_collections_title">Upravljaj Kolekcijama</string>
+    <string name="web_manage_collections_subtitle">Kreiraj i upravljaj svojim prilagođenim kolekcijama</string>
+    <string name="web_status_msg_collections_updated">Vaše kolekcije su ažurirane na TV-u.</string>
+    <string name="web_tab_addons">Addoni</string>
+    <string name="web_tab_home_layout">Početni Izgled</string>
+    <string name="web_tab_collections">Kolekcije</string>
+    <string name="web_btn_enable_all">Omogući Sve</string>
+    <string name="web_btn_disable_all">Onemogući Sve</string>
+    <string name="web_btn_show_all">Prikaži Sve</string>
+    <string name="web_btn_hide_all">Sakrij Sve</string>
+    <string name="web_btn_new_collection">+ Nova Kolekcija</string>
+    <string name="web_btn_export">Eksportuj</string>
+    <string name="web_btn_import">Importuj</string>
+    <string name="web_no_collections">Još nema kolekcija</string>
+    <string name="web_badge_collection">Kolekcija</string>
+    <string name="web_import_collections_title">Importuj Kolekcije</string>
+    <string name="web_import_tab_paste">Zalijepi</string>
+    <string name="web_import_tab_file">Fajl</string>
+    <string name="web_import_tab_url">URL</string>
+
+    <!-- HomeScreen -->
+    <string name="home_no_addons">Nema instaliranih addona. Dodajte jedan za početak.</string>
+    <string name="home_no_catalog_addons">Nema instaliranih addona za katalog. Instalirajte katalog addon da vidite sadržaj.</string>
+    <string name="auth_notice_nuvio_logged_out">Odjavljeni ste iz Nuvia. Molimo prijavite se ponovo.</string>
+    <string name="auth_notice_trakt_logged_out">Odjavljeni ste sa Trakta. Molimo ponovo se povežite.</string>
+    <string name="error_generic">Došlo je do greške</string>
+
+    <!-- ErrorState -->
+    <string name="action_retry">Pokušaj ponovo</string>
+    <string name="error_state_generic_issue">Nešto je pošlo po zlu.</string>
+    <string name="error_state_possible_fix">Moguće rješenje: %1$s</string>
+    <string name="error_state_fix_retry_soon">pokušajte ponovo za trenutak.</string>
+    <string name="error_state_issue_no_metadata_any_addon">Ovaj ID nije mogao učitati detalje jer nijedan instalirani addon nije vratio metapodatke.</string>
+    <string name="error_state_fix_no_metadata_any_addon">probajte drugi addon, onemogućite "Preferiraj eksterni meta addon" u postavkama izgleda, ili potvrdite da instalirani addon podržava ovaj ID.</string>
+    <string name="error_state_prefix_no_supported_metadata">Nijedan instalirani addon ne podržava metapodatke za </string>
+    <string name="error_state_prefix_no_addon_for_id">Nijedan instalirani addon ne može pružiti metapodatke za ID=</string>
+    <string name="error_state_fix_no_supported_metadata">instalirajte ili ažurirajte addon koji podržava ovaj tip sadržaja, pa pokušajte ponovo.</string>
+    <string name="error_state_prefix_tried_meta_addons">Pokušani meta addoni:</string>
+    <string name="error_state_fix_tried_meta_addons">instalirajte addon koji podržava ovaj ID, ili konfigurirajte/ažurirajte addon i pokušajte ponovo.</string>
+    <string name="error_state_issue_missing_metadata_for_id">nema metapodatke za ovaj ID</string>
+    <string name="error_state_fix_missing_metadata_for_id">otvorite ovaj ID sa drugog addona, onemogućite "Preferiraj eksterni meta addon", ili provjerite da li addon podržava ovaj ID.</string>
+    <string name="error_state_issue_addon_unreachable">nije moguće pristupiti</string>
+    <string name="error_state_fix_addon_unreachable">provjerite svoju internet konekciju, potvrdite da URL addona još uvijek radi, pa pokušajte ponovo.</string>
+    <string name="error_state_issue_addon_connection_failed">je odbio vezu</string>
+    <string name="error_state_fix_addon_connection_failed">provjerite da li je addon server na mreži i dostupan, pa pokušajte ponovo.</string>
+    <string name="error_state_issue_addon_timeout">je predugo odgovarao</string>
+    <string name="error_state_fix_addon_timeout">pokušajte ponovo za trenutak, ili probajte drugi addon ako se ovo nastavi događati.</string>
+    <string name="error_state_issue_addon_cleartext">koristi nesigurnu HTTP vezu koju je Android blokirao</string>
+    <string name="error_state_fix_addon_cleartext">promijenite URL addona na HTTPS ili ažurirajte konfiguraciju addona.</string>
+    <string name="error_state_fix_addon_generic">pokušajte ponovo, ažurirajte ili reinstalirajte addon, ili probajte drugi addon.</string>
+    <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
+    <string name="error_meta_not_found">Metapodaci nisu pronađeni</string>
+    <string name="error_meta_no_supported_addon">Nijedan instalirani addon ne podržava metapodatke za "%1$s".</string>
+    <string name="error_meta_no_addon_for_id">Nijedan instalirani addon nije mogao pružiti metapodatke za ID=%1$s (tip=%2$s).</string>
+    <string name="error_meta_tried_none">Pokušani meta addoni: %1$s. Nijedan od njih nije pružio metapodatke za ID=%1$s (tip=%2$s).</string>
+    <string name="error_meta_tried_generic">Pokušani meta addoni: %1$s. Nije bilo moguće učitati metapodatke za ID=%1$s (tip=%2$s).</string>
+    <string name="error_meta_tried_issues">Pokušani meta addoni: %1$s. Nije bilo moguće učitati metapodatke za ID=%1$s (tip=%2$s). Problemi: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Nijedan instalirani addon ne podržava streamove za "%1$s".</string>
+    <string name="error_stream_tried_none">Pokušani stream addoni: %1$s. Nijedan od njih nije vratio streamove za ID=%1$s (tip=%2$s).</string>
+    <string name="error_stream_tried_generic">Pokušani stream addoni: %1$s. Nije bilo moguće učitati streamove za ID=%1$s (tip=%2$s).</string>
+    <string name="error_stream_tried_issues">Pokušani stream addoni: %1$s. Nije bilo moguće učitati streamove za ID=%1$s (tip=%2$s). Problemi: %4$s.</string>
+
+    <!-- ContinueWatchingSection -->
+    <string name="continue_watching">Nastavi Gledati</string>
+    <string name="cw_upcoming">Nadolazeće</string>
+    <string name="cw_next_up">Sljedeće Na Redu</string>
+    <string name="cw_new_episode">Nova Epizoda</string>
+    <string name="cw_new_season">Nova Sezona</string>
+    <string name="cw_resume">Nastavi</string>
+    <string name="cw_percent_watched">%1$d%% odgledano</string>
+    <string name="cw_hours_min_left">Preostalo %1$dh %2$dm</string>
+    <string name="cw_min_left">Preostalo %1$dm</string>
+    <string name="cw_almost_done">Skoro gotovo</string>
+    <string name="cw_airs_date">Prikazuje se %1$s</string>
+    <string name="cw_action_go_to_details">Idi na detalje</string>
+    <string name="cw_action_start_from_beginning">Počni ispočetka</string>
+    <string name="cw_action_remove">Ukloni</string>
+    <string name="cw_dialog_subtitle">Odaberi šta želiš uraditi s ovom stavkom.</string>
+    <string name="home_poster_dialog_subtitle">Akcije za naslov</string>
+
+    <!-- CatalogRowSection -->
+    <string name="catalog_from_addon">od %1$s</string>
+    <string name="action_see_all">Prikaži Sve</string>
+    <string name="action_load_more">Učitaj Više</string>
+
+    <!-- HeroSection -->
+    <string name="hero_creator">Kreator: %1$s</string>
+    <string name="hero_director">Režiser: %1$s</string>
+    <string name="hero_writer">Scenarist: %1$s</string>
+    <string name="hero_play">Pusti</string>
+    <string name="hero_play_episode">Pusti S%1$d, E%2$d</string>
+    <string name="hero_add_to_library">Dodaj u biblioteku</string>
+    <string name="hero_remove_from_library">Ukloni iz biblioteke</string>
+    <string name="hero_mark_watched">Označi kao odgledano</string>
+    <string name="hero_mark_unwatched">Označi kao neodgledano</string>
+    <string name="hero_play_trailer">Pusti trailer</string>
+    <string name="hero_press_back_trailer">Pritisnite nazad za izlaz iz trailera</string>
+    <string name="cd_rating">Ocjena</string>
+
+    <!-- EpisodesSection -->
+    <string name="episodes_season">Sezona %1$d</string>
+    <string name="episodes_specials">Specijali</string>
+    <string name="episodes_episode">Epizoda</string>
+    <string name="episodes_cd_watched">Odgledano</string>
+    <string name="episodes_dialog_subtitle">Akcije za epizodu</string>
+    <string name="episodes_mark_watched">Označi kao odgledano</string>
+    <string name="episodes_mark_unwatched">Označi kao neodgledano</string>
+    <string name="episodes_mark_season_watched">Označi sezonu kao odgledanu</string>
+    <string name="episodes_mark_season_unwatched">Označi sezonu kao neodgledanu</string>
+    <string name="episodes_mark_previous_watched">Označi prethodne u ovoj sezoni kao odgledane</string>
+    <string name="episodes_play">Pusti</string>
+    <string name="play_manually">Pusti ručno</string>
+    <string name="episodes_season_actions">Akcije za sezonu</string>
+
+    <!-- MetaDetailsViewModel -->
+    <string name="detail_added_to_library">Dodano u biblioteku</string>
+    <string name="detail_removed_from_library">Uklonjeno iz biblioteke</string>
+    <string name="detail_episode_marked_watched">Epizoda označena kao odgledana</string>
+    <string name="detail_episode_marked_unwatched">Epizoda označena kao neodgledana</string>
+    <string name="detail_lists_updated">Liste ažurirane</string>
+    <string name="detail_movie_marked_watched">Označi kao odgledano</string>
+    <string name="detail_movie_marked_unwatched">Označi kao neodgledano</string>
+    <string name="detail_all_episodes_watched">Sve epizode su već odgledane</string>
+    <string name="detail_no_watched_episodes">Nema odgledanih epizoda u ovoj sezoni</string>
+    <string name="detail_all_previous_watched">Sve prethodne epizode su već odgledane</string>
+    <string name="detail_marked_episodes_watched">Epizode označene kao odgledane: %1$d</string>
+    <string name="detail_marked_episodes_unwatched">Epizode označene kao neodgledane: %1$d</string>
+    <string name="detail_marked_previous_watched">Prethodne epizode označene kao odgledane: %1$d</string>
+
+    <!-- MetaDetailsScreen -->
+    <string name="detail_btn_play">Pusti</string>
+    <string name="detail_btn_resume">Nastavi</string>
+    <string name="detail_btn_play_episode">Pusti S%1$dE%2$d</string>
+    <string name="detail_btn_resume_episode">Nastavi S%1$dE%2$d</string>
+    <string name="detail_btn_next_episode">Sljedeća S%1$dE%2$d</string>
+    <string name="detail_tab_cast">Kreator i Glumci</string>
+    <string name="cast_role_creator">Kreator</string>
+    <string name="cast_role_director">Režiser</string>
+    <string name="cast_role_writer">Scenarist</string>
+    <string name="detail_tab_ratings">Ocjene</string>
+    <string name="detail_tab_more_like_this">Slično ovome</string>
+    <string name="detail_more_like_this_powered_by_tmdb">Omogućava TMDB</string>
+    <string name="detail_more_like_this_powered_by_trakt">Omogućava Trakt</string>
+    <string name="detail_comments_title">Komentari</string>
+    <string name="detail_comments_subtitle">Recenzije sa Trakta</string>
+    <string name="detail_section_network">Mreža</string>
+    <string name="detail_section_production">Produkcija</string>
+    <string name="detail_comments_empty">Još uvijek nema Trakt recenzija.</string>
+    <string name="detail_comments_error">Trenutno nije moguće učitati Trakt recenzije.</string>
+    <string name="detail_comments_spoiler_hidden">Recenzija sadrži spoiler. Pritisnite OK za prikaz.</string>
+    <string name="detail_comments_reveal_spoiler">Prikaži spoiler</string>
+    <string name="detail_comments_reveal_spoiler_hint">Pritisnite OK za prikaz spoilera.</string>
+    <string name="detail_comments_back_hint">Kliknite nazad za zatvaranje</string>
+    <string name="detail_comments_badge_review">Recenzija</string>
+    <string name="detail_comments_badge_spoiler">Spoiler</string>
+    <string name="detail_comments_badge_rating">%1$d/10</string>
+    <string name="detail_comments_likes">%1$d lajkova</string>
+    <string name="tmdb_entity_kind_company">Produkcijska Kuća</string>
+    <string name="tmdb_entity_kind_network">Mreža</string>
+    <string name="tmdb_entity_rail_popular">Popularno</string>
+    <string name="tmdb_entity_rail_top_rated">Najbolje Ocijenjeno</string>
+    <string name="tmdb_entity_rail_recent">Nedavno</string>
+    <string name="tmdb_entity_empty_title">Naslovi nisu pronađeni</string>
+    <string name="tmdb_entity_empty_subtitle">TMDB trenutno nema dostupne naslove za ovaj odabir.</string>
+    <string name="episodes_unavailable">Nedostupno</string>
+    <string name="series_status_ended">Završeno</string>
+    <string name="series_status_continuing">U toku</string>
+    <string name="series_status_current">Trenutno</string>
+    <string name="series_status_cancelled">Otkazano</string>
+    <string name="series_status_released">Objavljeno</string>
+    <string name="series_status_planned">Planirano</string>
+    <string name="series_status_rumored">Glasine</string>
+    <string name="series_status_in_production">U produkciji</string>
+    <string name="series_status_post_production">U postprodukciji</string>
+    <string name="movie_status_ended">Završeno</string>
+    <string name="movie_status_continuing">U toku</string>
+    <string name="movie_status_current">Trenutno</string>
+    <string name="movie_status_cancelled">Otkazano</string>
+    <string name="movie_status_released">Objavljeno</string>
+    <string name="movie_status_planned">Planirano</string>
+    <string name="movie_status_rumored">Glasine</string>
+    <string name="movie_status_in_production">U produkciji</string>
+    <string name="movie_status_post_production">U postprodukciji</string>
+    <string name="detail_lists_fallback">Liste</string>
+    <string name="detail_lists_subtitle">Odaberite na koje liste želite dodati ovaj naslov.</string>
+    <string name="action_save">Spremi</string>
+    <string name="action_saving">Spremanje…</string>
+
+    <!-- AppLanguage -->
+    <string name="appearance_language">Jezik Aplikacije</string>
+    <string name="appearance_language_subtitle">Zaobiđi sistemski jezik</string>
+    <string name="appearance_language_system">Sistemski podrazumijevano</string>
+    <string name="appearance_language_dialog_title">Odaberite Jezik</string>
+    <string name="appearance_language_restart_hint">Ponovo pokrenite aplikaciju da primijenite promjenu jezika.</string>
+
+    <!-- Font -->
+    <string name="appearance_font">Font Aplikacije</string>
+    <string name="appearance_font_subtitle">Odaberite željeni font</string>
+    <string name="appearance_font_dialog_title">Odaberite Font</string>
+
+    <!-- ThemeSettingsScreen -->
+    <string name="appearance_title">Izgled</string>
+    <string name="appearance_subtitle">Odaberite temu boja, font i jezik</string>
+    <string name="cd_selected">Odabrano</string>
+
+    <!-- AboutScreen -->
+    <string name="about_title">O nama</string>
+    <string name="about_subtitle">Informacije o aplikaciji, ažuriranja i pravni linkovi</string>
+    <string name="about_made_with_love">Napravljeno s ❤️ od strane Tapframea i prijatelja</string>
+    <string name="about_version">Verzija %1$s</string>
+    <string name="about_check_updates">Provjeri ažuriranja</string>
+    <string name="about_check_updates_subtitle">Preuzmi najnoviju verziju</string>
+    <string name="about_privacy_policy">Politika Privatnosti</string>
+    <string name="about_privacy_policy_subtitle">Pogledajte našu politiku privatnosti</string>
+    <string name="about_supporters_contributors">Podržavaoci i Saradnici</string>
+    <string name="about_supporters_contributors_subtitle">Priznanja i zasluge za projekt</string>
+
+    <!-- SettingsScreen categories -->
+    <string name="settings_account">Račun</string>
+    <string name="settings_account_subtitle">Račun i status sinhronizacije</string>
+    <string name="settings_profiles">Profili</string>
+    <string name="settings_profiles_subtitle">Upravljaj korisničkim profilima</string>
+    <string name="settings_layout">Izgled</string>
+    <string name="settings_layout_subtitle">Struktura početne stranice i stilovi postera.</string>
+    <string name="settings_plugins">Plugini</string>
+    <string name="settings_plugins_subtitle">Repozitoriji i provajderi.</string>
+    <string name="settings_integration">Integracije</string>
+    <string name="settings_playback">Playback</string>
+    <string name="settings_playback_subtitle">Player, titlovi i automatsko pokretanje.</string>
+    <string name="settings_trakt_subtitle">Otvori ekran za povezivanje sa Traktom.</string>
+    <string name="settings_about_subtitle">Verzija i politike.</string>
+    <string name="settings_network">Brzina mreže</string>
+    <string name="settings_network_subtitle">Latencija i dijagnostika preuzimanja</string>
+    <string name="settings_advanced">Napredno</string>
+    <string name="settings_advanced_subtitle">Pokreni dijagnostiku brzine mreže</string>
+    <string name="network_speed_test_run">Pokreni Test Brzine</string>
+    <string name="network_speed_test_running">Testiranje brzine u toku</string>
+    <string name="network_speed_test_subtitle">Izmjeri brzinu preuzimanja i latenciju</string>
+    <string name="network_testing_latency">Mjerenje latencije</string>
+    <string name="network_testing_download">Mjerenje brzine preuzimanja</string>
+    <string name="network_results_title">Rezultati</string>
+    <string name="network_latency_label">Latencija</string>
+    <string name="network_download_label">Preuzimanje</string>
+    <string name="network_error_prefix">Greška: %1$s</string>
+    <string name="network_powered_by_fast">Omogućava fast.com</string>
+    <string name="network_connection_wifi">Wi-Fi</string>
+    <string name="network_connection_ethernet">LAN kabel (Ethernet)</string>
+    <string name="network_connection_offline">Van mreže</string>
+    <string name="settings_debug">Debug</string>
+    <string name="settings_debug_subtitle">Alati za programere i opcije.</string>
+    <string name="settings_plugins_section_subtitle">Upravljanje repozitorijima, provajderima i statusom plugina</string>
+    <string name="settings_account_section_subtitle">Račun i status sinhronizacije</string>
+    <string name="account_stat_addons">addoni</string>
+    <string name="account_stat_plugins">plugini</string>
+    <string name="account_stat_library">biblioteka</string>
+    <string name="account_stat_progress">napredak</string>
+    <string name="account_stat_watched">odgledano</string>
+    <string name="settings_integrations_section">Integracije</string>
+    <string name="settings_integrations_section_subtitle">Upravljanje dostupnim integracijama</string>
+    <string name="settings_tmdb_subtitle">Kontrole za obogaćivanje metapodataka</string>
+    <string name="settings_mdblist_subtitle">Vanjski provajderi ocjena</string>
+    <string name="settings_animeskip_subtitle">Vremenske oznake za preskakanje anime uvoda/odjave</string>
+
+    <!-- PlaybackSettingsScreen -->
+    <string name="playback_title">Postavke Reprodukcije</string>
+    <string name="playback_subtitle">Konfigurirajte opcije za video i titlove</string>
+    <string name="cd_decrease">Smanji</string>
+    <string name="cd_increase">Povećaj</string>
+    <string name="action_cancel">Otkaži</string>
+    <string name="action_none">Ništa</string>
+    <string name="action_close">Zatvori</string>
+
+    <!-- SupportersContributorsScreen -->
+    <string name="supporters_contributors_title">Podržavaoci i Saradnici</string>
+    <string name="supporters_contributors_subtitle">Ljudi koji podržavaju Nuvio i saradnici koji ga grade na TV-u i mobilnim uređajima.</string>
+    <string name="supporters_contributors_supporters_copy">Podržavaoci i donatori pomažu da projekat napreduje, finansiraju infrastrukturu i ostavljaju prostor za ambiciozne funkcije.</string>
+    <string name="supporters_contributors_donate_copy">Nuvio će ostati besplatan i open source. Ako želite podržati projekt, možete pomoći u pokrivanju vremena i infrastrukture koja stoji iza njega.</string>
+    <string name="supporters_contributors_donate_button">Donirajte za Nuvio</string>
+    <string name="supporters_contributors_qr_title">Skenirajte za donaciju</string>
+    <string name="supporters_contributors_qr_subtitle">Otvorite link na telefonu i podržite Nuvio putem Ko-fi.</string>
+    <string name="supporters_contributors_qr_hint">Usmjerite kameru na QR kod ili koristite dugme ispod.</string>
+    <string name="supporters_contributors_back_button">Nazad na detalje</string>
+    <string name="supporters_tab">Podržavaoci</string>
+    <string name="contributors_tab">Saradnici</string>
+    <string name="supporters_loading">Učitavanje podržavalaca…</string>
+    <string name="supporters_empty">Još nema podržavalaca.</string>
+    <string name="supporters_error_title">Nije moguće učitati podržavaoce</string>
+    <string name="supporters_no_message">Nema podijeljene poruke.</string>
+    <string name="supporters_open_donations">Otvori stranicu za donacije</string>
+    <string name="contributors_loading">Učitavanje GitHub saradnika…</string>
+    <string name="contributors_empty">Još nema saradnika.</string>
+    <string name="contributors_error_title">Nije moguće učitati saradnike</string>
+    <string name="contributors_total_contributions">%1$d ukupno doprinosa</string>
+    <string name="contributors_open_github">Otvori GitHub Profil</string>
+    <string name="contributors_show_kofi_qr">Prikaži Ko-fi QR</string>
+    <string name="contributors_hide_kofi_qr">Sakrij Ko-fi QR</string>
+    <string name="contributors_profile_unavailable">GitHub profil link je nedostupan.</string>
+
+    <!-- PlaybackSettingsSections -->
+    <string name="playback_section_general">Općenito</string>
+    <string name="playback_section_general_desc">Osnovno ponašanje reprodukcije.</string>
+    <string name="playback_loading_overlay">Ekran Učitavanja</string>
+    <string name="playback_loading_overlay_sub">Prikaži ekran za učitavanje dok se ne pojavi prva slika videa.</string>
+    <string name="playback_pause_overlay">Ekran pri Pauzi</string>
+    <string name="playback_pause_overlay_sub">Prikaži detalje nakon 5 sekundi pauziranja.</string>
+    <string name="playback_show_clock_sub">Prikaži trenutno vrijeme i vrijeme završetka dok su kontrole vidljive.</string>
+    <string name="playback_osd_clock">Sat na Ekranu</string>
+    <string name="playback_skip_intro">Preskoči Uvod</string>
+    <string name="playback_skip_intro_sub">Koristi introdb.app za prepoznavanje uvoda i sažetaka.</string>
+    <string name="playback_auto_frame_rate">Automatski Frame Rate</string>
+    <string name="playback_section_player">Player i Odabir Streama</string>
+    <string name="playback_section_player_desc">Prioritet playera, auto-play i filtriranje izvora.</string>
+    <string name="playback_player">Player</string>
+    <string name="playback_player_internal">Interni</string>
+    <string name="playback_player_external">Eksterni</string>
+    <string name="playback_player_ask">Pitaj svaki put</string>
+    <string name="playback_internal_player_engine">Interni Engine</string>
+    <string name="playback_engine_exoplayer">ExoPlayer</string>
+    <string name="playback_engine_mvplayer">libmpv (Beta)</string>
+    <string name="playback_auto_switch_internal_player_on_error">Automatski promijeni engine u slučaju greške</string>
+    <string name="playback_auto_switch_internal_player_on_error_sub">Ako pokretanje streama ne uspije, automatski se prebaci između ExoPlayer i libmpv.</string>
+    <string name="playback_section_audio">Zvuk i Trailer</string>
+    <string name="playback_section_audio_desc">Ponašanje trailera i kontrole zvuka.</string>
+    <string name="playback_section_subtitles">Titlovi</string>
+    <string name="playback_section_subtitles_desc">Jezik, stil i način iscrtavanja.</string>
+    <string name="playback_afr_open">Otvori</string>
+    <string name="playback_afr_closed">Zatvori</string>
+    <string name="playback_afr_off">Isključeno</string>
+    <string name="playback_afr_off_sub">Ne mijenjaj frekvenciju osvežavanja ekrana.</string>
+    <string name="playback_afr_on_start">Pri pokretanju</string>
+    <string name="playback_afr_on_start_sub">Promijeni kad započne reprodukcija.</string>
+    <string name="playback_afr_on_start_stop">Pri pokretanju/zaustavljanju</string>
+    <string name="playback_afr_on_start_stop_sub">Promijeni pri pokretanju i vrati na staro pri zaustavljanju.</string>
+    <string name="playback_resolution_matching">Usklađivanje rezolucije</string>
+    <string name="playback_resolution_matching_sub">Dozvoli promjene načina prikaza kako bi odgovaralo rezoluciji videa.</string>
+    <string name="playback_player_external_desc">Uvijek otvaraj streamove u vanjskoj aplikaciji</string>
+    <string name="playback_player_ask_desc">Odaberi player svaki put</string>
+    <string name="playback_engine_exoplayer_desc">Najbolja kompatibilnost sa trenutnim Nuvio funkcijama.</string>
+    <string name="playback_engine_mvplayer_desc">Koristi libmpv sa Nuvio OSD kontrolama. Eksperimentalno.</string>
+
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_trailer_section">Trailer</string>
+    <string name="audio_autoplay_trailers">Automatski Pusti Trailere</string>
+    <string name="audio_autoplay_trailers_sub">Automatski pusti trailere na ekranu sa detaljima nakon perioda neaktivnosti</string>
+    <string name="audio_trailer_delay">Odgoda Trailera</string>
+    <string name="audio_section">Zvuk</string>
+    <string name="audio_lang_default">Zadano (medijski fajl)</string>
+    <string name="audio_lang_device">Jezik uređaja</string>
+    <string name="audio_lang_original">Originalni jezik</string>
+    <string name="audio_lang_original_hint">Zahtijeva omogućeno TMDB obogaćivanje</string>
+    <string name="audio_preferred_lang">Preferirani Jezik Zvuka</string>
+    <string name="audio_skip_silence">Preskoči Tišinu</string>
+    <string name="audio_skip_silence_sub">Preskoči tihe dijelove zvuka tokom reprodukcije</string>
+    <string name="audio_advanced_section">Napredni Zvuk</string>
+    <string name="audio_advanced_warning">Ove postavke mogu uzrokovati probleme na nekim uređajima. Mijenjajte samo ako znate šta radite.</string>
+    <string name="audio_decoder_device_only">Samo dekoderi uređaja</string>
+    <string name="audio_decoder_prefer_device">Preferiraj dekodere uređaja</string>
+    <string name="audio_decoder_prefer_app">Preferiraj dekodere aplikacije (FFmpeg)</string>
+    <string name="audio_decoder_priority">Prioritet Dekodera</string>
+    <string name="audio_tunneled">Tunneled Playback</string>
+    <string name="audio_tunneled_sub">Sinhronizacija zvuka/videa na hardverskom nivou. Može poboljšati reprodukciju na nekim Android TV uređajima.</string>
+    <string name="audio_dv_sub">Mapiraj Dolby Vision Profile 7 na standardni HEVC za uređaje bez hardverske Dolby Vision podrške.</string>
+    <string name="audio_mpv_hwdec_title">Hardware Decoding (Samo MPV)</string>
+    <string name="audio_mpv_hwdec_dialog_subtitle">Odaberite kako bi libmpv trebao koristiti hardware dekodere.</string>
+    <string name="audio_mpv_hwdec_legacy_direct_copy">Legacy (direct -&gt; copy)</string>
+    <string name="audio_mpv_hwdec_legacy_direct_copy_desc">Prethodno zadano ponašanje: prvo pokušaj direct hardware, zatim copy-back.</string>
+    <string name="audio_mpv_hwdec_auto_safe">Auto (auto-safe)</string>
+    <string name="audio_mpv_hwdec_auto_safe_desc">Sigurniji automatski mod sa fallback opcijom kada neki hardware decoderi zakažu.</string>
+    <string name="audio_mpv_hwdec_hardware_copy">Hardware (copy) (mediacodec-copy)</string>
+    <string name="audio_mpv_hwdec_hardware_copy_desc">Koristi hardware decoding sa copy-back u softversku memoriju.</string>
+    <string name="audio_mpv_hwdec_hardware_direct">Hardware (direct) (mediacodec)</string>
+    <string name="audio_mpv_hwdec_hardware_direct_desc">Koristi direct hardware decoding. Najbrži način na kompatibilnim uređajima.</string>
+    <string name="audio_mpv_hwdec_disabled">Onemogućeno (no)</string>
+    <string name="audio_mpv_hwdec_disabled_desc">Onemogućava hardware decoding i koristi samo software decoding.</string>
+    <string name="audio_decoder_device_only_desc">Koristi samo ugrađene hardware decodere. Najkompatibilnije, ali možda ne podržava sve formate.</string>
+    <string name="audio_decoder_prefer_device_desc">Koristi hardware decodere kad su dostupni, a fallback je FFmpeg. Preporučeno za većinu uređaja.</string>
+    <string name="audio_decoder_prefer_app_desc">Koristi FFmpeg decodere kad su dostupni. Bolja podrška za formate, ali veća potrošnja CPU-a.</string>
+    <string name="audio_decoder_controls">Određuje da li se za audio i video koriste hardware ili software (FFmpeg) decoderi</string>
+
+    <!-- PlaybackSubtitleSettings -->
+    <string name="sub_section">Titlovi</string>
+    <string name="sub_not_set">Nije postavljeno</string>
+    <string name="sub_forced_lang">Forced</string>
+    <string name="sub_preferred_lang">Preferirani Jezik</string>
+    <string name="sub_secondary_lang">Sekundarni Preferirani Jezik</string>
+    <string name="sub_organization">Organizacija Titlova</string>
+    <string name="sub_size">Veličina</string>
+    <string name="sub_vertical_offset">Vertikalni Pomak</string>
+    <string name="sub_bold">Bold</string>
+    <string name="sub_bold_sub">Koristi bold debljinu fonta za titlove</string>
+    <string name="sub_text_color">Boja Teksta</string>
+    <string name="sub_bg_color">Boja Pozadine</string>
+    <string name="sub_outline">Outline</string>
+    <string name="sub_outline_sub">Dodaj outline oko teksta titla radi bolje vidljivosti</string>
+    <string name="sub_outline_color">Boja Outline-a</string>
+    <string name="sub_advanced_section">Napredni Subtitle Rendering</string>
+    <string name="sub_libass">Koristi libass za ASS/SSA titlove</string>
+    <string name="sub_libass_sub">Eksperimentalno: napredni ASS/SSA rendering (stilovi, pozicioniranje, animacije)</string>
+    <string name="sub_libass_mode">Libass Render Mode</string>
+    <string name="sub_mode_overlay_gl">Overlay OpenGL (Preporučeno)</string>
+    <string name="sub_mode_overlay_gl_sub">Najbolji kvalitet uz HDR podršku. Iscrtava titlove na zasebnom threadu.</string>
+    <string name="sub_mode_overlay_canvas">Overlay Canvas</string>
+    <string name="sub_mode_effects_gl">Effects OpenGL</string>
+    <string name="sub_mode_effects_gl_sub">Podrška za animacije koristeći Media3 efekte. Brže od Canvas-a.</string>
+    <string name="sub_mode_effects_canvas">Effects Canvas</string>
+    <string name="sub_mode_effects_canvas_sub">Podrška za animacije koristeći Media3 efekte sa Canvas renderingom.</string>
+    <string name="sub_mode_standard">Standard Cues</string>
+    <string name="sub_mode_standard_sub">Osnovni subtitle rendering bez podrške za animacije. Najkompatibilnije.</string>
+    <string name="sub_org_none">Bez organizacije (zadani redoslijed)</string>
+    <string name="sub_org_by_lang">Po jeziku</string>
+    <string name="sub_org_by_addon">Po addonu</string>
+    <string name="sub_org_none_desc">Prikaži titlove u zadanom redoslijedu rezultata addona.</string>
+    <string name="sub_org_by_lang_desc">Grupiši titlove po jeziku.</string>
+    <string name="sub_org_by_addon_desc">Grupiši titlove po izvoru addona.</string>
+    <string name="sub_startup_mode_title">Učitavanje Addon Titlova</string>
+    <string name="sub_startup_mode_fast">Brzo pokretanje</string>
+    <string name="sub_startup_mode_preferred">Preferirani jezici</string>
+    <string name="sub_startup_mode_all">Svi addon titlovi</string>
+    <string name="sub_startup_mode_fast_desc">Pokreni reprodukciju odmah. Odabir addon titlova može jednom ponovo učitati player.</string>
+    <string name="sub_startup_mode_preferred_desc">Unaprijed učitaj addon titlove prije reprodukcije i dodaj preferirane/sekundarne jezičke trackove.</string>
+    <string name="sub_startup_mode_all_desc">Unaprijed učitaj i dodaj sve addon titlove prije reprodukcije. Najsporije pokretanje.</string>
+
+    <!-- PlaybackAutoPlaySettings -->
+    <string name="autoplay_reuse_last_link">Ponovo Koristi Zadnji Link</string>
+    <string name="autoplay_reuse_last_link_sub">Auto-play zadnjeg ispravnog streama za isti film/epizodu dok je cache još važeći</string>
+    <string name="autoplay_last_link_cache">Trajanje Cache-a Zadnjeg Linka</string>
+    <string name="autoplay_mode_manual">Ručno (odaberi stream)</string>
+    <string name="autoplay_mode_first">Auto-play prvog izvora</string>
+    <string name="autoplay_mode_regex">Auto-play regex podudaranje</string>
+    <string name="autoplay_stream_selection">Auto Odabir Streama</string>
+    <string name="autoplay_next_episode">Auto-play Sljedeće Epizode</string>
+    <string name="autoplay_next_episode_sub">Automatski pokreni sljedeću epizodu kada se pojavi prompt.</string>
+    <string name="autoplay_prefer_binge_group">Preferiraj Binge Group (Sljedeća Epizoda)</string>
+    <string name="autoplay_prefer_binge_group_sub">Prvo pokušaj isti source profil (isti addon/quality group) prije normalnih auto-play pravila.</string>
+    <string name="autoplay_threshold_pct">Postotak</string>
+    <string name="autoplay_threshold_min">Minute prije kraja</string>
+    <string name="autoplay_threshold_mode">Threshold Mod za Sljedeću Epizodu</string>
+    <string name="autoplay_threshold_pct_title">Threshold Postotak</string>
+    <string name="autoplay_threshold_pct_sub">Fallback kada ne postoji outro timestamp.</string>
+    <string name="autoplay_threshold_min_title">Threshold Minute</string>
+    <string name="autoplay_threshold_min_sub">Fallback kada ne postoji outro timestamp.</string>
+    <string name="autoplay_scope_all">Svi izvori</string>
+    <string name="autoplay_scope_addons">Samo instalirani addoni</string>
+    <string name="autoplay_scope_plugins">Samo omogućeni plugini</string>
+    <string name="autoplay_scope">Opseg Izvora za Auto-play</string>
+    <string name="autoplay_timeout_title">Timeout za Odabir Streama</string>
+    <string name="autoplay_timeout_sub">Vrijeme čekanja na addone prije odabira.</string>
+    <string name="autoplay_timeout_instant">Odmah</string>
+    <string name="autoplay_timeout_unlimited">Neograničeno</string>
+    <string name="autoplay_allowed_addons">Dozvoljeni Addoni</string>
+    <string name="autoplay_all_addons">Svi instalirani addoni</string>
+    <string name="autoplay_allowed_plugins">Dozvoljeni Plugini</string>
+    <string name="autoplay_all_plugins">Svi omogućeni plugini</string>
+    <string name="autoplay_regex_placeholder">Nema postavljenog patterna. Primjer: 4K|2160p|Remux</string>
+    <string name="autoplay_regex_title">Regex Pattern</string>
+    <string name="autoplay_no_items">Nema dostupnih stavki</string>
+    <string name="autoplay_mode_manual_desc">Uvijek prikaži listu izvora i pusti mene da odaberem.</string>
+    <string name="autoplay_mode_first_desc">Automatski pusti prvi dostupni izvor.</string>
+    <string name="autoplay_mode_regex_desc">Pusti prvi izvor čiji tekst odgovara tvom regex patternu.</string>
+    <string name="autoplay_scope_all_desc">Auto-play može koristiti i instalirane addone i omogućene plugine.</string>
+    <string name="autoplay_scope_addons_desc">Auto-play uzima u obzir samo streamove iz instaliranih addona.</string>
+    <string name="autoplay_scope_plugins_desc">Auto-play uzima u obzir samo streamove iz omogućenih plugina.</string>
+    <string name="autoplay_threshold_pct_desc">Prikaži prema procentu reprodukcije kada outro timestamp nije dostupan.</string>
+    <string name="autoplay_threshold_min_desc">Prikaži ovoliko minuta prije kraja epizode kada outro timestamp nije dostupan.</string>
+    <string name="autoplay_regex_matches">Podudara se sa nazivom/naslovom/opisom/addonom/url-om streama. Primjer: 4K|2160p|Remux</string>
+    <string name="autoplay_regex_presets">Presets</string>
+    <string name="autoplay_invalid_regex">Neispravan regex pattern</string>
+
+    <!-- LayoutSettingsScreen -->
+    <string name="layout_title">Postavke Izgleda</string>
+    <string name="layout_subtitle">Prilagodi početni izgled, vidljivost sadržaja i ponašanje postera</string>
+    <string name="layout_classic">Classic Prikaz</string>
+    <string name="layout_grid">Grid Prikaz</string>
+    <string name="layout_modern">Modern Prikaz</string>
+    <string name="layout_classic_desc">Horizontalno listaj kroz kategorije</string>
+    <string name="layout_grid_desc">Pregledaj sve u vertikalnom gridu sa glavnom sekcijom</string>
+    <string name="layout_modern_desc">Fiksni glavni prikaz sa jednim aktivnim redom za brže pregledanje</string>
+    <string name="layout_section_home">Početni Izgled</string>
+    <string name="layout_section_home_desc">Odaberi strukturu i izvor glavnog prikaza.</string>
+    <string name="layout_landscape_posters">Landscape Posteri</string>
+    <string name="layout_landscape_posters_sub">Prebacuj između portrait i landscape kartica za Modern prikaz.</string>
+    <string name="layout_preview_row">Prikaži Preview Red</string>
+    <string name="layout_preview_row_sub">Prikaži djelimični pregled reda ispod u Modern Home izgledu.</string>
+    <string name="layout_hero_catalogs">Katalozi za Glavni Prikaz</string>
+    <string name="layout_hero_catalogs_sub">Odaberi jedan ili više kataloga za istaknuti sadržaj.</string>
+    <string name="layout_section_content">Početni Sadržaj</string>
+    <string name="layout_section_content_desc">Kontroliši šta se prikazuje na početnoj i u pretrazi.</string>
+    <string name="layout_collapse_sidebar">Skupi Sidebar</string>
+    <string name="layout_collapse_sidebar_sub">Sakrij sidebar po defaultu; prikaži ga kada je fokusiran.</string>
+    <string name="layout_modern_sidebar">Modern Sidebar</string>
+    <string name="layout_modern_sidebar_sub">Omogući floating sidebar navigaciju.</string>
+    <string name="layout_modern_sidebar_blur">Modern Sidebar Blur</string>
+    <string name="layout_modern_sidebar_blur_sub">Uključi/isključi blur efekt za površine u modernom sidebaru.</string>
+    <string name="layout_fullscreen_hero_backdrop">Fullscreen Backdrop za Glavni Prikaz</string>
+    <string name="layout_fullscreen_hero_backdrop_sub">Proširi backdrop sliku da ispuni cijeli ekran.</string>
+    <string name="layout_show_hero">Prikaži Glavnu Sekciju</string>
+    <string name="layout_show_hero_sub">Prikaži istaknuti carousel na vrhu početne.</string>
+    <string name="layout_show_discover">Prikaži Otkrij u Pretrazi</string>
+    <string name="layout_show_discover_sub">Prikaži browse sekciju kada je pretraga prazna.</string>
+    <string name="layout_poster_labels">Prikaži Nazive Postera</string>
+    <string name="layout_poster_labels_sub">Prikaži naslove ispod postera u redovima, gridu i view-all prikazu.</string>
+    <string name="layout_addon_name">Prikaži Naziv Addona</string>
+    <string name="layout_addon_name_sub">Prikaži naziv izvora ispod naziva kataloga.</string>
+    <string name="layout_catalog_type">Prikaži Tip Kataloga</string>
+    <string name="layout_catalog_type_sub">Prikaži sufiks tipa pored naziva kataloga (Film/Serija).</string>
+    <string name="layout_hide_unreleased">Sakrij Neobjavljen Sadržaj</string>
+    <string name="layout_hide_unreleased_sub">Sakrij filmove i serije koji još nisu objavljeni.</string>
+    <string name="layout_section_detail">Stranica Detalja</string>
+    <string name="layout_section_detail_desc">Postavke za ekran detalja i epizoda.</string>
+    <string name="layout_blur_unwatched">Zamuti Neodgledane Epizode</string>
+    <string name="layout_blur_unwatched_sub">Zamuti thumbnailove epizoda dok nisu odgledane da izbjegneš spoilere.</string>
+    <string name="layout_blur_cw_next_up">Zamuti Neodgledano u Nastavi Gledati</string>
+    <string name="layout_blur_cw_next_up_sub">Zamuti thumbnailove sljedeće epizode u Nastavi Gledati da izbjegneš spoilere.</string>
+    <string name="layout_trailer_button">Prikaži Dugme za Trailer</string>
+    <string name="layout_trailer_button_sub">Prikaži dugme za trailer na stranici detalja (samo kada je trailer dostupan).</string>
+    <string name="layout_prefer_external_meta">Preferiraj meta sa eksternog addona</string>
+    <string name="layout_prefer_external_meta_sub">Koristi metadata sa eksternog addona umjesto katalog addona.</string>
+    <string name="layout_show_full_release_date">Prikaži puni datum izlaska</string>
+    <string name="layout_show_full_release_date_sub">Za filmove, prikaži puni datum izlaska umjesto samo godine.</string>
+    <string name="layout_section_focused">Fokusirani Poster</string>
+    <string name="layout_section_focused_desc">Napredno ponašanje za fokusirane poster kartice.</string>
+    <string name="layout_expand_poster">Proširi Fokusirani Poster u Backdrop</string>
+    <string name="layout_expand_poster_sub">Proširi fokusirani poster nakon odgode tokom neaktivnosti.</string>
+    <string name="layout_expand_delay">Odgoda Širenja Backdropa</string>
+    <string name="layout_expand_delay_sub">Koliko dugo čekati prije proširivanja fokusiranih kartica.</string>
+    <string name="layout_autoplay_trailer">Autoplay Trailer</string>
+    <string name="layout_autoplay_trailer_expanded">Autoplay Trailer u Proširenoj Kartici</string>
+    <string name="layout_autoplay_trailer_sub">Pusti preview trailera za fokusirani sadržaj kada je dostupan.</string>
+    <string name="layout_autoplay_trailer_expanded_sub">Pusti trailer unutar proširenog backdropa kada je dostupan.</string>
+    <string name="layout_trailer_muted">Pusti Trailer Bez Zvuka</string>
+    <string name="layout_trailer_muted_sub_preview">Utišaj zvuk trailera tokom autoplay previewa.</string>
+    <string name="layout_trailer_muted_sub_expanded">Utišaj zvuk trailera u proširenim karticama.</string>
+    <string name="layout_section_card_style">Stil Poster Kartice</string>
+    <string name="layout_section_card_style_desc">Podesi širinu kartice i radius uglova.</string>
+    <string name="layout_open">Otvoreno</string>
+    <string name="layout_closed">Zatvoreno</string>
+    <string name="layout_trailer_location">Lokacija Reprodukcije Trailera u Modern prikazu</string>
+    <string name="layout_trailer_location_sub">Odaberi gdje će se trailer preview puštati u Modern Home prikazu.</string>
+    <string name="layout_trailer_expanded_card">Proširena Kartica</string>
+    <string name="layout_trailer_hero_media">Istaknuti Sadržaj</string>
+    <string name="layout_preset_compact">Kompaktno</string>
+    <string name="layout_preset_dense">Zbijeno</string>
+    <string name="layout_preset_standard">Standardno</string>
+    <string name="layout_preset_balanced">Balansirano</string>
+    <string name="layout_preset_comfort">Komforno</string>
+    <string name="layout_preset_large">Veliko</string>
+    <string name="layout_preset_sharp">Oštro</string>
+    <string name="layout_preset_subtle">Suptilno</string>
+    <string name="layout_preset_classic">Klasično</string>
+    <string name="layout_preset_rounded">Zaobljeno</string>
+    <string name="layout_preset_pill">Oblik Pilule</string>
+    <string name="layout_card_width">Širina</string>
+    <string name="layout_card_radius">Radius Uglova</string>
+    <string name="layout_reset_default">Vrati na Zadano</string>
+    <string name="layout_custom">Prilagođeno</string>
+
+    <!-- MDBListSettingsScreen -->
+    <string name="mdblist_title">MDBList Ocjene</string>
+    <string name="mdblist_subtitle">Podesi vanjske ocjene prikazane u glavnoj sekciji detalja</string>
+    <string name="mdblist_enable_title">Omogući MDBList Ocjene</string>
+    <string name="mdblist_enable_subtitle">Dohvati ocjene od vanjskih provajdera na ekranu detalja</string>
+    <string name="mdblist_api_key_title">API Key</string>
+    <string name="mdblist_api_key_subtitle">Potreban za dohvaćanje ocjena sa MDBList-a</string>
+    <string name="mdblist_trakt_title">Trakt</string>
+    <string name="mdblist_trakt_subtitle">Prikaži Trakt ocjenu</string>
+    <string name="mdblist_imdb_title">IMDb</string>
+    <string name="mdblist_imdb_subtitle">Prikaži IMDb ocjenu (i sakrij zadani IMDb red kad je dostupan)</string>
+    <string name="mdblist_tmdb_title">TMDB</string>
+    <string name="mdblist_tmdb_subtitle">Prikaži TMDB ocjenu</string>
+    <string name="mdblist_letterboxd_title">Letterboxd</string>
+    <string name="mdblist_letterboxd_subtitle">Prikaži Letterboxd ocjenu</string>
+    <string name="mdblist_tomatoes_title">Rotten Tomatoes</string>
+    <string name="mdblist_tomatoes_subtitle">Prikaži ocjenu kritičara</string>
+    <string name="mdblist_audience_title">Ocjena Publike</string>
+    <string name="mdblist_audience_subtitle">Prikaži ocjenu publike</string>
+    <string name="mdblist_metacritic_title">Metacritic</string>
+    <string name="mdblist_metacritic_subtitle">Prikaži Metacritic ocjenu</string>
+    <string name="mdblist_dialog_title">MDBList API Key</string>
+    <string name="mdblist_dialog_subtitle">Unesi svoj API key za dohvaćanje vanjskih ocjena</string>
+    <string name="mdblist_dialog_placeholder">Unesi MDBList API key</string>
+    <string name="mdblist_not_set">Nije postavljeno</string>
+    <string name="mdblist_invalid_api_key">Neispravan MDBList API key</string>
+
+    <!-- Anime-Skip -->
+    <string name="animeskip_title">Anime Skip</string>
+    <string name="animeskip_subtitle">Konfiguriši svoj Anime Skip Client ID za preskakanje anime uvoda/odjave</string>
+    <string name="animeskip_enable_title">Omogući Anime Skip</string>
+    <string name="animeskip_enable_subtitle">Dohvati vremenske oznake za preskakanje sa anime-skip.com</string>
+    <string name="animeskip_client_id_title">Client ID</string>
+    <string name="animeskip_client_id_subtitle">Potreban za dohvaćanje vremenskih oznaka sa anime-skip.com</string>
+    <string name="animeskip_dialog_title">Anime Skip Client ID</string>
+    <string name="animeskip_dialog_subtitle">Kreiraj svoj Client ID na anime-skip.com/account/settings</string>
+    <string name="animeskip_dialog_placeholder">Unesi Client ID</string>
+    <string name="animeskip_invalid_client_id">Neispravan Client ID</string>
+    <string name="action_clear">Očisti</string>
+
+    <!-- TmdbSettingsScreen -->
+    <string name="tmdb_title">TMDB Obogaćivanje</string>
+    <string name="tmdb_subtitle">Odaberi koja metadata polja trebaju dolaziti sa TMDB-a</string>
+    <string name="tmdb_enable_title">Omogući TMDB Obogaćivanje</string>
+    <string name="tmdb_enable_subtitle">Koristi TMDB kao izvor metapodataka za poboljšanje addon podataka</string>
+    <string name="tmdb_modern_home_title">Omogući na Modern Home</string>
+    <string name="tmdb_modern_home_subtitle">Također primijeni TMDB obogaćivanje na glavni prikaz i fokusirane kartice</string>
+    <string name="tmdb_enrich_continue_watching_title">Obogati Nastavi Gledati</string>
+    <string name="tmdb_enrich_continue_watching_subtitle">Primijeni TMDB obogaćivanje na stavke u Nastavi Gledati</string>
+    <string name="tmdb_language_title">Jezik</string>
+    <string name="tmdb_language_subtitle">Jezik TMDB metapodataka za naslov, logo i omogućena polja</string>
+    <string name="tmdb_artwork_title">Artwork</string>
+    <string name="tmdb_artwork_subtitle">Logo i backdrop slike sa TMDB-a</string>
+    <string name="tmdb_basic_info_title">Osnovne Informacije</string>
+    <string name="tmdb_basic_info_subtitle">Opis, žanrovi i ocjena sa TMDB-a</string>
+    <string name="tmdb_details_title">Detalji</string>
+    <string name="tmdb_details_subtitle">Trajanje, status, država i jezik sa TMDB-a</string>
+    <string name="tmdb_release_dates_title">Datumi Izlaska</string>
+    <string name="tmdb_release_dates_subtitle">Datumi izlaska i emitovanja sa TMDB-a</string>
+    <string name="tmdb_credits_title">Zasluge</string>
+    <string name="tmdb_credits_subtitle">Glumci sa slikama, režiser i scenarista sa TMDB-a</string>
+    <string name="tmdb_productions_title">Produkcije</string>
+    <string name="tmdb_productions_subtitle">Produkcijske kuće sa TMDB-a</string>
+    <string name="tmdb_networks_title">Mreže</string>
+    <string name="tmdb_networks_subtitle">Mreže sa logotipima sa TMDB-a</string>
+    <string name="tmdb_episodes_title">Epizode</string>
+    <string name="tmdb_episodes_subtitle">Naslovi epizoda, opisi, thumbnailovi i trajanje sa TMDB-a</string>
+    <string name="tmdb_more_like_this_title">Slično Ovome</string>
+    <string name="tmdb_more_like_this_subtitle">TMDB preporuke backdrop slika na stranici detalja</string>
+    <string name="tmdb_collections_title">Kolekcije</string>
+    <string name="tmdb_collections_subtitle">TMDB filmske kolekcije po redoslijedu izlaska</string>
+
+    <string name="tmdb_language_dialog_title">TMDB Jezik</string>
+
+    <!-- TraktScreen -->
+    <string name="trakt_description">Sinhronizuj svoju watchlistu, napredak gledanja, nastavi gledati, scrobble i lične liste sa Traktom.</string>
+    <string name="trakt_connected_as">Prijavljen kao %1$s</string>
+    <string name="trakt_account_login">Prijava na Račun</string>
+    <string name="trakt_awaiting_instruction">Idi na trakt.tv/activate i unesi ovaj kod:</string>
+    <string name="trakt_waiting_approval">Čekanje na odobrenje…</string>
+    <string name="qr_login_approved">Prijava odobrena. Završavanje prijave…</string>
+    <string name="qr_login_pending">Čekanje na odobrenje na tvom telefonu…</string>
+    <string name="qr_login_expired">QR prijava je istekla. Generiši novi kod.</string>
+    <string name="qr_login_scan_prompt">Skeniraj QR i prijavi se na svom telefonu</string>
+    <string name="qr_login_start_failed">Pokretanje QR prijave nije uspjelo</string>
+    <string name="qr_login_signing_in">Prijavljivanje…</string>
+    <string name="qr_login_success">Uspješno prijavljeno</string>
+    <string name="qr_login_exchange_failed">Nije bilo moguće završiti QR prijavu</string>
+    <string name="trakt_code_expires">Kod ističe za %1$s</string>
+    <string name="trakt_token_refreshes">Trakt access token se osvježava za %1$s</string>
+    <string name="trakt_login_instruction">Pritisni Prijava da započneš Trakt autentifikaciju uređaja. Ovdje će se pojaviti QR kod.</string>
+    <string name="trakt_missing_credentials">Nedostaju TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET u local.properties.</string>
+    <string name="trakt_watch_progress_title">Napredak Gledanja</string>
+    <string name="trakt_watch_progress_subtitle">Odaberi koji izvor napretka upravlja opcijama nastavi i nastavi gledati</string>
+    <string name="trakt_watch_progress_dialog_title">Napredak Gledanja</string>
+    <string name="trakt_watch_progress_dialog_subtitle">Odaberi da li nastavi i nastavi gledati treba da koriste Trakt ili Nuvio Sync, dok Trakt scrobble ostaje aktivan.</string>
+    <string name="trakt_watch_progress_source_trakt">Trakt</string>
+    <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_setting_on">Uključeno</string>
+    <string name="trakt_setting_off">Isključeno</string>
+    <string name="trakt_watch_progress_trakt_selected">Izvor napretka gledanja postavljen na Trakt</string>
+    <string name="trakt_watch_progress_nuvio_selected">Izvor napretka gledanja postavljen na Nuvio Sync</string>
+    <string name="trakt_continue_watching_window">Prozor za Nastavi Gledati</string>
+    <string name="trakt_continue_watching_subtitle">Trakt historija koja se uzima u obzir za nastavi gledati</string>
+    <string name="trakt_unaired_next_up">Neemitovane Sljedeće Epizode</string>
+    <string name="trakt_unaired_next_up_subtitle">Prikaži nadolazeće epizode prije nego se emituju</string>
+    <string name="trakt_unaired_shown">Prikazano</string>
+    <string name="trakt_unaired_hidden">Skriveno</string>
+    <string name="trakt_unaired_now_shown">Neemitovane sljedeće epizode su sada prikazane</string>
+    <string name="trakt_unaired_now_hidden">Neemitovane sljedeće epizode su sada skrivene</string>
+    <string name="trakt_comments_title">Komentari</string>
+    <string name="trakt_comments_subtitle">Prikaži Trakt recenzije na stranicama metapodataka</string>
+    <string name="trakt_comments_dialog_title">Komentari</string>
+    <string name="trakt_comments_dialog_subtitle">Odaberi da li stranice metapodataka trebaju prikazivati Trakt recenzije kada je tvoj račun povezan.</string>
+    <string name="trakt_comments_now_shown">Trakt recenzije na stranicama metapodataka su sada prikazane</string>
+    <string name="trakt_comments_now_hidden">Trakt recenzije na stranicama metapodataka su sada skrivene</string>
+    <string name="trakt_cached_label">U Kešu</string>
+    <string name="trakt_stat_movies">Filmovi</string>
+    <string name="trakt_stat_shows">Serije</string>
+    <string name="trakt_stat_episodes">Epizode</string>
+    <string name="trakt_stat_watched_hours">Odgledano Sati</string>
+    <string name="trakt_disconnect">Odjavi se</string>
+    <string name="trakt_disconnect_title">Odjaviti se sa Trakta?</string>
+    <string name="trakt_disconnect_subtitle">Ovo će odspojiti tvoj Trakt račun sa Nuvia.</string>
+    <string name="trakt_login">Prijava</string>
+    <string name="trakt_retry">Pokušaj ponovo</string>
+    <string name="trakt_back">Nazad</string>
+    <string name="trakt_cw_window_title">Prozor za Nastavi Gledati</string>
+    <string name="trakt_cw_window_subtitle">Odaberi koliko Trakt aktivnosti se treba pojavljivati u nastavi gledati.</string>
+    <string name="trakt_unaired_dialog_title">Neemitovane Sljedeće Epizode</string>
+    <string name="trakt_unaired_dialog_subtitle">Odaberi da li Nastavi Gledati treba uključivati nadolazeće epizode prije izlaska.</string>
+    <string name="trakt_show_unaired">Prikaži neemitovane epizode</string>
+    <string name="trakt_hide_unaired">Sakrij neemitovane epizode</string>
+    <string name="trakt_all_history">Cijela historija</string>
+    <string name="trakt_days_format">%1$d dana</string>
+
+    <!-- DebugSettingsScreen -->
+    <string name="debug_title">Debug</string>
+    <string name="debug_subtitle">Alati za programere i opcije (samo za debug buildove)</string>
+    <string name="debug_section_popup">Testiranje Popupova / Dijaloga</string>
+    <string name="debug_playback_error_title">Ekran za Grešku Reprodukcije</string>
+    <string name="debug_playback_error_subtitle">Prikaži simulirani popup greške tokom reprodukcije</string>
+    <string name="debug_section_features">Feature Toggles</string>
+    <string name="debug_account_tab_title">Račun Tab</string>
+    <string name="debug_account_tab_subtitle">Prikaži Račun tab u navigaciji postavki</string>
+    <string name="debug_sync_code_title">Sync Code Opcije</string>
+    <string name="debug_sync_code_subtitle">Prikaži dugmad za Generiši/Unesi Sync Code u postavkama Računa</string>
+    <string name="debug_section_account">Račun</string>
+    <string name="debug_manual_signin_title">Ručna Prijava</string>
+    <string name="debug_manual_signin_subtitle">Prijavi se sa emailom i lozinkom (Supabase auth)</string>
+    <string name="debug_email_placeholder">Email</string>
+    <string name="debug_password_placeholder">Lozinka</string>
+    <string name="debug_signing_in">Prijavljivanje…</string>
+    <string name="debug_sign_in">Prijavi se</string>
+    <string name="debug_error_dialog_title">Greška Reprodukcije</string>
+    <string name="debug_error_dialog_subtitle">Došlo je do greške tokom reprodukcije.\n\nGreška: Simulirana test greška - ovo nije stvarni kvar. Izvor je vratio HTTP 503 (Servis Nedostupan).</string>
+    <string name="debug_dismiss">Zatvori</string>
+    <string name="debug_section_library">Biblioteka</string>
+    <string name="debug_generate_library_title">Generiši Stavke u Biblioteci</string>
+    <string name="debug_generate_library_subtitle">Dodaj nasumične filmove/serije u biblioteku za testiranje</string>
+    <string name="debug_generate_library_placeholder">Broj stavki</string>
+    <string name="debug_generate_library_button">Generiši</string>
+    <string name="debug_generating_library">Generisanje…</string>
+
+    <!-- ProfileSettingsContent -->
+    <string name="profile_title">Profili</string>
+    <string name="profile_subtitle">Upravljaj korisničkim profilima za ovaj račun.</string>
+    <string name="profile_manage_button">Upravljaj Profilima</string>
+    <string name="profile_manage_title">Upravljaj Profilima</string>
+    <string name="profile_manage_subtitle">Odaberi profil za uređivanje, promjenu ili kreiraj novi</string>
+    <string name="profile_manage_hint">Odaberi profil za upravljanje</string>
+    <string name="profile_primary_label">Primarni</string>
+    <string name="profile_shares_primary">Dijeli sa primarnim %1$s</string>
+    <string name="profile_edit_label">Uredi</string>
+    <string name="profile_edit_header">Uredi Profil</string>
+    <string name="profile_add">Dodaj Profil</string>
+    <string name="profile_create_title">Kreiraj Profil</string>
+    <string name="profile_edit_title">Uredi Profil %1$s</string>
+    <string name="profile_name_placeholder">Ime profila</string>
+    <string name="profile_avatar_color">Boja Avatara</string>
+    <string name="profile_use_primary_addons">Koristi addone primarnog profila</string>
+    <string name="profile_use_primary_plugins">Koristi plugine primarnog profila</string>
+    <string name="profile_creating">Kreiranje…</string>
+    <string name="profile_create_btn">Kreiraj</string>
+    <string name="profile_confirm">Potvrdi</string>
+    <string name="profile_delete">Izbriši</string>
+    <string name="profile_addons">addoni</string>
+    <string name="profile_plugins">plugini</string>
+    <string name="profile_choose_avatar">Odaberi Avatar</string>
+    <string name="profile_avatar_none_selected">Avatar nije odabran</string>
+    <string name="profile_avatar_focus_hint">Fokusiraj avatar da vidiš njegovo ime</string>
+    <string name="profile_avatar_category_all">Sve</string>
+    <string name="profile_avatar_category_anime">Anime</string>
+    <string name="profile_avatar_category_animation">Animirani</string>
+    <string name="profile_avatar_category_movie">Film</string>
+    <string name="profile_avatar_category_tv">TV</string>
+    <string name="profile_avatar_category_gaming">Gaming</string>
+    <string name="profile_add_new">Dodaj Profil</string>
+    <string name="profile_cancel">Otkaži</string>
+    <string name="profile_save">Spremi</string>
+    <string name="profile_pin_title">Zaključavanje profila PIN-om</string>
+    <string name="profile_pin_enabled_subtitle">Ovaj profil zahtijeva 4-cifreni PIN prije prebacivanja.</string>
+    <string name="profile_pin_disabled_subtitle">Postavi 4-cifreni PIN da zaključaš ovaj profil.</string>
+    <string name="profile_pin_set">Postavi PIN</string>
+    <string name="profile_pin_change">Promijeni PIN</string>
+    <string name="profile_pin_remove">Ukloni PIN</string>
+    <string name="profile_pin_set_title">Postavi PIN za profil</string>
+    <string name="profile_pin_set_subtitle">Unesi 4-cifreni PIN i potvrdi ga.</string>
+    <string name="profile_pin_enter">Unesi 4-cifreni PIN</string>
+    <string name="profile_pin_confirm">Potvrdi 4-cifreni PIN</string>
+    <string name="profile_pin_mismatch">PIN vrijednosti se ne poklapaju.</string>
+    <string name="profile_pin_save">Spremi PIN</string>
+    <string name="profile_pin_unlock_title">Otključaj %1$s</string>
+    <string name="profile_pin_unlock_subtitle">Unesi 4-cifreni PIN da nastaviš.</string>
+    <string name="profile_pin_verifying">Provjera…</string>
+    <string name="profile_pin_unlock_action">Otključaj</string>
+    <string name="profile_pin_overlay_unlock_heading">Unesi svoj PIN za pristup profilu %1$s.</string>
+    <string name="profile_pin_overlay_set_heading">Kreiraj 4-cifreni PIN za profil %1$s.</string>
+    <string name="profile_pin_overlay_confirm_heading">Potvrdi svoj novi PIN.</string>
+    <string name="profile_pin_overlay_unlock_support">Koristi daljinski ili tastaturu da uneseš 4 cifre.</string>
+    <string name="profile_pin_overlay_change_verify_kicker">Potrebna sigurnosna provjera.</string>
+    <string name="profile_pin_overlay_change_verify_heading">Unesi trenutni PIN da promijeniš PIN za profil %1$s.</string>
+    <string name="profile_pin_overlay_change_verify_support">Unesi trenutni 4-cifreni PIN prije postavljanja novog.</string>
+    <string name="profile_pin_overlay_remove_verify_kicker">Potrebna sigurnosna provjera.</string>
+    <string name="profile_pin_overlay_remove_verify_heading">Unesi trenutni PIN da ukloniš zaključavanje za profil %1$s.</string>
+    <string name="profile_pin_overlay_remove_verify_support">Unesi trenutni 4-cifreni PIN da ukloniš ovo zaključavanje.</string>
+    <string name="profile_pin_overlay_set_support">Ovaj PIN će biti potreban prije otvaranja ovog profila.</string>
+    <string name="profile_pin_overlay_confirm_support">Ponovo unesi iste 4 cifre da završiš podešavanje.</string>
+    <string name="profile_pin_overlay_mismatch">PIN-ovi se ne poklapaju. Ponovo unesi novi PIN.</string>
+    <string name="profile_pin_overlay_forgot_hint">Zaboravljen PIN? Resetuj ga sa svog Nuvio računa na Nuvio web stranici.</string>
+    <string name="profile_pin_overlay_back_hint">Pritisni nazad za otkazivanje</string>
+
+    <!-- AddonManagerScreen -->
+    <string name="addon_title">Addoni</string>
+    <string name="addon_readonly_notice">Koriste se addoni primarnog profila i ne mogu se mijenjati</string>
+    <string name="addon_install_title">Instaliraj addon</string>
+    <string name="addon_install_placeholder">https://example.com</string>
+    <string name="addon_installing">Instaliranje</string>
+    <string name="addon_install_btn">Instaliraj</string>
+    <string name="addon_install_success">Instalirano %1$s</string>
+    <string name="addon_error_invalid_url">Unesi ispravan URL addona</string>
+    <string name="addon_error_invalid_scheme">URL addona mora počinjati sa http ili https</string>
+    <string name="addon_installed_section">Instalirano</string>
+    <string name="addon_empty">Nema instaliranih addona. Dodaj jedan za početak.</string>
+    <string name="addon_remove">Ukloni</string>
+    <string name="addon_manage_from_phone_title">Upravljaj preko telefona</string>
+    <string name="addon_manage_from_phone_subtitle">Skeniraj QR kod da upravljaš addonima, katalozima i kolekcijama sa svog telefona</string>
+    <string name="addon_manage_collections_from_phone_subtitle">Skeniraj QR kod da upravljaš kolekcijama sa svog telefona</string>
+    <string name="addon_reorder_title">Promijeni redoslijed početnih kataloga</string>
+    <string name="addon_reorder_subtitle">Kontroliše redoslijed redova kataloga i kolekcija na početnoj (Classic + Modern + Grid)</string>
+    <string name="addon_qr_scan_instruction">Skeniraj sa svojim telefonom da upravljaš addonima, katalozima i kolekcijama</string>
+    <string name="addon_qr_collections_scan_instruction">Skeniraj sa svojim telefonom da upravljaš kolekcijama</string>
+    <string name="addon_qr_close">Zatvori</string>
+    <string name="addon_confirm_title">Potvrdi promjene addona i kataloga</string>
+    <string name="addon_confirm_subtitle">Sljedeće promjene su napravljene sa tvog telefona:</string>
+    <string name="addon_confirm_added">Dodano:</string>
+    <string name="addon_confirm_removed">Uklonjeno:</string>
+    <string name="addon_confirm_catalog_reordered">Redoslijed kataloga je promijenjen</string>
+    <string name="addon_confirm_catalogs_disabled">Katalozi onemogućeni na početnoj:</string>
+    <string name="addon_confirm_catalogs_enabled">Katalozi omogućeni na početnoj:</string>
+    <string name="addon_confirm_no_changes">Nisu pronađene vidljive promjene</string>
+    <string name="addon_confirm_reject">Odbij</string>
+    <string name="addon_confirm_confirm">Potvrdi</string>
+
+    <!-- CatalogOrderScreen -->
+    <string name="catalog_order_title">Redoslijed Početnih Kataloga</string>
+    <string name="catalog_order_subtitle">Ovo kontroliše redoslijed redova kataloga na početnoj (Classic + Modern + Grid).</string>
+    <string name="catalog_order_empty">Još nema dostupnih početnih kataloga.</string>
+    <string name="catalog_order_disabled_on_home">Onemogućeno na početnoj</string>
+    <string name="catalog_order_enable">Omogući</string>
+    <string name="catalog_order_disable">Onemogući</string>
+
+    <!-- StreamScreen -->
+    <string name="stream_retry">Pokušaj ponovo</string>
+    <string name="stream_no_streams">Streamovi nisu pronađeni</string>
+    <string name="stream_no_streams_hint">Pokušaj instalirati više addona da pronađeš streamove</string>
+    <string name="stream_finding_source">Traženje izvora streama</string>
+    <string name="stream_type_torrent">Torrent</string>
+    <string name="stream_type_youtube">YouTube</string>
+    <string name="p2p_consent_title">P2P Streaming</string>
+    <string name="p2p_consent_body">Ovaj stream koristi peer-to-peer (P2P) tehnologiju. Omogućavanjem P2P-a, slažete se sa sljedećim:\n\n• Vaša IP adresa će biti vidljiva drugim učesnicima u mreži\n• Vi ste isključivo odgovorni za sadržaj kojem pristupate\n• Potvrđujete da imate zakonsko pravo streamati ovaj sadržaj u vašoj državi\n• Nuvio ne hosta, ne distribuira i ne kontroliše bilo kakav P2P sadržaj\n• Nuvio ne snosi odgovornost za bilo kakve pravne posljedice koje proizilaze iz vašeg korištenja P2P streaminga\n\nOvu funkciju koristite u potpunosti na vlastiti rizik. P2P možete isključiti bilo kada u Postavkama.</string>
+    <string name="p2p_consent_enable">Omogući P2P</string>
+    <string name="p2p_consent_cancel">Otkaži</string>
+    <string name="settings_p2p_title">P2P Streaming</string>
+    <string name="settings_p2p_subtitle">Dozvoli peer-to-peer (torrent) streamove</string>
+    <string name="settings_p2p_hide_stats_title">Sakrij torrent statistiku</string>
+    <string name="settings_p2p_hide_stats_subtitle">Sakrij buffer, seeds, peers i brzinu preuzimanja tokom učitavanja i reprodukcije</string>
+    <string name="p2p_download_title">Preuzimanje P2P Engine-a</string>
+    <string name="p2p_download_subtitle">Ovo je jednokratno preuzimanje potrebno za P2P streaming.</string>
+    <string name="stream_type_external">Eksterni</string>
+    <string name="stream_player_picker_title">Koji player treba koristiti?</string>
+    <string name="stream_player_internal">Interni</string>
+    <string name="stream_player_external">Eksterni</string>
+
+    <!-- PlayerScreen -->
+    <string name="player_no_external_player">Nije pronađen nijedan vanjski player</string>
+    <string name="player_loading_preparing">Priprema streama…</string>
+    <string name="player_loading_detecting_format">Detektovanje formata streama…</string>
+    <string name="player_loading_subtitles">Dohvaćanje titlova…</string>
+    <string name="player_loading_subtitles_from">Dohvaćanje titlova sa %1$d addona…</string>
+    <string name="player_loading_subtitles_progress">Dohvaćanje titlova… (%1$d / %2$d)</string>
+    <string name="player_loading_subtitles_addon">Titlovi: %1$s (%2$d / %3$d)</string>
+    <string name="player_loading_building">Pokretanje playera…</string>
+    <string name="player_loading_starting">Započinjanje streama…</string>
+    <string name="player_loading_buffering">Učitavanje (Buffering)…</string>
+    <string name="player_loading_fallback_pcm_audio">Pokretanje audio tracka nije uspjelo - prebacivanje na PCM audio…</string>
+    <string name="player_loading_fallback_hevc_decoder">Pokretanje decodera nije uspjelo - prebacivanje na HEVC decoder…</string>
+    <string name="player_engine_switching_title">Promjena Player Engine-a</string>
+    <string name="player_engine_switching_message">Pokretanje nije uspjelo. Prebacivanje na %1$s…</string>
+    <string name="player_engine_switching_manual_message">Prebacivanje na %1$s...</string>
+    <string name="playback_show_loading_status">Prikaži status učitavanja</string>
+    <string name="playback_show_loading_status_sub">Prikaži korak po korak napredak dok se player inicijalizuje.</string>
+
+    <!-- ParentalGuideOverlay -->
+    <string name="parental_nudity">Golišavost</string>
+    <string name="parental_violence">Nasilje</string>
+    <string name="parental_profanity">Psovke</string>
+    <string name="parental_alcohol">Alkohol/Droga</string>
+    <string name="parental_frightening">Zastrašujuće</string>
+    <string name="parental_severity_severe">Teško</string>
+    <string name="parental_severity_moderate">Umjereno</string>
+    <string name="parental_severity_mild">Blago</string>
+    <string name="player_ends_at">Završava u %1$s</string>
+    <string name="player_via">preko %1$s</string>
+    <string name="player_subtitle_delay">Odgoda Titlova</string>
+    <string name="player_error_title">Greška Reprodukcije</string>
+    <string name="player_go_back">Nazad</string>
+    <string name="player_speed_title">Brzina Reprodukcije</string>
+    <string name="player_more_actions_title">Više Opcija</string>
+    <string name="player_more_speed">Brzina Reprodukcije</string>
+    <string name="player_more_aspect_ratio">Omjer Slike (Aspect Ratio)</string>
+    <string name="player_more_open_external">Otvori u Vanjskom Playeru</string>
+
+    <!-- StreamInfoOverlay -->
+    <string name="stream_info_section_source">IZVOR</string>
+    <string name="stream_info_section_file">FAJL</string>
+    <string name="stream_info_section_video">VIDEO</string>
+    <string name="stream_info_section_audio">AUDIO</string>
+    <string name="stream_info_section_subtitle">TITL</string>
+    <string name="stream_info_filename">Ime fajla</string>
+    <string name="stream_info_size">Veličina</string>
+    <string name="stream_info_codec">Codec</string>
+    <string name="stream_info_resolution">Rezolucija</string>
+    <string name="stream_info_frame_rate">Frame Rate</string>
+    <string name="stream_info_bitrate">Bitrate</string>
+    <string name="stream_info_channels">Kanali</string>
+    <string name="stream_info_sample_rate">Sample Rate</string>
+    <string name="stream_info_language">Jezik</string>
+    <string name="stream_info_name">Ime</string>
+    <string name="stream_info_source">Izvor</string>
+    <string name="stream_info_subtitle_source_addon">Addon</string>
+    <string name="stream_info_subtitle_source_embedded">Ugrađen (Embedded)</string>
+
+    <!-- StreamSourcesSidePanel -->
+    <string name="sources_title">Izvori</string>
+    <string name="sources_reload">Učitaj Ponovo</string>
+    <string name="sources_close">Zatvori</string>
+    <string name="sources_playing">Prikazuje se</string>
+    <string name="sources_no_streams">Streamovi nisu pronađeni</string>
+
+    <!-- EpisodesSidePanel -->
+    <string name="episodes_panel_close">Zatvori</string>
+    <string name="episodes_panel_back">Nazad</string>
+    <string name="episodes_panel_reload">Učitaj Ponovo</string>
+    <string name="episodes_panel_no_streams">Streamovi nisu pronađeni</string>
+    <string name="episodes_panel_no_episodes">Nema dostupnih epizoda</string>
+    <string name="episodes_panel_title">Epizode</string>
+    <string name="episodes_panel_streams_title">Streamovi</string>
+    <string name="player_speed_normal">Normalno</string>
+    <string name="player_aspect_fit">Prilagodi (Originalno)</string>
+    <string name="player_aspect_stretch">Razvuci</string>
+    <string name="player_aspect_fit_width">Prilagodi Širini</string>
+    <string name="player_aspect_fit_height">Prilagodi Visini</string>
+    <string name="player_aspect_crop">Odreži (Crop)</string>
+    <string name="player_aspect_tunneling_unavailable">Nedostupno tokom tunneled playback-a</string>
+    <string name="player_aspect_mode_slight_zoom">Blagi Zoom</string>
+    <string name="player_aspect_mode_cinema_zoom">Kino Zoom</string>
+
+    <!-- AudioDialog -->
+    <string name="audio_dialog_title">Zvuk</string>
+    <string name="audio_dialog_tab_tracks">Zvuk</string>
+    <string name="audio_dialog_tab_mix">Mix</string>
+    <string name="audio_mix_label">Pojačanje (PCM)</string>
+    <string name="audio_mix_value_db">%1$d dB</string>
+    <string name="audio_mix_persist_on">Sačuvaj za idući put: UKLJUČENO</string>
+    <string name="audio_mix_persist_off">Sačuvaj za idući put: ISKLJUČENO</string>
+    <string name="audio_mix_range">Raspon: %1$d dB do %2$d dB</string>
+    <string name="audio_mix_range_saved">Raspon: %1$d dB do %2$d dB (sačuvano)</string>
+    <string name="audio_mix_unavailable">Pojačanje nije dostupno na ovom uređaju</string>
+
+    <!-- SubtitleDialog / SubtitleStyleSidePanel -->
+    <string name="subtitle_dialog_title">Titlovi</string>
+    <string name="subtitle_no_builtin">Nema ugrađenih titlova</string>
+    <string name="subtitle_loading_addon">Učitavanje titlova sa addona…</string>
+    <string name="subtitle_no_addon">Nema dostupnih addon titlova</string>
+    <string name="subtitle_text_color">Boja Teksta</string>
+    <string name="subtitle_outline_color">Boja Outline-a</string>
+    <string name="subtitle_reset_defaults">Vrati na Zadano</string>
+    <string name="subtitle_tab_builtin">Ugrađeni</string>
+    <string name="subtitle_tab_addons">Addoni</string>
+    <string name="subtitle_tab_languages">Jezici</string>
+    <string name="subtitle_tab_style">Stil</string>
+    <string name="subtitle_tab_delay">Odgoda</string>
+    <string name="subtitle_none">Ništa</string>
+    <string name="subtitle_built_in">Ugrađeno</string>
+    <string name="subtitle_all">Svi</string>
+    <string name="subtitle_section_core">Osnovno</string>
+    <string name="subtitle_section_advanced">Napredno</string>
+    <string name="subtitle_font_size">Veličina Fonta</string>
+    <string name="subtitle_bold">Bold</string>
+    <string name="subtitle_outline">Outline</string>
+    <string name="subtitle_bottom_offset">Donji Pomak</string>
+    <string name="subtitle_on">Uklj</string>
+    <string name="subtitle_off">Isklj</string>
+    <string name="subtitle_style_title">Stil Titlova</string>
+    <string name="subtitle_style_customize">Prilagodi</string>
+    <string name="subtitle_style_color">Boja</string>
+    <string name="subtitle_style_reset">Resetuj</string>
+    <string name="subtitle_style_font_size">Veličina Fonta</string>
+    <string name="subtitle_style_bold">Bold</string>
+    <string name="subtitle_style_text_color">Boja Teksta</string>
+    <string name="subtitle_style_outline">Outline</string>
+    <string name="subtitle_style_bottom_offset">Donji Pomak</string>
+    <string name="subtitle_style_defaults">Zadano</string>
+    <string name="subtitle_style_on">Uklj</string>
+    <string name="subtitle_style_off">Isklj</string>
+    <string name="panel_failed_load_streams">Učitavanje streamova nije uspjelo</string>
+    <string name="panel_failed_load_episodes">Učitavanje epizoda nije uspjelo</string>
+
+    <!-- PauseOverlay -->
+    <string name="pause_you_are_watching">Gledate</string>
+    <string name="pause_cast_label">Uloge</string>
+    <string name="pause_back_to_details">Nazad na detalje</string>
+    <string name="pause_as_character">kao %1$s</string>
+
+    <!-- NextEpisodeCardOverlay -->
+    <string name="next_episode_label">Sljedeća Epizoda</string>
+    <string name="next_episode_finding_source">Traženje izvora…</string>
+    <string name="next_episode_playing_via">Pokretanje preko %1$s za %2$ds</string>
+    <string name="next_episode_play">Pusti</string>
+    <string name="next_episode_unaired">Neemitovano</string>
+    <string name="next_episode_not_aired_yet">Sljedeća epizoda još nije emitovana</string>
+    <string name="skip_intro">Preskoči Uvod</string>
+    <string name="skip_ending">Preskoči Odjavu</string>
+    <string name="skip_recap">Preskoči Sažetak</string>
+    <string name="skip_generic">Preskoči</string>
+    <string name="display_mode_refresh">Refresh Rate</string>
+    <string name="display_mode_resolution">Rezolucija</string>
+
+    <!-- SearchScreen -->
+    <string name="search_keyboard_hint">Pritisni Gotovo na tastaturi za pretragu</string>
+    <string name="search_placeholder">Pretraži filmove i serije</string>
+    <string name="search_start_title">Započni Pretragu</string>
+    <string name="search_start_subtitle">Unesi najmanje 2 karaktera</string>
+    <string name="search_start_subtitle_no_discover">Otkrivanje je onemogućeno. Unesi najmanje 2 karaktera</string>
+    <string name="search_recent_title">Nedavne pretrage</string>
+    <string name="search_recent_clear">Očisti historiju</string>
+    <string name="search_voice_no_speech">Glas nije prepoznat. Pokušaj ponovo.</string>
+    <string name="search_voice_mic_permission">Za glasovnu pretragu je potrebna dozvola za mikrofon.</string>
+    <string name="search_voice_failed">Glasovno prepoznavanje nije uspjelo. Pokušaj ponovo.</string>
+    <string name="search_voice_unavailable">Glasovna pretraga nije dostupna na ovom uređaju.</string>
+
+    <!-- LibraryScreen -->
+    <string name="library_syncing">Sinhronizacija Trakt biblioteke…</string>
+    <string name="library_title">Biblioteka</string>
+    <string name="library_filter_list">Lista</string>
+    <string name="library_filter_type">Tip</string>
+    <string name="library_filter_sort">Sortiraj</string>
+    <string name="library_filter_genre">Žanr</string>
+    <string name="library_filter_year">Godina</string>
+    <!-- Genre names (from TMDB movie + TV) -->
+    <string name="genre_action">Akcija</string>
+    <string name="genre_adventure">Avantura</string>
+    <string name="genre_animation">Animirani</string>
+    <string name="genre_comedy">Komedija</string>
+    <string name="genre_crime">Krimi</string>
+    <string name="genre_documentary">Dokumentarni</string>
+    <string name="genre_drama">Drama</string>
+    <string name="genre_family">Porodični</string>
+    <string name="genre_fantasy">Fantazija</string>
+    <string name="genre_history">Historijski</string>
+    <string name="genre_horror">Horor</string>
+    <string name="genre_music">Muzički</string>
+    <string name="genre_mystery">Misterija</string>
+    <string name="genre_romance">Romantika</string>
+    <string name="genre_science_fiction">Naučna Fantastika</string>
+    <string name="genre_tv_movie">TV Film</string>
+    <string name="genre_thriller">Triler</string>
+    <string name="genre_war">Ratni</string>
+    <string name="genre_western">Vestern</string>
+    <!-- TV-specific genres -->
+    <string name="genre_action_adventure">Akcija i Avantura</string>
+    <string name="genre_kids">Dječiji</string>
+    <string name="genre_news">Vijesti</string>
+    <string name="genre_reality">Reality</string>
+    <string name="genre_sci_fi_fantasy">Sci-Fi i Fantazija</string>
+    <string name="genre_soap">Sapunica</string>
+    <string name="genre_talk">Talk Show</string>
+    <string name="genre_war_politics">Rat i Politika</string>
+    <string name="library_sort_trakt_order">Trakt Redoslijed</string>
+    <string name="library_sort_added_desc">Dodano ↓</string>
+    <string name="library_sort_added_asc">Dodano ↑</string>
+    <string name="library_sort_title_asc">Naslov A-Ž</string>
+    <string name="library_sort_title_desc">Naslov Ž-A</string>
+    <string name="library_manage_lists">Upravljaj Listama</string>
+    <string name="library_manage_trakt_lists">Upravljaj Trakt Listama</string>
+    <string name="library_no_lists">Još nema ličnih listi.</string>
+    <string name="library_list_create">Kreiraj</string>
+    <string name="library_list_edit">Uredi</string>
+    <string name="library_list_move_up">Pomjeri Gore</string>
+    <string name="library_list_move_down">Pomjeri Dolje</string>
+    <string name="library_list_delete">Izbriši</string>
+    <string name="library_list_close">Zatvori</string>
+    <string name="library_list_name_label">Ime</string>
+    <string name="library_list_description_label">Opis</string>
+    <string name="library_list_privacy">Privatnost</string>
+    <string name="library_delete_title">Izbrisati ovu listu?</string>
+    <string name="library_delete_subtitle">Ovo uklanja listu i sve stavke sa Trakta.</string>
+    <string name="library_delete_confirm">Izbriši</string>
+    <string name="library_source_local">LOKALNO</string>
+    <string name="library_source_nuvio">NUVIO</string>
+    <string name="library_source_trakt">TRAKT</string>
+    <string name="library_syncing_library">Sinhronizacija biblioteke…</string>
+    <string name="library_type_all">Sve</string>
+    <string name="library_type_items">stavki</string>
+    <string name="library_empty_local_title">Još nema %1$s</string>
+    <string name="library_empty_trakt_title">Nema %1$s u ovoj listi</string>
+    <string name="library_empty_local_subtitle">Počni dodavati favorite da ih vidiš ovdje</string>
+    <string name="library_empty_trakt_subtitle">Koristi + u detaljima da dodaš stavke na watchlistu ili liste</string>
+
+    <!-- AccountSettingsContent -->
+    <string name="account_loading">Učitavanje…</string>
+    <string name="account_sync_description">Sinhronizuj svoju biblioteku, napredak gledanja, addone i plugine na svim uređajima.</string>
+    <string name="account_sync_restart_note">Sinhronizacija nije u stvarnom vremenu između aktivnih uređaja. Ponovo pokreni ovaj uređaj nakon prijave ili da preuzmeš promjene napravljene negdje drugo.</string>
+    <string name="account_signin_qr_title">Prijava sa QR</string>
+    <string name="account_signin_qr_subtitle">Skeniraj QR kod i završi prijavu emailom na telefonu</string>
+    <string name="account_signed_in_label">Prijavljeno</string>
+    <string name="account_total_label">Ukupno</string>
+    <string name="account_loading_sync">Učitavanje podataka za sinhronizaciju…</string>
+    <string name="account_sign_out">Odjavi se</string>
+
+    <!-- AuthSignInScreen -->
+    <string name="auth_signin_title">Prijava</string>
+    <string name="auth_signin_tv_disabled">Unos emaila/lozinke na TV-u je onemogućen. Nastavi sa QR prijavom.</string>
+    <string name="auth_signin_qr_btn">Nastavi sa QR</string>
+
+    <!-- AuthQrSignInScreen -->
+    <string name="auth_qr_title">Prijava Sa QR Kodom</string>
+    <string name="auth_qr_account_login">Prijava na Račun</string>
+    <string name="auth_qr_finishing">Završavanje prijave…</string>
+    <string name="auth_qr_code_label">Kod: %1$s</string>
+    <string name="auth_qr_expires">Ističe za %1$s</string>
+    <string name="auth_qr_phone_hint">Koristi telefon za prijavu sa emailom/lozinkom. TV ostaje samo za QR zbog brže prijave.</string>
+    <string name="auth_qr_scan_instruction">Skeniraj QR, odobri u pretraživaču, pa se vrati ovdje.</string>
+    <string name="auth_qr_code_display">Kod: %1$s</string>
+    <string name="auth_qr_refresh">Osvježi QR</string>
+    <string name="auth_qr_continue_without_account">Nastavi bez računa</string>
+    <string name="auth_qr_connected">Tvoj račun je povezan na ovom TV-u.</string>
+    <string name="auth_qr_synced_data">Tvoji sinhronizovani podaci</string>
+    <string name="auth_qr_generating">Generisanje QR koda…</string>
+    <string name="auth_qr_unavailable">QR nedostupan. Osvježi za ponovni pokušaj.</string>
+    <string name="auth_qr_please_wait">Molimo pričekajte…</string>
+    <string name="auth_qr_continue">Nastavi</string>
+    <string name="auth_qr_back">Nazad</string>
+
+    <!-- SyncCodeGenerateScreen -->
+    <string name="sync_generate_title">Generiši Sync Kod</string>
+    <string name="sync_generate_subtitle">Kreiraj PIN da zaštitiš svoj sync kod. Podijeli kod sa ostalim svojim uređajima.</string>
+    <string name="sync_generate_code_label">Tvoj Sync Kod</string>
+    <string name="sync_generate_instruction">Unesi ovaj kod i svoj PIN na drugom uređaju da ih povežeš.</string>
+    <string name="sync_generate_done">Gotovo</string>
+    <string name="sync_generate_pin_label">Odaberi PIN (4-8 karaktera)</string>
+    <string name="sync_generate_pin_placeholder">Unesi PIN</string>
+
+    <!-- SyncCodeClaimScreen -->
+    <string name="sync_claim_title">Poveži Uređaj</string>
+    <string name="sync_claim_subtitle">Unesi sync kod i PIN sa svog drugog uređaja da povežeš ovaj uređaj.</string>
+    <string name="sync_claim_success">Uređaj uspješno povezan! Tvoji addoni i plugini će se sada sinhronizovati.</string>
+    <string name="sync_claim_done">Gotovo</string>
+    <string name="sync_claim_code_label">Sync Kod</string>
+    <string name="sync_claim_code_placeholder">XXXX-XXXX-XXXX-XXXX-XXXX</string>
+    <string name="sync_claim_pin_label">PIN</string>
+    <string name="sync_claim_pin_placeholder">Unesi PIN</string>
+
+    <!-- PluginScreen -->
+    <string name="plugin_readonly_notice">Koriste se plugini primarnog profila i ne mogu se mijenjati</string>
+    <string name="plugin_repositories_section">Repozitoriji (%1$d)</string>
+    <string name="plugin_providers_section">Provajderi (%1$d)</string>
+    <string name="plugin_title">Plugini</string>
+    <string name="plugin_subtitle">Upravljaj lokalnim scraperima i provajderima</string>
+    <string name="plugin_add_repository">Dodaj repozitorij</string>
+    <string name="plugin_add_btn">Dodaj</string>
+    <string name="plugin_manage_from_phone_title">Upravljaj preko telefona</string>
+    <string name="plugin_manage_from_phone_subtitle">Skeniraj QR kod da dodaš ili ukloniš repozitorije sa svog telefona</string>
+    <string name="plugin_qr_instruction">Skeniraj sa svojim telefonom da upravljaš repozitorijima</string>
+    <string name="plugin_qr_close">Zatvori</string>
+    <string name="plugin_confirm_title">Potvrdi promjene repozitorija</string>
+    <string name="plugin_confirm_subtitle">Sljedeće promjene su napravljene sa tvog telefona:</string>
+    <string name="plugin_confirm_added">Dodano:</string>
+    <string name="plugin_confirm_removed">Uklonjeno:</string>
+    <string name="plugin_confirm_no_changes">Promjene nisu detektovane</string>
+    <string name="plugin_confirm_total">Ukupno repozitorija: %1$d</string>
+    <string name="plugin_confirm_reject">Odbij</string>
+    <string name="plugin_confirm_confirm">Potvrdi</string>
+    <string name="plugin_risky_enable_title">Omogući provajdera?</string>
+    <string name="plugin_risky_enable_message">%1$s je poznat po tome da uzrokuje padove aplikacije na nekom sadržaju. Ipak omogućiti?</string>
+    <string name="plugin_risky_enable_cancel">Otkaži</string>
+    <string name="plugin_risky_enable_confirm">Omogući</string>
+    <string name="plugin_updated_format">Ažurirano: %1$s</string>
+    <string name="plugin_test_btn">Testiraj</string>
+    <string name="plugin_test_results">Rezultati Testa (%1$d streamova)</string>
+
+    <!-- ProfileSelectionScreen -->
+    <string name="profile_selection_title">Ko gleda?</string>
+    <string name="profile_selection_subtitle">Odaberi profil za nastavak</string>
+    <string name="profile_selection_hint">Zadrži za upravljanje profilom</string>
+    <string name="profile_selection_empty">Profili nisu pronađeni</string>
+    <string name="profile_selection_primary_badge">PRIMARNI</string>
+    <string name="profile_selection_options_title">Opcije Profila</string>
+    <string name="profile_delete_confirm_title">Izbrisati Profil?</string>
+    <string name="profile_delete_confirm_subtitle">Ovo će trajno izbrisati ovaj profil i sve njegove podatke uključujući biblioteku, historiju gledanja i postavke addona. Ovo se ne može poništiti.</string>
+    <string name="profile_delete_btn">Izbriši Profil</string>
+    <string name="profile_saving">Spremanje…</string>
+
+    <!-- CastDetailScreen -->
+    <string name="cast_detail_error">Nešto je pošlo po zlu</string>
+    <string name="cast_detail_retry">Pokušaj ponovo</string>
+    <string name="cast_detail_filmography">Filmografija</string>
+    <string name="cast_detail_born">Rođen/a: %1$s</string>
+    <string name="cast_detail_born_died">Rođen/a: %1$s — †%2$s</string>
+    <string name="cast_detail_age">%1$d god.</string>
+
+    <!-- CatalogSeeAllScreen -->
+    <string name="catalog_see_all_from">od %1$s</string>
+    <string name="catalog_see_all_empty_title">Nema dostupnih stavki</string>
+    <string name="catalog_see_all_empty_subtitle">Pokušaj sa drugim katalogom ili provjeri kasnije</string>
+
+    <!-- LayoutSelectionScreen -->
+    <string name="layout_selection_welcome">Dobrodošli u Nuvio</string>
+    <string name="layout_selection_subtitle">Odaberi izgled početnog ekrana</string>
+    <string name="layout_selection_continue">Nastavi</string>
+
+    <!-- UpdatePromptDialog -->
+    <string name="update_title">Ažuriranje Aplikacije</string>
+    <string name="update_downloading">Preuzimanje ažuriranja</string>
+    <string name="update_download">Preuzmi</string>
+    <string name="update_downloading_ellipsis">Preuzimanje…</string>
+    <string name="update_unknown_sources">Dozvoli instalacije iz nepoznatih izvora da bi nastavio/la.</string>
+
+    <!-- AccountScreen -->
+    <string name="account_title">Račun</string>
+    <string name="account_sign_in_description">Prijavi se za sinhronizaciju biblioteke, napretka gledanja, addona i plugina na svim uređajima. Sinhronizacija biblioteke koristi Nuvio Sync kada Trakt nije povezan, a napredak gledanja može koristiti i Trakt i Nuvio Sync.</string>
+    <string name="account_sync_code_title">Sync Kod</string>
+    <string name="account_sync_code_description">Sinhronizuj uređaje bez kreiranja računa.</string>
+    <string name="account_linked_devices">Povezani Uređaji (%1$d)</string>
+    <string name="account_no_linked_devices">Nema povezanih uređaja</string>
+    <string name="account_unlink">Odspoji</string>
+
+    <!-- EpisodeRatingsSection -->
+    <string name="ratings_loading">Učitavanje ocjena epizoda...</string>
+    <string name="ratings_unavailable">Ocjene epizoda nisu dostupne.</string>
+    <string name="ratings_load_error">Nije moguće učitati ocjene epizoda.</string>
+    <string name="ratings_season_summary">Sezona %1$d - %2$d epizoda</string>
+
+    <!-- SearchDiscoverSection -->
+    <string name="discover_title">Otkrij</string>
+    <string name="discover_load_more">Učitaj više</string>
+    <string name="discover_loading">Učitavanje...</string>
+    <string name="discover_filter_type">Tip</string>
+    <string name="discover_filter_catalog">Katalog</string>
+    <string name="discover_filter_genre">Žanr</string>
+    <string name="discover_select_catalog">Odaberi</string>
+    <string name="discover_genre_default">Zadano</string>
+    <string name="discover_empty_no_catalog_title">Odaberi katalog</string>
+    <string name="discover_empty_no_catalog_subtitle">Odaberi katalog za pretragu kako bi pretraživao/la</string>
+    <string name="discover_empty_no_content_title">Sadržaj nije pronađen</string>
+    <string name="discover_empty_no_content_subtitle">Pokušaj sa drugim žanrom ili katalogom</string>
+
+    <!-- AddonManagerScreen -->
+    <string name="addon_confirm_total_addons">Ukupno addona: %1$d</string>
+    <string name="addon_confirm_total_catalogs">Ukupno kataloga: %1$d</string>
+    <string name="addon_catalogs_types">Katalozi: %1$d - Tipovi: %2$s</string>
+
+    <!-- PluginScreen -->
+    <string name="plugin_and_more">... i još %1$d</string>
+    <string name="plugin_providers_count">%1$d provajdera</string>
+    <string name="plugin_enabled">Omogućeno</string>
+    <string name="plugin_disabled">Onemogućeno</string>
+    <string name="plugin_no_repos">Još nema dodanih repozitorija.\nDodaj repozitorij za početak.</string>
+
+    <!-- ProfileSettingsContent -->
+    <string name="profile_edit_title_id">Uredi Profil %1$d</string>
+
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_passthrough_info">Audio passthrough (TrueHD, DTS, AC-3, itd.) je automatski. Kada je uređaj povezan sa kompatibilnim AV receiverom ili soundbarom preko HDMI-a, lossless audio se šalje originalno bez dekodiranja.</string>
+    <string name="audio_dv_title">DV7 - HEVC Fallback</string>
+
+    <!-- SidebarNavigation / MainActivity -->
+    <string name="nav_home">Početna</string>
+    <string name="nav_discover">Otkrij</string>
+    <string name="nav_search">Pretraga</string>
+    <string name="nav_library">Biblioteka</string>
+    <string name="nav_addons">Addoni</string>
+    <string name="nav_settings">Postavke</string>
+    <string name="settings_rounded_ui">Zaobljeni UI</string>
+    <string name="cd_expand_sidebar">Proširi sidebar</string>
+
+    <string name="update_checking">Provjera ažuriranja…</string>
+    <string name="update_download_complete">Preuzimanje završeno. Spremno za instalaciju.</string>
+    <string name="update_up_to_date">Sistem je ažuriran. Najnovije promjene:</string>
+    <string name="update_close">Zatvori</string>
+    <string name="update_open_settings">Otvori Postavke</string>
+    <string name="update_install">Instaliraj</string>
+    <string name="update_ignore">Ignoriši</string>
+    <string name="watchlist_added">Dodano na watchlistu</string>
+    <string name="watchlist_removed">Uklonjeno sa watchlist-e</string>
+
+    <!-- Profile PIN errors -->
+    <string name="profile_pin_save_error">Nije bilo moguće spasiti PIN. Pokušaj ponovo.</string>
+    <string name="profile_pin_locked">Profil je zaključan. Pokušaj ponovo za %1$ds.</string>
+    <string name="profile_pin_invalid">Nevažeći PIN. Pokušaj ponovo.</string>
+    <string name="profile_pin_verify_error">Nije bilo moguće provjeriti PIN. Pokušaj ponovo.</string>
+    <string name="profile_pin_incorrect">Trenutni PIN je netačan.</string>
+
+    <!-- Account Screen -->
+    <string name="account_signin_create_title">Prijavi se / Kreiraj Račun</string>
+    <string name="account_signin_create_desc">Koristi email i lozinku da kreiraš ili se prijaviš na svoj račun.</string>
+    <string name="account_generate_sync_desc">Kreiraj kod na ovom uređaju kako bi se drugi uređaji mogli povezati na njega.</string>
+    <string name="account_enter_sync_desc">Poveži ovaj uređaj sa drugim koristeći sync kod.</string>
+    <string name="account_signed_in_as">Prijavljen/a kao</string>
+    <string name="account_generate_sync_signed_in_desc">Kreiraj kod da bi se drugi uređaji mogli sinhronizovati sa ovim računom.</string>
+    <string name="account_unknown_device">Nepoznat Uređaj</string>
+
+    <!-- Sync screens -->
+    <string name="sync_claim_linking">Povezivanje…</string>
+    <string name="sync_generate_generating">Generisanje…</string>
+    <string name="sync_generate_code_btn">Generiši Kod</string>
+
+    <!-- Search -->
+    <string name="search_no_results_title">Nema Rezultata</string>
+    <string name="search_no_results_subtitle">Pokušaj pretragu sa drugačijim ključnim riječima</string>
+    <string name="discover_disabled_title">Otkrivanje je onemogućeno</string>
+    <string name="discover_disabled_subtitle">Omogući Otkrij u Pretrazi u postavkama</string>
+
+    <!-- Library -->
+    <string name="library_list_create_dialog_title">Kreiraj Listu</string>
+    <string name="library_list_edit_dialog_title">Uredi Listu</string>
+    <string name="library_sync_btn">Sinhronizuj</string>
+    <string name="library_syncing_btn">Sinhronizacija…</string>
+
+    <!-- Error messages (shared) -->
+    <string name="error_network_required">Poveži se na Wi-Fi ili LAN za korištenje ove funkcije</string>
+    <string name="error_server_ports_unavailable">Nije moguće pokrenuti server. Svi portovi su u upotrebi.</string>
+
+    <!-- Plugin errors -->
+    <string name="plugin_error_invalid_url">Molimo unesi ispravan URL</string>
+    <string name="plugin_error_add_repo">Nije uspjelo dodavanje repozitorija: %1$s</string>
+    <string name="plugin_error_refresh">Nije uspjelo osvježavanje: %1$s</string>
+    <string name="plugin_error_test">Test nije uspio: %1$s</string>
+    <string name="plugin_test_no_results">Nema pronađenih rezultata</string>
+    <string name="plugin_test_found_streams">Pronađeno %1$d streamova</string>
+
+    <!-- Trakt errors -->
+    <string name="trakt_error_code_expired">Kod uređaja je istekao. Pokreni ponovo.</string>
+    <string name="trakt_error_code_used">Kod uređaja je već iskorišten. Pokreni ponovo.</string>
+    <string name="trakt_error_denied">Autorizacija odbijena na Traktu.</string>
+
+    <!-- Account errors -->
+    <string name="account_error_signin_required">Prvo se prijavi sa svojim računom.</string>
+
+    <!-- Search errors -->
+    <string name="search_error_no_catalogs">Nisu pronađeni pretraživi katalozi u instaliranim addonima</string>
+
+    <!-- Home errors -->
+    <string name="home_error_no_addons">Nema instaliranih addona</string>
+    <string name="home_error_no_catalog_addons">Nema instaliranih katalog addona</string>
+
+    <!-- Player errors -->
+    <string name="player_error_no_stream_url">Nije proslijeđen stream URL</string>
+
+    <!-- Playback subtitle settings -->
+    <string name="sub_mode_overlay_canvas_sub">HDR podrška uz canvas rendering. Može blokirati UI thread.</string>
+    <string name="subtitle_style_weight">Debljina</string>
+
+    <!-- Plugin screen -->
+    <string name="plugin_version">Verzija %1$s</string>
+
+    <!-- Stream screen -->
+    <string name="stream_episode_label">S%1$d E%2$d</string>
+
+    <!-- Episode ratings -->
+    <string name="ratings_season_label">S%1$d</string>
+    <string name="ratings_episode_label">E%1$d</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_play">Pusti</string>
+    <string name="cd_pause">Pauziraj</string>
+    <string name="cd_subtitles">Titlovi</string>
+    <string name="cd_audio_tracks">Audio kanali</string>
+    <string name="cd_sources">Izvori</string>
+    <string name="cd_switch_player_engine">Promijeni player engine</string>
+    <string name="cd_episodes">Epizode</string>
+    <string name="cd_playback_speed">Brzina reprodukcije</string>
+    <string name="cd_aspect_ratio">Omjer slike</string>
+    <string name="cd_open_external_player">Otvori u vanjskom playeru</string>
+    <string name="cd_stream_info">Informacije o streamu</string>
+    <string name="cd_more_actions">Više opcija</string>
+    <string name="cd_close_more_actions">Zatvori više opcija</string>
+    <string name="cd_back">Nazad</string>
+    <string name="cd_next_episode_thumbnail">Thumbnail sljedeće epizode</string>
+    <string name="cd_current">Trenutno</string>
+    <string name="cd_loading_backdrop">Učitavanje backdropa</string>
+    <string name="cd_loading_logo">Učitavanje logotipa</string>
+    <string name="cd_move_up">Pomjeri gore</string>
+    <string name="cd_move_down">Pomjeri dolje</string>
+    <string name="cd_edit">Uredi</string>
+    <string name="cd_delete">Izbriši</string>
+    <string name="cd_qr_code">QR Kod</string>
+    <string name="cd_add">Dodaj</string>
+    <string name="cd_refresh">Osvježi</string>
+    <string name="cd_remove">Ukloni</string>
+    <string name="cd_preview">Pregled</string>
+    <string name="cd_test">Testiraj</string>
+    <string name="cd_unlink">Odspoji</string>
+    <string name="cd_nuvio_logo">NuvioTV</string>
+    <string name="cd_trakt_logo">Trakt Logo</string>
+    <string name="cd_trakt_qr">Trakt QR za aktivaciju</string>
+    <string name="cd_imdb">IMDb</string>
+    <string name="cd_open_discover">Otvori Otkrij</string>
+    <string name="cd_voice_search">Glasovna pretraga</string>
+    <string name="cd_donation_qr">QR kod za donaciju</string>
+    <string name="cd_contributor_qr">QR kod za podršku saradnicima</string>
+    <string name="cd_expand">Proširi %1$s</string>
+    <string name="cd_collapse">Skupi %1$s</string>
+    <string name="cd_qr_login">QR kod za prijavu</string>
+    <string name="cd_nuvio">Nuvio</string>
+
+    <!-- Debug -->
+    <string name="debug_signin_success">Uspješno prijavljeno</string>
+    <string name="debug_generate_description">Debug generisana stavka %1$s broj %2$d</string>
+    <string name="debug_generate_result_failed">Nije uspjelo: %1$s</string>
+
+    <!-- Collection Management -->
+    <string name="collections_header">Kolekcije</string>
+    <string name="collections_empty">Još nema kolekcija. Kreiraj jednu da organizuješ svoje kataloge.</string>
+    <string name="collections_new">Nova Kolekcija</string>
+    <string name="collections_import">Uvezi</string>
+    <string name="collections_export_file">Izvezi Fajl</string>
+    <string name="collections_saved_downloads">Sačuvano u Preuzimanja (Downloads)</string>
+    <string name="collections_export_failed">Izvoz nije uspio</string>
+    <string name="collections_import_header">Uvezi Kolekcije</string>
+    <string name="collections_import_description">Uvezi kolekcije iz JSON fajla. Katalozi iz addona koje niste instalirali prikazivat će upozorenje.</string>
+    <string name="collections_cancel">Otkaži</string>
+    <string name="collections_mode_paste">Zalijepi JSON</string>
+    <string name="collections_mode_file">Iz fajla</string>
+    <string name="collections_mode_url">Preko URL-a</string>
+    <string name="collections_paste_clipboard">Zalijepi iz Clipboarda</string>
+    <string name="collections_validate">Validiraj</string>
+    <string name="collections_paste_hint">Ovdje zalijepi kolekcije iz JSON-a…</string>
+    <string name="collections_file_description">Čita nuvio-collections.json iz foldera Preuzimanja (Downloads).</string>
+    <string name="collections_load_file">Učitaj Fajl</string>
+    <string name="collections_file_loaded">Fajl učitan (%1$d karaktera)</string>
+    <string name="collections_fetch_url">Preuzmi preko URL-a</string>
+    <string name="collections_fetching">Preuzimanje…</string>
+    <string name="collections_valid_json">Ispravan JSON</string>
+    <string name="collections_valid_summary">%1$d kolekcija/e, %2$d folder(a)</string>
+    <string name="collections_confirm_import">Potvrdi Uvoz</string>
+    <string name="collections_folder_count">%1$d folder(a)</string>
+
+    <!-- Collection Editor -->
+    <string name="collections_editor_row_title">Naslov Reda</string>
+    <string name="collections_editor_save">Spremi</string>
+    <string name="collections_editor_backdrop">Backdrop Slika</string>
+    <string name="collections_editor_pin_above">Zakači iznad Kataloga</string>
+    <string name="collections_editor_pin_above_desc">Prikaži ovu kolekciju iznad svih običnih početnih kataloga. Više zakačenih kolekcija prati redoslijed njihovog kreiranja.</string>
+    <string name="collections_editor_focus_glow">Glow pri Fokusu</string>
+    <string name="collections_editor_focus_glow_desc">Koristi nativni TV sjaj (glow) na prilagođenim karticama kataloga ove kolekcije na početnom ekranu</string>
+    <string name="collections_editor_view_mode">Mod Prikaza</string>
+    <string name="collections_editor_show_all_tab">Prikaži tab "Sve"</string>
+    <string name="collections_editor_show_all_tab_desc">Kombinuj sve kataloge u jedan tab</string>
+    <string name="collections_editor_folders">Folderi</string>
+    <string name="collections_editor_add_folder">Dodaj Folder</string>
+    <string name="collections_editor_edit_folder">Uredi Folder</string>
+    <string name="collections_editor_folder_title">Naslov Foldera</string>
+    <string name="collections_editor_cover">Naslovna (Cover)</string>
+    <string name="collections_editor_cover_none">Ništa</string>
+    <string name="collections_editor_cover_emoji">Emoji</string>
+    <string name="collections_editor_cover_image_url">URL Slike</string>
+    <string name="collections_editor_focus_gif">Fokus GIF</string>
+    <string name="collections_editor_play_gif">Pusti GIF na Fokus</string>
+    <string name="collections_editor_tile_shape">Oblik Pločice</string>
+    <string name="collections_editor_hide_title">Sakrij Naslov</string>
+    <string name="collections_editor_hide_title_desc">Prikaži samo naslovnu sliku (cover)</string>
+    <string name="collections_editor_display">Prikaz</string>
+    <string name="collections_editor_catalogs">Katalozi</string>
+    <string name="collections_editor_add_catalog">Dodaj Katalog</string>
+    <string name="collections_editor_select_catalogs">Odaberi Kataloge</string>
+    <string name="collections_editor_done">Gotovo</string>
+    <string name="collections_editor_choose_emoji">Odaberi Emoji</string>
+    <string name="collections_editor_back">Nazad</string>
+    <string name="collections_editor_edit_collection">Uredi Kolekciju</string>
+    <string name="collections_editor_catalog_count">%1$d katalog(a)</string>
+    <string name="collections_editor_view_mode_tabs">Tabovi</string>
+    <string name="collections_editor_view_mode_rows">Redovi</string>
+    <string name="collections_editor_view_mode_follow">Prati Početni Izgled</string>
+    <string name="collections_editor_shape_poster">Poster</string>
+    <string name="collections_editor_shape_wide">Široko (Wide)</string>
+    <string name="collections_editor_shape_square">Kvadrat</string>
+    <string name="collections_editor_addon_missing">Addon nije instaliran: %1$s</string>
+    <string name="collections_editor_placeholder_name">Ime kolekcije</string>
+    <string name="collections_editor_placeholder_backdrop">URL backdrop slike (opciono)</string>
+    <string name="collections_editor_placeholder_folder">Ime foldera</string>
+    <string name="collections_editor_placeholder_gif">URL animiranog GIF-a (reproducira se samo tokom fokusa)</string>
+    <string name="collections_card_title">Kolekcije</string>
+    <string name="collections_card_subtitle">Grupiši kataloge u foldere na svom početnom ekranu</string>
+    <string name="collections_tab_all">Sve</string>
+    <string name="collections_tab_combined">Kombinovano</string>
+
+</resources>

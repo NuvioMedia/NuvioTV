@@ -157,6 +157,15 @@
     <string name="series_status_rumored">Gerüchte</string>
     <string name="series_status_in_production">In Produktion</string>
     <string name="series_status_post_production">Postproduktion</string>
+    <string name="movie_status_ended">Abgeschlossen</string>
+    <string name="movie_status_continuing">Fortlaufend</string>
+    <string name="movie_status_current">Aktuell</string>
+    <string name="movie_status_cancelled">Abgesetzt</string>
+    <string name="movie_status_released">Veröffentlicht</string>
+    <string name="movie_status_planned">Geplant</string>
+    <string name="movie_status_rumored">Gerüchte</string>
+    <string name="movie_status_in_production">In Produktion</string>
+    <string name="movie_status_post_production">Postproduktion</string>
     <string name="detail_lists_fallback">Listen</string>
     <string name="detail_lists_subtitle">Wählen Sie aus, welche Listen diesen Titel enthalten sollen.</string>
     <string name="action_save">Speichern</string>
