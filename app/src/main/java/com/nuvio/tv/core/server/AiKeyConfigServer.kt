@@ -14,15 +14,17 @@ class AiKeyConfigServer(
         val method = session.method
 
         return when {
-            method == Method.GET && uri == "/" -> serveWebPage()
-            method == Method.GET && uri == "/logo.png" -> serveLogo()
-            method == Method.POST && uri == "/api/key" -> handleKeySubmit(session)
+            method == Method.GET  && uri == "/"          -> serveHtml(AiKeyWebPage.getLandingHtml())
+            method == Method.GET  && uri == "/groq"      -> serveHtml(AiKeyWebPage.getGroqHtml())
+            method == Method.GET  && uri == "/gemini"    -> serveHtml(AiKeyWebPage.getGeminiHtml())
+            method == Method.GET  && uri == "/logo.png"  -> serveLogo()
+            method == Method.POST && uri == "/api/key"   -> handleKeySubmit(session, onKeyReceived)
             else -> newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not found")
         }
     }
 
-    private fun serveWebPage(): Response =
-        newFixedLengthResponse(Response.Status.OK, "text/html", AiKeyWebPage.getHtml())
+    private fun serveHtml(html: String): Response =
+        newFixedLengthResponse(Response.Status.OK, "text/html", html)
 
     private fun serveLogo(): Response {
         val bytes = logoProvider?.invoke()
@@ -38,7 +40,7 @@ class AiKeyConfigServer(
         }
     }
 
-    private fun handleKeySubmit(session: IHTTPSession): Response {
+    private fun handleKeySubmit(session: IHTTPSession, onKeyReceived: (String) -> Unit): Response {
         val bodyMap = HashMap<String, String>()
         session.parseBody(bodyMap)
         val body = bodyMap["postData"] ?: ""

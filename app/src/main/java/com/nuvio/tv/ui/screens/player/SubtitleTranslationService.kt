@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
+import com.nuvio.tv.data.local.SubtitleAiModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -21,10 +22,14 @@ internal data class TranslationResult(
     val errorMessage: String? = null
 )
 
+private const val GROQ_MODEL_ID = "llama-3.3-70b-versatile"
+private const val GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 private const val GEMINI_MODEL_ID = "gemini-2.5-flash"
+private const val GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL_ID:generateContent"
 
 internal class SubtitleTranslationService(
-    private val apiKeyProvider: () -> String
+    private val apiKeyProvider: () -> String,
+    private val modelProvider: () -> SubtitleAiModel = { SubtitleAiModel.GROQ_LLAMA_70B }
 ) {
 
     private val client = OkHttpClient.Builder()
@@ -59,41 +64,38 @@ internal class SubtitleTranslationService(
             return TranslationResult(lines, false, "API key missing")
         }
 
-        // Replace newlines within cues with a placeholder so Gemini never splits a
-        // multi-line cue into separate array entries. Restored after translation.
-        val NL = "\u23CE" // ⏎ — unlikely to appear in subtitle text
+        return when (modelProvider()) {
+            SubtitleAiModel.GROQ_LLAMA_70B -> translateGroq(lines, targetLanguage, apiKey)
+            SubtitleAiModel.GEMINI_FLASH_25 -> translateGemini(lines, targetLanguage, apiKey)
+        }
+    }
+
+    private suspend fun translateGroq(lines: List<String>, targetLanguage: String, apiKey: String): TranslationResult {
+        val NL = "\u23CE"
         val encoded = lines.map { it.replace("\n", NL) }
         val inputArray = JSONArray(encoded)
+
         val systemPrompt = "Translate movie subtitles naturally. Return ONLY a JSON array, same order and count. Preserve $NL as-is (line-break). No extra text."
 
         val body = JSONObject().apply {
-            put("systemInstruction", JSONObject().apply {
-                put("parts", JSONArray().apply {
-                    put(JSONObject().apply { put("text", systemPrompt) })
+            put("model", GROQ_MODEL_ID)
+            put("temperature", 0.1)
+            put("messages", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("role", "system")
+                    put("content", systemPrompt)
                 })
-            })
-            put("contents", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "user")
-                    put("parts", JSONArray().apply {
-                        put(JSONObject().apply {
-                            put("text", "Translate to $targetLanguage:\n$inputArray")
-                        })
-                    })
-                })
-            })
-            put("generationConfig", JSONObject().apply {
-                put("thinkingConfig", JSONObject().apply {
-                    put("thinkingBudget", 0)
+                    put("content", "Translate to $targetLanguage:\n$inputArray")
                 })
             })
         }
 
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL_ID:generateContent?key=$apiKey"
-
         val request = Request.Builder()
-            .url(url)
-            .header("content-type", "application/json")
+            .url(GROQ_URL)
+            .header("Authorization", "Bearer $apiKey")
+            .header("Content-Type", "application/json")
             .post(body.toString().toRequestBody("application/json".toMediaType()))
             .build()
 
@@ -111,6 +113,71 @@ internal class SubtitleTranslationService(
 
                 val json = JSONObject(responseBody)
                 val rawText = json
+                    .getJSONArray("choices")
+                    .getJSONObject(0)
+                    .getJSONObject("message")
+                    .getString("content")
+                    .trim()
+
+                parseTranslationResult(lines, targetLanguage, rawText, NL)
+            } catch (e: Exception) {
+                Log.e(TAG, "translateGroq exception: ${e.message}", e)
+                TranslationResult(lines, false, e.message)
+            }
+        }
+    }
+
+    private suspend fun translateGemini(lines: List<String>, targetLanguage: String, apiKey: String): TranslationResult {
+        val NL = "\u23CE"
+        val encoded = lines.map { it.replace("\n", NL) }
+        val inputArray = JSONArray(encoded)
+
+        val systemPrompt = "Translate movie subtitles naturally. Return ONLY a JSON array, same order and count. Preserve $NL as-is (line-break). No extra text."
+
+        val body = JSONObject().apply {
+            put("system_instruction", JSONObject().apply {
+                put("parts", JSONArray().apply {
+                    put(JSONObject().apply { put("text", systemPrompt) })
+                })
+            })
+            put("contents", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("parts", JSONArray().apply {
+                        put(JSONObject().apply {
+                            put("text", "Translate to $targetLanguage:\n$inputArray")
+                        })
+                    })
+                })
+            })
+            put("generationConfig", JSONObject().apply {
+                put("temperature", 0.1)
+                put("thinkingConfig", JSONObject().apply {
+                    put("thinkingBudget", 0)
+                })
+            })
+        }
+
+        val url = "$GEMINI_BASE_URL?key=$apiKey"
+        val request = Request.Builder()
+            .url(url)
+            .header("Content-Type", "application/json")
+            .post(body.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = client.newCall(request).execute()
+                val responseBody = response.body?.string() ?: run {
+                    Log.e(TAG, "Empty Gemini response body (HTTP ${response.code})")
+                    return@withContext TranslationResult(lines, false, "Empty response (${response.code})")
+                }
+                if (!response.isSuccessful) {
+                    val errorMsg = if (response.code == 429) "RATE_LIMITED" else "HTTP ${response.code}: $responseBody"
+                    return@withContext TranslationResult(lines, false, errorMsg)
+                }
+
+                val json = JSONObject(responseBody)
+                val rawText = json
                     .getJSONArray("candidates")
                     .getJSONObject(0)
                     .getJSONObject("content")
@@ -119,25 +186,29 @@ internal class SubtitleTranslationService(
                     .getString("text")
                     .trim()
 
-                val resultArray = extractJsonArray(rawText)
-                    ?: return@withContext TranslationResult(lines, false, "No valid JSON array in response")
-
-                if (resultArray.length() != lines.size) {
-                    Log.w(TAG, "Line count mismatch: sent ${lines.size}, got ${resultArray.length()}")
-                    return@withContext TranslationResult(lines, false, "Line count mismatch")
-                }
-
-                val isRtl = RTL_LANGUAGES.contains(targetLanguage.lowercase())
-                val translated = List(resultArray.length()) { i ->
-                    val line = resultArray.getString(i).replace(NL, "\n")
-                    if (isRtl) "\u200F$line\u200F" else line
-                }
-
-                TranslationResult(translated, true)
+                parseTranslationResult(lines, targetLanguage, rawText, NL)
             } catch (e: Exception) {
-                Log.e(TAG, "translateBatch exception: ${e.message}", e)
+                Log.e(TAG, "translateGemini exception: ${e.message}", e)
                 TranslationResult(lines, false, e.message)
             }
         }
+    }
+
+    private fun parseTranslationResult(lines: List<String>, targetLanguage: String, rawText: String, NL: String): TranslationResult {
+        val resultArray = extractJsonArray(rawText)
+            ?: return TranslationResult(lines, false, "No valid JSON array in response")
+
+        if (resultArray.length() != lines.size) {
+            Log.w(TAG, "Line count mismatch: sent ${lines.size}, got ${resultArray.length()}")
+            return TranslationResult(lines, false, "Line count mismatch")
+        }
+
+        val isRtl = RTL_LANGUAGES.contains(targetLanguage.lowercase())
+        val translated = List(resultArray.length()) { i ->
+            val line = resultArray.getString(i).replace(NL, "\n")
+            if (isRtl) "\u200F$line\u200F" else line
+        }
+
+        return TranslationResult(translated, true)
     }
 }

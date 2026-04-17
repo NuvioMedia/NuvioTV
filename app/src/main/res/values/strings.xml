@@ -433,7 +433,7 @@
     <string name="sub_remove_hearing_impaired">Remove Hearing Impaired Annotations</string>
     <string name="sub_remove_hearing_impaired_sub">Strip [sound descriptions] from AI-translated subtitles</string>
     <string name="sub_ai_api_key">Gemini API Key</string>
-    <string name="sub_ai_api_key_sub">Required — get a free key at aistudio.google.com/apikey</string>
+    <string name="sub_ai_api_key_sub">Required — get a free key from Groq or Google</string>
     <string name="sub_ai_api_key_qr">Set key via phone</string>
     <string name="sub_ai_api_key_qr_sub">Scan a QR code on your phone to enter the key easily</string>
     <string name="sub_ai_free_tier_disclaimer">The free Gemini API tier is limited to 15 requests/min and 1,500/day. Heavy use may cause translation pauses. Adding billing info to your Google AI account is recommended for a smooth experience. Cost on paid tier is less than $0.01 per movie.</string>

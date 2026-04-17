@@ -194,6 +194,18 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setSubtitleAiApiKey(key)
     }
 
+    suspend fun saveSubtitleAiGroqKey(key: String) {
+        playerSettingsDataStore.setSubtitleAiGroqKey(key)
+    }
+
+    suspend fun saveSubtitleAiGeminiKey(key: String) {
+        playerSettingsDataStore.setSubtitleAiGeminiKey(key)
+    }
+
+    suspend fun setSubtitleAiModel(model: com.nuvio.tv.data.local.SubtitleAiModel) {
+        playerSettingsDataStore.setSubtitleAiModel(model)
+    }
+
     fun startAiKeyServer() {
         viewModelScope.launch {
             stopAiKeyServerInternal()

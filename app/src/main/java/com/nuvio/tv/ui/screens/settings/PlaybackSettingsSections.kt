@@ -879,7 +879,7 @@ internal fun AiKeyQrOverlay(
         } else {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "Scan with your phone to set the Gemini API key",
+                    text = "Scan with your phone — choose Groq or Gemini",
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary,
                     textAlign = TextAlign.Center

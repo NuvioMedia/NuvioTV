@@ -633,6 +633,7 @@ private fun AiSubtitlesIntegrationContent(
                     onSetSubtitleRemoveHearingImpaired = { enabled -> coroutineScope.launch { viewModel.setSubtitleRemoveHearingImpaired(enabled) } },
                     onShowAiKeyDialog = { showAiKeyDialog = true },
                     onStartAiKeyServer = { viewModel.startAiKeyServer() },
+                    onSetSubtitleAiModel = { model -> coroutineScope.launch { viewModel.setSubtitleAiModel(model) } },
                     firstItemModifier = initialFocusRequester?.let {
                         Modifier.focusRequester(it)
                     } ?: Modifier
@@ -644,6 +645,7 @@ private fun AiSubtitlesIntegrationContent(
     if (showAiKeyDialog) {
         AiApiKeyDialog(
             currentKey = playerSettings.subtitleAiApiKey,
+            model = playerSettings.subtitleAiModel,
             onSave = { key -> coroutineScope.launch { viewModel.saveSubtitleAiApiKey(key) }; showAiKeyDialog = false },
             onDismiss = { showAiKeyDialog = false }
         )

@@ -77,6 +77,7 @@ class PlayerRuntimeController(
     }
 
     @Volatile internal var userAiApiKey: String = ""
+    @Volatile internal var userAiModel: com.nuvio.tv.data.local.SubtitleAiModel = com.nuvio.tv.data.local.SubtitleAiModel.GROQ_LLAMA_70B
     @Volatile internal var subtitleAiEnabled: Boolean = false
     @Volatile internal var subtitleAiAutoSelect: Boolean = false
     @Volatile internal var firstBatchSuccessShown: Boolean = false
@@ -95,7 +96,8 @@ class PlayerRuntimeController(
         val service = SubtitleTranslationService(
             apiKeyProvider = {
                 if (SubtitleTranslationManager.MOCK_MODE) "" else userAiApiKey.trim()
-            }
+            },
+            modelProvider = { userAiModel }
         )
         SubtitleTranslationManager(service = service, targetLanguage = "", scope = scope).also { mgr ->
             mgr.onTranslatingChanged = { translating ->

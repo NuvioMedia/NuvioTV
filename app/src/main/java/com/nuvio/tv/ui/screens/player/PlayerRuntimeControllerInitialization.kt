@@ -978,7 +978,9 @@ private class TranslatingTextOutput(
     }
 
     private fun stripHearingImpaired(text: String): String =
-        text.replace(Regex("\\[.*?]"), "").trim()
+        text.replace(Regex("\\[.*?]"), "")
+            .replace(Regex("[♪♫]+"), "")
+            .trim()
 
     private fun buildTranslated(group: CueGroup, originalCues: List<Cue>, translatedText: String): CueGroup {
         val translated = applyTranslatedLinesToCues(originalCues, translatedText)

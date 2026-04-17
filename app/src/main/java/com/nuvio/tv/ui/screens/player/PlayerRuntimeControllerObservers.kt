@@ -185,6 +185,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
     scope.launch {
         playerSettingsDataStore.playerSettings.collect { settings ->
             userAiApiKey = settings.subtitleAiApiKey
+            userAiModel = settings.subtitleAiModel
             subtitleAiEnabled = settings.subtitleAiEnabled
             subtitleAiAutoSelect = settings.subtitleAiAutoSelect
             val currentState = _uiState.value

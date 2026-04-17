@@ -22,12 +22,16 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.VerticalAlignBottom
 import android.view.KeyEvent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -345,6 +349,7 @@ internal fun LazyListScope.subtitleAiSettingsItems(
     onSetSubtitleRemoveHearingImpaired: (Boolean) -> Unit,
     onShowAiKeyDialog: () -> Unit,
     onStartAiKeyServer: () -> Unit,
+    onSetSubtitleAiModel: (com.nuvio.tv.data.local.SubtitleAiModel) -> Unit = {},
     onItemFocused: () -> Unit = {},
     enabled: Boolean = true,
     firstItemModifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier
@@ -363,6 +368,28 @@ internal fun LazyListScope.subtitleAiSettingsItems(
     }
 
     if (playerSettings.subtitleAiEnabled) {
+        item(key = "subtitle_ai_model") {
+            val modelLabel = when (playerSettings.subtitleAiModel) {
+                com.nuvio.tv.data.local.SubtitleAiModel.GROQ_LLAMA_70B -> "Groq – Llama 3.3 70B"
+                com.nuvio.tv.data.local.SubtitleAiModel.GEMINI_FLASH_25 -> "Google – Gemini 2.5 Flash"
+            }
+            var showModelDialog by remember { mutableStateOf(false) }
+            SettingsActionRow(
+                title = "AI Model",
+                subtitle = "Translation model to use",
+                value = modelLabel,
+                onClick = { showModelDialog = true },
+                enabled = enabled
+            )
+            if (showModelDialog) {
+                AiModelDialog(
+                    currentModel = playerSettings.subtitleAiModel,
+                    onModelSelected = { onSetSubtitleAiModel(it); showModelDialog = false },
+                    onDismiss = { showModelDialog = false }
+                )
+            }
+        }
+
         item(key = "subtitle_ai_auto_select") {
             ToggleSettingsItem(
                 icon = Icons.Default.AutoAwesome,
@@ -389,7 +416,7 @@ internal fun LazyListScope.subtitleAiSettingsItems(
 
         item(key = "subtitle_ai_api_key") {
             SettingsActionRow(
-                title = stringResource(R.string.sub_ai_api_key),
+                title = "API Key",
                 subtitle = stringResource(R.string.sub_ai_api_key_sub),
                 value = maskAiApiKey(playerSettings.subtitleAiApiKey),
                 onClick = onShowAiKeyDialog,
@@ -400,7 +427,7 @@ internal fun LazyListScope.subtitleAiSettingsItems(
         item(key = "subtitle_ai_api_key_qr") {
             SettingsActionRow(
                 title = stringResource(R.string.sub_ai_api_key_qr),
-                subtitle = stringResource(R.string.sub_ai_api_key_qr_sub),
+                subtitle = "Scan a QR on your phone — choose Groq or Gemini",
                 value = "",
                 onClick = onStartAiKeyServer,
                 enabled = enabled
@@ -409,7 +436,12 @@ internal fun LazyListScope.subtitleAiSettingsItems(
 
         item(key = "subtitle_ai_disclaimer") {
             Text(
-                text = stringResource(R.string.sub_ai_free_tier_disclaimer),
+                text = when (playerSettings.subtitleAiModel) {
+                    com.nuvio.tv.data.local.SubtitleAiModel.GROQ_LLAMA_70B ->
+                        "Groq free tier: 1,000 requests/min · 500,000 requests/day. Get a free key at console.groq.com/keys"
+                    com.nuvio.tv.data.local.SubtitleAiModel.GEMINI_FLASH_25 ->
+                        stringResource(R.string.sub_ai_free_tier_disclaimer)
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = NuvioColors.TextSecondary,
                 modifier = Modifier
@@ -423,24 +455,94 @@ internal fun LazyListScope.subtitleAiSettingsItems(
 private fun maskAiApiKey(key: String): String {
     val trimmed = key.trim()
     if (trimmed.isBlank()) return "Not set"
-    return if (trimmed.length <= 4) "••••" else "••••${trimmed.takeLast(4)}"
+    val provider = when {
+        trimmed.startsWith("gsk_") -> "Groq · "
+        trimmed.startsWith("AIzaSy") -> "Gemini · "
+        else -> ""
+    }
+    val masked = if (trimmed.length <= 4) "••••" else "••••${trimmed.takeLast(4)}"
+    return "$provider$masked"
+}
+
+@Composable
+internal fun AiModelDialog(
+    currentModel: com.nuvio.tv.data.local.SubtitleAiModel,
+    onModelSelected: (com.nuvio.tv.data.local.SubtitleAiModel) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val focusRequester = remember { FocusRequester() }
+    val options = listOf(
+        Triple(com.nuvio.tv.data.local.SubtitleAiModel.GROQ_LLAMA_70B, "Groq – Llama 3.3 70B", "Free"),
+        Triple(com.nuvio.tv.data.local.SubtitleAiModel.GEMINI_FLASH_25, "Google – Gemini 2.5 Flash", "Better quality · billing account required for smooth use")
+    )
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    BackHandler { onDismiss() }
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = "AI Model",
+        subtitle = "Select the translation model to use",
+        width = 500.dp
+    ) {
+        options.forEachIndexed { index, (model, label, note) ->
+            val isSelected = model == currentModel
+            val itemFocusRequester = if (index == 0) focusRequester else remember { FocusRequester() }
+            androidx.tv.material3.Surface(
+                onClick = { onModelSelected(model) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(itemFocusRequester),
+                colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(
+                    containerColor = if (isSelected) NuvioColors.BackgroundElevated else androidx.compose.ui.graphics.Color.Transparent,
+                    focusedContainerColor = NuvioColors.Primary
+                ),
+                shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    androidx.compose.foundation.layout.Column(modifier = Modifier.weight(1f)) {
+                        Text(text = label, style = MaterialTheme.typography.bodyMedium)
+                        Text(text = note, style = MaterialTheme.typography.bodySmall, color = NuvioColors.TextSecondary)
+                    }
+                    if (isSelected) {
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = NuvioColors.Primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+            if (index < options.lastIndex) Spacer(modifier = Modifier.height(4.dp))
+        }
+    }
 }
 
 @Composable
 internal fun AiApiKeyDialog(
     currentKey: String,
     onSave: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    model: com.nuvio.tv.data.local.SubtitleAiModel = com.nuvio.tv.data.local.SubtitleAiModel.GROQ_LLAMA_70B
 ) {
     var value by remember(currentKey) { mutableStateOf(currentKey) }
     var isInputFocused by remember { mutableStateOf(false) }
     val inputFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    val placeholder = when (model) {
+        com.nuvio.tv.data.local.SubtitleAiModel.GROQ_LLAMA_70B -> "gsk_..."
+        com.nuvio.tv.data.local.SubtitleAiModel.GEMINI_FLASH_25 -> "AIzaSy..."
+    }
+
     NuvioDialog(
         onDismiss = onDismiss,
-        title = "Gemini API Key",
-        subtitle = "Enter your Google Gemini API key from aistudio.google.com/apikey",
+        title = "API Key",
+        subtitle = stringResource(R.string.sub_ai_api_key_sub),
         width = 700.dp
     ) {
         Card(
@@ -485,7 +587,7 @@ internal fun AiApiKeyDialog(
                     decorationBox = { innerTextField ->
                         if (value.isBlank()) {
                             Text(
-                                text = "AIzaSy...",
+                                text = placeholder,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = NuvioColors.TextTertiary
                             )

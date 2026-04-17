@@ -177,6 +177,9 @@ data class PlayerSettings(
     val subtitleAiEnabled: Boolean = false,
     val subtitleAiAutoSelect: Boolean = false,
     val subtitleAiApiKey: String = "",
+    val subtitleAiGroqKey: String = "",
+    val subtitleAiGeminiKey: String = "",
+    val subtitleAiModel: SubtitleAiModel = SubtitleAiModel.GROQ_LLAMA_70B,
     val subtitleRemoveHearingImpaired: Boolean = true,
     val showPlayerLoadingStatus: Boolean = true,
     val pauseOverlayEnabled: Boolean = true,
@@ -265,6 +268,11 @@ enum class InternalPlayerEngine {
  * Enum representing the different libass render types
  * Maps to io.github.peerless2012.ass.media.type.AssRenderType
  */
+enum class SubtitleAiModel {
+    GROQ_LLAMA_70B,
+    GEMINI_FLASH_25
+}
+
 enum class LibassRenderType {
     CUES,              // Standard SubtitleView rendering (no animation support)
     EFFECTS_CANVAS,    // Effect-based Canvas rendering (supports animations)
@@ -312,6 +320,9 @@ class PlayerSettingsDataStore @Inject constructor(
     private val subtitleAiEnabledKey = booleanPreferencesKey("subtitle_ai_enabled")
     private val subtitleAiAutoSelectKey = booleanPreferencesKey("subtitle_ai_auto_select")
     private val subtitleAiApiKeyKey = stringPreferencesKey("subtitle_ai_api_key")
+    private val subtitleAiGroqKeyKey = stringPreferencesKey("subtitle_ai_groq_key")
+    private val subtitleAiGeminiKeyKey = stringPreferencesKey("subtitle_ai_gemini_key")
+    private val subtitleAiModelKey = stringPreferencesKey("subtitle_ai_model")
     private val subtitleRemoveHearingImpairedKey = booleanPreferencesKey("subtitle_remove_hearing_impaired")
     private val showPlayerLoadingStatusKey = booleanPreferencesKey("show_player_loading_status")
     private val pauseOverlayEnabledKey = booleanPreferencesKey("pause_overlay_enabled")
@@ -467,6 +478,11 @@ class PlayerSettingsDataStore @Inject constructor(
                 subtitleAiEnabled = prefs[subtitleAiEnabledKey] ?: false,
                 subtitleAiAutoSelect = prefs[subtitleAiAutoSelectKey] ?: false,
                 subtitleAiApiKey = prefs[subtitleAiApiKeyKey] ?: "",
+                subtitleAiGroqKey = prefs[subtitleAiGroqKeyKey] ?: "",
+                subtitleAiGeminiKey = prefs[subtitleAiGeminiKeyKey] ?: "",
+                subtitleAiModel = prefs[subtitleAiModelKey]?.let {
+                    runCatching { SubtitleAiModel.valueOf(it) }.getOrNull()
+                } ?: SubtitleAiModel.GROQ_LLAMA_70B,
                 subtitleRemoveHearingImpaired = prefs[subtitleRemoveHearingImpairedKey] ?: true,
                 showPlayerLoadingStatus = prefs[showPlayerLoadingStatusKey] ?: true,
                 pauseOverlayEnabled = prefs[pauseOverlayEnabledKey] ?: true,
@@ -869,6 +885,18 @@ class PlayerSettingsDataStore @Inject constructor(
 
     suspend fun setSubtitleAiApiKey(key: String) {
         store().edit { prefs -> prefs[subtitleAiApiKeyKey] = key }
+    }
+
+    suspend fun setSubtitleAiGroqKey(key: String) {
+        store().edit { prefs -> prefs[subtitleAiGroqKeyKey] = key }
+    }
+
+    suspend fun setSubtitleAiGeminiKey(key: String) {
+        store().edit { prefs -> prefs[subtitleAiGeminiKeyKey] = key }
+    }
+
+    suspend fun setSubtitleAiModel(model: SubtitleAiModel) {
+        store().edit { prefs -> prefs[subtitleAiModelKey] = model.name }
     }
 
     suspend fun setSubtitleRemoveHearingImpaired(enabled: Boolean) {
