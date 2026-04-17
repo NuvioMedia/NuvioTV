@@ -754,6 +754,13 @@ class StreamScreenViewModel @Inject constructor(
 
 
     private fun isAnimeContent(): Boolean {
+        // Log all possible data to see if we have anime identifiers
+        val uiStateValue = _uiState.value
+        Log.d(TAG, "METADATA DUMP -> contentId: $contentId, videoId: $videoId, contentType: $contentType")
+        Log.d(TAG, "METADATA DUMP -> Top-level Genres: $genres, title: $title, year: $year, runtime: $runtime, contentName: $contentName")
+        Log.d(TAG, "METADATA DUMP -> UIState Genres: ${uiStateValue.genres}, Title: ${uiStateValue.title}, Year: ${uiStateValue.year}")
+        Log.d(TAG, "METADATA DUMP -> Season: ${uiStateValue.season}, Episode: ${uiStateValue.episode}")
+        
         // 1. Anime-specific ID namespace
         val effectiveId = (contentId ?: videoId).lowercase()
         if (effectiveId.startsWith("kitsu:") ||
