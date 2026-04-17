@@ -253,7 +253,8 @@ class StreamScreenViewModel @Inject constructor(
                                 videoSize = cached.videoSize,
                                 fileIdx = cached.fileIdx,
                                 sources = cached.sources,
-                                contentLanguage = contentLanguage
+                                contentLanguage = contentLanguage,
+                                isAnime = isAnimeContent()
                             )
                         )
                     }
@@ -722,7 +723,8 @@ class StreamScreenViewModel @Inject constructor(
             streamDescription = stream.description,
             fileIdx = stream.fileIdx,
             sources = stream.sources,
-            contentLanguage = contentLanguage
+            contentLanguage = contentLanguage,
+            isAnime = isAnimeContent()
         )
 
         val url = playbackInfo.url
@@ -750,7 +752,22 @@ class StreamScreenViewModel @Inject constructor(
         sourceChipErrorDismissJob?.cancel()
     }
 
+
+    private fun isAnimeContent(): Boolean {
+        // 1. Anime-specific ID namespace
+        val effectiveId = (contentId ?: videoId).lowercase()
+        if (effectiveId.startsWith("kitsu:") ||
+            effectiveId.startsWith("mal:") ||
+            effectiveId.startsWith("anilist:")) return true
+
+        // 2. Explicit "Anime" or "Animation" genre tag
+        return genres?.lowercase()?.contains("anime") == true ||
+               genres?.lowercase()?.contains("animation") == true ||
+               _uiState.value.genres?.lowercase()?.contains("anime") == true ||
+               _uiState.value.genres?.lowercase()?.contains("animation") == true
+    }
 }
+
 
 data class StreamPlaybackInfo(
     val url: String?,
@@ -782,5 +799,6 @@ data class StreamPlaybackInfo(
     val streamDescription: String? = null,
     val fileIdx: Int? = null,
     val sources: List<String>? = null,
-    val contentLanguage: String? = null
+    val contentLanguage: String? = null,
+    val isAnime: Boolean = false
 )

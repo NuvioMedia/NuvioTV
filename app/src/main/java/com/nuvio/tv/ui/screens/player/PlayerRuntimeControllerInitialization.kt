@@ -124,10 +124,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     "streamUrl: '$currentStreamUrl', " +
                     "title: '${navigationArgs.title}'")
 
-                val isAnime = effectiveId.startsWith("kitsu:") ||
-                              effectiveId.startsWith("mal:") ||
-                              effectiveId.startsWith("anilist:") ||
-                              (currentStreamUrl.contains("/anime/"))
+                val isAnime = navigationArgs.isAnime
                 
                 Log.d("NuvioPlayer", "AUTO Engine Selected. Effective ID: '$effectiveId'. isAnime: $isAnime")
                 effectiveInternalPlayerEngine = if (isAnime) InternalPlayerEngine.MVP_PLAYER else InternalPlayerEngine.EXOPLAYER
