@@ -39,7 +39,9 @@ backups/
 .supabase_db.env
 scripts/*
 !scripts/release_beta.py
-/supabase
+supabase/.temp/
+supabase/.branches/
+supabase/.env
 tv-samples
 HOME_UI_OPTIMIZATION_NOTES.local.md
 .kotlin/
