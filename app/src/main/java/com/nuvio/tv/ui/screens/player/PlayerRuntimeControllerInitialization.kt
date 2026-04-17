@@ -110,16 +110,29 @@ internal fun PlayerRuntimeController.initializePlayer(
             mpvPreferredAudioLanguages = preferredAudioLanguages
             mpvHardwareDecodeModeSetting = playerSettings.mpvHardwareDecodeMode
             var effectiveInternalPlayerEngine = overrideInternalPlayerEngine ?: playerSettings.internalPlayerEngine
+            Log.d("NuvioPlayer", "Initializing Player. Settings InternalPlayerEngine: ${playerSettings.internalPlayerEngine}")
             if (effectiveInternalPlayerEngine == InternalPlayerEngine.AUTO) {
                 // Determine if anime
                 val effectiveId = (contentId ?: currentVideoId ?: "").lowercase()
+                
+                // Logging extra data to help build a better heuristic!
+                Log.d("NuvioPlayer", "AUTO Engine Heuristic Data -> " +
+                    "contentId: '$contentId', videoId: '$currentVideoId', " +
+                    "contentType: '${navigationArgs.contentType}', " +
+                    "addonName: '${navigationArgs.addonName}', " +
+                    "streamName: '${navigationArgs.streamName}', " +
+                    "streamUrl: '$currentStreamUrl', " +
+                    "title: '${navigationArgs.title}'")
+
                 val isAnime = effectiveId.startsWith("kitsu:") ||
                               effectiveId.startsWith("mal:") ||
                               effectiveId.startsWith("anilist:") ||
                               (currentStreamUrl.contains("/anime/"))
-
+                
+                Log.d("NuvioPlayer", "AUTO Engine Selected. Effective ID: '$effectiveId'. isAnime: $isAnime")
                 effectiveInternalPlayerEngine = if (isAnime) InternalPlayerEngine.MVP_PLAYER else InternalPlayerEngine.EXOPLAYER
             }
+            Log.d("NuvioPlayer", "Final Effective InternalPlayerEngine: $effectiveInternalPlayerEngine")
             runtimeInternalPlayerEngineOverride = overrideInternalPlayerEngine
             currentInternalPlayerEngine = effectiveInternalPlayerEngine
             val showLoadingStatus = playerSettings.showPlayerLoadingStatus
