@@ -254,7 +254,7 @@ class StreamScreenViewModel @Inject constructor(
                                 fileIdx = cached.fileIdx,
                                 sources = cached.sources,
                                 contentLanguage = contentLanguage,
-                                isAnime = isAnimeContent(streamUrl = cached.url, streamName = cached.streamName)
+                                isAnime = isAnimeContent()
                             )
                         )
                     }
@@ -724,7 +724,7 @@ class StreamScreenViewModel @Inject constructor(
             fileIdx = stream.fileIdx,
             sources = stream.sources,
             contentLanguage = contentLanguage,
-            isAnime = isAnimeContent(streamUrl = stream.getStreamUrl(), streamName = stream.name ?: stream.addonName)
+            isAnime = isAnimeContent()
         )
 
         val url = playbackInfo.url
@@ -753,7 +753,7 @@ class StreamScreenViewModel @Inject constructor(
     }
 
 
-        private fun isAnimeContent(streamUrl: String? = null, streamName: String? = null): Boolean {
+    private fun isAnimeContent(): Boolean {
         // 1. Anime-specific ID namespace
         val effectiveId = (contentId ?: videoId).lowercase()
         if (effectiveId.startsWith("kitsu:") ||
@@ -761,30 +761,10 @@ class StreamScreenViewModel @Inject constructor(
             effectiveId.startsWith("anilist:")) return true
 
         // 2. Explicit "Anime" or "Animation" genre tag
-        if (genres?.lowercase()?.contains("anime") == true ||
-            genres?.lowercase()?.contains("animation") == true ||
-            _uiState.value.genres?.lowercase()?.contains("anime") == true ||
-            _uiState.value.genres?.lowercase()?.contains("animation") == true) return true
-
-        // 3. Fallback to stream url/name heuristic for Anime release groups
-        val urlLower = streamUrl?.lowercase() ?: ""
-        val nameLower = streamName?.lowercase() ?: ""
-        
-        if (urlLower.contains("/anime/") || 
-            urlLower.contains("kitsune") || 
-            urlLower.contains("subsplease") || 
-            urlLower.contains("erai-raws") || 
-            urlLower.contains("judas") || 
-            urlLower.contains("ember") ||
-            urlLower.contains("[cr]") ||
-            nameLower.contains("kitsune") ||
-            nameLower.contains("subsplease") ||
-            nameLower.contains("erai-raws") ||
-            nameLower.contains("[cr]")) {
-            return true
-        }
-
-        return false
+        return genres?.lowercase()?.contains("anime") == true ||
+               genres?.lowercase()?.contains("animation") == true ||
+               _uiState.value.genres?.lowercase()?.contains("anime") == true ||
+               _uiState.value.genres?.lowercase()?.contains("animation") == true
     }
 }
 
