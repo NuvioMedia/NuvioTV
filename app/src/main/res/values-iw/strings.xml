@@ -1034,4 +1034,6 @@
     <string name="sub_mode_effects_gl">Effects OpenGL</string>
     <string name="sub_mode_effects_gl_sub">תמיכת אנימציה באמצעות אפקטי Media3. מהיר יותר מ-Canvas.</string>
     <string name="sub_advanced_section">רינדור כתוביות מתקדם</string>
+    <string name="playback_player_auto">אוטומטי (הטוב ביותר לתוכן)</string>
+    <string name="playback_player_auto_desc">ExoPlayer לסרטים ולתוכניות טלוויזיה · MPV לאנימה</string>
 </resources>

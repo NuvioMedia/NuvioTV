@@ -1418,4 +1418,6 @@
     <string name="collections_card_subtitle">Združite kataloge v mape na začetnem zaslonu</string>
     <string name="collections_tab_all">Vse</string>
     <string name="collections_tab_combined">Združeno</string>															  
-	</resources>
+	    <string name="playback_player_auto">Samodejno (Najboljše za vsebino)</string>
+    <string name="playback_player_auto_desc">ExoPlayer za filme in serije · MPV za anime</string>
+</resources>

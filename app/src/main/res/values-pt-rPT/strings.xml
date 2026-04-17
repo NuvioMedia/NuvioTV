@@ -1058,4 +1058,6 @@
     <string name="update_ignore">Ignorar</string>
     <string name="watchlist_added">Adicionado à lista de interesses</string>
     <string name="watchlist_removed">Removido da lista de interesses</string>
+    <string name="playback_player_auto">Automático (Melhor para o conteúdo)</string>
+    <string name="playback_player_auto_desc">ExoPlayer para Filmes e Séries · MPV para Animes</string>
 </resources>

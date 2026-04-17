@@ -1182,4 +1182,6 @@
     <string name="update_ignore">Αγνόηση</string>
     <string name="watchlist_added">Προστέθηκε στη watchlist</string>
     <string name="watchlist_removed">Αφαιρέθηκε από τη watchlist</string>
+    <string name="playback_player_auto">Αυτόματο (Καλύτερο για το περιεχόμενο)</string>
+    <string name="playback_player_auto_desc">ExoPlayer για Ταινίες &amp; Σειρές · MPV για Anime</string>
 </resources>

@@ -998,4 +998,6 @@
     <string name="update_open_settings">सेटिंग्स खोलें</string>
     <string name="update_install">इंस्टॉल</string>
     <string name="update_ignore">नज़रअंदाज़ करें</string>
+    <string name="playback_player_auto">ऑटो (सामग्री के लिए सर्वश्रेष्ठ)</string>
+    <string name="playback_player_auto_desc">ExoPlayer मूवीज़ और टीवी शोज़ के लिए · MPV एनीमे के लिए</string>
 </resources>

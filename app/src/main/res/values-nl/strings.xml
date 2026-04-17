@@ -870,4 +870,6 @@
     <string name="update_open_settings">Open Instellingen</string>
     <string name="update_install">Installeer</string>
     <string name="update_ignore">Negeer</string>
+    <string name="playback_player_auto">Automatisch (Beste voor inhoud)</string>
+    <string name="playback_player_auto_desc">ExoPlayer voor films en series · MPV voor anime</string>
 </resources>

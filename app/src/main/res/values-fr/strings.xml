@@ -1509,4 +1509,6 @@
     <string name="collections_tab_all">Tout</string>
     <string name="collections_tab_combined">Combiné</string>
 
+    <string name="playback_player_auto">Auto (Meilleur pour le contenu)</string>
+    <string name="playback_player_auto_desc">ExoPlayer pour les Films et Séries · MPV pour les Animes</string>
 </resources>

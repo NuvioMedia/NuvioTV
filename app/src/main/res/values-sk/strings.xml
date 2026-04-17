@@ -739,4 +739,6 @@
     <string name="update_open_settings">Otvoriť nastavenia</string>
     <string name="update_install">Inštalovať</string>
     <string name="update_ignore">Ignorovať</string>
+    <string name="playback_player_auto">Automaticky (Najlepšie pre obsah)</string>
+    <string name="playback_player_auto_desc">ExoPlayer pre filmy a seriály · MPV pre anime</string>
 </resources>

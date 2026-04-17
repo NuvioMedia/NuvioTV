@@ -1488,4 +1488,6 @@
     <string name="collections_tab_all">Все</string>
     <string name="collections_tab_combined">Объединенные</string>
 
+    <string name="playback_player_auto">Авто (Лучшее для контента)</string>
+    <string name="playback_player_auto_desc">ExoPlayer для фильмов и сериалов · MPV для аниме</string>
 </resources>

@@ -1203,4 +1203,6 @@
     <string name="update_checking">Söker efter uppdateringar…</string>
     <string name="update_download_complete">Nedladdning klar. Redo att installera.</string>
     <string name="update_up_to_date">Systemet är uppdaterat. Senaste ändringarna:</string>
+    <string name="playback_player_auto">Automatiskt (Bäst för innehåll)</string>
+    <string name="playback_player_auto_desc">ExoPlayer för filmer och serier · MPV för anime</string>
 </resources>

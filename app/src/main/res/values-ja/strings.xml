@@ -1182,4 +1182,6 @@
     <string name="update_ignore">無視</string>
     <string name="watchlist_added">ウォッチリストに追加しました</string>
     <string name="watchlist_removed">ウォッチリストから削除しました</string>
+    <string name="playback_player_auto">自動（コンテンツに最適化）</string>
+    <string name="playback_player_auto_desc">映画やドラマにはExoPlayer・アニメにはMPV</string>
 </resources>

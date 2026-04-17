@@ -1384,4 +1384,6 @@
     <string name="debug_signin_success">Giriş başarılı</string>
     <string name="debug_generate_description">Hata ayıklama için %1$s öğesi oluşturuldu #%2$d</string>
     <string name="debug_generate_result_failed">Başarısız: %1$s</string>
+    <string name="playback_player_auto">Otomatik (İçerik için en iyisi)</string>
+    <string name="playback_player_auto_desc">Filmler ve Diziler için ExoPlayer · Anime için MPV</string>
 </resources>

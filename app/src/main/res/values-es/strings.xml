@@ -1046,4 +1046,6 @@
     <string name="update_downloading_ellipsis">Descargando…</string>
     <string name="watchlist_added">Añadido a lista de deseos</string>
     <string name="watchlist_removed">Eliminado de lista de deseos</string>
+    <string name="playback_player_auto">Automático (Mejor para el contenido)</string>
+    <string name="playback_player_auto_desc">ExoPlayer para Películas y Series · MPV para Anime</string>
 </resources>

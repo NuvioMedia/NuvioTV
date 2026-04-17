@@ -1119,4 +1119,6 @@
     <string name="update_ignore">Ignorovat</string>
     <string name="watchlist_added">Přidáno do watchlistu</string>
     <string name="watchlist_removed">Odstraněno z watchlistu</string>
+    <string name="playback_player_auto">Automaticky (Nejlepší pro obsah)</string>
+    <string name="playback_player_auto_desc">ExoPlayer pro filmy a seriály · MPV pro anime</string>
 </resources>

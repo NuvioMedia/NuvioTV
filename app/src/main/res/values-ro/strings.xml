@@ -842,4 +842,6 @@
     <string name="update_open_settings">Deschide Setările</string>
     <string name="update_install">Instalează</string>
     <string name="update_ignore">Ignoră</string>
-  </resources>
+      <string name="playback_player_auto">Automat (Cel mai bun pentru conținut)</string>
+    <string name="playback_player_auto_desc">ExoPlayer pentru Filme și Seriale · MPV pentru Anime</string>
+</resources>

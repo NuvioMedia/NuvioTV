@@ -1515,4 +1515,6 @@
     <string name="qr_login_signing_in">Logowanie…</string>
     <string name="qr_login_success">Zalogowano pomyślnie</string>
     <string name="qr_login_exchange_failed">Nie udało się dokończyć logowania QR</string>
+    <string name="playback_player_auto">Zalecane (Najlepsze dla treści)</string>
+    <string name="playback_player_auto_desc">ExoPlayer dla filmów i seriali · MPV dla anime</string>
 </resources>

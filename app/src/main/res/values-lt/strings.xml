@@ -1011,4 +1011,6 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="update_ignore">Ignoruoti</string>
     <string name="watchlist_added">Pridėta į žiūrėjimo sąrašą</string>
     <string name="watchlist_removed">Pašalinta iš žiūrėjimo sąrašo</string>
+    <string name="playback_player_auto">Automatiškai (Geriausia turiniui)</string>
+    <string name="playback_player_auto_desc">ExoPlayer filmams ir serialams · MPV animėms</string>
 </resources>

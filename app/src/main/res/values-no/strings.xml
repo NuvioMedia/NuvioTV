@@ -1124,4 +1124,6 @@
     <string name="update_ignore">Ignorer</string>
     <string name="watchlist_added">Lagt til ønskelisten</string>
     <string name="watchlist_removed">Fjernet fra ønskelisten</string>
+    <string name="playback_player_auto">Automatisk (Best for innhold)</string>
+    <string name="playback_player_auto_desc">ExoPlayer for filmer og serier · MPV for anime</string>
 </resources>

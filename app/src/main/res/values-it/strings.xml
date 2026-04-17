@@ -1308,4 +1308,6 @@
     <string name="debug_generate_description">Debug-generato %1$s elemento #%2$d</string>
     <string name="debug_generate_result_failed">Fallito: %1$s</string>
 
+    <string name="playback_player_auto">Automatico (Il migliore per i contenuti)</string>
+    <string name="playback_player_auto_desc">ExoPlayer per Film e Serie TV · MPV per gli Anime</string>
 </resources>
