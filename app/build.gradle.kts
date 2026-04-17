@@ -32,9 +32,9 @@ val releaseStoreFilePath = env("OMNIO_RELEASE_STORE_FILE")
 val releaseKeyAliasValue = env("OMNIO_RELEASE_KEY_ALIAS")
     ?: localProperties.getProperty("OMNIO_RELEASE_KEY_ALIAS", "omniotv")
 val releaseKeyPasswordValue = env("OMNIO_RELEASE_KEY_PASSWORD")
-    ?: localProperties.getProperty("OMNIO_RELEASE_KEY_PASSWORD", "815787")
+    ?: localProperties.getProperty("OMNIO_RELEASE_KEY_PASSWORD", "")
 val releaseStorePasswordValue = env("OMNIO_RELEASE_STORE_PASSWORD")
-    ?: localProperties.getProperty("OMNIO_RELEASE_STORE_PASSWORD", "815787")
+    ?: localProperties.getProperty("OMNIO_RELEASE_STORE_PASSWORD", "")
 
 android {
     namespace = "com.omnio.tv"
