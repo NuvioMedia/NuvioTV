@@ -1,0 +1,56 @@
+name: Deploy Supabase
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'supabase/**'
+      - '.github/workflows/supabase-deploy.yml'
+  workflow_dispatch:
+    inputs:
+      skip_migrations:
+        description: "Skip database migrations (functions only)"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: supabase-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Push database migrations
+        if: ${{ inputs.skip_migrations != true }}
+        run: supabase db push --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Deploy edge functions
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          deployed=0
+          for fn_dir in supabase/functions/*/; do
+            name=$(basename "$fn_dir")
+            if [ "$name" = "_shared" ]; then
+              continue
+            fi
+            echo "Deploying function: $name"
+            supabase functions deploy "$name" --project-ref "$SUPABASE_PROJECT_REF"
+            deployed=$((deployed + 1))
+          done
+          echo "Deployed $deployed function(s)."
