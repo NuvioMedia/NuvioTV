@@ -1,5 +1,5 @@
 SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 SUPABASE_ANON_KEY=your-anon-key-here
 AVATAR_PUBLIC_BASE_URL=https://YOUR_PROJECT.supabase.co/storage/v1/object/public/avatars
-TV_LOGIN_WEB_BASE_URL=
+TV_LOGIN_WEB_BASE_URL=https://app.omnio.tv/tv-login
 TRAKT_REDIRECT_URI=urn:ietf:wg:oauth:2.0:oob
