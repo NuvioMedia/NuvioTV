@@ -56,6 +56,14 @@ internal class SubtitleTranslationService(
         return null
     }
 
+    private fun buildSystemPrompt(targetLanguage: String, NL: String) =
+        "You are a professional subtitle translator. Translate the following JSON array into natural $targetLanguage.\n" +
+        "Rules:\n" +
+        "1. Return ONLY a valid JSON array.\n" +
+        "2. Keep the exact same order and element count.\n" +
+        "3. Preserve the '$NL' symbol exactly where it appears as a line break.\n" +
+        "4. Use informal, spoken $targetLanguage suitable for cinema."
+
     suspend fun translateBatch(lines: List<String>, targetLanguage: String): TranslationResult {
         if (lines.isEmpty()) return TranslationResult(lines, true)
         val apiKey = apiKeyProvider()
@@ -75,7 +83,7 @@ internal class SubtitleTranslationService(
         val encoded = lines.map { it.replace("\n", NL) }
         val inputArray = JSONArray(encoded)
 
-        val systemPrompt = "Translate movie subtitles naturally. Return ONLY a JSON array, same order and count. Preserve $NL as-is (line-break). No extra text."
+        val systemPrompt = buildSystemPrompt(targetLanguage, NL)
 
         val body = JSONObject().apply {
             put("model", GROQ_MODEL_ID)
@@ -132,7 +140,7 @@ internal class SubtitleTranslationService(
         val encoded = lines.map { it.replace("\n", NL) }
         val inputArray = JSONArray(encoded)
 
-        val systemPrompt = "Translate movie subtitles naturally. Return ONLY a JSON array, same order and count. Preserve $NL as-is (line-break). No extra text."
+        val systemPrompt = buildSystemPrompt(targetLanguage, NL)
 
         val body = JSONObject().apply {
             put("system_instruction", JSONObject().apply {
@@ -151,6 +159,7 @@ internal class SubtitleTranslationService(
             })
             put("generationConfig", JSONObject().apply {
                 put("temperature", 0.1)
+                put("responseMimeType", "application/json")
                 put("thinkingConfig", JSONObject().apply {
                     put("thinkingBudget", 0)
                 })
