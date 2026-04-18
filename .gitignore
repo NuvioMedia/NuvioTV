@@ -8,6 +8,7 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+/.vscode/
 .DS_Store
 /build
 **/build/
