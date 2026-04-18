@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Omnio TV Login",
-  description: "Sign in to your Omnio TV account",
+  description: "Sign in or create an Omnio TV account from your phone",
 };
 
 export default function RootLayout({

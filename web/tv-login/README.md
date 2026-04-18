@@ -1,13 +1,14 @@
 # Omnio TV Login Web App
 
-A minimal Next.js web application that handles the TV login flow for Omnio TV.
+A minimal Next.js web application that handles the TV login and account-creation flow for Omnio TV.
 
 ## Overview
 
 This app serves the `app.omnio.tv/tv-login` route. It allows users to:
 1. Scan a QR code on their TV which directs them to this app with a `?code=ABC123` parameter.
-2. Sign in using their Supabase email and password.
+2. Sign in with an existing Supabase account or create a new one using email and password.
 3. Approve the pending TV login session by calling the `approve_tv_login_session` Supabase RPC.
+4. Return from an email-confirmation link to the same TV approval URL when Supabase requires sign-up verification.
 
 ## Tech Stack
 
