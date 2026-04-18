@@ -104,24 +104,28 @@ internal class PlayerMediaSourceFactory {
         return when {
             isHls && !forceDefaultFactory -> HlsMediaSource.Factory(httpDataSourceFactory)
                 .setAllowChunklessPreparation(true)
-                .apply {
-                    customSubtitleParserFactory?.let { parserFactory ->
-                        setSubtitleParserFactory(parserFactory)
-                    }
-                }
+                .applySubtitleParserFactory(customSubtitleParserFactory)
                 .createMediaSource(mediaItem)
             isDash && !forceDefaultFactory -> DashMediaSource.Factory(httpDataSourceFactory)
-                .apply {
-                    customSubtitleParserFactory?.let { parserFactory ->
-                        setSubtitleParserFactory(parserFactory)
-                    }
-                }
+                .applySubtitleParserFactory(customSubtitleParserFactory)
                 .createMediaSource(mediaItem)
             else -> defaultFactory.createMediaSource(mediaItem)
         }
     }
 
     fun shutdown() = Unit
+
+    private fun HlsMediaSource.Factory.applySubtitleParserFactory(
+        subtitleParserFactory: SubtitleParser.Factory?
+    ): HlsMediaSource.Factory = apply {
+        subtitleParserFactory?.let(::setSubtitleParserFactory)
+    }
+
+    private fun DashMediaSource.Factory.applySubtitleParserFactory(
+        subtitleParserFactory: SubtitleParser.Factory?
+    ): DashMediaSource.Factory = apply {
+        subtitleParserFactory?.let(::setSubtitleParserFactory)
+    }
 
     companion object {
         private const val PROBE_TIMEOUT_MS = 4000
