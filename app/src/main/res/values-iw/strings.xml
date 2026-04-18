@@ -183,7 +183,7 @@
     <string name="settings_layout_subtitle">מבנה בית וסגנונות פוסטרים</string>
     <string name="settings_plugins">תוספים</string>
     <string name="settings_plugins_subtitle">מאגרים וספקים</string>
-    <string name="settings_integration">שילוב</string>
+    <string name="settings_integration">אינטגרציות</string>
     <string name="settings_playback">הפעלה</string>
     <string name="settings_playback_subtitle">נגן, כתוביות והפעלה אוטומטית</string>
     <string name="settings_trakt_subtitle">פתח מסך חיבור Trakt</string>
