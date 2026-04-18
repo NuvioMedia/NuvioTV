@@ -126,16 +126,16 @@
 <string name="settings_profiles">Profielen</string>
 <string name="settings_profiles_subtitle">Beheer gebruikersprofielen</string>
 <string name="settings_layout">Indeling</string>
-<string name="settings_layout_subtitle">Startpagina-indeling en posterstijlen.</string>
+<string name="settings_layout_subtitle">Startpagina-indeling en posterstijlen</string>
 <string name="settings_plugins">Plugins</string>
-<string name="settings_plugins_subtitle">Repositories en providers.</string>
+<string name="settings_plugins_subtitle">Repositories en providers</string>
 <string name="settings_integration">Integraties</string>
 <string name="settings_playback">Afspelen</string>
-<string name="settings_playback_subtitle">Speler, ondertitels en automatisch afspelen.</string>
-<string name="settings_trakt_subtitle">Open het Trakt-verbindingsscherm.</string>
-<string name="settings_about_subtitle">Versie en beleid.</string>
+<string name="settings_playback_subtitle">Speler, ondertitels en automatisch afspelen</string>
+<string name="settings_trakt_subtitle">Open het Trakt-verbindingsscherm</string>
+<string name="settings_about_subtitle">Versie en beleid</string>
 <string name="settings_debug">Debug</string>
-<string name="settings_debug_subtitle">Ontwikkelaarstools en feature flags.</string>
+<string name="settings_debug_subtitle">Ontwikkelaarstools en feature flags</string>
 <string name="settings_plugins_section_subtitle">Beheer repositories, providers en pluginstatussen</string>
 <string name="settings_account_section_subtitle">Account- en synchronisatiestatus</string>
 <string name="account_stat_addons">addons</string>
@@ -511,7 +511,7 @@
 
    <!-- ProfileSettingsContent -->
 <string name="profile_title">Profielen</string>
-<string name="profile_subtitle">Beheer gebruikersprofielen voor dit account.</string>
+<string name="profile_subtitle">Beheer gebruikersprofielen voor dit account</string>
 <string name="profile_primary_label">Primair</string>
 <string name="profile_shares_primary">Deelt de %1$s van het primaire profiel</string>
 <string name="profile_edit_label">Bewerken</string>

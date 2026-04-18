@@ -101,6 +101,12 @@ fun HomeScreen(
     var catalogLoadingStarted by rememberSaveable { mutableStateOf(false) }
     var posterOptionsTarget by remember { mutableStateOf<HomePosterOptionsTarget?>(null) }
 
+    LaunchedEffect(uiState.homeLayout) {
+        if (uiState.homeLayout != HomeLayout.MODERN) {
+            HeroBackdropState.update(null)
+        }
+    }
+
     // Stable lambdas — captured via rememberUpdatedState so they never cause
     // downstream recomposition when uiState changes.
     val latestMovieWatchedStatus by rememberUpdatedState(uiState.movieWatchedStatus)
@@ -557,8 +563,7 @@ private fun ModernHomeRoute(
             { item -> viewModel.onItemFocus(item) }
         },
         onPreloadAdjacentItem = preloadAdjacentItem,
-        onSaveFocusState = saveModernFocusState,
-        rowBuildCache = viewModel.modernCarouselRowBuildCache
+        onSaveFocusState = saveModernFocusState
     )
 }
 

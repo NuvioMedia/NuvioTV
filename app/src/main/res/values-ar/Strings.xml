@@ -255,14 +255,14 @@
     <string name="settings_profiles">المستخدمين</string>
     <string name="settings_profiles_subtitle">إدارة ملفات المستخدمين</string>
     <string name="settings_layout">واجهة العرض</string>
-    <string name="settings_layout_subtitle">تنظيم الواجهة الرئيسية وشكل البطاقات.</string>
+    <string name="settings_layout_subtitle">تنظيم الواجهة الرئيسية وشكل البطاقات</string>
     <string name="settings_plugins">الملحقات</string>
-    <string name="settings_plugins_subtitle">المستودعات والمصادر.</string>
+    <string name="settings_plugins_subtitle">المستودعات والمصادر</string>
     <string name="settings_integration">الخدمات المرتبطة</string>
     <string name="settings_playback">وسائط التشغيل</string>
-    <string name="settings_playback_subtitle">المشغل، الترجمة، والتشغيل التلقائي.</string>
-    <string name="settings_trakt_subtitle">الانتقال إلى صفحة ربط Trakt.</string>
-    <string name="settings_about_subtitle">الإصدار والبنود القانونية.</string>
+    <string name="settings_playback_subtitle">المشغل، الترجمة، والتشغيل التلقائي</string>
+    <string name="settings_trakt_subtitle">الانتقال إلى صفحة ربط Trakt</string>
+    <string name="settings_about_subtitle">الإصدار والبنود القانونية</string>
     <string name="settings_network">سرعة الشبكة</string>
     <string name="settings_network_subtitle">تشخيصات زمن الوصول وسرعة التنزيل</string>
     <string name="settings_advanced">متقدم</string>
@@ -281,7 +281,7 @@
     <string name="network_connection_ethernet">إيثرنت</string>
     <string name="network_connection_offline">غير متصل</string>
     <string name="settings_debug">معالجة الأخطاء</string>
-    <string name="settings_debug_subtitle">أدوات المطورين والميزات التجريبية.</string>
+    <string name="settings_debug_subtitle">أدوات المطورين والميزات التجريبية</string>
     <string name="settings_plugins_section_subtitle">إدارة المستودعات، المصادر، والملحقات</string>
     <string name="settings_account_section_subtitle">الحساب وحالة المزامنة</string>
     <string name="account_stat_addons">إضافات</string>
@@ -755,7 +755,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">الملفات الشخصية</string>
-    <string name="profile_subtitle">إدارة ملفات المستخدمين لهذا الحساب.</string>
+    <string name="profile_subtitle">إدارة ملفات المستخدمين لهذا الحساب</string>
     <string name="profile_manage_button">إدارة الملفات الشخصية</string>
     <string name="profile_manage_title">إدارة الملفات الشخصية</string>
     <string name="profile_manage_subtitle">حدد ملفاً شخصياً لتعديله أو التبديل إليه أو إنشاء ملف جديد</string>

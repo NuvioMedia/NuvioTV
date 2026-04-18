@@ -548,7 +548,8 @@ class AddonManagerViewModel @Inject constructor(
                             AddonConfigServer.CatalogSourceInfo(
                                 addonId = src.addonId,
                                 type = src.type,
-                                catalogId = src.catalogId
+                                catalogId = src.catalogId,
+                                genre = src.genre
                             )
                         }
                     )

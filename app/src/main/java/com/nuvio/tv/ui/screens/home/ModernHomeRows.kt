@@ -46,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
@@ -329,7 +330,8 @@ internal fun ModernRowSection(
     onNavigateToFolderDetail: (String, String) -> Unit,
     onLoadMoreCatalog: (String, String, String) -> Unit,
     onBackdropInteraction: () -> Unit,
-    onExpandedCatalogFocusKeyChange: (String?) -> Unit
+    onExpandedCatalogFocusKeyChange: (String?) -> Unit,
+    onGetVerticalFocusRequester: (index: Int, isDown: Boolean) -> FocusRequester = { _, _ -> FocusRequester.Default }
 ) {
     val focusedItemByRow = uiCaches.focusedItemByRow
     val itemFocusRequesters = uiCaches.itemFocusRequesters
@@ -629,6 +631,15 @@ internal fun ModernRowSection(
                     val onFocused = remember(row.key, index, isContinueWatchingRow) {
                         { onRowItemFocused(row.key, index, isContinueWatchingRow) }
                     }
+                    val hasExpandedCard = expandedCatalogFocusKey != null
+                    val verticalFocusModifier = if (hasExpandedCard) {
+                        Modifier.focusProperties {
+                            up = onGetVerticalFocusRequester(index, false)
+                            down = onGetVerticalFocusRequester(index, true)
+                        }
+                    } else {
+                        Modifier
+                    }
 
                     when (val payload = item.payload) {
                         is ModernPayload.ContinueWatching -> {
@@ -640,7 +651,8 @@ internal fun ModernRowSection(
                                 blurUnwatchedEpisodes = blurUnwatchedEpisodes,
                                 onFocused = onFocused,
                                 onContinueWatchingClick = onContinueWatchingClick,
-                                onShowOptions = onContinueWatchingOptions
+                                onShowOptions = onContinueWatchingOptions,
+                                modifier = verticalFocusModifier
                             )
                         }
 
@@ -693,7 +705,8 @@ internal fun ModernRowSection(
                                 onNavigateToFolderDetail = onNavigateToFolderDetail,
                                 onLongPress = onLongPress,
                                 onBackdropInteraction = onBackdropInteraction,
-                                onExpandedCatalogFocusKeyChange = onExpandedCatalogFocusKeyChange
+                                onExpandedCatalogFocusKeyChange = onExpandedCatalogFocusKeyChange,
+                                modifier = verticalFocusModifier
                             )
                         }
                     }
@@ -827,13 +840,20 @@ private fun ModernCarouselCard(
     var landscapeLogoLoadFailed by remember(effectiveLogoUrl) { mutableStateOf(false) }
     val shouldPlayTrailerInCard = playTrailerInExpandedCard && !trailerPreviewUrl.isNullOrBlank()
     val isVerticalRowsScrolling = LocalVerticalRowsScrolling.current
-    val imageCacheKey = "${imageUrl}_${requestWidthPx}x${requestHeightPx}"
-    val isImageCached = remember(imageModel) {
-        context.imageLoader.memoryCache?.get(MemoryCache.Key(imageCacheKey)) != null
-    }
 
-    val safeImageModel = if (isVerticalRowsScrolling && !isImageCached) null else imageModel
-    val hasImage = !imageUrl.isNullOrBlank() && safeImageModel != null
+    val scrollAwareImageModel = if (!isVerticalRowsScrolling || imageModel == null) {
+        imageModel
+    } else {
+        remember(imageModel) {
+            (imageModel as? ImageRequest)?.newBuilder()
+                ?.memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                ?.diskCachePolicy(coil.request.CachePolicy.DISABLED)
+                ?.networkCachePolicy(coil.request.CachePolicy.DISABLED)
+                ?.build()
+                ?: imageModel
+        }
+    }
+    val hasImage = !imageUrl.isNullOrBlank()
     val hasLandscapeLogo =
         (useLandscapeOverlayTreatment || isBackdropExpanded) &&
             !effectiveLogoUrl.isNullOrBlank() &&
@@ -939,7 +959,7 @@ private fun ModernCarouselCard(
                 Box(modifier = mediaLayerModifier) {
                     if (hasImage) {
                         AsyncImage(
-                            model = safeImageModel,
+                            model = scrollAwareImageModel,
                             contentDescription = item.title,
                             modifier = Modifier.fillMaxSize(),
                             placeholder = backgroundPainter,

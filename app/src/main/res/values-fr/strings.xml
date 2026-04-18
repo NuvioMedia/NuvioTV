@@ -215,6 +215,15 @@
     <string name="series_status_rumored">Rumeur</string>
     <string name="series_status_in_production">En production</string>
     <string name="series_status_post_production">En post-production</string>
+    <string name="movie_status_ended">Terminé</string>
+    <string name="movie_status_continuing">En cours</string>
+    <string name="movie_status_current">Actuel</string>
+    <string name="movie_status_cancelled">Annulé</string>
+    <string name="movie_status_released">Sorti</string>
+    <string name="movie_status_planned">Prévu</string>
+    <string name="movie_status_rumored">Rumeur</string>
+    <string name="movie_status_in_production">En production</string>
+    <string name="movie_status_post_production">En post-production</string>
     <string name="detail_lists_fallback">Listes</string>
     <string name="detail_lists_subtitle">Sélectionne les listes auxquelles ajouter ce titre.</string>
     <string name="action_save">Enregistrer</string>
@@ -255,14 +264,14 @@
     <string name="settings_profiles">Profils</string>
     <string name="settings_profiles_subtitle">Gérer les profils utilisateurs</string>
     <string name="settings_layout">Disposition</string>
-    <string name="settings_layout_subtitle">Structure de l\'accueil et styles d\'affiches.</string>
+    <string name="settings_layout_subtitle">Structure de l\'accueil et styles d\'affiches</string>
     <string name="settings_plugins">Plugins</string>
-    <string name="settings_plugins_subtitle">Dépôts et fournisseurs.</string>
+    <string name="settings_plugins_subtitle">Dépôts et fournisseurs</string>
     <string name="settings_integration">Intégration</string>
     <string name="settings_playback">Lecture</string>
-    <string name="settings_playback_subtitle">Lecteur, sous-titres et lecture automatique.</string>
-    <string name="settings_trakt_subtitle">Ouvrir l\'écran de connexion Trakt.</string>
-    <string name="settings_about_subtitle">Version et politiques.</string>
+    <string name="settings_playback_subtitle">Lecteur, sous-titres et lecture automatique</string>
+    <string name="settings_trakt_subtitle">Ouvrir l\'écran de connexion Trakt</string>
+    <string name="settings_about_subtitle">Version et politiques</string>
     <string name="settings_network">Débit réseau</string>
     <string name="settings_network_subtitle">Diagnostics de la latence et du débit descendant</string>
     <string name="settings_advanced">Avancés</string>
@@ -281,7 +290,7 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Hors ligne</string>
     <string name="settings_debug">Débogage</string>
-    <string name="settings_debug_subtitle">Outils développeur et options expérimentales.</string>
+    <string name="settings_debug_subtitle">Outils développeur et options expérimentales</string>
     <string name="settings_plugins_section_subtitle">Gérer les dépôts, fournisseurs et états des plugins</string>
     <string name="settings_account_section_subtitle">Compte et état de la synchronisation</string>
     <string name="account_stat_addons">addons</string>
@@ -755,7 +764,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profils</string>
-    <string name="profile_subtitle">Gérer les profils utilisateurs pour ce compte.</string>
+    <string name="profile_subtitle">Gérer les profils utilisateurs pour ce compte</string>
     <string name="profile_manage_button">Gérer les profils</string>
     <string name="profile_manage_title">Gérer les profils</string>
     <string name="profile_manage_subtitle">Choisir, modifier ou créer un profil</string>

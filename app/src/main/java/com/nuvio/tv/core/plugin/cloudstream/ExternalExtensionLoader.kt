@@ -306,13 +306,13 @@ class ExternalExtensionLoader @Inject constructor(
             extractorRegistry.installGlobal()
 
             // Call load() to trigger registerMainAPI() calls.
+            // Dispatch on Context so plugins that override load(Context) — upstream's
+            // primary overload — get their impl invoked. Plugins that only override
+            // load(Activity?) or no-arg load() still work: stub's load(Context) casts
+            // the arg to Activity? and chains through.
             val activity = AcraApplication.getActivity()
             try {
-                if (activity != null) {
-                    plugin.load(activity as android.app.Activity?)
-                } else {
-                    plugin.load(context)
-                }
+                plugin.load((activity as Context?) ?: context)
             } catch (e: Exception) {
                 Log.w(TAG, "plugin.load() threw (partial load, ${plugin.registeredMainAPIs.size} APIs so far): ${e.message}", e)
             } catch (e: Error) {
@@ -345,14 +345,16 @@ class ExternalExtensionLoader @Inject constructor(
                         !className.contains('$') &&
                         !className.contains("Plugin") &&
                         !className.contains("Fragment") &&
-                        className.startsWith("com.") &&
-                        !className.startsWith("com.lagradost.cloudstream3.")
+                        className.startsWith("com.")
                     }
 
                     for (className in candidates) {
                         try {
                             val clazz = classLoader.loadClass(className)
-                            if (apis.isEmpty() && MainAPI::class.java.isAssignableFrom(clazz)) {
+                            if (apis.isEmpty()
+                                && MainAPI::class.java.isAssignableFrom(clazz)
+                                && !java.lang.reflect.Modifier.isAbstract(clazz.modifiers)
+                                && !clazz.isInterface) {
                                 val instance = clazz.getDeclaredConstructor().newInstance() as MainAPI
                                 fallbackApis.add(instance)
                                 Log.d(TAG, "Fallback found MainAPI: ${instance.name} ($className)")
@@ -478,12 +480,8 @@ class ExternalExtensionLoader @Inject constructor(
 
             val activity = AcraApplication.getActivity()
             try {
-                if (activity != null) {
-                    plugin.load(activity as android.app.Activity?)
-                } else {
-                    plugin.load(context)
-                }
-                diagnostics.addStep("load(${if (activity != null) "Activity" else "Context"}): OK, ${plugin.registeredMainAPIs.size} APIs")
+                plugin.load((activity as Context?) ?: context)
+                diagnostics.addStep("load(Context): OK, ${plugin.registeredMainAPIs.size} APIs")
             } catch (e: Exception) {
                 diagnostics.addStep("load() FAILED: ${e.javaClass.simpleName}: ${e.message?.take(120)}")
             } catch (e: Error) {
@@ -503,14 +501,16 @@ class ExternalExtensionLoader @Inject constructor(
                     !className.contains('$') &&
                     !className.contains("Plugin") &&
                     !className.contains("Fragment") &&
-                    className.startsWith("com.") &&
-                    !className.startsWith("com.lagradost.cloudstream3.")
+                    className.startsWith("com.")
                 }
 
                 for (className in candidates) {
                     try {
                         val clazz = classLoader.loadClass(className)
-                        if (apis.isEmpty() && MainAPI::class.java.isAssignableFrom(clazz)) {
+                        if (apis.isEmpty()
+                            && MainAPI::class.java.isAssignableFrom(clazz)
+                            && !java.lang.reflect.Modifier.isAbstract(clazz.modifiers)
+                            && !clazz.isInterface) {
                             val instance = clazz.getDeclaredConstructor().newInstance() as MainAPI
                             fallbackApis.add(instance)
                             diagnostics.addStep("Found API: ${instance.name} (${clazz.simpleName})")
@@ -604,11 +604,7 @@ class ExternalExtensionLoader @Inject constructor(
                 if (plugin != null) {
                     val activity = AcraApplication.getActivity()
                     try {
-                        if (activity != null) {
-                            plugin.load(activity as android.app.Activity?)
-                        } else {
-                            plugin.load(context)
-                        }
+                        plugin.load((activity as Context?) ?: context)
                     } catch (_: Exception) {
                     } catch (_: Error) {
                     }

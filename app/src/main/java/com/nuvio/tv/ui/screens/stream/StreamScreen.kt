@@ -367,7 +367,8 @@ private fun StreamBackdrop(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer { alpha = imageAlpha },
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopEnd
             )
         }
 
@@ -665,6 +666,15 @@ private fun AddonFilterChips(
     val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     val chipMap = sourceChips.associateBy { it.name }
     var chipRowHasFocus by remember { mutableStateOf(false) }
+    // Track the focused chip index to handle duplicate addon names correctly.
+    // indexOf(selectedAddon) would always return the first duplicate.
+    var focusedChipIndex by remember { mutableStateOf(
+        if (selectedAddon == null) 0 else (orderedNames.indexOf(selectedAddon) + 1).coerceAtLeast(0)
+    ) }
+    LaunchedEffect(selectedAddon, orderedNames) {
+        val idx = if (selectedAddon == null) 0 else (orderedNames.indexOf(selectedAddon) + 1).coerceAtLeast(0)
+        focusedChipIndex = idx
+    }
     val scope = rememberCoroutineScope()
     val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
     LazyRow(
@@ -674,11 +684,9 @@ private fun AddonFilterChips(
             .onFocusChanged { focusState ->
                 val hasFocus = focusState.hasFocus
                 if (hasFocus && !chipRowHasFocus && isRtl) {
-                    val selectedIdx = if (selectedAddon == null) 0
-                        else (orderedNames.indexOf(selectedAddon) + 1).coerceAtLeast(0)
                     scope.coroutineLaunch {
                         withFrameNanos {}
-                        focusRequesters.getOrNull(selectedIdx)?.requestFocus()
+                        focusRequesters.getOrNull(focusedChipIndex)?.requestFocus()
                     }
                 }
                 chipRowHasFocus = hasFocus
@@ -694,20 +702,20 @@ private fun AddonFilterChips(
                 }
 
                 val allOptions = listOf<String?>(null) + orderedNames
-                val currentIdx = allOptions.indexOf(selectedAddon)
+                val currentIdx = focusedChipIndex.coerceIn(0, allOptions.lastIndex)
                 when (event.key) {
                     androidx.compose.ui.input.key.Key.DirectionLeft -> {
                         if (isRtl) {
-                            if (currentIdx < allOptions.lastIndex) { onAddonSelected(allOptions[currentIdx + 1]); true } else false
+                            if (currentIdx < allOptions.lastIndex) { focusedChipIndex = currentIdx + 1; onAddonSelected(allOptions[currentIdx + 1]); true } else false
                         } else {
-                            if (currentIdx > 0) { onAddonSelected(allOptions[currentIdx - 1]); true } else false
+                            if (currentIdx > 0) { focusedChipIndex = currentIdx - 1; onAddonSelected(allOptions[currentIdx - 1]); true } else false
                         }
                     }
                     androidx.compose.ui.input.key.Key.DirectionRight -> {
                         if (isRtl) {
-                            if (currentIdx > 0) { onAddonSelected(allOptions[currentIdx - 1]); true } else false
+                            if (currentIdx > 0) { focusedChipIndex = currentIdx - 1; onAddonSelected(allOptions[currentIdx - 1]); true } else false
                         } else {
-                            if (currentIdx < allOptions.lastIndex) { onAddonSelected(allOptions[currentIdx + 1]); true } else false
+                            if (currentIdx < allOptions.lastIndex) { focusedChipIndex = currentIdx + 1; onAddonSelected(allOptions[currentIdx + 1]); true } else false
                         }
                     }
                     else -> false

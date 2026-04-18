@@ -27,6 +27,9 @@ import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.LocalScraperResult
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
@@ -34,7 +37,12 @@ import javax.inject.Singleton
 
 private const val TAG = "ExtExtensionRunner"
 private const val EXECUTION_TIMEOUT_MS = 120_000L
+// Per-provider loadLinks cap. Mega-aggregators (Phisher StreamPlay, Ultima,
+// TorraStream) scrape many source sites in parallel and happily burn through
+// minutes — cap them at 60s and return the partial link set collected so far.
+private const val LOADLINKS_TIMEOUT_MS = 60_000L
 private const val MIN_TITLE_SIMILARITY = 0.5
+private const val MAX_ALT_TITLES = 8
 
 /**
  * Executes external DEX extensions by bridging between NuvioTV's TMDB ID-based system
@@ -285,7 +293,7 @@ class ExternalExtensionRunner @Inject constructor(
 
         if (searchResults.isNullOrEmpty()) return emptyList()
 
-        val bestMatch = findBestMatch(searchResults, title, year, mediaType)
+        val bestMatch = findBestMatch(searchResults, listOf(title), year, mediaType)
         if (bestMatch == null) {
             diagnostics.addStep("No match above similarity threshold ($MIN_TITLE_SIMILARITY)")
             searchResults.take(3).forEachIndexed { i, r ->
@@ -427,19 +435,30 @@ class ExternalExtensionRunner @Inject constructor(
         val links = java.util.Collections.synchronizedList(mutableListOf<ExtractorLink>())
         val subtitles = java.util.Collections.synchronizedList(mutableListOf<SubtitleFile>())
 
-        try {
-            api.loadLinks(
-                data = data,
-                isCasting = false,
-                subtitleCallback = { subtitles.add(it) },
-                callback = { links.add(it) }
-            )
-        } catch (e: Exception) {
-            // TimeoutCancellationException or other — links collected so far are still valid
-            Log.w(TAG, "TmdbProvider ${api.name} loadLinks ended: ${e.javaClass.simpleName} (${links.size} links collected)")
-        } catch (e: Error) {
-            val missing = extractMissingClass(e)
-            Log.w(TAG, "TmdbProvider ${api.name} loadLinks error: ${missing ?: e.message} (${links.size} links collected)")
+        // Wrap loadLinks in withTimeoutOrNull so the timeout cancels only this block
+        // (returning null locally) rather than propagating cancellation out and
+        // discarding the already-collected link set. This is the cancellation-scope
+        // trick that lets us return partial results from mega-aggregators.
+        val completed = withTimeoutOrNull(LOADLINKS_TIMEOUT_MS) {
+            try {
+                api.loadLinks(
+                    data = data,
+                    isCasting = false,
+                    subtitleCallback = { subtitles.add(it) },
+                    callback = { links.add(it) }
+                )
+                true
+            } catch (e: Exception) {
+                Log.w(TAG, "TmdbProvider ${api.name} loadLinks threw: ${e.javaClass.simpleName} (${links.size} links collected)")
+                false
+            } catch (e: Error) {
+                val missing = extractMissingClass(e)
+                Log.w(TAG, "TmdbProvider ${api.name} loadLinks error: ${missing ?: e.message} (${links.size} links collected)")
+                false
+            }
+        }
+        if (completed == null) {
+            Log.w(TAG, "TmdbProvider ${api.name} loadLinks timed out at ${LOADLINKS_TIMEOUT_MS}ms (${links.size} links collected so far)")
         }
 
         if (links.isEmpty()) {
@@ -471,41 +490,78 @@ class ExternalExtensionRunner @Inject constructor(
         val title = enrichment.localizedTitle ?: return emptyList()
         val year = enrichment.releaseInfo?.take(4)?.toIntOrNull()
 
-        Log.d(TAG, "SearchBased ${api.name}: searching for \"$title\"")
-        var searchResults = try {
-            api.search(title, 1)?.items
-        } catch (e: Exception) {
-            Log.e(TAG, "SearchBased ${api.name} search() threw: ${e.javaClass.simpleName}: ${e.message}", e)
-            null
-        } catch (e: Error) {
-            val missing = extractMissingClass(e)
-            Log.e(TAG, "SearchBased ${api.name} search() error: ${missing ?: e.message}", e)
-            null
+        // Build candidate titles for multi-language matching: primary localized title,
+        // TMDB original title (often non-English for foreign content), plus alt titles
+        // per country. Filter alts to Latin-script and cap the list — TMDB returns
+        // translations in every script (Cyrillic/CJK/Arabic/Thai/etc.), and trying
+        // each one against a Spanish/Portuguese/English provider wastes requests.
+        val candidateTitles = buildList {
+            add(title)
+            enrichment.originalTitle
+                ?.takeIf { it.isNotBlank() && !equalsIgnoreCase(it, title) }
+                ?.let(::add)
+            enrichment.alternativeTitles
+                .asSequence()
+                .filter { it.isNotBlank() && isLatinScript(it) }
+                .distinctBy { it.lowercase() }
+                .filter { alt -> none { equalsIgnoreCase(it, alt) } }
+                .take(MAX_ALT_TITLES)
+                .forEach(::add)
         }
 
-        if (searchResults.isNullOrEmpty() && title.contains(Regex("[:\\-–—]"))) {
+        Log.d(TAG, "SearchBased ${api.name}: searching for \"$title\" (${candidateTitles.size} candidates)")
+
+        var outcome = trySearch(api, title)
+        var searchResults = outcome.items
+        var hostDead = outcome.hostUnreachable
+        var unsupported = outcome.unsupported
+
+        if (searchResults.isNullOrEmpty() && !hostDead && !unsupported && title.contains(Regex("[:\\-–—]"))) {
             val simplified = title.replace(Regex("[:\\-–—]"), " ").replace(Regex("\\s+"), " ").trim()
             Log.d(TAG, "SearchBased ${api.name}: retrying with simplified \"$simplified\"")
-            searchResults = try {
-                api.search(simplified, 1)?.items
-            } catch (e: Exception) {
-                Log.e(TAG, "SearchBased ${api.name} search(simplified) threw: ${e.javaClass.simpleName}: ${e.message}", e)
-                null
-            } catch (e: Error) {
-                null
+            outcome = trySearch(api, simplified)
+            searchResults = outcome.items
+            if (outcome.hostUnreachable) hostDead = true
+            if (outcome.unsupported) unsupported = true
+        }
+
+        // Multi-title fallback: if primary found nothing AND host is reachable AND
+        // provider supports search, try alts in parallel. Parallel because sequential
+        // 7x retries × ~500ms each = ~3.5s wasted per miss; running concurrently cuts
+        // this to ~500ms. Picks the first non-empty result in candidate order.
+        if (searchResults.isNullOrEmpty() && !hostDead && !unsupported) {
+            val alts = candidateTitles.drop(1)
+            if (alts.isNotEmpty()) {
+                Log.d(TAG, "SearchBased ${api.name}: trying ${alts.size} alt titles in parallel")
+                val altOutcomes = coroutineScope {
+                    alts.map { alt -> async { alt to trySearch(api, alt) } }.awaitAll()
+                }
+                altOutcomes.firstOrNull { it.second.hostUnreachable }?.let { hostDead = true }
+                altOutcomes.firstOrNull { it.second.unsupported }?.let { unsupported = true }
+                if (!hostDead && !unsupported) {
+                    altOutcomes.firstOrNull { !it.second.items.isNullOrEmpty() }?.let { (alt, o) ->
+                        Log.d(TAG, "SearchBased ${api.name}: alt title \"$alt\" returned ${o.items?.size ?: 0} results")
+                        searchResults = o.items
+                    }
+                }
             }
         }
+
         if (searchResults.isNullOrEmpty()) {
-            Log.w(TAG, "SearchBased ${api.name}: 0 search results for \"$title\"")
+            when {
+                hostDead -> Log.w(TAG, "SearchBased ${api.name}: host unreachable, skipping (primary=\"$title\")")
+                unsupported -> Log.w(TAG, "SearchBased ${api.name}: search() unsupported, skipping (primary=\"$title\")")
+                else -> Log.w(TAG, "SearchBased ${api.name}: 0 search results for any of ${candidateTitles.size} titles (primary=\"$title\")")
+            }
             return emptyList()
         }
         Log.d(TAG, "SearchBased ${api.name}: ${searchResults.size} results")
 
-        val bestMatch = findBestMatch(searchResults, title, year, mediaType)
+        val bestMatch = findBestMatch(searchResults, candidateTitles, year, mediaType)
         if (bestMatch == null) {
-            Log.d(TAG, "No suitable match in ${api.name} results for: $title ($year)")
+            Log.d(TAG, "No suitable match in ${api.name} results for: $title ($year) [candidates=${candidateTitles.size}]")
             searchResults.take(5).forEachIndexed { i, r ->
-                val sim = calculateSimilarity(r.name, title)
+                val sim = candidateTitles.maxOf { calculateSimilarity(r.name, it) }
                 Log.d(TAG, "  [$i] \"${r.name}\" (sim=${String.format("%.2f", sim)}, type=${r.type})")
             }
             return emptyList()
@@ -534,27 +590,32 @@ class ExternalExtensionRunner @Inject constructor(
             return emptyList()
         }
 
-        val links = mutableListOf<ExtractorLink>()
-        val subtitles = mutableListOf<SubtitleFile>()
+        val links = java.util.Collections.synchronizedList(mutableListOf<ExtractorLink>())
+        val subtitles = java.util.Collections.synchronizedList(mutableListOf<SubtitleFile>())
 
-        val success = try {
-            api.loadLinks(
-                data = data,
-                isCasting = false,
-                subtitleCallback = { subtitles.add(it) },
-                callback = { links.add(it) }
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "SearchBased ${api.name} loadLinks threw: ${e.javaClass.simpleName}: ${e.message}", e)
-            false
-        } catch (e: Error) {
-            val missing = extractMissingClass(e)
-            Log.e(TAG, "SearchBased ${api.name} loadLinks error: ${missing ?: e.message}", e)
-            false
+        val success = withTimeoutOrNull(LOADLINKS_TIMEOUT_MS) {
+            try {
+                api.loadLinks(
+                    data = data,
+                    isCasting = false,
+                    subtitleCallback = { subtitles.add(it) },
+                    callback = { links.add(it) }
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "SearchBased ${api.name} loadLinks threw: ${e.javaClass.simpleName}: ${e.message}", e)
+                false
+            } catch (e: Error) {
+                val missing = extractMissingClass(e)
+                Log.e(TAG, "SearchBased ${api.name} loadLinks error: ${missing ?: e.message}", e)
+                false
+            }
+        }
+        if (success == null) {
+            Log.w(TAG, "SearchBased ${api.name} loadLinks timed out at ${LOADLINKS_TIMEOUT_MS}ms (${links.size} links collected so far)")
         }
 
-        if (!success && links.isEmpty()) {
-            Log.w(TAG, "SearchBased ${api.name}: loadLinks returned false, 0 links")
+        if (success != true && links.isEmpty()) {
+            Log.w(TAG, "SearchBased ${api.name}: loadLinks returned false/null, 0 links")
             return emptyList()
         }
 
@@ -572,29 +633,106 @@ class ExternalExtensionRunner @Inject constructor(
 
     private fun findBestMatch(
         results: List<SearchResponse>,
-        targetTitle: String,
+        candidateTitles: List<String>,
         targetYear: Int?,
         mediaType: String
     ): SearchResponse? {
         val isMovie = mediaType.lowercase() == "movie"
+        val movieTypes = setOf(TvType.Movie, TvType.AnimeMovie, TvType.Documentary)
+        val tvTypes = setOf(TvType.TvSeries, TvType.Anime, TvType.OVA, TvType.Cartoon, TvType.AsianDrama)
+        // Catch-all TV types: niche providers (anime/dorama/donghua sites) may list
+        // any result as Anime/AsianDrama/OVA, giving a free type-match against any
+        // TV target. Require near-exact title for these to prevent false positives
+        // like MundoDonghua matching "The Invincible" for the "Invincible" series.
+        val catchAllTvTypes = setOf(TvType.Anime, TvType.OVA, TvType.AsianDrama)
 
         return results
-            .map { result ->
-                val titleSimilarity = calculateSimilarity(result.name, targetTitle)
-                val typeBonus = when {
-                    result.type == null -> 0.0
-                    isMovie && result.type in listOf(TvType.Movie, TvType.AnimeMovie, TvType.Documentary) -> 0.1
-                    !isMovie && result.type in listOf(TvType.TvSeries, TvType.Anime, TvType.OVA, TvType.Cartoon, TvType.AsianDrama) -> 0.1
-                    else -> -0.1
-                }
+            .mapNotNull { result ->
+                val resultType = result.type
                 val resultYear = getSearchResponseYear(result)
-                val yearBonus = if (targetYear != null && resultYear == targetYear) 0.1 else 0.0
-                val score = titleSimilarity + typeBonus + yearBonus
+                val titleSimilarity = candidateTitles.maxOf { calculateSimilarity(result.name, it) }
+                val isExactTitle = titleSimilarity >= 0.95
+
+                // Type check: hard reject only when title is NOT near-exact. Latam/es
+                // providers often mis-classify TV series as Movie; an exact title match
+                // is strong enough to override that. But a fuzzy title match ("Atom Eve"
+                // for "Invincible", "Hardy Boys" for "The Boys") must have matching type.
+                if (resultType != null && !isExactTitle) {
+                    val typeOk = if (isMovie) resultType in movieTypes else resultType in tvTypes
+                    if (!typeOk) return@mapNotNull null
+                }
+                // Catch-all TV types need stronger title evidence.
+                if (!isMovie && resultType in catchAllTvTypes && titleSimilarity < 0.9) {
+                    return@mapNotNull null
+                }
+                // Year check: hard reject when both years known and differ by >1.
+                if (targetYear != null && resultYear != null &&
+                    kotlin.math.abs(targetYear - resultYear) > 1) {
+                    return@mapNotNull null
+                }
+
+                val yearBonus = if (targetYear != null && resultYear == targetYear) 0.15 else 0.0
+                val typeBonus = when {
+                    resultType == null -> 0.0
+                    isMovie && resultType in movieTypes -> 0.05
+                    !isMovie && resultType in tvTypes -> 0.05
+                    else -> 0.0 // type mismatch but exact title — neutral, don't boost
+                }
+                val score = titleSimilarity + yearBonus + typeBonus
                 result to score
             }
             .filter { it.second >= MIN_TITLE_SIMILARITY }
             .maxByOrNull { it.second }
             ?.first
+    }
+
+    private data class SearchOutcome(
+        val items: List<SearchResponse>?,
+        val hostUnreachable: Boolean = false,
+        val unsupported: Boolean = false // provider didn't implement search()
+    )
+
+    private suspend fun trySearch(api: MainAPI, query: String): SearchOutcome = try {
+        SearchOutcome(api.search(query, 1)?.items)
+    } catch (e: java.net.UnknownHostException) {
+        Log.e(TAG, "SearchBased ${api.name} search(\"$query\") DNS fail: ${e.message}")
+        SearchOutcome(null, hostUnreachable = true)
+    } catch (e: NotImplementedError) {
+        // Provider (e.g. live-sports scrapers) doesn't override search(); retries
+        // with alt titles will all throw the same. Short-circuit.
+        Log.e(TAG, "SearchBased ${api.name}: search() not implemented; skipping provider")
+        SearchOutcome(null, unsupported = true)
+    } catch (e: Exception) {
+        Log.e(TAG, "SearchBased ${api.name} search(\"$query\") threw: ${e.javaClass.simpleName}: ${e.message}", e)
+        SearchOutcome(null)
+    } catch (e: Error) {
+        val missing = extractMissingClass(e)
+        Log.e(TAG, "SearchBased ${api.name} search(\"$query\") error: ${missing ?: e.message}", e)
+        SearchOutcome(null)
+    }
+
+    private fun equalsIgnoreCase(a: String, b: String): Boolean = a.equals(b, ignoreCase = true)
+
+    /**
+     * Returns true if the title is predominantly Latin-script (ASCII + Latin-1 +
+     * Latin Extended). Filters out TMDB alternative titles in Cyrillic, CJK, Arabic,
+     * Hebrew, Thai, Greek, Georgian, Korean, etc. — which waste search requests on
+     * providers that index Latin-script titles only (most storm-ext / latam sites).
+     */
+    private fun isLatinScript(s: String): Boolean {
+        val letters = s.filter(Char::isLetter)
+        if (letters.isEmpty()) return true
+        val latinCount = letters.count { c ->
+            when (Character.UnicodeBlock.of(c)) {
+                Character.UnicodeBlock.BASIC_LATIN,
+                Character.UnicodeBlock.LATIN_1_SUPPLEMENT,
+                Character.UnicodeBlock.LATIN_EXTENDED_A,
+                Character.UnicodeBlock.LATIN_EXTENDED_B,
+                Character.UnicodeBlock.LATIN_EXTENDED_ADDITIONAL -> true
+                else -> false
+            }
+        }
+        return latinCount.toDouble() / letters.length >= 0.7
     }
 
     private fun extractData(
@@ -643,15 +781,45 @@ class ExternalExtensionRunner @Inject constructor(
         if (a == b) return 1.0
         if (a.isEmpty() || b.isEmpty()) return 0.0
 
-        val aNorm = a.replace(Regex("\\(\\d{4}\\)"), "").trim()
-        val bNorm = b.replace(Regex("\\(\\d{4}\\)"), "").trim()
+        val aNorm = normalizeTitleForMatch(a)
+        val bNorm = normalizeTitleForMatch(b)
         if (aNorm == bNorm) return 0.95
+        if (aNorm.isEmpty() || bNorm.isEmpty()) return 0.0
 
-        if (aNorm.contains(bNorm) || bNorm.contains(aNorm)) return 0.85
+        if (aNorm.contains(bNorm) || bNorm.contains(aNorm)) {
+            // Length-ratio-weighted containment. Prevents "Boys" ⊂ "Fantasy Boys" or
+            // "Invincible" ⊂ "The Boys: Diábolico Latino" from scoring 0.85 — those
+            // are different works. Only treat as strong match when the strings are
+            // close in length (trivial punctuation/articles diff).
+            val shortLen = minOf(aNorm.length, bNorm.length).toDouble()
+            val longLen = maxOf(aNorm.length, bNorm.length).toDouble()
+            val ratio = shortLen / longLen
+            if (ratio >= 0.8) return 0.85
+            // else fall through to Levenshtein — naturally scores lower for
+            // significant length mismatches.
+        }
 
         val distance = levenshteinDistance(aNorm, bNorm)
         val maxLen = maxOf(aNorm.length, bNorm.length)
         return 1.0 - (distance.toDouble() / maxLen)
+    }
+
+    /**
+     * Strip noise that provider titles commonly add: release year, season/part
+     * markers, language/dub tags. Lets "Invincible S4 Castellano" normalize to
+     * "Invincible" so it matches the TMDB primary title cleanly.
+     */
+    private fun normalizeTitleForMatch(lowered: String): String {
+        return lowered
+            .replace(Regex("\\(\\d{4}\\)"), " ")
+            .replace(Regex("\\b\\d{4}\\b"), " ") // bare year
+            .replace(Regex("\\b(temporada|season)\\s*\\d+\\b"), " ")
+            .replace(Regex("\\b[st]\\d{1,2}\\b"), " ") // s1, t2, s04
+            .replace(Regex("\\b(part|parte)\\s*\\d+\\b"), " ")
+            .replace(Regex("\\b(latino|castellano|subtitulado|sub\\s*espa(ñ|n)ol|espa(ñ|n)ol|dual|vose|vostfr|subbed|dubbed)\\b"), " ")
+            .replace(Regex("[:\\-–—]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
     }
 
     private fun levenshteinDistance(s1: String, s2: String): Int {

@@ -194,6 +194,15 @@
     <string name="series_status_rumored">Söylenti</string>
     <string name="series_status_in_production">Yapım Aşamasında</string>
     <string name="series_status_post_production">Post Prodüksiyon</string>
+    <string name="movie_status_ended">Sona Erdi</string>
+    <string name="movie_status_continuing">Devam Ediyor</string>
+    <string name="movie_status_current">Güncel</string>
+    <string name="movie_status_cancelled">İptal Edildi</string>
+    <string name="movie_status_released">Yayınlandı</string>
+    <string name="movie_status_planned">Planlanıyor</string>
+    <string name="movie_status_rumored">Söylenti</string>
+    <string name="movie_status_in_production">Yapım Aşamasında</string>
+    <string name="movie_status_post_production">Post Prodüksiyon</string>
     <string name="detail_lists_fallback">Listeler</string>
     <string name="detail_lists_subtitle">Bu içeriğin hangi listelerde yer alacağını seçin.</string>
     <string name="action_save">Kaydet</string>
@@ -234,14 +243,14 @@
     <string name="settings_profiles">Profiller</string>
     <string name="settings_profiles_subtitle">Kullanıcı profillerini yönetin</string>
     <string name="settings_layout">Düzen</string>
-    <string name="settings_layout_subtitle">Ana sayfa düzeni ve poster stilleri.</string>
+    <string name="settings_layout_subtitle">Ana sayfa düzeni ve poster stilleri</string>
     <string name="settings_plugins">Uzantılar</string>
-    <string name="settings_plugins_subtitle">Depolar ve sağlayıcılar.</string>
+    <string name="settings_plugins_subtitle">Depolar ve sağlayıcılar</string>
     <string name="settings_integration">Entegrasyon</string>
     <string name="settings_playback">Oynatma</string>
-    <string name="settings_playback_subtitle">Oynatıcı, altyazılar ve otomatik oynatma.</string>
-    <string name="settings_trakt_subtitle">Trakt bağlantı ekranını aç.</string>
-    <string name="settings_about_subtitle">Sürüm ve politikalar.</string>
+    <string name="settings_playback_subtitle">Oynatıcı, altyazılar ve otomatik oynatma</string>
+    <string name="settings_trakt_subtitle">Trakt bağlantı ekranını aç</string>
+    <string name="settings_about_subtitle">Sürüm ve politikalar</string>
     <string name="settings_network">Ağ Hızı</string>
     <string name="settings_network_subtitle">Gecikme ve indirme hızı testleri</string>
     <string name="settings_advanced">Gelişmiş</string>
@@ -260,7 +269,7 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Çevrimdışı</string>
     <string name="settings_debug">Hata Ayıklama</string>
-    <string name="settings_debug_subtitle">Geliştirici araçları ve özellik bayrakları.</string>
+    <string name="settings_debug_subtitle">Geliştirici araçları ve özellik bayrakları</string>
     <string name="settings_plugins_section_subtitle">Depoları, sağlayıcıları ve eklenti durumlarını yönetin</string>
     <string name="settings_account_section_subtitle">Hesap ve senkronizasyon durumu</string>
     <string name="account_stat_addons">eklentiler</string>
@@ -727,7 +736,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profiller</string>
-    <string name="profile_subtitle">Bu hesaptaki kullanıcı profillerini yönetin.</string>
+    <string name="profile_subtitle">Bu hesaptaki kullanıcı profillerini yönetin</string>
     <string name="profile_manage_button">Profilleri Yönet</string>
     <string name="profile_manage_title">Profil Yönetimi</string>
     <string name="profile_manage_subtitle">Düzenlemek, değiştirmek veya yeni bir hesap oluşturmak için profillerden birini seçin</string>

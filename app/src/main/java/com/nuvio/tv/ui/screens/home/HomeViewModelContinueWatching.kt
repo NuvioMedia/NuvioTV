@@ -2290,11 +2290,27 @@ private fun resolveNextUpReleaseState(
     hasAired: Boolean
 ): NextUpReleaseState {
     val releaseTimestamp = parseEpisodeReleaseInstant(nextReleased)?.toEpochMilli()
+    val nowMs = System.currentTimeMillis()
+    val sixtyDaysMs = 60L * 24 * 60 * 60 * 1000
     val isReleaseAlert = hasAired &&
         releaseTimestamp != null &&
-        releaseTimestamp > seedProgress.lastWatched
+        releaseTimestamp > seedProgress.lastWatched &&
+        // Suppress release alerts for episodes that aired more than 60 days ago —
+        // the user likely abandoned the show.
+        (nowMs - releaseTimestamp) < sixtyDaysMs
+
+    // Use midnight of the release date for sorting instead of the full
+    // timestamp.  Meta sources sometimes report a future hour on the
+    // current day which would pin the alert above freshly-watched items.
+    val releaseDateMidnight = releaseTimestamp?.let { ts ->
+        val localDate = Instant.ofEpochMilli(ts)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
+        localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }
+
     return NextUpReleaseState(
-        sortTimestamp = if (isReleaseAlert) releaseTimestamp else seedProgress.lastWatched,
+        sortTimestamp = if (isReleaseAlert) releaseDateMidnight ?: releaseTimestamp!! else seedProgress.lastWatched,
         releaseTimestamp = releaseTimestamp,
         isReleaseAlert = isReleaseAlert,
         isNewSeasonRelease = isReleaseAlert && seedProgress.season != null && nextSeason != seedProgress.season

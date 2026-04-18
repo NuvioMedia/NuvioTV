@@ -72,7 +72,8 @@ class AddonConfigServer(
     data class CatalogSourceInfo(
         val addonId: String,
         val type: String,
-        val catalogId: String
+        val catalogId: String,
+        val genre: String? = null
     )
 
     data class PageState(

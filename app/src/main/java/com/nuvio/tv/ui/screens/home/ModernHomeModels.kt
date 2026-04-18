@@ -160,6 +160,12 @@ internal data class ModernCatalogRowBuildCacheEntry(
     val mappedRow: HeroCarouselRow
 )
 
+internal data class ModernCollectionRowBuildCacheEntry(
+    val source: Collection,
+    val useLandscapePosters: Boolean,
+    val mappedRow: HeroCarouselRow
+)
+
 @Stable
 internal class ModernHomeUiCaches {
     val focusedItemByRow = mutableMapOf<String, Int>()
@@ -182,6 +188,7 @@ class ModernCarouselRowBuildCache {
     var continueWatchingUseLandscapePosters: Boolean = false
     var continueWatchingRow: HeroCarouselRow? = null
     internal val catalogRows = mutableMapOf<String, ModernCatalogRowBuildCacheEntry>()
+    internal val collectionRows = mutableMapOf<String, ModernCollectionRowBuildCacheEntry>()
     // per-item cache: rowKey -> (itemId -> cached carousel item + source MetaPreview)
     internal val catalogItemCache = mutableMapOf<String, MutableMap<String, CachedCarouselItem>>()
 }
@@ -206,7 +213,9 @@ internal fun ModernCarouselItem.catalogCardMetrics(
     landscapeCardWidth: androidx.compose.ui.unit.Dp,
     landscapeCardHeight: androidx.compose.ui.unit.Dp
 ): ModernCatalogCardMetrics {
-    if (useLandscapePosters) {
+    // Collection folders define their own tile shape — never override with
+    // the global landscape-posters toggle.
+    if (useLandscapePosters && payload !is ModernPayload.CollectionFolder) {
         return ModernCatalogCardMetrics(
             width = landscapeCardWidth,
             height = landscapeCardHeight

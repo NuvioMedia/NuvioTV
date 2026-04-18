@@ -52,6 +52,7 @@ data class HomeUiState(
     val gridItems: List<GridItem> = emptyList(),
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true,
+    val memoryOnlyVerticalScroll: Boolean = false,
     val blurUnwatchedEpisodes: Boolean = false,
     val startupAuthNotice: StartupAuthNotice? = null,
     val homeRows: List<HomeRow> = emptyList()

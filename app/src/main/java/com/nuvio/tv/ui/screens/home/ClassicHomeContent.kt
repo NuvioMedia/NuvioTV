@@ -39,6 +39,7 @@ import com.nuvio.tv.ui.components.CollectionRowSection
 import com.nuvio.tv.ui.components.ContinueWatchingSection
 import com.nuvio.tv.ui.components.HeroCarousel
 import com.nuvio.tv.ui.components.LoadingIndicator
+import com.nuvio.tv.ui.components.LocalVerticalScrollSuppressImages
 import com.nuvio.tv.ui.components.PosterCardStyle
 
 /** Minimum interval between processed key repeat events to prevent HWUI overload. */
@@ -84,6 +85,10 @@ fun ClassicHomeContent(
         initialFirstVisibleItemScrollOffset = focusState.verticalScrollOffset,
         prefetchStrategy = nestedPrefetchStrategy
     )
+    val isVerticalScrolling by remember(columnListState) {
+        androidx.compose.runtime.derivedStateOf { columnListState.isScrollInProgress }
+    }
+    val suppressImages = uiState.memoryOnlyVerticalScroll && isVerticalScrolling
 
     LaunchedEffect(focusState.verticalScrollIndex, focusState.verticalScrollOffset) {
         val targetIndex = focusState.verticalScrollIndex
@@ -191,6 +196,9 @@ fun ClassicHomeContent(
         return
     }
 
+    androidx.compose.runtime.CompositionLocalProvider(
+        LocalVerticalScrollSuppressImages provides suppressImages
+    ) {
     LazyColumn(
         state = columnListState,
         modifier = Modifier
@@ -393,4 +401,5 @@ fun ClassicHomeContent(
             }
         }
     }
+    } // CompositionLocalProvider
 }

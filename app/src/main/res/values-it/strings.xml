@@ -155,6 +155,15 @@
     <string name="series_status_rumored">Solo voci</string>
     <string name="series_status_in_production">In produzione</string>
     <string name="series_status_post_production">Post-produzione</string>
+    <string name="movie_status_ended">Concluso</string>
+    <string name="movie_status_continuing">In corso</string>
+    <string name="movie_status_current">In corso</string>
+    <string name="movie_status_cancelled">Cancellato</string>
+    <string name="movie_status_released">Uscito</string>
+    <string name="movie_status_planned">Pianificato</string>
+    <string name="movie_status_rumored">Solo voci</string>
+    <string name="movie_status_in_production">In produzione</string>
+    <string name="movie_status_post_production">Post-produzione</string>
     <string name="detail_section_network">Network</string>
     <string name="detail_section_production">Produzione</string>
     <string name="detail_lists_fallback">Liste</string>
@@ -197,14 +206,14 @@
     <string name="settings_profiles">Profili</string>
     <string name="settings_profiles_subtitle">Gestisci i profili utente</string>
     <string name="settings_layout">Layout</string>
-    <string name="settings_layout_subtitle">Struttura della home e stili delle locandine.</string>
+    <string name="settings_layout_subtitle">Struttura della home e stili delle locandine</string>
     <string name="settings_plugins">Plugin</string>
-    <string name="settings_plugins_subtitle">Repository e provider.</string>
+    <string name="settings_plugins_subtitle">Repository e provider</string>
     <string name="settings_integration">Integrazione</string>
     <string name="settings_playback">Riproduzione</string>
-    <string name="settings_playback_subtitle">Player, sottotitoli e riproduzione automatica.</string>
-    <string name="settings_trakt_subtitle">Apri la schermata di login su Trakt.</string>
-    <string name="settings_about_subtitle">Versione e informative.</string>
+    <string name="settings_playback_subtitle">Player, sottotitoli e riproduzione automatica</string>
+    <string name="settings_trakt_subtitle">Apri la schermata di login su Trakt</string>
+    <string name="settings_about_subtitle">Versione e informative</string>
     <string name="settings_network">Velocità di rete</string>
     <string name="settings_network_subtitle">Diagnostica di latenza e download</string>
     <string name="settings_advanced">Avanzate</string>
@@ -223,7 +232,7 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Debug</string>
-    <string name="settings_debug_subtitle">Strumenti per sviluppatori e feature flags.</string>
+    <string name="settings_debug_subtitle">Strumenti per sviluppatori e feature flags</string>
     <string name="settings_plugins_section_subtitle">Gestisci repository, provider e stato dei plugin</string>
     <string name="settings_account_section_subtitle">Stato dell\'account e della sincronizzazione</string>
     <string name="account_stat_addons">addon</string>
@@ -669,7 +678,7 @@
 
     <!-- ProfileSettingsContent -->
    <string name="profile_title">Profili</string>
-    <string name="profile_subtitle">Gestisci i profili utente per questo account.</string>
+    <string name="profile_subtitle">Gestisci i profili utente per questo account</string>
     <string name="profile_manage_button">Gestisci Profili</string>
     <string name="profile_manage_title">Gestisci Profili</string>
     <string name="profile_manage_subtitle">Seleziona un profilo da modificare o utilizzare oppure creane uno nuovo</string>

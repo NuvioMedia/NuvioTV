@@ -311,7 +311,7 @@ internal fun PlayerRuntimeController.emitScrobbleStop(progressPercent: Float? = 
     if (!hasRequestedScrobbleStartForCurrentItem && (provided ?: 0f) < 80f) return
 
     val percent = provided ?: currentPlaybackProgressPercent()
-    scope.launch {
+    scope.launch(kotlinx.coroutines.NonCancellable) {
         traktScrobbleService.scrobbleStop(
             item = item,
             progressPercent = percent
@@ -328,7 +328,7 @@ internal fun PlayerRuntimeController.emitPauseScrobbleStop(progressPercent: Floa
     if (item == null) return
     if (!hasRequestedScrobbleStartForCurrentItem) return
 
-    scope.launch {
+    scope.launch(kotlinx.coroutines.NonCancellable) {
         traktScrobbleService.scrobbleStop(
             item = item,
             progressPercent = progressPercent

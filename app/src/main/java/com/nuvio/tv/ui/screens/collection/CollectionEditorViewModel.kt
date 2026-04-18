@@ -4,8 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.local.CollectionsDataStore
-import com.nuvio.tv.domain.model.Addon
-import com.nuvio.tv.domain.model.CatalogDescriptor
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.CollectionCatalogSource
 import com.nuvio.tv.domain.model.CollectionFolder
@@ -36,6 +34,7 @@ data class CollectionEditorUiState(
     val editingFolder: CollectionFolder? = null,
     val showFolderEditor: Boolean = false,
     val showCatalogPicker: Boolean = false,
+    val genrePickerSourceIndex: Int? = null,
     val showEmojiPicker: Boolean = false
 )
 
@@ -44,7 +43,9 @@ data class AvailableCatalog(
     val addonName: String,
     val type: String,
     val catalogId: String,
-    val catalogName: String
+    val catalogName: String,
+    val genreOptions: List<String> = emptyList(),
+    val genreRequired: Boolean = false
 )
 
 @HiltViewModel
@@ -67,15 +68,22 @@ class CollectionEditorViewModel @Inject constructor(
         viewModelScope.launch {
             val addons = addonRepository.getInstalledAddons().first()
             val availableCatalogs = addons.flatMap { addon ->
-                addon.catalogs.map { catalog ->
-                    AvailableCatalog(
-                        addonId = addon.id,
-                        addonName = addon.displayName,
-                        type = catalog.apiType,
-                        catalogId = catalog.id,
-                        catalogName = catalog.name
-                    )
-                }
+                addon.catalogs
+                    .filter { catalog ->
+                        catalog.extra.none { extra -> extra.isRequired && !extra.name.equals("genre", ignoreCase = true) }
+                    }
+                    .map { catalog ->
+                        val genreExtra = catalog.extra.firstOrNull { it.name.equals("genre", ignoreCase = true) }
+                        AvailableCatalog(
+                            addonId = addon.id,
+                            addonName = addon.displayName,
+                            type = catalog.apiType,
+                            catalogId = catalog.id,
+                            catalogName = catalog.name,
+                            genreOptions = genreExtra?.options.orEmpty(),
+                            genreRequired = genreExtra?.isRequired == true
+                        )
+                    }
             }
 
             if (collectionIdArg.isNotBlank()) {
@@ -256,17 +264,19 @@ class CollectionEditorViewModel @Inject constructor(
     fun addCatalogSource(catalog: AvailableCatalog) {
         _uiState.update { state ->
             val folder = state.editingFolder ?: return@update state
+            val defaultGenre = resolveGenreSelection(catalog, requestedGenre = null)
             val source = CollectionCatalogSource(
                 addonId = catalog.addonId,
                 type = catalog.type,
-                catalogId = catalog.catalogId
+                catalogId = catalog.catalogId,
+                genre = defaultGenre
             )
             if (folder.catalogSources.any { it.addonId == source.addonId && it.type == source.type && it.catalogId == source.catalogId }) {
                 return@update state
             }
             state.copy(
                 editingFolder = folder.copy(catalogSources = folder.catalogSources + source),
-                showCatalogPicker = false
+                genrePickerSourceIndex = null
             )
         }
     }
@@ -276,7 +286,11 @@ class CollectionEditorViewModel @Inject constructor(
             val folder = state.editingFolder ?: return@update state
             val sources = folder.catalogSources.toMutableList()
             if (index in sources.indices) sources.removeAt(index)
-            state.copy(editingFolder = folder.copy(catalogSources = sources))
+            state.copy(
+                editingFolder = folder.copy(catalogSources = sources),
+                genrePickerSourceIndex = state.genrePickerSourceIndex?.takeIf { it != index }
+                    ?.let { if (it > index) it - 1 else it }
+            )
         }
     }
 
@@ -311,22 +325,53 @@ class CollectionEditorViewModel @Inject constructor(
             val newSources = if (existing >= 0) {
                 folder.catalogSources.toMutableList().also { it.removeAt(existing) }
             } else {
+                val defaultGenre = resolveGenreSelection(catalog, requestedGenre = null)
                 folder.catalogSources + CollectionCatalogSource(
                     addonId = catalog.addonId,
                     type = catalog.type,
-                    catalogId = catalog.catalogId
+                    catalogId = catalog.catalogId,
+                    genre = defaultGenre
                 )
             }
-            state.copy(editingFolder = folder.copy(catalogSources = newSources))
+            state.copy(
+                editingFolder = folder.copy(catalogSources = newSources),
+                genrePickerSourceIndex = state.genrePickerSourceIndex?.takeIf { it != existing }
+            )
         }
     }
 
     fun showCatalogPicker() {
-        _uiState.update { it.copy(showCatalogPicker = true) }
+        _uiState.update { it.copy(showCatalogPicker = true, genrePickerSourceIndex = null) }
     }
 
     fun hideCatalogPicker() {
         _uiState.update { it.copy(showCatalogPicker = false) }
+    }
+
+    fun showGenrePicker(index: Int) {
+        _uiState.update { state ->
+            val folder = state.editingFolder ?: return@update state
+            if (index !in folder.catalogSources.indices) return@update state
+            state.copy(showCatalogPicker = false, genrePickerSourceIndex = index)
+        }
+    }
+
+    fun hideGenrePicker() {
+        _uiState.update { it.copy(genrePickerSourceIndex = null) }
+    }
+
+    fun updateCatalogSourceGenre(index: Int, genre: String?) {
+        _uiState.update { state ->
+            val folder = state.editingFolder ?: return@update state
+            val source = folder.catalogSources.getOrNull(index) ?: return@update state
+            val catalog = state.availableCatalogs.find {
+                it.addonId == source.addonId && it.type == source.type && it.catalogId == source.catalogId
+            } ?: return@update state
+            val normalizedGenre = resolveGenreSelection(catalog, genre)
+            val updatedSources = folder.catalogSources.toMutableList()
+            updatedSources[index] = source.copy(genre = normalizedGenre)
+            state.copy(editingFolder = folder.copy(catalogSources = updatedSources))
+        }
     }
 
     fun saveFolderEdit() {
@@ -344,12 +389,27 @@ class CollectionEditorViewModel @Inject constructor(
             } else {
                 state.folders + editingFolder
             }
-            state.copy(folders = newFolders, showFolderEditor = false, editingFolder = null)
+            state.copy(
+                folders = newFolders,
+                showFolderEditor = false,
+                editingFolder = null,
+                showCatalogPicker = false,
+                genrePickerSourceIndex = null,
+                showEmojiPicker = false
+            )
         }
     }
 
     fun cancelFolderEdit() {
-        _uiState.update { it.copy(showFolderEditor = false, editingFolder = null) }
+        _uiState.update {
+            it.copy(
+                showFolderEditor = false,
+                editingFolder = null,
+                showCatalogPicker = false,
+                genrePickerSourceIndex = null,
+                showEmojiPicker = false
+            )
+        }
     }
 
     fun save(onComplete: () -> Unit) {
@@ -373,6 +433,15 @@ class CollectionEditorViewModel @Inject constructor(
                 collectionsDataStore.updateCollection(collection)
             }
             onComplete()
+        }
+    }
+
+    private fun resolveGenreSelection(catalog: AvailableCatalog, requestedGenre: String?): String? {
+        return when {
+            catalog.genreOptions.isEmpty() -> null
+            requestedGenre != null && catalog.genreOptions.contains(requestedGenre) -> requestedGenre
+            catalog.genreRequired -> catalog.genreOptions.firstOrNull()
+            else -> null
         }
     }
 }

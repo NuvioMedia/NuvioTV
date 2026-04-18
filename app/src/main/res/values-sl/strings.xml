@@ -207,6 +207,15 @@
     <string name="series_status_in_production">V produkciji</string>
     <string name="series_status_post_production">Postprodukcija</string>
     <string name="detail_lists_fallback">Seznami</string>
+    <string name="movie_status_ended">Končano</string>
+    <string name="movie_status_continuing">V teku</string>
+    <string name="movie_status_current">Trenutno</string>
+    <string name="movie_status_cancelled">Preklicano</string>
+    <string name="movie_status_released">Izdano</string>
+    <string name="movie_status_planned">Načrtovano</string>
+    <string name="movie_status_rumored">Govorice</string>
+    <string name="movie_status_in_production">V produkciji</string>
+    <string name="movie_status_post_production">Postprodukcija</string>
     <string name="detail_lists_subtitle">Izberite, na katere sezname naj bo vključen ta naslov.</string>
     <string name="action_save">Shrani</string>
     <string name="action_saving">Shranjevanje…</string>
@@ -242,14 +251,14 @@
     <string name="settings_profiles">Profili</string>
     <string name="settings_profiles_subtitle">Upravljajte uporabniške profile</string>
     <string name="settings_layout">Postavitev</string>
-    <string name="settings_layout_subtitle">Struktura domačega zaslona in slogi plakatov.</string>
+    <string name="settings_layout_subtitle">Struktura domačega zaslona in slogi plakatov</string>
     <string name="settings_plugins">Vtičniki</string>
-    <string name="settings_plugins_subtitle">Repozitoriji in ponudniki.</string>
+    <string name="settings_plugins_subtitle">Repozitoriji in ponudniki</string>
     <string name="settings_integration">Integracija</string>
     <string name="settings_playback">Predvajanje</string>
-    <string name="settings_playback_subtitle">Predvajalnik, podnapisi in samodejno predvajanje.</string>
-    <string name="settings_trakt_subtitle">Odpri zaslon za povezavo s Trakt.</string>
-    <string name="settings_about_subtitle">Različica in pravilniki.</string>
+    <string name="settings_playback_subtitle">Predvajalnik, podnapisi in samodejno predvajanje</string>
+    <string name="settings_trakt_subtitle">Odpri zaslon za povezavo s Trakt</string>
+    <string name="settings_about_subtitle">Različica in pravilniki</string>
     <string name="settings_network">Hitrost omrežja</string>
     <string name="settings_network_subtitle">Diagnostika zakasnitve in prenosa</string>
     <string name="settings_advanced">Napredno</string>
@@ -268,7 +277,7 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Brez povezave</string>
     <string name="settings_debug">Odpravljanje napak</string>
-    <string name="settings_debug_subtitle">Razvojna orodja in zastavice funkcij.</string>																  
+    <string name="settings_debug_subtitle">Razvojna orodja in zastavice funkcij</string>
     <string name="settings_plugins_section_subtitle">Upravljanje repozitorijev, ponudnikov in stanj vtičnikov</string>
     <string name="settings_account_section_subtitle">Stanje računa in sinhronizacije</string>
 	<string name="account_stat_addons">dodatki</string>
@@ -723,7 +732,7 @@
     <string name="debug_generating_library">Ustvarjanje\u2026</string>													 
 	<!-- ProfileSettingsContent -->
     <string name="profile_title">Profili</string>
-    <string name="profile_subtitle">Upravljajte uporabniške profile za ta račun.</string>
+    <string name="profile_subtitle">Upravljajte uporabniške profile za ta račun</string>
 	<string name="profile_manage_button">Upravljanje profilov</string>
     <string name="profile_manage_title">Upravljanje profilov</string>
     <string name="profile_manage_subtitle">Izberite profil za urejanje, preklop ali ustvarjanje novega</string>

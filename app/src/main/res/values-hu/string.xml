@@ -197,14 +197,14 @@
     <string name="settings_profiles">Profilok</string>
     <string name="settings_profiles_subtitle">Felhasználói profilok kezelése</string>
     <string name="settings_layout">Elrendezés</string>
-    <string name="settings_layout_subtitle">Kezdőlap szerkezete és poszter stílusok.</string>
+    <string name="settings_layout_subtitle">Kezdőlap szerkezete és poszter stílusok</string>
     <string name="settings_plugins">Beépülő modulok</string>
-    <string name="settings_plugins_subtitle">Tárhelyek és szolgáltatók.</string>
+    <string name="settings_plugins_subtitle">Tárhelyek és szolgáltatók</string>
     <string name="settings_integration">Integráció</string>
     <string name="settings_playback">Lejátszás</string>
-    <string name="settings_playback_subtitle">Lejátszó, feliratok és automatikus lejátszás.</string>
-    <string name="settings_trakt_subtitle">Trakt kapcsolat beállítása.</string>
-    <string name="settings_about_subtitle">Verzióinformációk és irányelvek.</string>
+    <string name="settings_playback_subtitle">Lejátszó, feliratok és automatikus lejátszás</string>
+    <string name="settings_trakt_subtitle">Trakt kapcsolat beállítása</string>
+    <string name="settings_about_subtitle">Verzióinformációk és irányelvek</string>
     <string name="settings_network">Hálózati sebesség</string>
     <string name="settings_network_subtitle">Késleltetés és letöltés diagnosztikája</string>
     <string name="settings_advanced">Haladó</string>
@@ -223,7 +223,7 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Hibakeresés</string>
-    <string name="settings_debug_subtitle">Fejlesztői eszközök és tesztfunkciók.</string>
+    <string name="settings_debug_subtitle">Fejlesztői eszközök és tesztfunkciók</string>
     <string name="settings_plugins_section_subtitle">Tárhelyek, szolgáltatók és beépülő modulok kezelése</string>
     <string name="settings_account_section_subtitle">Fiók és szinkronizálási állapot</string>
     <string name="account_stat_addons">bővítmény</string>
@@ -669,7 +669,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profilok</string>
-    <string name="profile_subtitle">Fiókhoz tartozó felhasználói profilok kezelése.</string>
+    <string name="profile_subtitle">Fiókhoz tartozó felhasználói profilok kezelése</string>
     <string name="profile_manage_button">Profilok kezelése</string>
     <string name="profile_manage_title">Profilok kezelése</string>
     <string name="profile_manage_subtitle">Válassz ki egy profilt szerkesztéshez, váltáshoz vagy új létrehozásához</string>

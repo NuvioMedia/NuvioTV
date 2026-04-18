@@ -149,6 +149,15 @@
     <string name="series_status_rumored">Spekuluje se</string>
     <string name="series_status_in_production">V produkci</string>
     <string name="series_status_post_production">Postprodukce</string>
+    <string name="movie_status_ended">Ukončeno</string>
+    <string name="movie_status_continuing">Pokračuje</string>
+    <string name="movie_status_current">Aktuální</string>
+    <string name="movie_status_cancelled">Zrušeno</string>
+    <string name="movie_status_released">Vydáno</string>
+    <string name="movie_status_planned">Plánováno</string>
+    <string name="movie_status_rumored">Spekuluje se</string>
+    <string name="movie_status_in_production">V produkci</string>
+    <string name="movie_status_post_production">Postprodukce</string>
     <string name="detail_lists_fallback">Seznamy</string>
     <string name="detail_lists_subtitle">Vyberte, do kterých seznamů má být tento titul zařazen.</string>
     <string name="action_save">Uložit</string>
@@ -184,14 +193,14 @@
     <string name="settings_profiles">Profily</string>
     <string name="settings_profiles_subtitle">Spravovat uživatelské profily</string>
     <string name="settings_layout">Rozložení</string>
-    <string name="settings_layout_subtitle">Domovská obrazovka a styly posterů.</string>
+    <string name="settings_layout_subtitle">Domovská obrazovka a styly posterů</string>
     <string name="settings_plugins">Pluginy</string>
-    <string name="settings_plugins_subtitle">Repozitáře a poskytovatelé.</string>
+    <string name="settings_plugins_subtitle">Repozitáře a poskytovatelé</string>
     <string name="settings_integration">Integrace</string>
     <string name="settings_playback">Přehrávání</string>
-    <string name="settings_playback_subtitle">Přehrávač, titulky a automatické přehrávání.</string>
-    <string name="settings_trakt_subtitle">Otevřít obrazovku připojení Trakt.</string>
-    <string name="settings_about_subtitle">Verze a zásady.</string>
+    <string name="settings_playback_subtitle">Přehrávač, titulky a automatické přehrávání</string>
+    <string name="settings_trakt_subtitle">Otevřít obrazovku připojení Trakt</string>
+    <string name="settings_about_subtitle">Verze a zásady</string>
     <string name="settings_network">Rychlost sítě</string>
     <string name="settings_network_subtitle">Diagnostika odezvy a stahování</string>
     <string name="settings_advanced">Pokročilé</string>
@@ -210,7 +219,7 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Debug</string>
-    <string name="settings_debug_subtitle">Nástroje pro vývojáře a funkční přepínače.</string>
+    <string name="settings_debug_subtitle">Nástroje pro vývojáře a funkční přepínače</string>
     <string name="settings_plugins_section_subtitle">Spravovat repozitáře, poskytovatele a stavy pluginů</string>
     <string name="settings_account_section_subtitle">Účet a stav synchronizace</string>
     <string name="account_stat_addons">doplňky</string>
@@ -643,7 +652,7 @@
     <string name="debug_generating_library">Generuje se…</string>
 
     <string name="profile_title">Profily</string>
-    <string name="profile_subtitle">Spravujte uživatelské profily pro tento účet.</string>
+    <string name="profile_subtitle">Spravujte uživatelské profily pro tento účet</string>
     <string name="profile_manage_button">Spravovat profily</string>
     <string name="profile_manage_title">Spravovat profily</string>
     <string name="profile_manage_subtitle">Vyberte profil k úpravě, přepnutí nebo vytvořte nový</string>

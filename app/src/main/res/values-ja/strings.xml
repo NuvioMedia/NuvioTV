@@ -157,6 +157,15 @@
     <string name="series_status_rumored">噂</string>
     <string name="series_status_in_production">製作中</string>
     <string name="series_status_post_production">ポストプロダクション</string>
+    <string name="movie_status_ended">終了</string>
+    <string name="movie_status_continuing">放送中</string>
+    <string name="movie_status_current">放送中</string>
+    <string name="movie_status_cancelled">打ち切り</string>
+    <string name="movie_status_released">公開</string>
+    <string name="movie_status_planned">予定</string>
+    <string name="movie_status_rumored">噂</string>
+    <string name="movie_status_in_production">製作中</string>
+    <string name="movie_status_post_production">ポストプロダクション</string>
     <string name="detail_lists_fallback">リスト</string>
     <string name="detail_lists_subtitle">このタイトルを含めるリストを選択してください</string>
     <string name="action_save">保存</string>

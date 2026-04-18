@@ -105,7 +105,7 @@ class TorrServerBinary @Inject constructor(
                 Log.d(TAG, "TorrServer started successfully")
                 return@withContext
             }
-            if (process?.isAlive == false) {
+            if (!isProcessAlive(process)) {
                 val exitCode = process?.exitValue() ?: -1
                 process = null
                 throw TorrentException("TorrServer process died on startup (exit code $exitCode)")
@@ -140,7 +140,7 @@ class TorrServerBinary @Inject constructor(
         process?.let { proc ->
             try {
                 Thread.sleep(3000)
-                if (proc.isAlive) {
+                if (isProcessAlive(proc)) {
                     proc.destroyForcibly()
                 }
             } catch (_: Exception) {
@@ -149,5 +149,17 @@ class TorrServerBinary @Inject constructor(
         }
         process = null
         Log.d(TAG, "TorrServer stopped")
+    }
+
+    private fun isProcessAlive(proc: Process?): Boolean {
+        if (proc == null) return false
+        return try {
+            proc.exitValue()
+            false
+        } catch (_: IllegalThreadStateException) {
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 }

@@ -103,7 +103,7 @@ class NuvioApplication : Application(), ImageLoaderFactory {
             }
             .memoryCache {
                 MemoryCache.Builder(this)
-                    .maxSizePercent(0.25)
+                    .maxSizePercent(0.33)
                     .build()
             }
             .diskCache {

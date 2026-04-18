@@ -206,6 +206,7 @@
     <string name="tmdb_entity_empty_title">No titles found</string>
     <string name="tmdb_entity_empty_subtitle">TMDB does not currently have browseable titles for this selection.</string>
     <string name="episodes_unavailable">Unavailable</string>
+    <!-- Status labels for series (some languages need gendered forms) -->
     <string name="series_status_ended">Ended</string>
     <string name="series_status_continuing">Ongoing</string>
     <string name="series_status_current">Current</string>
@@ -215,6 +216,16 @@
     <string name="series_status_rumored">Rumored</string>
     <string name="series_status_in_production">In Production</string>
     <string name="series_status_post_production">Post Production</string>
+    <!-- Status labels for movies (allows gendered translations in languages that need it) -->
+    <string name="movie_status_ended">Ended</string>
+    <string name="movie_status_continuing">Ongoing</string>
+    <string name="movie_status_current">Current</string>
+    <string name="movie_status_cancelled">Cancelled</string>
+    <string name="movie_status_released">Released</string>
+    <string name="movie_status_planned">Planned</string>
+    <string name="movie_status_rumored">Rumored</string>
+    <string name="movie_status_in_production">In Production</string>
+    <string name="movie_status_post_production">Post Production</string>
     <string name="detail_lists_fallback">Lists</string>
     <string name="detail_lists_subtitle">Select which lists should include this title.</string>
     <string name="action_save">Save</string>
@@ -255,14 +266,14 @@
     <string name="settings_profiles">Profiles</string>
     <string name="settings_profiles_subtitle">Manage user profiles</string>
     <string name="settings_layout">Layout</string>
-    <string name="settings_layout_subtitle">Home structure and poster styles.</string>
+    <string name="settings_layout_subtitle">Home structure and poster styles</string>
     <string name="settings_plugins">Plugins</string>
-    <string name="settings_plugins_subtitle">Repositories and providers.</string>
+    <string name="settings_plugins_subtitle">Repositories and providers</string>
     <string name="settings_integration">Integration</string>
     <string name="settings_playback">Playback</string>
-    <string name="settings_playback_subtitle">Player, subtitles, and auto-play.</string>
-    <string name="settings_trakt_subtitle">Open Trakt connection screen.</string>
-    <string name="settings_about_subtitle">Version and policies.</string>
+    <string name="settings_playback_subtitle">Player, subtitles, and auto-play</string>
+    <string name="settings_trakt_subtitle">Open Trakt connection screen</string>
+    <string name="settings_about_subtitle">Version and policies</string>
     <string name="settings_network">Network speed</string>
     <string name="settings_network_subtitle">Latency and download diagnostics</string>
     <string name="settings_advanced">Advanced</string>
@@ -281,7 +292,7 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Debug</string>
-    <string name="settings_debug_subtitle">Developer tools and feature flags.</string>
+    <string name="settings_debug_subtitle">Developer tools and feature flags</string>
     <string name="settings_plugins_section_subtitle">Manage repositories, providers, and plugin states</string>
     <string name="settings_account_section_subtitle">Account and sync status</string>
     <string name="account_stat_addons">addons</string>
@@ -593,6 +604,8 @@
     <string name="layout_preset_balanced">Balanced</string>
     <string name="layout_preset_comfort">Comfort</string>
     <string name="layout_preset_large">Large</string>
+    <string name="layout_memory_only_scroll">Memory-Only Vertical Scroll</string>
+    <string name="layout_memory_only_scroll_sub">Skip loading new images while scrolling vertically.</string>
     <string name="layout_preset_sharp">Sharp</string>
     <string name="layout_preset_subtle">Subtle</string>
     <string name="layout_preset_classic">Classic</string>
@@ -770,7 +783,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profiles</string>
-    <string name="profile_subtitle">Manage user profiles for this account.</string>
+    <string name="profile_subtitle">Manage user profiles for this account</string>
     <string name="profile_manage_button">Manage Profiles</string>
     <string name="profile_manage_title">Manage Profiles</string>
     <string name="profile_manage_subtitle">Select a profile to edit, switch, or create a new one</string>
@@ -1520,6 +1533,12 @@
     <string name="collections_editor_placeholder_backdrop">Backdrop image URL (optional)</string>
     <string name="collections_editor_placeholder_folder">Folder name</string>
     <string name="collections_editor_placeholder_gif">Animated GIF URL (plays only while focused)</string>
+    <string name="collections_editor_genre_filter">Genre Filter</string>
+    <string name="collections_editor_choose_genre">Choose</string>
+    <string name="collections_editor_select_genre">Select genre</string>
+    <string name="collections_editor_all_genres">All genres</string>
+    <string name="collections_editor_genre_required">Genre required</string>
+    <string name="collections_editor_genre_optional">Genre filter available</string>
     <string name="collections_card_title">Collections</string>
     <string name="collections_card_subtitle">Group catalogs into folders on your home screen</string>
     <string name="collections_tab_all">All</string>

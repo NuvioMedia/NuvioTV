@@ -93,9 +93,18 @@ fun DiscoverScreen(
                     onNavigateToDetail(itemId, itemType, addonBaseUrl)
                 },
                 onDiscoverItemFocused = { discoverFocusedItemIndex = it },
-                onSelectType = { viewModel.onEvent(SearchEvent.SelectDiscoverType(it)) },
-                onSelectCatalog = { viewModel.onEvent(SearchEvent.SelectDiscoverCatalog(it)) },
-                onSelectGenre = { viewModel.onEvent(SearchEvent.SelectDiscoverGenre(it)) },
+                onSelectType = {
+                    discoverFocusedItemIndex = 0
+                    viewModel.onEvent(SearchEvent.SelectDiscoverType(it))
+                },
+                onSelectCatalog = {
+                    discoverFocusedItemIndex = 0
+                    viewModel.onEvent(SearchEvent.SelectDiscoverCatalog(it))
+                },
+                onSelectGenre = {
+                    discoverFocusedItemIndex = 0
+                    viewModel.onEvent(SearchEvent.SelectDiscoverGenre(it))
+                },
                 onLoadMore = { viewModel.onEvent(SearchEvent.LoadNextDiscoverResults) },
                 modifier = Modifier.padding(top = 16.dp)
             )

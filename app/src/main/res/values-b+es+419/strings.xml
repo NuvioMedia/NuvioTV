@@ -215,6 +215,15 @@
     <string name="series_status_rumored">Rumoreada</string>
     <string name="series_status_in_production">En producción</string>
     <string name="series_status_post_production">Postproducción</string>
+    <string name="movie_status_ended">Finalizada</string>
+    <string name="movie_status_continuing">En emisión</string>
+    <string name="movie_status_current">Actual</string>
+    <string name="movie_status_cancelled">Cancelada</string>
+    <string name="movie_status_released">Estrenada</string>
+    <string name="movie_status_planned">Planeada</string>
+    <string name="movie_status_rumored">Rumoreada</string>
+    <string name="movie_status_in_production">En producción</string>
+    <string name="movie_status_post_production">Postproducción</string>
     <string name="detail_lists_fallback">Listas</string>
     <string name="detail_lists_subtitle">Selecciona en qué listas incluir este título.</string>
     <string name="action_save">Guardar</string>
@@ -255,14 +264,14 @@
     <string name="settings_profiles">Perfiles</string>
     <string name="settings_profiles_subtitle">Administrar perfiles de usuario</string>
     <string name="settings_layout">Diseño</string>
-    <string name="settings_layout_subtitle">Estructura de inicio y estilos de pósteres.</string>
+    <string name="settings_layout_subtitle">Estructura de inicio y estilos de pósteres</string>
     <string name="settings_plugins">Plugins</string>
-    <string name="settings_plugins_subtitle">Repositorios y proveedores.</string>
+    <string name="settings_plugins_subtitle">Repositorios y proveedores</string>
     <string name="settings_integration">Integración</string>
     <string name="settings_playback">Reproducción</string>
-    <string name="settings_playback_subtitle">Reproductor, subtítulos y auto-reproducción.</string>
-    <string name="settings_trakt_subtitle">Abrir pantalla de conexión con Trakt.</string>
-    <string name="settings_about_subtitle">Versión y políticas.</string>
+    <string name="settings_playback_subtitle">Reproductor, subtítulos y auto-reproducción</string>
+    <string name="settings_trakt_subtitle">Abrir pantalla de conexión con Trakt</string>
+    <string name="settings_about_subtitle">Versión y políticas</string>
     <string name="settings_network">Velocidad de red</string>
     <string name="settings_network_subtitle">Diagnóstico de latencia y descarga</string>
     <string name="settings_advanced">Avanzado</string>
@@ -281,7 +290,7 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Sin conexión</string>
     <string name="settings_debug">Depuración</string>
-    <string name="settings_debug_subtitle">Herramientas de desarrollador y funciones experimentales.</string>
+    <string name="settings_debug_subtitle">Herramientas de desarrollador y funciones experimentales</string>
     <string name="settings_plugins_section_subtitle">Administrar repositorios, proveedores y estado de los plugins</string>
     <string name="settings_account_section_subtitle">Estado de la cuenta y sincronización</string>
     <string name="account_stat_addons">addons</string>
@@ -754,7 +763,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Perfiles</string>
-    <string name="profile_subtitle">Administra los perfiles de usuario para esta cuenta.</string>
+    <string name="profile_subtitle">Administra los perfiles de usuario para esta cuenta</string>
     <string name="profile_manage_button">Administrar perfiles</string>
     <string name="profile_manage_title">Administrar perfiles</string>
     <string name="profile_manage_subtitle">Selecciona un perfil para editarlo, cambiarlo o crear uno nuevo</string>

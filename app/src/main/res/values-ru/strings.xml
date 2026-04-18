@@ -214,6 +214,15 @@
     <string name="series_status_rumored">Слухи</string>
     <string name="series_status_in_production">В производстве</string>
     <string name="series_status_post_production">Пост-продакшн</string>
+    <string name="movie_status_ended">Завершен</string>
+    <string name="movie_status_continuing">В эфире</string>
+    <string name="movie_status_current">Текущий</string>
+    <string name="movie_status_cancelled">Отменен</string>
+    <string name="movie_status_released">Вышел</string>
+    <string name="movie_status_planned">Запланирован</string>
+    <string name="movie_status_rumored">Слухи</string>
+    <string name="movie_status_in_production">В производстве</string>
+    <string name="movie_status_post_production">Пост-продакшн</string>
     <string name="detail_lists_fallback">Списки</string>
     <string name="detail_lists_subtitle">Выберите списки, в которые нужно включить этот тайтл.</string>
     <string name="action_save">Сохранить</string>
@@ -254,14 +263,14 @@
     <string name="settings_profiles">Профили</string>
     <string name="settings_profiles_subtitle">Управление профилями пользователей</string>
     <string name="settings_layout">Интерфейс</string>
-    <string name="settings_layout_subtitle">Структура главного экрана и стиль постеров.</string>
+    <string name="settings_layout_subtitle">Структура главного экрана и стиль постеров</string>
     <string name="settings_plugins">Плагины</string>
-    <string name="settings_plugins_subtitle">Репозитории и провайдеры.</string>
+    <string name="settings_plugins_subtitle">Репозитории и провайдеры</string>
     <string name="settings_integration">Интеграции</string>
     <string name="settings_playback">Воспроизведение</string>
-    <string name="settings_playback_subtitle">Плеер, субтитры и автовоспроизведение.</string>
-    <string name="settings_trakt_subtitle">Настройка подключения к Trakt.</string>
-    <string name="settings_about_subtitle">Версия и политики.</string>
+    <string name="settings_playback_subtitle">Плеер, субтитры и автовоспроизведение</string>
+    <string name="settings_trakt_subtitle">Настройка подключения к Trakt</string>
+    <string name="settings_about_subtitle">Версия и политики</string>
     <string name="settings_network">Скорость сети</string>
     <string name="settings_network_subtitle">Диагностика задержки и скорости загрузки</string>
     <string name="settings_advanced">Дополнительно</string>
@@ -280,7 +289,7 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Не в сети</string>
     <string name="settings_debug">Отладка</string>
-    <string name="settings_debug_subtitle">Инструменты разработчика и скрытые функции.</string>
+    <string name="settings_debug_subtitle">Инструменты разработчика и скрытые функции</string>
     <string name="settings_plugins_section_subtitle">Управление репозиториями, провайдерами и состоянием плагинов</string>
     <string name="settings_account_section_subtitle">Аккаунт и статус синхронизации</string>
     <string name="account_stat_addons">аддоны</string>
@@ -748,7 +757,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Профили</string>
-    <string name="profile_subtitle">Управление профилями пользователей для этого аккаунта.</string>
+    <string name="profile_subtitle">Управление профилями пользователей для этого аккаунта</string>
     <string name="profile_manage_button">Управление профилями</string>
     <string name="profile_manage_title">Управление профилями</string>
     <string name="profile_manage_subtitle">Выберите профиль для редактирования, переключения или создайте новый</string>

@@ -91,16 +91,16 @@
     <string name="settings_profiles">Profily</string>
     <string name="settings_profiles_subtitle">Spravovať používateľské profily</string>
     <string name="settings_layout">Rozloženie</string>
-    <string name="settings_layout_subtitle">Domáca obrazovka a štýly posterov.</string>
+    <string name="settings_layout_subtitle">Domáca obrazovka a štýly posterov</string>
     <string name="settings_plugins">Pluginy</string>
-    <string name="settings_plugins_subtitle">Repozitáre a poskytovatelia.</string>
+    <string name="settings_plugins_subtitle">Repozitáre a poskytovatelia</string>
     <string name="settings_integration">Integrácia</string>
     <string name="settings_playback">Prehrávanie</string>
-    <string name="settings_playback_subtitle">Prehrávač, titulky a automatické prehrávanie.</string>
-    <string name="settings_trakt_subtitle">Otvoriť obrazovku pripojenia Trakt.</string>
-    <string name="settings_about_subtitle">Verzia a zásady.</string>
+    <string name="settings_playback_subtitle">Prehrávač, titulky a automatické prehrávanie</string>
+    <string name="settings_trakt_subtitle">Otvoriť obrazovku pripojenia Trakt</string>
+    <string name="settings_about_subtitle">Verzia a zásady</string>
     <string name="settings_debug">Debug</string>
-    <string name="settings_debug_subtitle">Nástroje pre vývojárov a funkčné prepínače.</string>
+    <string name="settings_debug_subtitle">Nástroje pre vývojárov a funkčné prepínače</string>
     <string name="settings_plugins_section_subtitle">Spravovať repozitáre, poskytovateľov a stavy pluginov</string>
     <string name="settings_account_section_subtitle">Účet a stav synchronizácie</string>
     <string name="settings_integrations_section">Integrácie</string>
@@ -440,7 +440,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profily</string>
-    <string name="profile_subtitle">Spravujte používateľské profily pre tento účet.</string>
+    <string name="profile_subtitle">Spravujte používateľské profily pre tento účet</string>
     <string name="profile_primary_label">Primárny</string>
     <string name="profile_shares_primary">Zdieľa %1$s primárneho profilu</string>
     <string name="profile_edit_label">Upraviť</string>

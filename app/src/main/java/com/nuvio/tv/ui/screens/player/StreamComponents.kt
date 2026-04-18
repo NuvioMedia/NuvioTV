@@ -232,6 +232,12 @@ internal fun AddonFilterChips(
 
 
     val selectedIndex = if (selectedAddon == null) 0 else orderedNames.indexOf(selectedAddon) + 1
+    // Track the focused chip index to handle duplicate addon names correctly.
+    var focusedChipIndex by remember { mutableStateOf(selectedIndex.coerceAtLeast(0)) }
+    LaunchedEffect(selectedAddon, orderedNames) {
+        val idx = if (selectedAddon == null) 0 else (orderedNames.indexOf(selectedAddon) + 1).coerceAtLeast(0)
+        focusedChipIndex = idx
+    }
     LaunchedEffect(selectedAddon) {
         if (selectedIndex >= 0 && selectedIndex < focusRequesters.size) {
             try { focusRequesters[selectedIndex].requestFocus() } catch (_: Exception) {}
@@ -246,7 +252,7 @@ internal fun AddonFilterChips(
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
         modifier = Modifier
             .focusRestorer {
-                val idx = selectedIndex.coerceIn(0, focusRequesters.lastIndex)
+                val idx = focusedChipIndex.coerceIn(0, focusRequesters.lastIndex)
                 focusRequesters[idx]
             }
             .onFocusChanged { chipRowHasFocus = it.hasFocus }
@@ -261,13 +267,13 @@ internal fun AddonFilterChips(
                 }
 
                 val allOptions = listOf<String?>(null) + orderedNames
-                val currentIdx = allOptions.indexOf(selectedAddon)
+                val currentIdx = focusedChipIndex.coerceIn(0, allOptions.lastIndex)
                 when (event.key) {
                     androidx.compose.ui.input.key.Key.DirectionLeft -> {
-                        if (currentIdx > 0) { onAddonSelected(allOptions[currentIdx - 1]); true } else false
+                        if (currentIdx > 0) { focusedChipIndex = currentIdx - 1; onAddonSelected(allOptions[currentIdx - 1]); true } else false
                     }
                     androidx.compose.ui.input.key.Key.DirectionRight -> {
-                        if (currentIdx < allOptions.lastIndex) { onAddonSelected(allOptions[currentIdx + 1]); true } else false
+                        if (currentIdx < allOptions.lastIndex) { focusedChipIndex = currentIdx + 1; onAddonSelected(allOptions[currentIdx + 1]); true } else false
                     }
                     else -> false
                 }

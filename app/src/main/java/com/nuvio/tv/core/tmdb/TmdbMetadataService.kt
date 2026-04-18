@@ -75,8 +75,8 @@ class TmdbMetadataService @Inject constructor(
                     append(",en,null")
                 }
 
-                // Fetch details, credits, and images in parallel
-                val (details, credits, images, ageRating) = coroutineScope {
+                // Fetch details, credits, images, and alt titles in parallel
+                val (details, credits, images, ageRating, altTitles) = coroutineScope {
                     val detailsDeferred = async {
                         when (tmdbType) {
                             "tv" -> tmdbApi.getTvDetails(numericId, TMDB_API_KEY, normalizedLanguage)
@@ -107,11 +107,22 @@ class TmdbMetadataService @Inject constructor(
                             }
                         }
                     }
-                    Quadruple(
+                    val altTitlesDeferred = async {
+                        runCatching {
+                            val resp = when (tmdbType) {
+                                "tv" -> tmdbApi.getTvAlternativeTitles(numericId, TMDB_API_KEY).body()
+                                else -> tmdbApi.getMovieAlternativeTitles(numericId, TMDB_API_KEY).body()
+                            }
+                            (resp?.movieTitles ?: resp?.tvTitles).orEmpty()
+                                .mapNotNull { it.title?.trim()?.takeIf(String::isNotBlank) }
+                        }.getOrDefault(emptyList())
+                    }
+                    Quintuple(
                         detailsDeferred.await(),
                         creditsDeferred.await(),
                         imagesDeferred.await(),
-                        ageRatingDeferred.await()
+                        ageRatingDeferred.await(),
+                        altTitlesDeferred.await()
                     )
                 }
 
@@ -278,6 +289,8 @@ class TmdbMetadataService @Inject constructor(
                     return@withContext null
                 }
 
+                val originalTitle = (details?.originalTitle ?: details?.originalName)
+                    ?.trim()?.takeIf { it.isNotBlank() }
                 val enrichment = TmdbEnrichment(
                     localizedTitle = localizedTitle,
                     description = description,
@@ -300,7 +313,9 @@ class TmdbMetadataService @Inject constructor(
                     countries = countries,
                     language = language,
                     collectionId = collectionId,
-                    collectionName = collectionName
+                    collectionName = collectionName,
+                    originalTitle = originalTitle,
+                    alternativeTitles = altTitles
                 )
                 enrichmentCache[cacheKey] = enrichment
                 requestDeferred.complete(enrichment)
@@ -1078,6 +1093,14 @@ private data class Quadruple<A, B, C, D>(
     val fourth: D
 )
 
+private data class Quintuple<A, B, C, D, E>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D,
+    val fifth: E
+)
+
 private fun preferredRegions(normalizedLanguage: String): List<String> {
     val fromLanguage = normalizedLanguage.substringAfter("-", "").uppercase(Locale.US).takeIf { it.length == 2 }
     return buildList {
@@ -1145,7 +1168,9 @@ data class TmdbEnrichment(
     val countries: List<String>?,
     val language: String?,
     val collectionId: Int?,
-    val collectionName: String?
+    val collectionName: String?,
+    val originalTitle: String? = null,
+    val alternativeTitles: List<String> = emptyList()
 )
 
 data class TmdbEpisodeEnrichment(

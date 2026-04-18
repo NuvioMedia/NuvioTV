@@ -173,7 +173,7 @@ fun NuvioNavHost(
 
             HomeScreen(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
-                    val heroBackdrop = HeroBackdropState.currentHeroBackdropUrl
+                    val heroBackdrop = HeroBackdropState.consumeAndClear()
                     navController.navigate(
                         Screen.Detail.createRoute(
                             itemId = itemId,
