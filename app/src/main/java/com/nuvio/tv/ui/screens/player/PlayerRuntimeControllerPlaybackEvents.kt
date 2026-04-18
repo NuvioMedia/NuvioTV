@@ -647,21 +647,24 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 message = "index=${event.index}"
             )
             autoSubtitleSelected = true
+            translationManager?.isEnabled = false
+            translationManager?.reset()
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
             resetSubtitleAutoSyncState()
             rememberInternalSubtitleSelection(event.index)
             selectSubtitleTrack(event.index)
-            _uiState.update { 
+            _uiState.update {
                 it.copy(
                     showSubtitleOverlay = true,
                     showSubtitleStylePanel = false,
                     showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
                     showControls = true,
-                    selectedAddonSubtitle = null 
-                ) 
+                    selectedAddonSubtitle = null,
+                    autoTranslateSubtitles = false
+                )
             }
         }
         PlayerEvent.OnDisableSubtitles -> {
@@ -670,13 +673,15 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 message = "selectedSubtitleIndex=${_uiState.value.selectedSubtitleTrackIndex}"
             )
             autoSubtitleSelected = true
+            translationManager?.isEnabled = false
+            translationManager?.reset()
             pendingAddonSubtitleLanguage = null
             pendingAddonSubtitleTrackId = null
             pendingAudioSelectionAfterSubtitleRefresh = null
             resetSubtitleAutoSyncState()
             rememberSubtitleDisabled()
             disableSubtitles()
-            _uiState.update { 
+            _uiState.update {
                 it.copy(
                     showSubtitleOverlay = true,
                     showSubtitleStylePanel = false,
@@ -684,8 +689,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleDelayOverlay = false,
                     showControls = true,
                     selectedAddonSubtitle = null,
-                    selectedSubtitleTrackIndex = -1
-                ) 
+                    selectedSubtitleTrackIndex = -1,
+                    autoTranslateSubtitles = false
+                )
             }
         }
         is PlayerEvent.OnSetAutoTranslateSubtitles -> {
@@ -701,6 +707,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 message = "addonId=${event.subtitle.id} addonLang=${event.subtitle.lang} addonName=${event.subtitle.addonName}"
             )
             autoSubtitleSelected = true
+            translationManager?.isEnabled = false
+            translationManager?.reset()
             rememberAddonSubtitleSelection(event.subtitle)
             selectAddonSubtitle(event.subtitle)
             _uiState.update {
@@ -709,7 +717,8 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleStylePanel = false,
                     showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
-                    showControls = true
+                    showControls = true,
+                    autoTranslateSubtitles = false
                 )
             }
         }
