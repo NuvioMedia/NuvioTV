@@ -375,8 +375,8 @@ internal fun LazyListScope.subtitleAiSettingsItems(
             }
             var showModelDialog by remember { mutableStateOf(false) }
             SettingsActionRow(
-                title = "AI Model",
-                subtitle = "Translation model to use",
+                title = stringResource(R.string.sub_ai_model),
+                subtitle = stringResource(R.string.sub_ai_model_sub),
                 value = modelLabel,
                 onClick = { showModelDialog = true },
                 enabled = enabled
@@ -416,7 +416,7 @@ internal fun LazyListScope.subtitleAiSettingsItems(
 
         item(key = "subtitle_ai_api_key") {
             SettingsActionRow(
-                title = "API Key",
+                title = stringResource(R.string.sub_ai_api_key_title),
                 subtitle = stringResource(R.string.sub_ai_api_key_sub),
                 value = maskAiApiKey(playerSettings.subtitleAiApiKey),
                 onClick = onShowAiKeyDialog,
@@ -427,7 +427,7 @@ internal fun LazyListScope.subtitleAiSettingsItems(
         item(key = "subtitle_ai_api_key_qr") {
             SettingsActionRow(
                 title = stringResource(R.string.sub_ai_api_key_qr),
-                subtitle = "Scan a QR on your phone — choose Groq or Gemini",
+                subtitle = stringResource(R.string.sub_ai_api_key_qr_sub2),
                 value = "",
                 onClick = onStartAiKeyServer,
                 enabled = enabled
@@ -438,7 +438,7 @@ internal fun LazyListScope.subtitleAiSettingsItems(
             Text(
                 text = when (playerSettings.subtitleAiModel) {
                     com.nuvio.tv.data.local.SubtitleAiModel.GROQ_LLAMA_70B ->
-                        "Groq free tier: 1,000 requests/min · 500,000 requests/day. Get a free key at console.groq.com/keys"
+                        stringResource(R.string.sub_ai_groq_disclaimer)
                     com.nuvio.tv.data.local.SubtitleAiModel.GEMINI_FLASH_25 ->
                         stringResource(R.string.sub_ai_free_tier_disclaimer)
                 },
