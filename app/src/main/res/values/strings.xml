@@ -666,7 +666,7 @@
     <string name="trakt_code_expires">Code expires in %1$s</string>
     <string name="trakt_token_refreshes">Trakt access token refreshes in %1$s</string>
     <string name="trakt_login_instruction">Press Login to start Trakt device authentication. A QR code will appear here.</string>
-    <string name="trakt_missing_credentials">Missing TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET in local.properties.</string>
+    <string name="trakt_missing_credentials">Missing TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET in app configuration.</string>
     <string name="trakt_watch_progress_title">Watch Progress</string>
     <string name="trakt_watch_progress_subtitle">Choose which progress source powers resume and continue watching</string>
     <string name="trakt_watch_progress_dialog_title">Watch Progress</string>

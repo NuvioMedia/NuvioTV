@@ -56,6 +56,34 @@ concurrency:
 jobs:
   beta-release:
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      TV_LOGIN_WEB_BASE_URL: ${{ secrets.TV_LOGIN_WEB_BASE_URL }}
+      PARENTAL_GUIDE_API_URL: ${{ secrets.PARENTAL_GUIDE_API_URL }}
+      INTRODB_API_URL: ${{ secrets.INTRODB_API_URL }}
+      TRAILER_API_URL: ${{ secrets.TRAILER_API_URL }}
+      IMDB_RATINGS_API_BASE_URL: ${{ secrets.IMDB_RATINGS_API_BASE_URL }}
+      IMDB_TAPFRAME_API_BASE_URL: ${{ secrets.IMDB_TAPFRAME_API_BASE_URL }}
+      TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+      TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
+      TRAKT_API_URL: ${{ secrets.TRAKT_API_URL }}
+      TRAKT_REDIRECT_URI: ${{ secrets.TRAKT_REDIRECT_URI }}
+      TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+      DONATIONS_BASE_URL: ${{ secrets.DONATIONS_BASE_URL }}
+      DONATIONS_DONATE_URL: ${{ secrets.DONATIONS_DONATE_URL }}
+      AVATAR_PUBLIC_BASE_URL: ${{ secrets.AVATAR_PUBLIC_BASE_URL }}
+      DEV_SUPABASE_URL: ${{ secrets.DEV_SUPABASE_URL }}
+      DEV_SUPABASE_ANON_KEY: ${{ secrets.DEV_SUPABASE_ANON_KEY }}
+      DEV_TV_LOGIN_WEB_BASE_URL: ${{ secrets.DEV_TV_LOGIN_WEB_BASE_URL }}
+      DEV_PARENTAL_GUIDE_API_URL: ${{ secrets.DEV_PARENTAL_GUIDE_API_URL }}
+      DEV_INTRODB_API_URL: ${{ secrets.DEV_INTRODB_API_URL }}
+      DEV_TRAILER_API_URL: ${{ secrets.DEV_TRAILER_API_URL }}
+      DEV_IMDB_RATINGS_API_BASE_URL: ${{ secrets.DEV_IMDB_RATINGS_API_BASE_URL }}
+      DEV_IMDB_TAPFRAME_API_BASE_URL: ${{ secrets.DEV_IMDB_TAPFRAME_API_BASE_URL }}
+      DEV_DONATIONS_BASE_URL: ${{ secrets.DEV_DONATIONS_BASE_URL }}
+      DEV_DONATIONS_DONATE_URL: ${{ secrets.DEV_DONATIONS_DONATE_URL }}
+      DEV_AVATAR_PUBLIC_BASE_URL: ${{ secrets.DEV_AVATAR_PUBLIC_BASE_URL }}
 
     steps:
       - name: Checkout
@@ -75,48 +103,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Export app config
-        env:
-          LOCAL_PROPERTIES_BASE64: ${{ secrets.LOCAL_PROPERTIES_BASE64 }}
-          LOCAL_DEV_PROPERTIES_BASE64: ${{ secrets.LOCAL_DEV_PROPERTIES_BASE64 }}
-        run: |
-          set -euo pipefail
-
-          export_properties() {
-            local encoded="$1"
-            local prefix="$2"
-
-            if [ -z "$encoded" ]; then
-              return 0
-            fi
-
-            while IFS= read -r line; do
-              line="${line%$'\r'}"
-
-              if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
-                continue
-              fi
-
-              local key="${line%%=*}"
-              if [ "$key" = "$line" ]; then
-                continue
-              fi
-
-              key="${key#"${key%%[![:space:]]*}"}"
-              key="${key%"${key##*[![:space:]]}"}"
-
-              if [ -z "$key" ] || [ "$key" = "sdk.dir" ]; then
-                continue
-              fi
-
-              local value="${line#*=}"
-              printf '%s%s=%s\n' "$prefix" "$key" "$value" >> "$GITHUB_ENV"
-            done < <(printf '%s' "$encoded" | base64 --decode)
-          }
-
-          export_properties "$LOCAL_PROPERTIES_BASE64" ""
-          export_properties "$LOCAL_DEV_PROPERTIES_BASE64" "DEV_"
 
       - name: Prepare signing config
         if: ${{ inputs.release_mode != 'dry_run' }}
