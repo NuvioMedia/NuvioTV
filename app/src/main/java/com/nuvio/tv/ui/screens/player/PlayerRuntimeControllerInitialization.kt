@@ -42,6 +42,7 @@ import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.domain.model.Subtitle
 import io.github.peerless2012.ass.media.type.AssRenderType
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -819,7 +820,8 @@ private class SubtitleOffsetRenderersFactory(
                 baseRenderer = out[index],
                 subtitleDelayUsProvider = subtitleDelayUsProvider,
                 translationManager = translationManager,
-                translationScope = translationScope
+                translationScope = translationScope,
+                removeHearingImpairedProvider = removeHearingImpairedProvider
             )
             offsetRenderers.add(offsetRenderer)
             out[index] = offsetRenderer
@@ -918,7 +920,7 @@ private class TranslatingTextOutput(
             // Already translated — show translated text instantly
             delegate.onCues(buildTranslated(cueGroup, cues, cached))
         } else {
-            // Hide original while translation is in-flight — show blank until translated text arrives
+            // Not yet cached — hide while translating, then show Hebrew when ready
             delegate.onCues(CueGroup(emptyList(), cueGroup.presentationTimeUs))
             val captured = cueGroup
             scope.launch {
@@ -953,12 +955,12 @@ private class TranslatingTextOutput(
             delegate.onCues(buildTranslated(cues, mockTranslate(text)))
             return
         }
-        // Cache-only — async translation is driven by onCues(CueGroup) to avoid duplicate API calls.
+        // Cache-only — translation is driven by onCues(CueGroup) to avoid duplicate API calls
         val cached = manager.getCached(text)
         if (cached != null) {
             delegate.onCues(buildTranslated(cues, cached))
         } else {
-            delegate.onCues(emptyList())
+            delegate.onCues(cues)
         }
     }
 
@@ -1023,7 +1025,8 @@ private class SubtitleOffsetRenderer(
     private val baseRenderer: Renderer,
     private val subtitleDelayUsProvider: () -> Long,
     private val translationManager: SubtitleTranslationManager? = null,
-    private val translationScope: CoroutineScope? = null
+    private val translationScope: CoroutineScope? = null,
+    private val removeHearingImpairedProvider: () -> Boolean = { false }
 ) : ForwardingRenderer(baseRenderer) {
 
     companion object {
@@ -1036,7 +1039,10 @@ private class SubtitleOffsetRenderer(
     @Volatile private var preTranslatedUpToUs = Long.MIN_VALUE
     private var currentPositionUs = 0L
     private var lastLookaheadMs = 0L
+    @Volatile private var pendingSeek = false
+    private var lastSeekRetryMs = 0L   // throttles pendingSeek retry when resolver is empty
     private var lastRenderPositionUs = Long.MIN_VALUE
+    private var lookaheadJob: Job? = null
 
     override fun render(positionUs: Long, elapsedRealtimeUs: Long) {
         val offset = subtitleDelayUsProvider()
@@ -1050,22 +1056,30 @@ private class SubtitleOffsetRenderer(
             Math.abs(positionUs - prevPositionUs) > 5_000_000L) {
             preTranslatedUpToUs = positionUs
             lastLookaheadMs = 0L
+            lastSeekRetryMs = 0L
+            pendingSeek = true
+            lookaheadJob?.cancel()   // cancel any in-flight lookahead from a prior seek
+            lookaheadJob = null
         }
         lastRenderPositionUs = positionUs
         tryPeriodicLookahead()
     }
 
-    /** Checks every 5s for uncached upcoming cues and pre-translates them.
-     *  Runs unconditionally — relies on cache filtering to skip already-translated cues. */
     private fun tryPeriodicLookahead() {
         val manager = translationManager ?: return
         if (!manager.isEnabled) return
         val now = System.currentTimeMillis()
-        if (now - lastLookaheadMs < 3000L) return
+        val isFreshSeek = pendingSeek
+        if (!isFreshSeek && now - lastLookaheadMs < 15_000L) return
+        // Throttle to avoid 60fps spam when resolver is empty (covers both seek and initial state)
+        if (now - lastSeekRetryMs < 300L) return
+        lastSeekRetryMs = now
         val allTexts = extractAllCueTexts()
         if (allTexts.isEmpty()) return  // Resolver not populated yet — retry next cycle
         lastLookaheadMs = now
+        if (isFreshSeek) pendingSeek = false
         val toTranslate = allTexts.filter { manager.getCached(it) == null }.take(WINDOW_CUES)
+        if (!isFreshSeek && toTranslate.size < 5) return  // Too few new cues — not worth an API call
         if (toTranslate.isEmpty()) return
         launchPreTranslation(manager, toTranslate, currentPositionUs + WINDOW_US)
     }
@@ -1092,14 +1106,15 @@ private class SubtitleOffsetRenderer(
 
     private fun launchPreTranslation(manager: SubtitleTranslationManager, texts: List<String>, coveredUpToUs: Long) {
         val tScope = translationScope ?: return
-        tScope.launch {
+        lookaheadJob = tScope.launch {
             manager.preTranslateWindow(texts)
             manager.onLookaheadAdvanced?.invoke(coveredUpToUs / 1000L, texts.size)
         }
     }
 
-    /** Extracts all unique cue texts. Tries newer CuesResolver architecture first, then legacy subtitle field. */
+    /** Extracts all unique cue texts, using the same key format as [extractText] (joined lines + HI-stripped). */
     private fun extractAllCueTexts(): List<String> {
+        val removeHI = removeHearingImpairedProvider()
         val texts = mutableSetOf<String>()
 
         // Newer Media3: TextRenderer uses cuesResolver (MergingCuesResolver)
@@ -1111,7 +1126,7 @@ private class SubtitleOffsetRenderer(
                 for (candidate in listOf("cuesWithTimingList", "cueGroupsByStartTime", "cueGroups", "cueGroupList", "groups")) {
                     val f = findField(resolver.javaClass, candidate) ?: continue
                     val v = f.get(resolver) ?: continue
-                    val count = extractFromCollectionOrMap(v, texts)
+                    val count = extractFromCollectionOrMap(v, texts, removeHI)
                     if (count > 0) {
                         extracted = true
                         break
@@ -1124,7 +1139,7 @@ private class SubtitleOffsetRenderer(
                             try {
                                 f.isAccessible = true
                                 val v = f.get(resolver) ?: continue
-                                extractFromCollectionOrMap(v, texts)
+                                extractFromCollectionOrMap(v, texts, removeHI)
                             } catch (_: Exception) {}
                         }
                         cls = cls.superclass
@@ -1150,10 +1165,8 @@ private class SubtitleOffsetRenderer(
                     val timeUs = getEventTime.invoke(subtitle, i) as Long
                     @Suppress("UNCHECKED_CAST")
                     val cues = getCues.invoke(subtitle, timeUs) as? List<Cue> ?: continue
-                    for (cue in cues) {
-                        val text = cue.text?.toString()?.trim()
-                        if (!text.isNullOrBlank()) texts.add(text)
-                    }
+                    val joined = joinCues(cues, removeHI)
+                    if (joined.isNotBlank()) texts.add(joined)
                 }
             } catch (e: Exception) {
                 Log.w("SubtitleTranslation", "extractAllCueTexts $fieldName: ${e.message}")
@@ -1165,31 +1178,40 @@ private class SubtitleOffsetRenderer(
         return texts.toList()
     }
 
+    /** Joins a list of cues into a single string with the same format used by [extractText]. */
+    private fun joinCues(cues: List<Cue>, removeHI: Boolean): String =
+        cues.mapNotNull { it.text?.toString()?.trim() }
+            .filter { it.isNotBlank() }
+            .joinToString("\n")
+            .let { if (removeHI) stripHI(it) else it }
+
+    private fun stripHI(text: String): String =
+        text.replace(Regex("\\[.*?]"), "")
+            .replace(Regex("[♪♫]+"), "")
+            .trim()
+
     /** Extracts CueGroup texts from a Map or Collection, returns number of cue groups processed. */
-    private fun extractFromCollectionOrMap(v: Any, texts: MutableSet<String>): Int {
+    private fun extractFromCollectionOrMap(v: Any, texts: MutableSet<String>, removeHI: Boolean): Int {
         var count = 0
         when (v) {
-            is Map<*, *> -> v.values.forEach { extractCueGroupTexts(it, texts).also { if (it) count++ } }
-            is Collection<*> -> v.forEach { extractCueGroupTexts(it, texts).also { if (it) count++ } }
+            is Map<*, *> -> v.values.forEach { extractCueGroupTexts(it, texts, removeHI).also { if (it) count++ } }
+            is Collection<*> -> v.forEach { extractCueGroupTexts(it, texts, removeHI).also { if (it) count++ } }
         }
         return count
     }
 
     /** Extracts text from a CueGroup, List<Cue>, or CuesWithTiming-like object. Returns true if anything was processed. */
-    private fun extractCueGroupTexts(obj: Any?, texts: MutableSet<String>): Boolean {
+    private fun extractCueGroupTexts(obj: Any?, texts: MutableSet<String>, removeHI: Boolean): Boolean {
         if (obj == null) return false
         if (obj is CueGroup) {
-            obj.cues.forEach { cue ->
-                val text = cue.text?.toString()?.trim()
-                if (!text.isNullOrBlank()) texts.add(text)
-            }
+            val joined = joinCues(obj.cues, removeHI)
+            if (joined.isNotBlank()) texts.add(joined)
             return true
         }
         if (obj is List<*>) {
-            obj.filterIsInstance<Cue>().forEach { cue ->
-                val text = cue.text?.toString()?.trim()
-                if (!text.isNullOrBlank()) texts.add(text)
-            }
+            val cues = obj.filterIsInstance<Cue>()
+            val joined = joinCues(cues, removeHI)
+            if (joined.isNotBlank()) texts.add(joined)
             return obj.isNotEmpty()
         }
         // CuesWithTiming or similar wrapper — look for a 'cues' field containing List<Cue> or ImmutableList
@@ -1197,10 +1219,8 @@ private class SubtitleOffsetRenderer(
             val cuesField = findField(obj.javaClass, "cues")
             val cues = cuesField?.get(obj)
             if (cues is List<*>) {
-                cues.filterIsInstance<Cue>().forEach { cue ->
-                    val text = cue.text?.toString()?.trim()
-                    if (!text.isNullOrBlank()) texts.add(text)
-                }
+                val joined = joinCues(cues.filterIsInstance<Cue>(), removeHI)
+                if (joined.isNotBlank()) texts.add(joined)
                 return cues.isNotEmpty()
             }
         } catch (_: Exception) {}

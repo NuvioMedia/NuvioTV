@@ -45,18 +45,30 @@ internal class SubtitleTranslationManager(
 
     private suspend fun processBatches() {
         val batch = mutableListOf<PendingItem>()
+        var lastSentMs = 0L
         while (true) {
             val first = queue.receive()
             batch.add(first)
 
-            val deadline = System.currentTimeMillis() + 200L
+            // Collect more items for up to 1500ms
+            val deadline = System.currentTimeMillis() + 1500L
             while (batch.size < 40 && System.currentTimeMillis() < deadline) {
                 val next = queue.tryReceive().getOrNull() ?: break
                 batch.add(next)
             }
 
+            // Rate limit: at most 1 request per 3s to stay well under Groq's 30 RPM
+            val sinceLastMs = System.currentTimeMillis() - lastSentMs
+            if (sinceLastMs < 3_000L && lastSentMs > 0) delay(3_000L - sinceLastMs)
+
             val texts = batch.map { it.text }
+            lastSentMs = System.currentTimeMillis()
             val result = service.translateBatch(texts, targetLanguage)
+            if (!result.success) {
+                Log.w(TAG, "processBatches: FAILED: ${result.errorMessage}")
+                // Back off on error (likely rate limit) before next attempt
+                delay(5_000L)
+            }
             onBatchResult?.invoke(result.success, result.errorMessage)
 
             batch.forEachIndexed { i, item ->
@@ -111,7 +123,9 @@ internal class SubtitleTranslationManager(
                     cache[text] = result.lines.getOrElse(i) { text }
                 }
             } else {
-                Log.w(TAG, "preTranslateWindow batch failed silently: ${result.errorMessage}")
+                Log.w(TAG, "preTranslateWindow: chunk FAILED: ${result.errorMessage}")
+                delay(5_000L)  // back off on error before next chunk
+                return          // abort remaining chunks — periodic lookahead will retry
             }
         }
     }
