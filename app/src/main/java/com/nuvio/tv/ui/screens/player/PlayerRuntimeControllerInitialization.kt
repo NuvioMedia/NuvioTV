@@ -243,12 +243,13 @@ internal fun PlayerRuntimeController.initializePlayer(
             ).setExtensionRendererMode(playerSettings.decoderPriority)
                 .setMapDV7ToHevc(playerSettings.mapDV7ToHevc || forceDv7ToHevc)
 
+            mediaSourceFactory.configureSubtitleParsing(
+                extractorsFactory = extractorsFactory,
+                subtitleParserFactory = DefaultSubtitleParserFactory()
+            )
+
             if (showLoadingStatus) _uiState.update { it.copy(loadingMessage = context.getString(R.string.player_loading_building)) }
             val buildDefaultPlayer = {
-                mediaSourceFactory.configureSubtitleParsing(
-                    extractorsFactory = null,
-                    subtitleParserFactory = DefaultSubtitleParserFactory()
-                )
                 val playerDataSourceFactory = PlayerPlaybackNetworking.createDataSourceFactory(context, headers)
                 ExoPlayer.Builder(context)
                     .setTrackSelector(trackSelector!!)
@@ -831,4 +832,3 @@ private class SubtitleOffsetRenderer(
         super.render(adjustedPositionUs, elapsedRealtimeUs)
     }
 }
-

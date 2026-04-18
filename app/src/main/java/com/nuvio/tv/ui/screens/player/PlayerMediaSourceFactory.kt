@@ -94,7 +94,7 @@ internal class PlayerMediaSourceFactory {
                 setSubtitleParserFactory(parserFactory)
             }
         }
-        val forceDefaultFactory = customExtractorsFactory != null || customSubtitleParserFactory != null
+        val forceDefaultFactory = customExtractorsFactory != null
 
         // Sidecar subtitles are more reliable through DefaultMediaSourceFactory.
         if (subtitleConfigurations.isNotEmpty()) {
@@ -104,8 +104,18 @@ internal class PlayerMediaSourceFactory {
         return when {
             isHls && !forceDefaultFactory -> HlsMediaSource.Factory(httpDataSourceFactory)
                 .setAllowChunklessPreparation(true)
+                .apply {
+                    customSubtitleParserFactory?.let { parserFactory ->
+                        setSubtitleParserFactory(parserFactory)
+                    }
+                }
                 .createMediaSource(mediaItem)
             isDash && !forceDefaultFactory -> DashMediaSource.Factory(httpDataSourceFactory)
+                .apply {
+                    customSubtitleParserFactory?.let { parserFactory ->
+                        setSubtitleParserFactory(parserFactory)
+                    }
+                }
                 .createMediaSource(mediaItem)
             else -> defaultFactory.createMediaSource(mediaItem)
         }
