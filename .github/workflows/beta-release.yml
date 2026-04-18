@@ -59,13 +59,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.ref_name }}
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -76,17 +76,47 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Prepare local properties
+      - name: Export app config
         env:
           LOCAL_PROPERTIES_BASE64: ${{ secrets.LOCAL_PROPERTIES_BASE64 }}
           LOCAL_DEV_PROPERTIES_BASE64: ${{ secrets.LOCAL_DEV_PROPERTIES_BASE64 }}
         run: |
-          if [ -n "$LOCAL_PROPERTIES_BASE64" ]; then
-            printf '%s' "$LOCAL_PROPERTIES_BASE64" | base64 --decode > local.properties
-          fi
-          if [ -n "$LOCAL_DEV_PROPERTIES_BASE64" ]; then
-            printf '%s' "$LOCAL_DEV_PROPERTIES_BASE64" | base64 --decode > local.dev.properties
-          fi
+          set -euo pipefail
+
+          export_properties() {
+            local encoded="$1"
+            local prefix="$2"
+
+            if [ -z "$encoded" ]; then
+              return 0
+            fi
+
+            while IFS= read -r line; do
+              line="${line%$'\r'}"
+
+              if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+                continue
+              fi
+
+              local key="${line%%=*}"
+              if [ "$key" = "$line" ]; then
+                continue
+              fi
+
+              key="${key#"${key%%[![:space:]]*}"}"
+              key="${key%"${key##*[![:space:]]}"}"
+
+              if [ -z "$key" ] || [ "$key" = "sdk.dir" ]; then
+                continue
+              fi
+
+              local value="${line#*=}"
+              printf '%s%s=%s\n' "$prefix" "$key" "$value" >> "$GITHUB_ENV"
+            done < <(printf '%s' "$encoded" | base64 --decode)
+          }
+
+          export_properties "$LOCAL_PROPERTIES_BASE64" ""
+          export_properties "$LOCAL_DEV_PROPERTIES_BASE64" "DEV_"
 
       - name: Prepare signing config
         if: ${{ inputs.release_mode != 'dry_run' }}

@@ -289,7 +289,7 @@ object NetworkModule {
     fun provideDonationsRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit {
         val baseUrl = BuildConfig.DONATIONS_BASE_URL
             .takeIf { it.isNotBlank() }
-            ?: error("DONATIONS_BASE_URL is missing. Set it in local.properties or local.dev.properties.")
+            ?: error("DONATIONS_BASE_URL is missing. Set it via environment variables or local properties.")
 
         return Retrofit.Builder()
             .baseUrl(baseUrl)

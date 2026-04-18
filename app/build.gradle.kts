@@ -10,31 +10,39 @@
 
 import java.util.Properties
 
-val localProperties = Properties().apply {
-    val localPropertiesFile = rootProject.file("local.properties")
-    if (localPropertiesFile.exists()) {
-        load(localPropertiesFile.inputStream())
+fun loadProperties(fileName: String): Properties = Properties().apply {
+    val propertiesFile = rootProject.file(fileName)
+    if (propertiesFile.exists()) {
+        load(propertiesFile.inputStream())
     }
 }
 
-val devProperties = Properties().apply {
-    val devPropertiesFile = rootProject.file("local.dev.properties")
-    if (devPropertiesFile.exists()) {
-        load(devPropertiesFile.inputStream())
-    }
-}
+val localProperties = loadProperties("local.properties")
+val devProperties = loadProperties("local.dev.properties")
 
 fun env(name: String): String? = providers.environmentVariable(name).orNull
 
+fun propertyOrNull(properties: Properties, name: String): String? =
+    properties.getProperty(name)?.takeIf { it.isNotBlank() }
+
+fun releaseValue(name: String, default: String = ""): String =
+    env(name) ?: propertyOrNull(localProperties, name) ?: default
+
+fun releaseOptional(name: String): String? =
+    env(name) ?: propertyOrNull(localProperties, name)
+
+fun debugValue(name: String, default: String = "", allowReleaseFallback: Boolean = false): String {
+    val devEnvName = "DEV_$name"
+    return env(devEnvName)
+        ?: propertyOrNull(devProperties, name)
+        ?: if (allowReleaseFallback) releaseValue(name, default) else default
+}
+
 val useDebugReleaseSigning = env("CI_USE_DEBUG_SIGNING").equals("true", ignoreCase = true)
-val releaseStoreFilePath = env("OMNIO_RELEASE_STORE_FILE")
-    ?: localProperties.getProperty("OMNIO_RELEASE_STORE_FILE")
-val releaseKeyAliasValue = env("OMNIO_RELEASE_KEY_ALIAS")
-    ?: localProperties.getProperty("OMNIO_RELEASE_KEY_ALIAS", "omniotv")
-val releaseKeyPasswordValue = env("OMNIO_RELEASE_KEY_PASSWORD")
-    ?: localProperties.getProperty("OMNIO_RELEASE_KEY_PASSWORD", "")
-val releaseStorePasswordValue = env("OMNIO_RELEASE_STORE_PASSWORD")
-    ?: localProperties.getProperty("OMNIO_RELEASE_STORE_PASSWORD", "")
+val releaseStoreFilePath = releaseOptional("OMNIO_RELEASE_STORE_FILE")
+val releaseKeyAliasValue = releaseValue("OMNIO_RELEASE_KEY_ALIAS", "omniotv")
+val releaseKeyPasswordValue = releaseValue("OMNIO_RELEASE_KEY_PASSWORD")
+val releaseStorePasswordValue = releaseValue("OMNIO_RELEASE_STORE_PASSWORD")
 
 android {
     namespace = "com.omnio.tv"
@@ -47,20 +55,20 @@ android {
         versionCode = 52
         versionName = "0.5.8-beta.1"
 
-        buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
-        buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
-        buildConfigField("String", "TRAILER_API_URL", "\"${localProperties.getProperty("TRAILER_API_URL", "")}\"")
-        buildConfigField("String", "IMDB_RATINGS_API_BASE_URL", "\"${localProperties.getProperty("IMDB_RATINGS_API_BASE_URL", "")}\"")
-        buildConfigField("String", "IMDB_TAPFRAME_API_BASE_URL", "\"${localProperties.getProperty("IMDB_TAPFRAME_API_BASE_URL", "")}\"")
-        buildConfigField("String", "TRAKT_CLIENT_ID", "\"${localProperties.getProperty("TRAKT_CLIENT_ID", "")}\"")
-        buildConfigField("String", "TRAKT_CLIENT_SECRET", "\"${localProperties.getProperty("TRAKT_CLIENT_SECRET", "")}\"")
-        buildConfigField("String", "TRAKT_API_URL", "\"${localProperties.getProperty("TRAKT_API_URL", "https://api.trakt.tv/")}\"")
-        buildConfigField("String", "TRAKT_REDIRECT_URI", "\"${localProperties.getProperty("TRAKT_REDIRECT_URI", "urn:ietf:wg:oauth:2.0:oob")}\"")
-        buildConfigField("String", "TMDB_API_KEY", "\"${localProperties.getProperty("TMDB_API_KEY", "")}\"")
-        buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "")}\"")
-        buildConfigField("String", "DONATIONS_BASE_URL", "\"${localProperties.getProperty("DONATIONS_BASE_URL", "")}\"")
-        buildConfigField("String", "DONATIONS_DONATE_URL", "\"${localProperties.getProperty("DONATIONS_DONATE_URL", "")}\"")
-        buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${localProperties.getProperty("AVATAR_PUBLIC_BASE_URL", "")}\"")
+        buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${releaseValue("PARENTAL_GUIDE_API_URL")}\"")
+        buildConfigField("String", "INTRODB_API_URL", "\"${releaseValue("INTRODB_API_URL")}\"")
+        buildConfigField("String", "TRAILER_API_URL", "\"${releaseValue("TRAILER_API_URL")}\"")
+        buildConfigField("String", "IMDB_RATINGS_API_BASE_URL", "\"${releaseValue("IMDB_RATINGS_API_BASE_URL")}\"")
+        buildConfigField("String", "IMDB_TAPFRAME_API_BASE_URL", "\"${releaseValue("IMDB_TAPFRAME_API_BASE_URL")}\"")
+        buildConfigField("String", "TRAKT_CLIENT_ID", "\"${releaseValue("TRAKT_CLIENT_ID")}\"")
+        buildConfigField("String", "TRAKT_CLIENT_SECRET", "\"${releaseValue("TRAKT_CLIENT_SECRET")}\"")
+        buildConfigField("String", "TRAKT_API_URL", "\"${releaseValue("TRAKT_API_URL", "https://api.trakt.tv/")}\"")
+        buildConfigField("String", "TRAKT_REDIRECT_URI", "\"${releaseValue("TRAKT_REDIRECT_URI", "urn:ietf:wg:oauth:2.0:oob")}\"")
+        buildConfigField("String", "TMDB_API_KEY", "\"${releaseValue("TMDB_API_KEY")}\"")
+        buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${releaseValue("TV_LOGIN_WEB_BASE_URL")}\"")
+        buildConfigField("String", "DONATIONS_BASE_URL", "\"${releaseValue("DONATIONS_BASE_URL")}\"")
+        buildConfigField("String", "DONATIONS_DONATE_URL", "\"${releaseValue("DONATIONS_DONATE_URL")}\"")
+        buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${releaseValue("AVATAR_PUBLIC_BASE_URL")}\"")
 
         // In-app updater (GitHub Releases)
         buildConfigField("String", "GITHUB_OWNER", "\"TheMrClaus\"")
@@ -84,18 +92,18 @@ android {
 
             buildConfigField("boolean", "IS_DEBUG_BUILD", "true")
 
-            // Dev environment (from local.dev.properties)
-            buildConfigField("String", "SUPABASE_URL", "\"${devProperties.getProperty("SUPABASE_URL", "")}\"")
-            buildConfigField("String", "SUPABASE_ANON_KEY", "\"${devProperties.getProperty("SUPABASE_ANON_KEY", "")}\"")
-            buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${devProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "")}\"")
-            buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${devProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
-            buildConfigField("String", "INTRODB_API_URL", "\"${devProperties.getProperty("INTRODB_API_URL", "")}\"")
-            buildConfigField("String", "TRAILER_API_URL", "\"${devProperties.getProperty("TRAILER_API_URL", "")}\"")
-            buildConfigField("String", "IMDB_RATINGS_API_BASE_URL", "\"${devProperties.getProperty("IMDB_RATINGS_API_BASE_URL", "")}\"")
-            buildConfigField("String", "IMDB_TAPFRAME_API_BASE_URL", "\"${devProperties.getProperty("IMDB_TAPFRAME_API_BASE_URL", "")}\"")
-            buildConfigField("String", "DONATIONS_BASE_URL", "\"${devProperties.getProperty("DONATIONS_BASE_URL", localProperties.getProperty("DONATIONS_BASE_URL", ""))}\"")
-            buildConfigField("String", "DONATIONS_DONATE_URL", "\"${devProperties.getProperty("DONATIONS_DONATE_URL", localProperties.getProperty("DONATIONS_DONATE_URL", ""))}\"")
-            buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${devProperties.getProperty("AVATAR_PUBLIC_BASE_URL", localProperties.getProperty("AVATAR_PUBLIC_BASE_URL", ""))}\"")
+            // Dev environment (from DEV_* env vars or local.dev.properties)
+            buildConfigField("String", "SUPABASE_URL", "\"${debugValue("SUPABASE_URL")}\"")
+            buildConfigField("String", "SUPABASE_ANON_KEY", "\"${debugValue("SUPABASE_ANON_KEY")}\"")
+            buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${debugValue("TV_LOGIN_WEB_BASE_URL")}\"")
+            buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${debugValue("PARENTAL_GUIDE_API_URL")}\"")
+            buildConfigField("String", "INTRODB_API_URL", "\"${debugValue("INTRODB_API_URL")}\"")
+            buildConfigField("String", "TRAILER_API_URL", "\"${debugValue("TRAILER_API_URL")}\"")
+            buildConfigField("String", "IMDB_RATINGS_API_BASE_URL", "\"${debugValue("IMDB_RATINGS_API_BASE_URL")}\"")
+            buildConfigField("String", "IMDB_TAPFRAME_API_BASE_URL", "\"${debugValue("IMDB_TAPFRAME_API_BASE_URL")}\"")
+            buildConfigField("String", "DONATIONS_BASE_URL", "\"${debugValue("DONATIONS_BASE_URL", allowReleaseFallback = true)}\"")
+            buildConfigField("String", "DONATIONS_DONATE_URL", "\"${debugValue("DONATIONS_DONATE_URL", allowReleaseFallback = true)}\"")
+            buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${debugValue("AVATAR_PUBLIC_BASE_URL", allowReleaseFallback = true)}\"")
         }
         release {
             isMinifyEnabled = true
@@ -112,18 +120,18 @@ android {
 
             buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
 
-            // Production environment (from local.properties)
-            buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("SUPABASE_URL", "")}\"")
-            buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperties.getProperty("SUPABASE_ANON_KEY", "")}\"")
-            buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${localProperties.getProperty("TV_LOGIN_WEB_BASE_URL", "")}\"")
-            buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
-            buildConfigField("String", "INTRODB_API_URL", "\"${localProperties.getProperty("INTRODB_API_URL", "")}\"")
-            buildConfigField("String", "TRAILER_API_URL", "\"${localProperties.getProperty("TRAILER_API_URL", "")}\"")
-            buildConfigField("String", "IMDB_RATINGS_API_BASE_URL", "\"${localProperties.getProperty("IMDB_RATINGS_API_BASE_URL", "")}\"")
-            buildConfigField("String", "IMDB_TAPFRAME_API_BASE_URL", "\"${localProperties.getProperty("IMDB_TAPFRAME_API_BASE_URL", "")}\"")
-            buildConfigField("String", "DONATIONS_BASE_URL", "\"${localProperties.getProperty("DONATIONS_BASE_URL", "")}\"")
-            buildConfigField("String", "DONATIONS_DONATE_URL", "\"${localProperties.getProperty("DONATIONS_DONATE_URL", "")}\"")
-            buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${localProperties.getProperty("AVATAR_PUBLIC_BASE_URL", "")}\"")
+            // Production environment (from env vars or local.properties)
+            buildConfigField("String", "SUPABASE_URL", "\"${releaseValue("SUPABASE_URL")}\"")
+            buildConfigField("String", "SUPABASE_ANON_KEY", "\"${releaseValue("SUPABASE_ANON_KEY")}\"")
+            buildConfigField("String", "TV_LOGIN_WEB_BASE_URL", "\"${releaseValue("TV_LOGIN_WEB_BASE_URL")}\"")
+            buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${releaseValue("PARENTAL_GUIDE_API_URL")}\"")
+            buildConfigField("String", "INTRODB_API_URL", "\"${releaseValue("INTRODB_API_URL")}\"")
+            buildConfigField("String", "TRAILER_API_URL", "\"${releaseValue("TRAILER_API_URL")}\"")
+            buildConfigField("String", "IMDB_RATINGS_API_BASE_URL", "\"${releaseValue("IMDB_RATINGS_API_BASE_URL")}\"")
+            buildConfigField("String", "IMDB_TAPFRAME_API_BASE_URL", "\"${releaseValue("IMDB_TAPFRAME_API_BASE_URL")}\"")
+            buildConfigField("String", "DONATIONS_BASE_URL", "\"${releaseValue("DONATIONS_BASE_URL")}\"")
+            buildConfigField("String", "DONATIONS_DONATE_URL", "\"${releaseValue("DONATIONS_DONATE_URL")}\"")
+            buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${releaseValue("AVATAR_PUBLIC_BASE_URL")}\"")
         }
         create("benchmark") {
             initWith(buildTypes.getByName("release"))
@@ -157,6 +165,9 @@ android {
     kotlin {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+            freeCompilerArgs.add("-Xannotation-default-target=param-property")
+            optIn.add("kotlinx.coroutines.ExperimentalCoroutinesApi")
+            optIn.add("kotlinx.coroutines.FlowPreview")
         }
     }
     buildFeatures {
