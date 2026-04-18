@@ -489,7 +489,12 @@ class AccountViewModel @Inject constructor(
             message.contains("start_tv_login_session") && message.contains("could not find the function") ->
                 "QR login service is outdated. Reapply TV login SQL setup."
             message.contains("gen_random_bytes") && message.contains("does not exist") ->
-                "QR login backend is missing setup. Update TV login SQL setup."
+                "QR login backend is missing pgcrypto setup. Apply the latest TV login SQL fix."
+            message.contains("anonymous_provider_disabled") ||
+                (message.contains("anonymous sign-ins") && message.contains("disabled")) ->
+                "QR login is disabled on this Supabase project. Enable anonymous sign-ins for TV login."
+            message.contains("column reference \"expires_at\" is ambiguous") ->
+                "QR login backend needs the latest TV login SQL fix."
             message.contains("invalid tv login redirect base url") ->
                 "QR login URL is misconfigured."
             message.contains("invalid device nonce") ->
