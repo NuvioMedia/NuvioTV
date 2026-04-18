@@ -6,15 +6,39 @@ import com.omnio.tv.domain.model.AddonStreams
 import com.omnio.tv.domain.model.Stream
 
 object StreamAutoPlaySelector {
+    private val providerPriority = mapOf(
+        "emby" to 0,
+        "jellyfin" to 1,
+        "plex" to 2
+    )
+
     fun orderAddonStreams(
         streams: List<AddonStreams>,
         installedOrder: List<String>
     ): List<AddonStreams> {
         if (streams.isEmpty()) return streams
 
-        val (addonEntries, pluginEntries) = streams.partition { it.addonName in installedOrder }
+        val providerEntries = streams.filter { group ->
+            group.streams.any { !it.sourceProvider.isNullOrBlank() }
+        }
+        val orderedProviders = providerEntries.sortedWith(
+            compareBy<AddonStreams> { group ->
+                group.streams
+                    .mapNotNull { stream ->
+                        val provider = stream.sourceProvider?.lowercase() ?: return@mapNotNull null
+                        providerPriority[provider]
+                    }
+                    .minOrNull()
+                    ?: Int.MAX_VALUE
+            }.thenBy { it.addonName }
+        )
+
+        val nonProviderEntries = streams.filterNot { group ->
+            group.streams.any { !it.sourceProvider.isNullOrBlank() }
+        }
+        val (addonEntries, pluginEntries) = nonProviderEntries.partition { it.addonName in installedOrder }
         val orderedAddons = addonEntries.sortedBy { installedOrder.indexOf(it.addonName) }
-        return orderedAddons + pluginEntries
+        return orderedProviders + orderedAddons + pluginEntries
     }
 
     private fun resolvePlayableUrl(stream: Stream): String? {
@@ -40,10 +64,17 @@ object StreamAutoPlaySelector {
 
         val sourceScopedStreams = when (source) {
             StreamAutoPlaySource.ALL_SOURCES -> streams
-            StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> streams.filter { it.addonName in installedAddonNames }
-            StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> streams.filter { it.addonName !in installedAddonNames }
+            StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> streams.filter { stream ->
+                !stream.sourceProvider.isNullOrBlank() || stream.addonName in installedAddonNames
+            }
+            StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> streams.filter { stream ->
+                stream.sourceProvider.isNullOrBlank() && stream.addonName !in installedAddonNames
+            }
         }
         val candidateStreams = sourceScopedStreams.filter { stream ->
+            if (!stream.sourceProvider.isNullOrBlank()) {
+                return@filter true
+            }
             val isAddonStream = stream.addonName in installedAddonNames
             if (isAddonStream) {
                 selectedAddons.isEmpty() || stream.addonName in selectedAddons

@@ -389,6 +389,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                             stopWatchProgressSaving()
                             if (playbackState != Player.STATE_BUFFERING) {
                                 emitStopScrobbleForCurrentProgress()
+                                reportEmbyPausedProgressNowIfNeeded()
                             }
                             
                             saveWatchProgress()

@@ -3,11 +3,13 @@ package com.omnio.tv.core.di
 import android.content.Context
 import android.util.Log
 import com.omnio.tv.BuildConfig
+import com.omnio.tv.data.local.EmbyCredentialsDataStore
 import com.omnio.tv.data.remote.api.AddonApi
 import com.omnio.tv.data.remote.api.AniSkipApi
 import com.omnio.tv.data.remote.api.AnimeSkipApi
 import com.omnio.tv.data.remote.api.ArmApi
 import com.omnio.tv.data.remote.api.DonationsApi
+import com.omnio.tv.data.remote.api.EmbyApi
 import com.omnio.tv.data.remote.api.GitHubReleaseApi
 import com.omnio.tv.data.remote.api.TraktApi
 import com.omnio.tv.data.remote.api.TrailerApi
@@ -382,4 +384,56 @@ object NetworkModule {
     @Singleton
     fun provideImdbTapframeApi(@Named("imdbTapframe") retrofit: Retrofit): ImdbTapframeApi =
         retrofit.create(ImdbTapframeApi::class.java)
+
+    @Provides
+    @Singleton
+    @Named("emby")
+    fun provideEmbyOkHttpClient(
+        okHttpClient: OkHttpClient,
+        embyCredentialsDataStore: EmbyCredentialsDataStore
+    ): OkHttpClient = okHttpClient.newBuilder()
+        .addInterceptor { chain ->
+            val credentials = embyCredentialsDataStore.cachedCredentials
+            var request = chain.request()
+
+            val serverUrl = credentials.serverUrl.trim().trimEnd('/')
+            if (serverUrl.isNotBlank()) {
+                val originalUrl = request.url.toString()
+                if (originalUrl.startsWith("http://localhost/")) {
+                    val rewrittenUrl = originalUrl.replaceFirst("http://localhost", serverUrl)
+                    request = request.newBuilder()
+                        .url(rewrittenUrl)
+                        .build()
+                }
+            }
+
+            if (credentials.apiKey.isNotBlank()) {
+                val version = BuildConfig.VERSION_NAME.ifBlank { "dev" }
+                val authHeader = "MediaBrowser Client=\"OmnioTV\", Device=\"Android TV\", DeviceId=\"${credentials.deviceId}\", Version=\"$version\", Token=\"${credentials.apiKey}\""
+                request = request.newBuilder()
+                    .header("X-Emby-Authorization", authHeader)
+                    .header("X-Emby-Token", credentials.apiKey)
+                    .build()
+            }
+
+            chain.proceed(request)
+        }
+        .build()
+
+    @Provides
+    @Singleton
+    @Named("emby")
+    fun provideEmbyRetrofit(
+        @Named("emby") okHttpClient: OkHttpClient,
+        moshi: Moshi
+    ): Retrofit = Retrofit.Builder()
+        .baseUrl("http://localhost/")
+        .client(okHttpClient)
+        .addConverterFactory(MoshiConverterFactory.create(moshi))
+        .build()
+
+    @Provides
+    @Singleton
+    fun provideEmbyApi(@Named("emby") retrofit: Retrofit): EmbyApi =
+        retrofit.create(EmbyApi::class.java)
 }

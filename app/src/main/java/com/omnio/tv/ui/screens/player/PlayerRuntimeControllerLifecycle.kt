@@ -31,6 +31,8 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     hideSubtitleDelayOverlayJob?.cancel()
     playbackPreparationJob?.cancel()
     playbackPreparationJob = null
+    embyProgressJob?.cancel()
+    embyProgressJob = null
     delayMpvResumeSeekUntilVideoTrack = false
     nextEpisodeAutoPlayJob?.cancel()
     nextEpisodeAutoPlayJob = null

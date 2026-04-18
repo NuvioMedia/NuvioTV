@@ -262,6 +262,8 @@ internal fun PlayerRuntimeController.buildScrobbleItem(): TraktScrobbleItem? {
 }
 
 internal fun PlayerRuntimeController.emitScrobbleStart() {
+    startEmbySessionIfNeeded()
+
     val item = currentScrobbleItem ?: buildScrobbleItem().also { currentScrobbleItem = it }
     if (item == null) return
     if (hasRequestedScrobbleStartForCurrentItem) return
@@ -328,6 +330,7 @@ internal fun PlayerRuntimeController.emitStopScrobbleForCurrentProgress() {
 }
 
 internal fun PlayerRuntimeController.flushPlaybackSnapshotForSwitchOrExit() {
+    stopEmbySession()
     emitStopScrobbleForCurrentProgress()
     saveWatchProgress()
 }
@@ -479,6 +482,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     stopProgressUpdates()
                     stopWatchProgressSaving()
                     emitStopScrobbleForCurrentProgress()
+                    reportEmbyPausedProgressNowIfNeeded()
                     schedulePauseOverlay()
                 } else {
                     userPausedManually = false

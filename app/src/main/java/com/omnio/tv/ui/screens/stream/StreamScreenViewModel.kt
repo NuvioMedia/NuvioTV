@@ -208,6 +208,12 @@ class StreamScreenViewModel @Inject constructor(
                     maxAgeMs = playerSettings.streamReuseLastLinkCacheHours * 60L * 60L * 1000L
                 )
                 if (cached != null) {
+                    val cachedProvider = inferProviderFromCachedLink(cached.url, cached.headers)
+                    val cachedProviderItemId = if (cachedProvider == "emby") {
+                        extractEmbyItemIdFromUrl(cached.url)
+                    } else {
+                        null
+                    }
                     autoPlayHandledForSession = true
                     resolvedAutoPlayTarget = true
                     updateUiStateIfChanged {
@@ -235,7 +241,10 @@ class StreamScreenViewModel @Inject constructor(
                                 bingeGroup = null,
                                 filename = cached.filename,
                                 videoHash = cached.videoHash,
-                                videoSize = cached.videoSize
+                                videoSize = cached.videoSize,
+                                sourceProvider = cachedProvider,
+                                providerItemId = cachedProviderItemId,
+                                providerMediaSourceId = cachedProviderItemId
                             )
                         )
                     }
@@ -658,7 +667,10 @@ class StreamScreenViewModel @Inject constructor(
             videoSize = stream.behaviorHints?.videoSize,
             addonName = stream.addonName,
             addonLogo = stream.addonLogo,
-            streamDescription = stream.description
+            streamDescription = stream.description,
+            sourceProvider = stream.sourceProvider,
+            providerItemId = stream.providerItemId,
+            providerMediaSourceId = stream.providerMediaSourceId
         )
 
         val url = playbackInfo.url
@@ -683,6 +695,24 @@ class StreamScreenViewModel @Inject constructor(
         super.onCleared()
         streamLoadJob?.cancel()
         sourceChipErrorDismissJob?.cancel()
+    }
+
+    private fun inferProviderFromCachedLink(
+        url: String,
+        headers: Map<String, String>?
+    ): String? {
+        if (headers?.keys?.any { it.equals("X-Emby-Token", ignoreCase = true) } == true) {
+            return "emby"
+        }
+        if (extractEmbyItemIdFromUrl(url) != null) {
+            return "emby"
+        }
+        return null
+    }
+
+    private fun extractEmbyItemIdFromUrl(url: String): String? {
+        val match = Regex("/Videos/([^/]+)/stream", RegexOption.IGNORE_CASE).find(url)
+        return match?.groupValues?.getOrNull(1)
     }
 
 }
@@ -714,5 +744,8 @@ data class StreamPlaybackInfo(
     val videoSize: Long? = null,
     val addonName: String? = null,
     val addonLogo: String? = null,
-    val streamDescription: String? = null
+    val streamDescription: String? = null,
+    val sourceProvider: String? = null,
+    val providerItemId: String? = null,
+    val providerMediaSourceId: String? = null
 )

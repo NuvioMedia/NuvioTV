@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 private const val TAG = "StreamRepositoryImpl"
@@ -35,7 +37,8 @@ class StreamRepositoryImpl @Inject constructor(
     private val api: AddonApi,
     private val addonRepository: AddonRepository,
     private val pluginManager: PluginManager,
-    private val tmdbService: TmdbService
+    private val tmdbService: TmdbService,
+    private val embyMediaService: EmbyMediaService
 ) : StreamRepository {
     private enum class StreamFailureKind {
         MISSING,
@@ -67,7 +70,12 @@ class StreamRepositoryImpl @Inject constructor(
             // Convert IMDB ID to TMDB ID if needed for plugins
             val tmdbId = tmdbService.ensureTmdbId(videoId, type)
             Log.d(TAG, "Video ID: $videoId -> TMDB ID: $tmdbId (type: $type)")
-            val attemptedAddonNames = streamAddons.map { it.displayName }
+            val attemptedAddonNames = buildList {
+                addAll(streamAddons.map { it.displayName })
+                if (embyMediaService.isConfigured()) {
+                    add("Emby")
+                }
+            }
             val attemptedFailures = java.util.Collections.synchronizedList(
                 mutableListOf<StreamAttemptFailure>()
             )
@@ -78,10 +86,87 @@ class StreamRepositoryImpl @Inject constructor(
             coroutineScope {
                 // Channel to receive results as they complete
                 val resultChannel = Channel<AddonStreams>(Channel.UNLIMITED)
-                
-                // Track number of pending jobs
-                val totalJobs = streamAddons.size + (if (tmdbId != null) 1 else 0)
-                var completedJobs = 0
+
+                val embyJob = async {
+                    try {
+                        embyMediaService.findEmbyStream(
+                            contentId = videoId,
+                            contentType = type,
+                            season = season,
+                            episode = episode
+                        )
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.d(TAG, "Emby stream lookup failed: ${e.message}")
+                        null
+                    }
+                }
+
+                // Track number of pending jobs (Emby + addons + plugins)
+                val totalJobs = 1 + streamAddons.size + (if (tmdbId != null) 1 else 0)
+                val completedJobs = AtomicInteger(0)
+                val closeOnce = AtomicBoolean(false)
+
+                fun markJobCompleted() {
+                    if (completedJobs.incrementAndGet() >= totalJobs && closeOnce.compareAndSet(false, true)) {
+                        resultChannel.close()
+                    }
+                }
+
+                launch {
+                    try {
+                        val embyResult = embyJob.await()
+                        if (embyResult != null) {
+                            val embyStream = Stream(
+                                name = embyResult.displayName,
+                                title = embyResult.displayName,
+                                description = "Direct play from Emby server",
+                                url = embyResult.streamUrl,
+                                ytId = null,
+                                infoHash = null,
+                                fileIdx = null,
+                                externalUrl = null,
+                                behaviorHints = StreamBehaviorHints(
+                                    notWebReady = null,
+                                    bingeGroup = null,
+                                    countryWhitelist = null,
+                                    proxyHeaders = ProxyHeaders(
+                                        request = embyResult.streamHeaders,
+                                        response = null
+                                    )
+                                ),
+                                addonName = "Emby",
+                                addonLogo = null,
+                                sourceProvider = embyMediaService.providerName(),
+                                providerItemId = embyResult.itemId,
+                                providerMediaSourceId = embyResult.mediaSourceId
+                            )
+                            resultChannel.send(
+                                AddonStreams(
+                                    addonName = "Emby",
+                                    addonLogo = null,
+                                    streams = listOf(embyStream)
+                                )
+                            )
+                        } else if (embyMediaService.isConfigured()) {
+                            attemptedFailures += StreamAttemptFailure(
+                                addonName = "Emby",
+                                kind = StreamFailureKind.MISSING,
+                                detail = "returned no streams for this id"
+                            )
+                        }
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.e(TAG, "Emby stream send failed: ${e.message}")
+                        attemptedFailures += StreamAttemptFailure(
+                            addonName = "Emby",
+                            kind = StreamFailureKind.REQUEST_FAILED,
+                            detail = e.message ?: "the provider request failed"
+                        )
+                    } finally {
+                        markJobCompleted()
+                    }
+                }
 
                 // Launch addon jobs
                 streamAddons.forEach { addon ->
@@ -119,10 +204,7 @@ class StreamRepositoryImpl @Inject constructor(
                                 detail = e.message ?: "the addon request failed"
                             )
                         } finally {
-                            completedJobs++
-                            if (completedJobs >= totalJobs) {
-                                resultChannel.close()
-                            }
+                            markJobCompleted()
                         }
                     }
                 }
@@ -132,26 +214,14 @@ class StreamRepositoryImpl @Inject constructor(
                     launch {
                         try {
                             // Stream plugins individually
-                            streamLocalPlugins(tmdbId, type, season, episode, resultChannel) {
-                                completedJobs++
-                                if (completedJobs >= totalJobs) {
-                                    resultChannel.close()
-                                }
-                            }
+                            streamLocalPlugins(tmdbId, type, season, episode, resultChannel)
                         } catch (e: Exception) {
                             if (e is CancellationException) throw e
                             Log.e(TAG, "Plugin execution failed: ${e.message}")
-                            completedJobs++
-                            if (completedJobs >= totalJobs) {
-                                resultChannel.close()
-                            }
+                        } finally {
+                            markJobCompleted()
                         }
                     }
-                }
-
-                // Handle case where there are no jobs
-                if (totalJobs == 0) {
-                    resultChannel.close()
                 }
 
                 // Emit results as they arrive
@@ -191,13 +261,11 @@ class StreamRepositoryImpl @Inject constructor(
         type: String,
         season: Int?,
         episode: Int?,
-        resultChannel: Channel<AddonStreams>,
-        onComplete: () -> Unit
+        resultChannel: Channel<AddonStreams>
     ) {
         // Check if plugins are enabled
         if (!pluginManager.pluginsEnabled.first()) {
             Log.d(TAG, "Plugins are disabled")
-            onComplete()
             return
         }
 
@@ -269,8 +337,6 @@ class StreamRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Failed to stream plugins: ${e.message}", e)
-        } finally {
-            onComplete()
         }
     }
 

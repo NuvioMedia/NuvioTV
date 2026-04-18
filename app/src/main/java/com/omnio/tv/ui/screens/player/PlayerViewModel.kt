@@ -10,6 +10,7 @@ import com.omnio.tv.data.local.PlayerSettingsDataStore
 import com.omnio.tv.data.local.StreamLinkCacheDataStore
 import com.omnio.tv.data.repository.ParentalGuideRepository
 import com.omnio.tv.data.repository.SkipIntroRepository
+import com.omnio.tv.data.repository.EmbySessionService
 import com.omnio.tv.data.repository.TraktEpisodeMappingService
 import com.omnio.tv.data.repository.TraktScrobbleService
 import com.omnio.tv.domain.repository.AddonRepository
@@ -34,6 +35,7 @@ class PlayerViewModel @Inject constructor(
     private val traktScrobbleService: TraktScrobbleService,
     private val traktEpisodeMappingService: TraktEpisodeMappingService,
     private val skipIntroRepository: SkipIntroRepository,
+    private val embySessionService: EmbySessionService,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val streamLinkCacheDataStore: StreamLinkCacheDataStore,
     private val layoutPreferenceDataStore: com.omnio.tv.data.local.LayoutPreferenceDataStore,
@@ -54,6 +56,7 @@ class PlayerViewModel @Inject constructor(
         traktScrobbleService = traktScrobbleService,
         traktEpisodeMappingService = traktEpisodeMappingService,
         skipIntroRepository = skipIntroRepository,
+        embySessionService = embySessionService,
         playerSettingsDataStore = playerSettingsDataStore,
         streamLinkCacheDataStore = streamLinkCacheDataStore,
         layoutPreferenceDataStore = layoutPreferenceDataStore,

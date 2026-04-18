@@ -476,7 +476,10 @@ fun OmnioNavHost(
                                 startFromBeginning = startFromBeginning,
                                 addonName = playbackInfo.addonName,
                                 addonLogo = playbackInfo.addonLogo,
-                                streamDescription = playbackInfo.streamDescription
+                                streamDescription = playbackInfo.streamDescription,
+                                sourceProvider = playbackInfo.sourceProvider,
+                                providerItemId = playbackInfo.providerItemId,
+                                providerMediaSourceId = playbackInfo.providerMediaSourceId
                             )
                         )
                     }
@@ -510,7 +513,10 @@ fun OmnioNavHost(
                                 startFromBeginning = startFromBeginning,
                                 addonName = playbackInfo.addonName,
                                 addonLogo = playbackInfo.addonLogo,
-                                streamDescription = playbackInfo.streamDescription
+                                streamDescription = playbackInfo.streamDescription,
+                                sourceProvider = playbackInfo.sourceProvider,
+                                providerItemId = playbackInfo.providerItemId,
+                                providerMediaSourceId = playbackInfo.providerMediaSourceId
                             )
                         ) {
                             popUpTo(Screen.Stream.route) { inclusive = true }
@@ -641,6 +647,21 @@ fun OmnioNavHost(
                     defaultValue = null
                 },
                 navArgument("streamDescription") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("sourceProvider") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("providerItemId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("providerMediaSourceId") {
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null

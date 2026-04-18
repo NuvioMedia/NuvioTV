@@ -3,7 +3,7 @@ package com.omnio.tv.domain.model
 import androidx.compose.runtime.Immutable
 
 /**
- * Represents a stream source from a Stremio addon
+ * Represents a stream source from addons, local plugins, or external media providers.
  */
 @Immutable
 data class Stream(
@@ -17,7 +17,10 @@ data class Stream(
     val externalUrl: String?,
     val behaviorHints: StreamBehaviorHints?,
     val addonName: String,
-    val addonLogo: String?
+    val addonLogo: String?,
+    val sourceProvider: String? = null,
+    val providerItemId: String? = null,
+    val providerMediaSourceId: String? = null
 ) {
     /**
      * Returns the primary stream source URL

@@ -284,6 +284,9 @@ private fun PlayerRuntimeController.applySelectedStreamState(
     currentAddonName = stream.addonName
     currentAddonLogo = stream.addonLogo
     currentStreamDescription = stream.description
+    currentStreamProvider = stream.sourceProvider
+    currentProviderItemId = stream.providerItemId
+    currentProviderMediaSourceId = stream.providerMediaSourceId
     currentVideoCodec = null
     currentVideoWidth = null
     currentVideoHeight = null

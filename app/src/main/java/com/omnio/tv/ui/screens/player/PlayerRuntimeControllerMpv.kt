@@ -165,9 +165,11 @@ internal fun PlayerRuntimeController.pauseForLifecycle() {
         stopWatchProgressSaving()
         stopProgressUpdates()
         _uiState.update { it.copy(isPlaying = false) }
+        reportEmbyPausedProgressNowIfNeeded()
         return
     }
     _exoPlayer?.pause()
+    reportEmbyPausedProgressNowIfNeeded()
 }
 
 internal fun PlayerRuntimeController.updateMpvAvailableTracks() {

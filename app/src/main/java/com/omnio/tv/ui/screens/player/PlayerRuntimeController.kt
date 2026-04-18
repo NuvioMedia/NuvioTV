@@ -16,6 +16,7 @@ import com.omnio.tv.data.local.StreamAutoPlayMode
 import com.omnio.tv.data.repository.ParentalGuideRepository
 import com.omnio.tv.data.repository.SkipIntroRepository
 import com.omnio.tv.data.repository.SkipInterval
+import com.omnio.tv.data.repository.EmbySessionService
 import com.omnio.tv.data.repository.EpisodeMappingEntry
 import com.omnio.tv.data.repository.TraktEpisodeMappingService
 import com.omnio.tv.data.repository.TraktScrobbleItem
@@ -47,6 +48,7 @@ class PlayerRuntimeController(
     internal val traktScrobbleService: TraktScrobbleService,
     internal val traktEpisodeMappingService: TraktEpisodeMappingService,
     internal val skipIntroRepository: SkipIntroRepository,
+    internal val embySessionService: EmbySessionService,
     internal val playerSettingsDataStore: PlayerSettingsDataStore,
     internal val streamLinkCacheDataStore: StreamLinkCacheDataStore,
     internal val layoutPreferenceDataStore: com.omnio.tv.data.local.LayoutPreferenceDataStore,
@@ -124,6 +126,9 @@ class PlayerRuntimeController(
     internal val initialSeason: Int? = navigationArgs.initialSeason
     internal val initialEpisode: Int? = navigationArgs.initialEpisode
     internal val initialEpisodeTitle: String? = navigationArgs.initialEpisodeTitle
+    internal val initialStreamProvider: String? = navigationArgs.sourceProvider
+    internal val initialProviderItemId: String? = navigationArgs.providerItemId
+    internal val initialProviderMediaSourceId: String? = navigationArgs.providerMediaSourceId
     internal val mediaSourceFactory = PlayerMediaSourceFactory()
 
     internal var currentVideoHash: String? = navigationArgs.videoHash
@@ -134,6 +139,9 @@ class PlayerRuntimeController(
     internal var currentAddonName: String? = navigationArgs.addonName
     internal var currentAddonLogo: String? = navigationArgs.addonLogo
     internal var currentStreamDescription: String? = navigationArgs.streamDescription
+    internal var currentStreamProvider: String? = initialStreamProvider
+    internal var currentProviderItemId: String? = initialProviderItemId
+    internal var currentProviderMediaSourceId: String? = initialProviderMediaSourceId
     internal var currentVideoCodec: String? = null
     internal var currentVideoWidth: Int? = null
     internal var currentVideoHeight: Int? = null
@@ -197,6 +205,7 @@ class PlayerRuntimeController(
     internal var nextEpisodeAutoPlayJob: Job? = null
     internal var sourceStreamsJob: Job? = null
     internal var sourceChipErrorDismissJob: Job? = null
+    internal var embyProgressJob: Job? = null
     internal var sourceStreamsCacheRequestKey: String? = null
     internal var hostActivityRef: WeakReference<Activity>? = null
     internal var initialPlaybackStarted: Boolean = false
