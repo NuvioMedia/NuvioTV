@@ -313,8 +313,6 @@ class AuthManager @Inject constructor(
 
     suspend fun exchangeTvLoginSession(code: String, deviceNonce: String): Result<Unit> {
         return try {
-            val token = auth.currentAccessTokenOrNull()
-                ?: return Result.failure(Exception("Not authenticated"))
             val payload = buildJsonObject {
                 put("code", code)
                 put("device_nonce", deviceNonce)
@@ -322,7 +320,7 @@ class AuthManager @Inject constructor(
             val request = Request.Builder()
                 .url("${BuildConfig.SUPABASE_URL}/functions/v1/tv-logins-exchange")
                 .header("apikey", BuildConfig.SUPABASE_ANON_KEY)
-                .header("Authorization", "Bearer $token")
+                .header("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
                 .post(payload.toRequestBody("application/json".toMediaType()))
                 .build()
             val body = withContext(Dispatchers.IO) {
