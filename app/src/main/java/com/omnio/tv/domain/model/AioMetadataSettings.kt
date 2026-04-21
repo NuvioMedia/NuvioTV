@@ -1,26 +1,22 @@
 package com.omnio.tv.domain.model
 
 /**
- * Per-user AIOMetadata configuration, cached locally and mirrored from Supabase.
- *
- * - [token] is opaque and embedded in the addon manifest URL.
- * - [providerKeys] holds the raw user-supplied API keys (masked in UI on display).
- * - [providerEnabled] toggles whether each provider participates in responses.
- * - [manifestUrl] is the full addon URL we install into the addon list when enabled.
+ * Cached bridge-table row for the current user. Upstream (the Fly-hosted
+ * cedya77/aiometadata instance) is the source of truth for provider keys and
+ * catalog configuration; here we only keep what the app needs to render the
+ * settings hub and install the addon URL.
  */
 data class AioMetadataSettings(
     val enabled: Boolean = false,
-    val token: String = "",
-    val providerEnabled: Map<AioMetadataProvider, Boolean> = emptyMap(),
-    val providerKeys: Map<AioMetadataProvider, String> = emptyMap(),
+    val aioUuid: String = "",
     val manifestUrl: String = "",
-    val webUrl: String = "",
     val lastSyncedAt: Long = 0L,
 )
 
 /**
- * Providers the AIOMetadata addon knows about. The concrete list should match
- * the upstream fork we vendor into the Edge Function; adjust when the fork is chosen.
+ * Providers upstream currently ships. Kept here so the Android UI can render
+ * consistent rows even if a fresh config fetch hasn't completed yet. Keep in
+ * sync with upstream when new providers are added.
  */
 enum class AioMetadataProvider(val key: String, val requiresApiKey: Boolean) {
     TMDB("tmdb", requiresApiKey = true),

@@ -5,6 +5,7 @@ import android.util.Log
 import com.omnio.tv.BuildConfig
 import com.omnio.tv.data.local.EmbyCredentialsDataStore
 import com.omnio.tv.data.remote.api.AddonApi
+import com.omnio.tv.data.remote.api.AioMetadataApi
 import com.omnio.tv.data.remote.api.AniSkipApi
 import com.omnio.tv.data.remote.api.AnimeSkipApi
 import com.omnio.tv.data.remote.api.ArmApi
@@ -338,6 +339,30 @@ object NetworkModule {
     @Singleton
     fun provideMDBListApi(@Named("mdblist") retrofit: Retrofit): MDBListApi =
         retrofit.create(MDBListApi::class.java)
+
+    // --- AIOMetadata API (self-hosted cedya77/aiometadata) ---
+
+    @Provides
+    @Singleton
+    @Named("aioMetadata")
+    fun provideAioMetadataRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit {
+        val raw = BuildConfig.AIOMETADATA_BASE_URL
+        val baseUrl = when {
+            raw.isBlank() -> "http://localhost/"
+            raw.endsWith('/') -> raw
+            else -> "$raw/"
+        }
+        return Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideAioMetadataApi(@Named("aioMetadata") retrofit: Retrofit): AioMetadataApi =
+        retrofit.create(AioMetadataApi::class.java)
 
     // --- SeriesGraph API ---
 
