@@ -145,7 +145,7 @@
     <string name="account_stat_progress">postęp</string>
     <string name="account_stat_watched">obejrzane</string>
     <string name="settings_integrations_section">Integracje</string>
-    <string name="settings_integrations_section_subtitle">Wybierz ustawienia TMDB lub MDBList</string>
+    <string name="settings_integrations_section_subtitle">Zarządzaj dostępnymi integracjami</string>
     <string name="settings_tmdb_subtitle">Kontrolki wzbogacania metadanych</string>
     <string name="settings_mdblist_subtitle">Zewnętrzni dostawcy ocen</string>
 
@@ -1524,4 +1524,6 @@
     <string name="qr_login_signing_in">Logowanie…</string>
     <string name="qr_login_success">Zalogowano pomyślnie</string>
     <string name="qr_login_exchange_failed">Nie udało się dokończyć logowania QR</string>
+    <string name="playback_player_auto">Zalecane (Najlepsze dla treści)</string>
+    <string name="playback_player_auto_desc">ExoPlayer dla filmów i seriali · MPV dla anime</string>
 </resources>

@@ -298,7 +298,7 @@
     <string name="account_stat_progress">прогресс</string>
     <string name="account_stat_watched">просмотрено</string>
     <string name="settings_integrations_section">Интеграции</string>
-    <string name="settings_integrations_section_subtitle">Выберите TMDB или MDBList</string>
+    <string name="settings_integrations_section_subtitle">Управление доступными интеграциями</string>
     <string name="settings_tmdb_subtitle">Настройки обогащения метаданными</string>
     <string name="settings_mdblist_subtitle">Провайдеры внешних рейтингов</string>
     <string name="settings_animeskip_subtitle">Таймкоды пропуска интро/аутро для аниме</string>
@@ -1497,4 +1497,6 @@
     <string name="collections_tab_all">Все</string>
     <string name="collections_tab_combined">Объединенные</string>
 
+    <string name="playback_player_auto">Авто (Лучшее для контента)</string>
+    <string name="playback_player_auto_desc">ExoPlayer для фильмов и сериалов · MPV для аниме</string>
 </resources>

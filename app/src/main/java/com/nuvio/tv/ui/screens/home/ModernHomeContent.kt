@@ -740,7 +740,7 @@ fun ModernHomeContent(
         val verticalPrefetchImageLoader = verticalPrefetchContext.imageLoader
         val verticalPrefetchDensity = LocalDensity.current
         LaunchedEffect(verticalPrefetchImageLoader, verticalPrefetchDensity) {
-            val prefetchAheadRows = 2
+            val prefetchAheadRows = 3
             val prefetchItemsPerRow = 8
             snapshotFlow {
                 verticalRowListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1

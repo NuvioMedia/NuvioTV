@@ -45,7 +45,7 @@
     <string name="web_manage_collections_subtitle">Kreiraj i upravljaj svojim prilagođenim kolekcijama</string>
     <string name="web_status_msg_collections_updated">Vaše kolekcije su ažurirane na TV-u.</string>
     <string name="web_tab_addons">Addoni</string>
-    <string name="web_tab_home_layout">Početni Izgled</string>
+    <string name="web_tab_home_layout">Početni Raspored</string>
     <string name="web_tab_collections">Kolekcije</string>
     <string name="web_btn_enable_all">Omogući Sve</string>
     <string name="web_btn_disable_all">Onemogući Sve</string>
@@ -74,7 +74,7 @@
     <string name="error_state_possible_fix">Moguće rješenje: %1$s</string>
     <string name="error_state_fix_retry_soon">pokušajte ponovo za trenutak.</string>
     <string name="error_state_issue_no_metadata_any_addon">Ovaj ID nije mogao učitati detalje jer nijedan instalirani addon nije vratio metapodatke.</string>
-    <string name="error_state_fix_no_metadata_any_addon">probajte drugi addon, onemogućite "Preferiraj eksterni meta addon" u postavkama izgleda, ili potvrdite da instalirani addon podržava ovaj ID.</string>
+    <string name="error_state_fix_no_metadata_any_addon">probajte drugi addon, onemogućite "Preferiraj eksterni meta addon" u postavkama rasporeda, ili potvrdite da instalirani addon podržava ovaj ID.</string>
     <string name="error_state_prefix_no_supported_metadata">Nijedan instalirani addon ne podržava metapodatke za </string>
     <string name="error_state_prefix_no_addon_for_id">Nijedan instalirani addon ne može pružiti metapodatke za ID=</string>
     <string name="error_state_fix_no_supported_metadata">instalirajte ili ažurirajte addon koji podržava ovaj tip sadržaja, pa pokušajte ponovo.</string>
@@ -263,7 +263,7 @@
     <string name="settings_account_subtitle">Račun i status sinhronizacije</string>
     <string name="settings_profiles">Profili</string>
     <string name="settings_profiles_subtitle">Upravljaj korisničkim profilima</string>
-    <string name="settings_layout">Izgled</string>
+    <string name="settings_layout">Raspored</string>
     <string name="settings_layout_subtitle">Struktura početne stranice i stilovi postera.</string>
     <string name="settings_plugins">Plugini</string>
     <string name="settings_plugins_subtitle">Repozitoriji i provajderi.</string>
@@ -299,7 +299,7 @@
     <string name="account_stat_progress">napredak</string>
     <string name="account_stat_watched">odgledano</string>
     <string name="settings_integrations_section">Integracije</string>
-    <string name="settings_integrations_section_subtitle">Upravljanje dostupnim integracijama</string>
+    <string name="settings_integrations_section_subtitle">Upravljajte dostupnim integracijama</string>
     <string name="settings_tmdb_subtitle">Kontrole za obogaćivanje metapodataka</string>
     <string name="settings_mdblist_subtitle">Vanjski provajderi ocjena</string>
     <string name="settings_animeskip_subtitle">Vremenske oznake za preskakanje anime uvoda/odjave</string>
@@ -510,20 +510,20 @@
     <string name="autoplay_invalid_regex">Neispravan regex pattern</string>
 
     <!-- LayoutSettingsScreen -->
-    <string name="layout_title">Postavke Izgleda</string>
-    <string name="layout_subtitle">Prilagodi početni izgled, vidljivost sadržaja i ponašanje postera</string>
-    <string name="layout_classic">Classic Prikaz</string>
-    <string name="layout_grid">Grid Prikaz</string>
-    <string name="layout_modern">Modern Prikaz</string>
+    <string name="layout_title">Postavke Rasporeda</string>
+    <string name="layout_subtitle">Prilagodi početni raspored, vidljivost sadržaja i ponašanje postera</string>
+    <string name="layout_classic">Klasično</string>
+    <string name="layout_grid">Mreža</string>
+    <string name="layout_modern">Moderno</string>
     <string name="layout_classic_desc">Horizontalno listaj kroz kategorije</string>
-    <string name="layout_grid_desc">Pregledaj sve u vertikalnom gridu sa glavnom sekcijom</string>
+    <string name="layout_grid_desc">Pregledaj sadržaj u vertikalnoj mreži s glavnom sekcijom</string>
     <string name="layout_modern_desc">Fiksni glavni prikaz sa jednim aktivnim redom za brže pregledanje</string>
-    <string name="layout_section_home">Početni Izgled</string>
+    <string name="layout_section_home">Početni Raspored</string>
     <string name="layout_section_home_desc">Odaberi strukturu i izvor glavnog prikaza.</string>
     <string name="layout_landscape_posters">Landscape Posteri</string>
     <string name="layout_landscape_posters_sub">Prebacuj između portrait i landscape kartica za Modern prikaz.</string>
     <string name="layout_preview_row">Prikaži Preview Red</string>
-    <string name="layout_preview_row_sub">Prikaži djelimični pregled reda ispod u Modern Home izgledu.</string>
+    <string name="layout_preview_row_sub">Prikaži djelimični pregled reda ispod u Modern Home rasporedu.</string>
     <string name="layout_hero_catalogs">Katalozi za Glavni Prikaz</string>
     <string name="layout_hero_catalogs_sub">Odaberi jedan ili više kataloga za istaknuti sadržaj.</string>
     <string name="layout_section_content">Početni Sadržaj</string>
@@ -541,7 +541,7 @@
     <string name="layout_show_discover">Prikaži Otkrij u Pretrazi</string>
     <string name="layout_show_discover_sub">Prikaži browse sekciju kada je pretraga prazna.</string>
     <string name="layout_poster_labels">Prikaži Nazive Postera</string>
-    <string name="layout_poster_labels_sub">Prikaži naslove ispod postera u redovima, gridu i view-all prikazu.</string>
+    <string name="layout_poster_labels_sub">Prikaži naslove ispod postera u redovima, mreži i prikazu “Vidi sve”.</string>
     <string name="layout_addon_name">Prikaži Naziv Addona</string>
     <string name="layout_addon_name_sub">Prikaži naziv izvora ispod naziva kataloga.</string>
     <string name="layout_catalog_type">Prikaži Tip Kataloga</string>
@@ -846,7 +846,7 @@
     <string name="addon_manage_from_phone_subtitle">Skeniraj QR kod da upravljaš addonima, katalozima i kolekcijama sa svog telefona</string>
     <string name="addon_manage_collections_from_phone_subtitle">Skeniraj QR kod da upravljaš kolekcijama sa svog telefona</string>
     <string name="addon_reorder_title">Promijeni redoslijed početnih kataloga</string>
-    <string name="addon_reorder_subtitle">Kontroliše redoslijed redova kataloga i kolekcija na početnoj (Classic + Modern + Grid)</string>
+    <string name="addon_reorder_subtitle">Kontroliše redoslijed redova kataloga i kolekcija na početnoj (Klasično + Moderno + Mreža)</string>
     <string name="addon_qr_scan_instruction">Skeniraj sa svojim telefonom da upravljaš addonima, katalozima i kolekcijama</string>
     <string name="addon_qr_collections_scan_instruction">Skeniraj sa svojim telefonom da upravljaš kolekcijama</string>
     <string name="addon_qr_close">Zatvori</string>
@@ -863,7 +863,7 @@
 
     <!-- CatalogOrderScreen -->
     <string name="catalog_order_title">Redoslijed Početnih Kataloga</string>
-    <string name="catalog_order_subtitle">Ovo kontroliše redoslijed redova kataloga na početnoj (Classic + Modern + Grid).</string>
+    <string name="catalog_order_subtitle">Ovo kontroliše redoslijed redova kataloga na početnoj (Klasično + Moderno + Mreža).</string>
     <string name="catalog_order_empty">Još nema dostupnih početnih kataloga.</string>
     <string name="catalog_order_disabled_on_home">Onemogućeno na početnoj</string>
     <string name="catalog_order_enable">Omogući</string>
@@ -1236,7 +1236,7 @@
 
     <!-- LayoutSelectionScreen -->
     <string name="layout_selection_welcome">Dobrodošli u Nuvio</string>
-    <string name="layout_selection_subtitle">Odaberi izgled početnog ekrana</string>
+    <string name="layout_selection_subtitle">Odaberi raspored početnog ekrana</string>
     <string name="layout_selection_continue">Nastavi</string>
 
     <!-- UpdatePromptDialog -->

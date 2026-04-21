@@ -112,9 +112,10 @@ class NuvioApplication : Application(), ImageLoaderFactory {
                     .maxSizeBytes(200L * 1024 * 1024)
                     .build()
             }
-            .decoderDispatcher(Dispatchers.IO.limitedParallelism(2))
-            .fetcherDispatcher(Dispatchers.IO.limitedParallelism(4))
-            .bitmapFactoryMaxParallelism(2)
+            .decoderDispatcher(Dispatchers.IO.limitedParallelism(4))
+            .fetcherDispatcher(Dispatchers.IO.limitedParallelism(8))
+            .bitmapFactoryMaxParallelism(4)
+            .allowHardware(true)
             .allowRgb565(true)
             .crossfade(false)
             .build()

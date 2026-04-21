@@ -228,7 +228,7 @@
     <string name="account_stat_progress">postup</string>
     <string name="account_stat_watched">zhlédnuto</string>
     <string name="settings_integrations_section">Integrace</string>
-    <string name="settings_integrations_section_subtitle">Vyberte TMDB nebo MDBList</string>
+    <string name="settings_integrations_section_subtitle">Spravujte dostupné integrace</string>
     <string name="settings_tmdb_subtitle">Ovládání obohacení metadat</string>
     <string name="settings_mdblist_subtitle">Externí poskytovatelé hodnocení</string>
     <string name="settings_animeskip_subtitle">Anime intro/outro časy pro přeskočení</string>
@@ -1128,4 +1128,6 @@
     <string name="update_ignore">Ignorovat</string>
     <string name="watchlist_added">Přidáno do watchlistu</string>
     <string name="watchlist_removed">Odstraněno z watchlistu</string>
+    <string name="playback_player_auto">Automaticky (Nejlepší pro obsah)</string>
+    <string name="playback_player_auto_desc">ExoPlayer pro filmy a seriály · MPV pro anime</string>
 </resources>

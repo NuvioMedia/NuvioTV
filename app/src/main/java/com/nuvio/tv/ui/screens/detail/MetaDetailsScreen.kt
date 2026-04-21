@@ -96,6 +96,7 @@ import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaCastMember
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.resolveContentLanguage
 import com.nuvio.tv.domain.model.MDBListRatings
 import com.nuvio.tv.domain.model.NextToWatch
 import com.nuvio.tv.domain.model.TraktCommentReview
@@ -238,6 +239,7 @@ fun MetaDetailsScreen(
     val selectedComment = uiState.selectedComment
     var commentOverlayDirection by remember { mutableIntStateOf(0) }
     var restorePlayFocusAfterTrailerBackToken by rememberSaveable { mutableIntStateOf(0) }
+    var isTrailerPaused by remember { mutableStateOf(false) }
 
     BackHandler {
         if (selectedComment != null) {
@@ -245,6 +247,7 @@ fun MetaDetailsScreen(
             viewModel.onEvent(MetaDetailsEvent.OnDismissCommentOverlay)
         } else if (uiState.isTrailerPlaying) {
             restorePlayFocusAfterTrailerBackToken += 1
+            isTrailerPaused = false
             viewModel.onEvent(MetaDetailsEvent.OnTrailerEnded)
         } else {
             onBackPress()
@@ -296,7 +299,20 @@ fun MetaDetailsScreen(
                             KeyEvent.KEYCODE_DPAD_CENTER,
                             KeyEvent.KEYCODE_ENTER,
                             KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                                isTrailerPaused = !isTrailerPaused
                                 trailerSeekOverlayVisible = true
+                                true
+                            }
+                            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                                isTrailerPaused = !isTrailerPaused
+                                true
+                            }
+                            KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                                isTrailerPaused = true
+                                true
+                            }
+                            KeyEvent.KEYCODE_MEDIA_PLAY -> {
+                                isTrailerPaused = false
                                 true
                             }
                             KeyEvent.KEYCODE_DPAD_UP -> {
@@ -407,6 +423,7 @@ fun MetaDetailsScreen(
                         season = returnFocusSeason,
                         episode = returnFocusEpisode
                     ),
+                    lastFocusedEpisodeIdBySeason = viewModel.lastFocusedEpisodeIdBySeason,
                     seasons = uiState.seasons,
                     selectedSeason = uiState.selectedSeason,
                     episodesForSeason = uiState.episodesForSeason,
@@ -454,7 +471,7 @@ fun MetaDetailsScreen(
                             null,
                             null,
                             video.runtime,
-                            meta.language
+                            meta.resolveContentLanguage()
                         )
                     },
                     onEpisodeManualPlayClick = { video ->
@@ -472,7 +489,7 @@ fun MetaDetailsScreen(
                             null,
                             null,
                             video.runtime,
-                            meta.language
+                            meta.resolveContentLanguage()
                         )
                     },
                     onPlayClick = { videoId ->
@@ -490,7 +507,7 @@ fun MetaDetailsScreen(
                             genresString,
                             yearString,
                             null,
-                            meta.language
+                            meta.resolveContentLanguage()
                         )
                     },
                     onPlayManuallyClick = { videoId ->
@@ -508,7 +525,7 @@ fun MetaDetailsScreen(
                             genresString,
                             yearString,
                             null,
-                            meta.language
+                            meta.resolveContentLanguage()
                         )
                     },
                     showManualPlayOption = effectiveAutoplayEnabled,
@@ -534,6 +551,7 @@ fun MetaDetailsScreen(
                     trailerUrl = uiState.trailerUrl,
                     trailerAudioUrl = uiState.trailerAudioUrl,
                     isTrailerPlaying = uiState.isTrailerPlaying,
+                    isTrailerPaused = isTrailerPaused,
                     showTrailerControls = uiState.showTrailerControls,
                     hideLogoDuringTrailer = uiState.hideLogoDuringTrailer,
                     trailerButtonEnabled = uiState.trailerButtonEnabled,
@@ -554,7 +572,23 @@ fun MetaDetailsScreen(
                             when (keyCode) {
                                 KeyEvent.KEYCODE_DPAD_CENTER,
                                 KeyEvent.KEYCODE_ENTER,
-                                KeyEvent.KEYCODE_NUMPAD_ENTER,
+                                KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                                    isTrailerPaused = !isTrailerPaused
+                                    trailerSeekOverlayVisible = true
+                                    true
+                                }
+                                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                                    isTrailerPaused = !isTrailerPaused
+                                    true
+                                }
+                                KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                                    isTrailerPaused = true
+                                    true
+                                }
+                                KeyEvent.KEYCODE_MEDIA_PLAY -> {
+                                    isTrailerPaused = false
+                                    true
+                                }
                                 KeyEvent.KEYCODE_DPAD_UP -> {
                                     trailerSeekOverlayVisible = true
                                     true
@@ -676,6 +710,7 @@ private fun MetaDetailsContent(
     heroBackdropUrl: String? = null,
     meta: Meta,
     detailReturnEpisodeFocusRequest: DetailReturnEpisodeFocusRequest? = null,
+    lastFocusedEpisodeIdBySeason: MutableMap<Int, String>,
     seasons: List<Int>,
     selectedSeason: Int,
     episodesForSeason: List<Video>,
@@ -725,6 +760,7 @@ private fun MetaDetailsContent(
     trailerUrl: String?,
     trailerAudioUrl: String?,
     isTrailerPlaying: Boolean,
+    isTrailerPaused: Boolean = false,
     showTrailerControls: Boolean,
     hideLogoDuringTrailer: Boolean,
     trailerButtonEnabled: Boolean,
@@ -1071,7 +1107,6 @@ private fun MetaDetailsContent(
     }
     var activePeopleTab by rememberSaveable(meta.id) { mutableStateOf(initialPeopleTab) }
     var seasonOptionsDialogSeason by remember { mutableStateOf<Int?>(null) }
-    val lastFocusedEpisodeIdBySeason = remember(meta.id) { mutableStateMapOf<Int, String>() }
     // Tracks whether the initial auto-scroll to the "next to play" episode has fired
     // for each season.  Until it fires we must keep passing scrollToEpisodeId even if
     // the user already focused an episode (which sets lastFocusedEpisodeIdBySeason).
@@ -1331,6 +1366,7 @@ private fun MetaDetailsContent(
             trailerUrl = trailerUrl,
             trailerAudioUrl = trailerAudioUrl,
             isTrailerPlaying = isTrailerPlaying,
+            isTrailerPaused = isTrailerPaused,
             showTrailerControls = showTrailerControls,
             trailerSeekToken = trailerSeekToken,
             trailerSeekDeltaMs = trailerSeekDeltaMs,
@@ -1758,6 +1794,7 @@ private fun BackdropLayer(
     trailerUrl: String?,
     trailerAudioUrl: String?,
     isTrailerPlaying: Boolean,
+    isTrailerPaused: Boolean = false,
     showTrailerControls: Boolean,
     trailerSeekToken: Int,
     trailerSeekDeltaMs: Long,
@@ -1807,6 +1844,7 @@ private fun BackdropLayer(
             trailerUrl = trailerUrl,
             trailerAudioUrl = trailerAudioUrl,
             isPlaying = isTrailerPlaying,
+            isPaused = isTrailerPaused,
             seekRequestToken = if (showTrailerControls) trailerSeekToken else 0,
             seekDeltaMs = if (showTrailerControls) trailerSeekDeltaMs else 0L,
             onRemoteKey = onTrailerControlKey,

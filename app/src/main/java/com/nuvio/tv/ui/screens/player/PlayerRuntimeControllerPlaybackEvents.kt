@@ -1071,13 +1071,17 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             }
             val newMode = nextAspectMode(state.aspectMode)
             val label = aspectModeLabel(newMode, context::getString)
-            Log.d("PlayerViewModel", "Aspect mode toggled: ${state.aspectMode} -> $newMode ($label)")
+            Log.d(PlayerRuntimeController.TAG, "Aspect mode toggled by user: ${state.aspectMode} -> $newMode ($label)")
             _uiState.update {
                 it.copy(
                     aspectMode = newMode,
                     showAspectRatioIndicator = true,
                     aspectRatioIndicatorText = label
                 )
+            }
+            scope.launch {
+                Log.d(PlayerRuntimeController.TAG, "Persisting aspect mode: $newMode")
+                deviceLocalPlayerPreferences.setAspectMode(newMode)
             }
             hideAspectRatioIndicatorJob?.cancel()
             hideAspectRatioIndicatorJob = scope.launch {
@@ -1140,6 +1144,11 @@ internal fun PlayerRuntimeController.buildStreamInfoData(): StreamInfoData {
             addonSub != null -> context.getString(R.string.stream_info_subtitle_source_addon)
             selectedSubtitle != null -> context.getString(R.string.stream_info_subtitle_source_embedded)
             else -> null
+        },
+        playerEngine = when (currentInternalPlayerEngine) {
+            com.nuvio.tv.data.local.InternalPlayerEngine.EXOPLAYER -> context.getString(R.string.playback_engine_exoplayer)
+            com.nuvio.tv.data.local.InternalPlayerEngine.MVP_PLAYER -> context.getString(R.string.playback_engine_mvplayer)
+            com.nuvio.tv.data.local.InternalPlayerEngine.AUTO -> null
         }
     )
 }

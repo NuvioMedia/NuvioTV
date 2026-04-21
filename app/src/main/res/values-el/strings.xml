@@ -209,7 +209,7 @@
     <string name="settings_layout_subtitle">Δομή αρχικής οθόνης και στυλ αφισών</string>
     <string name="settings_plugins">Πρόσθετα</string>
     <string name="settings_plugins_subtitle">Αποθετήρια και πάροχοι</string>
-    <string name="settings_integration">Ενσωμάτωση</string>
+    <string name="settings_integration">Ενσωματώσεις</string>
     <string name="settings_playback">Αναπαραγωγή</string>
     <string name="settings_playback_subtitle">Πρόγραμμα αναπαραγωγής, υπότιτλοι και αυτόματη αναπαραγωγή</string>
     <string name="settings_trakt_subtitle">Άνοιγμα οθόνης σύνδεσης Trakt</string>
@@ -241,7 +241,7 @@
     <string name="account_stat_progress">πρόοδος</string>
     <string name="account_stat_watched">προβληθέντα</string>
     <string name="settings_integrations_section">Ενσωματώσεις</string>
-    <string name="settings_integrations_section_subtitle">Επιλέξτε TMDB ή MDBList</string>
+    <string name="settings_integrations_section_subtitle">Διαχειριστείτε τις διαθέσιμες ενσωματώσεις</string>
     <string name="settings_tmdb_subtitle">Έλεγχοι εμπλουτισμού μεταδεδομένων</string>
     <string name="settings_mdblist_subtitle">Εξωτερικοί πάροχοι βαθμολογιών</string>
     <string name="settings_animeskip_subtitle">Χρονοσήμανση παράλειψης intro/outro anime</string>
@@ -1191,4 +1191,6 @@
     <string name="update_ignore">Αγνόηση</string>
     <string name="watchlist_added">Προστέθηκε στη watchlist</string>
     <string name="watchlist_removed">Αφαιρέθηκε από τη watchlist</string>
+    <string name="playback_player_auto">Αυτόματο (Καλύτερο για το περιεχόμενο)</string>
+    <string name="playback_player_auto_desc">ExoPlayer για Ταινίες &amp; Σειρές · MPV για Anime</string>
 </resources>

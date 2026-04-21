@@ -207,7 +207,7 @@
     <string name="settings_layout_subtitle">Hjemmestruktur og plakatstiler</string>
     <string name="settings_plugins">Programtillegg</string>
     <string name="settings_plugins_subtitle">Arkiver og leverandører</string>
-    <string name="settings_integration">Integrasjon</string>
+    <string name="settings_integration">Integrasjoner</string>
     <string name="settings_playback">Avspilling</string>
     <string name="settings_playback_subtitle">Spiller, undertekster og autoavspilling</string>
     <string name="settings_trakt_subtitle">Åpne tilkoblingsside for Trakt</string>
@@ -239,7 +239,7 @@
     <string name="account_stat_progress">progresjon</string>
     <string name="account_stat_watched">sett</string>
     <string name="settings_integrations_section">Integrasjoner</string>
-    <string name="settings_integrations_section_subtitle">Velg TMDB eller MDBList</string>
+    <string name="settings_integrations_section_subtitle">Administrer tilgjengelige integrasjoner</string>
     <string name="settings_tmdb_subtitle">Kontroller for metadataberikelse</string>
     <string name="settings_mdblist_subtitle">Eksterne vurderingsleverandører</string>
     <string name="settings_animeskip_subtitle">Tidsmerker for anime intro/outro</string>
@@ -1133,4 +1133,6 @@
     <string name="update_ignore">Ignorer</string>
     <string name="watchlist_added">Lagt til ønskelisten</string>
     <string name="watchlist_removed">Fjernet fra ønskelisten</string>
+    <string name="playback_player_auto">Automatisk (Best for innhold)</string>
+    <string name="playback_player_auto_desc">ExoPlayer for filmer og serier · MPV for anime</string>
 </resources>

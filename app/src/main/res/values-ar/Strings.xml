@@ -290,7 +290,7 @@
     <string name="account_stat_progress">مستوى المشاهدة</string>
     <string name="account_stat_watched">تمت المشاهدة</string>
     <string name="settings_integrations_section">الخدمات المرتبطة</string>
-    <string name="settings_integrations_section_subtitle">ضبط إعدادات TMDB أو MDBList</string>
+    <string name="settings_integrations_section_subtitle">إدارة عمليات التكامل المتاحة</string>
     <string name="settings_tmdb_subtitle">عناصر التحكم في إثراء البيانات الوصفية</string>
     <string name="settings_mdblist_subtitle">مصادر التقييمات الخارجية</string>
     <string name="settings_animeskip_subtitle">مواقيت تخطي مقدمة/نهاية الأنمي</string>

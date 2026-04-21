@@ -242,7 +242,7 @@
     <string name="account_stat_progress">進行状況</string>
     <string name="account_stat_watched">視聴済み</string>
     <string name="settings_integrations_section">連携</string>
-    <string name="settings_integrations_section_subtitle">TMDBまたはMDBListの設定</string>
+    <string name="settings_integrations_section_subtitle">利用可能な統合を管理する</string>
     <string name="settings_tmdb_subtitle">メタデータ補完の設定</string>
     <string name="settings_mdblist_subtitle">外部評価プロバイダー</string>
     <string name="settings_animeskip_subtitle">アニメのイントロ/アウトロスキップのタイムスタンプ</string>
@@ -1191,4 +1191,6 @@
     <string name="update_ignore">無視</string>
     <string name="watchlist_added">ウォッチリストに追加しました</string>
     <string name="watchlist_removed">ウォッチリストから削除しました</string>
+    <string name="playback_player_auto">自動（コンテンツに最適化）</string>
+    <string name="playback_player_auto_desc">映画やドラマにはExoPlayer・アニメにはMPV</string>
 </resources>

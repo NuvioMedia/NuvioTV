@@ -108,6 +108,10 @@ private fun StreamInfoContent(data: StreamInfoData) {
                 modifier = Modifier.padding(top = 4.dp)
             )
         }
+        if (data.playerEngine != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            InfoItem(label = stringResource(R.string.stream_info_player_engine), value = data.playerEngine)
+        }
         Spacer(modifier = Modifier.height(16.dp))
     }
 

@@ -144,7 +144,7 @@
     <string name="account_stat_progress">tiến độ</string>
     <string name="account_stat_watched">đã xem</string>
     <string name="settings_integrations_section">Tích hợp</string>
-    <string name="settings_integrations_section_subtitle">Chọn TMDB hoặc MDBList</string>
+    <string name="settings_integrations_section_subtitle">Quản lý tích hợp có sẵn</string>
     <string name="settings_tmdb_subtitle">Tuỳ chỉnh bổ sung metadata</string>
     <string name="settings_mdblist_subtitle">Nhà cung cấp xếp hạng bên ngoài</string>
     <string name="settings_animeskip_subtitle">Dấu thời gian bỏ qua intro/outro anime</string>
@@ -891,4 +891,6 @@
     <string name="update_open_settings">Mở cài đặt</string>
     <string name="update_install">Cài đặt</string>
     <string name="update_ignore">Bỏ qua</string>
+    <string name="playback_player_auto">Tự động (Tốt nhất cho nội dung)</string>
+    <string name="playback_player_auto_desc">ExoPlayer cho Phim &amp; TV Show · MPV cho Anime</string>
 </resources>

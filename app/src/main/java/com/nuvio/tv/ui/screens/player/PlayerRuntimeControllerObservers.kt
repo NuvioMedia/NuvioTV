@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 internal data class SubtitleFetchRequest(
     val type: String,
@@ -190,7 +191,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             subtitleAiAutoSelect = settings.subtitleAiAutoSelect
             val currentState = _uiState.value
             val resolvedInternalPlayerEngine =
-                runtimeInternalPlayerEngineOverride ?: settings.internalPlayerEngine
+                runtimeInternalPlayerEngineOverride ?: resolvedAutoPlayerEngine ?: settings.internalPlayerEngine
             val resolvedAudioAmplificationDb = when {
                 !hasInitializedAudioAmplificationForSession -> {
                     hasInitializedAudioAmplificationForSession = true
@@ -203,6 +204,7 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
                 settings.persistAudioAmplification -> settings.audioAmplificationDb
                 else -> currentState.audioAmplificationDb
             }
+
 
             _uiState.update { state ->
                 val shouldShowOverlay = if (settings.loadingOverlayEnabled && !hasRenderedFirstFrame) {
@@ -456,5 +458,22 @@ internal fun PlayerRuntimeController.retryCurrentStreamFromStartAfter416() {
                 )
             }
         }
+    }
+}
+
+internal fun PlayerRuntimeController.observeDeviceLocalAspectMode() {
+    scope.launch {
+        deviceLocalPlayerPreferences.aspectMode
+            .distinctUntilChanged()
+            .collect { mode ->
+                val currentState = _uiState.value
+                if (currentState.aspectMode != mode) {
+                    Log.d(
+                        PlayerRuntimeController.TAG,
+                        "Aspect mode restored from device-local prefs: ${currentState.aspectMode} -> $mode"
+                    )
+                    _uiState.update { it.copy(aspectMode = mode) }
+                }
+            }
     }
 }

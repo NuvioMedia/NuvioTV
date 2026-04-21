@@ -2,6 +2,8 @@ package com.nuvio.tv.ui.screens.detail
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import androidx.compose.foundation.layout.Arrangement
@@ -99,11 +101,7 @@ fun CastSection(
     val itemWidth = 150.dp
     val cardSize = 100.dp
     val hasTitle = title.isNotBlank()
-    val upFocusModifier = if (upFocusRequester != null) {
-        Modifier.focusProperties { up = upFocusRequester }
-    } else {
-        Modifier
-    }
+    val currentUpFocusRequester by rememberUpdatedState(upFocusRequester)
 
     Column(
         modifier = modifier
@@ -155,7 +153,7 @@ fun CastSection(
                             member = member,
                             modifier = Modifier
                                 .focusRequester(focusRequester)
-                                .then(upFocusModifier),
+                                .then(if (currentUpFocusRequester != null) Modifier.focusProperties { up = currentUpFocusRequester!! } else Modifier),
                             itemWidth = itemWidth,
                             cardSize = cardSize,
                             onFocused = {
@@ -207,7 +205,7 @@ fun CastSection(
                         member = member,
                         modifier = Modifier
                             .focusRequester(focusRequester)
-                            .then(upFocusModifier),
+                            .then(if (currentUpFocusRequester != null) Modifier.focusProperties { up = currentUpFocusRequester!! } else Modifier),
                         itemWidth = itemWidth,
                         cardSize = cardSize,
                         onFocused = {

@@ -5,6 +5,7 @@ import androidx.media3.common.TrackGroup
 import androidx.media3.ui.AspectRatioFrameLayout
 import com.nuvio.tv.data.local.FrameRateMatchingMode
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.repository.SkipInterval
@@ -133,6 +134,8 @@ data class PlayerUiState(
     val afrProbeRunning: Boolean = false,
     val internalPlayerEngine: InternalPlayerEngine = InternalPlayerEngine.EXOPLAYER,
     val frameRateMatchingMode: FrameRateMatchingMode = FrameRateMatchingMode.OFF,
+    val useLibass: Boolean = false,
+    val libassRenderType: LibassRenderType = LibassRenderType.OVERLAY_OPEN_GL,
     val displayModeInfo: DisplayModeInfo? = null,
     val showDisplayModeInfo: Boolean = false,
     // Aspect ratio / resize mode
@@ -322,5 +325,6 @@ data class StreamInfoData(
     val subtitleName: String? = null,
     val subtitleCodec: String? = null,
     val subtitleLanguage: String? = null,
-    val subtitleSource: String? = null
+    val subtitleSource: String? = null,
+    val playerEngine: String? = null
 )

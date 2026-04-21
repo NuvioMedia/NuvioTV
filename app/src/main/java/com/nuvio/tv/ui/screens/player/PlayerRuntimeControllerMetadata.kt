@@ -37,6 +37,8 @@ internal fun PlayerRuntimeController.fetchMetaDetails(id: String?, type: String?
 
 internal fun PlayerRuntimeController.applyMetaDetails(meta: Meta) {
     metaVideos = meta.videos
+    metaGenres = meta.genres
+    metaCountry = meta.country
     val description = resolveDescription(meta)
 
     _uiState.update { state ->

@@ -254,7 +254,7 @@
     <string name="settings_layout_subtitle">Struktura domačega zaslona in slogi plakatov</string>
     <string name="settings_plugins">Vtičniki</string>
     <string name="settings_plugins_subtitle">Repozitoriji in ponudniki</string>
-    <string name="settings_integration">Integracija</string>
+    <string name="settings_integration">Integracije</string>
     <string name="settings_playback">Predvajanje</string>
     <string name="settings_playback_subtitle">Predvajalnik, podnapisi in samodejno predvajanje</string>
     <string name="settings_trakt_subtitle">Odpri zaslon za povezavo s Trakt</string>
@@ -286,7 +286,7 @@
     <string name="account_stat_progress">napredek</string>
     <string name="account_stat_watched">ogledano</string>													
 	<string name="settings_integrations_section">Integracije</string>
-    <string name="settings_integrations_section_subtitle">Izberite nastavitve za TMDB ali MDBList</string>
+    <string name="settings_integrations_section_subtitle">Upravljajte razpoložljive integracije</string>
     <string name="settings_tmdb_subtitle">Kontrole za obogatitev metapodatkov</string>
     <string name="settings_mdblist_subtitle">Zunanji ponudniki ocen</string>
     <string name="settings_animeskip_subtitle">Časovni žigi za preskok anime uvoda/odjave</string>
@@ -1427,4 +1427,6 @@
     <string name="collections_card_subtitle">Združite kataloge v mape na začetnem zaslonu</string>
     <string name="collections_tab_all">Vse</string>
     <string name="collections_tab_combined">Združeno</string>															  
-	</resources>
+	    <string name="playback_player_auto">Samodejno (Najboljše za vsebino)</string>
+    <string name="playback_player_auto_desc">ExoPlayer za filme in serije · MPV za anime</string>
+</resources>

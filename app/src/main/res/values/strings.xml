@@ -269,7 +269,7 @@
     <string name="settings_layout_subtitle">Home structure and poster styles</string>
     <string name="settings_plugins">Plugins</string>
     <string name="settings_plugins_subtitle">Repositories and providers</string>
-    <string name="settings_integration">Integration</string>
+    <string name="settings_integration">Integrations</string>
     <string name="settings_playback">Playback</string>
     <string name="settings_playback_subtitle">Player, subtitles, and auto-play</string>
     <string name="settings_trakt_subtitle">Open Trakt connection screen</string>
@@ -382,6 +382,8 @@
     <string name="playback_resolution_matching_sub">Allow display mode changes to match video resolution.</string>
     <string name="playback_player_external_desc">Always open streams in an external app</string>
     <string name="playback_player_ask_desc">Choose the player each time</string>
+    <string name="playback_player_auto">Auto (Best for Content)</string>
+    <string name="playback_player_auto_desc">ExoPlayer for Movies &amp; TV Shows · MPV for Anime</string>
     <string name="playback_engine_exoplayer_desc">Best compatibility with current Nuvio features.</string>
     <string name="playback_engine_mvplayer_desc">Uses libmpv with Nuvio OSD controls. Experimental.</string>
 
@@ -848,6 +850,8 @@
     <string name="profile_pin_overlay_remove_verify_kicker">Security check required.</string>
     <string name="profile_pin_overlay_remove_verify_heading">Enter current PIN to remove lock for %1$s.</string>
     <string name="profile_pin_overlay_remove_verify_support">Enter the current 4-digit PIN to remove this lock.</string>
+    <string name="profile_pin_overlay_delete_verify_heading">Enter current PIN to delete %1$s.</string>
+    <string name="profile_pin_overlay_delete_verify_support">Enter the current 4-digit PIN before deleting this profile.</string>
     <string name="profile_pin_overlay_set_support">This PIN will be required before opening this profile.</string>
     <string name="profile_pin_overlay_confirm_support">Re-enter the same 4 digits to finish setup.</string>
     <string name="profile_pin_overlay_mismatch">PINs did not match. Enter a new PIN again.</string>
@@ -976,6 +980,7 @@
     <string name="stream_info_source">Source</string>
     <string name="stream_info_subtitle_source_addon">Addon</string>
     <string name="stream_info_subtitle_source_embedded">Embedded</string>
+    <string name="stream_info_player_engine">Player Engine</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Sources</string>
@@ -1348,6 +1353,7 @@
     <string name="profile_pin_invalid">Invalid PIN. Try again.</string>
     <string name="profile_pin_verify_error">Could not verify PIN. Try again.</string>
     <string name="profile_pin_incorrect">Current PIN is incorrect.</string>
+    <string name="profile_pin_current_required">This profile already has a PIN. Enter the current PIN to change it.</string>
 
     <!-- Account Screen -->
     <string name="account_signin_create_title">Sign In / Create Account</string>

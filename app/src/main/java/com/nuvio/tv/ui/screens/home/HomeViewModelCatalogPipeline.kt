@@ -547,6 +547,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
     heroItemOrder = baseHeroItems.map { it.id }
 
     val computedHomeRows = buildList {
+        val displayRowsByKey = displayRows.associateBy { "${it.addonId}_${it.apiType}_${it.catalogId}" }
         collectionsCache.forEach { collection ->
             val key = "collection_${collection.id}"
             if (collection.pinToTop && key !in disabledHomeCatalogKeys) {
@@ -561,9 +562,7 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
                     add(HomeRow.CollectionRow(collectionEntry))
                 }
             } else {
-                val catalogRow = displayRows.find { row ->
-                    "${row.addonId}_${row.apiType}_${row.catalogId}" == key
-                }
+                val catalogRow = displayRowsByKey[key]
                 if (catalogRow != null && catalogRow.items.isNotEmpty()) {
                     add(HomeRow.Catalog(catalogRow))
                 }

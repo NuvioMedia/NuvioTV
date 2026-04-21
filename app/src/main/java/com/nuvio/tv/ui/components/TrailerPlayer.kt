@@ -44,6 +44,7 @@ fun TrailerPlayer(
     trailerUrl: String?,
     trailerAudioUrl: String? = null,
     isPlaying: Boolean,
+    isPaused: Boolean = false,
     onEnded: () -> Unit,
     onFirstFrameRendered: () -> Unit = {},
     muted: Boolean = false,
@@ -133,6 +134,12 @@ fun TrailerPlayer(
         } else {
             C.VIDEO_SCALING_MODE_SCALE_TO_FIT
         }
+    }
+
+    LaunchedEffect(isPaused, trailerPlayer) {
+        val player = trailerPlayer ?: return@LaunchedEffect
+        if (!isPlaying) return@LaunchedEffect
+        player.playWhenReady = !isPaused
     }
 
     LaunchedEffect(seekRequestToken, seekDeltaMs, trailerPlayer) {

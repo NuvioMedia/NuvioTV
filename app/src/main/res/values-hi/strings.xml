@@ -195,7 +195,7 @@
     <string name="account_stat_progress">प्रोग्रेस</string>
     <string name="account_stat_watched">देखा गया</string>
     <string name="settings_integrations_section">इंटीग्रेशन</string>
-    <string name="settings_integrations_section_subtitle">TMDB या MDBList चुनें</string>
+    <string name="settings_integrations_section_subtitle">उपलब्ध एकीकरण प्रबंधित करें</string>
     <string name="settings_tmdb_subtitle">मेटाडेटा एनरिचमेंट कंट्रोल</string>
     <string name="settings_mdblist_subtitle">बाहरी रेटिंग प्रोवाइडर्स</string>
     <string name="settings_animeskip_subtitle">एनीमे इंट्रो/आउट्रो स्किप टाइमस्टैम्प</string>
@@ -1007,4 +1007,6 @@
     <string name="update_open_settings">सेटिंग्स खोलें</string>
     <string name="update_install">इंस्टॉल</string>
     <string name="update_ignore">नज़रअंदाज़ करें</string>
+    <string name="playback_player_auto">ऑटो (सामग्री के लिए सर्वश्रेष्ठ)</string>
+    <string name="playback_player_auto_desc">ExoPlayer मूवीज़ और टीवी शोज़ के लिए · MPV एनीमे के लिए</string>
 </resources>

@@ -198,7 +198,7 @@
     <string name="account_stat_progress">pågående</string>
     <string name="account_stat_watched">sedd</string>
     <string name="settings_integrations_section">Integrationer</string>
-    <string name="settings_integrations_section_subtitle">Välj TMDB eller MDBList inställningar</string>
+    <string name="settings_integrations_section_subtitle">Hantera tillgängliga integrationer</string>
     <string name="settings_tmdb_subtitle">Metadataberikning</string>
     <string name="settings_mdblist_subtitle">Externa betygsläggare</string>
     <string name="settings_animeskip_subtitle">Tidsstämplar för att hoppa över anime-intro/outro</string>
@@ -1212,4 +1212,6 @@
     <string name="update_checking">Söker efter uppdateringar…</string>
     <string name="update_download_complete">Nedladdning klar. Redo att installera.</string>
     <string name="update_up_to_date">Systemet är uppdaterat. Senaste ändringarna:</string>
+    <string name="playback_player_auto">Automatiskt (Bäst för innehåll)</string>
+    <string name="playback_player_auto_desc">ExoPlayer för filmer och serier · MPV för anime</string>
 </resources>

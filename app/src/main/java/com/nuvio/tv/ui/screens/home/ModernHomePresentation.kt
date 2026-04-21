@@ -212,9 +212,10 @@ internal fun buildModernHomePresentation(
         cache.collectionRows.keys.retainAll(activeCollectionKeys)
     }
 
+    val lookups = buildCarouselRowLookups(rows)
     return ModernHomePresentationState(
         rows = rows,
-        lookups = buildCarouselRowLookups(rows)
+        lookups = lookups
     )
 }
 

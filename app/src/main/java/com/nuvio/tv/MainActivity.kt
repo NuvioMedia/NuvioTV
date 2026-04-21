@@ -97,6 +97,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.tv.material3.DrawerValue
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.ModalNavigationDrawer
@@ -823,14 +825,26 @@ private fun LegacySidebarButton(
         label = "legacySidebarItemIconTint"
     )
 
-    Box(
+    Card(
+        onClick = onClick,
         modifier = modifier
             .height(52.dp)
             .focusProperties { canFocus = expanded }
-            .background(color = backgroundColor, shape = itemShape)
-            .onFocusChanged { isFocused = it.isFocused }
-            .clickable(onClick = onClick),
+            .onFocusChanged { isFocused = it.hasFocus },
+        colors = CardDefaults.colors(
+            containerColor = backgroundColor,
+            focusedContainerColor = backgroundColor,
+        ),
+        border = CardDefaults.border(
+            border = androidx.tv.material3.Border.None,
+            focusedBorder = androidx.tv.material3.Border(
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, Color.Transparent),
+                shape = itemShape
+            )
+        ),
+        shape = CardDefaults.shape(shape = itemShape)
     ) {
+        Box(modifier = Modifier.fillMaxSize()) {
         DrawerItemIcon(
             iconRes = iconRes,
             icon = icon,
@@ -860,6 +874,7 @@ private fun LegacySidebarButton(
             )
         }
     }
+}
 }
 
 @Composable

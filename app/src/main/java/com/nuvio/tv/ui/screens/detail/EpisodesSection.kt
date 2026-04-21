@@ -223,7 +223,7 @@ fun SeasonTabs(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun EpisodesRow(
     episodes: List<Video>,
@@ -292,9 +292,13 @@ fun EpisodesRow(
         onScrollToEpisodeHandled()
     }
 
+    // Track the last focused episode requester for focus restoration
+    var lastFocusedEpisodeRequester by remember { androidx.compose.runtime.mutableStateOf<FocusRequester?>(null) }
+
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
+            .focusRestorer { lastFocusedEpisodeRequester ?: FocusRequester.Default }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
                 val isHorizontalKey = native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_LEFT ||
@@ -331,7 +335,10 @@ fun EpisodesRow(
             val episodeFocusRequester = remember(episode.id) { episodeFocusRequesters.getOrPut(episode.id) { FocusRequester() } }
             val episodeOnClick = remember(episode.id) { { onEpisodeClick(episode) } }
             val episodeOnLongPress = remember(episode.id) { { optionsEpisode = episode } }
-            val episodeOnFocused = remember(episode.id) { { onEpisodeFocused(episode.id) } }
+            val episodeOnFocused = remember(episode.id) { {
+                lastFocusedEpisodeRequester = episodeFocusRequester
+                onEpisodeFocused(episode.id)
+            } }
             val isRestoreTarget = episode.id == restoreEpisodeId
             val episodeOnFocusRestored = remember(isRestoreTarget, onRestoreFocusHandled) {
                 if (isRestoreTarget) onRestoreFocusHandled else null

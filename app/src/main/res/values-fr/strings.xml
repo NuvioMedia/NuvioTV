@@ -267,7 +267,7 @@
     <string name="settings_layout_subtitle">Structure de l\'accueil et styles d\'affiches</string>
     <string name="settings_plugins">Plugins</string>
     <string name="settings_plugins_subtitle">Dépôts et fournisseurs</string>
-    <string name="settings_integration">Intégration</string>
+    <string name="settings_integration">Intégrations</string>
     <string name="settings_playback">Lecture</string>
     <string name="settings_playback_subtitle">Lecteur, sous-titres et lecture automatique</string>
     <string name="settings_trakt_subtitle">Ouvrir l\'écran de connexion Trakt</string>
@@ -299,7 +299,7 @@
     <string name="account_stat_progress">progression</string>
     <string name="account_stat_watched">vus</string>
     <string name="settings_integrations_section">Intégrations</string>
-    <string name="settings_integrations_section_subtitle">Paramètres TMDB ou MDBList</string>
+    <string name="settings_integrations_section_subtitle">Gérer les intégrations disponibles</string>
     <string name="settings_tmdb_subtitle">Contrôles d\'enrichissement des métadonnées</string>
     <string name="settings_mdblist_subtitle">Fournisseurs de notes externes</string>
     <string name="settings_animeskip_subtitle">Horodatages pour passer les intros/outros d\'animés</string>
@@ -1518,4 +1518,6 @@
     <string name="collections_tab_all">Tout</string>
     <string name="collections_tab_combined">Combiné</string>
 
+    <string name="playback_player_auto">Auto (Meilleur pour le contenu)</string>
+    <string name="playback_player_auto_desc">ExoPlayer pour les Films et Séries · MPV pour les Animes</string>
 </resources>

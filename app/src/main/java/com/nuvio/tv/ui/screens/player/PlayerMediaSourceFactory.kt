@@ -117,6 +117,7 @@ internal class PlayerMediaSourceFactory {
         private const val PROBE_TIMEOUT_MS = 4000
         private const val PROBE_BYTES = 1024
         private const val MIME_PROBE_CACHE_SIZE = 64
+        private const val MIME_VIDEO_QUICK_TIME = "video/quicktime"
         internal const val DEFAULT_USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -320,7 +321,7 @@ internal class PlayerMediaSourceFactory {
                 extension == "webm" -> MimeTypes.VIDEO_WEBM
                 extension == "mp4" || extension == "m4v" -> MimeTypes.VIDEO_MP4
                 extension == "ts" || extension == "mts" || extension == "m2ts" -> MimeTypes.VIDEO_MP2T
-                extension == "mov" -> MimeTypes.VIDEO_QUICK_TIME
+                extension == "mov" -> MIME_VIDEO_QUICK_TIME
                 extension == "avi" -> MimeTypes.VIDEO_AVI
                 extension == "mpeg" || extension == "mpg" -> MimeTypes.VIDEO_MPEG
                 else -> inferMimeTypeFromQuery(queryPart)
@@ -355,7 +356,7 @@ internal class PlayerMediaSourceFactory {
                             "webm" -> return MimeTypes.VIDEO_WEBM
                             "mp4", "m4v" -> return MimeTypes.VIDEO_MP4
                             "ts", "mts", "m2ts" -> return MimeTypes.VIDEO_MP2T
-                            "mov" -> return MimeTypes.VIDEO_QUICK_TIME
+                            "mov" -> return MIME_VIDEO_QUICK_TIME
                             "avi" -> return MimeTypes.VIDEO_AVI
                             "mpeg", "mpg" -> return MimeTypes.VIDEO_MPEG
                         }
