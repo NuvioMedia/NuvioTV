@@ -1968,48 +1968,32 @@ private fun PeopleSectionTabs(
 
     val defaultRequester = tabs.first().focusRequester
     val restorerRequester = tabs.firstOrNull { it.tab == activeTab }?.focusRequester ?: defaultRequester
-    val shouldSplitCollection = tabs.size > 3 && tabs.any { it.tab == PeopleSectionTab.COLLECTION }
-    val firstRowTabs = if (shouldSplitCollection) tabs.filterNot { it.tab == PeopleSectionTab.COLLECTION } else tabs
-    val secondRowTabs = if (shouldSplitCollection) tabs.filter { it.tab == PeopleSectionTab.COLLECTION } else emptyList()
 
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 20.dp, start = 48.dp, end = 48.dp)
             .focusRestorer(restorerRequester),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        @Composable
-        fun androidx.compose.foundation.layout.RowScope.renderTabs(items: List<PeopleTabItem>) {
-            items.forEachIndexed { index, item ->
-                if (index > 0) {
-                    Text(
-                        text = "|",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = NuvioColors.TextPrimary.copy(alpha = 0.45f),
-                        modifier = Modifier.padding(horizontal = 10.dp)
-                    )
-                }
-
-                PeopleSectionTabButton(
-                    label = item.label,
-                    selected = activeTab == item.tab,
-                    focusRequester = item.focusRequester,
-                    upFocusRequester = upFocusRequester,
-                    downFocusRequester = if (item.tab == PeopleSectionTab.RATINGS) ratingsDownFocusRequester else null,
-                    onFocused = { onTabFocused(item.tab) }
+        tabs.forEachIndexed { index, item ->
+            if (index > 0) {
+                Text(
+                    text = "|",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = NuvioColors.TextPrimary.copy(alpha = 0.45f),
+                    modifier = Modifier.padding(horizontal = 10.dp)
                 )
             }
-        }
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            renderTabs(firstRowTabs)
-        }
-
-        if (secondRowTabs.isNotEmpty()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                renderTabs(secondRowTabs)
-            }
+            PeopleSectionTabButton(
+                label = item.label,
+                selected = activeTab == item.tab,
+                focusRequester = item.focusRequester,
+                upFocusRequester = upFocusRequester,
+                downFocusRequester = if (item.tab == PeopleSectionTab.RATINGS) ratingsDownFocusRequester else null,
+                onFocused = { onTabFocused(item.tab) }
+            )
         }
     }
 }
