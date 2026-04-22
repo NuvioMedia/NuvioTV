@@ -10,6 +10,7 @@ import com.omnio.tv.data.remote.dto.aiometadata.AioConfigRequestDto
 import com.omnio.tv.data.remote.dto.aiometadata.AioConfigResponseDto
 import com.omnio.tv.domain.model.AioMetadataSettings
 import com.omnio.tv.domain.repository.AddonRepository
+import com.omnio.tv.domain.repository.AioMetadataRepository
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.SerialName
@@ -34,10 +35,10 @@ class AioMetadataRepositoryImpl @Inject constructor(
     private val authManager: AuthManager,
     private val profileManager: ProfileManager,
     private val addonRepository: AddonRepository,
-) {
+) : AioMetadataRepository {
 
     /** Local cache of the bridge-table row; drives the settings screen. */
-    val settings: Flow<AioMetadataSettings> = dataStore.settings
+    override val settings: Flow<AioMetadataSettings> = dataStore.settings
 
     /**
      * Full config loaded from upstream; kept in-memory so the UI layer can edit
@@ -46,14 +47,14 @@ class AioMetadataRepositoryImpl @Inject constructor(
     @Volatile
     private var currentConfig: AioConfigResponseDto? = null
 
-    fun cachedConfig(): AioConfigResponseDto? = currentConfig
+    override fun cachedConfig(): AioConfigResponseDto? = currentConfig
 
     /**
      * Pull the bridge-table row (if any), then fetch the upstream config. Safe
      * to call on screen-open; a null result means the user hasn't created a
      * config yet.
      */
-    suspend fun refresh(): Result<AioConfigResponseDto?> = runCatching {
+    override suspend fun refresh(): Result<AioConfigResponseDto?> = runCatching {
         val link = fetchLink() ?: run {
             currentConfig = null
             return@runCatching null
@@ -81,7 +82,7 @@ class AioMetadataRepositoryImpl @Inject constructor(
      * First-time creation: POST /api/config/save, then write the bridge row.
      * Returns the UUID upstream minted.
      */
-    suspend fun createConfig(request: AioConfigRequestDto): Result<String> = runCatching {
+    override suspend fun createConfig(request: AioConfigRequestDto): Result<String> = runCatching {
         val response = api.saveConfig(request)
         if (!response.isSuccessful) {
             error("saveConfig failed: HTTP ${response.code()}")
@@ -107,7 +108,7 @@ class AioMetadataRepositoryImpl @Inject constructor(
      * /update as a full replace at the time of writing; keep a merged payload
      * in-memory via [cachedConfig] to avoid wiping fields).
      */
-    suspend fun updateConfig(uuid: String, request: AioConfigRequestDto): Result<AioConfigResponseDto> =
+    override suspend fun updateConfig(uuid: String, request: AioConfigRequestDto): Result<AioConfigResponseDto> =
         runCatching {
             val response = api.updateConfig(uuid, request)
             if (!response.isSuccessful) {
@@ -125,7 +126,7 @@ class AioMetadataRepositoryImpl @Inject constructor(
      * addon URL on the active profile. Returns [Failure] if the active profile
      * uses primary-only addons.
      */
-    suspend fun setEnabled(enabled: Boolean, manifestUrl: String): Result<Unit> = runCatching {
+    override suspend fun setEnabled(enabled: Boolean, manifestUrl: String): Result<Unit> = runCatching {
         val profile = profileManager.activeProfile
         if (profile?.usesPrimaryAddons == true) {
             error("Active profile uses primary addons; switch profiles to manage AIOMetadata.")
