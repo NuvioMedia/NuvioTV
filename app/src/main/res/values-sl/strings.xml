@@ -1350,7 +1350,7 @@
     <string name="library_delete_subtitle">To odstrani seznam in vse elemente seznama iz Trakt.</string>
     <string name="library_delete_confirm">Izbriši</string>
     <string name="library_source_local">LOKALNO</string>
-	<string name="library_source_omnio">NUVIO</string>
+	<string name="library_source_omnio">OMNIO</string>
     <string name="library_source_trakt">TRAKT</string>																 
 	<string name="library_syncing_library">Sinhroniziranje knjižnice\u2026</string>
 	<string name="library_type_all">Vse</string>

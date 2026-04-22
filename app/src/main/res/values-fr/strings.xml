@@ -993,7 +993,7 @@
     <string name="library_delete_subtitle">Cela supprime la liste et tous ses éléments de Trakt.</string>
     <string name="library_delete_confirm">Supprimer</string>
     <string name="library_source_local">LOCAL</string>
-    <string name="library_source_omnio">NUVIO</string>
+    <string name="library_source_omnio">OMNIO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Synchronisation de la bibliothèque\u2026</string>
     <string name="library_type_all">Tout</string>

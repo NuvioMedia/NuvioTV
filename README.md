@@ -30,7 +30,7 @@ Built with Kotlin and optimized for a TV-first viewing experience.
 
 ### Android TV
 
-Download the latest APK from [GitHub Releases](https://github.com/TheMrClaus/NuvioTV/releases/latest) and install on your Android TV device.
+Download the latest APK from [GitHub Releases](https://github.com/TheMrClaus/OmnioTV/releases/latest) and install on your Android TV device.
 
 ## Development
 
@@ -44,8 +44,8 @@ Download the latest APK from [GitHub Releases](https://github.com/TheMrClaus/Nuv
 ### Setup
 
 ```bash
-git clone https://github.com/TheMrClaus/NuvioTV.git
-cd NuvioTV
+git clone https://github.com/TheMrClaus/OmnioTV.git
+cd OmnioTV
 ./gradlew build
 ```
 
@@ -78,22 +78,22 @@ For comprehensive legal information, including our full disclaimer, third-party 
 
 ## Star History
 
-<a href="https://www.star-history.com/#TheMrClaus/NuvioTV&type=date&legend=top-left">
+<a href="https://www.star-history.com/#TheMrClaus/OmnioTV&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=TheMrClaus/NuvioTV&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=TheMrClaus/NuvioTV&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=TheMrClaus/NuvioTV&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=TheMrClaus/OmnioTV&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=TheMrClaus/OmnioTV&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=TheMrClaus/OmnioTV&type=date&legend=top-left" />
  </picture>
 </a>
 
 <!-- MARKDOWN LINKS & IMAGES -->
-[contributors-shield]: https://img.shields.io/github/contributors/TheMrClaus/NuvioTV.svg?style=for-the-badge
-[contributors-url]: https://github.com/TheMrClaus/NuvioTV/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/TheMrClaus/NuvioTV.svg?style=for-the-badge
-[forks-url]: https://github.com/TheMrClaus/NuvioTV/network/members
-[stars-shield]: https://img.shields.io/github/stars/TheMrClaus/NuvioTV.svg?style=for-the-badge
-[stars-url]: https://github.com/TheMrClaus/NuvioTV/stargazers
-[issues-shield]: https://img.shields.io/github/issues/TheMrClaus/NuvioTV.svg?style=for-the-badge
-[issues-url]: https://github.com/TheMrClaus/NuvioTV/issues
-[license-shield]: https://img.shields.io/github/license/TheMrClaus/NuvioTV.svg?style=for-the-badge
+[contributors-shield]: https://img.shields.io/github/contributors/TheMrClaus/OmnioTV.svg?style=for-the-badge
+[contributors-url]: https://github.com/TheMrClaus/OmnioTV/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/TheMrClaus/OmnioTV.svg?style=for-the-badge
+[forks-url]: https://github.com/TheMrClaus/OmnioTV/network/members
+[stars-shield]: https://img.shields.io/github/stars/TheMrClaus/OmnioTV.svg?style=for-the-badge
+[stars-url]: https://github.com/TheMrClaus/OmnioTV/stargazers
+[issues-shield]: https://img.shields.io/github/issues/TheMrClaus/OmnioTV.svg?style=for-the-badge
+[issues-url]: https://github.com/TheMrClaus/OmnioTV/issues
+[license-shield]: https://img.shields.io/github/license/TheMrClaus/OmnioTV.svg?style=for-the-badge
 [license-url]: http://www.gnu.org/licenses/gpl-3.0.en.html

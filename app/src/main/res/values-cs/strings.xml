@@ -947,7 +947,7 @@
     <string name="library_delete_subtitle">Tímto odstraníte seznam a všechny položky seznamu z Trakt.</string>
     <string name="library_delete_confirm">Odstranit</string>
     <string name="library_source_local">LOKÁLNÍ</string>
-    <string name="library_source_omnio">NUVIO</string>
+    <string name="library_source_omnio">OMNIO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Synchronizuje se knihovna…</string>
     <string name="library_type_all">Vše</string>

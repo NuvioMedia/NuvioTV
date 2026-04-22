@@ -991,7 +991,7 @@
     <string name="library_delete_subtitle">Αυτό θα διαγράψει τη λίστα και όλα τα στοιχεία της από το Trakt.</string>
     <string name="library_delete_confirm">Διαγραφή</string>
     <string name="library_source_local">LOCAL</string>
-    <string name="library_source_omnio">NUVIO</string>
+    <string name="library_source_omnio">OMNIO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Συγχρονισμός βιβλιοθήκης…</string>
     <string name="library_type_all">Όλα</string>

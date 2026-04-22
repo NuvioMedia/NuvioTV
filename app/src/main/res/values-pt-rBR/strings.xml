@@ -995,7 +995,7 @@
     <string name="library_delete_subtitle">Isso removerá a lista e todos os seus itens do Trakt.</string>
     <string name="library_delete_confirm">Excluir</string>
     <string name="library_source_local">LOCAL</string>
-    <string name="library_source_omnio">NUVIO</string>
+    <string name="library_source_omnio">OMNIO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Sincronizando biblioteca…</string>
     <string name="library_type_all">Todos</string>

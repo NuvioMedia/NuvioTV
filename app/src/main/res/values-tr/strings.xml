@@ -1028,7 +1028,7 @@
     <string name="library_delete_subtitle">Bu işlem listeyi ve içindeki tüm öğeleri Trakt hesabınızdan kaldırır.</string>
     <string name="library_delete_confirm">Sil</string>
     <string name="library_source_local">YEREL</string>
-    <string name="library_source_omnio">NUVİO</string>
+    <string name="library_source_omnio">OMNİO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Kütüphane senkronize ediliyor\u2026</string>
     <string name="library_type_all">Tümü</string>

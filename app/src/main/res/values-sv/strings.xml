@@ -870,7 +870,7 @@
     <string name="library_delete_subtitle">Detta tar bort listan och alla listobjekt från Trakt.</string>
     <string name="library_delete_confirm">Radera</string>
     <string name="library_source_local">LOKAL</string>
-    <string name="library_source_omnio">NUVIO</string>
+    <string name="library_source_omnio">OMNIO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Synkroniserar bibliotek\u2026</string>
     <string name="library_type_all">Alla</string>

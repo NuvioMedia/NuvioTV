@@ -991,7 +991,7 @@
     <string name="library_delete_subtitle">Traktからリストとすべてのリストアイテムが削除されます</string>
     <string name="library_delete_confirm">削除</string>
     <string name="library_source_local">ローカル</string>
-    <string name="library_source_omnio">NUVIO</string>
+    <string name="library_source_omnio">OMNIO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">ライブラリを同期中\u2026</string>
     <string name="library_type_all">すべて</string>

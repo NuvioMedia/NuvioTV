@@ -609,7 +609,7 @@
 
     <!-- AIOMetadata -->
     <string name="aio_metadata_title">AIOMetadata</string>
-    <string name="aio_metadata_subtitle">Aggregated metadata from multiple providers, hosted by NuvioTV</string>
+    <string name="aio_metadata_subtitle">Aggregated metadata from multiple providers, hosted by OmnioTV</string>
     <string name="aio_metadata_enable_title">Enable AIOMetadata</string>
     <string name="aio_metadata_enable_subtitle">Adds the AIOMetadata addon to your addon list</string>
     <string name="aio_metadata_manifest_url_title">Manifest URL</string>
@@ -1114,7 +1114,7 @@
     <string name="library_delete_subtitle">This removes the list and all list items from Trakt.</string>
     <string name="library_delete_confirm">Delete</string>
     <string name="library_source_local">LOCAL</string>
-    <string name="library_source_omnio">NUVIO</string>
+    <string name="library_source_omnio">OMNIO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Syncing library\u2026</string>
     <string name="library_type_all">All</string>
