@@ -81,6 +81,11 @@ fun AioMetadataSettingsContent(
             ErrorBanner(message = message, onDismiss = { viewModel.consumeError() })
         }
 
+        val showKeysRequiredBanner = !uiState.canEnable && !uiState.isPrimaryProfileBlocked
+        if (showKeysRequiredBanner) {
+            KeysRequiredBanner()
+        }
+
         SettingsGroupCard(
             modifier = Modifier
                 .fillMaxWidth()
@@ -90,12 +95,40 @@ fun AioMetadataSettingsContent(
                 contentPadding = PaddingValues(bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                // Before a UUID exists, push the TMDB + TVDB rows above the toggle so
+                // the user's eye falls on them first. Once we have a UUID, keep the
+                // toggle prominent.
+                val requiredProviders = listOf(AioMetadataProvider.TMDB, AioMetadataProvider.TVDB)
+                val optionalProviders = AioMetadataSettingsViewModel.KNOWN_PROVIDERS - requiredProviders.toSet()
+                val showRequiredFirst = !uiState.hasConfig
+
+                if (showRequiredFirst) {
+                    items(
+                        items = requiredProviders,
+                        key = { provider -> "aio_provider_${provider.key}" }
+                    ) { provider ->
+                        ProviderRow(
+                            provider = provider,
+                            enabled = uiState.providers[provider.key] ?: false,
+                            keyValue = uiState.apiKeys[provider.key].orEmpty(),
+                            isMutating = uiState.isMutating,
+                            interactive = !uiState.isPrimaryProfileBlocked,
+                            onToggle = { next ->
+                                viewModel.onProviderEnabledChanged(provider.key, next)
+                            },
+                            onEditKey = { keyDialogProvider = provider }
+                        )
+                    }
+                }
+
                 item(key = "aio_enable") {
                     SettingsToggleRow(
                         title = stringResource(R.string.aio_metadata_enable_title),
                         subtitle = stringResource(R.string.aio_metadata_enable_subtitle),
                         checked = uiState.enabled,
-                        enabled = !uiState.isPrimaryProfileBlocked && !uiState.isMutating,
+                        enabled = uiState.canEnable &&
+                            !uiState.isPrimaryProfileBlocked &&
+                            !uiState.isMutating,
                         onToggle = { viewModel.onToggleEnabled() },
                         modifier = if (initialFocusRequester != null) {
                             Modifier.focusRequester(initialFocusRequester)
@@ -131,14 +164,15 @@ fun AioMetadataSettingsContent(
                     }
                 }
 
+                val trailingProviders = if (showRequiredFirst) optionalProviders else AioMetadataSettingsViewModel.KNOWN_PROVIDERS
                 items(
-                    items = AioMetadataSettingsViewModel.KNOWN_PROVIDERS,
+                    items = trailingProviders,
                     key = { provider -> "aio_provider_${provider.key}" }
                 ) { provider ->
                     ProviderRow(
                         provider = provider,
                         enabled = uiState.providers[provider.key] ?: false,
-                        keyValue = uiState.providerKeys[provider.key].orEmpty(),
+                        keyValue = uiState.apiKeys[provider.key].orEmpty(),
                         isMutating = uiState.isMutating,
                         interactive = !uiState.isPrimaryProfileBlocked,
                         onToggle = { next ->
@@ -155,7 +189,7 @@ fun AioMetadataSettingsContent(
     if (dialogProvider != null) {
         AioKeyInputDialog(
             provider = dialogProvider,
-            currentValue = uiState.providerKeys[dialogProvider.key].orEmpty(),
+            currentValue = uiState.apiKeys[dialogProvider.key].orEmpty(),
             onSave = { value ->
                 viewModel.onProviderKeyChanged(dialogProvider.key, value)
                 keyDialogProvider = null
@@ -233,6 +267,18 @@ private fun PrimaryProfileBlockedBanner() {
         text = stringResource(R.string.aio_metadata_primary_profile_blocked),
         style = MaterialTheme.typography.bodyMedium,
         color = OmnioColors.Error,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp, vertical = 6.dp)
+    )
+}
+
+@Composable
+private fun KeysRequiredBanner() {
+    Text(
+        text = stringResource(R.string.aio_metadata_keys_required_warning),
+        style = MaterialTheme.typography.bodyMedium,
+        color = OmnioColors.TextSecondary,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 18.dp, vertical = 6.dp)

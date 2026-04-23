@@ -1,7 +1,10 @@
 package com.omnio.tv.data.remote.api
 
-import com.omnio.tv.data.remote.dto.aiometadata.AioConfigRequestDto
-import com.omnio.tv.data.remote.dto.aiometadata.AioConfigResponseDto
+import com.omnio.tv.data.remote.dto.aiometadata.AioConfigLoadRequestDto
+import com.omnio.tv.data.remote.dto.aiometadata.AioConfigLoadResponseDto
+import com.omnio.tv.data.remote.dto.aiometadata.AioConfigSaveRequestDto
+import com.omnio.tv.data.remote.dto.aiometadata.AioConfigSaveResponseDto
+import com.omnio.tv.data.remote.dto.aiometadata.AioConfigUpdateRequestDto
 import com.omnio.tv.data.remote.dto.aiometadata.AioTrustedResponseDto
 import retrofit2.Response
 import retrofit2.http.Body
@@ -18,19 +21,20 @@ interface AioMetadataApi {
 
     @POST("api/config/save")
     suspend fun saveConfig(
-        @Body body: AioConfigRequestDto,
-    ): Response<AioConfigResponseDto>
+        @Body body: AioConfigSaveRequestDto,
+    ): Response<AioConfigSaveResponseDto>
 
     @POST("api/config/load/{uuid}")
     suspend fun loadConfig(
         @Path("uuid") uuid: String,
-    ): Response<AioConfigResponseDto>
+        @Body body: AioConfigLoadRequestDto,
+    ): Response<AioConfigLoadResponseDto>
 
     @PUT("api/config/update/{uuid}")
     suspend fun updateConfig(
         @Path("uuid") uuid: String,
-        @Body body: AioConfigRequestDto,
-    ): Response<AioConfigResponseDto>
+        @Body body: AioConfigUpdateRequestDto,
+    ): Response<AioConfigSaveResponseDto>
 
     @GET("api/config/is-trusted/{uuid}")
     suspend fun isTrusted(

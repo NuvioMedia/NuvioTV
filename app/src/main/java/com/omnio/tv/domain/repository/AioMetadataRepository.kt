@@ -1,23 +1,24 @@
 package com.omnio.tv.domain.repository
 
-import com.omnio.tv.data.remote.dto.aiometadata.AioConfigRequestDto
-import com.omnio.tv.data.remote.dto.aiometadata.AioConfigResponseDto
+import com.omnio.tv.data.remote.dto.aiometadata.AioConfigInnerDto
 import com.omnio.tv.domain.model.AioMetadataSettings
 import kotlinx.coroutines.flow.Flow
 
 interface AioMetadataRepository {
     val settings: Flow<AioMetadataSettings>
 
-    fun cachedConfig(): AioConfigResponseDto?
+    fun cachedConfig(): AioConfigInnerDto?
 
-    suspend fun refresh(): Result<AioConfigResponseDto?>
+    suspend fun refresh(): Result<AioConfigInnerDto?>
 
-    suspend fun createConfig(request: AioConfigRequestDto): Result<String>
+    suspend fun createConfig(config: AioConfigInnerDto): Result<CreateConfigResult>
 
     suspend fun updateConfig(
         uuid: String,
-        request: AioConfigRequestDto
-    ): Result<AioConfigResponseDto>
+        config: AioConfigInnerDto,
+    ): Result<AioConfigInnerDto>
 
     suspend fun setEnabled(enabled: Boolean, manifestUrl: String): Result<Unit>
+
+    data class CreateConfigResult(val uuid: String, val manifestUrl: String)
 }

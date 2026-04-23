@@ -1,14 +1,16 @@
 package com.omnio.tv.ui.screens.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.omnio.tv.BuildConfig
+import com.omnio.tv.R
 import com.omnio.tv.core.profile.ProfileManager
-import com.omnio.tv.data.remote.dto.aiometadata.AioConfigRequestDto
-import com.omnio.tv.data.remote.dto.aiometadata.AioConfigResponseDto
+import com.omnio.tv.data.remote.dto.aiometadata.AioConfigInnerDto
 import com.omnio.tv.domain.model.AioMetadataProvider
 import com.omnio.tv.domain.repository.AioMetadataRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +25,7 @@ import javax.inject.Inject
 class AioMetadataSettingsViewModel @Inject constructor(
     private val repository: AioMetadataRepository,
     private val profileManager: ProfileManager,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     data class UiState(
@@ -32,7 +35,9 @@ class AioMetadataSettingsViewModel @Inject constructor(
         val uuid: String = "",
         val manifestUrl: String = "",
         val providers: Map<String, Boolean> = emptyMap(),
-        val providerKeys: Map<String, String> = emptyMap(),
+        val apiKeys: Map<String, String> = emptyMap(),
+        val catalogs: List<Map<String, Any?>> = emptyList(),
+        val settings: Map<String, Any?> = emptyMap(),
         val isPrimaryProfileBlocked: Boolean = false,
         val hasConfig: Boolean = false,
         val errorMessage: String? = null,
@@ -45,6 +50,11 @@ class AioMetadataSettingsViewModel @Inject constructor(
                 if (base.isBlank()) return ""
                 return "$base/configure?uuid=$uuid"
             }
+
+        /** Upstream requires both TMDB and TVDB before it will mint a UUID. */
+        val canEnable: Boolean
+            get() = apiKeys["tmdb"].orEmpty().isNotBlank() &&
+                apiKeys["tvdb"].orEmpty().isNotBlank()
     }
 
     private val _uiState = MutableStateFlow(UiState(isLoading = true))
@@ -73,7 +83,9 @@ class AioMetadataSettingsViewModel @Inject constructor(
                         isPrimaryProfileBlocked = primaryBlocked,
                         hasConfig = settings.aioUuid.isNotBlank(),
                         providers = cached?.providers ?: it.providers,
-                        providerKeys = cached?.providerKeys ?: it.providerKeys,
+                        apiKeys = cached?.apiKeys ?: it.apiKeys,
+                        catalogs = cached?.catalogs ?: it.catalogs,
+                        settings = cached?.settings ?: it.settings,
                     )
                 }
             }
@@ -93,7 +105,9 @@ class AioMetadataSettingsViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         providers = config?.providers ?: it.providers,
-                        providerKeys = config?.providerKeys ?: it.providerKeys,
+                        apiKeys = config?.apiKeys ?: it.apiKeys,
+                        catalogs = config?.catalogs ?: it.catalogs,
+                        settings = config?.settings ?: it.settings,
                         hasConfig = config != null,
                     )
                 }
@@ -112,15 +126,21 @@ class AioMetadataSettingsViewModel @Inject constructor(
         val current = _uiState.value
         if (current.isMutating || current.isPrimaryProfileBlocked) return
 
+        val target = !current.enabled
+        if (target && !current.canEnable) {
+            _uiState.update {
+                it.copy(statusMessage = appContext.getString(R.string.aio_metadata_enable_blocked_no_keys))
+            }
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isMutating = true, errorMessage = null, statusMessage = null) }
 
-            // If turning ON but no config has been created yet, create one first.
-            val target = !current.enabled
             val manifest = if (target && current.uuid.isBlank()) {
-                val createResult = repository.createConfig(emptyRequest())
-                val uuid = createResult.getOrNull()
-                if (uuid == null) {
+                val createResult = repository.createConfig(current.toInnerConfig())
+                val created = createResult.getOrNull()
+                if (created == null) {
                     _uiState.update {
                         it.copy(
                             isMutating = false,
@@ -130,7 +150,7 @@ class AioMetadataSettingsViewModel @Inject constructor(
                     }
                     return@launch
                 }
-                repository.cachedConfig()?.manifestUrl.orEmpty()
+                created.manifestUrl
             } else {
                 current.manifestUrl
             }
@@ -154,9 +174,9 @@ class AioMetadataSettingsViewModel @Inject constructor(
     fun onProviderKeyChanged(providerKey: String, value: String) {
         val trimmed = value.trim()
         mutateConfig { current ->
-            val newKeys = current.providerKeys.toMutableMap()
+            val newKeys = current.apiKeys.toMutableMap()
             if (trimmed.isBlank()) newKeys.remove(providerKey) else newKeys[providerKey] = trimmed
-            current.copy(providerKeys = newKeys)
+            current.copy(apiKeys = newKeys)
         }
     }
 
@@ -168,20 +188,34 @@ class AioMetadataSettingsViewModel @Inject constructor(
         _uiState.update { it.copy(statusMessage = null) }
     }
 
-    private inline fun mutateConfig(crossinline transform: (AioConfigRequestDto) -> AioConfigRequestDto) {
+    private inline fun mutateConfig(crossinline transform: (AioConfigInnerDto) -> AioConfigInnerDto) {
         val current = _uiState.value
         if (current.isMutating) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isMutating = true, errorMessage = null, statusMessage = null) }
 
-            val baseRequest = repository.cachedConfig()?.toRequest() ?: emptyRequest()
-            val next = transform(baseRequest)
+            val base = repository.cachedConfig() ?: current.toInnerConfig()
+            val next = transform(base)
 
-            val result = if (current.uuid.isBlank()) {
-                repository.createConfig(next).map { uuid ->
-                    repository.cachedConfig() ?: AioConfigResponseDto(uuid = uuid)
+            // First save requires both TMDB + TVDB — otherwise upstream returns 400.
+            // Edits that don't satisfy that constraint are stored in UI state only;
+            // the network call waits until the user fills both required keys.
+            if (current.uuid.isBlank() && !hasRequiredKeys(next)) {
+                _uiState.update {
+                    it.copy(
+                        isMutating = false,
+                        providers = next.providers,
+                        apiKeys = next.apiKeys,
+                        catalogs = next.catalogs,
+                        settings = next.settings,
+                    )
                 }
+                return@launch
+            }
+
+            val result: Result<AioConfigInnerDto> = if (current.uuid.isBlank()) {
+                repository.createConfig(next).map { next }
             } else {
                 repository.updateConfig(current.uuid, next)
             }
@@ -189,13 +223,12 @@ class AioMetadataSettingsViewModel @Inject constructor(
             result
                 .onSuccess { config ->
                     _uiState.update { state ->
-                        val incomingManifest = config.manifestUrl.orEmpty()
                         state.copy(
                             isMutating = false,
-                            uuid = config.uuid,
                             providers = config.providers,
-                            providerKeys = config.providerKeys,
-                            manifestUrl = incomingManifest.ifBlank { state.manifestUrl },
+                            apiKeys = config.apiKeys,
+                            catalogs = config.catalogs,
+                            settings = config.settings,
                             hasConfig = true,
                         )
                     }
@@ -204,6 +237,11 @@ class AioMetadataSettingsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isMutating = false,
+                            // Preserve the user's edit locally so they don't lose input.
+                            providers = next.providers,
+                            apiKeys = next.apiKeys,
+                            catalogs = next.catalogs,
+                            settings = next.settings,
                             errorMessage = error.message ?: "Unable to update AIOMetadata config."
                         )
                     }
@@ -211,17 +249,18 @@ class AioMetadataSettingsViewModel @Inject constructor(
         }
     }
 
+    private fun UiState.toInnerConfig() = AioConfigInnerDto(
+        providers = providers,
+        apiKeys = apiKeys,
+        catalogs = catalogs,
+        settings = settings,
+    )
+
+    private fun hasRequiredKeys(inner: AioConfigInnerDto): Boolean =
+        inner.apiKeys["tmdb"].orEmpty().isNotBlank() &&
+            inner.apiKeys["tvdb"].orEmpty().isNotBlank()
+
     companion object {
         val KNOWN_PROVIDERS: List<AioMetadataProvider> = AioMetadataProvider.entries
-
-        private fun emptyRequest(): AioConfigRequestDto = AioConfigRequestDto()
-
-        private fun AioConfigResponseDto.toRequest(): AioConfigRequestDto = AioConfigRequestDto(
-            providers = providers,
-            providerKeys = providerKeys,
-            catalogs = catalogs,
-            settings = settings,
-        )
     }
 }
-

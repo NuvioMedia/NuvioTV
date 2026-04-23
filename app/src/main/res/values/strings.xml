@@ -634,6 +634,9 @@
     <string name="aio_metadata_not_set">Not set</string>
     <string name="aio_metadata_invalid_manifest">Unable to reach your AIOMetadata addon. Check your keys or try again.</string>
     <string name="aio_metadata_primary_profile_blocked">Switch to a non-primary profile to enable AIOMetadata.</string>
+    <string name="aio_metadata_keys_required_warning">Add your TMDB and TVDB API keys below before enabling. The service needs both to mint your personal config.</string>
+    <string name="aio_metadata_keys_required_short">TMDB + TVDB keys required</string>
+    <string name="aio_metadata_enable_blocked_no_keys">Enter TMDB and TVDB API keys first.</string>
     <string name="aio_metadata_rotate_success">Token rotated.</string>
     <string name="aio_metadata_save">Save</string>
     <string name="aio_metadata_clear">Clear</string>
