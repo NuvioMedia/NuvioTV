@@ -50,7 +50,7 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
         runCatching { player.release() }
     }
     _exoPlayer = null
-    playbackSpeedAwareAudioSink = null
+    playbackSpeedAwareAudioOutputProvider = null
     resetPlaybackTimeline()
     isReleasingPlayer = false
 }

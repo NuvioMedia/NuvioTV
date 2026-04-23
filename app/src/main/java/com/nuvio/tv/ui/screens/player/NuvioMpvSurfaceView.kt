@@ -20,11 +20,6 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     private var hasQueuedInitialMedia = false
     private var lastMediaRequestKey: String? = null
     private var hardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE
-    private var currentAspectMode: AspectMode = AspectMode.ORIGINAL
-    private var pendingAspectRetryCount = 0
-    private val aspectReapplyRunnable = Runnable {
-        applyAspectModeInternal(currentAspectMode, allowRetry = true)
-    }
 
     fun ensureInitialized() {
         if (initialized) return
@@ -53,7 +48,6 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         }
         lastMediaRequestKey = requestKey
         applyDefaultTrackSelectionForNewLoad()
-        scheduleAspectModeRefresh(resetRetryCount = true)
     }
 
     fun setMediaUsingLoadfile(url: String, headers: Map<String, String>) {
@@ -69,7 +63,6 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         hasQueuedInitialMedia = true
         lastMediaRequestKey = requestKey
         applyDefaultTrackSelectionForNewLoad()
-        scheduleAspectModeRefresh(resetRetryCount = true)
     }
 
     private fun ensureSurfaceAttachedIfAlreadyAvailable() {
@@ -197,52 +190,34 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     }
 
     fun applyAspectMode(mode: AspectMode) {
-        currentAspectMode = mode
-        pendingAspectRetryCount = 0
-        removeCallbacks(aspectReapplyRunnable)
-        applyAspectModeInternal(mode, allowRetry = true)
-    }
+        when (mode) {
+            AspectMode.ORIGINAL -> {
+                scaleX = 1.0f
+                scaleY = 1.0f
+            }
 
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        if (w == oldw && h == oldh) return
-        pendingAspectRetryCount = 0
-        removeCallbacks(aspectReapplyRunnable)
-        post {
-            applyAspectModeInternal(currentAspectMode, allowRetry = true)
-        }
-    }
+            AspectMode.FULL_SCREEN -> applyCoverAspectScale()
 
-    private fun applyAspectModeInternal(mode: AspectMode, allowRetry: Boolean) {
-        val viewAspect = readViewAspectRatio(width, height)
-        val videoAspect = readVideoAspectRatio()
-        val scale = resolveAspectScale(
-            mode = mode,
-            viewAspect = viewAspect,
-            videoAspect = videoAspect
-        )
-        scaleX = scale.scaleX
-        scaleY = scale.scaleY
-        if (
-            allowRetry &&
-            aspectModeNeedsVideoAspect(mode) &&
-            (viewAspect <= 0f || videoAspect == null || videoAspect <= 0f)
-        ) {
-            scheduleAspectModeRefresh(resetRetryCount = false)
-        }
-    }
+            AspectMode.SLIGHT_ZOOM -> {
+                scaleX = 1.15f
+                scaleY = 1.15f
+            }
 
-    private fun scheduleAspectModeRefresh(resetRetryCount: Boolean) {
-        if (resetRetryCount) {
-            pendingAspectRetryCount = 0
+            AspectMode.CINEMA_ZOOM -> {
+                scaleX = 1.33f
+                scaleY = 1.33f
+            }
+
+            AspectMode.VERTICAL_STRETCH -> {
+                scaleX = 1.0f
+                scaleY = 1.33f
+            }
+
+            AspectMode.HORIZONTAL_STRETCH -> {
+                scaleX = 1.3333f
+                scaleY = 1.0f
+            }
         }
-        removeCallbacks(aspectReapplyRunnable)
-        if (pendingAspectRetryCount >= MAX_ASPECT_RETRY_COUNT) {
-            return
-        }
-        val delayMs = if (pendingAspectRetryCount == 0) 0L else ASPECT_RETRY_DELAY_MS
-        pendingAspectRetryCount += 1
-        postDelayed(aspectReapplyRunnable, delayMs)
     }
 
     fun applySubtitleStyle(style: SubtitleStyleSettings) {
@@ -465,7 +440,6 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
 
     fun releasePlayer() {
         if (!initialized) return
-        removeCallbacks(aspectReapplyRunnable)
         runCatching { destroy() }
             .onFailure { Log.w(TAG, "Failed to destroy libmpv view cleanly: ${it.message}") }
         initialized = false
@@ -587,8 +561,6 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         private const val TAG = "NuvioMpvSurfaceView"
         private const val MPV_COVER_FALLBACK_SCALE = 1.15f
         private const val MPV_MAX_VOLUME_PERCENT = 400.0
-        private const val ASPECT_RETRY_DELAY_MS = 120L
-        private const val MAX_ASPECT_RETRY_COUNT = 10
         private const val SUBTITLE_VERTICAL_OFFSET_MIN = -20
         private const val SUBTITLE_VERTICAL_OFFSET_MAX = 50
         private const val MPV_SUB_POS_AT_BOTTOM = 103.4

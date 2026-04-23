@@ -87,7 +87,6 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val initialCwResolved by viewModel.initialCwResolved.collectAsStateWithLifecycle()
-    val scrollToTopTrigger by viewModel.scrollToTopTrigger.collectAsStateWithLifecycle()
     val effectiveAutoplayEnabled by viewModel.effectiveAutoplayEnabled.collectAsStateWithLifecycle(
         initialValue = false
     )
@@ -460,12 +459,10 @@ private fun ClassicHomeRoute(
     onCatalogItemLongPress: (MetaPreview, String) -> Unit
 ) {
     val focusState by viewModel.focusState.collectAsStateWithLifecycle()
-    val scrollToTopTrigger by viewModel.scrollToTopTrigger.collectAsStateWithLifecycle()
     ClassicHomeContent(
         uiState = uiState,
         posterCardStyle = posterCardStyle,
         focusState = focusState,
-        scrollToTopTrigger = scrollToTopTrigger,
         trailerPreviewUrls = viewModel.trailerPreviewUrls,
         trailerPreviewAudioUrls = viewModel.trailerPreviewAudioUrls,
         onNavigateToDetail = onNavigateToDetail,
@@ -508,12 +505,10 @@ private fun GridHomeRoute(
     onCatalogItemLongPress: (MetaPreview, String) -> Unit
 ) {
     val gridFocusState by viewModel.gridFocusState.collectAsStateWithLifecycle()
-    val scrollToTopTrigger by viewModel.scrollToTopTrigger.collectAsStateWithLifecycle()
     GridHomeContent(
         uiState = uiState,
         posterCardStyle = posterCardStyle,
         gridFocusState = gridFocusState,
-        scrollToTopTrigger = scrollToTopTrigger,
         onNavigateToDetail = onNavigateToDetail,
         onContinueWatchingClick = onContinueWatchingClick,
         onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning,
@@ -549,7 +544,6 @@ private fun ModernHomeRoute(
     onCatalogItemLongPress: (MetaPreview, String) -> Unit
 ) {
     val focusState by viewModel.focusState.collectAsStateWithLifecycle()
-    val scrollToTopTrigger by viewModel.scrollToTopTrigger.collectAsStateWithLifecycle()
     val enrichingItemId by viewModel.enrichingItemId.collectAsStateWithLifecycle()
     val requestTrailerPreview = remember(viewModel) {
         { itemId: String, title: String, releaseInfo: String?, apiType: String ->
@@ -579,7 +573,6 @@ private fun ModernHomeRoute(
     ModernHomeContent(
         uiState = uiState,
         focusState = focusState,
-        scrollToTopTrigger = scrollToTopTrigger,
         enrichingItemId = enrichingItemId,
         trailerPreviewUrls = viewModel.trailerPreviewUrls,
         trailerPreviewAudioUrls = viewModel.trailerPreviewAudioUrls,

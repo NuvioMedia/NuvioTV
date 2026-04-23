@@ -146,8 +146,7 @@ fun ModernHomeContent(
     onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> },
     onItemFocus: (MetaPreview) -> Unit = {},
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
-    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit,
-    scrollToTopTrigger: Int = 0
+    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
 ) {
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val isSidebarExpanded = LocalSidebarExpanded.current
@@ -219,13 +218,6 @@ fun ModernHomeContent(
     )
     val isVerticalRowsScrolling by remember(verticalRowListState) {
         derivedStateOf { verticalRowListState.isScrollInProgress }
-    }
-
-    // Scroll to top when triggered from sidebar Home button.
-    LaunchedEffect(scrollToTopTrigger) {
-        if (scrollToTopTrigger > 0) {
-            verticalRowListState.scrollToItem(0, 0)
-        }
     }
 
     // Tag JankStats with key UI states so jank reports are actionable.

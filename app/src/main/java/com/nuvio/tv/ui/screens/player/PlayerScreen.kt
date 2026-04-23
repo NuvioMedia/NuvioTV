@@ -7,7 +7,6 @@ package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
 import android.view.KeyEvent
-import android.view.View
 import androidx.annotation.RawRes
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -1150,7 +1149,6 @@ private fun MpvPlayerSurface(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val latestAspectMode by rememberUpdatedState(aspectMode)
     val mpvView = remember(context) {
         NuvioMpvSurfaceView(context)
     }
@@ -1164,16 +1162,6 @@ private fun MpvPlayerSurface(
         viewModel.attachMpvView(mpvView)
         onDispose {
             viewModel.attachMpvView(null)
-        }
-    }
-
-    DisposableEffect(mpvView) {
-        val listener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            mpvView.applyAspectMode(latestAspectMode)
-        }
-        mpvView.addOnLayoutChangeListener(listener)
-        onDispose {
-            mpvView.removeOnLayoutChangeListener(listener)
         }
     }
 
@@ -1244,32 +1232,22 @@ private fun ExoPlayerSurface(
         val listener = object : androidx.media3.common.Player.Listener {
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 playerView.post {
-                    playerView.applyExoAspectMode(latestAspectMode)
+                    playerView.applyExoAspectModeIfNeeded(latestAspectMode)
                 }
             }
 
             override fun onRenderedFirstFrame() {
                 playerView.post {
-                    playerView.applyExoAspectMode(latestAspectMode)
+                    playerView.applyExoAspectModeIfNeeded(latestAspectMode)
                 }
             }
         }
         player.addListener(listener)
         playerView.post {
-            playerView.applyExoAspectMode(latestAspectMode)
+            playerView.applyExoAspectModeIfNeeded(latestAspectMode)
         }
         onDispose {
             player.removeListener(listener)
-        }
-    }
-
-    DisposableEffect(playerView) {
-        val listener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            playerView.applyExoAspectMode(latestAspectMode)
-        }
-        playerView.addOnLayoutChangeListener(listener)
-        onDispose {
-            playerView.removeOnLayoutChangeListener(listener)
         }
     }
 
@@ -1281,7 +1259,7 @@ private fun ExoPlayerSurface(
     }
 
     LaunchedEffect(playerView, aspectMode) {
-        playerView.applyExoAspectMode(aspectMode)
+        playerView.applyExoAspectModeIfNeeded(aspectMode)
     }
 
     LaunchedEffect(playerView, player, useLibass, libassRenderType) {
@@ -1305,7 +1283,10 @@ private fun PlayerView.enableComposeSurfaceSyncWorkaroundIfAvailable() {
     }
 }
 
-private fun PlayerView.applyExoAspectMode(mode: AspectMode) {
+private fun PlayerView.applyExoAspectModeIfNeeded(mode: AspectMode) {
+    if (getTag(R.id.player_view_aspect_mode_tag) == mode) {
+        return
+    }
     setTag(R.id.player_view_aspect_mode_tag, mode)
     applyExoAspectMode(this, mode)
 }

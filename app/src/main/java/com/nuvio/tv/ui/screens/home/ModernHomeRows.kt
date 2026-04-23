@@ -362,19 +362,6 @@ internal fun ModernRowSection(
                 prefetchStrategy = LazyListPrefetchStrategy(nestedPrefetchItemCount = 4)
             )
         }
-
-        // When fresh data prepends new items to a row the user hasn't
-        // scrolled, snap back to position 0 so the newest content is visible.
-        val firstItemKey = row.items.firstOrNull()?.key
-        LaunchedEffect(row.key, firstItemKey) {
-            if (firstItemKey == null) return@LaunchedEffect
-            val state = rowListState
-            // Only reset if the user hasn't scrolled at all.
-            if (state.firstVisibleItemIndex == 0 && state.firstVisibleItemScrollOffset == 0) {
-                state.scrollToItem(0)
-            }
-        }
-
         val isRowScrollingState = remember(rowListState) {
             derivedStateOf { rowListState.isScrollInProgress }
         }
@@ -645,10 +632,7 @@ internal fun ModernRowSection(
                         { onRowItemFocused(row.key, index, isContinueWatchingRow) }
                     }
                     val hasExpandedCard = expandedCatalogFocusKey != null
-                    val isCwPayload = item.payload is ModernPayload.ContinueWatching
-                    val isCollectionPayload = item.payload is ModernPayload.CollectionFolder
-                    val needsVerticalOverride = hasExpandedCard || isCwPayload || isCollectionPayload
-                    val verticalFocusModifier = if (needsVerticalOverride) {
+                    val verticalFocusModifier = if (hasExpandedCard) {
                         Modifier.focusProperties {
                             up = onGetVerticalFocusRequester(index, false)
                             down = onGetVerticalFocusRequester(index, true)

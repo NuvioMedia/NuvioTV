@@ -94,8 +94,7 @@ fun GridHomeContent(
     posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
     onItemFocus: (com.nuvio.tv.domain.model.MetaPreview) -> Unit = {},
     catalogSeeAllLabel: String? = null,
-    onSaveGridFocusState: (Int, Int, String?) -> Unit,
-    scrollToTopTrigger: Int = 0
+    onSaveGridFocusState: (Int, Int, String?) -> Unit
 ) {
     val gridState = rememberLazyGridState(
         initialFirstVisibleItemIndex = gridFocusState.verticalScrollIndex,
@@ -103,13 +102,6 @@ fun GridHomeContent(
     )
     val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     var lastFocusedGridItemKey by remember { mutableStateOf(gridFocusState.focusedItemKey) }
-
-    // Scroll to top when triggered from sidebar Home button.
-    LaunchedEffect(scrollToTopTrigger) {
-        if (scrollToTopTrigger > 0) {
-            gridState.scrollToItem(0, 0)
-        }
-    }
 
     // Save scroll state when leaving
     DisposableEffect(Unit) {

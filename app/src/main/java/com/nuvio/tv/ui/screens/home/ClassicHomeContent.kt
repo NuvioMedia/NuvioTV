@@ -21,13 +21,11 @@ import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.delay
 
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import android.view.KeyEvent as AndroidKeyEvent
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.nuvio.tv.domain.model.MetaPreview
@@ -74,8 +72,7 @@ fun ClassicHomeContent(
     onRequestTrailerPreview: (MetaPreview) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {},
     catalogSeeAllLabel: String? = null,
-    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit,
-    scrollToTopTrigger: Int = 0
+    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
 ) {
 
     // Nested prefetch: when LazyColumn prefetches a row ahead of scrolling,
@@ -88,16 +85,10 @@ fun ClassicHomeContent(
         initialFirstVisibleItemScrollOffset = focusState.verticalScrollOffset,
         prefetchStrategy = nestedPrefetchStrategy
     )
-    val isVerticalScrollingState = remember(columnListState) {
+    val isVerticalScrolling by remember(columnListState) {
         androidx.compose.runtime.derivedStateOf { columnListState.isScrollInProgress }
     }
-
-    // Scroll to top when triggered from sidebar Home button.
-    LaunchedEffect(scrollToTopTrigger) {
-        if (scrollToTopTrigger > 0) {
-            columnListState.scrollToItem(0, 0)
-        }
-    }
+    val suppressImages = uiState.memoryOnlyVerticalScroll && isVerticalScrolling
 
     LaunchedEffect(focusState.verticalScrollIndex, focusState.verticalScrollOffset) {
         val targetIndex = focusState.verticalScrollIndex
@@ -125,7 +116,6 @@ fun ClassicHomeContent(
     // Store scroll state for each row to persist position during recycling
     val rowStates = remember { mutableMapOf<String, LazyListState>() }
     val rowFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
-    val rowEntryFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
 
     var restoringFocus by remember { mutableStateOf(focusState.hasSavedFocus) }
     val heroFocusRequester = remember { FocusRequester() }
@@ -153,7 +143,6 @@ fun ClassicHomeContent(
     LaunchedEffect(visibleRowKeys) {
         rowStates.keys.retainAll(visibleRowKeys)
         rowFocusRequesters.keys.retainAll(visibleRowKeys)
-        rowEntryFocusRequesters.keys.retainAll(visibleRowKeys)
     }
 
     DisposableEffect(Unit) {
@@ -192,16 +181,8 @@ fun ClassicHomeContent(
     }
 
     // Throttle D-pad key repeats to prevent HWUI overload when a key is held down.
-    // Use a plain ref instead of mutableStateOf to avoid recomposition on every key event.
-    val lastKeyRepeatTimeRef = remember { longArrayOf(0L) }
+    var lastKeyRepeatTime by remember { mutableStateOf(0L) }
     val contentFocusRequester = LocalContentFocusRequester.current
-    val focusManager = LocalFocusManager.current
-
-    // Stabilize map references to avoid recomposing every row when a single trailer URL changes.
-    val stableTrailerPreviewUrls = remember { androidx.compose.runtime.mutableStateOf(trailerPreviewUrls) }
-        .apply { value = trailerPreviewUrls }
-    val stableTrailerPreviewAudioUrls = remember { androidx.compose.runtime.mutableStateOf(trailerPreviewAudioUrls) }
-        .apply { value = trailerPreviewAudioUrls }
 
     if (deferContentFocus) {
         // Show spinner while waiting for hero data to arrive — prevents
@@ -216,7 +197,7 @@ fun ClassicHomeContent(
     }
 
     androidx.compose.runtime.CompositionLocalProvider(
-        LocalVerticalScrollSuppressImages provides (uiState.memoryOnlyVerticalScroll && isVerticalScrollingState.value)
+        LocalVerticalScrollSuppressImages provides suppressImages
     ) {
     LazyColumn(
         state = columnListState,
@@ -226,32 +207,12 @@ fun ClassicHomeContent(
             .focusRestorer()
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
-                if (native.action == AndroidKeyEvent.ACTION_DOWN &&
-                    native.repeatCount > 0 &&
-                    (native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_DOWN ||
-                        native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_UP ||
-                        native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_LEFT ||
-                        native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_RIGHT)
-                ) {
-                    val isVertical = native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_DOWN ||
-                        native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_UP
-                    val gateMs = if (isVertical) 112L else KEY_REPEAT_THROTTLE_MS
-                    val now = android.os.SystemClock.uptimeMillis()
-                    if (now - lastKeyRepeatTimeRef[0] < gateMs) {
+                if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {
+                    val now = System.currentTimeMillis()
+                    if (now - lastKeyRepeatTime < KEY_REPEAT_THROTTLE_MS) {
                         return@onPreviewKeyEvent true // consume — too fast
                     }
-                    lastKeyRepeatTimeRef[0] = now
-                    val direction = when (native.keyCode) {
-                        AndroidKeyEvent.KEYCODE_DPAD_DOWN -> FocusDirection.Down
-                        AndroidKeyEvent.KEYCODE_DPAD_UP -> FocusDirection.Up
-                        AndroidKeyEvent.KEYCODE_DPAD_LEFT -> FocusDirection.Left
-                        AndroidKeyEvent.KEYCODE_DPAD_RIGHT -> FocusDirection.Right
-                        else -> null
-                    }
-                    if (direction != null) {
-                        focusManager.moveFocus(direction)
-                    }
-                    return@onPreviewKeyEvent true
+                    lastKeyRepeatTime = now
                 }
                 false
             },
@@ -277,13 +238,6 @@ fun ClassicHomeContent(
 
         if (uiState.continueWatchingItems.isNotEmpty()) {
             item(key = "continue_watching", contentType = "continue_watching") {
-                val firstRowKey = visibleHomeRows.firstOrNull()?.let { row ->
-                    when (row) {
-                        is HomeRow.Catalog -> "${row.row.addonId}_${row.row.apiType}_${row.row.catalogId}"
-                        is HomeRow.CollectionRow -> "collection_${row.collection.id}"
-                    }
-                }
-                val cwDownRequester = firstRowKey?.let { rowEntryFocusRequesters.getOrPut(it) { FocusRequester() } }
                 ContinueWatchingSection(
                     items = uiState.continueWatchingItems,
                     onItemClick = { item ->
@@ -330,8 +284,7 @@ fun ClassicHomeContent(
                         currentFocusSnapshot.rowIndex = -1
                         currentFocusSnapshot.itemIndex = itemIndex
                     },
-                    blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes,
-                    downFocusRequester = cwDownRequester
+                    blurUnwatchedEpisodes = uiState.blurUnwatchedEpisodes
                 )
             }
         }
@@ -351,23 +304,6 @@ fun ClassicHomeContent(
                 }
             }
         ) { index, homeRow ->
-            val nextRowKey = visibleHomeRows.getOrNull(index + 1)?.let { r ->
-                when (r) {
-                    is HomeRow.Catalog -> "${r.row.addonId}_${r.row.apiType}_${r.row.catalogId}"
-                    is HomeRow.CollectionRow -> "collection_${r.collection.id}"
-                }
-            }
-            val prevRowKey = visibleHomeRows.getOrNull(index - 1)?.let { r ->
-                when (r) {
-                    is HomeRow.Catalog -> "${r.row.addonId}_${r.row.apiType}_${r.row.catalogId}"
-                    is HomeRow.CollectionRow -> "collection_${r.collection.id}"
-                }
-            }
-            val rowDownFocusRequester = nextRowKey?.let { rowFocusRequesters.getOrPut(it) { FocusRequester() } }
-            val rowUpFocusRequester = prevRowKey?.let { rowFocusRequesters.getOrPut(it) { FocusRequester() } }
-            val nextEntryRequester = nextRowKey?.let { rowEntryFocusRequesters.getOrPut(it) { FocusRequester() } }
-            val prevEntryRequester = prevRowKey?.let { rowEntryFocusRequesters.getOrPut(it) { FocusRequester() } }
-
             when (homeRow) {
                 is HomeRow.Catalog -> {
                     val catalogRow = homeRow.row
@@ -403,8 +339,8 @@ fun ClassicHomeContent(
                         focusedPosterBackdropExpandDelaySeconds = uiState.focusedPosterBackdropExpandDelaySeconds,
                         focusedPosterBackdropTrailerEnabled = uiState.focusedPosterBackdropTrailerEnabled,
                         focusedPosterBackdropTrailerMuted = uiState.focusedPosterBackdropTrailerMuted,
-                        trailerPreviewUrls = stableTrailerPreviewUrls.value,
-                        trailerPreviewAudioUrls = stableTrailerPreviewAudioUrls.value,
+                        trailerPreviewUrls = trailerPreviewUrls,
+                        trailerPreviewAudioUrls = trailerPreviewAudioUrls,
                         onRequestTrailerPreview = onRequestTrailerPreview,
                         onItemFocus = onItemFocus,
                         isItemWatched = isCatalogItemWatched,
@@ -421,14 +357,9 @@ fun ClassicHomeContent(
                             )
                         },
                         rowFocusRequester = rowFocusRequester,
-                        entryFocusRequester = rowEntryFocusRequesters.getOrPut(catalogKey) { FocusRequester() },
                         listState = listState,
                         enableRowFocusRestorer = true,
                         focusedItemIndex = focusedItemIndex,
-                        downRowFocusRequester = rowDownFocusRequester,
-                        upRowFocusRequester = rowUpFocusRequester,
-                        downEntryFocusRequester = nextEntryRequester,
-                        upEntryFocusRequester = prevEntryRequester,
                         onItemFocused = { itemIndex ->
                             if (restoringFocus) restoringFocus = false
                             currentFocusSnapshot.rowIndex = index
@@ -459,9 +390,6 @@ fun ClassicHomeContent(
                         onFolderClick = onNavigateToFolderDetail,
                         listState = listState,
                         focusedItemIndex = collectionFocusedItemIndex,
-                        entryFocusRequester = rowEntryFocusRequesters.getOrPut(collectionKey) { FocusRequester() },
-                        downEntryFocusRequester = nextEntryRequester,
-                        upEntryFocusRequester = prevEntryRequester,
                         onItemFocused = { itemIndex ->
                             if (restoringFocus) restoringFocus = false
                             currentFocusSnapshot.rowIndex = index

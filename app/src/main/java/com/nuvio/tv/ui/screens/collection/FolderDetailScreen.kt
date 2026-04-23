@@ -631,8 +631,8 @@ private fun FollowLayoutContent(
             uiState = homeState,
             posterCardStyle = posterCardStyle,
             focusState = focusState,
-            trailerPreviewUrls = trailerPreviewUrls,
-            trailerPreviewAudioUrls = trailerPreviewAudioUrls,
+            trailerPreviewUrls = emptyMap(),
+            trailerPreviewAudioUrls = emptyMap(),
             onNavigateToDetail = onNavigateToDetail,
             onContinueWatchingClick = noOpCwClick,
             onNavigateToCatalogSeeAll = onLoadMoreCatalog,
@@ -640,9 +640,7 @@ private fun FollowLayoutContent(
             onRemoveContinueWatching = noOpRemoveCw,
             isCatalogItemWatched = isItemWatched,
             catalogSeeAllLabel = loadMoreLabel,
-            onRequestTrailerPreview = { item ->
-                onRequestTrailerPreview(item.id, item.name, item.releaseInfo, item.apiType)
-            },
+            onRequestTrailerPreview = { },
             onSaveFocusState = onSaveFocusState
         )
         HomeLayout.GRID -> GridHomeContent(
