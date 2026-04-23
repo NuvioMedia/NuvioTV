@@ -20,38 +20,80 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.MetaTrailer
+import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.theme.NuvioColors
 
+private data class TrailerListItem(
+    val trailer: MetaTrailer,
+    val preview: MetaPreview
+)
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun CollectionSection(
-    items: List<MetaPreview>,
-    title: String? = null,
+fun TrailerSection(
+    trailers: List<MetaTrailer>,
     upFocusRequester: FocusRequester? = null,
     sectionFocusRequester: FocusRequester? = null,
-    restoreItemId: String? = null,
+    restoreTrailerId: String? = null,
     restoreFocusToken: Int = 0,
     onRestoreFocusHandled: () -> Unit = {},
-    onItemFocused: (MetaPreview) -> Unit = {},
-    onItemClick: (MetaPreview) -> Unit
+    onTrailerFocused: (MetaTrailer) -> Unit = {},
+    onTrailerClick: (MetaTrailer) -> Unit
 ) {
-    if (items.isEmpty()) return
+    if (trailers.isEmpty()) return
+
+    val trailerItems = remember(trailers) {
+        trailers.mapNotNull { trailer ->
+            val ytId = trailer.ytId?.trim().orEmpty()
+            if (ytId.isBlank()) return@mapNotNull null
+            val title = trailer.name?.takeIf { it.isNotBlank() }
+                ?: trailer.type?.takeIf { it.isNotBlank() }
+                ?: "Trailer"
+            val subtitle = buildList {
+                trailer.type?.takeIf { it.isNotBlank() }?.let(::add)
+                trailer.lang?.takeIf { it.isNotBlank() }?.uppercase()?.let(::add)
+            }.joinToString(" • ")
+
+            TrailerListItem(
+                trailer = trailer,
+                preview = MetaPreview(
+                    id = ytId,
+                    type = ContentType.MOVIE,
+                    name = title,
+                    poster = "https://img.youtube.com/vi/$ytId/hqdefault.jpg",
+                    posterShape = PosterShape.LANDSCAPE,
+                    background = null,
+                    logo = null,
+                    description = null,
+                    releaseInfo = subtitle.ifBlank { null },
+                    imdbRating = null,
+                    genres = emptyList(),
+                    trailerYtIds = listOf(ytId),
+                    trailers = listOf(trailer)
+                )
+            )
+        }
+    }
+
+    if (trailerItems.isEmpty()) return
 
     val firstItemFocusRequester = remember { FocusRequester() }
     val restoreFocusRequester = remember { FocusRequester() }
     val itemFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
 
-    LaunchedEffect(items) {
-        val validIds = items.mapTo(mutableSetOf()) { it.id }
+    LaunchedEffect(trailerItems) {
+        val validIds = trailerItems.mapTo(mutableSetOf()) { it.preview.id }
         itemFocusRequesters.keys.retainAll(validIds)
     }
 
-    LaunchedEffect(restoreFocusToken, restoreItemId, items) {
-        if (restoreFocusToken <= 0 || restoreItemId.isNullOrBlank()) return@LaunchedEffect
-        if (items.none { it.id == restoreItemId }) return@LaunchedEffect
+    LaunchedEffect(restoreFocusToken, restoreTrailerId, trailerItems) {
+        if (restoreFocusToken <= 0 || restoreTrailerId.isNullOrBlank()) return@LaunchedEffect
+        if (trailerItems.none { it.preview.id == restoreTrailerId }) return@LaunchedEffect
         restoreFocusRequester.requestFocusAfterFrames()
     }
 
@@ -68,17 +110,8 @@ fun CollectionSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = if (title.isNullOrBlank()) 8.dp else 20.dp, bottom = 8.dp)
+            .padding(top = 8.dp, bottom = 8.dp)
     ) {
-        if (!title.isNullOrBlank()) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                color = NuvioColors.TextPrimary,
-                modifier = Modifier
-                    .padding(start = 48.dp, end = 48.dp, bottom = 8.dp)
-            )
-        }
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
@@ -88,37 +121,40 @@ fun CollectionSection(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             itemsIndexed(
-                items = items,
-                key = { index, item -> item.id + "|" + item.name + "|" + index }
+                items = trailerItems,
+                key = { index, item -> item.preview.id + "|" + item.preview.name + "|" + index }
             ) { index, item ->
-                val isRestoreTarget = item.id == restoreItemId
+                val isRestoreTarget = item.preview.id == restoreTrailerId
                 val isFirstItem = index == 0
                 val focusRequester = when {
                     isRestoreTarget -> restoreFocusRequester
                     isFirstItem -> firstItemFocusRequester
-                    else -> remember(item.id) { itemFocusRequesters.getOrPut(item.id) { FocusRequester() } }
+                    else -> remember(item.preview.id) {
+                        itemFocusRequesters.getOrPut(item.preview.id) { FocusRequester() }
+                    }
                 }
 
                 Column {
                     GridContentCard(
-                        item = item,
-                        onClick = { onItemClick(item) },
+                        item = item.preview,
+                        onClick = { onTrailerClick(item.trailer) },
                         posterCardStyle = landscapeStyle,
                         showLabel = true,
                         imageCrossfade = true,
                         focusRequester = focusRequester,
                         upFocusRequester = upFocusRequester,
                         onFocused = {
-                            onItemFocused(item)
+                            onTrailerFocused(item.trailer)
                             if (isRestoreTarget && restoreFocusToken > 0) {
                                 onRestoreFocusHandled()
                             }
                         }
                     )
-                    val year = item.releaseInfo
-                    if (!year.isNullOrBlank()) {
+
+                    val subtitle = item.preview.releaseInfo
+                    if (!subtitle.isNullOrBlank()) {
                         Text(
-                            text = year,
+                            text = subtitle,
                             style = MaterialTheme.typography.bodySmall,
                             color = NuvioColors.TextTertiary,
                             maxLines = 1,

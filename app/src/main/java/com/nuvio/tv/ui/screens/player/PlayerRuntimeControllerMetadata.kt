@@ -150,7 +150,7 @@ private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(id: String
 
 internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boolean) {
     val normalizedType = contentType?.lowercase()
-    if (normalizedType !in listOf("series", "tv")) {
+    if (normalizedType !in listOf("series", "tv", "other")) {
         nextEpisodeVideo = null
         _uiState.update {
             it.copy(
@@ -160,6 +160,50 @@ internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boole
                 nextEpisodeAutoPlaySearching = false,
                 nextEpisodeAutoPlaySourceName = null,
                 nextEpisodeAutoPlayCountdownSec = null
+            )
+        }
+        return
+    }
+
+    // For "other" type, videos lack season/episode - resolve next by
+    // position in the video list using the current video ID.
+    if (normalizedType == "other") {
+        val currentId = currentVideoId
+        val idx = if (currentId != null) metaVideos.indexOfFirst { it.id == currentId } else -1
+        val resolvedNext = if (idx >= 0 && idx < metaVideos.size - 1) metaVideos[idx + 1] else null
+        nextEpisodeVideo = resolvedNext
+        if (resolvedNext == null) {
+            _uiState.update {
+                it.copy(
+                    nextEpisode = null,
+                    showNextEpisodeCard = false,
+                    nextEpisodeCardDismissed = false,
+                    nextEpisodeAutoPlaySearching = false,
+                    nextEpisodeAutoPlaySourceName = null,
+                    nextEpisodeAutoPlayCountdownSec = null
+                )
+            }
+            return
+        }
+        val nextInfo = NextEpisodeInfo(
+            videoId = resolvedNext.id,
+            season = resolvedNext.season ?: 1,
+            episode = resolvedNext.episode ?: (idx + 2),
+            title = resolvedNext.title,
+            thumbnail = resolvedNext.thumbnail,
+            overview = resolvedNext.overview,
+            released = resolvedNext.released,
+            hasAired = true,
+            unairedMessage = null,
+            isOtherType = true
+        )
+        _uiState.update { state ->
+            val sameEpisode = state.nextEpisode?.videoId == nextInfo.videoId
+            val shouldResetVisibility = resetVisibility || !sameEpisode
+            state.copy(
+                nextEpisode = nextInfo,
+                showNextEpisodeCard = if (shouldResetVisibility) false else state.showNextEpisodeCard,
+                nextEpisodeCardDismissed = if (shouldResetVisibility) false else state.nextEpisodeCardDismissed
             )
         }
         return

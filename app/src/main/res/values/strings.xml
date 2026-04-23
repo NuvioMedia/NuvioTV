@@ -182,6 +182,7 @@
     <string name="cast_role_writer">Writer</string>
     <string name="detail_tab_ratings">Ratings</string>
     <string name="detail_tab_more_like_this">More like this</string>
+    <string name="detail_tab_trailer">Trailer</string>
     <string name="detail_more_like_this_powered_by_tmdb">Powered by TMDB</string>
     <string name="detail_more_like_this_powered_by_trakt">Powered by Trakt</string>
     <string name="detail_comments_title">Comments</string>
@@ -190,6 +191,8 @@
     <string name="detail_section_production">Production</string>
     <string name="detail_comments_empty">No Trakt reviews available yet.</string>
     <string name="detail_comments_error">Couldn\'t load Trakt reviews right now.</string>
+    <string name="detail_trailer_loading">Loading trailer...</string>
+    <string name="detail_trailer_error">Couldn\'t load trailer right now.</string>
     <string name="detail_comments_spoiler_hidden">Spoiler review. Press OK to reveal.</string>
     <string name="detail_comments_reveal_spoiler">Reveal spoiler</string>
     <string name="detail_comments_reveal_spoiler_hint">Press OK to reveal spoiler.</string>
@@ -691,6 +694,8 @@
     <string name="tmdb_networks_subtitle">Networks with logos from TMDB</string>
     <string name="tmdb_episodes_title">Episodes</string>
     <string name="tmdb_episodes_subtitle">Episode titles, overviews, thumbnails, and runtime from TMDB</string>
+    <string name="tmdb_trailers_title">Trailers</string>
+    <string name="tmdb_trailers_subtitle">Trailer candidates from TMDB videos for the detail trailer section</string>
     <string name="tmdb_more_like_this_title">More Like This</string>
     <string name="tmdb_more_like_this_subtitle">TMDB recommendation backdrops on detail page</string>
     <string name="tmdb_collections_title">Collections</string>
@@ -722,6 +727,14 @@
     <string name="trakt_watch_progress_dialog_subtitle">Choose whether resume and continue watching should use Trakt or Nuvio Sync while Trakt scrobbling stays active.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_library_source_title">Library Source</string>
+    <string name="trakt_library_source_subtitle">Choose which library to use for saving and viewing your collection</string>
+    <string name="trakt_library_source_dialog_title">Library Source</string>
+    <string name="trakt_library_source_dialog_subtitle">Choose where to save and manage your library items</string>
+    <string name="trakt_library_source_trakt">Trakt</string>
+    <string name="trakt_library_source_nuvio">Nuvio Library</string>
+    <string name="trakt_library_source_trakt_selected">Trakt library selected</string>
+    <string name="trakt_library_source_nuvio_selected">Nuvio library selected</string>
     <string name="trakt_setting_on">On</string>
     <string name="trakt_setting_off">Off</string>
     <string name="trakt_watch_progress_trakt_selected">Watch progress source set to Trakt</string>
@@ -952,6 +965,8 @@
     <string name="parental_severity_mild">Mild</string>
     <string name="player_ends_at">Ends at %1$s</string>
     <string name="player_via">via %1$s</string>
+    <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
+    <string name="season_episode_format">S%1$02dE%2$02d</string>
     <string name="player_subtitle_delay">Subtitles Delay</string>
     <string name="player_error_title">Playback Error</string>
     <string name="player_go_back">Go Back</string>
@@ -1160,6 +1175,8 @@
     <string name="library_empty_trakt_title">No %1$s in this list</string>
     <string name="library_empty_local_subtitle">Start saving your favorites to see them here</string>
     <string name="library_empty_trakt_subtitle">Use + in details to add items to watchlist or lists</string>
+    <string name="library_empty_trakt_not_auth_title">Trakt not connected</string>
+    <string name="library_empty_trakt_not_auth_subtitle">Connect your Trakt account in Settings to view your Trakt library</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Loading\u2026</string>

@@ -11,6 +11,7 @@ import com.nuvio.tv.data.remote.api.TmdbImagesResponse
 import com.nuvio.tv.data.remote.api.TmdbMovieReleaseDatesResponse
 import com.nuvio.tv.data.remote.api.TmdbNetwork
 import com.nuvio.tv.data.remote.api.TmdbNetworkDetailsResponse
+import com.nuvio.tv.data.remote.api.TmdbVideosResponse
 import com.nuvio.tv.domain.model.ContentType
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -18,8 +19,9 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -47,6 +49,7 @@ class TmdbMetadataServiceTest {
         coEvery { api.getMovieCredits(any(), any(), any()) } returns Response.success(TmdbCreditsResponse())
         coEvery { api.getMovieImages(any(), any(), any()) } returns Response.success(TmdbImagesResponse())
         coEvery { api.getMovieReleaseDates(any(), any()) } returns Response.success(TmdbMovieReleaseDatesResponse())
+        coEvery { api.getMovieVideos(any(), any(), any()) } returns Response.success(TmdbVideosResponse(id = 10))
 
         val service = TmdbMetadataService(api)
 
@@ -73,7 +76,7 @@ class TmdbMetadataServiceTest {
         coEvery { api.getMovieDetails(any(), any(), any()) } coAnswers {
             detailsCalls += 1
             gate.await()
-            Response.success(TmdbDetailsResponse(id = 10, title = "Movie"))
+            Response.success(TmdbDetailsResponse(id = 10, title = "Movie", overview = "Synopsis"))
         }
         coEvery { api.getMovieCredits(any(), any(), any()) } coAnswers {
             creditsCalls += 1
@@ -87,13 +90,14 @@ class TmdbMetadataServiceTest {
             releaseCalls += 1
             Response.success(TmdbMovieReleaseDatesResponse())
         }
+        coEvery { api.getMovieVideos(any(), any(), any()) } returns Response.success(TmdbVideosResponse(id = 10))
 
-        val service = TmdbMetadataService(api)
+        val service = TmdbMetadataService(api, StandardTestDispatcher(testScheduler))
 
         val first = async { service.fetchEnrichment(tmdbId = "10", contentType = ContentType.MOVIE, language = "en") }
         val second = async { service.fetchEnrichment(tmdbId = "10", contentType = ContentType.MOVIE, language = "en") }
 
-        yield()
+        advanceUntilIdle()
         assertEquals(1, detailsCalls)
 
         gate.complete(Unit)

@@ -203,6 +203,20 @@ fun TmdbSettingsContent(
                     )
                 }
 
+                item(key = "tmdb_trailers") {
+                    SettingsToggleRow(
+                        title = stringResource(R.string.tmdb_trailers_title),
+                        subtitle = stringResource(R.string.tmdb_trailers_subtitle),
+                        checked = uiState.useTrailers,
+                        enabled = uiState.enabled,
+                        onToggle = {
+                            viewModel.onEvent(
+                                TmdbSettingsEvent.ToggleTrailers(!uiState.useTrailers)
+                            )
+                        }
+                    )
+                }
+
                 item(key = "tmdb_more_like_this") {
                     SettingsToggleRow(
                         title = stringResource(R.string.tmdb_more_like_this_title),

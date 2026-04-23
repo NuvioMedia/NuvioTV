@@ -182,6 +182,7 @@
     <string name="cast_role_writer">Roteiro</string>
     <string name="detail_tab_ratings">Avaliações</string>
     <string name="detail_tab_more_like_this">Recomendações</string>
+    <string name="detail_tab_trailer">Trailer</string>
     <string name="detail_more_like_this_powered_by_tmdb">Fonte: TMDB</string>
     <string name="detail_more_like_this_powered_by_trakt">Fonte: Trakt</string>
     <string name="detail_comments_title">Comentários</string>
@@ -190,6 +191,8 @@
     <string name="detail_section_production">Produção</string>
     <string name="detail_comments_empty">Nenhuma avaliação disponível no Trakt.</string>
     <string name="detail_comments_error">Não foi possível carregar avaliações do Trakt agora.</string>
+    <string name="detail_trailer_loading">Carregando trailer...</string>
+    <string name="detail_trailer_error">Não foi possível carregar o trailer agora.</string>
     <string name="detail_comments_spoiler_hidden">Comentário com spoiler. Pressione OK para revelar.</string>
     <string name="detail_comments_reveal_spoiler">Revelar spoiler</string>
     <string name="detail_comments_reveal_spoiler_hint">Pressione OK para revelar spoiler.</string>
@@ -206,6 +209,7 @@
     <string name="tmdb_entity_empty_title">Nenhum título encontrado</string>
     <string name="tmdb_entity_empty_subtitle">O TMDB não possui títulos disponíveis para esta seleção.</string>
     <string name="episodes_unavailable">Indisponível</string>
+    <!-- Status labels for series (some languages need gendered forms) -->
     <string name="series_status_ended">Encerrada</string>
     <string name="series_status_continuing">Em andamento</string>
     <string name="series_status_current">Em exibição</string>
@@ -215,10 +219,11 @@
     <string name="series_status_rumored">Rumores</string>
     <string name="series_status_in_production">Em produção</string>
     <string name="series_status_post_production">Pós-produção</string>
-    <string name="movie_status_ended">Encerrada</string>
+     <!-- Status labels for movies (allows gendered translations in languages that need it) -->
+    <string name="movie_status_ended">Encerrado</string>
     <string name="movie_status_continuing">Continua</string>
-    <string name="movie_status_current">Em exibição</string>
-    <string name="movie_status_cancelled">Cancelada</string>
+    <string name="movie_status_current">Em andamento</string>
+    <string name="movie_status_cancelled">Cancelado</string>
     <string name="movie_status_released">Lançado</string>
     <string name="movie_status_planned">Planejado</string>
     <string name="movie_status_rumored">Rumores</string>
@@ -357,7 +362,7 @@
     <string name="playback_player_internal">Interno</string>
     <string name="playback_player_external">Externo</string>
     <string name="playback_player_ask">Sempre perguntar</string>
-    <string name="playback_internal_player_engine">Motor Interno</string>
+    <string name="playback_internal_player_engine">Player Interno</string>
     <string name="playback_engine_exoplayer">ExoPlayer</string>
     <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Alternar motor em erro inicial</string>
@@ -378,6 +383,8 @@
     <string name="playback_resolution_matching_sub">Sincronizar tela com vídeo</string>
     <string name="playback_player_external_desc">Abrir vídeos em app externo</string>
     <string name="playback_player_ask_desc">Escolher player sempre</string>
+    <string name="playback_player_auto">Automático (Melhor para conteúdo)</string>
+    <string name="playback_player_auto_desc">ExoPlayer: Filmes/Séries · MPV: Animes</string>
     <string name="playback_engine_exoplayer_desc">Compatível com recursos atuais do Nuvio</string>
     <string name="playback_engine_mvplayer_desc">Usa libmpv com OSD do Nuvio (Experimental)</string>
 
@@ -667,6 +674,8 @@
     <string name="tmdb_networks_subtitle">Logos de emissoras do TMDB</string>
     <string name="tmdb_episodes_title">Episódios</string>
     <string name="tmdb_episodes_subtitle">Títulos, sinopses, imagens e duração dos episódios</string>
+    <string name="tmdb_trailers_title">Trailers</string>
+    <string name="tmdb_trailers_subtitle">Opções de trailers do TMDB para a seção de detalhes</string>
     <string name="tmdb_more_like_this_title">Recomendações</string>
     <string name="tmdb_more_like_this_subtitle">Sugestões do TMDB com planos de fundo na página de detalhes</string>
     <string name="tmdb_collections_title">Coleções</string>
@@ -698,6 +707,14 @@
     <string name="trakt_watch_progress_dialog_subtitle">Escolha se o progresso deve usar o Trakt ou o Nuvio Sync (o scrobble do Trakt continuará ativo).</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_library_source_title">Fonte para Biblioteca</string>
+    <string name="trakt_library_source_subtitle">Escolha qual fonte usar para salvar e ver sua coleção</string>
+    <string name="trakt_library_source_dialog_title">Fonte para Biblioteca</string>
+    <string name="trakt_library_source_dialog_subtitle">Escolha onde salvar e gerenciar os itens da sua biblioteca</string>
+    <string name="trakt_library_source_trakt">Trakt</string>
+    <string name="trakt_library_source_nuvio">Nuvio</string>
+    <string name="trakt_library_source_trakt_selected">Biblioteca Trakt selecionada</string>
+    <string name="trakt_library_source_nuvio_selected">Biblioteca Nuvio selecionada</string>
     <string name="trakt_setting_on">Ativado</string>
     <string name="trakt_setting_off">Desativado</string>
     <string name="trakt_watch_progress_trakt_selected">Fonte de progresso definida para Trakt</string>
@@ -826,6 +843,8 @@
     <string name="profile_pin_overlay_remove_verify_kicker">Verificação de segurança necessária.</string>
     <string name="profile_pin_overlay_remove_verify_heading">Insira o PIN atual para remover o bloqueio.</string>
     <string name="profile_pin_overlay_remove_verify_support">Digite o PIN atual para desativar esta proteção.</string>
+    <string name="profile_pin_overlay_delete_verify_heading">Digite o PIN atual para excluir %1$s.</string>
+    <string name="profile_pin_overlay_delete_verify_support">Digite o PIN de 4 dígitos antes de excluir este perfil.</string>
     <string name="profile_pin_overlay_set_support">Este PIN será solicitado sempre que abrir este perfil.</string>
     <string name="profile_pin_overlay_confirm_support">Digite os mesmos 4 dígitos novamente para finalizar.</string>
     <string name="profile_pin_overlay_mismatch">Os PINs não coincidem. Tente novamente.</string>
@@ -907,11 +926,11 @@
     <string name="player_loading_building">Construindo player…</string>
     <string name="player_loading_starting">Iniciando vídeo…</string>
     <string name="player_loading_buffering">Bufferizando…</string>
-    <string name="player_loading_fallback_pcm_audio">Falha ao iniciar faixa de áudio - alternando para PCM…</string>
-    <string name="player_loading_fallback_hevc_decoder">Falha ao iniciar decodificador - alternando para HEVC…</string>
-    <string name="player_engine_switching_title">Alternando motor do player</string>
-    <string name="player_engine_switching_message">Falha na inicialização. Alternando para %1$s…</string>
-    <string name="player_engine_switching_manual_message">Alternando para %1$s…</string>
+    <string name="player_loading_fallback_pcm_audio">Falha ao iniciar faixa de áudio - mudando para PCM…</string>
+    <string name="player_loading_fallback_hevc_decoder">Falha ao iniciar decodificador - mudando para HEVC…</string>
+    <string name="player_engine_switching_title">Mudando o player</string>
+    <string name="player_engine_switching_message">Falha na inicialização. Mudando para %1$s…</string>
+    <string name="player_engine_switching_manual_message">Mudando para %1$s…</string>
     <string name="playback_show_loading_status">Exibir status de carregamento</string>
     <string name="playback_show_loading_status_sub">Mostrar progresso passo a passo ao iniciar o player</string>
     
@@ -926,6 +945,8 @@
     <string name="parental_severity_mild">Leve</string>
     <string name="player_ends_at">Termina às %1$s</string>
     <string name="player_via"> %1$s</string>
+    <!-- Código de temporada/episódio mostrado na interface do player (ex.: T01E02). %1$d = temporada, %2$d = episódio. -->
+    <string name="season_episode_format">T%1$02dE%2$02d</string>
     <string name="player_subtitle_delay">Atraso da legenda</string>
     <string name="player_error_title">Erro de Reprodução</string>
     <string name="player_go_back">Voltar</string>
@@ -954,6 +975,7 @@
     <string name="stream_info_source">Fonte</string>
     <string name="stream_info_subtitle_source_addon">Extensão</string>
     <string name="stream_info_subtitle_source_embedded">Embutida</string>
+    <string name="stream_info_player_engine">Player</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Fontes</string>
@@ -1132,6 +1154,8 @@
     <string name="library_empty_trakt_title">Nenhum %1$s nesta lista</string>
     <string name="library_empty_local_subtitle">Comece a salvar seus favoritos para vê-los aqui</string>
     <string name="library_empty_trakt_subtitle">Use "+" nos detalhes para adicionar itens à biblioteca ou outras listas</string>
+    <string name="library_empty_trakt_not_auth_title">Trakt não conectado</string>
+    <string name="library_empty_trakt_not_auth_subtitle">Conecte sua conta Trakt em Configurações para ver sua biblioteca</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Carregando\u2026</string>
@@ -1325,6 +1349,7 @@
     <string name="profile_pin_invalid">PIN inválido. Tente novamente.</string>
     <string name="profile_pin_verify_error">Não foi possível verificar o PIN. Tente novamente.</string>
     <string name="profile_pin_incorrect">O PIN atual está incorreto.</string>
+    <string name="profile_pin_current_required">Este perfil já possui um PIN. Digite o PIN atual para alterá-lo.</string>
 
     <!-- Account Screen -->
     <string name="account_signin_create_title">Entrar / Criar Conta</string>

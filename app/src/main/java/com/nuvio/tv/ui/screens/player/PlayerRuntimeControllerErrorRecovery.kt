@@ -308,6 +308,9 @@ internal fun PlayerRuntimeController.tryAudioTrackPcmFallback(
     val currentSpeed = _uiState.value.playbackSpeed
     val pcmSpeed = if (currentSpeed == 1f) 1.00001f else currentSpeed
     player.playbackParameters = PlaybackParameters(pcmSpeed)
+    player.trackSelectionParameters = player.trackSelectionParameters
+        .buildUpon()
+        .build()
 
     if (savedPosition > 0L) {
         player.seekTo(savedPosition)

@@ -4,7 +4,6 @@ import android.util.Log
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.LibraryPreferences
-import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.remote.supabase.SupabaseLibraryItem
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.model.SavedLibraryItem
@@ -28,7 +27,6 @@ class LibrarySyncService @Inject constructor(
     private val authManager: AuthManager,
     private val postgrest: Postgrest,
     private val libraryPreferences: LibraryPreferences,
-    private val traktAuthDataStore: TraktAuthDataStore,
     private val profileManager: ProfileManager
 ) {
     private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
@@ -42,13 +40,12 @@ class LibrarySyncService @Inject constructor(
 
     suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            if (traktAuthDataStore.isAuthenticated.first()) {
-                Log.d(TAG, "Trakt connected, skipping library push")
+            val items = libraryPreferences.getAllItems()
+            
+            // Nothing to sync
+            if (items.isEmpty()) {
                 return@withContext Result.success(Unit)
             }
-
-            val items = libraryPreferences.getAllItems()
-            Log.d(TAG, "pushToRemote: ${items.size} local library items to push")
 
             val profileId = profileManager.activeProfileId.value
             val params = buildJsonObject {
@@ -88,11 +85,6 @@ class LibrarySyncService @Inject constructor(
 
     suspend fun pullFromRemote(): Result<List<SavedLibraryItem>> = withContext(Dispatchers.IO) {
         try {
-            if (traktAuthDataStore.isAuthenticated.first()) {
-                Log.d(TAG, "Trakt connected, skipping library pull")
-                return@withContext Result.success(emptyList())
-            }
-
             val profileId = profileManager.activeProfileId.value
             val allItems = mutableListOf<SupabaseLibraryItem>()
             var offset = 0

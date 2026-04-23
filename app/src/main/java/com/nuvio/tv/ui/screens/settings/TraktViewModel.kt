@@ -15,6 +15,7 @@ import com.nuvio.tv.data.local.WatchedSeriesStateHolder
 import com.nuvio.tv.data.repository.TraktAuthService
 import com.nuvio.tv.data.repository.TraktProgressService
 import com.nuvio.tv.data.repository.TraktTokenPollResult
+import com.nuvio.tv.domain.model.LibrarySourceMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -49,6 +50,7 @@ data class TraktUiState(
     val showUnairedNextUp: Boolean = TraktSettingsDataStore.DEFAULT_SHOW_UNAIRED_NEXT_UP,
     val showMetaComments: Boolean = TraktSettingsDataStore.DEFAULT_SHOW_META_COMMENTS,
     val watchProgressSource: WatchProgressSource = TraktSettingsDataStore.DEFAULT_WATCH_PROGRESS_SOURCE,
+    val librarySourceMode: LibrarySourceMode = TraktSettingsDataStore.DEFAULT_LIBRARY_SOURCE_MODE,
     val connectedStats: TraktProgressService.TraktCachedStats? = null,
     val statusMessage: String? = null,
     val errorMessage: String? = null
@@ -148,6 +150,22 @@ class TraktViewModel @Inject constructor(
                         context.getString(R.string.trakt_watch_progress_trakt_selected)
                     } else {
                         context.getString(R.string.trakt_watch_progress_nuvio_selected)
+                    }
+                )
+            }
+        }
+    }
+
+    fun onLibrarySourceModeSelected(mode: LibrarySourceMode) {
+        viewModelScope.launch {
+            traktSettingsDataStore.setLibrarySourceMode(mode)
+            _uiState.update {
+                it.copy(
+                    librarySourceMode = mode,
+                    statusMessage = if (mode == LibrarySourceMode.TRAKT) {
+                        context.getString(R.string.trakt_library_source_trakt_selected)
+                    } else {
+                        context.getString(R.string.trakt_library_source_nuvio_selected)
                     }
                 )
             }
@@ -259,13 +277,15 @@ class TraktViewModel @Inject constructor(
                 traktSettingsDataStore.continueWatchingDaysCap,
                 traktSettingsDataStore.showUnairedNextUp,
                 traktSettingsDataStore.showMetaComments,
-                traktSettingsDataStore.watchProgressSource
-            ) { daysCap, showUnairedNextUp, showMetaComments, watchProgressSource ->
+                traktSettingsDataStore.watchProgressSource,
+                traktSettingsDataStore.librarySourceMode
+            ) { daysCap, showUnairedNextUp, showMetaComments, watchProgressSource, librarySourceMode ->
                 SettingsSnapshot(
                     continueWatchingDaysCap = daysCap,
                     showUnairedNextUp = showUnairedNextUp,
                     showMetaComments = showMetaComments,
-                    watchProgressSource = watchProgressSource
+                    watchProgressSource = watchProgressSource,
+                    librarySourceMode = librarySourceMode
                 )
             }.collectLatest { snapshot ->
                 _uiState.update {
@@ -273,7 +293,8 @@ class TraktViewModel @Inject constructor(
                         continueWatchingDaysCap = snapshot.continueWatchingDaysCap,
                         showUnairedNextUp = snapshot.showUnairedNextUp,
                         showMetaComments = snapshot.showMetaComments,
-                        watchProgressSource = snapshot.watchProgressSource
+                        watchProgressSource = snapshot.watchProgressSource,
+                        librarySourceMode = snapshot.librarySourceMode
                     )
                 }
             }
@@ -284,7 +305,8 @@ class TraktViewModel @Inject constructor(
         val continueWatchingDaysCap: Int,
         val showUnairedNextUp: Boolean,
         val showMetaComments: Boolean,
-        val watchProgressSource: WatchProgressSource
+        val watchProgressSource: WatchProgressSource,
+        val librarySourceMode: LibrarySourceMode
     )
 
     private fun applyAuthState(authState: TraktAuthState) {

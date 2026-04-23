@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.detail
 
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.MetaTrailer
 import com.nuvio.tv.domain.model.NextToWatch
 import com.nuvio.tv.domain.model.TraktCommentReview
 import com.nuvio.tv.domain.model.Video
@@ -31,6 +32,12 @@ data class MetaDetailsUiState(
     val isTrailerLoading: Boolean = false,
     val showTrailerControls: Boolean = false,
     val hideLogoDuringTrailer: Boolean = false,
+    val isSharedTrailerOverlayVisible: Boolean = false,
+    val isSharedTrailerLoading: Boolean = false,
+    val sharedTrailerUrl: String? = null,
+    val sharedTrailerAudioUrl: String? = null,
+    val sharedTrailerErrorMessage: String? = null,
+    val selectedSharedTrailer: MetaTrailer? = null,
     val trailerButtonEnabled: Boolean = false,
     val librarySourceMode: LibrarySourceMode = LibrarySourceMode.LOCAL,
     val libraryListTabs: List<LibraryListTab> = emptyList(),
@@ -83,6 +90,9 @@ sealed class MetaDetailsEvent {
     data object OnPlayButtonFocused : MetaDetailsEvent()
     data object OnTrailerButtonClick : MetaDetailsEvent()
     data object OnTrailerEnded : MetaDetailsEvent()
+    data class OnSharedTrailerSelected(val trailer: MetaTrailer) : MetaDetailsEvent()
+    data object OnDismissSharedTrailer : MetaDetailsEvent()
+    data object OnRetrySharedTrailer : MetaDetailsEvent()
     data object OnToggleMovieWatched : MetaDetailsEvent()
     data class OnToggleEpisodeWatched(val video: Video) : MetaDetailsEvent()
     data class OnMarkSeasonWatched(val season: Int) : MetaDetailsEvent()

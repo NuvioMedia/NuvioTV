@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.network
 
 import retrofit2.Response
+import kotlinx.coroutines.CancellationException
 
 suspend fun <T> safeApiCall(apiCall: suspend () -> Response<T>): NetworkResult<T> {
     return try {
@@ -12,6 +13,8 @@ suspend fun <T> safeApiCall(apiCall: suspend () -> Response<T>): NetworkResult<T
         } else {
             NetworkResult.Error(response.message(), response.code())
         }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         NetworkResult.Error(e.message ?: "Unknown error occurred")
     }

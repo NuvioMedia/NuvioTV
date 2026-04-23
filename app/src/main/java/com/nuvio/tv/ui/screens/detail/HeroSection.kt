@@ -232,7 +232,9 @@ fun HeroContentSection(
                     ) {
                         PlayButton(
                             text = nextToWatch?.displayText ?: when {
-                                nextEpisode != null -> stringResource(R.string.hero_play_episode, nextEpisode.season ?: 0, nextEpisode.episode ?: 0)
+                                nextEpisode != null && nextEpisode.season != null && nextEpisode.episode != null ->
+                                    stringResource(R.string.hero_play_episode, nextEpisode.season, nextEpisode.episode)
+                                nextEpisode != null -> stringResource(R.string.hero_play)
                                 else -> stringResource(R.string.hero_play)
                             },
                             onClick = onPlayClick,

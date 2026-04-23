@@ -284,7 +284,13 @@ internal fun buildContinueWatchingItem(
     val heroPreview = when (item) {
         is ContinueWatchingItem.InProgress -> {
             val isSeries = isSeriesType(item.progress.contentType)
-            val episodeCode = item.progress.episodeDisplayString
+            val s = item.progress.season
+            val e = item.progress.episode
+            val episodeCode = if (s != null && e != null) {
+                context.getString(R.string.season_episode_format, s, e)
+            } else {
+                null
+            }
             val episodeTitle = item.progress.episodeTitle?.takeIf { it.isNotBlank() }?.localizeEpisodeTitle(context)
             val episodeLabel = when {
                 isSeries && episodeCode != null && episodeTitle != null -> "$episodeCode · $episodeTitle"
@@ -312,7 +318,11 @@ internal fun buildContinueWatchingItem(
             )
         }
         is ContinueWatchingItem.NextUp -> {
-            val episodeCode = "S${item.info.season}E${item.info.episode}"
+            val episodeCode = context.getString(
+                R.string.season_episode_format,
+                item.info.season,
+                item.info.episode
+            )
             val episodeTitle = item.info.episodeTitle?.takeIf { it.isNotBlank() }?.localizeEpisodeTitle(context)
             val episodeLabel = if (episodeTitle != null) "$episodeCode · $episodeTitle" else episodeCode
             HeroPreview(
@@ -370,9 +380,21 @@ internal fun buildContinueWatchingItem(
             is ContinueWatchingItem.NextUp -> item.info.name
         },
         subtitle = when (item) {
-            is ContinueWatchingItem.InProgress -> item.progress.episodeDisplayString ?: item.progress.episodeTitle
+            is ContinueWatchingItem.InProgress -> {
+                val ps = item.progress.season
+                val pe = item.progress.episode
+                if (ps != null && pe != null) {
+                    context.getString(R.string.season_episode_format, ps, pe)
+                } else {
+                    item.progress.episodeTitle
+                }
+            }
             is ContinueWatchingItem.NextUp -> {
-                val code = "S${item.info.season}E${item.info.episode}"
+                val code = context.getString(
+                    R.string.season_episode_format,
+                    item.info.season,
+                    item.info.episode
+                )
                 if (item.info.hasAired) {
                     code
                 } else {

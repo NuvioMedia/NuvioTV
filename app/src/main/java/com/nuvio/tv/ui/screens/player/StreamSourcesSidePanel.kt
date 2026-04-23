@@ -114,10 +114,19 @@ internal fun StreamSourcesSidePanel(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Current content info
+            val seasonEpisodeCode = if (uiState.currentSeason != null && uiState.currentEpisode != null) {
+                stringResource(
+                    R.string.season_episode_format,
+                    uiState.currentSeason,
+                    uiState.currentEpisode
+                )
+            } else {
+                null
+            }
             Text(
                 text = buildString {
-                    if (uiState.currentSeason != null && uiState.currentEpisode != null) {
-                        append("S${uiState.currentSeason} E${uiState.currentEpisode}")
+                    if (seasonEpisodeCode != null) {
+                        append(seasonEpisodeCode)
                         if (!uiState.currentEpisodeTitle.isNullOrBlank()) {
                             append(" • ${uiState.currentEpisodeTitle}")
                         }

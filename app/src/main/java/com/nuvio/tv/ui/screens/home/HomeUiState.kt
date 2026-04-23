@@ -16,6 +16,7 @@ data class HomeUiState(
     val catalogRows: List<CatalogRow> = emptyList(),
     val continueWatchingItems: List<ContinueWatchingItem> = emptyList(),
     val isLoading: Boolean = true,
+    val layoutPreferencesReady: Boolean = false,
     val error: String? = null,
     val selectedItemId: String? = null,
     val installedAddonsCount: Int = 0,

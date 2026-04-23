@@ -272,6 +272,9 @@ fun EpisodesRow(
         episodeFocusRequesters.keys.retainAll(episodeIds)
     }
 
+    // Track the last focused episode requester for focus restoration
+    var lastFocusedEpisodeRequester by remember { androidx.compose.runtime.mutableStateOf<FocusRequester?>(null) }
+
     LaunchedEffect(restoreFocusToken, restoreEpisodeId, restoreTargetRequester, dedupedEpisodes) {
         if (restoreFocusToken <= 0 || restoreEpisodeId.isNullOrBlank()) return@LaunchedEffect
         if (dedupedEpisodes.none { it.id == restoreEpisodeId }) return@LaunchedEffect
@@ -280,6 +283,7 @@ fun EpisodesRow(
             val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
             lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
         }
+        lastFocusedEpisodeRequester = restoreTargetRequester
         restoreTargetRequester?.requestFocusAfterFrames()
     }
 
@@ -289,16 +293,18 @@ fun EpisodesRow(
         if (index < 0) return@LaunchedEffect
         val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
         lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
+        // Reset the focus restorer target so it doesn't point at an off-screen episode
+        // after the list scrolled to a different position.
+        lastFocusedEpisodeRequester = episodeFocusRequesters[scrollToEpisodeId]
         onScrollToEpisodeHandled()
     }
-
-    // Track the last focused episode requester for focus restoration
-    var lastFocusedEpisodeRequester by remember { androidx.compose.runtime.mutableStateOf<FocusRequester?>(null) }
 
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .focusRestorer { lastFocusedEpisodeRequester ?: FocusRequester.Default }
+            .focusRestorer {
+                lastFocusedEpisodeRequester ?: FocusRequester.Default
+            }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
                 val isHorizontalKey = native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_LEFT ||

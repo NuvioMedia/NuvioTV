@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.domain.model.LibrarySourceMode
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -37,6 +38,7 @@ class TraktSettingsDataStore @Inject constructor(
         const val DEFAULT_SHOW_UNAIRED_NEXT_UP = true
         const val DEFAULT_SHOW_META_COMMENTS = true
         val DEFAULT_WATCH_PROGRESS_SOURCE = WatchProgressSource.TRAKT
+        val DEFAULT_LIBRARY_SOURCE_MODE = LibrarySourceMode.TRAKT
         const val MIN_CONTINUE_WATCHING_DAYS_CAP = 7
         const val MAX_CONTINUE_WATCHING_DAYS_CAP = 365
     }
@@ -49,6 +51,7 @@ class TraktSettingsDataStore @Inject constructor(
     private val showUnairedNextUpKey = booleanPreferencesKey("show_unaired_next_up")
     private val showMetaCommentsKey = booleanPreferencesKey("show_meta_comments")
     private val watchProgressSourceKey = stringPreferencesKey("watch_progress_source")
+    private val librarySourceModeKey = stringPreferencesKey("library_source_mode")
 
     val continueWatchingDaysCap: Flow<Int> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
@@ -131,6 +134,19 @@ class TraktSettingsDataStore @Inject constructor(
     suspend fun setWatchProgressSource(source: WatchProgressSource) {
         store().edit { prefs ->
             prefs[watchProgressSourceKey] = source.name
+        }
+    }
+
+    val librarySourceMode: Flow<LibrarySourceMode> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            val stored = prefs[librarySourceModeKey]
+            LibrarySourceMode.entries.firstOrNull { it.name == stored } ?: DEFAULT_LIBRARY_SOURCE_MODE
+        }
+    }
+
+    suspend fun setLibrarySourceMode(mode: LibrarySourceMode) {
+        store().edit { prefs ->
+            prefs[librarySourceModeKey] = mode.name
         }
     }
 }

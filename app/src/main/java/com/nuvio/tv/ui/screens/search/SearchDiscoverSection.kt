@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -77,6 +78,7 @@ internal fun DiscoverSection(
     firstItemFocusRequester: FocusRequester,
     focusedItemIndex: Int,
     shouldRestoreFocusedItem: Boolean,
+    blockFilterFocus: Boolean = false,
     onRestoreFocusedItemHandled: () -> Unit,
     onNavigateToDetail: (String, String, String) -> Unit,
     onDiscoverItemFocused: (Int) -> Unit,
@@ -129,7 +131,8 @@ internal fun DiscoverSection(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             DiscoverDropdownPicker(
-                modifier = Modifier.weight(1f).focusRequester(filterFocusRequester),
+                modifier = Modifier.weight(1f)
+                    .focusRequester(filterFocusRequester),
                 title = stringResource(R.string.discover_filter_type),
                 value = selectedTypeLabel,
                 selectedValue = uiState.selectedDiscoverType,
@@ -144,7 +147,8 @@ internal fun DiscoverSection(
                 onSelect = { option ->
                     onSelectType(option.value)
                     expandedPicker = null
-                }
+                },
+                blockFocus = blockFilterFocus
             )
 
             DiscoverDropdownPicker(
@@ -160,7 +164,8 @@ internal fun DiscoverSection(
                 onSelect = { option ->
                     onSelectCatalog(option.value)
                     expandedPicker = null
-                }
+                },
+                blockFocus = blockFilterFocus
             )
 
             DiscoverDropdownPicker(
@@ -179,7 +184,8 @@ internal fun DiscoverSection(
                 onSelect = { option ->
                     onSelectGenre(option.value.takeUnless { it == "__default__" })
                     expandedPicker = null
-                }
+                },
+                blockFocus = blockFilterFocus
             )
         }
 
@@ -270,7 +276,8 @@ private fun DiscoverDropdownPicker(
     expanded: Boolean,
     options: List<DiscoverOption>,
     onExpandedChange: (Boolean) -> Unit,
-    onSelect: (DiscoverOption) -> Unit
+    onSelect: (DiscoverOption) -> Unit,
+    blockFocus: Boolean = false
 ) {
     var isFocused by remember { mutableStateOf(false) }
     var anchorSize by remember { mutableStateOf(IntSize.Zero) }
@@ -284,7 +291,11 @@ private fun DiscoverDropdownPicker(
                 .onSizeChanged { anchorSize = it }
                 .onFocusChanged { state ->
                     isFocused = state.isFocused
-                },
+                }
+                .then(
+                    if (blockFocus) Modifier.focusProperties { canFocus = false }
+                    else Modifier
+                ),
             shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
             colors = CardDefaults.colors(
                 containerColor = NuvioColors.BackgroundCard,
@@ -406,6 +417,7 @@ private data class DiscoverOption(
     val value: String
 )
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 internal fun DiscoverGrid(
     items: List<MetaPreview>,
@@ -429,9 +441,13 @@ internal fun DiscoverGrid(
     val gridState = rememberLazyGridState()
     var pendingFocusOnNewItemIndex by remember { mutableStateOf<Int?>(null) }
 
-    // Scroll to top when the filter combination changes.
+    // Scroll to top only when the filter combination actually changes (not on initial composition / back navigation).
+    var previousFilterKey by remember { mutableStateOf(filterKey) }
     LaunchedEffect(filterKey) {
-        gridState.scrollToItem(0, 0)
+        if (filterKey != previousFilterKey) {
+            gridState.scrollToItem(0, 0)
+            previousFilterKey = filterKey
+        }
     }
     var localRestoreFocusedItemIndex by remember { mutableStateOf(-1) }
     var localShouldRestoreFocusedItem by remember { mutableStateOf(false) }
@@ -504,10 +520,19 @@ internal fun DiscoverGrid(
         }
     }
 
+    // Per-item FocusRequesters for focusRestorer on the grid.
+    // Pre-create the requester for the focused item so focusRestorer can use it
+    // even before the grid items are composed (first return from navigation).
+    val itemFocusRequesters = remember { mutableMapOf<Int, FocusRequester>() }
+    val focusedItemRequester = remember(focusedItemIndex) {
+        itemFocusRequesters.getOrPut(focusedItemIndex) { FocusRequester() }
+    }
+
     LazyVerticalGrid(
         state = gridState,
         columns = GridCells.Adaptive(minSize = adaptiveStyle.width),
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize()
+            .focusRestorer { focusedItemRequester },
         contentPadding = PaddingValues(bottom = 32.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -517,10 +542,11 @@ internal fun DiscoverGrid(
             key = { index, item -> item.id.ifEmpty { "discover_$index" } },
             contentType = { _, _ -> "content_card" }
         ) { index, item ->
+            val itemFocusReq = remember(index) { itemFocusRequesters.getOrPut(index) { FocusRequester() } }
             val focusReq = when {
                 effectiveShouldRestoreFocusedItem && index == effectiveFocusedItemIndex -> restoreFocusRequester
                 focusResults && index == 0 -> firstItemFocusRequester
-                else -> null
+                else -> itemFocusReq
             }
             GridContentCard(
                 item = item,
@@ -532,7 +558,9 @@ internal fun DiscoverGrid(
                 },
                 modifier = Modifier.width(adaptiveStyle.width),
                 focusRequester = focusReq,
-                onFocused = { onItemFocused(index) }
+                onFocused = {
+                    onItemFocused(index)
+                }
             )
         }
 

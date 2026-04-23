@@ -313,6 +313,8 @@ class StartupSyncService @Inject constructor(
                     watchProgressRepository.isSyncingFromRemote = false
                 }
             } else if (shouldUseSupabaseWatchProgressSync) {
+                // Mark initial pull as complete so that library push operations can proceed
+                libraryRepository.hasCompletedInitialPull = true
                 try {
                     val remoteWatchedItems = watchedItemsSyncService.pullFromRemote().getOrElse { throw it }
                     Log.d(TAG, "Pulled ${remoteWatchedItems.size} watched items from remote")
@@ -336,6 +338,9 @@ class StartupSyncService @Inject constructor(
                     watchProgressRepository.isSyncingFromRemote = false
                 }
             } else {
+                // Trakt is connected and not using Supabase for watch progress
+                // Mark library initial pull as complete so push operations can proceed
+                libraryRepository.hasCompletedInitialPull = true
                 Log.d(TAG, "Skipping watch progress & library sync (Trakt connected)")
             }
             return Result.success(Unit)

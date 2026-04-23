@@ -469,7 +469,7 @@ private fun EpisodeItem(
         val s = episode.season
         val e = episode.episode
         if (s != null && e != null) {
-            "S${s.toString().padStart(2, '0')}E${e.toString().padStart(2, '0')}"
+            context.getString(R.string.season_episode_format, s, e)
         } else {
             null
         }

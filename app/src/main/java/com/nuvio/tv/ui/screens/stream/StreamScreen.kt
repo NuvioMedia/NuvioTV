@@ -2,6 +2,8 @@
 
 package com.nuvio.tv.ui.screens.stream
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -124,7 +126,28 @@ fun StreamScreen(
     var pendingTorrentPlaybackInfo by remember { mutableStateOf<StreamPlaybackInfo?>(null) }
     val p2pEnabled by viewModel.p2pEnabled.collectAsStateWithLifecycle(initialValue = false)
 
+    fun openExternalInBrowser(playbackInfo: StreamPlaybackInfo): Boolean {
+        if (!playbackInfo.isExternal) return false
+        val url = playbackInfo.url?.takeIf { it.isNotBlank() } ?: return false
+        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            .addCategory(Intent.CATEGORY_BROWSABLE)
+        runCatching {
+            context.startActivity(browserIntent)
+        }.onFailure {
+            ExternalPlayerLauncher.launch(
+                context = context,
+                url = url,
+                title = playbackInfo.title,
+                headers = playbackInfo.headers
+            )
+        }
+        return true
+    }
+
     fun routePlayback(playbackInfo: StreamPlaybackInfo) {
+        if (openExternalInBrowser(playbackInfo)) {
+            return
+        }
         if (playbackInfo.isTorrent && !p2pEnabled) {
             pendingTorrentPlaybackInfo = playbackInfo
             showP2pConsentDialog = true
@@ -152,6 +175,10 @@ fun StreamScreen(
     }
 
     fun routeAutoPlay(playbackInfo: StreamPlaybackInfo) {
+        if (openExternalInBrowser(playbackInfo)) {
+            viewModel.onEvent(StreamScreenEvent.OnAutoPlayConsumed)
+            return
+        }
         // Always check P2P consent for torrents, even in direct auto-play flow
         if (playbackInfo.isTorrent && !p2pEnabled) {
             pendingTorrentPlaybackInfo = playbackInfo
