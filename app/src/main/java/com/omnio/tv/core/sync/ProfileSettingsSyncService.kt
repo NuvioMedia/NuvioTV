@@ -79,7 +79,14 @@ class ProfileSettingsSyncService @Inject constructor(
         "tmdb_settings",
         "mdblist_settings",
         "animeskip_settings",
-        "track_preference"
+        "track_preference",
+        "trakt_settings",
+        "emby_credentials",
+    )
+
+    // Keys within a feature that must never leave the device (e.g. per-device identifiers).
+    private val excludedKeys: Map<String, Set<String>> = mapOf(
+        "emby_credentials" to setOf("emby_device_id")
     )
 
     init {
@@ -179,7 +186,9 @@ class ProfileSettingsSyncService @Inject constructor(
             syncedFeatures.forEach { feature ->
                 val prefs = profileDataStoreFactory.get(profileId, feature).data.first()
                 val serialized = buildJsonObject {
+                    val excluded = excludedKeys[feature] ?: emptySet()
                     prefs.asMap().forEach { (key, rawValue) ->
+                        if (key.name in excluded) return@forEach
                         val encoded = encodePreferenceValue(rawValue) ?: return@forEach
                         put(key.name, encoded)
                     }
@@ -201,7 +210,9 @@ class ProfileSettingsSyncService @Inject constructor(
                 val featureJson = featuresJson[feature]?.jsonObject ?: return@forEach
                 profileDataStoreFactory.get(profileId, feature).edit { mutablePrefs ->
                     mutablePrefs.clear()
+                    val excluded = excludedKeys[feature] ?: emptySet()
                     featureJson.forEach { (keyName, encodedValue) ->
+                        if (keyName in excluded) return@forEach
                         applyEncodedPreference(mutablePrefs, keyName, encodedValue)
                     }
                 }
@@ -218,7 +229,7 @@ class ProfileSettingsSyncService @Inject constructor(
                     val featureFlows = syncedFeatures.map { feature ->
                         profileDataStoreFactory.get(profileId, feature).data
                             .map { prefs ->
-                                "$feature={${buildFeatureSignature(prefs)}}"
+                                "$feature={${buildFeatureSignature(prefs, feature)}}"
                             }
                     }
                     combine(featureFlows) { signatures ->
@@ -244,7 +255,7 @@ class ProfileSettingsSyncService @Inject constructor(
         val signatures = ArrayList<String>(syncedFeatures.size)
         syncedFeatures.forEach { feature ->
             val prefs = profileDataStoreFactory.get(profileId, feature).data.first()
-            signatures += "$feature={${buildFeatureSignature(prefs)}}"
+            signatures += "$feature={${buildFeatureSignature(prefs, feature)}}"
         }
         return signatures.joinToString(separator = "||")
     }
@@ -256,9 +267,11 @@ class ProfileSettingsSyncService @Inject constructor(
         }
     }
 
-    private fun buildFeatureSignature(prefs: Preferences): String {
+    private fun buildFeatureSignature(prefs: Preferences, feature: String = ""): String {
+        val excluded = excludedKeys[feature] ?: emptySet()
         return prefs.asMap()
             .entries
+            .filter { (key, _) -> key.name !in excluded }
             .mapNotNull { (key, rawValue) ->
                 encodePreferenceValue(rawValue)?.let { encoded ->
                     key.name to encoded.toString()
