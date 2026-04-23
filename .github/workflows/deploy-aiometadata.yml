@@ -1,0 +1,57 @@
+name: Deploy AIOMetadata
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'infra/aiometadata/**'
+      - '.github/workflows/deploy-aiometadata.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-aiometadata-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Sync secrets to Fly
+        env:
+          AIOMETADATA_DATABASE_URI: ${{ secrets.AIOMETADATA_DATABASE_URI }}
+          AIOMETADATA_REDIS_URL: ${{ secrets.AIOMETADATA_REDIS_URL }}
+          AIOMETADATA_HOST_NAME: ${{ secrets.AIOMETADATA_HOST_NAME }}
+          AIOMETADATA_ADMIN_KEY: ${{ secrets.AIOMETADATA_ADMIN_KEY }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          TVDB_API_KEY: ${{ secrets.TVDB_API_KEY }}
+          FANART_API_KEY: ${{ secrets.FANART_API_KEY }}
+          MDBLIST_API_KEY: ${{ secrets.MDBLIST_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
+        run: |
+          # Required secrets — always set
+          args=(
+            DATABASE_URI="$AIOMETADATA_DATABASE_URI"
+            REDIS_URL="$AIOMETADATA_REDIS_URL"
+            HOST_NAME="$AIOMETADATA_HOST_NAME"
+            ADMIN_KEY="$AIOMETADATA_ADMIN_KEY"
+            TMDB_API_KEY="$TMDB_API_KEY"
+            TRAKT_CLIENT_ID="$TRAKT_CLIENT_ID"
+            TRAKT_CLIENT_SECRET="$TRAKT_CLIENT_SECRET"
+          )
+          # Optional provider keys — only set when the GitHub Secret is populated
+          [ -n "$TVDB_API_KEY" ]    && args+=(TVDB_API_KEY="$TVDB_API_KEY")
+          [ -n "$FANART_API_KEY" ]  && args+=(FANART_API_KEY="$FANART_API_KEY")
+          [ -n "$MDBLIST_API_KEY" ] && args+=(MDBLIST_API_KEY="$MDBLIST_API_KEY")
+          [ -n "$GEMINI_API_KEY" ]  && args+=(GEMINI_API_KEY="$GEMINI_API_KEY")
+          flyctl secrets set "${args[@]}" --app nuviotv-aiometadata --stage
+
+      - name: Deploy
+        run: flyctl deploy --config infra/aiometadata/fly.toml --app nuviotv-aiometadata

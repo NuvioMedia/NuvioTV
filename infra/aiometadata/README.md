@@ -4,7 +4,31 @@ Runs the upstream [`cedya77/aiometadata`](https://github.com/cedya77/aiometadata
 addon. The Android app talks to this instance over HTTPS; Supabase only stores
 the mapping `supabase_user_id → aio_uuid`.
 
-## One-time setup
+## Secrets management
+
+Secrets live in **GitHub Secrets** and are pushed to Fly on every deploy by
+`.github/workflows/deploy-aiometadata.yml`. You never need to run
+`fly secrets set` manually — just update the GitHub Secret and re-run the
+workflow (or push a change to `infra/aiometadata/`).
+
+| GitHub Secret | Fly env var | Notes |
+|---|---|---|
+| `FLY_API_TOKEN` | — | Fly personal token for CI auth |
+| `AIOMETADATA_DATABASE_URI` | `DATABASE_URI` | Postgres connection string (Neon pooled) |
+| `AIOMETADATA_REDIS_URL` | `REDIS_URL` | `redis://` or `rediss://` URL |
+| `AIOMETADATA_HOST_NAME` | `HOST_NAME` | Public base URL, e.g. `https://nuviotv-aiometadata.fly.dev` |
+| `AIOMETADATA_ADMIN_KEY` | `ADMIN_KEY` | Random hex, `openssl rand -hex 32` |
+| `TMDB_API_KEY` | `TMDB_API_KEY` | Shared with Android build |
+| `TVDB_API_KEY` | `TVDB_API_KEY` | |
+| `FANART_API_KEY` | `FANART_API_KEY` | |
+| `MDBLIST_API_KEY` | `MDBLIST_API_KEY` | |
+| `GEMINI_API_KEY` | `GEMINI_API_KEY` | |
+| `TRAKT_CLIENT_ID` | `TRAKT_CLIENT_ID` | Shared with Android build |
+| `TRAKT_CLIENT_SECRET` | `TRAKT_CLIENT_SECRET` | Shared with Android build |
+
+## One-time infrastructure setup
+
+Only needed when provisioning a brand-new Fly app — not for routine deploys.
 
 ```bash
 # From this directory
@@ -14,27 +38,11 @@ fly launch --copy-config --no-deploy   # change `app` in fly.toml first
 fly volumes create aiometadata_data --app nuviotv-aiometadata --region iad --size 1
 
 # Postgres — Neon free tier works great; copy the pooled connection string
-fly secrets set --app nuviotv-aiometadata \
-  DATABASE_URI="postgres://user:pass@ep-...-pooler.region.aws.neon.tech/neondb?sslmode=require"
-
 # Redis — Fly's managed Upstash (or Upstash direct). Must be redis:// or rediss://, not https://.
 fly redis create --name nuviotv-aiometadata-cache --region iad
-fly secrets set --app nuviotv-aiometadata \
-  REDIS_URL="redis://default:PASSWORD@HOST:PORT"
-
-# Public hostname (for Stremio manifest URLs) + admin key
-fly secrets set --app nuviotv-aiometadata \
-  HOST_NAME="https://nuviotv-aiometadata.fly.dev" \
-  ADMIN_KEY="$(openssl rand -hex 32)"
-
-# App-level provider keys are OPTIONAL fallbacks (users can override per-config)
-fly secrets set --app nuviotv-aiometadata \
-  TMDB_API_KEY=... \
-  TVDB_API_KEY=... \
-  FANART_API_KEY=... \
-  MDBLIST_API_KEY=... \
-  GEMINI_API_KEY=...
 ```
+
+Then populate the GitHub Secrets listed above and trigger the deploy workflow.
 
 ## Deploy / update
 
