@@ -107,6 +107,15 @@ class HomeViewModel @Inject constructor(
     private val _gridFocusState = MutableStateFlow(HomeScreenFocusState())
     val gridFocusState: StateFlow<HomeScreenFocusState> = _gridFocusState.asStateFlow()
 
+    private val _scrollToTopTrigger = MutableStateFlow(0)
+    val scrollToTopTrigger: StateFlow<Int> = _scrollToTopTrigger.asStateFlow()
+
+    fun requestScrollToTop() {
+        clearFocusState()
+        _gridFocusState.value = HomeScreenFocusState()
+        _scrollToTopTrigger.value++
+    }
+
     internal val _loadingCatalogs = MutableStateFlow<Set<String>>(emptySet())
     val loadingCatalogs: StateFlow<Set<String>> = _loadingCatalogs.asStateFlow()
 

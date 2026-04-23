@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -46,6 +47,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -75,7 +83,7 @@ private val CwNewSeasonBadgeColor = Color(0xFFB45309)
 /** URLs that failed to load — skip them immediately on next recomposition. */
 internal val brokenImageUrls = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
-@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun ContinueWatchingSection(
     items: List<ContinueWatchingItem>,
@@ -88,7 +96,8 @@ fun ContinueWatchingSection(
     modifier: Modifier = Modifier,
     focusedItemIndex: Int = -1,
     onItemFocused: (itemIndex: Int) -> Unit = {},
-    blurUnwatchedEpisodes: Boolean = false
+    blurUnwatchedEpisodes: Boolean = false,
+    downFocusRequester: FocusRequester? = null
 ) {
     if (items.isEmpty()) return
 
@@ -139,10 +148,30 @@ fun ContinueWatchingSection(
             focusRequesters.getOrNull(idx) ?: FocusRequester.Default
         }
 
+        val density = LocalDensity.current
+        val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
+        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec) {
+            val startPx = with(density) { 48.dp.roundToPx() }
+            @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+            object : BringIntoViewSpec {
+                override val scrollAnimationSpec: AnimationSpec<Float> =
+                    defaultBringIntoViewSpec.scrollAnimationSpec
+                override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+                    val childSize = kotlin.math.abs(size)
+                    val target = startPx.toFloat()
+                    val space = containerSize - target
+                    val leading = if (childSize <= containerSize && space < childSize) containerSize - childSize else target
+                    return offset - leading
+                }
+            }
+        }
+
+        CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalBringIntoViewSpec) {
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .focusRestorer(restoreFocusRequester),
+                .focusRestorer(restoreFocusRequester)
+                .focusGroup(),
             contentPadding = PaddingValues(horizontal = 48.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             state = listState
@@ -163,7 +192,7 @@ fun ContinueWatchingSection(
                     else -> Modifier
                 }
 
-                ContinueWatchingCard(
+                    ContinueWatchingCard(
                     item = progress,
                     onClick = { onItemClick(progress) },
                     onLongPress = { optionsItem = progress },
@@ -175,10 +204,16 @@ fun ContinueWatchingSection(
                                 onItemFocused(index)
                             }
                         }
+                        .then(
+                            if (downFocusRequester != null) {
+                                Modifier.focusProperties { down = downFocusRequester }
+                            } else Modifier
+                        )
                         .then(focusModifier)
                 )
             }
         }
+        } // CompositionLocalProvider
     }
 
     val menuItem = optionsItem

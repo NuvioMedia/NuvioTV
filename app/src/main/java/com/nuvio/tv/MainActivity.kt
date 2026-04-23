@@ -1387,6 +1387,12 @@ private fun navigateToDrawerRoute(
     targetRoute: String
 ) {
     if (currentRoute == targetRoute) {
+        if (targetRoute == Screen.Home.route) {
+            // Scroll Home to top by clearing saved focus/scroll state on the ViewModel.
+            val homeEntry = navController.getBackStackEntry(Screen.Home.route)
+            val homeViewModel = androidx.lifecycle.ViewModelProvider(homeEntry)[com.nuvio.tv.ui.screens.home.HomeViewModel::class.java]
+            homeViewModel.requestScrollToTop()
+        }
         return
     }
     navController.navigate(targetRoute) {

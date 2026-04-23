@@ -11,6 +11,7 @@ import com.nuvio.tv.R
 enum class AspectMode(@StringRes val labelResId: Int) {
     ORIGINAL(R.string.player_aspect_fit),
     FULL_SCREEN(R.string.player_aspect_crop),
+    STRETCH(R.string.player_aspect_stretch),
     SLIGHT_ZOOM(R.string.player_aspect_mode_slight_zoom),
     CINEMA_ZOOM(R.string.player_aspect_mode_cinema_zoom),
     VERTICAL_STRETCH(R.string.player_aspect_fit_height),
@@ -25,6 +26,96 @@ internal fun nextAspectMode(current: AspectMode): AspectMode {
 
 internal fun aspectModeLabel(mode: AspectMode, getString: (Int) -> String): String =
     getString(mode.labelResId)
+
+internal data class AspectScale(val scaleX: Float, val scaleY: Float)
+
+internal fun aspectModeNeedsVideoAspect(mode: AspectMode): Boolean {
+    return when (mode) {
+        AspectMode.FULL_SCREEN,
+        AspectMode.STRETCH,
+        AspectMode.VERTICAL_STRETCH,
+        AspectMode.HORIZONTAL_STRETCH -> true
+
+        AspectMode.ORIGINAL,
+        AspectMode.SLIGHT_ZOOM,
+        AspectMode.CINEMA_ZOOM -> false
+    }
+}
+
+internal fun readViewAspectRatio(width: Int, height: Int): Float {
+    return if (width > 0 && height > 0) {
+        width.toFloat() / height.toFloat()
+    } else {
+        0f
+    }
+}
+
+internal fun readExoVideoAspectRatio(playerView: PlayerView): Float? {
+    val videoSize = playerView.player?.videoSize
+    return if ((videoSize?.height ?: 0) > 0) {
+        ((videoSize?.width ?: 0).toFloat() * (videoSize?.pixelWidthHeightRatio ?: 1f)) /
+            videoSize!!.height.toFloat()
+    } else {
+        null
+    }
+}
+
+internal fun resolveAspectScale(mode: AspectMode, viewAspect: Float, videoAspect: Float?): AspectScale {
+    if (viewAspect <= 0f) {
+        return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+    }
+
+    return when (mode) {
+        AspectMode.ORIGINAL -> AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+
+        AspectMode.FULL_SCREEN -> {
+            val safeVideoAspect = videoAspect?.takeIf { it > 0f }
+                ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+            val uniformScale = if (safeVideoAspect > viewAspect) {
+                safeVideoAspect / viewAspect
+            } else {
+                viewAspect / safeVideoAspect
+            }
+            AspectScale(scaleX = uniformScale, scaleY = uniformScale)
+        }
+
+        AspectMode.STRETCH -> {
+            val safeVideoAspect = videoAspect?.takeIf { it > 0f }
+                ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+            if (safeVideoAspect > viewAspect) {
+                AspectScale(scaleX = 1.0f, scaleY = safeVideoAspect / viewAspect)
+            } else {
+                AspectScale(scaleX = viewAspect / safeVideoAspect, scaleY = 1.0f)
+            }
+        }
+
+        AspectMode.SLIGHT_ZOOM -> AspectScale(scaleX = 1.15f, scaleY = 1.15f)
+
+        AspectMode.CINEMA_ZOOM -> AspectScale(scaleX = 1.33f, scaleY = 1.33f)
+
+        AspectMode.VERTICAL_STRETCH -> {
+            val safeVideoAspect = videoAspect?.takeIf { it > 0f }
+                ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+            if (safeVideoAspect > viewAspect) {
+                val uniformScale = safeVideoAspect / viewAspect
+                AspectScale(scaleX = uniformScale, scaleY = uniformScale)
+            } else {
+                AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+            }
+        }
+
+        AspectMode.HORIZONTAL_STRETCH -> {
+            val safeVideoAspect = videoAspect?.takeIf { it > 0f }
+                ?: return AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+            if (safeVideoAspect < viewAspect) {
+                val uniformScale = viewAspect / safeVideoAspect
+                AspectScale(scaleX = uniformScale, scaleY = uniformScale)
+            } else {
+                AspectScale(scaleX = 1.0f, scaleY = 1.0f)
+            }
+        }
+    }
+}
 
 internal fun applyExoAspectMode(playerView: PlayerView, mode: AspectMode) {
     val contentFrame = playerView.findViewById<View>(androidx.media3.ui.R.id.exo_content_frame)
@@ -50,63 +141,13 @@ internal fun applyAspectMode(playerView: PlayerView, mode: AspectMode) {
 }
 
 private fun applyAspectScale(playerView: PlayerView, targetView: View, mode: AspectMode) {
-    when (mode) {
-        AspectMode.ORIGINAL -> {
-            targetView.scaleX = 1.0f
-            targetView.scaleY = 1.0f
-        }
-
-        AspectMode.FULL_SCREEN -> applyCoverAspectScale(playerView, targetView)
-
-        AspectMode.SLIGHT_ZOOM -> {
-            targetView.scaleX = 1.15f
-            targetView.scaleY = 1.15f
-        }
-
-        AspectMode.CINEMA_ZOOM -> {
-            targetView.scaleX = 1.33f
-            targetView.scaleY = 1.33f
-        }
-
-        AspectMode.VERTICAL_STRETCH -> {
-            targetView.scaleX = 1.0f
-            targetView.scaleY = 1.33f
-        }
-
-        AspectMode.HORIZONTAL_STRETCH -> {
-            targetView.scaleX = 1.3333f
-            targetView.scaleY = 1.0f
-        }
-    }
-}
-
-private fun applyCoverAspectScale(playerView: PlayerView, targetView: View) {
-    val videoSize = playerView.player?.videoSize
-    val videoAspect = if ((videoSize?.height ?: 0) > 0) {
-        ((videoSize?.width ?: 0).toFloat() * (videoSize?.pixelWidthHeightRatio ?: 1f)) /
-            videoSize!!.height.toFloat()
-    } else {
-        0f
-    }
-
-    val viewAspect = if (playerView.width > 0 && playerView.height > 0) {
-        playerView.width.toFloat() / playerView.height.toFloat()
-    } else {
-        0f
-    }
-
-    if (videoAspect > 0f && viewAspect > 0f) {
-        if (videoAspect > viewAspect) {
-            targetView.scaleX = 1.0f
-            targetView.scaleY = videoAspect / viewAspect
-        } else {
-            targetView.scaleX = viewAspect / videoAspect
-            targetView.scaleY = 1.0f
-        }
-    } else {
-        targetView.scaleX = 1.0f
-        targetView.scaleY = 1.0f
-    }
+    val scale = resolveAspectScale(
+        mode = mode,
+        viewAspect = readViewAspectRatio(playerView.width, playerView.height),
+        videoAspect = readExoVideoAspectRatio(playerView)
+    )
+    targetView.scaleX = scale.scaleX
+    targetView.scaleY = scale.scaleY
 }
 
 private fun resolveVideoSurfaceView(playerView: PlayerView): View? {

@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -88,6 +89,9 @@ fun ContentCard(
     onRequestTrailerPreview: (MetaPreview) -> Unit = {},
     isWatched: Boolean = false,
     onFocus: (MetaPreview) -> Unit = {},
+    onBackdropExpandedChanged: ((Boolean) -> Unit)? = null,
+    expandedDownFocusRequester: FocusRequester? = null,
+    expandedUpFocusRequester: FocusRequester? = null,
     onLongPress: (() -> Unit)? = null,
     onClick: () -> Unit = {}
 ) {
@@ -111,7 +115,9 @@ fun ContentCard(
     var trailerFirstFrameRendered by remember(trailerPreviewUrl) { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
-
+    LaunchedEffect(isBackdropExpanded) {
+        onBackdropExpandedChanged?.invoke(isBackdropExpanded)
+    }
     val needsFocusState = focusedPosterBackdropExpandEnabled || focusedPosterBackdropTrailerEnabled
     val lastFocusedRef = remember { booleanArrayOf(false) }
 
@@ -304,6 +310,14 @@ fun ContentCard(
                     }
                     false
                 }
+                .then(
+                    if (isBackdropExpanded && (expandedDownFocusRequester != null || expandedUpFocusRequester != null)) {
+                        Modifier.focusProperties {
+                            if (expandedDownFocusRequester != null) down = expandedDownFocusRequester
+                            if (expandedUpFocusRequester != null) up = expandedUpFocusRequester
+                        }
+                    } else Modifier
+                )
                 .then(
                     if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
                 ),
