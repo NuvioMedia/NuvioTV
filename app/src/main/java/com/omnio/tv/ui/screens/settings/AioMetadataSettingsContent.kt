@@ -401,7 +401,10 @@ private fun AioKeyInputDialog(
                                 event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN
                         },
                     singleLine = true,
-                    keyboardActions = KeyboardActions(onDone = { keyboardController?.hide() }),
+                    keyboardActions = KeyboardActions(onDone = {
+                        keyboardController?.hide()
+                        onSave(value.trim())
+                    }),
                     textStyle = MaterialTheme.typography.bodyMedium.copy(color = OmnioColors.TextPrimary),
                     cursorBrush = SolidColor(
                         if (isInputFocused) OmnioColors.Primary
