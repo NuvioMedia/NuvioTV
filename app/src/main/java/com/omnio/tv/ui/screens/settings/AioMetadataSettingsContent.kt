@@ -6,6 +6,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.view.KeyEvent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,12 +27,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -47,6 +52,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.omnio.tv.R
+import com.omnio.tv.core.qr.QrCodeGenerator
 import com.omnio.tv.domain.model.AioMetadataProvider
 import com.omnio.tv.ui.components.OmnioDialog
 import com.omnio.tv.ui.theme.OmnioColors
@@ -119,6 +125,10 @@ fun AioMetadataSettingsContent(
                             onClick = { copyToClipboard(context, uiState.configureUrl) }
                         )
                     }
+
+                    item(key = "aio_configure_qr") {
+                        AioConfigureQr(url = uiState.configureUrl)
+                    }
                 }
 
                 items(
@@ -187,6 +197,33 @@ private fun ProviderRow(
                 onClick = onEditKey
             )
         }
+    }
+}
+
+@Composable
+private fun AioConfigureQr(url: String) {
+    val bitmap = remember(url) {
+        runCatching { QrCodeGenerator.generate(url, 420) }.getOrNull()
+    } ?: return
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = stringResource(R.string.cd_aio_metadata_qr),
+            modifier = Modifier.size(160.dp),
+            contentScale = ContentScale.Fit
+        )
+        Text(
+            text = stringResource(R.string.aio_metadata_qr_caption),
+            style = MaterialTheme.typography.bodySmall,
+            color = OmnioColors.TextSecondary
+        )
     }
 }
 
