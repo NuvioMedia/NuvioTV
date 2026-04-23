@@ -7,7 +7,7 @@ app = 'nuviotv-aiometadata'
 primary_region = 'iad'
 
 [build]
-  image = "ghcr.io/cedya77/aiometadata:v0.0.0-testing.20260422.2"
+  image = "ghcr.io/cedya77/aiometadata:v.testing.20260422.2-e66078a9d02186ab182f8f6826bd455a2cf3874d"
 
 [env]
   LOG_LEVEL = 'info'

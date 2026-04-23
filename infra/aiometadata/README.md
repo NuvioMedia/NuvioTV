@@ -47,9 +47,13 @@ fly status                      # machine health
 
 ## Pin the image
 
-The config uses the rolling `testing` tag. After verifying a deploy works,
-bump `image = ` in `fly.toml` to the concrete tag returned by `/health`
-(e.g. `v0.0.0-testing.20260422.2`) so future deploys are deterministic.
+The upstream builds both a date-based tag (`v.testing.YYYYMMDD.N`) and a
+commit-SHA-suffixed variant (`v.testing.YYYYMMDD.N-<gitsha>`); list them at
+https://github.com/cedya77/aiometadata/pkgs/container/aiometadata. Pin
+`image = ` in `fly.toml` to the SHA-suffixed form (or an `@sha256:` digest)
+so the tag can't be re-pushed out from under you. The version reported by
+`/health` (`0.0.0-testing.YYYYMMDD.N`) identifies the build but is not
+itself a valid registry tag.
 
 ## Custom domain — `aiometadata.omnio.tv`
 
