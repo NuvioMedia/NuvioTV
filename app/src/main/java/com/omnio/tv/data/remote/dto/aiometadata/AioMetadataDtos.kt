@@ -15,7 +15,7 @@ import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
 data class AioConfigInnerDto(
-    @Json(name = "providers") val providers: Map<String, Boolean> = emptyMap(),
+    @Json(name = "providers") val providers: Map<String, Any?> = emptyMap(),
     @Json(name = "apiKeys") val apiKeys: Map<String, String> = emptyMap(),
     @Json(name = "catalogs") val catalogs: List<Map<String, Any?>> = emptyList(),
     @Json(name = "settings") val settings: Map<String, Any?> = emptyMap(),

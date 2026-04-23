@@ -7,6 +7,7 @@ import com.omnio.tv.BuildConfig
 import com.omnio.tv.R
 import com.omnio.tv.core.profile.ProfileManager
 import com.omnio.tv.data.remote.dto.aiometadata.AioConfigInnerDto
+import com.omnio.tv.data.remote.dto.aiometadata.AioMetadataDefaultConfig
 import com.omnio.tv.domain.model.AioMetadataProvider
 import com.omnio.tv.domain.repository.AioMetadataRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -82,7 +83,7 @@ class AioMetadataSettingsViewModel @Inject constructor(
                         manifestUrl = settings.manifestUrl,
                         isPrimaryProfileBlocked = primaryBlocked,
                         hasConfig = settings.aioUuid.isNotBlank(),
-                        providers = cached?.providers ?: it.providers,
+                        providers = cached?.providers?.toBooleanProviders() ?: it.providers,
                         apiKeys = cached?.apiKeys ?: it.apiKeys,
                         catalogs = cached?.catalogs ?: it.catalogs,
                         settings = cached?.settings ?: it.settings,
@@ -104,8 +105,10 @@ class AioMetadataSettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        providers = config?.providers ?: it.providers,
-                        apiKeys = config?.apiKeys ?: it.apiKeys,
+                        providers = config?.providers?.toBooleanProviders() ?: it.providers,
+                        apiKeys = if (config != null) config.apiKeys
+                                  else if (it.apiKeys.isEmpty()) mapOf("rpdb" to DEFAULT_RPDB_KEY)
+                                  else it.apiKeys,
                         catalogs = config?.catalogs ?: it.catalogs,
                         settings = config?.settings ?: it.settings,
                         hasConfig = config != null,
@@ -138,7 +141,9 @@ class AioMetadataSettingsViewModel @Inject constructor(
             _uiState.update { it.copy(isMutating = true, errorMessage = null, statusMessage = null) }
 
             val manifest = if (target && current.uuid.isBlank()) {
-                val createResult = repository.createConfig(current.toInnerConfig())
+                val createResult = repository.createConfig(
+                    AioMetadataDefaultConfig.build(appContext, current.apiKeys)
+                )
                 val created = createResult.getOrNull()
                 if (created == null) {
                     _uiState.update {
@@ -205,7 +210,7 @@ class AioMetadataSettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isMutating = false,
-                        providers = next.providers,
+                        providers = next.providers.toBooleanProviders(),
                         apiKeys = next.apiKeys,
                         catalogs = next.catalogs,
                         settings = next.settings,
@@ -215,7 +220,9 @@ class AioMetadataSettingsViewModel @Inject constructor(
             }
 
             val result: Result<AioConfigInnerDto> = if (current.uuid.isBlank()) {
-                repository.createConfig(next).map { next }
+                // First creation: send full default template with user's API keys.
+                val defaultConfig = AioMetadataDefaultConfig.build(appContext, next.apiKeys)
+                repository.createConfig(defaultConfig).map { defaultConfig }
             } else {
                 repository.updateConfig(current.uuid, next)
             }
@@ -225,7 +232,7 @@ class AioMetadataSettingsViewModel @Inject constructor(
                     _uiState.update { state ->
                         state.copy(
                             isMutating = false,
-                            providers = config.providers,
+                            providers = config.providers.toBooleanProviders(),
                             apiKeys = config.apiKeys,
                             catalogs = config.catalogs,
                             settings = config.settings,
@@ -238,7 +245,7 @@ class AioMetadataSettingsViewModel @Inject constructor(
                         it.copy(
                             isMutating = false,
                             // Preserve the user's edit locally so they don't lose input.
-                            providers = next.providers,
+                            providers = next.providers.toBooleanProviders(),
                             apiKeys = next.apiKeys,
                             catalogs = next.catalogs,
                             settings = next.settings,
@@ -262,5 +269,9 @@ class AioMetadataSettingsViewModel @Inject constructor(
 
     companion object {
         val KNOWN_PROVIDERS: List<AioMetadataProvider> = AioMetadataProvider.entries
+        const val DEFAULT_RPDB_KEY = "t0-free-rpdb"
     }
 }
+
+private fun Map<String, Any?>.toBooleanProviders(): Map<String, Boolean> =
+    mapValues { (_, v) -> v as? Boolean ?: false }
