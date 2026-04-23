@@ -50,7 +50,7 @@ class AioMetadataSettingsViewModel @Inject constructor(
                 if (uuid.isBlank()) return ""
                 val base = BuildConfig.AIOMETADATA_BASE_URL.trimEnd('/')
                 if (base.isBlank()) return ""
-                return "$base/stremio/$uuid"
+                return "$base/stremio/$uuid/configure"
             }
 
         /** Upstream requires both TMDB and TVDB before it will mint a UUID. */
