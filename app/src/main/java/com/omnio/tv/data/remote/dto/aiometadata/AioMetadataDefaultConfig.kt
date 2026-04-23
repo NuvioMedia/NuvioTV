@@ -30,12 +30,9 @@ object AioMetadataDefaultConfig {
 
         val json = JSONObject(rawJson)
 
-        // Routing providers (e.g. "movie" → "tmdb") plus any booleans in the block.
-        val routingProviders = jsonObjectToMap(json.optJSONObject("providers") ?: JSONObject())
-        // Add boolean toggle states for the known provider keys so the Android UI
-        // shows TMDB and TVDB as enabled on first load.
-        val providers: Map<String, Any?> = routingProviders +
-            mapOf("tmdb" to true, "tvdb" to true)
+        // Routing providers (e.g. "movie" → "tmdb"). Keep this pure routing config —
+        // NuvioTV toggle states go into settings under nuvio_provider_* keys.
+        val providers: Map<String, Any?> = jsonObjectToMap(json.optJSONObject("providers") ?: JSONObject())
 
         // Default API keys from template (RPDB is already set to the free key there,
         // but we also enforce it here in case the template ever changes).
@@ -65,7 +62,12 @@ object AioMetadataDefaultConfig {
             providers = providers,
             apiKeys = finalApiKeys,
             catalogs = catalogs,
-            settings = settings + (TEMPLATE_VERSION_KEY to TEMPLATE_VERSION),
+            settings = settings + mapOf(
+                TEMPLATE_VERSION_KEY to TEMPLATE_VERSION,
+                // Store initial provider enabled states here, not in providers (routing config).
+                "nuvio_provider_tmdb" to true,
+                "nuvio_provider_tvdb" to true,
+            ),
         )
     }
 

@@ -84,7 +84,7 @@ class AioMetadataSettingsViewModel @Inject constructor(
                         manifestUrl = settings.manifestUrl,
                         isPrimaryProfileBlocked = primaryBlocked,
                         hasConfig = settings.aioUuid.isNotBlank(),
-                        providers = cached?.providers?.toBooleanProviders() ?: it.providers,
+                        providers = cached?.toNuvioProviderStates() ?: it.providers,
                         apiKeys = cached?.apiKeys ?: it.apiKeys,
                         catalogs = cached?.catalogs ?: it.catalogs,
                         settings = cached?.settings ?: it.settings,
@@ -108,7 +108,7 @@ class AioMetadataSettingsViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         configPassword = password.orEmpty(),
-                        providers = config?.providers?.toBooleanProviders() ?: it.providers,
+                        providers = config?.toNuvioProviderStates() ?: it.providers,
                         apiKeys = if (config != null) config.apiKeys
                                   else if (it.apiKeys.isEmpty()) mapOf("rpdb" to DEFAULT_RPDB_KEY)
                                   else it.apiKeys,
@@ -118,12 +118,17 @@ class AioMetadataSettingsViewModel @Inject constructor(
                     )
                 }
 
-                // Silently apply the default template to existing configs that were
-                // created before the template feature was introduced (detected by the
-                // absence of the nuvio_template_version marker in their settings).
                 val uuid = _uiState.value.uuid
-                if (config != null && uuid.isNotBlank() && !AioMetadataDefaultConfig.isTemplateApplied(config)) {
-                    applyTemplateInBackground(uuid, config.apiKeys)
+                if (config != null && uuid.isNotBlank()) {
+                    // Migrate legacy configs that stored provider toggle booleans inside
+                    // the upstream providers routing map (corrupts the web configure UI).
+                    migrateProviderBooleansIfNeeded(uuid, config)
+
+                    // Silently apply the default template to configs created before the
+                    // template feature (detected by absent nuvio_template_version marker).
+                    if (!AioMetadataDefaultConfig.isTemplateApplied(config)) {
+                        applyTemplateInBackground(uuid, config.apiKeys)
+                    }
                 }
             }
             .onFailure { error ->
@@ -138,15 +143,39 @@ class AioMetadataSettingsViewModel @Inject constructor(
 
     private fun applyTemplateInBackground(uuid: String, currentApiKeys: Map<String, String>) {
         viewModelScope.launch {
-            val templateConfig = AioMetadataDefaultConfig.build(appContext, currentApiKeys)
-            repository.updateConfig(uuid, templateConfig)
-                .onSuccess { config ->
+            runCatching { AioMetadataDefaultConfig.build(appContext, currentApiKeys) }
+                .onSuccess { templateConfig ->
+                    repository.updateConfig(uuid, templateConfig)
+                        .onSuccess { config ->
+                            _uiState.update { state ->
+                                state.copy(
+                                    providers = config.toNuvioProviderStates(),
+                                    apiKeys = config.apiKeys,
+                                    catalogs = config.catalogs,
+                                    settings = config.settings,
+                                )
+                            }
+                        }
+                }
+        }
+    }
+
+    private fun migrateProviderBooleansIfNeeded(uuid: String, config: AioConfigInnerDto) {
+        val providerKeys = AioMetadataProvider.entries.map { it.key }.toSet()
+        val booleansInProviders = config.providers.filter { (k, v) -> k in providerKeys && v is Boolean }
+        if (booleansInProviders.isEmpty()) return
+
+        viewModelScope.launch {
+            val migrated = config.copy(
+                providers = config.providers - booleansInProviders.keys,
+                settings = config.settings + booleansInProviders.mapKeys { (k, _) -> "nuvio_provider_$k" },
+            )
+            repository.updateConfig(uuid, migrated)
+                .onSuccess { updated ->
                     _uiState.update { state ->
                         state.copy(
-                            providers = config.providers.toBooleanProviders(),
-                            apiKeys = config.apiKeys,
-                            catalogs = config.catalogs,
-                            settings = config.settings,
+                            providers = updated.toNuvioProviderStates(),
+                            settings = updated.settings,
                         )
                     }
                 }
@@ -169,9 +198,15 @@ class AioMetadataSettingsViewModel @Inject constructor(
             _uiState.update { it.copy(isMutating = true, errorMessage = null, statusMessage = null) }
 
             val manifest = if (target && current.uuid.isBlank()) {
-                val createResult = repository.createConfig(
-                    AioMetadataDefaultConfig.build(appContext, current.apiKeys)
-                )
+                val templateResult = runCatching { AioMetadataDefaultConfig.build(appContext, current.apiKeys) }
+                val templateConfig = templateResult.getOrNull()
+                if (templateConfig == null) {
+                    _uiState.update {
+                        it.copy(isMutating = false, errorMessage = "Unable to build AIOMetadata config.")
+                    }
+                    return@launch
+                }
+                val createResult = repository.createConfig(templateConfig)
                 val created = createResult.getOrNull()
                 if (created == null) {
                     _uiState.update {
@@ -202,7 +237,7 @@ class AioMetadataSettingsViewModel @Inject constructor(
 
     fun onProviderEnabledChanged(providerKey: String, enabled: Boolean) {
         mutateConfig { current ->
-            current.copy(providers = current.providers + (providerKey to enabled))
+            current.copy(settings = current.settings + ("nuvio_provider_$providerKey" to enabled))
         }
     }
 
@@ -230,7 +265,15 @@ class AioMetadataSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isMutating = true, errorMessage = null, statusMessage = null) }
 
-            val base = repository.cachedConfig() ?: current.toInnerConfig()
+            // Prefer the in-memory cache (has routing config). Fall back to toInnerConfig()
+            // only when there is no UUID yet; once a UUID exists the cache should always
+            // be populated — bail out rather than risk sending an empty providers map.
+            val base = repository.cachedConfig() ?: if (current.uuid.isBlank()) {
+                current.toInnerConfig()
+            } else {
+                _uiState.update { it.copy(isMutating = false) }
+                return@launch
+            }
             val next = transform(base)
 
             // First save requires both TMDB + TVDB — otherwise upstream returns 400.
@@ -240,7 +283,7 @@ class AioMetadataSettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isMutating = false,
-                        providers = next.providers.toBooleanProviders(),
+                        providers = next.toNuvioProviderStates(),
                         apiKeys = next.apiKeys,
                         catalogs = next.catalogs,
                         settings = next.settings,
@@ -251,8 +294,13 @@ class AioMetadataSettingsViewModel @Inject constructor(
 
             val result: Result<AioConfigInnerDto> = if (current.uuid.isBlank()) {
                 // First creation: send full default template with user's API keys.
-                val defaultConfig = AioMetadataDefaultConfig.build(appContext, next.apiKeys)
-                repository.createConfig(defaultConfig).map { defaultConfig }
+                runCatching { AioMetadataDefaultConfig.build(appContext, next.apiKeys) }
+                    .fold(
+                        onSuccess = { defaultConfig ->
+                            repository.createConfig(defaultConfig).map { defaultConfig }
+                        },
+                        onFailure = { Result.failure(it) }
+                    )
             } else {
                 repository.updateConfig(current.uuid, next)
             }
@@ -262,7 +310,7 @@ class AioMetadataSettingsViewModel @Inject constructor(
                     _uiState.update { state ->
                         state.copy(
                             isMutating = false,
-                            providers = config.providers.toBooleanProviders(),
+                            providers = config.toNuvioProviderStates(),
                             apiKeys = config.apiKeys,
                             catalogs = config.catalogs,
                             settings = config.settings,
@@ -275,7 +323,7 @@ class AioMetadataSettingsViewModel @Inject constructor(
                         it.copy(
                             isMutating = false,
                             // Preserve the user's edit locally so they don't lose input.
-                            providers = next.providers.toBooleanProviders(),
+                            providers = next.toNuvioProviderStates(),
                             apiKeys = next.apiKeys,
                             catalogs = next.catalogs,
                             settings = next.settings,
@@ -287,11 +335,16 @@ class AioMetadataSettingsViewModel @Inject constructor(
     }
 
     private fun UiState.toInnerConfig() = AioConfigInnerDto(
-        providers = providers,
+        providers = emptyMap(), // routing config comes from cachedConfig or template
         apiKeys = apiKeys,
         catalogs = catalogs,
         settings = settings,
     )
+
+    private fun AioConfigInnerDto.toNuvioProviderStates(): Map<String, Boolean> =
+        AioMetadataProvider.entries.associate { provider ->
+            provider.key to (settings["nuvio_provider_${provider.key}"] as? Boolean ?: false)
+        }
 
     private fun hasRequiredKeys(inner: AioConfigInnerDto): Boolean =
         inner.apiKeys["tmdb"].orEmpty().isNotBlank() &&
@@ -303,5 +356,3 @@ class AioMetadataSettingsViewModel @Inject constructor(
     }
 }
 
-private fun Map<String, Any?>.toBooleanProviders(): Map<String, Boolean> =
-    mapValues { (_, v) -> v as? Boolean ?: false }
