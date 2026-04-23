@@ -1,0 +1,57 @@
+name: PR Build
+
+on:
+  pull_request:
+    branches:
+      - dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Prepare local properties
+        env:
+          LOCAL_PROPERTIES_BASE64: ${{ secrets.LOCAL_PROPERTIES_BASE64 }}
+          LOCAL_DEV_PROPERTIES_BASE64: ${{ secrets.LOCAL_DEV_PROPERTIES_BASE64 }}
+        run: |
+          if [ -n "$LOCAL_PROPERTIES_BASE64" ]; then
+            printf '%s' "$LOCAL_PROPERTIES_BASE64" | base64 --decode > local.properties
+          fi
+          if [ -n "$LOCAL_DEV_PROPERTIES_BASE64" ]; then
+            printf '%s' "$LOCAL_DEV_PROPERTIES_BASE64" | base64 --decode > local.dev.properties
+          fi
+
+      - name: Append harrybarnes to version
+        run: |
+          sed -i 's/versionName = "\(.*\)"/versionName = "\1-harrybarnes"/' app/build.gradle.kts
+          grep "versionName =" app/build.gradle.kts
+
+      - name: Build APK
+        env:
+          CI_USE_DEBUG_SIGNING: "true"
+        run: ./gradlew app:assembleDebug
+
+      - name: Rename and Move APKs
+        run: |
+          mkdir -p build/outputs/harrybarnes-apks
+          find app/build/outputs/apk/debug -name "*.apk" | while read apk; do
+            filename=$(basename "$apk")
+            name="${filename%.*}"
+            mv "$apk" "build/outputs/harrybarnes-apks/${name}-harrybarnes.apk"
+          done
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: harrybarnes-apks
+          path: build/outputs/harrybarnes-apks/*.apk
