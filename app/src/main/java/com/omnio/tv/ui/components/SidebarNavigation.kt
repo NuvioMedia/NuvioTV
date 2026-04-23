@@ -82,7 +82,7 @@ fun SidebarNavigation(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "NUVIO",
+            text = "OMNIO",
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
             color = OmnioColors.Primary
         )

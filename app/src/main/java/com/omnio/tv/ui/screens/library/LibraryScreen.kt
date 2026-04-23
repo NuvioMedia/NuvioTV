@@ -239,7 +239,7 @@ fun LibraryScreen(
                 Text(
                     text = when {
                         uiState.sourceMode == LibrarySourceMode.TRAKT -> "TRAKT"
-                        uiState.isNuvioAccount -> "NUVIO"
+                        uiState.isNuvioAccount -> "OMNIO"
                         else -> stringResource(R.string.library_source_local)
                     },
                     style = MaterialTheme.typography.labelLarge,

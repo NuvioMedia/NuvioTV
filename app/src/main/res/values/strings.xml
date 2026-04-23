@@ -607,6 +607,38 @@
     <string name="mdblist_not_set">Not set</string>
     <string name="mdblist_invalid_api_key">Invalid MDBList API key</string>
 
+    <!-- AIOMetadata -->
+    <string name="aio_metadata_title">AIOMetadata</string>
+    <string name="aio_metadata_subtitle">Aggregated metadata from multiple providers, hosted by OmnioTV</string>
+    <string name="aio_metadata_enable_title">Enable AIOMetadata</string>
+    <string name="aio_metadata_enable_subtitle">Adds the AIOMetadata addon to your addon list</string>
+    <string name="aio_metadata_manifest_url_title">Manifest URL</string>
+    <string name="aio_metadata_manifest_url_subtitle">Copy to install manually in other Stremio clients</string>
+    <string name="aio_metadata_manage_on_web_title">Manage on the web</string>
+    <string name="aio_metadata_manage_on_web_subtitle">Configure providers and keys from any browser</string>
+    <string name="aio_metadata_qr_caption">Scan to open the configure page on your phone</string>
+    <string name="cd_aio_metadata_qr">AIOMetadata configure QR code</string>
+    <string name="aio_metadata_rotate_token_title">Rotate token</string>
+    <string name="aio_metadata_rotate_token_subtitle">Invalidates your current addon URL and issues a new one</string>
+    <string name="aio_metadata_rotate_token_confirm_title">Rotate token?</string>
+    <string name="aio_metadata_rotate_token_confirm_message">The current AIOMetadata URL will stop working immediately. Other Stremio clients will need to reinstall the new URL.</string>
+    <string name="aio_metadata_provider_tmdb">TMDB API key</string>
+    <string name="aio_metadata_provider_tvdb">TVDB API key</string>
+    <string name="aio_metadata_provider_fanart">Fanart.tv API key</string>
+    <string name="aio_metadata_provider_mal">MyAnimeList Client ID</string>
+    <string name="aio_metadata_provider_anilist">AniList token (optional)</string>
+    <string name="aio_metadata_provider_kitsu">Kitsu token (optional)</string>
+    <string name="aio_metadata_provider_enable_suffix">Enable</string>
+    <string name="aio_metadata_dialog_subtitle">Enter the API key for this provider</string>
+    <string name="aio_metadata_dialog_placeholder">Enter API key</string>
+    <string name="aio_metadata_not_set">Not set</string>
+    <string name="aio_metadata_invalid_manifest">Unable to reach your AIOMetadata addon. Check your keys or try again.</string>
+    <string name="aio_metadata_primary_profile_blocked">Switch to a non-primary profile to enable AIOMetadata.</string>
+    <string name="aio_metadata_rotate_success">Token rotated.</string>
+    <string name="aio_metadata_save">Save</string>
+    <string name="aio_metadata_clear">Clear</string>
+    <string name="aio_metadata_cancel">Cancel</string>
+
     <!-- Anime-Skip -->
     <string name="animeskip_title">Anime Skip</string>
     <string name="animeskip_subtitle">Configure your Anime Skip Client ID for anime intro/outro skipping</string>
@@ -1084,7 +1116,7 @@
     <string name="library_delete_subtitle">This removes the list and all list items from Trakt.</string>
     <string name="library_delete_confirm">Delete</string>
     <string name="library_source_local">LOCAL</string>
-    <string name="library_source_omnio">NUVIO</string>
+    <string name="library_source_omnio">OMNIO</string>
     <string name="library_source_trakt">TRAKT</string>
     <string name="library_syncing_library">Syncing library\u2026</string>
     <string name="library_type_all">All</string>

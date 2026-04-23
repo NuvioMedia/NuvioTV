@@ -52,8 +52,8 @@ android {
         applicationId = "com.omnio.tv"
         minSdk = 24
         targetSdk = 36
-        versionCode = 54
-        versionName = "0.5.10-beta"
+        versionCode = 55
+        versionName = "0.5.10-beta2"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${releaseValue("PARENTAL_GUIDE_API_URL")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${releaseValue("INTRODB_API_URL")}\"")
@@ -69,6 +69,7 @@ android {
         buildConfigField("String", "DONATIONS_BASE_URL", "\"${releaseValue("DONATIONS_BASE_URL")}\"")
         buildConfigField("String", "DONATIONS_DONATE_URL", "\"${releaseValue("DONATIONS_DONATE_URL")}\"")
         buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${releaseValue("AVATAR_PUBLIC_BASE_URL")}\"")
+        buildConfigField("String", "AIOMETADATA_BASE_URL", "\"${releaseValue("AIOMETADATA_BASE_URL", "")}\"")
 
         // In-app updater (GitHub Releases)
         buildConfigField("String", "GITHUB_OWNER", "\"TheMrClaus\"")
@@ -104,6 +105,7 @@ android {
             buildConfigField("String", "DONATIONS_BASE_URL", "\"${debugValue("DONATIONS_BASE_URL", allowReleaseFallback = true)}\"")
             buildConfigField("String", "DONATIONS_DONATE_URL", "\"${debugValue("DONATIONS_DONATE_URL", allowReleaseFallback = true)}\"")
             buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${debugValue("AVATAR_PUBLIC_BASE_URL", allowReleaseFallback = true)}\"")
+            buildConfigField("String", "AIOMETADATA_BASE_URL", "\"${debugValue("AIOMETADATA_BASE_URL", allowReleaseFallback = true)}\"")
         }
         release {
             isMinifyEnabled = true
@@ -132,6 +134,7 @@ android {
             buildConfigField("String", "DONATIONS_BASE_URL", "\"${releaseValue("DONATIONS_BASE_URL")}\"")
             buildConfigField("String", "DONATIONS_DONATE_URL", "\"${releaseValue("DONATIONS_DONATE_URL")}\"")
             buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${releaseValue("AVATAR_PUBLIC_BASE_URL")}\"")
+            buildConfigField("String", "AIOMETADATA_BASE_URL", "\"${releaseValue("AIOMETADATA_BASE_URL", "")}\"")
         }
         create("benchmark") {
             initWith(buildTypes.getByName("release"))

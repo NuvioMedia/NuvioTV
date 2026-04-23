@@ -31,7 +31,7 @@ fun OmnioTopBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "NUVIO",
+            text = "OMNIO",
             style = MaterialTheme.typography.headlineLarge.copy(
                 fontWeight = FontWeight.Bold
             ),

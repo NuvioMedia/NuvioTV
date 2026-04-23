@@ -1,6 +1,7 @@
 package com.omnio.tv.core.di
 
 import com.omnio.tv.data.repository.AddonRepositoryImpl
+import com.omnio.tv.data.repository.AioMetadataRepositoryImpl
 import com.omnio.tv.data.repository.CatalogRepositoryImpl
 import com.omnio.tv.data.repository.LibraryRepositoryImpl
 import com.omnio.tv.data.repository.MetaRepositoryImpl
@@ -9,6 +10,7 @@ import com.omnio.tv.data.repository.SubtitleRepositoryImpl
 import com.omnio.tv.data.repository.SyncRepositoryImpl
 import com.omnio.tv.data.repository.WatchProgressRepositoryImpl
 import com.omnio.tv.domain.repository.AddonRepository
+import com.omnio.tv.domain.repository.AioMetadataRepository
 import com.omnio.tv.domain.repository.CatalogRepository
 import com.omnio.tv.domain.repository.LibraryRepository
 import com.omnio.tv.domain.repository.MetaRepository
@@ -29,6 +31,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAddonRepository(impl: AddonRepositoryImpl): AddonRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAioMetadataRepository(impl: AioMetadataRepositoryImpl): AioMetadataRepository
 
     @Binds
     @Singleton
