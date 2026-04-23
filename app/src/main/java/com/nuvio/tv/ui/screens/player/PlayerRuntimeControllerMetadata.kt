@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.data.repository.SkipInterval
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Stream
@@ -363,11 +364,24 @@ internal fun PlayerRuntimeController.updateActiveSkipInterval(positionMs: Long) 
         if (currentActive == null || active.type != currentActive.type || active.startTime != currentActive.startTime) {
             lastActiveSkipType = active.type
             _uiState.update { it.copy(activeSkipInterval = active, skipIntervalDismissed = false) }
+            maybeAutoSkipInterval(active)
         }
     } else if (currentActive != null) {
         
         _uiState.update { it.copy(activeSkipInterval = null, skipIntervalDismissed = false) }
     }
+}
+
+private fun PlayerRuntimeController.maybeAutoSkipInterval(interval: SkipInterval) {
+    val normalizedType = interval.type.lowercase()
+    val shouldAutoSkip = normalizedType in setOf("intro", "op", "mixed-op", "recap", "outro", "ed", "mixed-ed")
+    if (!shouldAutoSkip) return
+
+    val duration = currentPlaybackDurationMs().takeIf { it > 0 } ?: Long.MAX_VALUE
+    val seekMs = if (interval.endTime == Double.MAX_VALUE) duration else (interval.endTime * 1000).toLong()
+    seekPlaybackTo(seekMs.coerceAtMost(duration))
+    scheduleProgressSyncAfterSeek()
+    _uiState.update { it.copy(activeSkipInterval = null, skipIntervalDismissed = true) }
 }
 
 internal fun PlayerRuntimeController.tryShowParentalGuide() {
