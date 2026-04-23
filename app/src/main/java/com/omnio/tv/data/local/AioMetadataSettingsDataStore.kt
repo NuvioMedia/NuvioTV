@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.omnio.tv.core.profile.ProfileManager
 import com.omnio.tv.domain.model.AioMetadataSettings
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -32,6 +33,7 @@ class AioMetadataSettingsDataStore @Inject constructor(
     private val uuidKey = stringPreferencesKey("aio_uuid")
     private val manifestUrlKey = stringPreferencesKey("aio_manifest_url")
     private val lastSyncedKey = longPreferencesKey("aio_last_synced_at")
+    private val configPasswordKey = stringPreferencesKey("aio_config_password")
 
     val settings: Flow<AioMetadataSettings> =
         profileManager.activeProfileId.flatMapLatest { pid ->
@@ -59,6 +61,16 @@ class AioMetadataSettingsDataStore @Inject constructor(
 
     suspend fun markSynced(timestampMillis: Long) {
         store().edit { it[lastSyncedKey] = timestampMillis }
+    }
+
+    suspend fun getConfigPassword(): String? =
+        store().data.first()[configPasswordKey]
+
+    suspend fun setConfigPassword(password: String?) {
+        store().edit { prefs ->
+            if (password.isNullOrBlank()) prefs.remove(configPasswordKey)
+            else prefs[configPasswordKey] = password
+        }
     }
 
     suspend fun replaceAll(settings: AioMetadataSettings) {
