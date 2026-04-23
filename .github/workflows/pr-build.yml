@@ -39,12 +39,12 @@ jobs:
       - name: Build APK
         env:
           CI_USE_DEBUG_SIGNING: "true"
-        run: ./gradlew app:assembleDebug
+        run: ./gradlew app:assembleRelease
 
       - name: Rename and Move APKs
         run: |
           mkdir -p build/outputs/harrybarnes-apks
-          find app/build/outputs/apk/debug -name "*.apk" | while read apk; do
+          find app/build/outputs/apk/release -name "*.apk" | while read apk; do
             filename=$(basename "$apk")
             name="${filename%.*}"
             mv "$apk" "build/outputs/harrybarnes-apks/${name}-harrybarnes.apk"
