@@ -616,6 +616,8 @@
     <string name="aio_metadata_manifest_url_subtitle">Copy to install manually in other Stremio clients</string>
     <string name="aio_metadata_manage_on_web_title">Manage on the web</string>
     <string name="aio_metadata_manage_on_web_subtitle">Configure providers and keys from any browser</string>
+    <string name="aio_metadata_config_password_title">Config password</string>
+    <string name="aio_metadata_config_password_subtitle">Required when logging in to the web interface — tap to copy</string>
     <string name="aio_metadata_qr_caption">Scan to open the configure page on your phone</string>
     <string name="cd_aio_metadata_qr">AIOMetadata configure QR code</string>
     <string name="aio_metadata_rotate_token_title">Rotate token</string>

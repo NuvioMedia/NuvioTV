@@ -35,6 +35,7 @@ class AioMetadataSettingsViewModel @Inject constructor(
         val enabled: Boolean = false,
         val uuid: String = "",
         val manifestUrl: String = "",
+        val configPassword: String = "",
         val providers: Map<String, Boolean> = emptyMap(),
         val apiKeys: Map<String, String> = emptyMap(),
         val catalogs: List<Map<String, Any?>> = emptyList(),
@@ -49,7 +50,7 @@ class AioMetadataSettingsViewModel @Inject constructor(
                 if (uuid.isBlank()) return ""
                 val base = BuildConfig.AIOMETADATA_BASE_URL.trimEnd('/')
                 if (base.isBlank()) return ""
-                return "$base/configure?uuid=$uuid"
+                return "$base/stremio/$uuid"
             }
 
         /** Upstream requires both TMDB and TVDB before it will mint a UUID. */
@@ -99,12 +100,14 @@ class AioMetadataSettingsViewModel @Inject constructor(
 
     private suspend fun refresh() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        val password = repository.getConfigPassword()
         val result = repository.refresh()
         result
             .onSuccess { config ->
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        configPassword = password.orEmpty(),
                         providers = config?.providers?.toBooleanProviders() ?: it.providers,
                         apiKeys = if (config != null) config.apiKeys
                                   else if (it.apiKeys.isEmpty()) mapOf("rpdb" to DEFAULT_RPDB_KEY)
@@ -180,6 +183,8 @@ class AioMetadataSettingsViewModel @Inject constructor(
                     }
                     return@launch
                 }
+                val newPassword = repository.getConfigPassword()
+                _uiState.update { it.copy(configPassword = newPassword.orEmpty()) }
                 created.manifestUrl
             } else {
                 current.manifestUrl

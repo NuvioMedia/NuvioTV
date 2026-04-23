@@ -159,6 +159,17 @@ fun AioMetadataSettingsContent(
                         )
                     }
 
+                    if (uiState.configPassword.isNotBlank()) {
+                        item(key = "aio_config_password") {
+                            SettingsActionRow(
+                                title = stringResource(R.string.aio_metadata_config_password_title),
+                                subtitle = stringResource(R.string.aio_metadata_config_password_subtitle),
+                                value = uiState.configPassword,
+                                onClick = { copyToClipboard(context, uiState.configPassword) }
+                            )
+                        }
+                    }
+
                     item(key = "aio_configure_qr") {
                         AioConfigureQr(url = uiState.configureUrl)
                     }

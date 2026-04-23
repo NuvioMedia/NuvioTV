@@ -20,5 +20,7 @@ interface AioMetadataRepository {
 
     suspend fun setEnabled(enabled: Boolean, manifestUrl: String): Result<Unit>
 
+    suspend fun getConfigPassword(): String?
+
     data class CreateConfigResult(val uuid: String, val manifestUrl: String)
 }

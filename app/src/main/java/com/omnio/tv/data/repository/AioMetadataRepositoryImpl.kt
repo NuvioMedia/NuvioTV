@@ -152,6 +152,8 @@ class AioMetadataRepositoryImpl @Inject constructor(
             config
         }.onFailure { Log.w(TAG, "updateConfig failed", it) }
 
+    override suspend fun getConfigPassword(): String? = dataStore.getConfigPassword()
+
     override suspend fun setEnabled(enabled: Boolean, manifestUrl: String): Result<Unit> = runCatching {
         val profile = profileManager.activeProfile
         if (profile?.usesPrimaryAddons == true) {
