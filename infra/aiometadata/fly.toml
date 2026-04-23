@@ -1,49 +1,43 @@
-# Fly.io deployment for the NuvioTV AIOMetadata instance.
+# fly.toml app configuration file generated for nuviotv-aiometadata on 2026-04-21T22:58:35+02:00
 #
-# This runs the upstream cedya77/aiometadata image unchanged. Rename `app`
-# to your own Fly app before `fly launch --copy-config`.
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
-# Provision these once, then set the values as Fly secrets (see README.md):
-#   - Postgres (Fly Postgres, Neon, Supabase — any Postgres works)
-#   - Redis (Upstash free tier or Fly Redis)
-#   - TMDB, TVDB, Fanart, MDBList, etc. app-level API keys
 
-app = "nuviotv-aiometadata"
-primary_region = "iad"
+app = 'nuviotv-aiometadata'
+primary_region = 'iad'
 
 [build]
-  image = "ghcr.io/cedya77/aiometadata:testing"
-  # Pin to a dated release tag once you've verified the deployment, e.g.:
-  # image = "ghcr.io/cedya77/aiometadata:v.testing.20260420.1"
+  image = "ghcr.io/cedya77/aiometadata:v0.0.0-testing.20260422.2"
 
 [env]
-  NODE_ENV = "production"
-  PORT = "3232"
-  LOG_LEVEL = "info"
+  LOG_LEVEL = 'info'
+  NODE_ENV = 'production'
+  PORT = '3232'
+
+[[mounts]]
+  source = 'aiometadata_data'
+  destination = '/data'
 
 [http_service]
   internal_port = 3232
   force_https = true
-  auto_stop_machines = "stop"
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
 
   [http_service.concurrency]
-    type = "requests"
+    type = 'requests'
     hard_limit = 250
     soft_limit = 200
 
   [[http_service.checks]]
-    interval = "30s"
-    timeout  = "5s"
-    method   = "GET"
-    path     = "/health"
+    interval = '30s'
+    timeout = '5s'
+    method = 'GET'
+    path = '/health'
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
+  size = 'shared-cpu-1x'
+  memory = '512mb'
   cpus = 1
-
-[mounts]
-  source = "aiometadata_data"
-  destination = "/data"
+  memory_mb = 512
