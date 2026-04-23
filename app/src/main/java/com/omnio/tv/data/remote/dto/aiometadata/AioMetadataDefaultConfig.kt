@@ -16,6 +16,11 @@ import org.json.JSONObject
 object AioMetadataDefaultConfig {
 
     private const val RPDB_FREE_KEY = "t0-free-rpdb"
+    const val TEMPLATE_VERSION_KEY = "nuvio_template_version"
+    const val TEMPLATE_VERSION = "1"
+
+    fun isTemplateApplied(config: AioConfigInnerDto): Boolean =
+        config.settings[TEMPLATE_VERSION_KEY] != null
 
     fun build(context: Context, userApiKeys: Map<String, String>): AioConfigInnerDto {
         val rawJson = context.resources
@@ -60,7 +65,7 @@ object AioMetadataDefaultConfig {
             providers = providers,
             apiKeys = finalApiKeys,
             catalogs = catalogs,
-            settings = settings,
+            settings = settings + (TEMPLATE_VERSION_KEY to TEMPLATE_VERSION),
         )
     }
 

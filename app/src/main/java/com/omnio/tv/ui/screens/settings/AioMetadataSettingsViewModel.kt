@@ -114,6 +114,14 @@ class AioMetadataSettingsViewModel @Inject constructor(
                         hasConfig = config != null,
                     )
                 }
+
+                // Silently apply the default template to existing configs that were
+                // created before the template feature was introduced (detected by the
+                // absence of the nuvio_template_version marker in their settings).
+                val uuid = _uiState.value.uuid
+                if (config != null && uuid.isNotBlank() && !AioMetadataDefaultConfig.isTemplateApplied(config)) {
+                    applyTemplateInBackground(uuid, config.apiKeys)
+                }
             }
             .onFailure { error ->
                 _uiState.update {
@@ -123,6 +131,23 @@ class AioMetadataSettingsViewModel @Inject constructor(
                     )
                 }
             }
+    }
+
+    private fun applyTemplateInBackground(uuid: String, currentApiKeys: Map<String, String>) {
+        viewModelScope.launch {
+            val templateConfig = AioMetadataDefaultConfig.build(appContext, currentApiKeys)
+            repository.updateConfig(uuid, templateConfig)
+                .onSuccess { config ->
+                    _uiState.update { state ->
+                        state.copy(
+                            providers = config.providers.toBooleanProviders(),
+                            apiKeys = config.apiKeys,
+                            catalogs = config.catalogs,
+                            settings = config.settings,
+                        )
+                    }
+                }
+        }
     }
 
     fun onToggleEnabled() {
