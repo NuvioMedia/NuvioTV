@@ -20,6 +20,7 @@ import com.omnio.tv.data.remote.api.MDBListApi
 import com.omnio.tv.data.remote.api.ParentalGuideApi
 import com.omnio.tv.data.remote.api.SeriesGraphApi
 import com.omnio.tv.data.remote.api.TmdbApi
+import com.omnio.tv.data.remote.dto.aiometadata.AioConfigInnerDtoJsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Module
@@ -56,6 +57,7 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideMoshi(): Moshi = Moshi.Builder()
+        .add(AioConfigInnerDtoJsonAdapter.Factory)
         .add(KotlinJsonAdapterFactory())
         .build()
 

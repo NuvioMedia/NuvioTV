@@ -11,14 +11,17 @@ import com.squareup.moshi.JsonClass
  * pin down only the fields the Android client writes directly and carry the
  * rest (catalogs, settings) as untyped maps so upstream can add knobs without
  * forcing a DTO bump.
+ *
+ * [AioConfigInnerDto] uses a custom Moshi adapter ([AioConfigInnerDtoJsonAdapter])
+ * so the `settings` catch-all serializes as flat root fields on the wire —
+ * that's the shape the upstream web `/configure` UI expects.
  */
 
-@JsonClass(generateAdapter = true)
 data class AioConfigInnerDto(
-    @Json(name = "providers") val providers: Map<String, Any?> = emptyMap(),
-    @Json(name = "apiKeys") val apiKeys: Map<String, String> = emptyMap(),
-    @Json(name = "catalogs") val catalogs: List<Map<String, Any?>> = emptyList(),
-    @Json(name = "settings") val settings: Map<String, Any?> = emptyMap(),
+    val providers: Map<String, Any?> = emptyMap(),
+    val apiKeys: Map<String, String> = emptyMap(),
+    val catalogs: List<Map<String, Any?>> = emptyList(),
+    val settings: Map<String, Any?> = emptyMap(),
 )
 
 @JsonClass(generateAdapter = true)

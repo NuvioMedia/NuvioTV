@@ -12,6 +12,11 @@ import org.json.JSONObject
  *
  * The template is the "Stremio Perfect Setup" guide config:
  * https://luckynumb3rs.github.io/stremio-perfect-setup/guide/4-AIOMetadata-Setup/
+ *
+ * Note: the built DTO groups non-routing/non-key/non-catalog template fields
+ * under [AioConfigInnerDto.settings] for internal ergonomics. The custom
+ * Moshi adapter flattens those entries up to the root on the wire, which is
+ * the shape upstream's web `/configure` UI expects.
  */
 object AioMetadataDefaultConfig {
 
