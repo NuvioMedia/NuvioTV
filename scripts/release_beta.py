@@ -361,6 +361,7 @@ def commit_tag_push(
         check=True,
         text=True,
     )
+    subprocess.run(["git", "pull", "--rebase", "origin", branch_name], cwd=ROOT, check=True)
     subprocess.run(
         ["git", "tag", "-a", release_tag, "-m", f"Release {release_title}"],
         cwd=ROOT,
@@ -376,6 +377,7 @@ def tag_push(
     release_title: str,
     branch_name: str,
 ) -> None:
+    subprocess.run(["git", "pull", "--rebase", "origin", branch_name], cwd=ROOT, check=True)
     subprocess.run(
         ["git", "tag", "-a", release_tag, "-m", f"Release {release_title}"],
         cwd=ROOT,
