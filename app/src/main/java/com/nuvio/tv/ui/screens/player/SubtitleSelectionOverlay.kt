@@ -1702,9 +1702,13 @@ private fun buildSubtitleLanguageRailItems(
 
     // When translation is available AND there is at least one internal track (needed as source),
     // ensure preferred languages appear in the rail and add 1 to represent the AI option.
+    // Skip languages that already have a built-in track — no AI option is shown for those.
     if (translationAvailable && internalTracks.isNotEmpty()) {
+        val internalLanguageKeys = internalTracks.map { normalizeOverlayLanguageKeyForTrack(it) }.toSet()
         preferredOrder.forEach { key ->
-            counts[key] = (counts[key] ?: 0) + 1
+            if (key !in internalLanguageKeys) {
+                counts[key] = (counts[key] ?: 0) + 1
+            }
         }
     }
 
@@ -1807,7 +1811,7 @@ private fun buildSubtitleOptionRailItems(
             )
         }
 
-    val aiItem = if (translationAvailable && selectedLanguageKey in preferredLanguageKeys && internalTracks.isNotEmpty()) {
+    val aiItem = if (translationAvailable && selectedLanguageKey in preferredLanguageKeys && internalTracks.isNotEmpty() && internalItems.isEmpty()) {
         listOf(
             SubtitleOptionRailItem(
                 id = "ai:$selectedLanguageKey",

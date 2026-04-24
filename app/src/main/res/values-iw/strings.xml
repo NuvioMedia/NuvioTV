@@ -1069,4 +1069,15 @@
     <string name="sub_advanced_section">רינדור כתוביות מתקדם</string>
     <string name="playback_player_auto">אוטומטי (הטוב ביותר לתוכן)</string>
     <string name="playback_player_auto_desc">ExoPlayer לסרטים ולתוכניות טלוויזיה · MPV לאנימה</string>
+    <string name="player_loading_buffering">אוגר נתונים…</string>
+    <string name="player_loading_building">בונה נגן…</string>
+    <string name="player_loading_detecting_format">מזהה פורמט הזרמה…</string>
+    <string name="player_loading_fallback_hevc_decoder">אתחול מפענח נכשל - עובר למפענח HEVC…</string>
+    <string name="player_loading_fallback_pcm_audio">אתחול רצועת שמע נכשל - עובר לשמע PCM…</string>
+    <string name="player_loading_preparing">מכין הזרמה…</string>
+    <string name="player_loading_starting">מתחיל הזרמה…</string>
+    <string name="player_loading_subtitles">מוריד כתוביות…</string>
+    <string name="player_loading_subtitles_addon">כתוביות: %1$s (%2$d / %3$d)</string>
+    <string name="player_loading_subtitles_from">מוריד כתוביות מ-%1$d תוספים…</string>
+    <string name="player_loading_subtitles_progress">מוריד כתוביות… (%1$d / %2$d)</string>
 </resources>
