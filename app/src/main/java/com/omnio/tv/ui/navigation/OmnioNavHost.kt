@@ -240,16 +240,15 @@ fun OmnioNavHost(
             )
         ) { backStackEntry ->
             val detailArgs = backStackEntry.arguments
-            val savedState = backStackEntry.savedStateHandle
             val returnToHomeOnBack = detailArgs
                 ?.getString("returnToHomeOnBack")
                 ?.toBooleanStrictOrNull() == true
-            val returnFocusSeason by savedState.getStateFlow(
-                "returnFocusSeason", detailArgs?.getString("returnFocusSeason")?.toIntOrNull()
-            ).collectAsState()
-            val returnFocusEpisode by savedState.getStateFlow(
-                "returnFocusEpisode", detailArgs?.getString("returnFocusEpisode")?.toIntOrNull()
-            ).collectAsState()
+            // NOTE: don't use savedStateHandle.getStateFlow<Int?>(key) for these —
+            // AndroidX Navigation 2.9 eagerly populates savedStateHandle with the
+            // String nav args, so the delegate unwrap would cast String->Int and
+            // crash. Nav args never mutate after landing, so read once directly.
+            val returnFocusSeason = detailArgs?.getString("returnFocusSeason")?.toIntOrNull()
+            val returnFocusEpisode = detailArgs?.getString("returnFocusEpisode")?.toIntOrNull()
             val heroBackdropUrl = detailArgs?.getString("heroBackdropUrl")?.takeIf { it.isNotBlank() }
             MetaDetailsScreen(
                 returnFocusSeason = returnFocusSeason,
