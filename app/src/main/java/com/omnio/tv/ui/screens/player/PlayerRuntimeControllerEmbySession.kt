@@ -1,11 +1,9 @@
 package com.omnio.tv.ui.screens.player
 
 import android.util.Log
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 private const val EMBY_PROVIDER = "emby"
 private const val EMBY_TAG = "EmbySession"
@@ -78,11 +76,7 @@ internal fun PlayerRuntimeController.stopEmbySession() {
     }
 
     val positionMs = currentPlaybackPositionMs() ?: 0L
-    scope.launch {
-        withContext(NonCancellable) {
-            embySessionService.reportStop(positionMs)
-        }
-    }
+    embySessionService.reportStop(positionMs)
 }
 
 internal fun PlayerRuntimeController.resetEmbySession() {

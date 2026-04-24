@@ -6,7 +6,11 @@ import com.omnio.tv.data.remote.api.EmbyApi
 import com.omnio.tv.data.remote.dto.emby.EmbyPlaybackProgressDto
 import com.omnio.tv.data.remote.dto.emby.EmbyPlaybackStartDto
 import com.omnio.tv.data.remote.dto.emby.EmbyPlaybackStopDto
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,6 +22,8 @@ class EmbySessionService @Inject constructor(
     private val embyApi: EmbyApi,
     private val embyCredentialsDataStore: EmbyCredentialsDataStore
 ) {
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     private var currentItemId: String? = null
     private var currentMediaSourceId: String? = null
     private var currentPlaySessionId: String? = null
@@ -84,33 +90,37 @@ class EmbySessionService @Inject constructor(
         }
     }
 
-    suspend fun reportStop(positionMs: Long = 0L) {
-        if (!isConnected()) {
-            resetSession()
-            return
-        }
-        val itemId = currentItemId ?: return
-        val mediaSourceId = currentMediaSourceId ?: return
-        val playSessionId = currentPlaySessionId ?: return
-        if (!hasReportedStart) return
+    fun reportStop(positionMs: Long = 0L) {
+        val itemId = currentItemId
+        val mediaSourceId = currentMediaSourceId
+        val playSessionId = currentPlaySessionId
+        val wasStarted = hasReportedStart
+        resetSession()
 
-        try {
-            val response = embyApi.reportPlaybackStopped(
-                EmbyPlaybackStopDto(
-                    itemId = itemId,
-                    mediaSourceId = mediaSourceId,
-                    playSessionId = playSessionId,
-                    positionTicks = msToTicks(positionMs)
+        if (!wasStarted || itemId == null || mediaSourceId == null || playSessionId == null) return
+
+        // Launched on serviceScope (not the caller's scope) so the stop event still fires
+        // when the player's viewModelScope has already been cancelled by ViewModel.clear().
+        serviceScope.launch {
+            if (!isConnected()) return@launch
+            try {
+                val response = embyApi.reportPlaybackStopped(
+                    EmbyPlaybackStopDto(
+                        itemId = itemId,
+                        mediaSourceId = mediaSourceId,
+                        playSessionId = playSessionId,
+                        positionTicks = msToTicks(positionMs)
+                    )
                 )
-            )
 
-            if (response.isSuccessful) {
-                Log.d(TAG, "Reported playback stopped: $itemId at ${positionMs}ms")
+                if (response.isSuccessful) {
+                    Log.d(TAG, "Reported playback stopped: $itemId at ${positionMs}ms")
+                } else {
+                    Log.w(TAG, "Failed to report stop: ${response.code()}")
+                }
+            } catch (error: Exception) {
+                Log.e(TAG, "Error reporting playback stop: ${error.message}", error)
             }
-        } catch (error: Exception) {
-            Log.e(TAG, "Error reporting playback stop: ${error.message}", error)
-        } finally {
-            resetSession()
         }
     }
 
