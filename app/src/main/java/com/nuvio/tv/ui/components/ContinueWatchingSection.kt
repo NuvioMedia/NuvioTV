@@ -68,8 +68,10 @@ import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.transformations
+import coil3.request.crossfade
 import kotlin.math.roundToInt
 import java.util.concurrent.TimeUnit
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
@@ -377,7 +379,7 @@ fun ContinueWatchingCard(
     val imageRequest = remember(effectiveImageModel, requestWidthPx, requestHeightPx, shouldBlur) {
         ImageRequest.Builder(context)
             .data(effectiveImageModel)
-            .crossfade(false)
+            .crossfade(true)
             .memoryCacheKey("${effectiveImageModel}_${requestWidthPx}x${requestHeightPx}_blur${shouldBlur}")
             .size(width = requestWidthPx, height = requestHeightPx)
             .apply {

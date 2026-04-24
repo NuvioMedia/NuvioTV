@@ -1526,4 +1526,28 @@
     <string name="qr_login_exchange_failed">Nie udało się dokończyć logowania QR</string>
     <string name="playback_player_auto">Zalecane (Najlepsze dla treści)</string>
     <string name="playback_player_auto_desc">ExoPlayer dla filmów i seriali · MPV dla anime</string>
+
+    <string name="advanced_clear_cw_cache">Wyczyść pamięć podręczną Kontynuuj oglądanie</string>
+    <string name="advanced_clear_cw_cache_done">Pamięć podręczna wyczyszczona</string>
+    <string name="advanced_clear_cw_cache_subtitle">Usuń zapisane miniatury, tytuły i dane wzbogacania dla Kontynuuj oglądanie</string>
+    <string name="detail_tab_trailer">Zwiastun</string>
+    <string name="detail_trailer_error">Nie udało się załadować zwiastuna.</string>
+    <string name="detail_trailer_loading">Ładowanie zwiastuna…</string>
+    <string name="library_empty_trakt_not_auth_subtitle">Połącz konto Trakt w Ustawieniach, aby zobaczyć swoją bibliotekę Trakt</string>
+    <string name="library_empty_trakt_not_auth_title">Trakt nie jest połączony</string>
+    <string name="profile_pin_current_required">Ten profil ma już PIN. Wprowadź aktualny PIN, aby go zmienić.</string>
+    <string name="profile_pin_overlay_delete_verify_heading">Wprowadź aktualny PIN, aby usunąć %1$s.</string>
+    <string name="profile_pin_overlay_delete_verify_support">Wprowadź aktualny 4-cyfrowy PIN przed usunięciem tego profilu.</string>
+    <string name="season_episode_format">S%1$02dE%2$02d</string>
+    <string name="stream_info_player_engine">Silnik odtwarzacza</string>
+    <string name="tmdb_trailers_subtitle">Kandydaci na zwiastuny z filmów TMDB dla sekcji zwiastunów</string>
+    <string name="tmdb_trailers_title">Zwiastuny</string>
+    <string name="trakt_library_source_dialog_subtitle">Wybierz, gdzie zapisywać i zarządzać elementami biblioteki</string>
+    <string name="trakt_library_source_dialog_title">Źródło biblioteki</string>
+    <string name="trakt_library_source_nuvio">Biblioteka Nuvio</string>
+    <string name="trakt_library_source_nuvio_selected">Wybrano bibliotekę Nuvio</string>
+    <string name="trakt_library_source_subtitle">Wybierz, której biblioteki używać do zapisywania i przeglądania kolekcji</string>
+    <string name="trakt_library_source_title">Źródło biblioteki</string>
+    <string name="trakt_library_source_trakt">Trakt</string>
+    <string name="trakt_library_source_trakt_selected">Wybrano bibliotekę Trakt</string>
 </resources>

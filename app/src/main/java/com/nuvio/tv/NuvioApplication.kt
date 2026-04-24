@@ -2,19 +2,23 @@ package com.nuvio.tv
 
 import android.app.Application
 import android.os.Build
-import coil.decode.GifDecoder
-import coil.decode.ImageDecoderDecoder
-import coil.ImageLoader
-import coil.ImageLoaderFactory
-import coil.disk.DiskCache
-import coil.memory.MemoryCache
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.disk.DiskCache
+import coil3.memory.MemoryCache
+import coil3.gif.GifDecoder
+import coil3.gif.AnimatedImageDecoder
+import coil3.request.crossfade
+import coil3.request.allowHardware
+import coil3.request.allowRgb565
+import coil3.bitmapFactoryMaxParallelism
+import okio.Path.Companion.toOkioPath
 import android.util.Log
 import com.lagradost.cloudstream3.AcraApplication
 import com.lagradost.cloudstream3.app
 import com.lagradost.nicehttp.ignoreAllSSLErrors
 import com.nuvio.tv.core.sync.StartupSyncService
 import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.Dispatchers
 import okhttp3.Cache
 import okhttp3.Cookie
 import okhttp3.CookieJar
@@ -27,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
 @HiltAndroidApp
-class NuvioApplication : Application(), ImageLoaderFactory {
+class NuvioApplication : Application(), SingletonImageLoader.Factory {
 
     @Inject lateinit var startupSyncService: StartupSyncService
 
@@ -92,32 +96,43 @@ class NuvioApplication : Application(), ImageLoaderFactory {
         AcraApplication.context = this
     }
 
-    override fun newImageLoader(): ImageLoader {
+    override fun newImageLoader(context: android.content.Context): ImageLoader {
         return ImageLoader.Builder(this)
             .components {
                 if (Build.VERSION.SDK_INT >= 28) {
-                    add(ImageDecoderDecoder.Factory())
+                    add(AnimatedImageDecoder.Factory())
                 } else {
                     add(GifDecoder.Factory())
                 }
+                // Use a lean OkHttpClient for image fetching — no HTTP cache (Coil's own
+                // DiskCache handles caching), no cookie jar, no logging interceptors.
+                add(
+                    coil3.network.okhttp.OkHttpNetworkFetcherFactory(
+                        callFactory = {
+                            OkHttpClient.Builder()
+                                .followRedirects(true)
+                                .followSslRedirects(true)
+                                .build()
+                        }
+                    )
+                )
             }
             .memoryCache {
-                MemoryCache.Builder(this)
-                    .maxSizePercent(0.33)
+                MemoryCache.Builder()
+                    .maxSizePercent(context, 0.33)
                     .build()
             }
             .diskCache {
                 DiskCache.Builder()
-                    .directory(cacheDir.resolve("image_cache"))
+                    .directory(cacheDir.resolve("image_cache").toOkioPath())
                     .maxSizeBytes(200L * 1024 * 1024)
                     .build()
             }
-            .decoderDispatcher(Dispatchers.IO.limitedParallelism(4))
-            .fetcherDispatcher(Dispatchers.IO.limitedParallelism(8))
-            .bitmapFactoryMaxParallelism(4)
+            .crossfade(false)
+            .precision(coil3.size.Precision.INEXACT)
             .allowHardware(true)
             .allowRgb565(true)
-            .crossfade(false)
+            .bitmapFactoryMaxParallelism(4)
             .build()
     }
 }

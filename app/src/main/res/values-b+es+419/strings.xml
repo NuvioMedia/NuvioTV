@@ -182,6 +182,7 @@
     <string name="cast_role_writer">Escritor</string>
     <string name="detail_tab_ratings">Calificaciones</string>
     <string name="detail_tab_more_like_this">Similares</string>
+    <string name="detail_tab_trailer">Tráiler</string>
     <string name="detail_more_like_this_powered_by_tmdb">Con tecnología de TMDB</string>
     <string name="detail_more_like_this_powered_by_trakt">Con tecnología de Trakt</string>
     <string name="detail_comments_title">Comentarios</string>
@@ -190,6 +191,8 @@
     <string name="detail_section_production">Producción</string>
     <string name="detail_comments_empty">Aún no hay reseñas en Trakt.</string>
     <string name="detail_comments_error">No se pudieron cargar las reseñas de Trakt en este momento.</string>
+    <string name="detail_trailer_loading">Cargando tráiler...</string>
+    <string name="detail_trailer_error">No se pudo cargar el tráiler en este momento.</string>
     <string name="detail_comments_spoiler_hidden">Reseña con spoiler. Presiona OK para mostrarla.</string>
     <string name="detail_comments_reveal_spoiler">Mostrar spoiler</string>
     <string name="detail_comments_reveal_spoiler_hint">Presiona OK para mostrar el spoiler.</string>
@@ -206,6 +209,7 @@
     <string name="tmdb_entity_empty_title">No se encontraron títulos</string>
     <string name="tmdb_entity_empty_subtitle">TMDB no tiene títulos disponibles para explorar en esta selección actualmente.</string>
     <string name="episodes_unavailable">No disponible</string>
+    <!-- Status labels for series (some languages need gendered forms) -->
     <string name="series_status_ended">Finalizada</string>
     <string name="series_status_continuing">En emisión</string>
     <string name="series_status_current">Actual</string>
@@ -215,6 +219,7 @@
     <string name="series_status_rumored">Rumoreada</string>
     <string name="series_status_in_production">En producción</string>
     <string name="series_status_post_production">Postproducción</string>
+    <!-- Status labels for movies (allows gendered translations in languages that need it) -->
     <string name="movie_status_ended">Finalizada</string>
     <string name="movie_status_continuing">En emisión</string>
     <string name="movie_status_current">Actual</string>
@@ -378,6 +383,8 @@
     <string name="playback_resolution_matching_sub">Permitir cambios en el modo de pantalla para coincidir con la resolución del video.</string>
     <string name="playback_player_external_desc">Abrir siempre los enlaces en una app externa</string>
     <string name="playback_player_ask_desc">Elegir el reproductor en cada ocasión</string>
+    <string name="playback_player_auto">Automático (Mejor para el contenido)</string>
+    <string name="playback_player_auto_desc">ExoPlayer para películas y series · MPV para anime</string>
     <string name="playback_engine_exoplayer_desc">Mejor compatibilidad con las funciones actuales de Nuvio.</string>
     <string name="playback_engine_mvplayer_desc">Usa libmpv con controles OSD de Nuvio. Experimental.</string>
 
@@ -552,7 +559,8 @@
     <string name="layout_section_detail_desc">Ajustes para las pantallas de detalles y episodios.</string>
     <string name="layout_blur_unwatched">Desenfocar Episodios No Vistos</string>
     <string name="layout_blur_unwatched_sub">Desenfocar miniaturas de episodios hasta que sean vistos para evitar spoilers.</string>
-    <string name="layout_blur_cw_next_up_sub">Difumina las miniaturas del siguiente episodio en “Continuar viendo” para evitar spoilers.</string>
+    <string name="layout_blur_cw_next_up">Difuminar no vistos en “Continuar viendo”</string>
+    <string name="layout_blur_cw_next_up_sub">Difumina las miniaturas del próximo episodio en “Continuar viendo” para evitar spoilers.</string>
     <string name="layout_trailer_button">Mostrar Botón de Tráiler</string>
     <string name="layout_trailer_button_sub">Mostrar el botón de tráiler en la página de detalles (solo si está disponible).</string>
     <string name="layout_prefer_external_meta">Preferir metadatos de addon externo</string>
@@ -586,6 +594,8 @@
     <string name="layout_preset_balanced">Equilibrado</string>
     <string name="layout_preset_comfort">Cómodo</string>
     <string name="layout_preset_large">Grande</string>
+    <string name="layout_memory_only_scroll">Desplazamiento vertical solo en memoria</string>
+    <string name="layout_memory_only_scroll_sub">Evita cargar nuevas imágenes mientras te desplazas verticalmente.</string>
     <string name="layout_preset_sharp">Puntiagudo</string>
     <string name="layout_preset_subtle">Sutil</string>
     <string name="layout_preset_classic">Clásico</string>
@@ -664,6 +674,8 @@
     <string name="tmdb_networks_subtitle">Cadenas con logos desde TMDB</string>
     <string name="tmdb_episodes_title">Episodios</string>
     <string name="tmdb_episodes_subtitle">Títulos de episodios, descripciones, miniaturas y duración desde TMDB</string>
+    <string name="tmdb_trailers_title">Tráilers</string>
+    <string name="tmdb_trailers_subtitle">Candidatos de tráiler desde los videos de TMDB para la sección de tráiler en detalles</string>
     <string name="tmdb_more_like_this_title">Similares</string>
     <string name="tmdb_more_like_this_subtitle">Fondos de recomendaciones de TMDB en la página de detalles</string>
     <string name="tmdb_collections_title">Colecciones</string>
@@ -730,6 +742,14 @@
     <string name="trakt_unaired_dialog_subtitle">Elige si Continuar Viendo debe incluir los próximos episodios antes de su lanzamiento.</string>
     <string name="trakt_show_unaired">Mostrar episodios sin emitir</string>
     <string name="trakt_hide_unaired">Ocultar episodios sin emitir</string>
+    <string name="trakt_all_history">Todo el historial</string>
+    <string name="trakt_days_format">%1$d días</string>
+    <string name="trakt_cw_window_title">Ventana de Continuar viendo</string>
+    <string name="trakt_cw_window_subtitle">Elige cuánta actividad de Trakt debe aparecer en “Continuar viendo”.</string>
+    <string name="trakt_unaired_dialog_title">Episodios próximos no emitidos</string>
+    <string name="trakt_unaired_dialog_subtitle">Elige si “Continuar viendo” debe incluir episodios próximos antes de su estreno.</string>
+    <string name="trakt_show_unaired">Mostrar episodios no emitidos</string>
+    <string name="trakt_hide_unaired">Ocultar episodios no emitidos</string>
     <string name="trakt_all_history">Todo el historial</string>
     <string name="trakt_days_format">%1$d días</string>
 
@@ -823,6 +843,8 @@
     <string name="profile_pin_overlay_remove_verify_kicker">Se requiere verificación de seguridad.</string>
     <string name="profile_pin_overlay_remove_verify_heading">Ingresa el PIN actual para eliminar el bloqueo de %1$s.</string>
     <string name="profile_pin_overlay_remove_verify_support">Ingresa el PIN actual de 4 dígitos para eliminar este bloqueo.</string>
+    <string name="profile_pin_overlay_delete_verify_heading">Ingresa el PIN actual para eliminar %1$s.</string>
+    <string name="profile_pin_overlay_delete_verify_support">Ingresa el PIN actual de 4 dígitos antes de eliminar este perfil.</string>
     <string name="profile_pin_overlay_set_support">Este PIN será requerido antes de abrir este perfil.</string>
     <string name="profile_pin_overlay_confirm_support">Vuelve a ingresar los mismos 4 dígitos para finalizar la configuración.</string>
     <string name="profile_pin_overlay_mismatch">Los PIN no coinciden. Ingresa uno nuevo nuevamente.</string>
@@ -845,9 +867,11 @@
     <string name="addon_remove">Eliminar</string>
     <string name="addon_manage_from_phone_title">Administrar desde el teléfono</string>
     <string name="addon_manage_from_phone_subtitle">Escanea un código QR para administrar addons y catálogos de Inicio desde tu teléfono</string>
+    <string name="addon_manage_collections_from_phone_subtitle">Escanea un código QR para administrar las colecciones desde tu teléfono</string>
     <string name="addon_reorder_title">Reordenar catálogos de inicio</string>
     <string name="addon_reorder_subtitle">Controla el orden de la fila de catálogos en Inicio (Clásico + Moderno + Cuadrícula)</string>
     <string name="addon_qr_scan_instruction">Escanea con tu teléfono para administrar addons y catálogos</string>
+    <string name="addon_qr_collections_scan_instruction">Escanea con tu teléfono para administrar las colecciones</string>
     <string name="addon_qr_close">Cerrar</string>
     <string name="addon_confirm_title">Confirmar cambios en addons y catálogos</string>
     <string name="addon_confirm_subtitle">Se realizaron los siguientes cambios desde tu teléfono:</string>
@@ -921,6 +945,8 @@
     <string name="parental_severity_mild">Leve</string>
     <string name="player_ends_at">Termina a las %1$s</string>
     <string name="player_via">vía %1$s</string>
+    <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
+    <string name="season_episode_format">T%1$02dE%2$02d</string>
     <string name="player_subtitle_delay">Retraso de Subtítulos</string>
     <string name="player_error_title">Error de Reproducción</string>
     <string name="player_go_back">Volver</string>
@@ -949,6 +975,7 @@
     <string name="stream_info_source">Origen</string>
     <string name="stream_info_subtitle_source_addon">Addon</string>
     <string name="stream_info_subtitle_source_embedded">Integrado</string>
+    <string name="stream_info_player_engine">Motor de reproducción</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Fuentes</string>
@@ -1127,6 +1154,8 @@
     <string name="library_empty_trakt_title">No hay %1$s en esta lista</string>
     <string name="library_empty_local_subtitle">Empieza a guardar tus favoritos para verlos aquí</string>
     <string name="library_empty_trakt_subtitle">Usa + en los detalles para agregar elementos a tu lista de seguimiento o a listas</string>
+    <string name="library_empty_trakt_not_auth_title">Trakt no conectado</string>
+    <string name="library_empty_trakt_not_auth_subtitle">Conecta tu cuenta de Trakt en Configuración para ver tu biblioteca de Trakt</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Cargando\u2026</string>
@@ -1320,6 +1349,7 @@
     <string name="profile_pin_invalid">PIN inválido. Inténtalo de nuevo.</string>
     <string name="profile_pin_verify_error">No se pudo verificar el PIN. Inténtalo de nuevo.</string>
     <string name="profile_pin_incorrect">El PIN actual es incorrecto.</string>
+    <string name="profile_pin_current_required">Este perfil ya tiene un PIN. Ingresa el PIN actual para cambiarlo.</string>
 
     <!-- Account Screen -->
     <string name="account_signin_create_title">Iniciar sesión / Crear cuenta</string>
@@ -1510,11 +1540,15 @@
     <string name="collections_editor_placeholder_backdrop">URL de imagen de fondo (opcional)</string>
     <string name="collections_editor_placeholder_folder">Nombre de carpeta</string>
     <string name="collections_editor_placeholder_gif">URL de GIF animado (solo al enfocar)</string>
+    <string name="collections_editor_genre_filter">Filtro de género</string>
+    <string name="collections_editor_choose_genre">Elegir</string>
+    <string name="collections_editor_select_genre">Seleccionar género</string>
+    <string name="collections_editor_all_genres">Todos los géneros</string>
+    <string name="collections_editor_genre_required">Género requerido</string>
+    <string name="collections_editor_genre_optional">Filtro de género disponible</string>
     <string name="collections_card_title">Colecciones</string>
-    <string name="collections_card_subtitle">Agrupa catálogos en carpetas en tu pantalla principal</string>
-    <string name="collections_tab_all">Todo</string>
+    <string name="collections_card_subtitle">Agrupa catálogos en carpetas en tu pantalla de inicio</string>
+    <string name="collections_tab_all">Todos</string>
     <string name="collections_tab_combined">Combinado</string>
- 
-    <string name="playback_player_auto">Automático (Mejor para el contenido)</string>
-    <string name="playback_player_auto_desc">ExoPlayer para Películas y Series · MPV para Anime</string>
+
 </resources>

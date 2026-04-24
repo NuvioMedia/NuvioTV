@@ -5,8 +5,8 @@ kotlin = "2.3.0"
 coreKtx = "1.15.0"
 appcompat = "1.6.1"
 composeBom = "2026.01.01"
-tvFoundation = "1.0.0-alpha11"
-tvMaterial = "1.0.1"
+tvFoundation = "1.0.0-rc01"
+tvMaterial = "1.1.0-rc01"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.11.0"
 
@@ -17,7 +17,7 @@ retrofit = "2.9.0"
 okhttp = "4.12.0"
 moshi = "1.15.1"
 coroutines = "1.8.1"
-coil = "2.7.0"
+coil = "3.3.0"
 navigationCompose = "2.8.8"
 datastore = "1.1.1"
 lifecycleViewModelCompose = "2.8.7"
@@ -76,9 +76,10 @@ coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 
 # Image Loading
-coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
-coil-gif = { group = "io.coil-kt", name = "coil-gif", version.ref = "coil" }
-coil-svg = { group = "io.coil-kt", name = "coil-svg", version.ref = "coil" }
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-gif = { group = "io.coil-kt.coil3", name = "coil-gif", version.ref = "coil" }
+coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 
 # Navigation
 navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }

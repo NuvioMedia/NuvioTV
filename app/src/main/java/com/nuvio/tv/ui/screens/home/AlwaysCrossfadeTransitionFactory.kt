@@ -1,11 +1,11 @@
 package com.nuvio.tv.ui.screens.home
 
-import coil.drawable.CrossfadeDrawable
-import coil.request.ImageResult
-import coil.request.SuccessResult
-import coil.transition.CrossfadeTransition
-import coil.transition.Transition
-import coil.transition.TransitionTarget
+import coil3.transition.CrossfadeDrawable
+import coil3.request.ImageResult
+import coil3.request.SuccessResult
+import coil3.transition.CrossfadeTransition
+import coil3.transition.Transition
+import coil3.transition.TransitionTarget
 
 internal class AlwaysCrossfadeTransitionFactory @JvmOverloads constructor(
     private val durationMillis: Int = CrossfadeDrawable.DEFAULT_DURATION,

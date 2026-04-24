@@ -254,6 +254,10 @@ fun TrailerPlayer(
                         AspectRatioFrameLayout.RESIZE_MODE_FIT
                     }
                 },
+                onRelease = { view ->
+                    view.player = null
+                    view.keepScreenOn = false
+                },
                 modifier = modifier
                     .clipToBounds()
                     .graphicsLayer {

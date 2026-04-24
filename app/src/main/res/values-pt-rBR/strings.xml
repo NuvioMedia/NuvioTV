@@ -1550,7 +1550,4 @@
     <string name="collections_card_subtitle">Agrupe catálogos em pastas na tela inicial</string>
     <string name="collections_tab_all">Tudo</string>
     <string name="collections_tab_combined">Combinado</string>
-    
-      <string name="playback_player_auto">Automático (Melhor para o conteúdo)</string>
-    <string name="playback_player_auto_desc">ExoPlayer para Filmes e Séries · MPV para Animes</string>
 </resources>

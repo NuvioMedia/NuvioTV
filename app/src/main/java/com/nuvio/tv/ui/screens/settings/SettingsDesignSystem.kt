@@ -55,9 +55,9 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.rememberAsyncImagePainter
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.theme.NuvioColors
 
@@ -606,10 +606,12 @@ private fun SettingsTogglePill(
 @Composable
 private fun rememberRawSvgPainter(rawIconRes: Int): Painter {
     val context = LocalContext.current
-    val request = remember(rawIconRes, context) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val sizePx = with(density) { 24.dp.roundToPx() }
+    val request = remember(rawIconRes, context, sizePx) {
         ImageRequest.Builder(context)
             .data(rawIconRes)
-            .decoderFactory(SvgDecoder.Factory())
+            .size(sizePx)
             .crossfade(false)
             .build()
     }

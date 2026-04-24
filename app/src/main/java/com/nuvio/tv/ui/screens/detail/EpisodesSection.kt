@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -67,8 +68,10 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.transformations
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.components.NuvioDialog
@@ -141,7 +144,8 @@ fun SeasonTabs(
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .focusRestorer(selectedTabFocusRequester),
+            .focusRestorer(selectedTabFocusRequester)
+            .focusGroup(),
         state = lazyListState,
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)

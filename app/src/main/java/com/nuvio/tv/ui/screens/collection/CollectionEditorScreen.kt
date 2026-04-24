@@ -67,7 +67,7 @@ import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Switch
 import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.CollectionCatalogSource
 import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.FolderViewMode

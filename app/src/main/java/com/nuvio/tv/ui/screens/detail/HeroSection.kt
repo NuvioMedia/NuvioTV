@@ -56,7 +56,7 @@ import androidx.tv.material3.IconButton
 import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import android.util.Log
@@ -74,8 +74,8 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.painter.Painter
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import java.util.Locale
 
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -114,7 +114,6 @@ fun HeroContentSection(
             ImageRequest.Builder(context)
                 .data(logo)
                 .crossfade(true)
-                .decoderFactory(SvgDecoder.Factory())
                 .build()
         }
     }
@@ -601,14 +600,12 @@ private fun MetaInfoRow(
     val imdbModel = remember(context) {
         ImageRequest.Builder(context)
             .data(com.nuvio.tv.R.raw.imdb_logo_2016)
-            .decoderFactory(SvgDecoder.Factory())
             .build()
     }
     val shouldShowTmdbRating = tmdbRating != null
     val tmdbModel = remember(context) {
         ImageRequest.Builder(context)
             .data(com.nuvio.tv.R.raw.mdblist_tmdb)
-            .decoderFactory(SvgDecoder.Factory())
             .build()
     }
     val ageRatingBadge = remember(meta.ageRating) {
@@ -861,7 +858,6 @@ private fun MDBListRatingsRow(ratings: MDBListRatings) {
                 val model = remember(context, logoRes) {
                     ImageRequest.Builder(context)
                         .data(logoRes)
-                        .decoderFactory(SvgDecoder.Factory())
                         .build()
                 }
                 AsyncImage(
@@ -964,13 +960,15 @@ private fun rememberRawSvgPainter(
     context: android.content.Context,
     @androidx.annotation.RawRes rawRes: Int
 ): Painter {
-    val model = remember(rawRes, context) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val sizePx = with(density) { 24.dp.roundToPx() }
+    val model = remember(rawRes, context, sizePx) {
         ImageRequest.Builder(context)
             .data(rawRes)
-            .decoderFactory(SvgDecoder.Factory())
+            .size(sizePx)
             .build()
     }
-    return coil.compose.rememberAsyncImagePainter(model = model)
+    return coil3.compose.rememberAsyncImagePainter(model = model)
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)

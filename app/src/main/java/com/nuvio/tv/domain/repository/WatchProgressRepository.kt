@@ -65,6 +65,12 @@ interface WatchProgressRepository {
     suspend fun getWatchedShowEpisodes(): Map<String, Set<Pair<Int, Int>>>
 
     /**
+     * Returns sibling ID mapping: each content ID maps to its alternate IDs
+     * from the same show (e.g. IMDB ↔ TMDB). Empty map for non-Trakt sources.
+     */
+    suspend fun getShowIdSiblings(): Map<String, Set<String>>
+
+    /**
      * Save or update watch progress
      */
     suspend fun saveProgress(progress: WatchProgress, syncRemote: Boolean = true)

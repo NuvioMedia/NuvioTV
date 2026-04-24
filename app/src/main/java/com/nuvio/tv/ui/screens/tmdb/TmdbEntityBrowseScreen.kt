@@ -58,14 +58,17 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import coil.compose.AsyncImage
-import coil.compose.AsyncImagePainter
-import coil.compose.rememberAsyncImagePainter
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
+import coil3.request.allowHardware
+import coil3.request.crossfade
 import com.nuvio.tv.R
 import com.nuvio.tv.core.tmdb.TmdbEntityBrowseData
 import com.nuvio.tv.core.tmdb.TmdbEntityKind
@@ -368,10 +371,10 @@ private fun TmdbEntityHero(
 
             // Detect dark monochrome logo and tint white if needed
             var logoColorFilter by remember { mutableStateOf<ColorFilter?>(null) }
-            val painterState = logoPainter.state
+            val painterState by logoPainter.state.collectAsState()
             LaunchedEffect(painterState) {
                 if (painterState is AsyncImagePainter.State.Success) {
-                    val bitmap = (painterState.result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                    val bitmap = ((painterState as AsyncImagePainter.State.Success).result.image as? coil3.BitmapImage)?.bitmap
                     if (bitmap != null) {
                         val isDarkMono = isLogoDarkAndMonochrome(bitmap)
                         logoColorFilter = if (isDarkMono) {

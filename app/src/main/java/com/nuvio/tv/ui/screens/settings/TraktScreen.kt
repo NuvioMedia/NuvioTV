@@ -50,9 +50,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import coil.compose.rememberAsyncImagePainter
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.nuvio.tv.R
 import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.data.local.TraktSettingsDataStore
@@ -799,10 +799,12 @@ private fun TraktStatItem(
 @Composable
 private fun rememberRawSvgPainter(@RawRes iconRes: Int): Painter {
     val context = LocalContext.current
-    val request = remember(iconRes, context) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val sizePx = with(density) { 24.dp.roundToPx() }
+    val request = remember(iconRes, context, sizePx) {
         ImageRequest.Builder(context)
             .data(iconRes)
-            .decoderFactory(SvgDecoder.Factory())
+            .size(sizePx)
             .crossfade(false)
             .build()
     }

@@ -516,6 +516,14 @@ class WatchProgressRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getShowIdSiblings(): Map<String, Set<String>> {
+        return if (shouldUseTraktProgress()) {
+            traktProgressService.getShowIdSiblings()
+        } else {
+            emptyMap()
+        }
+    }
+
     override fun isWatched(contentId: String, videoId: String?, season: Int?, episode: Int?): Flow<Boolean> {
         return useTraktProgressFlow()
             .flatMapLatest { useTraktProgress ->

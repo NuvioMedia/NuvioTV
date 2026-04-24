@@ -58,7 +58,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.PosterShape
@@ -153,12 +153,18 @@ fun CollectionRowSection(
         }
 
         CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalBringIntoViewSpec) {
+        val restoreIdx = lastFocusedItemIndex.coerceIn(0, (collection.folders.size - 1).coerceAtLeast(0))
+        val restoreFolder = collection.folders.getOrNull(restoreIdx)
+        val restoreFocusRequester = if (restoreFolder != null) {
+            itemFocusRequesters.getOrPut(folderFocusKey(restoreIdx, restoreFolder)) { FocusRequester() }
+        } else FocusRequester.Default
+
         LazyRow(
             state = listState,
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(rowFocusRequester)
-                .focusRestorer()
+                .focusRestorer(restoreFocusRequester)
                 .focusGroup(),
             contentPadding = PaddingValues(start = 48.dp, end = 200.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)

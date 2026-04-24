@@ -104,9 +104,8 @@ import androidx.tv.material3.IconButton
 import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.rememberAsyncImagePainter
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.core.player.ExternalPlayerLauncher
@@ -2434,10 +2433,12 @@ private fun SubtitleDelayOverlay(
 @Composable
 private fun rememberRawSvgPainter(@RawRes iconRes: Int): Painter {
     val context = LocalContext.current
-    val request = remember(iconRes, context) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val sizePx = with(density) { 24.dp.roundToPx() }
+    val request = remember(iconRes, context, sizePx) {
         ImageRequest.Builder(context)
             .data(iconRes)
-            .decoderFactory(SvgDecoder.Factory())
+            .size(sizePx)
             .build()
     }
     return rememberAsyncImagePainter(model = request)

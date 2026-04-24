@@ -163,6 +163,9 @@ class TraktProgressService @Inject constructor(
     /** Maps any content key (tmdb:X, trakt:X, imdb) to a Trakt-accepted path ID (slug or trakt numeric). */
     @Volatile
     private var showIdToTraktPathId: Map<String, String> = emptyMap()
+    /** Maps each content ID to its sibling IDs from the same Trakt show (e.g. IMDB ↔ TMDB). */
+    @Volatile
+    private var showIdSiblingsMap: Map<String, Set<String>> = emptyMap()
     private val episodeProgressState = MutableStateFlow<Map<String, EpisodeProgressCacheEntry>>(emptyMap())
     private val hasLoadedRemoteProgress = MutableStateFlow(false)
     private val cacheMutex = Mutex()
@@ -264,6 +267,7 @@ class TraktProgressService @Inject constructor(
         hasLoadedRemoteProgress.value = false
         watchedShowEpisodesMap = emptyMap()
         showIdToTraktPathId = emptyMap()
+        showIdSiblingsMap = emptyMap()
         hiddenProgressShowsLoadedAtMs = 0L
         forceRefreshUntilMs = 0L
         watchedMoviesUpdatedAtMs = 0L
@@ -443,6 +447,12 @@ class TraktProgressService @Inject constructor(
      * Keys are content IDs, values are sets of (season, episode) pairs.
      */
     fun getWatchedShowEpisodes(): Map<String, Set<Pair<Int, Int>>> = watchedShowEpisodesMap
+
+    /**
+     * Returns sibling ID mapping from Trakt: each content ID maps to its
+     * alternate IDs from the same show (e.g. IMDB ↔ TMDB ↔ Trakt).
+     */
+    fun getShowIdSiblings(): Map<String, Set<String>> = showIdSiblingsMap
 
     fun observeEpisodeProgress(contentId: String): Flow<Map<Pair<Int, Int>, WatchProgress>> {
         val cacheKey = canonicalLookupKey(contentId)
@@ -663,6 +673,9 @@ class TraktProgressService @Inject constructor(
                 if (episodeProgressState.value[cacheKey] == null) {
                     invalidateEpisodeProgressCache(effectiveProgress.contentId)
                 }
+                // Also update watchedShowEpisodesMap so badge pipeline sees the
+                // change immediately without waiting for a full Trakt re-fetch.
+                optimisticallyAddWatchedEpisode(effectiveProgress.contentId.trim(), season, episode)
             } else {
                 invalidateEpisodeProgressCache(effectiveProgress.contentId)
             }
@@ -800,6 +813,9 @@ class TraktProgressService @Inject constructor(
                     }
                     current + (cacheKey to entry.copy(progress = updatedProgress))
                 }
+                // Also update watchedShowEpisodesMap so badge pipeline sees the
+                // change immediately without waiting for a full Trakt re-fetch.
+                optimisticallyRemoveWatchedEpisode(contentId.trim(), season, episode)
             } else {
                 invalidateEpisodeProgressCache(contentId)
             }
@@ -1162,6 +1178,7 @@ class TraktProgressService @Inject constructor(
             // matches regardless of which ID the catalog or addon uses.
             val episodesMap = mutableMapOf<String, MutableSet<Pair<Int, Int>>>()
             val idLookup = mutableMapOf<String, String>()
+            val siblingsMap = mutableMapOf<String, MutableSet<String>>()
             items.forEach { item ->
                 val show = item.show ?: return@forEach
                 val ids = show.ids ?: return@forEach
@@ -1171,6 +1188,23 @@ class TraktProgressService @Inject constructor(
                     ids.trakt?.let { add("trakt:$it") }
                 }
                 if (keys.isEmpty()) return@forEach
+                // Build sibling mapping: each key points to all other keys from the same show.
+                // Track IMDB IDs that appear in multiple shows (e.g. Monsters vs Monster
+                // share the same IMDB but have different TMDB IDs) — these are ambiguous
+                // and must NOT be cross-cached.
+                if (keys.size > 1) {
+                    for (key in keys) {
+                        val existing = siblingsMap[key]
+                        if (existing != null) {
+                            // This key appeared in a previous show entry — mark as ambiguous
+                            // by clearing siblings so it won't be used for cross-caching.
+                            existing.clear()
+                            existing.add("__ambiguous__")
+                        } else {
+                            siblingsMap[key] = (keys - key).toMutableSet()
+                        }
+                    }
+                }
                 // Resolve a Trakt-accepted path ID: prefer slug, then trakt numeric
                 val traktAccepted = ids.slug?.takeIf { it.isNotBlank() }
                     ?: ids.trakt?.toString()
@@ -1197,6 +1231,7 @@ class TraktProgressService @Inject constructor(
             }
             watchedShowEpisodesMap = episodesMap
             showIdToTraktPathId = idLookup
+            showIdSiblingsMap = siblingsMap
 
             watchedShowSeedsState.value = watchedShowSeeds
             watchedShowSeedsUpdatedAtMs = System.currentTimeMillis()
@@ -1356,6 +1391,62 @@ class TraktProgressService @Inject constructor(
             hasLoadedWatchedMovies = true
             watchedMoviesStale = false
             trace("watched-movies cache optimistic update: watched=$watched keys=${keys.joinToString()}")
+        }
+    }
+
+    /**
+     * Optimistically add a watched episode to [watchedShowEpisodesMap] so the badge
+     * pipeline sees the change immediately without waiting for a full Trakt re-fetch.
+     */
+    private fun optimisticallyAddWatchedEpisode(contentId: String, season: Int, episode: Int) {
+        val key = contentId.trim()
+        if (key.isBlank()) return
+        val current = watchedShowEpisodesMap.toMutableMap()
+        // Update all keys that match this content (IMDB, TMDB variants via sibling map).
+        val keysToUpdate = showIdSiblingsMap[key]
+            ?.let { siblings -> (siblings + key).filter { !it.startsWith("trakt:") } }
+            ?: listOf(key)
+        var changed = false
+        for (k in keysToUpdate) {
+            val existing = current[k]
+            if (existing != null) {
+                val pair = season to episode
+                if (pair !in existing) {
+                    current[k] = existing + pair
+                    changed = true
+                }
+            }
+        }
+        if (changed) {
+            watchedShowEpisodesMap = current
+            trace("watchedShowEpisodes optimistic add: $key s${season}e${episode}")
+        }
+    }
+
+    /**
+     * Optimistically remove a watched episode from [watchedShowEpisodesMap].
+     */
+    private fun optimisticallyRemoveWatchedEpisode(contentId: String, season: Int, episode: Int) {
+        val key = contentId.trim()
+        if (key.isBlank()) return
+        val current = watchedShowEpisodesMap.toMutableMap()
+        val keysToUpdate = showIdSiblingsMap[key]
+            ?.let { siblings -> (siblings + key).filter { !it.startsWith("trakt:") } }
+            ?: listOf(key)
+        var changed = false
+        for (k in keysToUpdate) {
+            val existing = current[k]
+            if (existing != null) {
+                val pair = season to episode
+                if (pair in existing) {
+                    current[k] = existing - pair
+                    changed = true
+                }
+            }
+        }
+        if (changed) {
+            watchedShowEpisodesMap = current
+            trace("watchedShowEpisodes optimistic remove: $key s${season}e${episode}")
         }
     }
 

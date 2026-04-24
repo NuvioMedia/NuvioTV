@@ -1,8 +1,8 @@
 package com.nuvio.tv.ui.util
 
 import android.graphics.Bitmap
-import coil.size.Size
-import coil.transform.Transformation
+import coil3.size.Size
+import coil3.transform.Transformation
 import kotlin.math.min
 
 /**
@@ -13,7 +13,7 @@ import kotlin.math.min
  */
 class BlurTransformation(
     private val radius: Int = 25
-) : Transformation {
+) : Transformation() {
 
     override val cacheKey: String = "stack_blur_$radius"
 

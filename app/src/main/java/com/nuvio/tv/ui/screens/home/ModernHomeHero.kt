@@ -42,9 +42,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.transitionFactory
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.ui.theme.NuvioColors
@@ -300,7 +301,6 @@ private fun HeroTitleContent(
             ImageRequest.Builder(context)
                 .data(it)
                 .crossfade(false)
-                .decoderFactory(SvgDecoder.Factory())
                 .size(width = logoMaxWidthPx, height = logoHeightPx)
                 .build()
         }
@@ -308,7 +308,6 @@ private fun HeroTitleContent(
     val imdbLogoModel = remember(context) {
         ImageRequest.Builder(context)
             .data(com.nuvio.tv.R.raw.imdb_logo_2016)
-            .decoderFactory(SvgDecoder.Factory())
             .build()
     }
 

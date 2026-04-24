@@ -53,8 +53,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -458,8 +460,42 @@ fun SearchScreen(
                 }
             }
         } else {
+            val searchFocusManager = LocalFocusManager.current
+            val searchLastKeyRepeatTimeRef = remember { longArrayOf(0L) }
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onPreviewKeyEvent { event ->
+                        val native = event.nativeKeyEvent
+                        if (native.action == KeyEvent.ACTION_DOWN &&
+                            native.repeatCount > 0 &&
+                            (native.keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
+                                native.keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+                                native.keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+                                native.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
+                        ) {
+                            val isVertical = native.keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
+                                native.keyCode == KeyEvent.KEYCODE_DPAD_UP
+                            val gateMs = if (isVertical) 112L else 80L
+                            val now = android.os.SystemClock.uptimeMillis()
+                            if (now - searchLastKeyRepeatTimeRef[0] < gateMs) {
+                                return@onPreviewKeyEvent true
+                            }
+                            searchLastKeyRepeatTimeRef[0] = now
+                            val direction = when (native.keyCode) {
+                                KeyEvent.KEYCODE_DPAD_DOWN -> FocusDirection.Down
+                                KeyEvent.KEYCODE_DPAD_UP -> FocusDirection.Up
+                                KeyEvent.KEYCODE_DPAD_LEFT -> FocusDirection.Left
+                                KeyEvent.KEYCODE_DPAD_RIGHT -> FocusDirection.Right
+                                else -> null
+                            }
+                            if (direction != null) {
+                                searchFocusManager.moveFocus(direction)
+                            }
+                            return@onPreviewKeyEvent true
+                        }
+                        false
+                    },
                 contentPadding = PaddingValues(vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -577,7 +613,7 @@ fun SearchScreen(
                                 showPosterLabels = uiState.posterLabelsEnabled,
                                 showAddonName = uiState.catalogAddonNameEnabled,
                                 showCatalogTypeSuffix = uiState.catalogTypeSuffixEnabled,
-                                enableRowFocusRestorer = false,
+                                enableRowFocusRestorer = true,
                                 isItemWatched = { item ->
                                     val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
                                     if (isSeries) item.id in watchedSeriesIds else item.id in watchedMovieIds

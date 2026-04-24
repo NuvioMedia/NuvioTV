@@ -551,6 +551,8 @@ private fun ModernHomeRoute(
     val focusState by viewModel.focusState.collectAsStateWithLifecycle()
     val scrollToTopTrigger by viewModel.scrollToTopTrigger.collectAsStateWithLifecycle()
     val enrichingItemId by viewModel.enrichingItemId.collectAsStateWithLifecycle()
+    val lastEnrichedPreview by viewModel.lastEnrichedPreview.collectAsStateWithLifecycle()
+    val enrichedPreviews by viewModel.enrichedPreviews.collectAsStateWithLifecycle()
     val requestTrailerPreview = remember(viewModel) {
         { itemId: String, title: String, releaseInfo: String?, apiType: String ->
             viewModel.requestTrailerPreview(itemId, title, releaseInfo, apiType)
@@ -581,6 +583,8 @@ private fun ModernHomeRoute(
         focusState = focusState,
         scrollToTopTrigger = scrollToTopTrigger,
         enrichingItemId = enrichingItemId,
+        lastEnrichedPreview = lastEnrichedPreview,
+        enrichedPreviews = enrichedPreviews,
         trailerPreviewUrls = viewModel.trailerPreviewUrls,
         trailerPreviewAudioUrls = viewModel.trailerPreviewAudioUrls,
         onNavigateToDetail = onNavigateToDetail,

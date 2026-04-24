@@ -280,7 +280,7 @@
     <string name="settings_network">Network speed</string>
     <string name="settings_network_subtitle">Latency and download diagnostics</string>
     <string name="settings_advanced">Advanced</string>
-    <string name="settings_advanced_subtitle">Run network speed diagnostics</string>
+    <string name="settings_advanced_subtitle">Network diagnostics and advanced options</string>
     <string name="network_speed_test_run">Run Speed Test</string>
     <string name="network_speed_test_running">Running Speed Test</string>
     <string name="network_speed_test_subtitle">Measure download speed and latency</string>
@@ -294,6 +294,9 @@
     <string name="network_connection_wifi">Wi-Fi</string>
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Offline</string>
+    <string name="advanced_clear_cw_cache">Clear Continue Watching Cache</string>
+    <string name="advanced_clear_cw_cache_subtitle">Remove cached thumbnails, titles, and enrichment data for Continue Watching</string>
+    <string name="advanced_clear_cw_cache_done">Cache cleared</string>
     <string name="settings_debug">Debug</string>
     <string name="settings_debug_subtitle">Developer tools and feature flags</string>
     <string name="settings_plugins_section_subtitle">Manage repositories, providers, and plugin states</string>

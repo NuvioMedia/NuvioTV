@@ -237,7 +237,18 @@ internal fun HomeViewModel.observeModernHomePresentationPipeline() {
                     showFullReleaseDate = state.showFullReleaseDate
                 )
             }
-            .distinctUntilChanged()
+            // Compare by row structure only (keys + item counts), not by
+            // item content.  TMDB/meta enrichment changes item fields but
+            // not the row structure — the hero section reads enriched data
+            // via lastEnrichedPreview instead.
+            .distinctUntilChanged { old, new ->
+                old.homeRows === new.homeRows
+                    && old.continueWatchingItems === new.continueWatchingItems
+                    && old.useLandscapePosters == new.useLandscapePosters
+                    && old.showCatalogTypeSuffix == new.showCatalogTypeSuffix
+                    && old.showFullReleaseDate == new.showFullReleaseDate
+                    && old.catalogRows.size == new.catalogRows.size
+            }
             .debounce(80)
             .collectLatest { input ->
                 val shouldWarmStart = uiState.value.modernHomePresentation.rows.isEmpty()
@@ -458,7 +469,7 @@ internal fun HomeViewModel.onItemFocusPipeline(item: MetaPreview) {
             if (_enrichingItemId.value == item.id) {
                 scheduleUpdateCatalogRows()
                 withContext(Dispatchers.Main) {
-                    delay(150)
+                    delay(250)
                 }
                 setEnrichingItemId(null)
             }
@@ -524,11 +535,12 @@ internal fun HomeViewModel.preloadAdjacentItemPipeline(item: MetaPreview) {
 }
 
 private fun HomeViewModel.updateCatalogItemWithTmdb(itemId: String, enrichment: TmdbEnrichment) {
+    val isModernLayout = _uiState.value.homeLayout == HomeLayout.MODERN
     fun mergeItem(currentItem: MetaPreview): MetaPreview {
         var merged = currentItem
         if (currentTmdbSettings.useBasicInfo) {
             merged = merged.copy(
-                name = enrichment.localizedTitle ?: merged.name,
+                name = if (isModernLayout) enrichment.localizedTitle ?: merged.name else merged.name,
                 description = enrichment.description ?: merged.description,
                 genres = if (enrichment.genres.isNotEmpty()) enrichment.genres else merged.genres
             )
@@ -573,6 +585,12 @@ private fun HomeViewModel.updateCatalogItemWithTmdb(itemId: String, enrichment: 
             }
         }
         if (changed) state.copy(catalogRows = updatedRows) else state
+    }
+    // Emit the enriched preview so the hero section can update without
+    // a full presentation rebuild.
+    findCatalogItemById(itemId)?.let { enriched ->
+        _lastEnrichedPreview.value = enriched
+        _enrichedPreviews.update { it + (itemId to enriched) }
     }
 }
 
@@ -638,6 +656,10 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
             }
         }
         if (changed) state.copy(catalogRows = updatedRows) else state
+    }
+    findCatalogItemById(itemId)?.let { enriched ->
+        _lastEnrichedPreview.value = enriched
+        _enrichedPreviews.update { it + (itemId to enriched) }
     }
 
     // If external meta brought new trailerYtIds and the item has no trailer resolved yet, retry.

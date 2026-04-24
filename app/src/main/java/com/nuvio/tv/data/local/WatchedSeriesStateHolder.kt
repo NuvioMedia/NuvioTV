@@ -21,6 +21,10 @@ import javax.inject.Singleton
  * Shared holder for fully-watched series IDs derived from the CW pipeline.
  * Updated by HomeViewModel, observed by any screen that needs series watched badges.
  * Persisted per profile so badges appear instantly on cold start.
+ *
+ * Uses per-series revalidation deadlines instead of a global TTL:
+ * - Default: 7 days after last validation
+ * - If a known upcoming season release date exists, revalidate at that date
  */
 @Singleton
 class WatchedSeriesStateHolder @Inject constructor(
@@ -30,8 +34,8 @@ class WatchedSeriesStateHolder @Inject constructor(
     companion object {
         private const val FEATURE = "watched_series_cache"
         private val KEY = stringSetPreferencesKey("fully_watched_ids")
-        private val TIMESTAMPS_KEY = stringPreferencesKey("validated_timestamps")
-        private const val VALIDATION_TTL_MS = 12L * 60 * 60 * 1000 // 12 hours
+        private val REVALIDATE_KEY = stringPreferencesKey("revalidate_after")
+        private const val DEFAULT_TTL_MS = 7L * 24 * 60 * 60 * 1000 // 7 days
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -39,24 +43,22 @@ class WatchedSeriesStateHolder @Inject constructor(
     private val _fullyWatchedSeriesIds = MutableStateFlow<Set<String>>(emptySet())
     val fullyWatchedSeriesIds: StateFlow<Set<String>> = _fullyWatchedSeriesIds.asStateFlow()
 
-    /** Per-series validation timestamps (contentId → epochMs). */
+    /** Per-series revalidation deadline (contentId → epochMs when re-check is needed). */
     @Volatile
-    private var validatedAtMap: Map<String, Long> = emptyMap()
+    private var revalidateAfterMap: Map<String, Long> = emptyMap()
     private var loaded = false
 
     private fun store() = factory.get(profileManager.activeProfileId.value, FEATURE)
 
-    fun loadFromDisk() {
+    suspend fun loadFromDisk() {
         if (loaded) return
-        scope.launch {
-            val prefs = store().data.first()
-            val persisted = prefs[KEY] ?: emptySet()
-            validatedAtMap = parseTimestamps(prefs[TIMESTAMPS_KEY])
-            if (_fullyWatchedSeriesIds.value.isEmpty() && persisted.isNotEmpty()) {
-                _fullyWatchedSeriesIds.value = persisted
-            }
-            loaded = true
+        val prefs = store().data.first()
+        val persisted = prefs[KEY] ?: emptySet()
+        revalidateAfterMap = parseTimestamps(prefs[REVALIDATE_KEY])
+        if (_fullyWatchedSeriesIds.value.isEmpty() && persisted.isNotEmpty()) {
+            _fullyWatchedSeriesIds.value = persisted
         }
+        loaded = true
     }
 
     fun update(ids: Set<String>) {
@@ -68,40 +70,73 @@ class WatchedSeriesStateHolder @Inject constructor(
 
     /**
      * Update badge IDs and mark the given series as freshly validated.
+     * [revalidateAt] allows setting per-series deadlines (e.g. upcoming season premiere).
+     * Series not in [revalidateAt] get the default 7-day TTL.
      */
-    fun updateWithValidation(ids: Set<String>, validatedIds: Set<String>) {
+    @Synchronized
+    fun updateWithValidation(
+        ids: Set<String>,
+        validatedIds: Set<String>,
+        revalidateAt: Map<String, Long> = emptyMap()
+    ) {
+        val idsChanged = _fullyWatchedSeriesIds.value != ids
         _fullyWatchedSeriesIds.value = ids
         val now = System.currentTimeMillis()
-        val updated = validatedAtMap.toMutableMap()
-        validatedIds.forEach { updated[it] = now }
-        // Prune entries no longer in the badge set.
-        updated.keys.retainAll(ids)
-        validatedAtMap = updated
-        scope.launch {
-            store().edit { prefs ->
-                prefs[KEY] = ids
-                prefs[TIMESTAMPS_KEY] = gson.toJson(updated)
+        val defaultDeadline = now + DEFAULT_TTL_MS
+        val updated = revalidateAfterMap.toMutableMap()
+        var deadlinesChanged = false
+        validatedIds.forEach { id ->
+            val newDeadline = revalidateAt[id] ?: defaultDeadline
+            if (updated[id] != newDeadline) {
+                updated[id] = newDeadline
+                deadlinesChanged = true
+            }
+        }
+        // Prune entries for series no longer in badge set AND not freshly validated.
+        // Skip pruning when only adding deadlines (validatedIds not in ids) to avoid
+        // removing deadlines set by earlier calls in the same async inject loop.
+        if (idsChanged) {
+            val keysToRetain = ids + validatedIds
+            val sizeBefore = updated.size
+            updated.keys.retainAll(keysToRetain)
+            if (updated.size != sizeBefore) deadlinesChanged = true
+        }
+
+        revalidateAfterMap = updated
+        if (idsChanged || deadlinesChanged) {
+            scope.launch {
+                store().edit { prefs ->
+                    prefs[KEY] = ids
+                    prefs[REVALIDATE_KEY] = gson.toJson(updated)
+                }
             }
         }
     }
 
     /**
-     * Returns true if the given series was validated within the TTL window.
+     * Returns true if the given series does not yet need re-validation.
      */
     fun isSeriesValidationFresh(contentId: String): Boolean {
-        val ts = validatedAtMap[contentId] ?: return false
-        return System.currentTimeMillis() - ts < VALIDATION_TTL_MS
+        val deadline = revalidateAfterMap[contentId] ?: return false
+        return System.currentTimeMillis() < deadline
+    }
+
+    /**
+     * Returns true if the series has ever been validated (has an entry in the map).
+     */
+    fun hasBeenValidated(contentId: String): Boolean {
+        return contentId in revalidateAfterMap
     }
 
     /**
      * Filters the given set to only those series that need re-validation
-     * (not validated within TTL).
+     * (past their revalidation deadline or never validated).
      */
     fun filterStaleIds(ids: Set<String>): Set<String> {
         val now = System.currentTimeMillis()
         return ids.filter { id ->
-            val ts = validatedAtMap[id] ?: return@filter true
-            now - ts >= VALIDATION_TTL_MS
+            val deadline = revalidateAfterMap[id] ?: return@filter true
+            now >= deadline
         }.toSet()
     }
 

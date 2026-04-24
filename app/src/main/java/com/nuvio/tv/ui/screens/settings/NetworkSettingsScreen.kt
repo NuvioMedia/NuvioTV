@@ -67,6 +67,12 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
+@dagger.hilt.EntryPoint
+@dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
+private interface ClearCwCacheEntryPoint {
+    fun cwEnrichmentCache(): com.nuvio.tv.data.local.ContinueWatchingEnrichmentCache
+}
+
 private enum class NetworkTestState { Idle, TestingLatency, TestingDownload, Done, Error }
 
 private enum class ConnectionType { WiFi, Ethernet, Offline }
@@ -231,109 +237,134 @@ fun NetworkSettingsContent(
         }
     }
 
-    Column(
+    LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            SettingsDetailHeader(
-                modifier = Modifier.weight(1f),
-                title = stringResource(R.string.settings_advanced),
-                subtitle = stringResource(R.string.settings_advanced_subtitle)
-            )
-            AnimatedVisibility(
-                visible = testState != NetworkTestState.Idle,
-                enter = fadeIn(),
-                exit = fadeOut()
+        item(key = "header") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                ConnectionStatusBadge(type = connectionType)
+                SettingsDetailHeader(
+                    modifier = Modifier.weight(1f),
+                    title = stringResource(R.string.settings_advanced),
+                    subtitle = stringResource(R.string.settings_advanced_subtitle)
+                )
+                AnimatedVisibility(
+                    visible = testState != NetworkTestState.Idle,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    ConnectionStatusBadge(type = connectionType)
+                }
             }
         }
 
-        SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                item(key = "network_speed_test_action") {
-                    val runFocusRequester = remember { initialFocusRequester ?: FocusRequester() }
-                    LaunchedEffect(Unit) {
-                        if (initialFocusRequester != null) {
-                            runCatching { runFocusRequester.requestFocus() }
+        item(key = "speed_test") {
+            SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+                val runFocusRequester = remember { initialFocusRequester ?: FocusRequester() }
+                LaunchedEffect(Unit) {
+                    if (initialFocusRequester != null) {
+                        runCatching { runFocusRequester.requestFocus() }
+                    }
+                }
+                val isRunning = testState == NetworkTestState.TestingLatency ||
+                        testState == NetworkTestState.TestingDownload
+                SettingsActionRow(
+                    title = stringResource(
+                        if (isRunning) R.string.network_speed_test_running
+                        else R.string.network_speed_test_run
+                    ),
+                    subtitle = stringResource(R.string.network_speed_test_subtitle),
+                    value = if (isRunning) stringResource(
+                        when (testState) {
+                            NetworkTestState.TestingLatency -> R.string.network_testing_latency
+                            else -> R.string.network_testing_download
+                        }
+                    ) else null,
+                    onClick = { if (!isRunning) runSpeedTest() },
+                    modifier = Modifier.focusRequester(runFocusRequester)
+                )
+            }
+        }
+
+        if (testState != NetworkTestState.Idle) {
+            item(key = "speed_results") {
+                SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.network_results_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = NuvioColors.TextSecondary
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(24.dp)
+                        ) {
+                            NetworkMetricCard(
+                                modifier = Modifier.weight(1f),
+                                icon = Icons.Default.Timer,
+                                label = stringResource(R.string.network_latency_label),
+                                value = latencyMs?.let { "$it ms" },
+                                loading = testState == NetworkTestState.TestingLatency
+                            )
+                            NetworkMetricCard(
+                                modifier = Modifier.weight(1f),
+                                icon = Icons.Default.Speed,
+                                label = stringResource(R.string.network_download_label),
+                                value = downloadMbps?.let { "%.1f Mbps".format(it) },
+                                loading = testState == NetworkTestState.TestingDownload
+                            )
+                        }
+
+                        if (testState == NetworkTestState.Error && errorMessage != null) {
+                            Text(
+                                text = stringResource(R.string.network_error_prefix, errorMessage!!),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = NuvioColors.Error
+                            )
+                        }
+
+                        Text(
+                            text = stringResource(R.string.network_powered_by_fast),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = NuvioColors.TextSecondary.copy(alpha = 0.45f)
+                        )
+                    }
+                }
+            }
+        }
+
+        item(key = "clear_cw_cache") {
+            SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
+                var cleared by remember { mutableStateOf(false) }
+                SettingsActionRow(
+                    title = stringResource(R.string.advanced_clear_cw_cache),
+                    subtitle = if (cleared) {
+                        stringResource(R.string.advanced_clear_cw_cache_done)
+                    } else {
+                        stringResource(R.string.advanced_clear_cw_cache_subtitle)
+                    },
+                    onClick = {
+                        if (!cleared) {
+                            scope.launch {
+                                val entryPoint = dagger.hilt.android.EntryPointAccessors
+                                    .fromApplication(
+                                        context.applicationContext,
+                                        ClearCwCacheEntryPoint::class.java
+                                    )
+                                entryPoint.cwEnrichmentCache().clearAll()
+                                cleared = true
+                            }
                         }
                     }
-                    val isRunning = testState == NetworkTestState.TestingLatency ||
-                            testState == NetworkTestState.TestingDownload
-                    SettingsActionRow(
-                        title = stringResource(
-                            if (isRunning) R.string.network_speed_test_running
-                            else R.string.network_speed_test_run
-                        ),
-                        subtitle = stringResource(R.string.network_speed_test_subtitle),
-                        value = if (isRunning) stringResource(
-                            when (testState) {
-                                NetworkTestState.TestingLatency -> R.string.network_testing_latency
-                                else -> R.string.network_testing_download
-                            }
-                        ) else null,
-                        onClick = { if (!isRunning) runSpeedTest() },
-                        modifier = Modifier.focusRequester(runFocusRequester)
-                    )
-                }
-            }
-        }
-
-        AnimatedVisibility(
-            visible = testState != NetworkTestState.Idle,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.network_results_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = NuvioColors.TextSecondary
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp)
-                    ) {
-                        NetworkMetricCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Default.Timer,
-                            label = stringResource(R.string.network_latency_label),
-                            value = latencyMs?.let { "$it ms" },
-                            loading = testState == NetworkTestState.TestingLatency
-                        )
-                        NetworkMetricCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Default.Speed,
-                            label = stringResource(R.string.network_download_label),
-                            value = downloadMbps?.let { "%.1f Mbps".format(it) },
-                            loading = testState == NetworkTestState.TestingDownload
-                        )
-                    }
-
-                    if (testState == NetworkTestState.Error && errorMessage != null) {
-                        Text(
-                            text = stringResource(R.string.network_error_prefix, errorMessage!!),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NuvioColors.Error
-                        )
-                    }
-
-                    Text(
-                        text = stringResource(R.string.network_powered_by_fast),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = NuvioColors.TextSecondary.copy(alpha = 0.45f)
-                    )
-                }
+                )
             }
         }
     }

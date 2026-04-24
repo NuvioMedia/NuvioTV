@@ -117,6 +117,8 @@ class FolderDetailViewModel @Inject constructor(
     private val enrichedItemIds = java.util.Collections.synchronizedSet(mutableSetOf<String>())
     private val _enrichingItemId = MutableStateFlow<String?>(null)
     val enrichingItemId: StateFlow<String?> = _enrichingItemId.asStateFlow()
+    private val _enrichedPreviews = MutableStateFlow<Map<String, MetaPreview>>(emptyMap())
+    val enrichedPreviews: StateFlow<Map<String, MetaPreview>> = _enrichedPreviews.asStateFlow()
     private val _trailerPreviewUrls = MutableStateFlow<Map<String, String>>(emptyMap())
     val trailerPreviewUrls: StateFlow<Map<String, String>> = _trailerPreviewUrls.asStateFlow()
     private val _trailerPreviewAudioUrls = MutableStateFlow<Map<String, String>>(emptyMap())
@@ -722,8 +724,9 @@ class FolderDetailViewModel @Inject constructor(
                     var result = merged
                 if (finalEnrichment != null) {
                     if (tmdbSettings.useBasicInfo) {
+                        val isModern = _uiState.value.homeLayout == HomeLayout.MODERN
                         result = result.copy(
-                            name = finalEnrichment.localizedTitle ?: result.name,
+                            name = if (isModern) finalEnrichment.localizedTitle ?: result.name else result.name,
                             description = finalEnrichment.description ?: result.description,
                             genres = if (finalEnrichment.genres.isNotEmpty()) finalEnrichment.genres else result.genres
                         )
@@ -773,6 +776,14 @@ class FolderDetailViewModel @Inject constructor(
 
             // Sync enriched tabs into followLayoutHomeState for FOLLOW_LAYOUT mode.
             if (_enrichingItemId.value == item.id) _enrichingItemId.value = null
+            // Emit enriched preview for Modern expanded poster cards.
+            val enrichedItem = _uiState.value.tabs
+                .firstNotNullOfOrNull { tab ->
+                    tab.catalogRow?.items?.firstOrNull { it.id == item.id }
+                }
+            if (enrichedItem != null) {
+                _enrichedPreviews.update { it + (item.id to enrichedItem) }
+            }
             rebuildFollowLayoutState()
         }
     }

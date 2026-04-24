@@ -49,9 +49,8 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeChild
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
 import com.nuvio.tv.ui.theme.NuvioColors
-import coil.compose.rememberAsyncImagePainter
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
 
 private val SidebarLeadingVisualSize = 34.dp
 private val SidebarContentGap = 14.dp
@@ -390,9 +389,13 @@ private fun SidebarProfileItem(
 }
 
 @Composable
-private fun rememberRawSvgPainter(rawIconRes: Int): Painter = rememberAsyncImagePainter(
-    model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-        .data(rawIconRes)
-        .decoderFactory(SvgDecoder.Factory())
-        .build()
-)
+private fun rememberRawSvgPainter(rawIconRes: Int): Painter {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val sizePx = with(density) { 24.dp.roundToPx() }
+    return rememberAsyncImagePainter(
+        model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+            .data(rawIconRes)
+            .size(sizePx)
+            .build()
+    )
+}

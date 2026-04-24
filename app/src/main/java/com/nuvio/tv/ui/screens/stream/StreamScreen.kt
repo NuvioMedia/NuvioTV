@@ -67,8 +67,8 @@ import android.view.KeyEvent
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
-import coil.request.ImageRequest
-import coil.decode.SvgDecoder
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import com.nuvio.tv.ui.util.localizeEpisodeTitle
@@ -81,7 +81,7 @@ import androidx.tv.material3.FilterChipDefaults
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.nuvio.tv.core.player.ExternalPlayerLauncher
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.domain.model.Stream
@@ -455,7 +455,6 @@ private fun LeftContentSection(
             ImageRequest.Builder(context)
                 .data(image)
                 .crossfade(false)
-                .decoderFactory(SvgDecoder.Factory())
                 .build()
         }
     }
@@ -990,7 +989,6 @@ private fun StreamCard(
             ImageRequest.Builder(context)
                 .data(logo)
                 .crossfade(false)
-                .decoderFactory(SvgDecoder.Factory())
                 .build()
         }
     }
