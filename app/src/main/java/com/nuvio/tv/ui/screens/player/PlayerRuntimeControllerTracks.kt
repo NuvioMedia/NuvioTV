@@ -1287,12 +1287,19 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
             return
         }
         // If internal match is secondary and a primary addon match exists, prefer the addon.
+        // But if AI auto-select is enabled, trigger AI for the primary language instead.
         if (matchedTargetPosition > 0 && addonSubtitlesLoaded) {
             val primaryTarget = targets.first()
             val primaryAddonMatch = state.addonSubtitles.firstOrNull { subtitle ->
                 PlayerSubtitleUtils.matchesLanguageCode(subtitle.lang, primaryTarget)
             }
             if (primaryAddonMatch != null) {
+                if (aiAutoSelectActive) {
+                    autoSubtitleSelected = true
+                    val aiStarted = triggerAiForLanguage(primaryTarget)
+                    if (!aiStarted) autoSubtitleSelected = false
+                    return
+                }
                 autoSubtitleSelected = true
                 translationManager?.isEnabled = false
                 translationManager?.reset()
