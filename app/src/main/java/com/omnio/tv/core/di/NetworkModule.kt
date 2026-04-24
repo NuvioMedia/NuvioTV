@@ -436,7 +436,15 @@ object NetworkModule {
 
             if (credentials.apiKey.isNotBlank()) {
                 val version = BuildConfig.VERSION_NAME.ifBlank { "dev" }
-                val authHeader = "MediaBrowser Client=\"OmnioTV\", Device=\"Android TV\", DeviceId=\"${credentials.deviceId}\", Version=\"$version\", Token=\"${credentials.apiKey}\""
+                val authHeader = buildString {
+                    append("MediaBrowser Client=\"OmnioTV\", Device=\"Android TV\"")
+                    append(", DeviceId=\"${credentials.deviceId}\"")
+                    append(", Version=\"$version\"")
+                    append(", Token=\"${credentials.apiKey}\"")
+                    if (credentials.userId.isNotBlank()) {
+                        append(", UserId=\"${credentials.userId}\"")
+                    }
+                }
                 request = request.newBuilder()
                     .header("X-Emby-Authorization", authHeader)
                     .header("X-Emby-Token", credentials.apiKey)
