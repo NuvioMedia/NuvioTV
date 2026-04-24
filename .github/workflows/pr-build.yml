@@ -31,11 +31,12 @@ jobs:
             printf '%s' "$LOCAL_DEV_PROPERTIES_BASE64" | base64 --decode > local.dev.properties
           fi
 
-      - name: Update version and application ID
+      - name: Update build configuration
         run: |
           sed -i 's/versionName = "\(.*\)"/versionName = "\1-harrybarnes"/' app/build.gradle.kts
           sed -i 's/applicationId = "com.nuvio.tv"/applicationId = "com.nuvio.tv.harrybarnes"/' app/build.gradle.kts
-          grep -E "versionName =|applicationId =" app/build.gradle.kts
+          sed -i 's/isEnable = true/isEnable = false/' app/build.gradle.kts
+          grep -E "versionName =|applicationId =|isEnable =" app/build.gradle.kts
 
       - name: Build APK
         env:
