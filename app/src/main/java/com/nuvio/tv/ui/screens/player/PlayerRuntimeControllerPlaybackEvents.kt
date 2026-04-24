@@ -813,6 +813,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         is PlayerEvent.OnAdjustSubtitleDelay -> {
             adjustSubtitleDelay(event.deltaMs, event.showOverlay)
         }
+        PlayerEvent.OnResetSubtitleDelay -> {
+            adjustSubtitleDelay(-_uiState.value.subtitleDelayMs, true)
+        }
         PlayerEvent.OnShowSpeedDialog -> {
             val state = _uiState.value
             if (state.tunnelingEnabled) {
