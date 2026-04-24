@@ -232,12 +232,12 @@ baselineProfile {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
-    val composeBom = platform("androidx.compose:compose-bom:2026.01.01")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+    val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
 
     baselineProfile(project(":baselineprofile"))
     implementation(libs.androidx.core.ktx)
-    implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation("androidx.core:core-splashscreen:1.2.0")
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.profileinstaller)
     implementation("androidx.recyclerview:recyclerview:1.4.0")
@@ -250,7 +250,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.tv:tv-material:1.0.1")
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation("androidx.activity:activity-compose:1.11.0")
+    implementation("androidx.activity:activity-compose:1.13.0")
 
     // Hilt
     implementation(libs.hilt.android)
@@ -350,8 +350,8 @@ dependencies {
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
-    testImplementation("io.mockk:mockk:1.13.12")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation("io.mockk:mockk:1.14.9")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
