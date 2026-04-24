@@ -30,8 +30,8 @@ updates:
           - "minor"
           - "patch"
     ignore:
-      # Next.js major bumps are breaking — review manually
-      - dependency-name: "next"
+      # Major version bumps are always breaking for this stack — upgrade manually
+      - dependency-name: "*"
         update-types: ["version-update:semver-major"]
 
   # GitHub Actions
