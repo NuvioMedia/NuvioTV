@@ -1,0 +1,4 @@
+{
+  "_comment": "ignoreCommand returns 0 to skip a deploy, 1 to build. git diff --quiet has the same convention (0 = clean, 1 = changes). Path is relative to Root Directory (web/panel) in Vercel project settings.",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ../../supabase/migrations"
+}
