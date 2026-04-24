@@ -52,8 +52,8 @@ android {
         applicationId = "com.omnio.tv"
         minSdk = 24
         targetSdk = 36
-        versionCode = 64
-        versionName = "0.5.13-beta-hotfix"
+        versionCode = 65
+        versionName = "0.5.15-beta"
 
         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${releaseValue("PARENTAL_GUIDE_API_URL")}\"")
         buildConfigField("String", "INTRODB_API_URL", "\"${releaseValue("INTRODB_API_URL")}\"")
