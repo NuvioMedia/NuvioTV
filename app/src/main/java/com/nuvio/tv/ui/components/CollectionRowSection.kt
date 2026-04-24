@@ -74,9 +74,7 @@ fun CollectionRowSection(
     focusedItemIndex: Int = -1,
     onItemFocused: (itemIndex: Int) -> Unit = {},
     onFolderFocused: (collection: Collection, folder: CollectionFolder) -> Unit = { _, _ -> },
-    entryFocusRequester: FocusRequester? = null,
-    downEntryFocusRequester: FocusRequester? = null,
-    upEntryFocusRequester: FocusRequester? = null
+    entryFocusRequester: FocusRequester? = null
 ) {
     val currentOnItemFocused by rememberUpdatedState(onItemFocused)
     val currentOnFolderFocused by rememberUpdatedState(onFolderFocused)
@@ -174,15 +172,8 @@ fun CollectionRowSection(
                 key = { index, folder -> folderFocusKey(index, folder) },
                 contentType = { _, _ -> "collection_folder" }
             ) { index, folder ->
-                val isWide = folder.tileShape != PosterShape.POSTER
                 val targetIndex = if (lastFocusedItemIndex >= 0) lastFocusedItemIndex else 0
                 val isEntryTarget = entryFocusRequester != null && index == targetIndex
-                val wideFocusModifier = if (isWide && (downEntryFocusRequester != null || upEntryFocusRequester != null)) {
-                    Modifier.focusProperties {
-                        if (downEntryFocusRequester != null) down = downEntryFocusRequester
-                        if (upEntryFocusRequester != null) up = upEntryFocusRequester
-                    }
-                } else Modifier
 
                 FolderCard(
                     folder = folder,
@@ -195,9 +186,7 @@ fun CollectionRowSection(
                         }
                         currentOnFolderFocused(collection, folder)
                     },
-                    modifier = wideFocusModifier.then(
-                        if (isEntryTarget) Modifier.focusRequester(entryFocusRequester!!) else Modifier
-                    ),
+                    modifier = if (isEntryTarget) Modifier.focusRequester(entryFocusRequester!!) else Modifier,
                     focusRequester = itemFocusRequesters.getOrPut(
                         folderFocusKey(index, folder)
                     ) { FocusRequester() }

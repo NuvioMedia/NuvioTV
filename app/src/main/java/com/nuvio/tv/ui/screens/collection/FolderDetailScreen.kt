@@ -461,6 +461,7 @@ private fun RowsContent(
         initialFirstVisibleItemScrollOffset = focusState.verticalScrollOffset
     )
     val rowStates = remember { mutableMapOf<String, LazyListState>() }
+    val rowFocusedItemIndex = remember { mutableMapOf<String, Int>() }
     val currentFocusedRowIndex = remember { intArrayOf(focusState.focusedRowIndex) }
     val currentFocusedItemIndex = remember { intArrayOf(focusState.focusedItemIndex) }
 
@@ -586,9 +587,11 @@ private fun RowsContent(
                             } else {
                                 -1
                             },
+                            restorerFocusedIndex = rowFocusedItemIndex[rowKey] ?: -1,
                             onItemFocused = { itemIndex ->
                                 currentFocusedRowIndex[0] = index
                                 currentFocusedItemIndex[0] = itemIndex
+                                rowFocusedItemIndex[rowKey] = itemIndex
                             }
                         )
                     }

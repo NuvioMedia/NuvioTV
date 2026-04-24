@@ -339,8 +339,7 @@ internal fun ModernRowSection(
     onNavigateToFolderDetail: (String, String) -> Unit,
     onLoadMoreCatalog: (String, String, String) -> Unit,
     onBackdropInteraction: () -> Unit,
-    onExpandedCatalogFocusKeyChange: (String?) -> Unit,
-    onGetVerticalFocusRequester: (index: Int, isDown: Boolean) -> FocusRequester = { _, _ -> FocusRequester.Default }
+    onExpandedCatalogFocusKeyChange: (String?) -> Unit
 ) {
     val focusedItemByRow = uiCaches.focusedItemByRow
     val itemFocusRequesters = uiCaches.itemFocusRequesters
@@ -661,18 +660,7 @@ internal fun ModernRowSection(
                     val onFocused = remember(row.key, index, isContinueWatchingRow) {
                         { onRowItemFocused(row.key, index, isContinueWatchingRow) }
                     }
-                    val hasExpandedCard = expandedCatalogFocusKey != null
                     val isCwPayload = item.payload is ModernPayload.ContinueWatching
-                    val isCollectionPayload = item.payload is ModernPayload.CollectionFolder
-                    val needsVerticalOverride = hasExpandedCard || isCwPayload || isCollectionPayload
-                    val verticalFocusModifier = if (needsVerticalOverride) {
-                        Modifier.focusProperties {
-                            up = onGetVerticalFocusRequester(index, false)
-                            down = onGetVerticalFocusRequester(index, true)
-                        }
-                    } else {
-                        Modifier
-                    }
 
                     when (val payload = item.payload) {
                         is ModernPayload.ContinueWatching -> {
@@ -684,8 +672,7 @@ internal fun ModernRowSection(
                                 blurUnwatchedEpisodes = blurUnwatchedEpisodes,
                                 onFocused = onFocused,
                                 onContinueWatchingClick = onContinueWatchingClick,
-                                onShowOptions = onContinueWatchingOptions,
-                                modifier = verticalFocusModifier
+                                onShowOptions = onContinueWatchingOptions
                             )
                         }
 
@@ -740,8 +727,7 @@ internal fun ModernRowSection(
                                 onBackdropInteraction = onBackdropInteraction,
                                 onExpandedCatalogFocusKeyChange = onExpandedCatalogFocusKeyChange,
                                 enrichedLogoUrl = (payload as? ModernPayload.Catalog)?.itemId?.let { enrichedPreviews[it]?.logo },
-                                enrichedBackdropUrl = (payload as? ModernPayload.Catalog)?.itemId?.let { enrichedPreviews[it]?.backdropUrl },
-                                modifier = verticalFocusModifier
+                                enrichedBackdropUrl = (payload as? ModernPayload.Catalog)?.itemId?.let { enrichedPreviews[it]?.backdropUrl }
                             )
                         }
                     }

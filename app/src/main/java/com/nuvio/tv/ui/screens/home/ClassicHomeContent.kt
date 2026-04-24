@@ -126,6 +126,7 @@ fun ClassicHomeContent(
     val rowStates = remember { mutableMapOf<String, LazyListState>() }
     val rowFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val rowEntryFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val rowFocusedItemIndex = remember { mutableMapOf<String, Int>() }
 
     var restoringFocus by remember { mutableStateOf(focusState.hasSavedFocus) }
     val heroFocusRequester = remember { FocusRequester() }
@@ -351,23 +352,6 @@ fun ClassicHomeContent(
                 }
             }
         ) { index, homeRow ->
-            val nextRowKey = visibleHomeRows.getOrNull(index + 1)?.let { r ->
-                when (r) {
-                    is HomeRow.Catalog -> "${r.row.addonId}_${r.row.apiType}_${r.row.catalogId}"
-                    is HomeRow.CollectionRow -> "collection_${r.collection.id}"
-                }
-            }
-            val prevRowKey = visibleHomeRows.getOrNull(index - 1)?.let { r ->
-                when (r) {
-                    is HomeRow.Catalog -> "${r.row.addonId}_${r.row.apiType}_${r.row.catalogId}"
-                    is HomeRow.CollectionRow -> "collection_${r.collection.id}"
-                }
-            }
-            val rowDownFocusRequester = nextRowKey?.let { rowFocusRequesters.getOrPut(it) { FocusRequester() } }
-            val rowUpFocusRequester = prevRowKey?.let { rowFocusRequesters.getOrPut(it) { FocusRequester() } }
-            val nextEntryRequester = nextRowKey?.let { rowEntryFocusRequesters.getOrPut(it) { FocusRequester() } }
-            val prevEntryRequester = prevRowKey?.let { rowEntryFocusRequesters.getOrPut(it) { FocusRequester() } }
-
             when (homeRow) {
                 is HomeRow.Catalog -> {
                     val catalogRow = homeRow.row
@@ -425,15 +409,13 @@ fun ClassicHomeContent(
                         listState = listState,
                         enableRowFocusRestorer = true,
                         focusedItemIndex = focusedItemIndex,
-                        downRowFocusRequester = rowDownFocusRequester,
-                        upRowFocusRequester = rowUpFocusRequester,
-                        downEntryFocusRequester = nextEntryRequester,
-                        upEntryFocusRequester = prevEntryRequester,
+                        restorerFocusedIndex = rowFocusedItemIndex[catalogKey] ?: -1,
                         onItemFocused = { itemIndex ->
                             if (restoringFocus) restoringFocus = false
                             currentFocusSnapshot.rowIndex = index
                             currentFocusSnapshot.itemIndex = itemIndex
                             currentFocusSnapshot.rowKey = catalogKey
+                            rowFocusedItemIndex[catalogKey] = itemIndex
                         }
                     )
                 }
@@ -460,13 +442,12 @@ fun ClassicHomeContent(
                         listState = listState,
                         focusedItemIndex = collectionFocusedItemIndex,
                         entryFocusRequester = rowEntryFocusRequesters.getOrPut(collectionKey) { FocusRequester() },
-                        downEntryFocusRequester = nextEntryRequester,
-                        upEntryFocusRequester = prevEntryRequester,
                         onItemFocused = { itemIndex ->
                             if (restoringFocus) restoringFocus = false
                             currentFocusSnapshot.rowIndex = index
                             currentFocusSnapshot.itemIndex = itemIndex
                             currentFocusSnapshot.rowKey = collectionKey
+                            rowFocusedItemIndex[collectionKey] = itemIndex
                         }
                     )
                 }

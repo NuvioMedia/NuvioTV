@@ -736,12 +736,12 @@
     <string name="trakt_login">Iniciar Sesión</string>
     <string name="trakt_retry">Reintentar</string>
     <string name="trakt_back">Atrás</string>
-    <string name="trakt_cw_window_title">Ventana de Continuar viendo</string>
-    <string name="trakt_cw_window_subtitle">Elige cuánta actividad de Trakt debe aparecer en “Continuar viendo”.</string>
-    <string name="trakt_unaired_dialog_title">Episodios próximos no emitidos</string>
-    <string name="trakt_unaired_dialog_subtitle">Elige si “Continuar viendo” debe incluir episodios próximos antes de su estreno.</string>
-    <string name="trakt_show_unaired">Mostrar episodios no emitidos</string>
-    <string name="trakt_hide_unaired">Ocultar episodios no emitidos</string>
+    <string name=”trakt_cw_window_title”>Ventana de Continuar viendo</string>
+    <string name=”trakt_cw_window_subtitle”>Elige cuánta actividad de Trakt debe aparecer en “Continuar viendo”.</string>
+    <string name=”trakt_unaired_dialog_title”>Episodios próximos no emitidos</string>
+    <string name=”trakt_unaired_dialog_subtitle”>Elige si “Continuar viendo” debe incluir episodios próximos antes de su estreno.</string>
+    <string name=”trakt_show_unaired”>Mostrar episodios no emitidos</string>
+    <string name=”trakt_hide_unaired”>Ocultar episodios no emitidos</string>
     <string name="trakt_all_history">Todo el historial</string>
     <string name="trakt_days_format">%1$d días</string>
 

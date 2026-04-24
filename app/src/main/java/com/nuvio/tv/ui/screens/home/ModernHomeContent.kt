@@ -965,19 +965,7 @@ fun ModernHomeContent(
                                 onNavigateToFolderDetail = onNavigateToFolderDetail,
                                 onLoadMoreCatalog = onLoadMoreCatalog,
                                 onBackdropInteraction = remember(Unit) { { expansionInteractionNonce++ } },
-                                onExpandedCatalogFocusKeyChange = remember(Unit) { { expandedCatalogFocusKey = it } },
-                                onGetVerticalFocusRequester = { _, isDown ->
-                                    val currentRowIndex = rowIndexByKey[row.key] ?: return@ModernRowSection FocusRequester.Default
-                                    val targetRowIndex = if (isDown) currentRowIndex + 1 else currentRowIndex - 1
-                                    val targetRow = latestCarouselRows.getOrNull(targetRowIndex) ?: return@ModernRowSection FocusRequester.Default
-
-                                    val targetSavedIndex = (focusedItemByRow[targetRow.key] ?: 0)
-                                        .coerceIn(0, (targetRow.items.size - 1).coerceAtLeast(0))
-                                    val targetItemKey = targetRow.items.getOrNull(targetSavedIndex)?.key
-                                    if (targetItemKey != null) {
-                                        uiCaches.requesterFor(targetRow.key, targetItemKey)
-                                    } else FocusRequester.Default
-                                }
+                                onExpandedCatalogFocusKeyChange = remember(Unit) { { expandedCatalogFocusKey = it } }
                             )
                 }
             }

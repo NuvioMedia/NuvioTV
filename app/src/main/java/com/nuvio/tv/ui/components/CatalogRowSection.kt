@@ -85,20 +85,17 @@ fun CatalogRowSection(
     modifier: Modifier = Modifier,
     enableRowFocusRestorer: Boolean = true,
     initialScrollIndex: Int = 0,
+    /** Used only for initial focus restore (e.g. returning from detail screen). */
     focusedItemIndex: Int = -1,
+    /** Persisted focus index from parent — used only by focusRestorer to
+     *  survive LazyColumn recycling.  Does NOT trigger a focus request. */
+    restorerFocusedIndex: Int = -1,
     onItemFocused: (itemIndex: Int) -> Unit = {},
     rowFocusRequester: FocusRequester? = null,
     /** FocusRequester that will be attached to the first-or-last-focused card.
      *  Wide elements above (CW, collections) can point their D-pad down here. */
     entryFocusRequester: FocusRequester? = null,
     upFocusRequester: FocusRequester? = null,
-    downRowFocusRequester: FocusRequester? = null,
-    upRowFocusRequester: FocusRequester? = null,
-    /** Entry-point FocusRequester of the row below — attached to the first-or-last-focused card.
-     *  Used by expanded cards to land on the correct card instead of the LazyRow. */
-    downEntryFocusRequester: FocusRequester? = null,
-    /** Entry-point FocusRequester of the row above. */
-    upEntryFocusRequester: FocusRequester? = null,
     listState: LazyListState = rememberLazyListState(initialFirstVisibleItemIndex = initialScrollIndex)
 ) {
     fun rowItemFocusKey(index: Int, item: MetaPreview): String {
@@ -114,7 +111,6 @@ fun CatalogRowSection(
     val itemFocusRequestersByKey = remember { mutableMapOf<String, FocusRequester>() }
     var lastRequestedFocusItemKey by remember { mutableStateOf<String?>(null) }
     var lastFocusedItemIndex by remember { mutableIntStateOf(-1) }
-    var hasExpandedCard by remember { mutableStateOf(false) }
 
     // When fresh data prepends new items to a row the user hasn't
     // scrolled, snap back to position 0 so the newest content is visible.
@@ -224,15 +220,15 @@ fun CatalogRowSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(resolvedRowFocusRequester)
-                .then(
-                    if (hasExpandedCard && (downRowFocusRequester != null || upRowFocusRequester != null)) {
-                        Modifier.focusProperties {
-                            if (downRowFocusRequester != null) down = downRowFocusRequester
-                            if (upRowFocusRequester != null) up = upRowFocusRequester
-                        }
-                    } else Modifier
+                .focusRestorer(
+                    run {
+                        val idx = (if (lastFocusedItemIndex >= 0) lastFocusedItemIndex else restorerFocusedIndex)
+                            .coerceIn(0, (catalogRow.items.size - 1).coerceAtLeast(0))
+                        catalogRow.items.getOrNull(idx)
+                            ?.let { itemFocusRequestersByKey.getOrPut(rowItemFocusKey(idx, it)) { FocusRequester() } }
+                            ?: FocusRequester.Default
+                    }
                 )
-                .focusRestorer()
                 .focusGroup(),
             contentPadding = PaddingValues(start = 48.dp, end = 200.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -269,9 +265,7 @@ fun CatalogRowSection(
                             currentOnItemFocused(index)
                         }
                     },
-                    onBackdropExpandedChanged = { expanded -> hasExpandedCard = expanded },
-                    expandedDownFocusRequester = downEntryFocusRequester,
-                    expandedUpFocusRequester = upEntryFocusRequester,
+                    onBackdropExpandedChanged = null,
                     onClick = { onItemClick(item.id, item.apiType, catalogRow.addonBaseUrl) },
                     onLongPress = { onItemLongPress(item, catalogRow.addonBaseUrl) },
                     modifier = Modifier
