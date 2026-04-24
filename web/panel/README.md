@@ -4,6 +4,8 @@ Web control panel for NuvioTV accounts. Lets a logged-in user view and (in v2)
 edit every setting the TV app exposes: profiles, addons, plugins, integrations,
 collections, home layout, playback, linked devices.
 
+**Production:** https://account.omnio.tv
+
 Backed by the same self-hosted Supabase the TV app uses.
 
 ## Status — v1 (read-only MVP)
