@@ -1,0 +1,47 @@
+version: 2
+updates:
+  # Android / Gradle dependencies
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Media3 / ExoPlayer — project uses a custom fork, skip upstream bumps
+      - dependency-name: "androidx.media3:*"
+      - dependency-name: "com.google.android.exoplayer:*"
+
+  # Next.js web app (web/tv-login)
+  - package-ecosystem: "npm"
+    directory: "/web/tv-login"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Next.js major bumps are breaking — review manually
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns:
+          - "*"
