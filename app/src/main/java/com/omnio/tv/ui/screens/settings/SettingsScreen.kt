@@ -63,6 +63,7 @@ internal enum class SettingsCategory {
     PROFILES,
     APPEARANCE,
     LAYOUT,
+    COLLECTIONS,
     PLUGINS,
     INTEGRATION,
     PLAYBACK,
@@ -130,6 +131,13 @@ private fun rememberSettingsSectionSpecs() = listOf(
         destination = SettingsSectionDestination.Inline
     ),
     SettingsSectionSpec(
+        category = SettingsCategory.COLLECTIONS,
+        title = stringResource(R.string.collections_card_title),
+        icon = Icons.Default.GridView,
+        subtitle = stringResource(R.string.collections_card_subtitle),
+        destination = SettingsSectionDestination.External
+    ),
+    SettingsSectionSpec(
         category = SettingsCategory.PLUGINS,
         title = stringResource(R.string.settings_plugins),
         icon = Icons.Default.Build,
@@ -187,6 +195,7 @@ fun SettingsScreen(
     onNavigateToAuthQrSignIn: () -> Unit = {},
     onNavigateToManageProfiles: () -> Unit = {},
     onNavigateToSupportersContributors: () -> Unit = {},
+    onNavigateToCollections: () -> Unit = {},
     profileViewModel: ProfileSettingsViewModel = hiltViewModel()
 ) {
     val isPrimaryProfileActive by profileViewModel.isPrimaryProfileActive.collectAsStateWithLifecycle()
@@ -328,6 +337,7 @@ fun SettingsScreen(
                                     when (section.category) {
                                         SettingsCategory.ACCOUNT -> onNavigateToAuthQrSignIn()
                                         SettingsCategory.TRAKT -> onNavigateToTrakt()
+                                        SettingsCategory.COLLECTIONS -> onNavigateToCollections()
                                         else -> Unit
                                     }
                                 } else {
@@ -436,6 +446,7 @@ fun SettingsScreen(
                         )
                         SettingsCategory.DEBUG -> DebugSettingsContent()
                         SettingsCategory.TRAKT -> Unit
+                        SettingsCategory.COLLECTIONS -> Unit
                     }
                 }
             }

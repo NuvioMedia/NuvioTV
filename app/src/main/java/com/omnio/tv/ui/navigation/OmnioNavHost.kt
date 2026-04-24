@@ -41,6 +41,9 @@ import com.omnio.tv.ui.screens.account.AuthQrSignInScreen
 import com.omnio.tv.ui.screens.cast.CastDetailScreen
 import com.omnio.tv.ui.screens.profile.ProfileSelectionMode
 import com.omnio.tv.ui.screens.profile.ProfileSelectionScreen
+import com.omnio.tv.ui.screens.collection.CollectionEditorScreen
+import com.omnio.tv.ui.screens.collection.CollectionManagementScreen
+import com.omnio.tv.ui.screens.collection.FolderDetailScreen
 import com.omnio.tv.ui.screens.tmdb.TmdbEntityBrowseScreen
 import com.omnio.tv.ui.screens.home.HeroBackdropState
 
@@ -898,7 +901,8 @@ fun OmnioNavHost(
                 onNavigateToManageProfiles = { navController.navigate(Screen.ManageProfiles.route) },
                 onNavigateToSupportersContributors = {
                     navController.navigate(Screen.SupportersContributors.route)
-                }
+                },
+                onNavigateToCollections = { navController.navigate(Screen.CollectionManagement.route) }
             )
         }
 
@@ -1053,6 +1057,44 @@ fun OmnioNavHost(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
                 }
+            )
+        }
+
+        composable(Screen.CollectionManagement.route) {
+            CollectionManagementScreen(
+                onNavigateToEditor = { collectionId ->
+                    navController.navigate(Screen.CollectionEditor.createRoute(collectionId))
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.CollectionEditor.route,
+            arguments = listOf(
+                navArgument("collectionId") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) {
+            CollectionEditorScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.FolderDetail.route,
+            arguments = listOf(
+                navArgument("collectionId") { type = NavType.StringType },
+                navArgument("folderId") { type = NavType.StringType }
+            )
+        ) {
+            FolderDetailScreen(
+                onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
+                    navController.navigate(Screen.Detail.createRoute(itemId, itemType, addonBaseUrl))
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 

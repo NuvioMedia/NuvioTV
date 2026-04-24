@@ -34,6 +34,7 @@ class StartupSyncService @Inject constructor(
     private val watchedItemsSyncService: WatchedItemsSyncService,
     private val profileSettingsSyncService: ProfileSettingsSyncService,
     private val profileSyncService: ProfileSyncService,
+    private val collectionSyncService: CollectionSyncService,
     private val pluginManager: PluginManager,
     private val addonRepository: AddonRepositoryImpl,
     private val watchProgressRepository: WatchProgressRepositoryImpl,
@@ -191,6 +192,14 @@ class StartupSyncService @Inject constructor(
                         Log.e(TAG, "Failed to pull profile settings blob, keeping local settings", e)
                     }
             }
+
+            collectionSyncService.pullFromRemote()
+                .onSuccess { applied ->
+                    Log.d(TAG, "Collections pull completed for profile $profileId (applied=$applied)")
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "Failed to pull collections, keeping local state", e)
+                }
 
             pluginManager.isSyncingFromRemote = true
             try {

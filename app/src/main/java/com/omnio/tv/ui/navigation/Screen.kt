@@ -169,6 +169,22 @@ sealed class Screen(val route: String) {
         }
     }
 
+    data object CollectionManagement : Screen("collection_management")
+
+    data object CollectionEditor : Screen("collection_editor?collectionId={collectionId}") {
+        fun createRoute(collectionId: String? = null): String =
+            if (collectionId.isNullOrBlank()) "collection_editor?collectionId="
+            else "collection_editor?collectionId=${URLEncoder.encode(collectionId, "UTF-8").replace("+", "%20")}"
+    }
+
+    data object FolderDetail : Screen("folder_detail/{collectionId}/{folderId}") {
+        fun createRoute(collectionId: String, folderId: String): String {
+            val cid = URLEncoder.encode(collectionId, "UTF-8").replace("+", "%20")
+            val fid = URLEncoder.encode(folderId, "UTF-8").replace("+", "%20")
+            return "folder_detail/$cid/$fid"
+        }
+    }
+
     data object TmdbEntityBrowse : Screen(
         "tmdb_entity_browse/{entityKind}/{entityId}/{entityName}?sourceType={sourceType}"
     ) {
