@@ -457,6 +457,9 @@
     <string name="sub_ai_api_key_qr_sub">Scan a QR code on your phone to enter the key easily</string>
     <string name="sub_ai_model">AI Model</string>
     <string name="sub_ai_model_sub">Translation model to use</string>
+    <string name="sub_ai_model_dialog_sub">Select the translation model to use</string>
+    <string name="sub_ai_model_free">Free</string>
+    <string name="sub_ai_model_gemini_note">Better quality · billing account required for smooth use</string>
     <string name="sub_ai_api_key_title">API Key</string>
     <string name="sub_ai_api_key_qr_sub2">Scan a QR on your phone — choose Groq or Gemini</string>
     <string name="sub_ai_groq_disclaimer">Groq free tier: 1,000 requests/day. Get a free key at console.groq.com/keys</string>

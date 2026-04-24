@@ -43,6 +43,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
@@ -470,54 +471,51 @@ internal fun AiModelDialog(
     onModelSelected: (com.nuvio.tv.data.local.SubtitleAiModel) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val focusRequester = remember { FocusRequester() }
     val options = listOf(
-        Triple(com.nuvio.tv.data.local.SubtitleAiModel.GROQ_LLAMA_70B, "Groq – Llama 3.3 70B", "Free"),
-        Triple(com.nuvio.tv.data.local.SubtitleAiModel.GEMINI_FLASH_25, "Google – Gemini 2.5 Flash", "Better quality · billing account required for smooth use")
+        Triple(com.nuvio.tv.data.local.SubtitleAiModel.GROQ_LLAMA_70B, "Groq – Llama 3.3 70B", stringResource(R.string.sub_ai_model_free)),
+        Triple(com.nuvio.tv.data.local.SubtitleAiModel.GEMINI_FLASH_25, "Google – Gemini 2.5 Flash", stringResource(R.string.sub_ai_model_gemini_note))
     )
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
     BackHandler { onDismiss() }
 
-    NuvioDialog(
-        onDismiss = onDismiss,
-        title = "AI Model",
-        subtitle = "Select the translation model to use",
-        width = 500.dp
-    ) {
-        options.forEachIndexed { index, (model, label, note) ->
-            val isSelected = model == currentModel
-            val itemFocusRequester = if (index == 0) focusRequester else remember { FocusRequester() }
-            androidx.tv.material3.Surface(
-                onClick = { onModelSelected(model) },
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.foundation.layout.Box(
+            modifier = Modifier
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                .background(NuvioColors.BackgroundCard)
+        ) {
+            androidx.compose.foundation.layout.Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(itemFocusRequester),
-                colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(
-                    containerColor = if (isSelected) NuvioColors.BackgroundElevated else androidx.compose.ui.graphics.Color.Transparent,
-                    focusedContainerColor = NuvioColors.Primary
-                ),
-                shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                    .width(500.dp)
+                    .padding(24.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                Text(
+                    text = stringResource(R.string.sub_ai_model),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = NuvioColors.TextPrimary
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.sub_ai_model_dialog_sub),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioColors.TextSecondary
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                androidx.compose.foundation.lazy.LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    androidx.compose.foundation.layout.Column(modifier = Modifier.weight(1f)) {
-                        Text(text = label, style = MaterialTheme.typography.bodyMedium)
-                        Text(text = note, style = MaterialTheme.typography.bodySmall, color = NuvioColors.TextSecondary)
-                    }
-                    if (isSelected) {
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            tint = NuvioColors.Primary,
-                            modifier = Modifier.size(20.dp)
+                    items(
+                        items = options,
+                        key = { it.first.name }
+                    ) { (model, label, note) ->
+                        RenderTypeSettingsItem(
+                            title = label,
+                            subtitle = note,
+                            isSelected = model == currentModel,
+                            onClick = { onModelSelected(model) }
                         )
                     }
                 }
             }
-            if (index < options.lastIndex) Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }

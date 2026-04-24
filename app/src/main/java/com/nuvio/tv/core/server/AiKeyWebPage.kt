@@ -107,7 +107,7 @@ $sharedCss
 
   <p class="hint">
     Get your free key at <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a><br>
-    Free tier: 1,000 requests/min · 500,000 requests/day
+    Free tier: 1,000 requests/day
   </p>
 
   <button class="btn" id="saveBtn" onclick="saveKey()">Save to TV</button>
