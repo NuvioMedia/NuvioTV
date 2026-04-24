@@ -1,5 +1,6 @@
 package com.omnio.tv.ui.screens.collection
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -90,6 +91,7 @@ class CollectionEditorViewModel @Inject constructor(
                 val collections = collectionsDataStore.collections.first()
                 val existing = collections.find { it.id == collectionIdArg }
                 if (existing != null) {
+                    logMissingCatalogSources(existing, availableCatalogs)
                     _uiState.update {
                         it.copy(
                             isNew = false,
@@ -442,6 +444,36 @@ class CollectionEditorViewModel @Inject constructor(
             requestedGenre != null && catalog.genreOptions.contains(requestedGenre) -> requestedGenre
             catalog.genreRequired -> catalog.genreOptions.firstOrNull()
             else -> null
+        }
+    }
+
+    private fun logMissingCatalogSources(
+        collection: Collection,
+        availableCatalogs: List<AvailableCatalog>
+    ) {
+        val missing = collection.folders.flatMap { folder ->
+            folder.catalogSources.mapNotNull { source ->
+                val found = availableCatalogs.any {
+                    it.addonId == source.addonId && it.type == source.type && it.catalogId == source.catalogId
+                }
+                if (found) null else Triple(folder.title, source, null as String?)
+            }
+        }
+        if (missing.isEmpty()) return
+        val addonHasAny: (String) -> Boolean = { id ->
+            availableCatalogs.any { it.addonId == id }
+        }
+        missing.forEach { (folderTitle, source, _) ->
+            val hint = if (addonHasAny(source.addonId)) {
+                "addon installed but declares no such catalog"
+            } else {
+                "addon not installed"
+            }
+            Log.w(
+                "CollectionEditorVM",
+                "Missing catalog source: folder=\"$folderTitle\" " +
+                    "addonId=${source.addonId} type=${source.type} catalogId=${source.catalogId} ($hint)"
+            )
         }
     }
 }

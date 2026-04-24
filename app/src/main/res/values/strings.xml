@@ -1508,7 +1508,7 @@
     <string name="collections_editor_shape_poster">Poster</string>
     <string name="collections_editor_shape_wide">Wide</string>
     <string name="collections_editor_shape_square">Square</string>
-    <string name="collections_editor_addon_missing">Addon not installed: %1$s</string>
+    <string name="collections_editor_addon_missing">Catalog not available in installed addons (%1$s)</string>
     <string name="collections_editor_placeholder_name">Collection name</string>
     <string name="collections_editor_placeholder_backdrop">Backdrop image URL (optional)</string>
     <string name="collections_editor_placeholder_folder">Folder name</string>

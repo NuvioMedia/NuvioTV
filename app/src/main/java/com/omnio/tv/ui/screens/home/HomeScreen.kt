@@ -81,7 +81,8 @@ fun HomeScreen(
     },
     onContinueWatchingStartFromBeginning: (ContinueWatchingItem) -> Unit = onContinueWatchingClick,
     onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit = onContinueWatchingClick,
-    onNavigateToCatalogSeeAll: (String, String, String) -> Unit = { _, _, _ -> }
+    onNavigateToCatalogSeeAll: (String, String, String) -> Unit = { _, _, _ -> },
+    onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val effectiveAutoplayEnabled by viewModel.effectiveAutoplayEnabled.collectAsStateWithLifecycle(
@@ -240,7 +241,8 @@ fun HomeScreen(
                                 showContinueWatchingManualPlayOption = effectiveAutoplayEnabled,
                                 onNavigateToCatalogSeeAll = onNavigateToCatalogSeeAll,
                                 isCatalogItemWatched = isCatalogItemWatched,
-                                onCatalogItemLongPress = onCatalogItemLongPress
+                                onCatalogItemLongPress = onCatalogItemLongPress,
+                                onNavigateToFolderDetail = onNavigateToFolderDetail
                             )
 
                             HomeLayout.GRID -> GridHomeRoute(
@@ -266,7 +268,8 @@ fun HomeScreen(
                                 onContinueWatchingPlayManually = onContinueWatchingPlayManually,
                                 showContinueWatchingManualPlayOption = effectiveAutoplayEnabled,
                                 isCatalogItemWatched = isCatalogItemWatched,
-                                onCatalogItemLongPress = onCatalogItemLongPress
+                                onCatalogItemLongPress = onCatalogItemLongPress,
+                                onNavigateToFolderDetail = onNavigateToFolderDetail
                             )
                         }
                     }
@@ -357,7 +360,8 @@ private fun ClassicHomeRoute(
     showContinueWatchingManualPlayOption: Boolean,
     onNavigateToCatalogSeeAll: (String, String, String) -> Unit,
     isCatalogItemWatched: (MetaPreview) -> Boolean,
-    onCatalogItemLongPress: (MetaPreview, String) -> Unit
+    onCatalogItemLongPress: (MetaPreview, String) -> Unit,
+    onNavigateToFolderDetail: (String, String) -> Unit
 ) {
     val focusState by viewModel.focusState.collectAsStateWithLifecycle()
     ClassicHomeContent(
@@ -385,7 +389,8 @@ private fun ClassicHomeRoute(
         },
         onSaveFocusState = { vi, vo, ri, ii, m ->
             viewModel.saveFocusState(vi, vo, ri, ii, m)
-        }
+        },
+        onNavigateToFolderDetail = onNavigateToFolderDetail
     )
 }
 
@@ -438,7 +443,8 @@ private fun ModernHomeRoute(
     onContinueWatchingPlayManually: (ContinueWatchingItem) -> Unit,
     showContinueWatchingManualPlayOption: Boolean,
     isCatalogItemWatched: (MetaPreview) -> Boolean,
-    onCatalogItemLongPress: (MetaPreview, String) -> Unit
+    onCatalogItemLongPress: (MetaPreview, String) -> Unit,
+    onNavigateToFolderDetail: (String, String) -> Unit
 ) {
     val focusState by viewModel.focusState.collectAsStateWithLifecycle()
     val enrichingItemId by viewModel.enrichingItemId.collectAsStateWithLifecycle()
@@ -487,7 +493,8 @@ private fun ModernHomeRoute(
             { item -> viewModel.onItemFocus(item) }
         },
         onPreloadAdjacentItem = preloadAdjacentItem,
-        onSaveFocusState = saveModernFocusState
+        onSaveFocusState = saveModernFocusState,
+        onNavigateToFolderDetail = onNavigateToFolderDetail
     )
 }
 

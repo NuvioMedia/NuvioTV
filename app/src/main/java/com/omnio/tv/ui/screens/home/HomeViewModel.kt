@@ -16,6 +16,7 @@ import com.omnio.tv.data.local.MDBListSettingsDataStore
 import com.omnio.tv.data.local.TmdbSettingsDataStore
 import com.omnio.tv.data.local.TraktSettingsDataStore
 import com.omnio.tv.data.local.WatchedItemsPreferences
+import com.omnio.tv.data.local.CollectionsDataStore
 import com.omnio.tv.data.local.ContinueWatchingEnrichmentCache
 import com.omnio.tv.data.trailer.TrailerService
 import com.omnio.tv.domain.model.Addon
@@ -70,7 +71,8 @@ class HomeViewModel @Inject constructor(
     internal val trailerService: TrailerService,
     internal val watchedItemsPreferences: WatchedItemsPreferences,
     internal val watchedSeriesStateHolder: com.omnio.tv.data.local.WatchedSeriesStateHolder,
-    internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache
+    internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache,
+    internal val collectionsDataStore: CollectionsDataStore
 ) : ViewModel() {
     companion object {
         internal const val TAG = "HomeViewModel"
@@ -188,6 +190,7 @@ class HomeViewModel @Inject constructor(
         observeMdbListSettings()
         observeBlurUnwatchedEpisodes()
         observeStartupAuthNotice()
+        observeCollections()
         loadContinueWatching()
         observeInstalledAddons()
         viewModelScope.launch {
@@ -509,5 +512,32 @@ class HomeViewModel @Inject constructor(
         posterLibraryObserverJobs.clear()
         movieWatchedObserverJobs.clear()
         super.onCleared()
+    }
+
+    private fun observeCollections() {
+        viewModelScope.launch {
+            kotlinx.coroutines.flow.combine(
+                _uiState.map { it.catalogRows }.distinctUntilChanged(),
+                collectionsDataStore.collections.distinctUntilChanged()
+            ) { rows, collections -> buildHomeRows(rows, collections) }
+                .distinctUntilChanged()
+                .collect { merged ->
+                    _uiState.update { state ->
+                        if (state.homeRows == merged) state else state.copy(homeRows = merged)
+                    }
+                }
+        }
+    }
+
+    private fun buildHomeRows(
+        catalogRows: List<CatalogRow>,
+        collections: List<com.omnio.tv.domain.model.Collection>
+    ): List<HomeRow> {
+        val pinned = collections.filter { it.pinToTop }
+        val unpinned = collections.filterNot { it.pinToTop }
+        val catalogWrapped = catalogRows.map { HomeRow.Catalog(it) }
+        val pinnedWrapped = pinned.map { HomeRow.CollectionRow(it) }
+        val unpinnedWrapped = unpinned.map { HomeRow.CollectionRow(it) }
+        return pinnedWrapped + catalogWrapped + unpinnedWrapped
     }
 }

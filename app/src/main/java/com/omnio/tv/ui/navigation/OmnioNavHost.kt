@@ -200,6 +200,9 @@ fun OmnioNavHost(
                 },
                 onNavigateToCatalogSeeAll = { catalogId, addonId, type ->
                     navController.navigate(Screen.CatalogSeeAll.createRoute(catalogId, addonId, type))
+                },
+                onNavigateToFolderDetail = { collectionId, folderId ->
+                    navController.navigate(Screen.FolderDetail.createRoute(collectionId, folderId))
                 }
             )
         }

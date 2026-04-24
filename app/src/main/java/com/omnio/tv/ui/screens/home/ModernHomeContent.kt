@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -142,7 +143,8 @@ fun ModernHomeContent(
     onCatalogItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     onItemFocus: (MetaPreview) -> Unit = {},
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
-    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
+    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit,
+    onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> }
 ) {
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val isSidebarExpanded = LocalSidebarExpanded.current
@@ -168,7 +170,13 @@ fun ModernHomeContent(
                 trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.HERO_MEDIA)
     val carouselRows = uiState.modernHomePresentation.rows
 
-    if (carouselRows.isEmpty()) return
+    val modernCollections = remember(uiState.homeRows) {
+        uiState.homeRows.mapNotNull { (it as? HomeRow.CollectionRow)?.collection }
+    }
+    val pinnedCollections = remember(modernCollections) { modernCollections.filter { it.pinToTop } }
+    val unpinnedCollections = remember(modernCollections) { modernCollections.filterNot { it.pinToTop } }
+
+    if (carouselRows.isEmpty() && modernCollections.isEmpty()) return
     val carouselLookups = uiState.modernHomePresentation.lookups
     val rowByKey = carouselLookups.rowByKey
     val rowKeyByGlobalRowIndex = carouselLookups.rowKeyByGlobalRowIndex
@@ -724,6 +732,17 @@ fun ModernHomeContent(
                 contentPadding = PaddingValues(bottom = rowsViewportHeight),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
+                items(
+                    items = pinnedCollections,
+                    key = { "collection_pinned_${it.id}" },
+                    contentType = { "collection_row" }
+                ) { collection ->
+                    com.omnio.tv.ui.components.CollectionRowSection(
+                        collection = collection,
+                        onFolderClick = onNavigateToFolderDetail
+                    )
+                }
+
                 itemsIndexed(
                     items = carouselRows,
                     key = { _, row -> row.key },
@@ -818,6 +837,17 @@ fun ModernHomeContent(
                         onLoadMoreCatalog = onLoadMoreCatalog,
                         onBackdropInteraction = remember(Unit) { { expansionInteractionNonce++ } },
                         onExpandedCatalogFocusKeyChange = remember(Unit) { { expandedCatalogFocusKey = it } }
+                    )
+                }
+
+                items(
+                    items = unpinnedCollections,
+                    key = { "collection_unpinned_${it.id}" },
+                    contentType = { "collection_row" }
+                ) { collection ->
+                    com.omnio.tv.ui.components.CollectionRowSection(
+                        collection = collection,
+                        onFolderClick = onNavigateToFolderDetail
                     )
                 }
             }

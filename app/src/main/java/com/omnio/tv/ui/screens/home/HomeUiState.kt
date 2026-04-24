@@ -3,6 +3,7 @@ package com.omnio.tv.ui.screens.home
 import androidx.compose.runtime.Immutable
 import com.omnio.tv.data.local.StartupAuthNotice
 import com.omnio.tv.domain.model.CatalogRow
+import com.omnio.tv.domain.model.Collection
 import com.omnio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.omnio.tv.domain.model.HomeLayout
 import com.omnio.tv.domain.model.LibraryListTab
@@ -52,8 +53,18 @@ data class HomeUiState(
     val hideUnreleasedContent: Boolean = false,
     val showFullReleaseDate: Boolean = true,
     val blurUnwatchedEpisodes: Boolean = false,
-    val startupAuthNotice: StartupAuthNotice? = null
+    val startupAuthNotice: StartupAuthNotice? = null,
+    val homeRows: List<HomeRow> = emptyList()
 )
+
+@Immutable
+sealed class HomeRow {
+    @Immutable
+    data class Catalog(val row: CatalogRow) : HomeRow()
+
+    @Immutable
+    data class CollectionRow(val collection: Collection) : HomeRow()
+}
 
 @Immutable
 sealed class ContinueWatchingItem {
