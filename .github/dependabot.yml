@@ -16,6 +16,9 @@ updates:
       # Media3 / ExoPlayer — project uses a custom fork, skip upstream bumps
       - dependency-name: "androidx.media3:*"
       - dependency-name: "com.google.android.exoplayer:*"
+      # Major version bumps are breaking — upgrade manually
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   # Next.js web app (web/tv-login)
   - package-ecosystem: "npm"
