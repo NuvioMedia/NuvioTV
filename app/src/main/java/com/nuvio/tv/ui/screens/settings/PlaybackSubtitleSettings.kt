@@ -358,7 +358,7 @@ internal fun LazyListScope.subtitleAiSettingsItems(
     item(key = "subtitle_ai_enabled") {
         ToggleSettingsItem(
             icon = Icons.Default.AutoAwesome,
-            title = stringResource(R.string.sub_ai_enabled),
+            title = stringResource(R.string.sub_ai_enabled) + " (Beta)",
             subtitle = stringResource(R.string.sub_ai_enabled_sub),
             isChecked = playerSettings.subtitleAiEnabled,
             onCheckedChange = onSetSubtitleAiEnabled,
