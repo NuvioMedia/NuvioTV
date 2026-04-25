@@ -130,6 +130,9 @@ fun TmdbEntityBrowseScreen(
                         data = successState.data,
                         sourceType = viewModel.sourceType,
                         onNavigateToDetail = onNavigateToDetail,
+                        onItemLongPress = { item ->
+                            viewModel.posterOptions.show(item, null)
+                        },
                         onLoadMoreRail = { mediaType, railType ->
                             viewModel.loadMoreRail(mediaType = mediaType, railType = railType)
                         }
@@ -137,6 +140,15 @@ fun TmdbEntityBrowseScreen(
                 }
             }
         }
+
+        val posterOptionsState by viewModel.posterOptions.state.collectAsStateWithLifecycle()
+        com.nuvio.tv.ui.components.posteroptions.PosterOptionsHost(
+            state = posterOptionsState,
+            controller = viewModel.posterOptions,
+            onNavigateToDetail = { id, type, addonBaseUrl ->
+                onNavigateToDetail(id, type, addonBaseUrl.takeIf { it.isNotBlank() })
+            }
+        )
     }
 }
 
@@ -146,6 +158,7 @@ private fun TmdbEntityBrowseContent(
     data: TmdbEntityBrowseData,
     sourceType: String,
     onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit,
+    onItemLongPress: (MetaPreview) -> Unit = {},
     onLoadMoreRail: (TmdbEntityMediaType, TmdbEntityRailType) -> Unit
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -258,6 +271,7 @@ private fun TmdbEntityBrowseContent(
                                     pendingRestoreItemId = item.id
                                     onNavigateToDetail(item.id, item.apiType, null)
                                 },
+                                onItemLongPress = onItemLongPress,
                                 onLoadMore = onLoadMoreRail
                             )
                         }
@@ -409,6 +423,7 @@ private fun EntityRailRow(
     onRestoreFocusHandled: () -> Unit,
     onFocusedItemIndexChanged: (Int) -> Unit,
     onItemClick: (MetaPreview) -> Unit,
+    onItemLongPress: (MetaPreview) -> Unit = {},
     onLoadMore: (TmdbEntityMediaType, TmdbEntityRailType) -> Unit
 ) {
     val focusRequesters = remember(rail.mediaType, rail.railType) {
@@ -474,6 +489,7 @@ private fun EntityRailRow(
                 GridContentCard(
                     item = item,
                     onClick = { onItemClick(item) },
+                    onLongPress = { onItemLongPress(item) },
                     posterCardStyle = posterCardStyle,
                     showLabel = false,
                     focusRequester = requester,

@@ -208,6 +208,23 @@ class HomeViewModel @Inject constructor(
     @Volatile
     internal var startupGracePeriodActive: Boolean = true
     internal var startupAuthNoticeJob: Job? = null
+
+    // Lazy catalog loading
+    internal val eagerCatalogLoadCount: Int = 4
+    internal val lazyLoadRequestedKeys = Collections.synchronizedSet(mutableSetOf<String>())
+    internal val pendingLazyCatalogs = linkedMapOf<String, Pair<Addon, CatalogDescriptor>>()
+    /** All placeholder descriptors for homeRow construction. */
+    internal data class PlaceholderDescriptor(
+        val catalogKey: String,
+        val addonId: String,
+        val addonName: String,
+        val addonBaseUrl: String,
+        val catalogId: String,
+        val catalogName: String,
+        val apiType: String,
+        val displayTitle: String
+    )
+    internal val placeholderDescriptors = mutableListOf<PlaceholderDescriptor>()
     val trailerPreviewUrls: Map<String, String>
         get() = trailerPreviewUrlsState
     val trailerPreviewAudioUrls: Map<String, String>
@@ -577,6 +594,20 @@ class HomeViewModel @Inject constructor(
             delay(debounceMs)
             updateCatalogRows()
         }
+    }
+
+    /**
+     * Called from the UI when a placeholder catalog row becomes visible.
+     */
+    fun requestLazyCatalogLoad(catalogKey: String) {
+        if (!lazyLoadRequestedKeys.add(catalogKey)) return
+        val pair = synchronized(catalogStateLock) {
+            pendingLazyCatalogs.remove(catalogKey)
+        } ?: return
+        val (addon, catalog) = pair
+        val generation = catalogLoadGeneration
+        pendingCatalogLoads = (pendingCatalogLoads + 1)
+        loadCatalogPipeline(addon, catalog, generation)
     }
 
     private suspend fun updateCatalogRows() = updateCatalogRowsPipeline()

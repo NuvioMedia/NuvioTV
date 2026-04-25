@@ -83,6 +83,7 @@ class MetaDetailsViewModel @Inject constructor(
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
+    val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val itemId: String = savedStateHandle["itemId"] ?: ""
@@ -123,6 +124,7 @@ class MetaDetailsViewModel @Inject constructor(
     private val _effectiveContentId = MutableStateFlow(itemId)
 
     init {
+        posterOptions.bind(viewModelScope)
         observeMetaViewSettings()
         observeTrailerAutoplaySettings()
         observeTraktCommentsAvailability()
@@ -340,8 +342,21 @@ class MetaDetailsViewModel @Inject constructor(
             }
         }
 
+        // Observe library/watchlist on the *same* (id, type) pair that
+        // `toggleLibrary` writes via `meta.toLibraryEntryInput()`. Falling back
+        // to navigation (itemId, itemType) until meta loads keeps the button
+        // responsive but pre-meta (when toggle is unavailable anyway).
+        val canonicalKey = _uiState
+            .map { state ->
+                val id = state.meta?.id?.takeIf { it.isNotBlank() } ?: itemId
+                val type = state.meta?.apiType?.takeIf { it.isNotBlank() } ?: itemType
+                id to type
+            }
+            .distinctUntilChanged()
+
         viewModelScope.launch {
-            libraryRepository.isInLibrary(itemId = itemId, itemType = itemType)
+            canonicalKey
+                .flatMapLatest { (id, type) -> libraryRepository.isInLibrary(itemId = id, itemType = type) }
                 .distinctUntilChanged()
                 .collectLatest { inLibrary ->
                     _uiState.update { state ->
@@ -351,7 +366,8 @@ class MetaDetailsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            libraryRepository.isInWatchlist(itemId = itemId, itemType = itemType)
+            canonicalKey
+                .flatMapLatest { (id, type) -> libraryRepository.isInWatchlist(itemId = id, itemType = type) }
                 .distinctUntilChanged()
                 .collectLatest { inWatchlist ->
                     _uiState.update { state ->

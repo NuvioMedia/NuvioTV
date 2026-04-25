@@ -103,7 +103,8 @@ class FolderDetailViewModel @Inject constructor(
     private val mdbListRepository: com.nuvio.tv.data.repository.MDBListRepository,
     private val mdbListSettingsDataStore: com.nuvio.tv.data.local.MDBListSettingsDataStore,
     private val metaRepository: com.nuvio.tv.domain.repository.MetaRepository,
-    private val trailerService: TrailerService
+    private val trailerService: TrailerService,
+    val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController
 ) : ViewModel() {
 
     private val collectionId: String = savedStateHandle["collectionId"] ?: ""
@@ -139,6 +140,7 @@ class FolderDetailViewModel @Inject constructor(
     val tabFocusStates: StateFlow<Map<Int, FolderDetailGridFocusState>> = _tabFocusStates.asStateFlow()
 
     init {
+        posterOptions.bind(viewModelScope)
         loadFolder()
         // Observe watched status immediately so badges are ready when catalogs load.
         observeWatchedStatusCombined()

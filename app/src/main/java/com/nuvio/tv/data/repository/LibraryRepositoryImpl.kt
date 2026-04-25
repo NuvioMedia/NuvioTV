@@ -21,6 +21,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -62,7 +63,16 @@ class LibraryRepositoryImpl @Inject constructor(
         }
     }
 
-    override val sourceMode: Flow<LibrarySourceMode> = traktSettingsDataStore.librarySourceMode
+    override val sourceMode: Flow<LibrarySourceMode> = combine(
+        traktSettingsDataStore.librarySourceMode,
+        traktAuthDataStore.isEffectivelyAuthenticated
+    ) { mode, isTraktAuthenticated ->
+        if (mode == LibrarySourceMode.TRAKT && !isTraktAuthenticated) {
+            LibrarySourceMode.LOCAL
+        } else {
+            mode
+        }
+    }
         .distinctUntilChanged()
 
     override val isSyncing: Flow<Boolean> = sourceMode

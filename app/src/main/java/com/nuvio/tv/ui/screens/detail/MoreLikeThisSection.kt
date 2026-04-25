@@ -37,7 +37,8 @@ fun MoreLikeThisSection(
     restoreFocusToken: Int = 0,
     onRestoreFocusHandled: () -> Unit = {},
     onItemFocused: (MetaPreview) -> Unit = {},
-    onItemClick: (MetaPreview) -> Unit
+    onItemClick: (MetaPreview) -> Unit,
+    onItemLongPress: (MetaPreview) -> Unit = {}
 ) {
     if (items.isEmpty()) return
 
@@ -95,6 +96,7 @@ fun MoreLikeThisSection(
                     GridContentCard(
                         item = item,
                         onClick = { onItemClick(item) },
+                        onLongPress = { onItemLongPress(item) },
                         posterCardStyle = landscapeStyle,
                         showLabel = true,
                         imageCrossfade = true,

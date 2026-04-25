@@ -591,7 +591,9 @@ class TmdbMetadataService(
                             description = rec.overview?.takeIf { it.isNotBlank() },
                             releaseInfo = releaseInfo,
                             imdbRating = rec.voteAverage?.toFloat(),
-                            genres = emptyList()
+                            genres = emptyList(),
+                            landscapePoster = backdrop,
+                            rawPosterUrl = fallbackPoster
                         )
                     }
                 }.awaitAll().filterNotNull()
@@ -658,7 +660,9 @@ class TmdbMetadataService(
                             description = part.overview?.takeIf { it.isNotBlank() },
                             releaseInfo = releaseInfo,
                             imdbRating = part.voteAverage?.toFloat(),
-                            genres = emptyList()
+                            genres = emptyList(),
+                            landscapePoster = backdrop,
+                            rawPosterUrl = fallbackPoster
                         )
                     }
                 }.awaitAll().filterNotNull()

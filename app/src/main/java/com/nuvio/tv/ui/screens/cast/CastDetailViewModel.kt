@@ -17,6 +17,7 @@ import javax.inject.Inject
 class CastDetailViewModel @Inject constructor(
     private val tmdbMetadataService: TmdbMetadataService,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
+    val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -30,6 +31,7 @@ class CastDetailViewModel @Inject constructor(
     val uiState: StateFlow<CastDetailUiState> = _uiState.asStateFlow()
 
     init {
+        posterOptions.bind(viewModelScope)
         loadPersonDetail()
     }
 

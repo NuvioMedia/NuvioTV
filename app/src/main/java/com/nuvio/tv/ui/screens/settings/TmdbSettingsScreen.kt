@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -73,11 +74,14 @@ fun TmdbSettingsContent(
                         subtitle = stringResource(R.string.tmdb_enable_subtitle),
                         checked = uiState.enabled,
                         onToggle = { viewModel.onEvent(TmdbSettingsEvent.ToggleEnabled(!uiState.enabled)) },
-                        modifier = if (initialFocusRequester != null) {
-                            Modifier.focusRequester(initialFocusRequester)
-                        } else {
-                            Modifier
-                        }
+                        modifier = Modifier
+                            .padding(top = 2.dp)
+                            .then(
+                                if (initialFocusRequester != null) {
+                                    Modifier.focusRequester(initialFocusRequester)
+                                } else {
+                                    Modifier
+                                })
                     )
                 }
 

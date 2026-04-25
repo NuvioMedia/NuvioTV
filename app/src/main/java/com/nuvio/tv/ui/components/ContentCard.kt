@@ -4,6 +4,7 @@ import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.foundation.layout.Box
@@ -24,8 +25,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +40,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -345,7 +352,38 @@ fun ContentCard(
                     .height(baseCardHeight)
                     .clip(cardShape)
             ) {
-                if (!imageUrl.isNullOrBlank()) {
+                val isPlaceholderItem = imageUrl?.startsWith("placeholder://") == true
+                if (isPlaceholderItem) {
+                    val shimmerTransition = rememberInfiniteTransition(label = "classicPlaceholderShimmer")
+                    val shimmerOffset by shimmerTransition.animateFloat(
+                        initialValue = -1f,
+                        targetValue = 2f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(durationMillis = 1600, easing = LinearEasing),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "shimmerOffset"
+                    )
+                    val shimmerBrush = remember(shimmerOffset) {
+                        Brush.linearGradient(
+                            colorStops = arrayOf(
+                                0.0f to Color.Transparent,
+                                0.4f to Color.White.copy(alpha = 0.07f),
+                                0.5f to Color.White.copy(alpha = 0.13f),
+                                0.6f to Color.White.copy(alpha = 0.07f),
+                                1.0f to Color.Transparent
+                            ),
+                            start = Offset(shimmerOffset * 1000f, 0f),
+                            end = Offset((shimmerOffset + 0.6f) * 1000f, 0f)
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(NuvioColors.BackgroundCard)
+                            .background(shimmerBrush)
+                    )
+                } else if (!imageUrl.isNullOrBlank()) {
                     key(scrollPhaseKey) {
                         AsyncImage(
                             model = scrollAwareImageModel,

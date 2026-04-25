@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -86,30 +87,32 @@ fun AboutSettingsContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                Spacer(modifier = Modifier.height(4.dp))
+
                 Image(
                     painter = painterResource(id = R.drawable.app_logo_wordmark),
                     contentDescription = stringResource(R.string.cd_nuvio_logo),
                     modifier = Modifier
                         .width(180.dp)
-                        .height(50.dp),
+                        .height(40.dp),
                     contentScale = ContentScale.Fit
                 )
 
                 Text(
                     text = stringResource(R.string.about_made_with_love),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = NuvioColors.TextSecondary,
                     textAlign = TextAlign.Center
                 )
 
                 Text(
                     text = stringResource(R.string.about_version, BuildConfig.VERSION_NAME),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = NuvioColors.TextSecondary,
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
 
                 SettingsActionRow(
                     title = stringResource(R.string.about_check_updates),

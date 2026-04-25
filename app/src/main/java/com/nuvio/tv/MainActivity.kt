@@ -222,6 +222,12 @@ class MainActivity : ComponentActivity() {
 
         // Store Activity reference for CloudStream extensions that need it in plugin.load()
         com.lagradost.cloudstream3.AcraApplication.setActivity(this)
+
+        window?.decorView?.post {
+            val snapshot = com.nuvio.tv.core.player.DisplayCapabilities.detect(this)
+            com.nuvio.tv.core.player.DisplayCapabilities.logSummary(snapshot)
+        }
+
         setContent {
             var hasSelectedProfileThisSession by rememberSaveable { mutableStateOf(false) }
             var onboardingCompletedThisSession by remember { mutableStateOf(false) }

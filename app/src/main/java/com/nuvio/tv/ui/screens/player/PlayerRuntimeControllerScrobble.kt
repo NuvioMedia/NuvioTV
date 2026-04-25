@@ -1,6 +1,7 @@
 package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.nuvio.tv.data.local.toTrackPreference
 
@@ -34,6 +35,21 @@ internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
                 )
                 persistedTrackPreference = loaded
             } ?: Log.d(PlayerRuntimeController.TAG, "TRACK_PREF load: skipped (contentId is null)")
+            // Subtitle delay is keyed per-videoId, so it is loaded separately
+            // from the track selection above. This happens before
+            // initializePlayer() because the renderers factory snapshots
+            // subtitleDelayUs from _uiState.value.subtitleDelayMs on build.
+            currentVideoId?.takeIf { it.isNotBlank() }?.let { vid ->
+                val savedDelayMs = trackPreferenceDataStore.loadSubtitleDelayMs(vid)
+                if (savedDelayMs != null && savedDelayMs != 0) {
+                    subtitleDelayUs.set(savedDelayMs.toLong() * 1000L)
+                    _uiState.update { it.copy(subtitleDelayMs = savedDelayMs) }
+                    Log.d(
+                        PlayerRuntimeController.TAG,
+                        "TRACK_PREF load: restored subtitleDelayMs=$savedDelayMs for videoId=$vid"
+                    )
+                }
+            }
         } else {
             Log.d(
                 PlayerRuntimeController.TAG,

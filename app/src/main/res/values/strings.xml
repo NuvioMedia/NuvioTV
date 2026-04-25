@@ -358,7 +358,7 @@
     <string name="playback_osd_clock">OSD Clock</string>
     <string name="playback_skip_intro">Skip Intro</string>
     <string name="playback_skip_intro_sub">Use introdb.app to detect intros and recaps.</string>
-    <string name="playback_auto_frame_rate">Auto Frame Rate</string>
+    <string name="playback_auto_frame_rate">Auto Frame Rate &amp; Resolution</string>
     <string name="playback_section_player">Player &amp; Stream Selection</string>
     <string name="playback_section_player_desc">Player preference, auto-play, and source filtering.</string>
     <string name="playback_player">Player</string>
@@ -386,6 +386,14 @@
     <string name="playback_afr_on_start_stop_sub">Switch on start and restore on stop.</string>
     <string name="playback_resolution_matching">Resolution matching</string>
     <string name="playback_resolution_matching_sub">Allow display mode changes to match video resolution.</string>
+    <string name="playback_resolution_matching_unsupported_sub">Display reports only one resolution; matching may have no effect.</string>
+    <string name="playback_afr_capability_unsupported_title">Some settings may not work</string>
+    <string name="playback_afr_capability_both_problem_body">Auto Frame Rate and resolution matching are both enabled, but your display reports only one refresh rate and one resolution. Neither may take effect, and it is recommended to disable both.</string>
+    <string name="playback_afr_capability_only_afr_unsupported_body">Auto Frame Rate is enabled but your display reports only one refresh rate. Switching may have no effect, and it is recommended to disable.</string>
+    <string name="playback_afr_capability_only_res_unsupported_body">Resolution matching is enabled but your display reports only one resolution. Matching may have no effect, and it is recommended to disable.</string>
+    <string name="playback_afr_capability_disable_button">Disable AFR</string>
+    <string name="playback_afr_capability_disable_resolution_button">Disable resolution matching</string>
+    <string name="playback_afr_capability_disable_both_button">Disable both</string>
     <string name="playback_player_external_desc">Always open streams in an external app</string>
     <string name="playback_player_ask_desc">Choose the player each time</string>
     <string name="playback_player_auto">Auto (Best for Content)</string>
@@ -1567,6 +1575,10 @@
     <string name="collections_editor_placeholder_backdrop">Backdrop image URL (optional)</string>
     <string name="collections_editor_placeholder_folder">Folder name</string>
     <string name="collections_editor_placeholder_gif">Animated GIF URL (plays only while focused)</string>
+    <string name="collections_editor_hero_backdrop">Hero Backdrop (Modern Home)</string>
+    <string name="collections_editor_placeholder_hero_backdrop">Custom hero backdrop URL (optional)</string>
+    <string name="collections_editor_title_logo">Title Logo (Modern Home)</string>
+    <string name="collections_editor_placeholder_title_logo">Custom title logo URL (optional)</string>
     <string name="collections_editor_genre_filter">Genre Filter</string>
     <string name="collections_editor_choose_genre">Choose</string>
     <string name="collections_editor_select_genre">Select genre</string>

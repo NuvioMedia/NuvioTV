@@ -542,7 +542,12 @@ private fun PlayerRuntimeController.currentTrackPreferenceForPersistence(): Play
 
 internal fun PlayerRuntimeController.persistTrackPreference() {
     val id = contentId ?: return
-    val pref = rememberedTrackPreference ?: return
+    // Use the currently-effective preference (remembered OR previously persisted)
+    // so that a delay-only change does not wipe a previously-saved track selection.
+    // For the resume-from-CW case, rememberedTrackPreference is null for the fresh
+    // session, and falling through to persistedTrackPreference preserves the user's
+    // earlier audio/subtitle choices. See issue #1063.
+    val pref = currentTrackPreferenceForPersistence()
     val audio = pref.audio
     val subtitle = pref.subtitle
     val persisted = com.nuvio.tv.data.local.PersistedTrackPreference(
@@ -567,6 +572,17 @@ internal fun PlayerRuntimeController.persistTrackPreference() {
         audioTrackId = audio?.trackId
     )
     scope.launch { trackPreferenceDataStore.save(id, persisted) }
+    // Subtitle delay is keyed per-videoId (not per-contentId) because a delay
+    // calibrated against one episode release rarely applies to the next
+    // episode. Scoping it to the exact video prevents cross-episode leakage.
+    // See issue #1063 discussion.
+    val vid = currentVideoId?.takeIf { it.isNotBlank() }
+    if (vid != null) {
+        val currentDelayMs = _uiState.value.subtitleDelayMs
+        scope.launch {
+            trackPreferenceDataStore.saveSubtitleDelayMs(vid, currentDelayMs.takeIf { it != 0 })
+        }
+    }
 }
 
 internal fun PlayerRuntimeController.captureCurrentAudioSelectionForSubtitleRefresh(

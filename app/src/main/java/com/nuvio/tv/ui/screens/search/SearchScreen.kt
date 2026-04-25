@@ -53,11 +53,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
+import com.nuvio.tv.ui.util.dpadRepeatThrottle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
@@ -460,42 +459,10 @@ fun SearchScreen(
                 }
             }
         } else {
-            val searchFocusManager = LocalFocusManager.current
-            val searchLastKeyRepeatTimeRef = remember { longArrayOf(0L) }
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .onPreviewKeyEvent { event ->
-                        val native = event.nativeKeyEvent
-                        if (native.action == KeyEvent.ACTION_DOWN &&
-                            native.repeatCount > 0 &&
-                            (native.keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
-                                native.keyCode == KeyEvent.KEYCODE_DPAD_UP ||
-                                native.keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
-                                native.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
-                        ) {
-                            val isVertical = native.keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
-                                native.keyCode == KeyEvent.KEYCODE_DPAD_UP
-                            val gateMs = if (isVertical) 112L else 80L
-                            val now = android.os.SystemClock.uptimeMillis()
-                            if (now - searchLastKeyRepeatTimeRef[0] < gateMs) {
-                                return@onPreviewKeyEvent true
-                            }
-                            searchLastKeyRepeatTimeRef[0] = now
-                            val direction = when (native.keyCode) {
-                                KeyEvent.KEYCODE_DPAD_DOWN -> FocusDirection.Down
-                                KeyEvent.KEYCODE_DPAD_UP -> FocusDirection.Up
-                                KeyEvent.KEYCODE_DPAD_LEFT -> FocusDirection.Left
-                                KeyEvent.KEYCODE_DPAD_RIGHT -> FocusDirection.Right
-                                else -> null
-                            }
-                            if (direction != null) {
-                                searchFocusManager.moveFocus(direction)
-                            }
-                            return@onPreviewKeyEvent true
-                        }
-                        false
-                    },
+                    .dpadRepeatThrottle(),
                 contentPadding = PaddingValues(vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -627,6 +594,9 @@ fun SearchScreen(
                                 onItemClick = { id, type, addonBaseUrl ->
                                     onNavigateToDetail(id, type, addonBaseUrl)
                                 },
+                                onItemLongPress = { item, addonBaseUrl ->
+                                    viewModel.posterOptions.show(item, addonBaseUrl)
+                                },
                                 onSeeAll = {
                                     onNavigateToSeeAll(
                                         catalogRow.catalogId,
@@ -641,6 +611,15 @@ fun SearchScreen(
             }
         }
     }
+
+    val posterOptionsState by viewModel.posterOptions.state.collectAsState()
+    com.nuvio.tv.ui.components.posteroptions.PosterOptionsHost(
+        state = posterOptionsState,
+        controller = viewModel.posterOptions,
+        onNavigateToDetail = { id, type, addonBaseUrl ->
+            onNavigateToDetail(id, type, addonBaseUrl)
+        }
+    )
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)

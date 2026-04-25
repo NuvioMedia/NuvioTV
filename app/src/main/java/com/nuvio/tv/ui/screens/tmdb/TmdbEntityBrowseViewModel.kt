@@ -22,6 +22,7 @@ import javax.inject.Inject
 class TmdbEntityBrowseViewModel @Inject constructor(
     private val tmdbMetadataService: TmdbMetadataService,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
+    val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -40,6 +41,7 @@ class TmdbEntityBrowseViewModel @Inject constructor(
     val uiState: StateFlow<TmdbEntityBrowseUiState> = _uiState.asStateFlow()
 
     init {
+        posterOptions.bind(viewModelScope)
         load()
     }
 

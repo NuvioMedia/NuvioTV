@@ -64,6 +64,7 @@ import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.util.dpadVerticalFastScroll
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
 import com.nuvio.tv.ui.util.localizedGenreLabel
 
@@ -86,6 +87,7 @@ internal fun DiscoverSection(
     onSelectCatalog: (String) -> Unit,
     onSelectGenre: (String?) -> Unit,
     onLoadMore: () -> Unit,
+    onItemLongPress: (MetaPreview, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val selectedCatalog = uiState.discoverCatalogs.firstOrNull { it.key == uiState.selectedDiscoverCatalogKey }
@@ -241,6 +243,9 @@ internal fun DiscoverSection(
                             item.apiType,
                             selectedCatalog?.addonBaseUrl ?: ""
                         )
+                    },
+                    onItemLongPress = { item ->
+                        onItemLongPress(item, selectedCatalog?.addonBaseUrl ?: "")
                     },
                     filterKey = "${uiState.selectedDiscoverType}|${uiState.selectedDiscoverCatalogKey}|${uiState.selectedDiscoverGenre}"
                 )
@@ -435,6 +440,7 @@ internal fun DiscoverGrid(
     isLoadingMore: Boolean,
     onLoadMore: () -> Unit,
     onItemClick: (Int, MetaPreview) -> Unit,
+    onItemLongPress: (MetaPreview) -> Unit = {},
     filterKey: String = ""
 ) {
     val restoreFocusRequester = remember { FocusRequester() }
@@ -528,11 +534,62 @@ internal fun DiscoverGrid(
         itemFocusRequesters.getOrPut(focusedItemIndex) { FocusRequester() }
     }
 
+    // Column the user was navigating in at the moment fast-scroll engaged.
+    // Captured on drag-start (see onFastScrollingChanged below) because the
+    // originally-focused card will have scrolled out of visibleItemsInfo by
+    // the time landing runs — looking it up at landing time is unreliable
+    // and was causing focus to jump to a different column after long drags.
+    var fastScrollStartColumn by remember { mutableStateOf<Int?>(null) }
+
     LazyVerticalGrid(
         state = gridState,
         columns = GridCells.Adaptive(minSize = adaptiveStyle.width),
         modifier = Modifier.fillMaxSize()
-            .focusRestorer { focusedItemRequester },
+            .focusRestorer { focusedItemRequester }
+            .dpadVerticalFastScroll(
+                scrollableState = gridState,
+                onFastScrollingChanged = { active ->
+                    // Only snapshot on drag-start. The modifier fires
+                    // active=false BEFORE it calls resolveVerticalLanding,
+                    // so clearing here would wipe the column right before
+                    // landing reads it. Next drag-start will overwrite.
+                    if (active) {
+                        fastScrollStartColumn = gridState.layoutInfo
+                            .visibleItemsInfo
+                            .firstOrNull { it.index == focusedItemIndex }
+                            ?.column
+                    }
+                },
+                resolveVerticalLanding = { sign ->
+                    // Keep the user on the column they were navigating in
+                    // so fast-scroll feels like a single vertical strip,
+                    // not a teleport to an arbitrary cell in the viewport.
+                    // Exclude the action (Load More / Loading) cell up front
+                    // — it lives at index == items.size and when items.size
+                    // % columns == 0 it lands at column 0 of a brand-new
+                    // tail row, which would otherwise hijack every column-0
+                    // landing and bounce focus to the last content cell.
+                    val contentVisible = gridState.layoutInfo.visibleItemsInfo
+                        .filter { it.index < items.size }
+                    if (contentVisible.isEmpty()) {
+                        null
+                    } else {
+                        val col = fastScrollStartColumn
+                        val sameColumn = if (col != null) {
+                            contentVisible.filter { it.column == col }
+                        } else {
+                            emptyList()
+                        }
+                        val target = when {
+                            sameColumn.isNotEmpty() && sign > 0 -> sameColumn.last()
+                            sameColumn.isNotEmpty() && sign < 0 -> sameColumn.first()
+                            sign > 0 -> contentVisible.last()
+                            else -> contentVisible.first()
+                        }
+                        itemFocusRequesters[target.index]
+                    }
+                }
+            ),
         contentPadding = PaddingValues(bottom = 32.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -551,12 +608,15 @@ internal fun DiscoverGrid(
             GridContentCard(
                 item = item,
                 onClick = { onItemClick(index, item) },
+                onLongPress = { onItemLongPress(item) },
                 posterCardStyle = adaptiveStyle,
                 isWatched = run {
                     val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
                     if (isSeries) item.id in watchedSeriesIds else item.id in watchedMovieIds
                 },
-                modifier = Modifier.width(adaptiveStyle.width),
+                modifier = Modifier
+                    .padding(top = 3.dp)
+                    .width(adaptiveStyle.width),
                 focusRequester = focusReq,
                 onFocused = {
                     onItemFocused(index)

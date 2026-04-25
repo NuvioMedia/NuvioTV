@@ -652,7 +652,8 @@ fun MetaDetailsScreen(
                     onSharedTrailerFocusRestored = { restoreSharedTrailerFocusToken = 0 },
                     onNavigateToCastDetail = onNavigateToCastDetail,
                     onNavigateToTmdbEntityBrowse = onNavigateToTmdbEntityBrowse,
-                    onNavigateToDetail = onNavigateToDetail
+                    onNavigateToDetail = onNavigateToDetail,
+                    onPosterLongPress = { item -> viewModel.posterOptions.show(item, null) }
                 )
             }
         }
@@ -721,6 +722,15 @@ fun MetaDetailsScreen(
             trailerSeekOverlayVisible = false
         }
     }
+
+    val posterOptionsState by viewModel.posterOptions.state.collectAsStateWithLifecycle()
+    com.nuvio.tv.ui.components.posteroptions.PosterOptionsHost(
+        state = posterOptionsState,
+        controller = viewModel.posterOptions,
+        onNavigateToDetail = { id, type, addonBaseUrl ->
+            onNavigateToDetail(id, type, addonBaseUrl.takeIf { it.isNotBlank() })
+        }
+    )
 }
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
@@ -811,7 +821,8 @@ private fun MetaDetailsContent(
     onSharedTrailerFocusRestored: () -> Unit,
     onNavigateToCastDetail: (personId: Int, personName: String, preferCrew: Boolean) -> Unit = { _, _, _ -> },
     onNavigateToTmdbEntityBrowse: (entityKind: String, entityId: Int, entityName: String, sourceType: String) -> Unit = { _, _, _, _ -> },
-    onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit = { _, _, _ -> }
+    onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit = { _, _, _ -> },
+    onPosterLongPress: (MetaPreview) -> Unit = {}
 ) {
     val canLoadMoreComments = commentsCurrentPage in 1 until commentsPageCount
     val selectedCommentIndex = remember(comments, selectedComment?.id) {
@@ -1206,6 +1217,7 @@ private fun MetaDetailsContent(
         else -> null
     }
     val commentsUpFocusRequester = when {
+        shouldSplitCollection && collection.isNotEmpty() -> collectionSectionFocusRequester
         hasVisiblePeopleSection -> when (activePeopleTab) {
             PeopleSectionTab.CAST -> castSectionFocusRequester
             PeopleSectionTab.MORE_LIKE_THIS -> moreLikeSectionFocusRequester
@@ -1638,6 +1650,9 @@ private fun MetaDetailsContent(
                                     onItemClick = { item ->
                                         markMoreLikeThisRestore(item.id)
                                         onNavigateToDetail(item.id, item.apiType, null)
+                                    },
+                                    onItemLongPress = { item ->
+                                        onPosterLongPress(item)
                                     }
                                 )
                             }
@@ -1669,6 +1684,9 @@ private fun MetaDetailsContent(
                                     onItemClick = { item ->
                                         markCollectionRestore(item.id)
                                         onNavigateToDetail(item.id, item.apiType, null)
+                                    },
+                                    onItemLongPress = { item ->
+                                        onPosterLongPress(item)
                                     }
                                 )
                             }
@@ -1720,6 +1738,9 @@ private fun MetaDetailsContent(
                         onItemClick = { item ->
                             markCollectionRestore(item.id)
                             onNavigateToDetail(item.id, item.apiType, null)
+                        },
+                        onItemLongPress = { item ->
+                            onPosterLongPress(item)
                         }
                     )
                 }

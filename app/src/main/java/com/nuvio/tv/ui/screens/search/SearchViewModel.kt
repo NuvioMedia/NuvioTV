@@ -39,6 +39,7 @@ class SearchViewModel @Inject constructor(
     private val searchHistoryDataStore: SearchHistoryDataStore,
     private val watchProgressRepository: com.nuvio.tv.domain.repository.WatchProgressRepository,
     private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
+    val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -70,6 +71,7 @@ class SearchViewModel @Inject constructor(
     }
 
     init {
+        posterOptions.bind(viewModelScope)
         viewModelScope.launch {
             watchProgressRepository.observeWatchedMovieIds()
                 .collect { ids -> _watchedMovieIds.value = ids }

@@ -254,6 +254,15 @@ fun PlaybackSettingsContent(
                 onSetResolutionMatchingEnabled = { enabled ->
                     coroutineScope.launch { viewModel.setResolutionMatchingEnabled(enabled) }
                 },
+                onDisableAfrAndResolution = { coroutineScope.launch { viewModel.disableAfrAndResolution() } },
+                onDisableAfrOnly = {
+                    coroutineScope.launch {
+                        viewModel.setFrameRateMatchingMode(com.nuvio.tv.data.local.FrameRateMatchingMode.OFF)
+                    }
+                },
+                onDisableResolutionOnly = {
+                    coroutineScope.launch { viewModel.setResolutionMatchingEnabled(false) }
+                },
                 onSetTrailerEnabled = { enabled -> coroutineScope.launch { viewModel.setTrailerEnabled(enabled) } },
                 onSetTrailerDelaySeconds = { seconds -> coroutineScope.launch { viewModel.setTrailerDelaySeconds(seconds) } },
                 onSetSkipSilence = { enabled -> coroutineScope.launch { viewModel.setSkipSilence(enabled) } },
@@ -386,7 +395,9 @@ internal fun ToggleSettingsItem(
     onCheckedChange: (Boolean) -> Unit,
     onFocused: () -> Unit = {},
     enabled: Boolean = true,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    titleTrailingIcon: ImageVector? = null,
+    titleTrailingIconTint: Color = NuvioColors.TextPrimary
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val contentAlpha = if (enabled) 1f else 0.4f
@@ -431,13 +442,25 @@ internal fun ToggleSettingsItem(
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = NuvioColors.TextPrimary.copy(alpha = contentAlpha),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = NuvioColors.TextPrimary.copy(alpha = contentAlpha),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (titleTrailingIcon != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = titleTrailingIcon,
+                            contentDescription = null,
+                            tint = titleTrailingIconTint.copy(alpha = contentAlpha),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,

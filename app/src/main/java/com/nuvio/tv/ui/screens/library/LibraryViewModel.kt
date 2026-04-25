@@ -112,6 +112,7 @@ class LibraryViewModel @Inject constructor(
     private val traktAuthDataStore: TraktAuthDataStore,
     private val watchProgressRepository: com.nuvio.tv.domain.repository.WatchProgressRepository,
     private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
+    val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -125,6 +126,7 @@ class LibraryViewModel @Inject constructor(
     private var messageClearJob: Job? = null
 
     init {
+        posterOptions.bind(viewModelScope)
         observeLayoutPreferences()
         observeLibraryData()
         viewModelScope.launch {

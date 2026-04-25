@@ -124,12 +124,54 @@ class TraktAuthService @Inject constructor(
             return Result.failure(IllegalStateException("Missing TRAKT credentials"))
         }
 
-        val response = try {
+        // Reuse an existing, still-valid device flow if one is already active.
+        // This avoids re-hitting /oauth/device/code (which is tightly rate-limited
+        // by Trakt) when the user navigates back to the login screen or taps the
+        // Connect button twice in a row — see issue #1197.
+        val state = getCurrentAuthState()
+        val existingExpiresAt = state.expiresAt
+        val existingCode = state.deviceCode
+        if (
+            !existingCode.isNullOrBlank() &&
+            existingExpiresAt != null &&
+            System.currentTimeMillis() < existingExpiresAt
+        ) {
+            return Result.success(
+                TraktDeviceCodeResponseDto(
+                    deviceCode = existingCode,
+                    userCode = state.userCode.orEmpty(),
+                    verificationUrl = state.verificationUrl.orEmpty(),
+                    expiresIn = ((existingExpiresAt - System.currentTimeMillis()) / 1000L)
+                        .coerceAtLeast(0L)
+                        .toInt(),
+                    interval = state.pollInterval ?: 5
+                )
+            )
+        }
+
+        // Issue a request, auto-retrying once on a transient 429 using the
+        // Retry-After header when the server supplies a short back-off.
+        suspend fun requestOnce(): Response<TraktDeviceCodeResponseDto> =
             traktApi.requestDeviceCode(
                 TraktDeviceCodeRequestDto(clientId = BuildConfig.TRAKT_CLIENT_ID)
             )
+
+        var response = try {
+            requestOnce()
         } catch (e: IOException) {
             return Result.failure(IllegalStateException("Network error, please try again"))
+        }
+
+        if (response.code() == 429) {
+            val retryAfterSeconds = response.headers()["Retry-After"]?.toLongOrNull()
+            if (retryAfterSeconds != null && retryAfterSeconds in 1L..10L) {
+                delay(retryAfterSeconds * 1000L)
+                response = try {
+                    requestOnce()
+                } catch (e: IOException) {
+                    return Result.failure(IllegalStateException("Network error, please try again"))
+                }
+            }
         }
 
         val body = response.body()

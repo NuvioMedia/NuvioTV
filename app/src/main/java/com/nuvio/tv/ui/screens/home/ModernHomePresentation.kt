@@ -47,7 +47,7 @@ internal fun buildModernHomePresentation(
                 checkNotNull(cache.continueWatchingRow)
             } else {
                 HeroCarouselRow(
-                    key = "continue_watching",
+                    key = MODERN_CONTINUE_WATCHING_ROW_KEY,
                     title = strContinueWatching,
                     globalRowIndex = -1,
                     items = input.continueWatchingItems.map { item ->
@@ -204,6 +204,50 @@ internal fun buildModernHomePresentation(
                     )
                     add(mappedRow)
                 }
+
+                is HomeRow.PlaceholderCatalog -> {
+                    if (catalogRowLimit != null && renderedCatalogRows >= catalogRowLimit) {
+                        return@forEachIndexed
+                    }
+                    renderedCatalogRows++
+                    val fakeItemCount = 8
+                    val fakeItems = (0 until fakeItemCount).map { i ->
+                        val fakeId = "__placeholder_${homeRow.catalogKey}_$i"
+                        ModernCarouselItem(
+                            key = "placeholder_${homeRow.catalogKey}_$i",
+                            title = "",
+                            subtitle = null,
+                            // Dummy URL triggers shimmer instead of MonochromePosterPlaceholder
+                            imageUrl = "placeholder://empty",
+                            heroPreview = HeroPreview(
+                                title = "", logo = null, description = null,
+                                contentTypeText = null, yearText = null, imdbText = null,
+                                genres = emptyList(), poster = null, backdrop = null,
+                                imageUrl = "placeholder://empty"
+                            ),
+                            payload = ModernPayload.Catalog(
+                                focusKey = "placeholder_${homeRow.catalogKey}_$i",
+                                itemId = fakeId,
+                                itemType = homeRow.apiType,
+                                addonBaseUrl = homeRow.addonBaseUrl,
+                                trailerTitle = "",
+                                trailerReleaseInfo = null,
+                                trailerApiType = homeRow.apiType
+                            )
+                        )
+                    }
+                    val placeholderRow = HeroCarouselRow(
+                        key = homeRow.catalogKey,
+                        title = homeRow.displayTitle,
+                        globalRowIndex = index,
+                        catalogId = homeRow.catalogId,
+                        addonId = homeRow.addonId,
+                        apiType = homeRow.apiType,
+                        items = fakeItems,
+                        isLoading = true
+                    )
+                    add(placeholderRow)
+                }
             }
         }
 
@@ -230,6 +274,10 @@ private fun resolveVisibleHomeRows(input: ModernHomePresentationInput): List<Hom
                 }
                 is HomeRow.CollectionRow -> {
                     homeRow.collection.takeIf(Collection::hasVisibleFolders)?.let(HomeRow::CollectionRow)
+                }
+                is HomeRow.PlaceholderCatalog -> {
+                    // Keep placeholder rows as-is — they'll be rendered as shimmer skeletons
+                    homeRow
                 }
             }
         }

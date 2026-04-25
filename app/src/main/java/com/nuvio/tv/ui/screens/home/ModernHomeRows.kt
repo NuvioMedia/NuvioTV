@@ -4,9 +4,15 @@ package com.nuvio.tv.ui.screens.home
 
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
@@ -43,6 +49,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -100,6 +108,17 @@ private const val MODERN_HORIZONTAL_FOCUS_DEBOUNCE_MS = 140L
 private const val POSTER_PREFETCH_DISTANCE = 8
 
 internal val LocalVerticalRowsScrolling = androidx.compose.runtime.compositionLocalOf { false }
+
+/**
+ * True while the user is actively "fast-scrolling" — i.e. holding DPAD_LEFT/RIGHT or
+ * DPAD_UP/DOWN and the LazyColumn-level key handler has taken over to drag the list
+ * programmatically instead of letting [androidx.compose.ui.focus.FocusManager.moveFocus]
+ * pull focus card-by-card. Cards use this to suppress their focus chrome (border / glow /
+ * GIF) during the drag; the chrome snaps back onto whichever card focus lands on when
+ * the user releases the key. Defaults to `false`, so any card used outside a modern
+ * home row keeps its normal focus visuals.
+ */
+internal val LocalFastScrollActive = androidx.compose.runtime.compositionLocalOf { false }
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -347,7 +366,18 @@ internal fun ModernRowSection(
     val loadMoreRequestedTotals = uiCaches.loadMoreRequestedTotals
 
     val rowKey = row.key
-    Column {
+    // Blocks vertical focus exit during placeholder→data transition.
+    val blockingFocusExit = remember { mutableStateOf(false) }
+    Column(
+        modifier = Modifier.then(
+            if (blockingFocusExit.value) {
+                Modifier.focusProperties {
+                    up = FocusRequester.Cancel
+                    down = FocusRequester.Cancel
+                }
+            } else Modifier
+        )
+    ) {
         val titleMediumStyle = MaterialTheme.typography.titleMedium
         val rowTitleStyle = remember(titleMediumStyle) {
             titleMediumStyle.copy(fontWeight = FontWeight.SemiBold)
@@ -383,6 +413,43 @@ internal fun ModernRowSection(
             }
         }
 
+        // When placeholder items are replaced by real data and this row
+        // is the active row, re-request focus on the first real item.
+        val wasPlaceholderRef = remember { mutableStateOf(row.isLoading && firstItemKey?.startsWith("placeholder_") == true) }
+        val needsFocusRestore = remember { mutableStateOf(false) }
+        val wasPlaceholder = wasPlaceholderRef.value
+        val isNowReal = !row.isLoading || firstItemKey?.startsWith("placeholder_") != true
+        if (wasPlaceholder && isNowReal && isActiveRow) {
+            needsFocusRestore.value = true
+            blockingFocusExit.value = true
+        }
+        wasPlaceholderRef.value = row.isLoading && firstItemKey?.startsWith("placeholder_") == true
+
+        // Restore focus after placeholder→data transition using a retry loop
+        // that starts immediately (no pre-delay) to minimize the visible jump.
+        LaunchedEffect(needsFocusRestore.value, row.key) {
+            if (!needsFocusRestore.value) return@LaunchedEffect
+            needsFocusRestore.value = false
+            if (row.items.isEmpty()) {
+                blockingFocusExit.value = false
+                return@LaunchedEffect
+            }
+            // Use index-based key matching the LazyRow key scheme
+            val targetStableKey = "${row.key}_0"
+            repeat(15) {
+                val requester = uiCaches.itemFocusRequesters[row.key]?.get(targetStableKey)
+                if (requester != null) {
+                    val ok = runCatching { requester.requestFocus(); true }.getOrDefault(false)
+                    if (ok) {
+                        blockingFocusExit.value = false
+                        return@LaunchedEffect
+                    }
+                }
+                withFrameNanos { }
+            }
+            blockingFocusExit.value = false
+        }
+
         val isRowScrollingState = remember(rowListState) {
             derivedStateOf { rowListState.isScrollInProgress }
         }
@@ -401,8 +468,8 @@ internal fun ModernRowSection(
             if (pendingRowFocusKey != row.key) return@LaunchedEffect
             val targetIndex = (pendingRowFocusIndex ?: 0)
                 .coerceIn(0, (row.items.size - 1).coerceAtLeast(0))
-            val targetItemKey = row.items.getOrNull(targetIndex)?.key ?: return@LaunchedEffect
-            val requester = uiCaches.requesterFor(row.key, targetItemKey)
+            val targetStableKey = "${row.key}_$targetIndex"
+            val requester = uiCaches.requesterFor(row.key, targetStableKey)
             var didFocus = false
             var didScrollToTarget = false
             repeat(20) {
@@ -422,11 +489,9 @@ internal fun ModernRowSection(
             if (!didFocus) {
                 val fallbackIndex = rowListState.firstVisibleItemIndex
                     .coerceIn(0, (row.items.size - 1).coerceAtLeast(0))
-                val fallbackItemKey = row.items.getOrNull(fallbackIndex)?.key
+                val fallbackStableKey = "${row.key}_$fallbackIndex"
                 didFocus = runCatching {
-                    if (fallbackItemKey != null) {
-                        uiCaches.requesterFor(row.key, fallbackItemKey).requestFocus()
-                    }
+                    uiCaches.requesterFor(row.key, fallbackStableKey).requestFocus()
                     true
                 }.getOrDefault(false)
             }
@@ -631,22 +696,28 @@ internal fun ModernRowSection(
 
         CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalBringIntoViewSpec) {
             val lastFocusedIdx = focusedItemByRow[rowKey] ?: 0
-            val restoreItemKey = row.items.getOrNull(
-                lastFocusedIdx.coerceIn(0, (row.items.size - 1).coerceAtLeast(0))
-            )?.key
-            val restoreFocusRequester = restoreItemKey?.let {
-                uiCaches.requesterFor(rowKey, it)
-            } ?: FocusRequester.Default
+            val restoreIdx = lastFocusedIdx.coerceIn(0, (row.items.size - 1).coerceAtLeast(0))
+            val restoreStableKey = "${row.key}_$restoreIdx"
+            val restoreFocusRequester = uiCaches.requesterFor(rowKey, restoreStableKey)
 
             LazyRow(
                 state = rowListState,
-                modifier = Modifier.focusRestorer(restoreFocusRequester).focusGroup(),
+                modifier = Modifier
+                    .focusRestorer(restoreFocusRequester)
+                    .focusGroup()
+                    .then(
+                        if (row.isLoading) {
+                            Modifier.onPreviewKeyEvent { event ->
+                                event.type == KeyEventType.KeyDown && event.key == Key.DirectionRight
+                            }
+                        } else Modifier
+                    ),
                 contentPadding = PaddingValues(horizontal = rowStartPadding),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 itemsIndexed(
                     items = row.items,
-                    key = { _, item -> item.key },
+                    key = { index, _ -> "${row.key}_$index" },
                     contentType = { _, item ->
                         when (val payload = item.payload) {
                             is ModernPayload.ContinueWatching -> "modern_cw_card"
@@ -655,8 +726,9 @@ internal fun ModernRowSection(
                         }
                     }
                 ) { index, item ->
-                    val requester = uiCaches.requesterFor(row.key, item.key)
-                    val isContinueWatchingRow = row.key == "continue_watching"
+                    val stableItemKey = "${row.key}_$index"
+                    val requester = uiCaches.requesterFor(row.key, stableItemKey)
+                    val isContinueWatchingRow = row.key == MODERN_CONTINUE_WATCHING_ROW_KEY
                     val onFocused = remember(row.key, index, isContinueWatchingRow) {
                         { onRowItemFocused(row.key, index, isContinueWatchingRow) }
                     }
@@ -905,14 +977,30 @@ private fun ModernCarouselCard(
             shape = cardShape
         )
     }
+    // While the user is dragging the list via held DPAD (see LazyColumn-level fast
+    // scroll takeover in ModernHomeContent), hide focus chrome entirely — the list is
+    // sliding like a touch swipe and showing a border / glow jittering across every
+    // card the drag passes over would break that illusion. The chrome reappears the
+    // moment the user releases the key, when requestFocus lands focus on whichever
+    // card is visible at the leading edge.
+    val isFastScrolling = LocalFastScrollActive.current
+    val transparentFocusBorder = remember(cardShape) {
+        Border(
+            border = BorderStroke(0.dp, Color.Transparent),
+            shape = cardShape
+        )
+    }
+    val effectiveFocusedBorder = if (isFastScrolling) transparentFocusBorder else focusedBorder
+    val noFocusGlow = remember { CardDefaults.glow(focusedGlow = androidx.tv.material3.Glow.None) }
     val cardGlow = when (payload) {
         is ModernPayload.CollectionFolder -> rememberArtworkBackedCardGlow(
             imageUrl = imageUrl,
             fallbackSeed = "${item.title}:${payload.collectionTitle}",
             enabled = payload.focusGlowEnabled
         )
-        else -> remember { CardDefaults.glow(focusedGlow = androidx.tv.material3.Glow.None) }
+        else -> noFocusGlow
     }
+    val effectiveCardGlow = if (isFastScrolling) noFocusGlow else cardGlow
     val titleStyle = remember(titleMedium) {
         titleMedium.copy(fontWeight = FontWeight.Medium)
     }
@@ -972,9 +1060,9 @@ private fun ModernCarouselCard(
                 containerColor = backgroundCardColor,
                 focusedContainerColor = backgroundCardColor
             ),
-            border = CardDefaults.border(focusedBorder = focusedBorder),
+            border = CardDefaults.border(focusedBorder = effectiveFocusedBorder),
             scale = CardDefaults.scale(focusedScale = 1f),
-            glow = cardGlow
+            glow = effectiveCardGlow
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 val mediaLayerModifier = remember(hasLandscapeLogo) {
@@ -993,7 +1081,38 @@ private fun ModernCarouselCard(
                 }
 
                 Box(modifier = mediaLayerModifier) {
-                    if (hasImage) {
+                    val isPlaceholderItem = imageUrl?.startsWith("placeholder://") == true
+                    if (isPlaceholderItem) {
+                        // Horizontal sweeping shimmer for placeholder cards
+                        val shimmerTransition = rememberInfiniteTransition(label = "placeholderShimmer")
+                        val shimmerOffset by shimmerTransition.animateFloat(
+                            initialValue = -1f,
+                            targetValue = 2f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(durationMillis = 1600, easing = LinearEasing),
+                                repeatMode = RepeatMode.Restart
+                            ),
+                            label = "shimmerOffset"
+                        )
+                        val shimmerBrush = remember(shimmerOffset) {
+                            Brush.linearGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color.Transparent,
+                                    0.4f to Color.White.copy(alpha = 0.07f),
+                                    0.5f to Color.White.copy(alpha = 0.13f),
+                                    0.6f to Color.White.copy(alpha = 0.07f),
+                                    1.0f to Color.Transparent
+                                ),
+                                start = Offset(shimmerOffset * 1000f, 0f),
+                                end = Offset((shimmerOffset + 0.6f) * 1000f, 0f)
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(shimmerBrush)
+                        )
+                    } else if (hasImage) {
                         key(scrollPhaseKey) {
                             AsyncImage(
                                 model = scrollAwareImageModel,

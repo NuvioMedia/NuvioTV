@@ -1,6 +1,5 @@
 package com.nuvio.tv.ui.screens.home
 
-import android.view.KeyEvent as AndroidKeyEvent
 import com.nuvio.tv.LocalContentFocusRequester
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -39,7 +38,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.onPreviewKeyEvent
+import com.nuvio.tv.ui.util.dpadRepeatThrottle
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -72,9 +71,6 @@ import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.collectionFolderCardImageUrl
 import com.nuvio.tv.ui.components.rememberArtworkBackedCardGlow
 import com.nuvio.tv.ui.theme.NuvioColors
-
-/** Minimum interval between processed key repeat events to prevent HWUI overload. */
-private const val KEY_REPEAT_THROTTLE_MS = 80L
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -216,7 +212,6 @@ fun GridHomeContent(
     }
 
     // Throttle D-pad key repeats to prevent HWUI overload when a key is held down.
-    val lastKeyRepeatTime = remember { longArrayOf(0L) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         val contentFocusRequester = LocalContentFocusRequester.current
@@ -229,17 +224,7 @@ fun GridHomeContent(
                 .fillMaxSize()
                 .focusRequester(contentFocusRequester)
                 .focusRestorer()
-                .onPreviewKeyEvent { event ->
-                    val native = event.nativeKeyEvent
-                    if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {
-                        val now = System.currentTimeMillis()
-                        if (now - lastKeyRepeatTime[0] < KEY_REPEAT_THROTTLE_MS) {
-                            return@onPreviewKeyEvent true
-                        }
-                        lastKeyRepeatTime[0] = now
-                    }
-                    false
-                },
+                .dpadRepeatThrottle(),
             contentPadding = PaddingValues(
                 start = 48.dp,
                 end = 24.dp,

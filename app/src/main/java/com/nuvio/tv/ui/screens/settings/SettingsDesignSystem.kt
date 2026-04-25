@@ -218,6 +218,7 @@ internal fun SettingsRailButton(
     Card(
         onClick = onClick,
         modifier = appliedModifier
+            .padding(top = 2.dp, bottom = 2.dp)
             .fillMaxWidth()
             .heightIn(min = SettingsRailItemHeight)
             .onFocusChanged { state ->
@@ -450,7 +451,9 @@ internal fun SettingsActionRow(
     modifier: Modifier = Modifier,
     onFocused: () -> Unit = {},
     enabled: Boolean = true,
-    trailingIcon: ImageVector = Icons.Default.ChevronRight
+    trailingIcon: ImageVector = Icons.Default.ChevronRight,
+    titleTrailingIcon: ImageVector? = null,
+    titleTrailingIconTint: Color = NuvioColors.TextPrimary
 ) {
     val contentAlpha = if (enabled) 1f else 0.4f
     var isFocused by remember { mutableStateOf(false) }
@@ -458,6 +461,7 @@ internal fun SettingsActionRow(
     Card(
         onClick = { if (enabled) onClick() },
         modifier = modifier
+            .padding(top = 2.dp, bottom = 2.dp)
             .fillMaxWidth()
             .heightIn(min = 62.dp)
             .onFocusChanged { state ->
@@ -487,13 +491,25 @@ internal fun SettingsActionRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = NuvioColors.TextPrimary.copy(alpha = contentAlpha),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = NuvioColors.TextPrimary.copy(alpha = contentAlpha),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (titleTrailingIcon != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = titleTrailingIcon,
+                            contentDescription = null,
+                            tint = titleTrailingIconTint.copy(alpha = contentAlpha),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
                 if (!subtitle.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(

@@ -326,8 +326,11 @@ fun LibraryScreen(
         items(uiState.visibleItems, key = { "${it.type}:${it.id}" }) { item ->
             val focusKey = "${item.type}:${item.id}"
             val isSeries = item.type.equals("series", ignoreCase = true) || item.type.equals("tv", ignoreCase = true)
+            val previewForLongPress = remember(item) {
+                item.toMetaPreview().copy(posterShape = PosterShape.POSTER)
+            }
             GridContentCard(
-                item = item.toMetaPreview().copy(posterShape = PosterShape.POSTER),
+                item = previewForLongPress,
                 posterCardStyle = posterCardStyle,
                 isWatched = if (isSeries) item.id in watchedSeriesIds else item.id in watchedMovieIds,
                 focusRequester = posterFocusRequesters[focusKey],
@@ -338,6 +341,10 @@ fun LibraryScreen(
                 onClick = {
                     lastFocusedPosterKey = focusKey
                     onNavigateToDetail(item.id, item.type, item.addonBaseUrl)
+                },
+                onLongPress = {
+                    lastFocusedPosterKey = focusKey
+                    viewModel.posterOptions.show(previewForLongPress, item.addonBaseUrl)
                 }
             )
         }
@@ -403,6 +410,15 @@ fun LibraryScreen(
             )
         }
     }
+
+    val posterOptionsState by viewModel.posterOptions.state.collectAsState()
+    com.nuvio.tv.ui.components.posteroptions.PosterOptionsHost(
+        state = posterOptionsState,
+        controller = viewModel.posterOptions,
+        onNavigateToDetail = { id, type, addonBaseUrl ->
+            onNavigateToDetail(id, type, addonBaseUrl.takeIf { it.isNotBlank() })
+        }
+    )
 }
 
 @OptIn(ExperimentalTvMaterial3Api::class)

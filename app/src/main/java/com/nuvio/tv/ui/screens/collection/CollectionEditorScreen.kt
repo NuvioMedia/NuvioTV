@@ -863,6 +863,76 @@ private fun FolderEditorContent(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(stringResource(R.string.collections_editor_hero_backdrop), style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    NuvioTextField(
+                        value = folder.heroBackdropUrl.orEmpty(),
+                        onValueChange = { viewModel.updateFolderHeroBackdropUrl(it) },
+                        modifier = Modifier.weight(1f),
+                        placeholder = stringResource(R.string.collections_editor_placeholder_hero_backdrop)
+                    )
+                    if (!folder.heroBackdropUrl.isNullOrBlank()) {
+                        Card(
+                            onClick = {},
+                            modifier = Modifier
+                                .width(56.dp)
+                                .height(56.dp),
+                            shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+                            colors = CardDefaults.colors(containerColor = NuvioColors.BackgroundCard),
+                            scale = CardDefaults.scale(focusedScale = 1f)
+                        ) {
+                            AsyncImage(
+                                model = folder.heroBackdropUrl,
+                                contentDescription = stringResource(R.string.cd_preview),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(12.dp)),
+                                contentScale = ContentScale.FillBounds
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(stringResource(R.string.collections_editor_title_logo), style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    NuvioTextField(
+                        value = folder.titleLogoUrl.orEmpty(),
+                        onValueChange = { viewModel.updateFolderTitleLogoUrl(it) },
+                        modifier = Modifier.weight(1f),
+                        placeholder = stringResource(R.string.collections_editor_placeholder_title_logo)
+                    )
+                    if (!folder.titleLogoUrl.isNullOrBlank()) {
+                        Card(
+                            onClick = {},
+                            modifier = Modifier
+                                .width(100.dp)
+                                .height(56.dp),
+                            shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
+                            colors = CardDefaults.colors(containerColor = NuvioColors.BackgroundCard),
+                            scale = CardDefaults.scale(focusedScale = 1f)
+                        ) {
+                            AsyncImage(
+                                model = folder.titleLogoUrl,
+                                contentDescription = stringResource(R.string.cd_preview),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(12.dp)),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                    }
+                }
             }
 
             item {

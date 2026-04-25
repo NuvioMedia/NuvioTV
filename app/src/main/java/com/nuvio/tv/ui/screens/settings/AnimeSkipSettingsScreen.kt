@@ -76,11 +76,14 @@ fun AnimeSkipSettingsContent(
                         subtitle = stringResource(R.string.animeskip_enable_subtitle),
                         checked = enabled,
                         onToggle = { viewModel.setEnabled(!enabled) },
-                        modifier = if (initialFocusRequester != null) {
+                        modifier = Modifier
+                            .padding(top = 2.dp)
+                            .then(
+                                if (initialFocusRequester != null) {
                             Modifier.focusRequester(initialFocusRequester)
                         } else {
                             Modifier
-                        }
+                        })
                     )
                 }
                 item(key = "animeskip_client_id") {

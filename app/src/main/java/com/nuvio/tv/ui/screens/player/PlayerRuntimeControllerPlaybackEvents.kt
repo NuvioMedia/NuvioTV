@@ -450,7 +450,9 @@ internal fun PlayerRuntimeController.adjustSubtitleDelay(deltaMs: Int, showOverl
             .buildUpon()
             .build()
     }
-    
+    // Remember the delay so it survives to the next session (issue #1063).
+    persistTrackPreference()
+
     if (!showOverlay || keepInlineInSubtitleOverlay) {
         hideSubtitleDelayOverlayJob?.cancel()
         hideSubtitleDelayOverlayJob = null

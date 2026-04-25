@@ -26,6 +26,7 @@ import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.audio.AudioRendererEventListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.text.TextOutput
@@ -793,7 +794,6 @@ private class SubtitleOffsetRenderersFactory(
         val baseAudioSink = DefaultAudioSink.Builder(context)
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
-            .setAudioTrackBufferSizeProvider(FormatAwareAudioTrackBufferProvider())
             .setAudioProcessors(arrayOf(gainAudioProcessor))
             .build()
         val playbackSpeedAwareAudioSink = PlaybackSpeedAwareAudioSink(baseAudioSink)
@@ -826,17 +826,32 @@ private class SubtitleOffsetRenderersFactory(
             )
             return
         }
-        out.add(
-            PlaybackSpeedAwareAudioRenderer(
-                context = context,
-                codecAdapterFactory = getCodecAdapterFactory(),
-                mediaCodecSelector = mediaCodecSelector,
-                enableDecoderFallback = enableDecoderFallback,
-                eventHandler = eventHandler,
-                eventListener = eventListener,
-                playbackSpeedAwareAudioSink = playbackAwareSink
-            )
+        val startIndex = out.size
+        super.buildAudioRenderers(
+            context,
+            extensionRendererMode,
+            mediaCodecSelector,
+            enableDecoderFallback,
+            audioSink,
+            eventHandler,
+            eventListener,
+            out
         )
+        if (out.size > startIndex) {
+            val mediaCodecAudioRendererIndex = (startIndex until out.size)
+                .firstOrNull { index -> out[index] is MediaCodecAudioRenderer }
+                ?: startIndex
+            out[mediaCodecAudioRendererIndex] =
+                PlaybackSpeedAwareAudioRenderer(
+                    context = context,
+                    codecAdapterFactory = getCodecAdapterFactory(),
+                    mediaCodecSelector = mediaCodecSelector,
+                    enableDecoderFallback = enableDecoderFallback,
+                    eventHandler = eventHandler,
+                    eventListener = eventListener,
+                    playbackSpeedAwareAudioSink = playbackAwareSink
+                )
+        }
     }
 
     override fun buildTextRenderers(

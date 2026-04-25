@@ -17,6 +17,7 @@ import com.nuvio.tv.data.remote.api.MDBListApi
 import com.nuvio.tv.data.remote.api.ParentalGuideApi
 import com.nuvio.tv.data.remote.api.SeriesGraphApi
 import com.nuvio.tv.data.remote.api.TmdbApi
+import com.nuvio.tv.data.remote.api.UniqueContributionsApi
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Module
@@ -44,6 +45,12 @@ import javax.net.ssl.X509TrustManager
 private object TraktHttpTrace {
     private val requestCounter = AtomicLong(0L)
     fun nextRequestId(): Long = requestCounter.incrementAndGet()
+}
+
+private fun normalizedBaseUrl(rawUrl: String, fallback: String): String {
+    val trimmed = rawUrl.trim()
+    if (trimmed.isBlank()) return fallback
+    return if (trimmed.endsWith('/')) trimmed else "$trimmed/"
 }
 
 @Module
@@ -293,6 +300,27 @@ object NetworkModule {
     @Singleton
     fun provideGitHubReleaseApi(@Named("github") retrofit: Retrofit): GitHubReleaseApi =
         retrofit.create(GitHubReleaseApi::class.java)
+
+    @Provides
+    @Singleton
+    @Named("uniqueContributionsBaseUrl")
+    fun provideUniqueContributionsBaseUrl(): String =
+        BuildConfig.UNIQUE_CONTRIBUTIONS_BASE_URL
+
+    @Provides
+    @Singleton
+    @Named("uniqueContributions")
+    fun provideUniqueContributionsRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit =
+        Retrofit.Builder()
+            .baseUrl(normalizedBaseUrl(BuildConfig.UNIQUE_CONTRIBUTIONS_BASE_URL, "https://localhost/"))
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+
+    @Provides
+    @Singleton
+    fun provideUniqueContributionsApi(@Named("uniqueContributions") retrofit: Retrofit): UniqueContributionsApi =
+        retrofit.create(UniqueContributionsApi::class.java)
 
     @Provides
     @Singleton

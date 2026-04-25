@@ -183,8 +183,15 @@ class TraktViewModel @Inject constructor(
             return
         }
 
+        // Guard against rapid re-entry — each double-tap would otherwise fire a
+        // fresh /oauth/device/code request and can trip Trakt's rate limiter (#1197).
+        // Flip isLoading synchronously here, before the launch, so two main-thread
+        // clicks can't both observe isLoading == false and start parallel
+        // coroutines (thanks Copilot).
+        if (_uiState.value.isLoading) return
+        _uiState.update { it.copy(isLoading = true, errorMessage = null, statusMessage = null) }
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null, statusMessage = null) }
             val result = traktAuthService.startDeviceAuth()
             _uiState.update { state ->
                 if (result.isSuccess) {

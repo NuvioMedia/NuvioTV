@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import com.nuvio.tv.ui.util.dpadRepeatThrottle
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -63,9 +64,11 @@ fun CatalogSeeAllScreen(
     type: String,
     searchViewModel: SearchViewModel? = null,
     viewModel: HomeViewModel = hiltViewModel(),
+    posterOptionsViewModel: com.nuvio.tv.ui.components.posteroptions.PosterOptionsViewModel = hiltViewModel(),
     onNavigateToDetail: (String, String, String) -> Unit,
     onBackPress: () -> Unit
 ) {
+    val posterOptionsController = searchViewModel?.posterOptions ?: posterOptionsViewModel.controller
     val uiState by viewModel.uiState.collectAsState()
     val fullCatalogRows by viewModel.fullCatalogRows.collectAsState()
     val computedHeightDp = (uiState.posterCardWidthDp * 1.5f).roundToInt()
@@ -194,6 +197,7 @@ fun CatalogSeeAllScreen(
                 LazyVerticalGrid(
                     state = gridState,
                     columns = GridCells.Adaptive(minSize = posterCardStyle.width),
+                    modifier = Modifier.dpadRepeatThrottle(),
                     contentPadding = PaddingValues(
                         start = 48.dp,
                         end = 24.dp,
@@ -229,6 +233,10 @@ fun CatalogSeeAllScreen(
                                     item.apiType,
                                     catalogRow.addonBaseUrl
                                 )
+                            },
+                            onLongPress = {
+                                focusedItemIndex = index
+                                posterOptionsController.show(item, catalogRow.addonBaseUrl)
                             }
                         )
                     }
@@ -260,5 +268,14 @@ fun CatalogSeeAllScreen(
                 icon = Icons.Default.GridView
             )
         }
+
+        val posterOptionsState by posterOptionsController.state.collectAsState()
+        com.nuvio.tv.ui.components.posteroptions.PosterOptionsHost(
+            state = posterOptionsState,
+            controller = posterOptionsController,
+            onNavigateToDetail = { id, type2, addonBaseUrl ->
+                onNavigateToDetail(id, type2, addonBaseUrl)
+            }
+        )
     }
 }

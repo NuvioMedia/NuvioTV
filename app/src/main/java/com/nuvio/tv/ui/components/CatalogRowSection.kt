@@ -99,7 +99,7 @@ fun CatalogRowSection(
     listState: LazyListState = rememberLazyListState(initialFirstVisibleItemIndex = initialScrollIndex)
 ) {
     fun rowItemFocusKey(index: Int, item: MetaPreview): String {
-        return "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}_${item.id}"
+        return "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}_$index"
     }
 
     val seeAllCardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
@@ -111,6 +111,33 @@ fun CatalogRowSection(
     val itemFocusRequestersByKey = remember { mutableMapOf<String, FocusRequester>() }
     var lastRequestedFocusItemKey by remember { mutableStateOf<String?>(null) }
     var lastFocusedItemIndex by remember { mutableIntStateOf(-1) }
+
+    val blockingFocusExit = remember { mutableStateOf(false) }
+    val rowHasFocusRef = remember { mutableStateOf(false) }
+    val firstItemId = catalogRow.items.firstOrNull()?.id
+    val wasPlaceholderRef = remember { mutableStateOf(firstItemId?.startsWith("__placeholder_") == true) }
+    val isNowReal = firstItemId?.startsWith("__placeholder_") != true
+    if (wasPlaceholderRef.value && isNowReal && rowHasFocusRef.value) {
+        blockingFocusExit.value = true
+    }
+    wasPlaceholderRef.value = firstItemId?.startsWith("__placeholder_") == true
+
+    LaunchedEffect(blockingFocusExit.value) {
+        if (!blockingFocusExit.value) return@LaunchedEffect
+        val targetKey = rowItemFocusKey(0, catalogRow.items.firstOrNull() ?: run {
+            blockingFocusExit.value = false
+            return@LaunchedEffect
+        })
+        repeat(15) {
+            val req = itemFocusRequestersByKey[targetKey]
+            if (req != null) {
+                val ok = runCatching { req.requestFocus(); true }.getOrDefault(false)
+                if (ok) { blockingFocusExit.value = false; return@LaunchedEffect }
+            }
+            withFrameNanos { }
+        }
+        blockingFocusExit.value = false
+    }
 
     // When fresh data prepends new items to a row the user hasn't
     // scrolled, snap back to position 0 so the newest content is visible.
@@ -170,7 +197,14 @@ fun CatalogRowSection(
         if (showCatalogTypeSuffix && typeLabel.isNotEmpty()) "$formattedName - $typeLabel" else formattedName
     }
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth().then(
+        if (blockingFocusExit.value) {
+            Modifier.focusProperties {
+                up = FocusRequester.Cancel
+                down = FocusRequester.Cancel
+            }
+        } else Modifier
+    )) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -219,14 +253,19 @@ fun CatalogRowSection(
             state = listState,
             modifier = Modifier
                 .fillMaxWidth()
+                .onFocusChanged { rowHasFocusRef.value = it.hasFocus }
                 .focusRequester(resolvedRowFocusRequester)
                 .focusRestorer(
-                    run {
-                        val idx = (if (lastFocusedItemIndex >= 0) lastFocusedItemIndex else restorerFocusedIndex)
-                            .coerceIn(0, (catalogRow.items.size - 1).coerceAtLeast(0))
-                        catalogRow.items.getOrNull(idx)
-                            ?.let { itemFocusRequestersByKey.getOrPut(rowItemFocusKey(idx, it)) { FocusRequester() } }
-                            ?: FocusRequester.Default
+                    if (enableRowFocusRestorer) {
+                        run {
+                            val idx = (if (lastFocusedItemIndex >= 0) lastFocusedItemIndex else restorerFocusedIndex)
+                                .coerceIn(0, (catalogRow.items.size - 1).coerceAtLeast(0))
+                            catalogRow.items.getOrNull(idx)
+                                ?.let { itemFocusRequestersByKey.getOrPut(rowItemFocusKey(idx, it)) { FocusRequester() } }
+                                ?: FocusRequester.Default
+                        }
+                    } else {
+                        FocusRequester.Default
                     }
                 )
                 .focusGroup(),

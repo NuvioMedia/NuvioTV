@@ -20,7 +20,9 @@ data class CollectionFolder(
     val coverEmoji: String? = null,
     val tileShape: PosterShape = PosterShape.SQUARE,
     val hideTitle: Boolean = false,
-    val catalogSources: List<CollectionCatalogSource> = emptyList()
+    val catalogSources: List<CollectionCatalogSource> = emptyList(),
+    val heroBackdropUrl: String? = null,
+    val titleLogoUrl: String? = null
 )
 
 @Immutable

@@ -79,11 +79,14 @@ fun MDBListSettingsContent(
                         subtitle = stringResource(R.string.mdblist_enable_subtitle),
                         checked = uiState.enabled,
                         onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleEnabled(!uiState.enabled)) },
-                        modifier = if (initialFocusRequester != null) {
+                        modifier = Modifier
+                            .padding(top = 2.dp)
+                            .then(
+                                if (initialFocusRequester != null) {
                             Modifier.focusRequester(initialFocusRequester)
                         } else {
                             Modifier
-                        }
+                        })
                     )
                 }
 

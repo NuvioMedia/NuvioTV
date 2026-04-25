@@ -122,7 +122,7 @@ fun SupportersContributorsScreen(
     BackHandler {
         when {
             uiState.selectedContributor != null -> {
-                pendingContributorRestoreKey = uiState.selectedContributor?.login
+                pendingContributorRestoreKey = uiState.selectedContributor?.id
                 viewModel.dismissContributorDetails()
             }
             uiState.selectedSupporter != null -> {
@@ -142,7 +142,7 @@ fun SupportersContributorsScreen(
     }
 
     LaunchedEffect(uiState.contributors) {
-        contributorFocusRequesters.keys.retainAll(uiState.contributors.map { it.login }.toSet())
+        contributorFocusRequesters.keys.retainAll(uiState.contributors.map { it.id }.toSet())
     }
 
     LaunchedEffect(uiState.selectedSupporter, pendingSupporterRestoreKey) {
@@ -207,7 +207,7 @@ fun SupportersContributorsScreen(
         ContributorDetailsDialog(
             contributor = contributor,
             onDismiss = {
-                pendingContributorRestoreKey = contributor.login
+                pendingContributorRestoreKey = contributor.id
                 viewModel.dismissContributorDetails()
             }
         )
@@ -592,7 +592,7 @@ private fun ContributorsTabContent(
 
             else -> {
                 val firstRequester = uiState.contributors.firstOrNull()?.let { contributor ->
-                    contributorFocusRequesters.getOrPut(contributor.login) { FocusRequester() }
+                    contributorFocusRequesters.getOrPut(contributor.id) { FocusRequester() }
                 } ?: FocusRequester()
 
                 LazyColumn(
@@ -603,11 +603,11 @@ private fun ContributorsTabContent(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(top = 6.dp, bottom = 8.dp)
                 ) {
-                    items(uiState.contributors, key = { it.login }) { contributor ->
-                        val requester = remember(contributor.login) {
-                            contributorFocusRequesters.getOrPut(contributor.login) { FocusRequester() }
+                    items(uiState.contributors, key = { it.id }) { contributor ->
+                        val requester = remember(contributor.id) {
+                            contributorFocusRequesters.getOrPut(contributor.id) { FocusRequester() }
                         }
-                        val isFirstItem = contributor.login == uiState.contributors.firstOrNull()?.login
+                        val isFirstItem = contributor.id == uiState.contributors.firstOrNull()?.id
                         ContributorCard(
                             contributor = contributor,
                             focusRequester = requester,
@@ -829,7 +829,7 @@ private fun ContributorCard(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             ContributorAvatar(
-                login = contributor.login,
+                login = contributor.name,
                 avatarUrl = contributor.avatarUrl,
                 modifier = Modifier.size(58.dp)
             )
@@ -840,13 +840,13 @@ private fun ContributorCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = contributor.login,
+                        text = contributor.name,
                         style = MaterialTheme.typography.titleMedium,
                         color = NuvioColors.TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    contributorRoleLabel(contributor.login)?.let { role ->
+                    contributorRoleLabel(contributor.githubLogin ?: contributor.name)?.let { role ->
                         ContributorRoleBadge(role = role)
                     }
                 }
@@ -1104,21 +1104,22 @@ private fun ContributorDetailsDialog(
 ) {
     val context = LocalContext.current
     val primaryFocusRequester = remember { FocusRequester() }
-    val supportLink = contributorSupportLink(contributor.login)
-    var showSupportQr by remember(contributor.login) { mutableStateOf(false) }
+    val contributorSupportKey = contributor.githubLogin ?: contributor.name
+    val supportLink = contributorSupportLink(contributorSupportKey)
+    var showSupportQr by remember(contributor.id) { mutableStateOf(false) }
     val supportQrBitmap = remember(supportLink?.kofiUrl) {
         supportLink?.kofiUrl?.let { url ->
             runCatching { QrCodeGenerator.generate(url, 360) }.getOrNull()
         }
     }
 
-    LaunchedEffect(contributor.login) {
+    LaunchedEffect(contributor.id) {
         primaryFocusRequester.requestFocusAfterFrames()
     }
 
     NuvioDialog(
         onDismiss = onDismiss,
-        title = contributor.login,
+        title = contributor.name,
         subtitle = stringResource(
             R.string.contributors_total_contributions,
             contributor.totalContributions
@@ -1131,7 +1132,7 @@ private fun ContributorDetailsDialog(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             ContributorAvatar(
-                login = contributor.login,
+                login = contributor.name,
                 avatarUrl = contributor.avatarUrl,
                 modifier = Modifier.size(72.dp)
             )
@@ -1139,7 +1140,7 @@ private fun ContributorDetailsDialog(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                contributorRoleLabel(contributor.login)?.let { role ->
+                contributorRoleLabel(contributorSupportKey)?.let { role ->
                     ContributorRoleBadge(role = role)
                 }
                 Text(
