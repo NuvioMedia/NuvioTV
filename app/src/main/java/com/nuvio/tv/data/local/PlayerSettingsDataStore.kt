@@ -137,7 +137,7 @@ data class SubtitleStyleSettings(
 data class BufferSettings(
     val minBufferMs: Int = 50_000,
     val maxBufferMs: Int = 50_000,
-    val bufferForPlaybackMs: Int = 2_500,
+    val bufferForPlaybackMs: Int = 1_000,
     val bufferForPlaybackAfterRebufferMs: Int = 5_000,
     val targetBufferSizeMb: Int = 0, // 0 = ExoPlayer default
     val backBufferDurationMs: Int = 0,
@@ -521,7 +521,7 @@ class PlayerSettingsDataStore @Inject constructor(
                 bufferSettings = BufferSettings(
                     minBufferMs = prefs[minBufferMsKey] ?: 50_000,
                     maxBufferMs = prefs[maxBufferMsKey] ?: 50_000,
-                    bufferForPlaybackMs = prefs[bufferForPlaybackMsKey] ?: 2_500,
+                    bufferForPlaybackMs = prefs[bufferForPlaybackMsKey] ?: 1_000,
                     bufferForPlaybackAfterRebufferMs = prefs[bufferForPlaybackAfterRebufferMsKey] ?: 5_000,
                     targetBufferSizeMb = prefs[targetBufferSizeMbKey] ?: 0,
                     backBufferDurationMs = prefs[backBufferDurationMsKey] ?: 0,

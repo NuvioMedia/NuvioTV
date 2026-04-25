@@ -177,12 +177,18 @@ internal fun PlayerRuntimeController.initializePlayer(
                 }
                 return@launch
             }
-            resolveCurrentStreamMimeType(
-                url = url,
-                headers = headers
-            )
+            val streamMimeTypeJob = async {
+                resolveCurrentStreamMimeType(
+                    url = url,
+                    headers = headers
+                )
+            }
             mpvInitializationInProgress = false
-            val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings, showLoadingStatus)
+            val startupSubtitlePreparationJob = async {
+                prepareStreamStartSubtitles(playerSettings, showLoadingStatus)
+            }
+            streamMimeTypeJob.await()
+            val startupSubtitlePreparation = startupSubtitlePreparationJob.await()
             afrJob.await()
             requestedUseLibassByUser = playerSettings.useLibass
             val useLibass = when {
@@ -198,17 +204,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     libassRenderType = playerSettings.libassRenderType
                 )
             }
-            val loadControl = run {
-                DefaultLoadControl.Builder()
-                    .setTargetBufferBytes(100 * 1024 * 1024)
-                    .setBufferDurationsMs(
-                        DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
-                        70_000,
-                        DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
-                        5_000
-                    )
-                    .build()
-            }
+            val loadControl = buildLoadControl(playerSettings)
 
             
             trackSelector = DefaultTrackSelector(context).apply {
@@ -584,6 +580,36 @@ internal fun resolveDeviceAudioLanguages(): List<String> {
     }
 }
 
+@androidx.annotation.OptIn(UnstableApi::class)
+private fun buildLoadControl(playerSettings: PlayerSettings): DefaultLoadControl {
+    val bufferSettings = playerSettings.bufferSettings
+    val minBufferMs = bufferSettings.minBufferMs.coerceIn(5_000, 120_000)
+    val maxBufferMs = bufferSettings.maxBufferMs.coerceIn(minBufferMs, 120_000)
+    val bufferForPlaybackMs = bufferSettings.bufferForPlaybackMs.coerceIn(1_000, 30_000)
+    val bufferForPlaybackAfterRebufferMs = bufferSettings.bufferForPlaybackAfterRebufferMs.coerceIn(1_000, 60_000)
+    val targetBufferBytes = bufferSettings.targetBufferSizeMb
+        .takeIf { it > 0 }
+        ?.let { (it.toLong() * 1024L * 1024L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt() }
+
+    return DefaultLoadControl.Builder()
+        .setBufferDurationsMs(
+            minBufferMs,
+            maxBufferMs,
+            bufferForPlaybackMs,
+            bufferForPlaybackAfterRebufferMs
+        )
+        .setBackBuffer(
+            bufferSettings.backBufferDurationMs.coerceIn(0, 120_000),
+            bufferSettings.retainBackBufferFromKeyframe
+        )
+        .apply {
+            if (targetBufferBytes != null) {
+                setTargetBufferBytes(targetBufferBytes)
+            }
+        }
+        .build()
+}
+
 internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(
     mode: AddonSubtitleStartupMode,
     preferredLanguage: String,
@@ -630,6 +656,7 @@ internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(
 
     val fetchedSubtitles = withTimeoutOrNull(STARTUP_SUBTITLE_PREFETCH_TIMEOUT_MS) {
         fetchAddonSubtitlesNow(
+            computeHash = false,
             onProgress = if (showLoadingStatus) { completed, total, addonName ->
                 val msg = if (completed == 0) {
                     context.getString(R.string.player_loading_subtitles_from, total)

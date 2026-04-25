@@ -29,7 +29,8 @@ internal fun PlayerRuntimeController.buildSubtitleFetchRequest(): SubtitleFetchR
 }
 
 internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(
-    onProgress: ((completed: Int, total: Int, addonName: String?) -> Unit)? = null
+    onProgress: ((completed: Int, total: Int, addonName: String?) -> Unit)? = null,
+    computeHash: Boolean = true
 ): List<Subtitle> {
     val request = buildSubtitleFetchRequest() ?: return emptyList()
     val installedAddonOrder = addonRepository.getInstalledAddons().firstOrNull()
@@ -38,7 +39,7 @@ internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(
     _uiState.update { it.copy(installedSubtitleAddonOrder = installedAddonOrder) }
 
     // Compute hash lazily for providers that support OpenSubtitles-style matching.
-    if (currentVideoHash == null && currentStreamUrl.isNotBlank()) {
+    if (computeHash && currentVideoHash == null && currentStreamUrl.isNotBlank()) {
         val result = OpenSubtitlesHasher.compute(currentStreamUrl, currentHeaders)
         if (result != null) {
             currentVideoHash = result.hash
