@@ -14,6 +14,7 @@ import com.omnio.tv.core.qr.QrCodeGenerator
 import com.omnio.tv.core.sync.AddonSyncService
 import com.omnio.tv.core.sync.LibrarySyncService
 import com.omnio.tv.core.sync.PluginSyncService
+import com.omnio.tv.core.sync.ProfileSyncService
 import com.omnio.tv.core.sync.WatchProgressSyncService
 import com.omnio.tv.core.sync.WatchedItemsSyncService
 import com.omnio.tv.core.sync.ProfileSettingsSyncService
@@ -54,6 +55,7 @@ class AccountViewModel @Inject constructor(
     private val librarySyncService: LibrarySyncService,
     private val watchedItemsSyncService: WatchedItemsSyncService,
     private val profileSettingsSyncService: ProfileSettingsSyncService,
+    private val profileSyncService: ProfileSyncService,
     private val pluginManager: PluginManager,
     private val addonRepository: AddonRepositoryImpl,
     private val watchProgressRepository: WatchProgressRepositoryImpl,
@@ -574,6 +576,7 @@ class AccountViewModel @Inject constructor(
     }
 
     private suspend fun pushLocalDataToRemote() {
+        profileSyncService.pushToRemote()
         profileSettingsSyncService.pushCurrentProfileToRemote()
         pluginSyncService.pushToRemote()
         addonSyncService.pushToRemote()
