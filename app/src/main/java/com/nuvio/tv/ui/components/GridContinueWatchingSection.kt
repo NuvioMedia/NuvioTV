@@ -22,11 +22,11 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.requiredWidth
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -56,16 +56,25 @@ fun GridContinueWatchingSection(
     var lastFocusedIndex by remember { mutableIntStateOf(-1) }
     var lastRequestedFocusIndex by remember { mutableIntStateOf(-1) }
     var pendingFocusIndex by remember { mutableStateOf<Int?>(null) }
+    val listState = rememberLazyListState()
+
+    suspend fun restoreFocusedItem(targetIndex: Int): Boolean {
+        if (targetIndex !in items.indices || targetIndex >= focusRequesters.size) return false
+        runCatching { listState.scrollToItem(targetIndex) }
+        var focused = false
+        for (attempt in 0 until 3) {
+            withFrameNanos { }
+            focused = runCatching { focusRequesters[targetIndex].requestFocus() }.isSuccess
+            if (focused) break
+            runCatching { listState.scrollToItem(targetIndex) }
+        }
+        return focused
+    }
 
     LaunchedEffect(focusedItemIndex) {
         if (focusedItemIndex >= 0 && focusedItemIndex < items.size) {
             if (lastRequestedFocusIndex == focusedItemIndex) return@LaunchedEffect
-            var focused = false
-            for (attempt in 0 until 3) {
-                withFrameNanos { }
-                focused = runCatching { focusRequesters[focusedItemIndex].requestFocus() }.isSuccess
-                if (focused) break
-            }
+            val focused = restoreFocusedItem(focusedItemIndex)
             if (focused) {
                 lastRequestedFocusIndex = focusedItemIndex
             }
@@ -103,7 +112,8 @@ fun GridContinueWatchingSection(
                     focusRequesters.getOrNull(idx) ?: FocusRequester.Default
                 },
             contentPadding = PaddingValues(horizontal = 36.dp, vertical = 0.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            state = listState
         ) {
             itemsIndexed(
                 items = items,
@@ -170,12 +180,7 @@ fun GridContinueWatchingSection(
     LaunchedEffect(items.size, pendingFocusIndex) {
         val target = pendingFocusIndex
         if (target != null && target >= 0 && target < focusRequesters.size) {
-            var focused = false
-            for (attempt in 0 until 3) {
-                withFrameNanos { }
-                focused = runCatching { focusRequesters[target].requestFocus() }.isSuccess
-                if (focused) break
-            }
+            val focused = restoreFocusedItem(target)
             if (focused) {
                 lastRequestedFocusIndex = target
             }

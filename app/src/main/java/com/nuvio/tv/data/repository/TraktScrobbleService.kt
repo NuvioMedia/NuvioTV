@@ -85,6 +85,7 @@ class TraktScrobbleService @Inject constructor(
         val response = traktAuthService.executeAuthorizedWriteRequest { authHeader ->
             when (action) {
                 "start" -> traktApi.scrobbleStart(authHeader, requestBody)
+                "pause" -> traktApi.scrobblePause(authHeader, requestBody)
                 else -> traktApi.scrobbleStop(authHeader, requestBody)
             }
         } ?: return

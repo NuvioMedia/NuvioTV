@@ -17,6 +17,7 @@ import com.nuvio.tv.data.remote.dto.trakt.TraktListItemsMutationResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktListSummaryDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktMovieDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktPlaybackItemDto
+import com.nuvio.tv.data.remote.dto.trakt.TraktUpNextItemDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktReorderListsRequestDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktReorderListsResponseDto
 import com.nuvio.tv.data.remote.dto.trakt.TraktRefreshTokenRequestDto
@@ -88,6 +89,12 @@ interface TraktApi {
         @Body body: TraktScrobbleRequestDto
     ): Response<TraktScrobbleResponseDto>
 
+    @POST("scrobble/pause")
+    suspend fun scrobblePause(
+        @Header("Authorization") authorization: String,
+        @Body body: TraktScrobbleRequestDto
+    ): Response<TraktScrobbleResponseDto>
+
     @POST("scrobble/stop")
     suspend fun scrobbleStop(
         @Header("Authorization") authorization: String,
@@ -106,6 +113,14 @@ interface TraktApi {
         @Query("start_at") startAt: String? = null,
         @Query("end_at") endAt: String? = null
     ): Response<List<TraktPlaybackItemDto>>
+
+    @GET("sync/progress/up_next")
+    suspend fun getUpNext(
+        @Header("Authorization") authorization: String,
+        @Query("extended") extended: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<List<TraktUpNextItemDto>>
 
     @GET("sync/watched/{type}")
     suspend fun getWatched(

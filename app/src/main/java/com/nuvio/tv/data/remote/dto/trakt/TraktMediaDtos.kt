@@ -58,7 +58,8 @@ data class TraktImagesDto(
     @Json(name = "logo") val logo: List<String>? = null,
     @Json(name = "clearart") val clearart: List<String>? = null,
     @Json(name = "banner") val banner: List<String>? = null,
-    @Json(name = "thumb") val thumb: List<String>? = null
+    @Json(name = "thumb") val thumb: List<String>? = null,
+    @Json(name = "screenshot") val screenshot: List<String>? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -73,5 +74,9 @@ data class TraktEpisodeDto(
     @Json(name = "title") val title: String? = null,
     @Json(name = "season") val season: Int? = null,
     @Json(name = "number") val number: Int? = null,
-    @Json(name = "ids") val ids: TraktIdsDto? = null
+    @Json(name = "ids") val ids: TraktIdsDto? = null,
+    @Json(name = "first_aired") val firstAired: String? = null,
+    @Json(name = "rating") val rating: Double? = null,
+    @Json(name = "overview") val overview: String? = null,
+    @Json(name = "images") val images: TraktImagesDto? = null
 )
