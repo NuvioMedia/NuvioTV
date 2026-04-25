@@ -19,6 +19,8 @@ data class PlayerUiState(
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = true,
     val playbackEnded: Boolean = false,
+    val playbackCompletionReadyToExit: Boolean = false,
+    val exitPlayerReady: Boolean = false,
     val title: String = "",
     val contentName: String? = null, // Series/show name (for series content)
     val releaseYear: String? = null, // Release year for movies

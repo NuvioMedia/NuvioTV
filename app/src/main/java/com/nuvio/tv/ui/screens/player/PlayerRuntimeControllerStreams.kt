@@ -671,6 +671,14 @@ internal fun PlayerRuntimeController.reloadEpisodeStreams() {
 }
 
 internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, forcedTargetVideo: Video? = null) {
+    if (interceptEpisodeSwitchForTraktRating(stream, forcedTargetVideo)) {
+        return
+    }
+
+    performSwitchToEpisodeStream(stream, forcedTargetVideo)
+}
+
+internal fun PlayerRuntimeController.performSwitchToEpisodeStream(stream: Stream, forcedTargetVideo: Video? = null) {
     // Torrent streams: delegate to torrent-aware path
     if (stream.isTorrent()) {
         val infoHash = stream.infoHash ?: return
