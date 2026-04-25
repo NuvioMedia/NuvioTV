@@ -411,7 +411,10 @@ fun PlayerScreen(
                                     return@onKeyEvent true
                                 }
                                 KeyEvent.KEYCODE_DPAD_CENTER,
-                                KeyEvent.KEYCODE_ENTER,
+                                KeyEvent.KEYCODE_ENTER -> {
+                                    viewModel.onEvent(PlayerEvent.OnResetSubtitleDelay)
+                                    return@onKeyEvent true
+                                }
                                 KeyEvent.KEYCODE_DPAD_UP -> {
                                     return@onKeyEvent true
                                 }
@@ -925,6 +928,9 @@ fun PlayerScreen(
                     subtitleDelayAutoSyncFocused = false
                     subtitleTimingConsumeNextConfirmKeyUp = true
                     viewModel.onEvent(PlayerEvent.OnShowSubtitleTimingDialog)
+                },
+                onResetDelay = {
+                    viewModel.onEvent(PlayerEvent.OnResetSubtitleDelay)
                 }
             )
         }
@@ -2155,7 +2161,8 @@ private fun SubtitleDelayOverlay(
     subtitleDelayMs: Int,
     isAutoSyncButtonFocused: Boolean,
     isSliderFocused: Boolean,
-    onOpenSyncByLine: () -> Unit
+    onOpenSyncByLine: () -> Unit,
+    onResetDelay: () -> Unit = {}
 ) {
     val fraction = ((subtitleDelayMs - SUBTITLE_DELAY_MIN_MS).toFloat() /
         (SUBTITLE_DELAY_MAX_MS - SUBTITLE_DELAY_MIN_MS).toFloat()).coerceIn(0f, 1f)
@@ -2233,24 +2240,42 @@ private fun SubtitleDelayOverlay(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Card(
-            onClick = onOpenSyncByLine,
-            colors = CardDefaults.colors(
-                containerColor = if (isAutoSyncButtonFocused) {
-                    Color.White.copy(alpha = 0.22f)
-                } else {
-                    Color.White.copy(alpha = 0.11f)
-                },
-                focusedContainerColor = Color.White.copy(alpha = 0.22f)
-            ),
-            shape = CardDefaults.shape(RoundedCornerShape(12.dp))
-        ) {
-            Text(
-                text = "Sync Line",
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                color = Color.White,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
-            )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Card(
+                onClick = onResetDelay,
+                colors = CardDefaults.colors(
+                    containerColor = Color.White.copy(alpha = 0.11f),
+                    focusedContainerColor = Color.White.copy(alpha = 0.22f)
+                ),
+                shape = CardDefaults.shape(RoundedCornerShape(12.dp))
+            ) {
+                Text(
+                    text = "Reset",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
+                )
+            }
+
+            Card(
+                onClick = onOpenSyncByLine,
+                colors = CardDefaults.colors(
+                    containerColor = if (isAutoSyncButtonFocused) {
+                        Color.White.copy(alpha = 0.22f)
+                    } else {
+                        Color.White.copy(alpha = 0.11f)
+                    },
+                    focusedContainerColor = Color.White.copy(alpha = 0.22f)
+                ),
+                shape = CardDefaults.shape(RoundedCornerShape(12.dp))
+            ) {
+                Text(
+                    text = "Sync Line",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
+                )
+            }
         }
     }
 }
