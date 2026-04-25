@@ -1408,7 +1408,13 @@ internal fun mergeContinueWatchingItems(
             contentId.isBlank() || seen.add(contentId)
         }
 
-    return result
+    val upcoming = result.filterIsInstance<ContinueWatchingItem.NextUp>()
+        .filter { !it.info.hasAired }
+        .sortedBy { it.info.releaseTimestamp ?: Long.MAX_VALUE }
+    val rest = result.filter { item ->
+        item !is ContinueWatchingItem.NextUp || item.info.hasAired
+    }
+    return rest + upcoming
 }
 
 private suspend fun HomeViewModel.buildNextUpItem(
