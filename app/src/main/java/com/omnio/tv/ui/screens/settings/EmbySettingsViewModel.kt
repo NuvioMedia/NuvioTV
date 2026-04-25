@@ -79,20 +79,9 @@ class EmbySettingsViewModel @Inject constructor(
                 .takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
 
             try {
-                val testApi = buildTestApi(serverUrl, deviceId, token = null)
+                val unauthenticatedApi = buildTestApi(serverUrl, deviceId, token = null)
 
-                val systemInfoResponse = testApi.getSystemInfo()
-                if (!systemInfoResponse.isSuccessful) {
-                    _uiState.value = _uiState.value.copy(
-                        isTesting = false,
-                        testResult = "Connection failed: ${systemInfoResponse.code()} ${systemInfoResponse.message()}",
-                        isTestSuccess = false
-                    )
-                    return@launch
-                }
-                val serverName = systemInfoResponse.body()?.serverName ?: "Emby Server"
-
-                val authResponse = testApi.authenticateByName(
+                val authResponse = unauthenticatedApi.authenticateByName(
                     EmbyAuthByNameRequestDto(username = username, pw = password)
                 )
                 if (!authResponse.isSuccessful) {
@@ -125,6 +114,11 @@ class EmbySettingsViewModel @Inject constructor(
                     userId = body.user.id,
                     deviceId = deviceId
                 )
+
+                val serverName = runCatching {
+                    val authedApi = buildTestApi(serverUrl, deviceId, token = body.accessToken)
+                    authedApi.getSystemInfo().body()?.serverName
+                }.getOrNull() ?: "Emby Server"
 
                 _uiState.value = _uiState.value.copy(
                     isTesting = false,
