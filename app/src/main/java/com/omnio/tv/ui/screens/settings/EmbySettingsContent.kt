@@ -54,7 +54,8 @@ fun EmbySettingsContent(
     val credentials by viewModel.credentials.collectAsStateWithLifecycle()
 
     var showServerDialog by remember { mutableStateOf(false) }
-    var showApiKeyDialog by remember { mutableStateOf(false) }
+    var showUsernameDialog by remember { mutableStateOf(false) }
+    var showPasswordDialog by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SettingsDetailHeader(
@@ -107,15 +108,27 @@ fun EmbySettingsContent(
                         )
                     }
 
-                    item(key = "emby_api_key") {
+                    item(key = "emby_username") {
                         SettingsActionRow(
-                            title = stringResource(R.string.settings_emby_api_key),
-                            subtitle = maskSecret(uiState.apiKey, stringResource(R.string.mdblist_not_set)),
-                            onClick = { showApiKeyDialog = true }
+                            title = stringResource(R.string.settings_emby_username),
+                            subtitle = uiState.username.ifBlank { stringResource(R.string.mdblist_not_set) },
+                            onClick = { showUsernameDialog = true }
                         )
                     }
 
-                    item(key = "emby_test_connection") {
+                    item(key = "emby_password") {
+                        SettingsActionRow(
+                            title = stringResource(R.string.settings_emby_password),
+                            subtitle = if (uiState.password.isBlank()) {
+                                stringResource(R.string.mdblist_not_set)
+                            } else {
+                                "••••••"
+                            },
+                            onClick = { showPasswordDialog = true }
+                        )
+                    }
+
+                    item(key = "emby_sign_in") {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -123,7 +136,7 @@ fun EmbySettingsContent(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Button(
-                                onClick = { viewModel.testConnection() },
+                                onClick = { viewModel.signIn() },
                                 enabled = !uiState.isTesting,
                                 colors = ButtonDefaults.colors(
                                     containerColor = OmnioColors.BackgroundElevated,
@@ -134,9 +147,9 @@ fun EmbySettingsContent(
                             ) {
                                 Text(
                                     text = if (uiState.isTesting) {
-                                        stringResource(R.string.settings_emby_testing)
+                                        stringResource(R.string.settings_emby_signing_in)
                                     } else {
-                                        stringResource(R.string.settings_emby_test_connection)
+                                        stringResource(R.string.settings_emby_sign_in)
                                     }
                                 )
                             }
@@ -175,22 +188,40 @@ fun EmbySettingsContent(
         )
     }
 
-    if (showApiKeyDialog) {
+    if (showUsernameDialog) {
         EmbyTextInputDialog(
-            title = stringResource(R.string.settings_emby_api_key),
-            subtitle = stringResource(R.string.settings_emby_api_key_hint),
-            placeholder = stringResource(R.string.settings_emby_api_key_placeholder),
-            currentValue = uiState.apiKey,
-            isSecret = true,
+            title = stringResource(R.string.settings_emby_username),
+            subtitle = stringResource(R.string.settings_emby_username_hint),
+            placeholder = stringResource(R.string.settings_emby_username_placeholder),
+            currentValue = uiState.username,
             onSave = {
-                viewModel.updateApiKey(it)
-                showApiKeyDialog = false
+                viewModel.updateUsername(it)
+                showUsernameDialog = false
             },
             onClear = {
-                viewModel.updateApiKey("")
-                showApiKeyDialog = false
+                viewModel.updateUsername("")
+                showUsernameDialog = false
             },
-            onDismiss = { showApiKeyDialog = false }
+            onDismiss = { showUsernameDialog = false }
+        )
+    }
+
+    if (showPasswordDialog) {
+        EmbyTextInputDialog(
+            title = stringResource(R.string.settings_emby_password),
+            subtitle = stringResource(R.string.settings_emby_password_hint),
+            placeholder = stringResource(R.string.settings_emby_password_placeholder),
+            currentValue = uiState.password,
+            isSecret = true,
+            onSave = {
+                viewModel.updatePassword(it)
+                showPasswordDialog = false
+            },
+            onClear = {
+                viewModel.updatePassword("")
+                showPasswordDialog = false
+            },
+            onDismiss = { showPasswordDialog = false }
         )
     }
 }

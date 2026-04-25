@@ -1,5 +1,7 @@
 package com.omnio.tv.data.remote.api
 
+import com.omnio.tv.data.remote.dto.emby.EmbyAuthByNameRequestDto
+import com.omnio.tv.data.remote.dto.emby.EmbyAuthResponseDto
 import com.omnio.tv.data.remote.dto.emby.EmbyItemsResponseDto
 import com.omnio.tv.data.remote.dto.emby.EmbyPlaybackProgressDto
 import com.omnio.tv.data.remote.dto.emby.EmbyPlaybackStartDto
@@ -37,6 +39,9 @@ interface EmbyApi {
         @Query("IncludeItemTypes") includeItemTypes: String = "Episode",
         @Query("Fields") fields: String = "RunTimeTicks,MediaSources,ParentIndexNumber,IndexNumber"
     ): Response<EmbyItemsResponseDto>
+
+    @POST("Users/AuthenticateByName")
+    suspend fun authenticateByName(@Body body: EmbyAuthByNameRequestDto): Response<EmbyAuthResponseDto>
 
     @POST("Sessions/Playing")
     suspend fun reportPlaybackStart(@Body body: EmbyPlaybackStartDto): Response<Unit>
