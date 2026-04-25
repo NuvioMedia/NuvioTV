@@ -22,13 +22,20 @@ export default async function DevicesPage() {
       <header>
         <h1 className="text-2xl font-semibold">Linked devices</h1>
         <p className="text-sm text-slate-400">
-          Each TV that has paired with this account via QR or sync code.
+          TVs that paired with this account via QR or sync code.
         </p>
       </header>
 
       {devices.length === 0 ? (
-        <div className="rounded-2xl border border-slate-700/50 bg-slate-800/40 p-6 text-slate-300">
-          No devices linked yet. Sign in on a TV to pair.
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-800/40 p-6 text-slate-300">
+            No QR-paired devices.
+          </div>
+          <div className="rounded-2xl border border-slate-700/30 bg-slate-800/20 p-4 text-xs text-slate-400">
+            TVs signed in directly with email and password share this account but do not appear
+            here — they don&apos;t go through the device-pairing flow. This list only shows TVs
+            that were paired by scanning a QR code or entering a 6-digit sync code.
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
