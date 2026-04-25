@@ -23,6 +23,7 @@ internal const val MODERN_HERO_MEDIA_WIDTH_FRACTION = 0.72f
 internal const val MODERN_TRAILER_OVERSCAN_ZOOM = 1.35f
 internal const val MODERN_HERO_FOCUS_DEBOUNCE_MS = 90L
 internal val MODERN_ROW_HEADER_FOCUS_INSET = 40.dp
+internal const val MODERN_CONTINUE_WATCHING_ROW_KEY = "continue_watching"
 internal val MODERN_LANDSCAPE_LOGO_GRADIENT = Brush.verticalGradient(
     colorStops = arrayOf(
         0.0f to Color.Transparent,
@@ -78,7 +79,9 @@ sealed class ModernPayload {
         val posterShape: PosterShape,
         val focusGlowEnabled: Boolean,
         val focusGifEnabled: Boolean,
-        val focusGifUrl: String?
+        val focusGifUrl: String?,
+        val heroBackdropUrl: String?,
+        val titleLogoUrl: String?
     ) : ModernPayload()
 }
 
@@ -284,7 +287,13 @@ internal fun buildContinueWatchingItem(
     val heroPreview = when (item) {
         is ContinueWatchingItem.InProgress -> {
             val isSeries = isSeriesType(item.progress.contentType)
-            val episodeCode = item.progress.episodeDisplayString
+            val s = item.progress.season
+            val e = item.progress.episode
+            val episodeCode = if (s != null && e != null) {
+                context.getString(R.string.season_episode_format, s, e)
+            } else {
+                null
+            }
             val episodeTitle = item.progress.episodeTitle?.takeIf { it.isNotBlank() }?.localizeEpisodeTitle(context)
             val episodeLabel = when {
                 isSeries && episodeCode != null && episodeTitle != null -> "$episodeCode · $episodeTitle"
@@ -312,7 +321,11 @@ internal fun buildContinueWatchingItem(
             )
         }
         is ContinueWatchingItem.NextUp -> {
-            val episodeCode = "S${item.info.season}E${item.info.episode}"
+            val episodeCode = context.getString(
+                R.string.season_episode_format,
+                item.info.season,
+                item.info.episode
+            )
             val episodeTitle = item.info.episodeTitle?.takeIf { it.isNotBlank() }?.localizeEpisodeTitle(context)
             val episodeLabel = if (episodeTitle != null) "$episodeCode · $episodeTitle" else episodeCode
             HeroPreview(
@@ -370,9 +383,21 @@ internal fun buildContinueWatchingItem(
             is ContinueWatchingItem.NextUp -> item.info.name
         },
         subtitle = when (item) {
-            is ContinueWatchingItem.InProgress -> item.progress.episodeDisplayString ?: item.progress.episodeTitle
+            is ContinueWatchingItem.InProgress -> {
+                val ps = item.progress.season
+                val pe = item.progress.episode
+                if (ps != null && pe != null) {
+                    context.getString(R.string.season_episode_format, ps, pe)
+                } else {
+                    item.progress.episodeTitle
+                }
+            }
             is ContinueWatchingItem.NextUp -> {
-                val code = "S${item.info.season}E${item.info.episode}"
+                val code = context.getString(
+                    R.string.season_episode_format,
+                    item.info.season,
+                    item.info.episode
+                )
                 if (item.info.hasAired) {
                     code
                 } else {
@@ -475,8 +500,9 @@ internal fun buildCollectionFolderItem(
         folder.title
     }
     val imageUrl = firstNonBlank(folder.coverImageUrl, collection.backdropImageUrl)
+    val heroBackdrop = firstNonBlank(folder.heroBackdropUrl, folder.coverImageUrl, collection.backdropImageUrl)
     val heroImageUrl = if (useLandscapePosters) {
-        firstNonBlank(folder.coverImageUrl, collection.backdropImageUrl)
+        firstNonBlank(folder.heroBackdropUrl, folder.coverImageUrl, collection.backdropImageUrl)
     } else {
         imageUrl
     }
@@ -488,14 +514,14 @@ internal fun buildCollectionFolderItem(
         imageUrl = heroImageUrl,
         heroPreview = HeroPreview(
             title = if (folder.hideTitle) "" else title,
-            logo = null,
+            logo = folder.titleLogoUrl,
             description = null,
             contentTypeText = null,
             yearText = null,
             imdbText = null,
             genres = emptyList(),
             poster = imageUrl,
-            backdrop = firstNonBlank(folder.coverImageUrl, collection.backdropImageUrl),
+            backdrop = heroBackdrop,
             imageUrl = heroImageUrl
         ),
         payload = ModernPayload.CollectionFolder(
@@ -506,7 +532,9 @@ internal fun buildCollectionFolderItem(
             posterShape = folder.tileShape,
             focusGlowEnabled = collection.focusGlowEnabled,
             focusGifEnabled = folder.focusGifEnabled,
-            focusGifUrl = folder.focusGifUrl
+            focusGifUrl = folder.focusGifUrl,
+            heroBackdropUrl = folder.heroBackdropUrl,
+            titleLogoUrl = folder.titleLogoUrl
         )
     )
 }
@@ -557,14 +585,27 @@ internal fun extractYear(releaseInfo: String?): String? {
     return YEAR_REGEX.find(releaseInfo)?.value
 }
 
+@Volatile
+private var cachedDateFormatLocale: java.util.Locale? = null
+@Volatile
+private var cachedDateFormat: java.text.SimpleDateFormat? = null
+
 internal fun extractYearText(type: ContentType, releaseInfo: String?, released: String?, showFullDate: Boolean = true): String? {
     if (showFullDate && type == ContentType.MOVIE) {
         val full = released
             ?.let { runCatching { java.time.OffsetDateTime.parse(it).toLocalDate() }.getOrNull() }
             ?.let {
                 val locale = java.util.Locale.getDefault()
-                val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMMy")
-                java.text.SimpleDateFormat(pattern, locale).format(
+                val fmt = if (locale == cachedDateFormatLocale && cachedDateFormat != null) {
+                    cachedDateFormat!!
+                } else {
+                    val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMMy")
+                    java.text.SimpleDateFormat(pattern, locale).also {
+                        cachedDateFormat = it
+                        cachedDateFormatLocale = locale
+                    }
+                }
+                fmt.format(
                     java.util.Date(it.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli())
                 )
             }
@@ -573,10 +614,13 @@ internal fun extractYearText(type: ContentType, releaseInfo: String?, released: 
     return extractYear(releaseInfo)
 }
 
+private val HOURS_REGEX = "(\\d+)\\s*h".toRegex()
+private val MINUTES_REGEX = "(\\d+)\\s*m(?:in)?".toRegex()
+
 private fun formatHeroRuntime(runtime: String?): String? {
     val normalized = runtime?.trim()?.lowercase()?.takeIf { it.isNotBlank() } ?: return null
-    val hours = "(\\d+)\\s*h".toRegex().find(normalized)?.groupValues?.getOrNull(1)?.toIntOrNull()
-    val minutes = "(\\d+)\\s*m(?:in)?".toRegex().find(normalized)?.groupValues?.getOrNull(1)?.toIntOrNull()
+    val hours = HOURS_REGEX.find(normalized)?.groupValues?.getOrNull(1)?.toIntOrNull()
+    val minutes = MINUTES_REGEX.find(normalized)?.groupValues?.getOrNull(1)?.toIntOrNull()
     val totalMinutes = when {
         hours != null || minutes != null -> (hours ?: 0) * 60 + (minutes ?: 0)
         else -> normalized.filter(Char::isDigit).toIntOrNull()

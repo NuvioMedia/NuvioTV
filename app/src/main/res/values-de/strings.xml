@@ -206,14 +206,14 @@
     <string name="settings_profiles">Profile</string>
     <string name="settings_profiles_subtitle">Benutzerprofile verwalten</string>
     <string name="settings_layout">Layout</string>
-    <string name="settings_layout_subtitle">Startseite-Struktur und Poster-Stile.</string>
+    <string name="settings_layout_subtitle">Startseite-Struktur und Poster-Stile</string>
     <string name="settings_plugins">Plugins</string>
-    <string name="settings_plugins_subtitle">Repositorys und Anbieter.</string>
-    <string name="settings_integration">Integration</string>
+    <string name="settings_plugins_subtitle">Repositorys und Anbieter</string>
+    <string name="settings_integration">Integrationen</string>
     <string name="settings_playback">Wiedergabe</string>
-    <string name="settings_playback_subtitle">Player, Untertitel und automatische Wiedergabe.</string>
-    <string name="settings_trakt_subtitle">Trakt-Verbindungsbildschirm öffnen.</string>
-    <string name="settings_about_subtitle">Version und Richtlinien.</string>
+    <string name="settings_playback_subtitle">Player, Untertitel und automatische Wiedergabe</string>
+    <string name="settings_trakt_subtitle">Trakt-Verbindungsbildschirm öffnen</string>
+    <string name="settings_about_subtitle">Version und Richtlinien</string>
 <string name="settings_network">Netzwerkgeschwindigkeit</string>
 <string name="settings_network_subtitle">Latenz- und Download-Diagnose</string>
 <string name="settings_advanced">Erweitert</string>
@@ -232,7 +232,7 @@
 <string name="network_connection_ethernet">Ethernet</string>
 <string name="network_connection_offline">Offline</string>
     <string name="settings_debug">Debugging</string>
-    <string name="settings_debug_subtitle">Entwicklertools und Feature-Flags.</string>
+    <string name="settings_debug_subtitle">Entwicklertools und Feature-Flags</string>
     <string name="settings_plugins_section_subtitle">Repositorys, Anbieter und Plugin-Status verwalten</string>
     <string name="settings_account_section_subtitle">Konto und Synchronisierungsstatus</string>
     <string name="account_stat_addons">Add-ons</string>
@@ -241,7 +241,7 @@
     <string name="account_stat_progress">Fortschritt</string>
     <string name="account_stat_watched">angesehen</string>
     <string name="settings_integrations_section">Integrationen</string>
-    <string name="settings_integrations_section_subtitle">TMDB oder MDBList auswählen</string>
+    <string name="settings_integrations_section_subtitle">Verwalten Sie verfügbare Integrationen</string>
     <string name="settings_tmdb_subtitle">Steuerelemente zur Anreicherung von Metadaten</string>
     <string name="settings_mdblist_subtitle">Externe Bewertungsanbieter</string>
     <string name="settings_animeskip_subtitle">Zeitstempel zum Überspringen von Anime-Intro/Outro</string>
@@ -678,7 +678,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profile</string>
-    <string name="profile_subtitle">Benutzerprofile für dieses Konto verwalten.</string>
+    <string name="profile_subtitle">Benutzerprofile für dieses Konto verwalten</string>
     <string name="profile_manage_button">Profile verwalten</string>
     <string name="profile_manage_title">Profile verwalten</string>
     <string name="profile_manage_subtitle">Wählen Sie ein Profil aus, um es zu bearbeiten, zu wechseln oder ein neues zu erstellen</string>
@@ -1157,4 +1157,6 @@
     <string name="update_ignore">Ignorieren</string>
     <string name="watchlist_added">Zur Beobachtungsliste hinzugefügt</string>
     <string name="watchlist_removed">Aus Beobachtungsliste entfernt</string>
+    <string name="playback_player_auto">Automatisch (Am besten für Inhalt)</string>
+    <string name="playback_player_auto_desc">ExoPlayer für Filme &amp; Serien · MPV für Anime</string>
 </resources>

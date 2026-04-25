@@ -7,6 +7,7 @@ package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
 import android.view.KeyEvent
+import android.view.View
 import androidx.annotation.RawRes
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -101,13 +102,13 @@ import androidx.tv.material3.IconButton
 import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.rememberAsyncImagePainter
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
 import com.nuvio.tv.core.player.ExternalPlayerLauncher
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.domain.model.Subtitle
@@ -122,6 +123,8 @@ import java.util.concurrent.TimeUnit
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.media3.exoplayer.ExoPlayer
+import io.github.peerless2012.ass.media.widget.AssSubtitleView
 import kotlinx.coroutines.delay
 
 @Composable
@@ -573,6 +576,8 @@ fun PlayerScreen(
                     isPlaying = uiState.isPlaying,
                     isBuffering = uiState.isBuffering,
                     aspectMode = uiState.aspectMode,
+                    useLibass = uiState.useLibass,
+                    libassRenderType = uiState.libassRenderType,
                     subtitleStyle = uiState.subtitleStyle,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -1176,6 +1181,7 @@ private fun MpvPlayerSurface(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val latestAspectMode by rememberUpdatedState(aspectMode)
     val mpvView = remember(context) {
         NuvioMpvSurfaceView(context)
     }
@@ -1189,6 +1195,16 @@ private fun MpvPlayerSurface(
         viewModel.attachMpvView(mpvView)
         onDispose {
             viewModel.attachMpvView(null)
+        }
+    }
+
+    DisposableEffect(mpvView) {
+        val listener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            mpvView.applyAspectMode(latestAspectMode)
+        }
+        mpvView.addOnLayoutChangeListener(listener)
+        onDispose {
+            mpvView.removeOnLayoutChangeListener(listener)
         }
     }
 
@@ -1210,10 +1226,12 @@ private fun MpvPlayerSurface(
 
 @Composable
 private fun ExoPlayerSurface(
-    player: androidx.media3.common.Player,
+    player: ExoPlayer,
     isPlaying: Boolean,
     isBuffering: Boolean,
     aspectMode: AspectMode,
+    useLibass: Boolean,
+    libassRenderType: LibassRenderType,
     subtitleStyle: SubtitleStyleSettings,
     modifier: Modifier = Modifier
 ) {
@@ -1232,7 +1250,14 @@ private fun ExoPlayerSurface(
 
     AndroidView(
         factory = { playerView },
-        modifier = modifier
+        modifier = modifier,
+        update = {
+            it.syncLibassOverlay(
+                player = player,
+                enabled = useLibass,
+                renderType = libassRenderType
+            )
+        }
     )
 
     DisposableEffect(playerView, player) {
@@ -1250,22 +1275,32 @@ private fun ExoPlayerSurface(
         val listener = object : androidx.media3.common.Player.Listener {
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 playerView.post {
-                    playerView.applyExoAspectModeIfNeeded(latestAspectMode)
+                    playerView.applyExoAspectMode(latestAspectMode)
                 }
             }
 
             override fun onRenderedFirstFrame() {
                 playerView.post {
-                    playerView.applyExoAspectModeIfNeeded(latestAspectMode)
+                    playerView.applyExoAspectMode(latestAspectMode)
                 }
             }
         }
         player.addListener(listener)
         playerView.post {
-            playerView.applyExoAspectModeIfNeeded(latestAspectMode)
+            playerView.applyExoAspectMode(latestAspectMode)
         }
         onDispose {
             player.removeListener(listener)
+        }
+    }
+
+    DisposableEffect(playerView) {
+        val listener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            playerView.applyExoAspectMode(latestAspectMode)
+        }
+        playerView.addOnLayoutChangeListener(listener)
+        onDispose {
+            playerView.removeOnLayoutChangeListener(listener)
         }
     }
 
@@ -1277,7 +1312,15 @@ private fun ExoPlayerSurface(
     }
 
     LaunchedEffect(playerView, aspectMode) {
-        playerView.applyExoAspectModeIfNeeded(aspectMode)
+        playerView.applyExoAspectMode(aspectMode)
+    }
+
+    LaunchedEffect(playerView, player, useLibass, libassRenderType) {
+        playerView.syncLibassOverlay(
+            player = player,
+            enabled = useLibass,
+            renderType = libassRenderType
+        )
     }
 
     LaunchedEffect(playerView, subtitleStyle) {
@@ -1293,10 +1336,7 @@ private fun PlayerView.enableComposeSurfaceSyncWorkaroundIfAvailable() {
     }
 }
 
-private fun PlayerView.applyExoAspectModeIfNeeded(mode: AspectMode) {
-    if (getTag(R.id.player_view_aspect_mode_tag) == mode) {
-        return
-    }
+private fun PlayerView.applyExoAspectMode(mode: AspectMode) {
     setTag(R.id.player_view_aspect_mode_tag, mode)
     applyExoAspectMode(this, mode)
 }
@@ -1344,6 +1384,69 @@ private fun PlayerView.applySubtitleStyleIfNeeded(subtitleStyle: SubtitleStyleSe
         post {
             val extraPadding = (height * (subtitleStyle.verticalOffset / 400f)).toInt().coerceAtLeast(0)
             setPadding(paddingLeft, paddingTop, paddingRight, extraPadding)
+        }
+    }
+}
+
+private fun PlayerView.syncLibassOverlay(
+    player: ExoPlayer,
+    enabled: Boolean,
+    renderType: LibassRenderType
+) {
+    val containerId = if (renderType == LibassRenderType.OVERLAY_OPEN_GL) {
+        R.id.libass_overlay_container_gl
+    } else {
+        R.id.libass_overlay_container
+    }
+    val overlayContainer = findViewById<android.widget.FrameLayout>(containerId) ?: return
+    val needsOverlay = enabled && renderType.usesOverlaySubtitleView()
+    val boundPlayer = getTag(R.id.libass_overlay_bound_player) as? ExoPlayer
+    val hasOverlayChild = overlayContainer.hasAssOverlayChild()
+
+    if (!needsOverlay) {
+        if (hasOverlayChild) {
+            overlayContainer.removeAssOverlayChildren()
+        }
+        if (boundPlayer != null) {
+            setTag(R.id.libass_overlay_bound_player, null)
+        }
+        return
+    }
+
+    val assHandler = player.getAssHandlerCompat() ?: return
+    if (boundPlayer === player && hasOverlayChild) {
+        return
+    }
+
+    overlayContainer.removeAssOverlayChildren()
+    val assSubtitleView = AssSubtitleView(overlayContainer.context, assHandler)
+    overlayContainer.addView(
+        assSubtitleView,
+        android.widget.FrameLayout.LayoutParams(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT
+        )
+    )
+    setTag(R.id.libass_overlay_bound_player, player)
+}
+
+private fun LibassRenderType.usesOverlaySubtitleView(): Boolean {
+    return this == LibassRenderType.OVERLAY_CANVAS || this == LibassRenderType.OVERLAY_OPEN_GL
+}
+
+private fun android.widget.FrameLayout.hasAssOverlayChild(): Boolean {
+    for (index in 0 until childCount) {
+        if (getChildAt(index) is AssSubtitleView) {
+            return true
+        }
+    }
+    return false
+}
+
+private fun android.widget.FrameLayout.removeAssOverlayChildren() {
+    for (index in childCount - 1 downTo 0) {
+        if (getChildAt(index) is AssSubtitleView) {
+            removeViewAt(index)
         }
     }
 }
@@ -1445,8 +1548,13 @@ private fun PlayerControlsOverlay(
                     )
 
                     if (uiState.currentSeason != null && uiState.currentEpisode != null) {
+                        val seasonEpisodeCode = stringResource(
+                            R.string.season_episode_format,
+                            uiState.currentSeason,
+                            uiState.currentEpisode
+                        )
                         val episodeInfo = buildString {
-                            append("S${uiState.currentSeason}E${uiState.currentEpisode}")
+                            append(seasonEpisodeCode)
                             if (!uiState.currentEpisodeTitle.isNullOrBlank()) {
                                 append(" • ${uiState.currentEpisodeTitle}")
                             }
@@ -2283,10 +2391,12 @@ private fun SubtitleDelayOverlay(
 @Composable
 private fun rememberRawSvgPainter(@RawRes iconRes: Int): Painter {
     val context = LocalContext.current
-    val request = remember(iconRes, context) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val sizePx = with(density) { 24.dp.roundToPx() }
+    val request = remember(iconRes, context, sizePx) {
         ImageRequest.Builder(context)
             .data(iconRes)
-            .decoderFactory(SvgDecoder.Factory())
+            .size(sizePx)
             .build()
     }
     return rememberAsyncImagePainter(model = request)

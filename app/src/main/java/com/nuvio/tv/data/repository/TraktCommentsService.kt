@@ -229,7 +229,7 @@ internal fun stripInlineSpoilerMarkup(comment: String?): String {
     if (comment.isNullOrBlank()) return ""
     return comment
         .replace(INLINE_SPOILER_TAG_REGEX, "")
-        .replace(Regex("\\s+"), " ")
+        .replace(Regex("[\\t ]+"), " ")
         .trim()
 }
 

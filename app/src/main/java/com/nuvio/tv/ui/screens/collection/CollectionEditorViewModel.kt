@@ -253,6 +253,18 @@ class CollectionEditorViewModel @Inject constructor(
         }
     }
 
+    fun updateFolderHeroBackdropUrl(url: String) {
+        _uiState.update { state ->
+            state.copy(editingFolder = state.editingFolder?.copy(heroBackdropUrl = url.ifBlank { null }))
+        }
+    }
+
+    fun updateFolderTitleLogoUrl(url: String) {
+        _uiState.update { state ->
+            state.copy(editingFolder = state.editingFolder?.copy(titleLogoUrl = url.ifBlank { null }))
+        }
+    }
+
     fun setViewMode(viewMode: FolderViewMode) {
         _uiState.update { it.copy(viewMode = viewMode) }
     }
@@ -379,7 +391,9 @@ class CollectionEditorViewModel @Inject constructor(
         if (rawFolder.catalogSources.isEmpty()) return
         val cleanedFolder = rawFolder.copy(
             title = rawFolder.title.ifBlank { "Untitled" },
-            coverImageUrl = rawFolder.coverImageUrl?.ifBlank { null }
+            coverImageUrl = rawFolder.coverImageUrl?.ifBlank { null },
+            heroBackdropUrl = rawFolder.heroBackdropUrl?.ifBlank { null },
+            titleLogoUrl = rawFolder.titleLogoUrl?.ifBlank { null }
         )
         val editingFolder = cleanedFolder
         _uiState.update { state ->

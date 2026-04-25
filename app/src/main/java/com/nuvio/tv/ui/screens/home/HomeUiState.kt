@@ -16,6 +16,7 @@ data class HomeUiState(
     val catalogRows: List<CatalogRow> = emptyList(),
     val continueWatchingItems: List<ContinueWatchingItem> = emptyList(),
     val isLoading: Boolean = true,
+    val layoutPreferencesReady: Boolean = false,
     val error: String? = null,
     val selectedItemId: String? = null,
     val installedAddonsCount: Int = 0,
@@ -112,6 +113,23 @@ sealed class HomeRow {
 
     @Immutable
     data class CollectionRow(val collection: Collection) : HomeRow()
+
+    /**
+     * Placeholder for a catalog row whose data hasn't been fetched yet.
+     * Rendered as a shimmer/skeleton row until the user scrolls near it
+     * and the actual catalog data is loaded on demand.
+     */
+    @Immutable
+    data class PlaceholderCatalog(
+        val catalogKey: String,
+        val addonId: String,
+        val addonName: String,
+        val addonBaseUrl: String,
+        val catalogId: String,
+        val catalogName: String,
+        val apiType: String,
+        val displayTitle: String
+    ) : HomeRow()
 }
 
 @Immutable

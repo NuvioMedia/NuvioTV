@@ -23,8 +23,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.util.languageCodeToName
@@ -107,6 +108,10 @@ private fun StreamInfoContent(data: StreamInfoData) {
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 4.dp)
             )
+        }
+        if (data.playerEngine != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            InfoItem(label = stringResource(R.string.stream_info_player_engine), value = data.playerEngine)
         }
         Spacer(modifier = Modifier.height(16.dp))
     }

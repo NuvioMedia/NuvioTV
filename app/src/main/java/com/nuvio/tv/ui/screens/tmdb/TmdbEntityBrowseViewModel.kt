@@ -31,10 +31,9 @@ class TmdbEntityBrowseViewModel @Inject constructor(
         savedStateHandle.get<String>("entityKind").orEmpty()
     )
     val entityId: Int = savedStateHandle.get<Int>("entityId") ?: 0
-    val entityName: String = URLDecoder.decode(
-        savedStateHandle.get<String>("entityName").orEmpty(),
-        "UTF-8"
-    )
+    val entityName: String = savedStateHandle.get<String>("entityName").orEmpty().let { raw ->
+        runCatching { URLDecoder.decode(raw, "UTF-8") }.getOrDefault(raw)
+    }
     val sourceType: String = savedStateHandle.get<String>("sourceType").orEmpty()
 
     private val _uiState = MutableStateFlow<TmdbEntityBrowseUiState>(TmdbEntityBrowseUiState.Loading)

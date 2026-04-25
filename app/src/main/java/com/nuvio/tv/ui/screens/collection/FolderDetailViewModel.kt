@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.collection
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -21,9 +22,13 @@ import com.nuvio.tv.domain.repository.WatchProgressRepository
 import com.nuvio.tv.ui.screens.home.GridItem
 import com.nuvio.tv.ui.screens.home.HomeRow
 import com.nuvio.tv.ui.screens.home.HomeUiState
+import com.nuvio.tv.ui.screens.home.ModernCarouselRowBuildCache
+import com.nuvio.tv.ui.screens.home.ModernHomePresentationInput
+import com.nuvio.tv.ui.screens.home.buildModernHomePresentation
 import com.nuvio.tv.ui.screens.home.homeItemStatusKey
 import com.nuvio.tv.domain.repository.CatalogRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -84,6 +89,7 @@ data class FolderDetailGridFocusState(
 
 @HiltViewModel
 class FolderDetailViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     savedStateHandle: SavedStateHandle,
     private val collectionsDataStore: CollectionsDataStore,
     private val addonRepository: AddonRepository,
@@ -111,12 +117,15 @@ class FolderDetailViewModel @Inject constructor(
     private val enrichedItemIds = java.util.Collections.synchronizedSet(mutableSetOf<String>())
     private val _enrichingItemId = MutableStateFlow<String?>(null)
     val enrichingItemId: StateFlow<String?> = _enrichingItemId.asStateFlow()
+    private val _enrichedPreviews = MutableStateFlow<Map<String, MetaPreview>>(emptyMap())
+    val enrichedPreviews: StateFlow<Map<String, MetaPreview>> = _enrichedPreviews.asStateFlow()
     private val _trailerPreviewUrls = MutableStateFlow<Map<String, String>>(emptyMap())
     val trailerPreviewUrls: StateFlow<Map<String, String>> = _trailerPreviewUrls.asStateFlow()
     private val _trailerPreviewAudioUrls = MutableStateFlow<Map<String, String>>(emptyMap())
     val trailerPreviewAudioUrls: StateFlow<Map<String, String>> = _trailerPreviewAudioUrls.asStateFlow()
     private val trailerPreviewLoadingIds = mutableSetOf<String>()
     private val trailerPreviewNegativeCache = mutableSetOf<String>()
+    private val modernCarouselRowBuildCache = ModernCarouselRowBuildCache()
     private var activeTrailerPreviewItemId: String? = null
     private var trailerPreviewRequestVersion: Long = 0L
 
@@ -322,8 +331,27 @@ class FolderDetailViewModel @Inject constructor(
         }
 
         val anyLoading = sourceTabs.any { it.isLoading }
+
+        // Build modern presentation so ModernHomeContent has carousel rows to render.
+        val modernPresentation = _uiState.value.let { s ->
+            if (s.homeLayout == HomeLayout.MODERN) {
+                buildModernHomePresentation(
+                    input = ModernHomePresentationInput(
+                        homeRows = homeRows,
+                        catalogRows = loadedRows,
+                        continueWatchingItems = emptyList(),
+                        useLandscapePosters = s.modernLandscapePostersEnabled,
+                        showCatalogTypeSuffix = s.catalogTypeSuffixEnabled,
+                        showFullReleaseDate = s.showFullReleaseDate
+                    ),
+                    cache = modernCarouselRowBuildCache,
+                    context = appContext
+                )
+            } else null
+        }
+
         _uiState.update { s ->
-            s.copy(followLayoutHomeState = HomeUiState(
+            val homeState = HomeUiState(
                 catalogRows = loadedRows,
                 homeRows = homeRows,
                 gridItems = gridItems,
@@ -347,7 +375,12 @@ class FolderDetailViewModel @Inject constructor(
                 hideUnreleasedContent = s.hideUnreleasedContent,
                 showFullReleaseDate = s.showFullReleaseDate,
                 movieWatchedStatus = s.movieWatchedStatus
-            ))
+            )
+            s.copy(followLayoutHomeState = if (modernPresentation != null) {
+                homeState.copy(modernHomePresentation = modernPresentation)
+            } else {
+                homeState
+            })
         }
     }
 
@@ -691,8 +724,9 @@ class FolderDetailViewModel @Inject constructor(
                     var result = merged
                 if (finalEnrichment != null) {
                     if (tmdbSettings.useBasicInfo) {
+                        val isModern = _uiState.value.homeLayout == HomeLayout.MODERN
                         result = result.copy(
-                            name = finalEnrichment.localizedTitle ?: result.name,
+                            name = if (isModern) finalEnrichment.localizedTitle ?: result.name else result.name,
                             description = finalEnrichment.description ?: result.description,
                             genres = if (finalEnrichment.genres.isNotEmpty()) finalEnrichment.genres else result.genres
                         )
@@ -742,6 +776,14 @@ class FolderDetailViewModel @Inject constructor(
 
             // Sync enriched tabs into followLayoutHomeState for FOLLOW_LAYOUT mode.
             if (_enrichingItemId.value == item.id) _enrichingItemId.value = null
+            // Emit enriched preview for Modern expanded poster cards.
+            val enrichedItem = _uiState.value.tabs
+                .firstNotNullOfOrNull { tab ->
+                    tab.catalogRow?.items?.firstOrNull { it.id == item.id }
+                }
+            if (enrichedItem != null) {
+                _enrichedPreviews.update { it + (item.id to enrichedItem) }
+            }
             rebuildFollowLayoutState()
         }
     }

@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import com.nuvio.tv.ui.util.dpadRepeatThrottle
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -85,6 +86,8 @@ fun CatalogSeeAllScreen(
     // In search mode, get the catalog row from SearchViewModel's existing results.
     // Otherwise fall back to HomeViewModel's fullCatalogRows (home screen catalogs).
     val searchUiState = searchViewModel?.uiState?.collectAsState()
+    val searchWatchedMovieIds = searchViewModel?.watchedMovieIds?.collectAsState()
+    val searchWatchedSeriesIds = searchViewModel?.watchedSeriesIds?.collectAsState()
     val searchCatalogRow = searchUiState?.value?.catalogRows?.find {
         "${it.addonId}_${it.apiType}_${it.catalogId}" == catalogKey
     }
@@ -192,6 +195,7 @@ fun CatalogSeeAllScreen(
                 LazyVerticalGrid(
                     state = gridState,
                     columns = GridCells.Adaptive(minSize = posterCardStyle.width),
+                    modifier = Modifier.dpadRepeatThrottle(),
                     contentPadding = PaddingValues(
                         start = 48.dp,
                         end = 24.dp,
@@ -205,9 +209,15 @@ fun CatalogSeeAllScreen(
                         items = catalogRow.items,
                         key = { index, item -> "${catalogRow.catalogId}_${item.id}_$index" }
                     ) { index, item ->
-                        val isWatched = uiState.movieWatchedStatus[
-                            com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)
-                        ] == true
+                        val isWatched = if (isSearchMode) {
+                            val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
+                            if (isSeries) item.id in (searchWatchedSeriesIds?.value ?: emptySet())
+                            else item.id in (searchWatchedMovieIds?.value ?: emptySet())
+                        } else {
+                            uiState.movieWatchedStatus[
+                                com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)
+                            ] == true
+                        }
                         GridContentCard(
                             item = item,
                             posterCardStyle = posterCardStyle,

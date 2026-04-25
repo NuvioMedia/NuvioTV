@@ -38,7 +38,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -55,7 +54,6 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
-import com.nuvio.tv.domain.model.AppFont
 import com.nuvio.tv.domain.model.AppTheme
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
@@ -138,9 +136,9 @@ fun ThemeSettingsContent(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(6.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = PaddingValues(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)
             ) {
                 itemsIndexed(
                     items = uiState.availableThemes,
@@ -330,12 +328,12 @@ private fun ThemeCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(17.dp),
+                .padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
                 modifier = Modifier
-                    .size(55.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
                     .background(palette.secondary),
                 contentAlignment = Alignment.Center
@@ -345,25 +343,26 @@ private fun ThemeCard(
                         imageVector = Icons.Default.Check,
                         contentDescription = stringResource(R.string.cd_selected),
                         tint = palette.onSecondary,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(11.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Text(
                 text = theme.displayName,
-                style = MaterialTheme.typography.titleMedium,
-                color = if (isFocused || isSelected) NuvioColors.TextPrimary else NuvioColors.TextSecondary
+                style = MaterialTheme.typography.labelLarge,
+                color = if (isFocused || isSelected) NuvioColors.TextPrimary else NuvioColors.TextSecondary,
+                maxLines = 1
             )
 
-            Spacer(modifier = Modifier.height(7.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp)
+                    .fillMaxWidth(0.8f)
+                    .height(2.dp)
                     .clip(RoundedCornerShape(SettingsPillRadius))
                     .background(palette.focusRing)
             )

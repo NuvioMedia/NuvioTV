@@ -55,14 +55,15 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import coil.compose.rememberAsyncImagePainter
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.nuvio.tv.R
 import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.data.local.TraktSettingsDataStore
 import com.nuvio.tv.data.local.WatchProgressSource
 import com.nuvio.tv.data.repository.TraktProgressService
+import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.components.TraktRatingSelectorContent
 import com.nuvio.tv.ui.components.traktRatingLabel
@@ -85,6 +86,7 @@ fun TraktScreen(
     var showEpisodeRatingsDialog by remember { mutableStateOf(false) }
     var showDefaultRatingDialog by remember { mutableStateOf(false) }
     var showWatchProgressDialog by remember { mutableStateOf(false) }
+    var showLibrarySourceDialog by remember { mutableStateOf(false) }
     val strAllHistory = stringResource(R.string.trakt_all_history)
     val strDaysFormat = stringResource(R.string.trakt_days_format)
     val strWatchProgressTrakt = stringResource(R.string.trakt_watch_progress_source_trakt)
@@ -98,6 +100,14 @@ fun TraktScreen(
         when (source) {
             WatchProgressSource.TRAKT -> strWatchProgressTrakt
             WatchProgressSource.NUVIO_SYNC -> strWatchProgressNuvio
+        }
+    }
+    val strLibrarySourceTrakt = stringResource(R.string.trakt_library_source_trakt)
+    val strLibrarySourceNuvio = stringResource(R.string.trakt_library_source_nuvio)
+    val librarySourceFormatter: (LibrarySourceMode) -> String = { mode ->
+        when (mode) {
+            LibrarySourceMode.TRAKT -> strLibrarySourceTrakt
+            LibrarySourceMode.LOCAL -> strLibrarySourceNuvio
         }
     }
     val enabledFormatter: (Boolean) -> String = { enabled ->
@@ -295,6 +305,12 @@ fun TraktScreen(
 
                 if (uiState.mode == TraktConnectionMode.CONNECTED) {
                     SettingsActionRow(
+                        title = stringResource(R.string.trakt_library_source_title),
+                        subtitle = stringResource(R.string.trakt_library_source_subtitle),
+                        value = librarySourceFormatter(uiState.librarySourceMode),
+                        onClick = { showLibrarySourceDialog = true }
+                    )
+                    SettingsActionRow(
                         title = stringResource(R.string.trakt_watch_progress_title),
                         subtitle = stringResource(R.string.trakt_watch_progress_subtitle),
                         value = watchProgressFormatter(uiState.watchProgressSource),
@@ -443,6 +459,75 @@ fun TraktScreen(
                 ) {
                     Button(
                         onClick = { showWatchProgressDialog = false },
+                        colors = ButtonDefaults.colors(
+                            containerColor = NuvioColors.BackgroundCard,
+                            contentColor = NuvioColors.TextPrimary
+                        )
+                    ) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                }
+            }
+        }
+    }
+
+    if (showLibrarySourceDialog) {
+        NuvioDialog(
+            onDismiss = { showLibrarySourceDialog = false },
+            title = stringResource(R.string.trakt_library_source_dialog_title),
+            subtitle = stringResource(R.string.trakt_library_source_dialog_subtitle),
+            width = 620.dp,
+            suppressFirstKeyUp = false
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = {
+                        viewModel.onLibrarySourceModeSelected(LibrarySourceMode.TRAKT)
+                        showLibrarySourceDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = if (uiState.librarySourceMode == LibrarySourceMode.TRAKT) {
+                            NuvioColors.Primary
+                        } else {
+                            NuvioColors.BackgroundCard
+                        },
+                        contentColor = if (uiState.librarySourceMode == LibrarySourceMode.TRAKT) {
+                            Color.Black
+                        } else {
+                            NuvioColors.TextPrimary
+                        }
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.trakt_library_source_trakt))
+                }
+                Button(
+                    onClick = {
+                        viewModel.onLibrarySourceModeSelected(LibrarySourceMode.LOCAL)
+                        showLibrarySourceDialog = false
+                    },
+                    colors = ButtonDefaults.colors(
+                        containerColor = if (uiState.librarySourceMode == LibrarySourceMode.LOCAL) {
+                            NuvioColors.Primary
+                        } else {
+                            NuvioColors.BackgroundCard
+                        },
+                        contentColor = if (uiState.librarySourceMode == LibrarySourceMode.LOCAL) {
+                            Color.Black
+                        } else {
+                            NuvioColors.TextPrimary
+                        }
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.trakt_library_source_nuvio))
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(
+                        onClick = { showLibrarySourceDialog = false },
                         colors = ButtonDefaults.colors(
                             containerColor = NuvioColors.BackgroundCard,
                             contentColor = NuvioColors.TextPrimary
@@ -921,10 +1006,12 @@ private fun TraktStatItem(
 @Composable
 private fun rememberRawSvgPainter(@RawRes iconRes: Int): Painter {
     val context = LocalContext.current
-    val request = remember(iconRes, context) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val sizePx = with(density) { 24.dp.roundToPx() }
+    val request = remember(iconRes, context, sizePx) {
         ImageRequest.Builder(context)
             .data(iconRes)
-            .decoderFactory(SvgDecoder.Factory())
+            .size(sizePx)
             .crossfade(false)
             .build()
     }

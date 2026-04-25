@@ -1,6 +1,5 @@
 package com.nuvio.tv.ui.screens.home
 
-import android.view.KeyEvent as AndroidKeyEvent
 import com.nuvio.tv.LocalContentFocusRequester
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -39,7 +38,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.onPreviewKeyEvent
+import com.nuvio.tv.ui.util.dpadRepeatThrottle
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -60,7 +59,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
@@ -72,9 +71,6 @@ import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.collectionFolderCardImageUrl
 import com.nuvio.tv.ui.components.rememberArtworkBackedCardGlow
 import com.nuvio.tv.ui.theme.NuvioColors
-
-/** Minimum interval between processed key repeat events to prevent HWUI overload. */
-private const val KEY_REPEAT_THROTTLE_MS = 80L
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -94,7 +90,8 @@ fun GridHomeContent(
     posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
     onItemFocus: (com.nuvio.tv.domain.model.MetaPreview) -> Unit = {},
     catalogSeeAllLabel: String? = null,
-    onSaveGridFocusState: (Int, Int, String?) -> Unit
+    onSaveGridFocusState: (Int, Int, String?) -> Unit,
+    scrollToTopTrigger: Int = 0
 ) {
     val gridState = rememberLazyGridState(
         initialFirstVisibleItemIndex = gridFocusState.verticalScrollIndex,
@@ -102,6 +99,13 @@ fun GridHomeContent(
     )
     val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     var lastFocusedGridItemKey by remember { mutableStateOf(gridFocusState.focusedItemKey) }
+
+    // Scroll to top when triggered from sidebar Home button.
+    LaunchedEffect(scrollToTopTrigger) {
+        if (scrollToTopTrigger > 0) {
+            gridState.scrollToItem(0, 0)
+        }
+    }
 
     // Save scroll state when leaving
     DisposableEffect(Unit) {
@@ -208,7 +212,6 @@ fun GridHomeContent(
     }
 
     // Throttle D-pad key repeats to prevent HWUI overload when a key is held down.
-    val lastKeyRepeatTime = remember { longArrayOf(0L) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         val contentFocusRequester = LocalContentFocusRequester.current
@@ -221,17 +224,7 @@ fun GridHomeContent(
                 .fillMaxSize()
                 .focusRequester(contentFocusRequester)
                 .focusRestorer()
-                .onPreviewKeyEvent { event ->
-                    val native = event.nativeKeyEvent
-                    if (native.action == AndroidKeyEvent.ACTION_DOWN && native.repeatCount > 0) {
-                        val now = System.currentTimeMillis()
-                        if (now - lastKeyRepeatTime[0] < KEY_REPEAT_THROTTLE_MS) {
-                            return@onPreviewKeyEvent true
-                        }
-                        lastKeyRepeatTime[0] = now
-                    }
-                    false
-                },
+                .dpadRepeatThrottle(),
             contentPadding = PaddingValues(
                 start = 48.dp,
                 end = 24.dp,

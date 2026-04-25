@@ -180,16 +180,16 @@
     <string name="settings_profiles">Profiler</string>
     <string name="settings_profiles_subtitle">Hantera användarprofiler</string>
     <string name="settings_layout">Layout</string>
-    <string name="settings_layout_subtitle">Hemstruktur och affischstilar.</string>
+    <string name="settings_layout_subtitle">Hemstruktur och affischstilar</string>
     <string name="settings_plugins">Plugins</string>
-    <string name="settings_plugins_subtitle">Arkiv och leverantörer.</string>
+    <string name="settings_plugins_subtitle">Arkiv och leverantörer</string>
     <string name="settings_integration">Integrationer</string>
     <string name="settings_playback">Uppspelning</string>
-    <string name="settings_playback_subtitle">Spelare, undertexter, och automatisk uppspelning.</string>
-    <string name="settings_trakt_subtitle">Öppna Trakt anslutningsskärm.</string>
-    <string name="settings_about_subtitle">Version och policyer.</string>
+    <string name="settings_playback_subtitle">Spelare, undertexter, och automatisk uppspelning</string>
+    <string name="settings_trakt_subtitle">Öppna Trakt anslutningsskärm</string>
+    <string name="settings_about_subtitle">Version och policyer</string>
     <string name="settings_debug">Debug</string>
-    <string name="settings_debug_subtitle">Utvecklarverktyg och funktionsflaggor.</string>
+    <string name="settings_debug_subtitle">Utvecklarverktyg och funktionsflaggor</string>
     <string name="settings_plugins_section_subtitle">Hantera arkiv, leverantörer, och plugin-status</string>
     <string name="settings_account_section_subtitle">Konto och synkroniseringsstatus</string>
     <string name="account_stat_addons">tillägg</string>
@@ -198,7 +198,7 @@
     <string name="account_stat_progress">pågående</string>
     <string name="account_stat_watched">sedd</string>
     <string name="settings_integrations_section">Integrationer</string>
-    <string name="settings_integrations_section_subtitle">Välj TMDB eller MDBList inställningar</string>
+    <string name="settings_integrations_section_subtitle">Hantera tillgängliga integrationer</string>
     <string name="settings_tmdb_subtitle">Metadataberikning</string>
     <string name="settings_mdblist_subtitle">Externa betygsläggare</string>
     <string name="settings_animeskip_subtitle">Tidsstämplar för att hoppa över anime-intro/outro</string>
@@ -611,7 +611,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profiler</string>
-    <string name="profile_subtitle">Hantera användarprofiler för detta konto.</string>
+    <string name="profile_subtitle">Hantera användarprofiler för detta konto</string>
     <string name="profile_manage_button">Hantera profiler</string>
     <string name="profile_manage_title">Hantera profiler</string>
     <string name="profile_manage_subtitle">Välj en profil att redigera, byta till, eller skapa en ny</string>
@@ -1212,4 +1212,6 @@
     <string name="update_checking">Söker efter uppdateringar…</string>
     <string name="update_download_complete">Nedladdning klar. Redo att installera.</string>
     <string name="update_up_to_date">Systemet är uppdaterat. Senaste ändringarna:</string>
+    <string name="playback_player_auto">Automatiskt (Bäst för innehåll)</string>
+    <string name="playback_player_auto_desc">ExoPlayer för filmer och serier · MPV för anime</string>
 </resources>

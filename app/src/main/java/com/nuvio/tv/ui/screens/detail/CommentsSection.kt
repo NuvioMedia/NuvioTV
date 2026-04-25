@@ -77,6 +77,12 @@ import com.nuvio.tv.domain.model.TraktCommentReview
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.distinctUntilChanged
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalTvMaterial3Api::class)
 @Composable
@@ -473,10 +479,14 @@ private fun CommentOverlayContent(
         review.comment
     }
     val commentStyle = readerCommentStyle(commentText.length)
+    val formattedCommentDate = remember(review.createdAt, review.updatedAt) {
+        formatCommentTimestamp(review.createdAt, review.updatedAt)
+    }
     val overlayLabels = buildList {
         if (review.review) add(stringResource(R.string.detail_comments_badge_review))
         if (review.hasSpoilerContent) add(stringResource(R.string.detail_comments_badge_spoiler))
         review.rating?.let { add(stringResource(R.string.detail_comments_badge_rating, it)) }
+        formattedCommentDate?.let { add(it) }
     }
 
     LaunchedEffect(review.id) {
@@ -635,6 +645,29 @@ private fun readerCommentStyle(length: Int): TextStyle {
         length <= 900 -> typography.titleMedium.copy(fontSize = 18.sp, lineHeight = 23.sp)
         else -> typography.bodyLarge.copy(fontSize = 16.sp, lineHeight = 21.sp)
     }
+}
+
+private fun formatCommentTimestamp(createdAt: String?, updatedAt: String?): String? {
+    val rawTimestamp = createdAt?.trim()?.takeIf { it.isNotBlank() }
+        ?: updatedAt?.trim()?.takeIf { it.isNotBlank() }
+        ?: return null
+
+    val instant = runCatching {
+        if (rawTimestamp.all { it.isDigit() }) {
+            val epoch = rawTimestamp.toLong()
+            val epochMillis = if (epoch < 100_000_000_000L) epoch * 1000L else epoch
+            Instant.ofEpochMilli(epochMillis)
+        } else {
+            runCatching { Instant.parse(rawTimestamp) }.getOrElse {
+                runCatching { OffsetDateTime.parse(rawTimestamp).toInstant() }.getOrElse {
+                    LocalDateTime.parse(rawTimestamp).atZone(ZoneId.systemDefault()).toInstant()
+                }
+            }
+        }
+    }.getOrNull() ?: return null
+
+    val formatter = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault())
+    return formatter.format(instant.atZone(ZoneId.systemDefault()))
 }
 
 private fun commentMaxLines(length: Int): Int = when {

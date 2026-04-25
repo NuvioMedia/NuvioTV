@@ -1,6 +1,7 @@
 @file:OptIn(
     androidx.compose.ui.ExperimentalComposeUiApi::class,
-    androidx.tv.material3.ExperimentalTvMaterial3Api::class
+    androidx.tv.material3.ExperimentalTvMaterial3Api::class,
+    androidx.compose.foundation.ExperimentalFoundationApi::class
 )
 
 package com.nuvio.tv.ui.components
@@ -36,6 +37,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -50,7 +58,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.nuvio.tv.domain.model.Collection
 import com.nuvio.tv.domain.model.CollectionFolder
 import com.nuvio.tv.domain.model.PosterShape
@@ -65,7 +73,8 @@ fun CollectionRowSection(
     listState: LazyListState = rememberLazyListState(),
     focusedItemIndex: Int = -1,
     onItemFocused: (itemIndex: Int) -> Unit = {},
-    onFolderFocused: (collection: Collection, folder: CollectionFolder) -> Unit = { _, _ -> }
+    onFolderFocused: (collection: Collection, folder: CollectionFolder) -> Unit = { _, _ -> },
+    entryFocusRequester: FocusRequester? = null
 ) {
     val currentOnItemFocused by rememberUpdatedState(onItemFocused)
     val currentOnFolderFocused by rememberUpdatedState(onFolderFocused)
@@ -123,27 +132,38 @@ fun CollectionRowSection(
             )
         }
 
+        val density = LocalDensity.current
+        val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
+        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec) {
+            val startPx = with(density) { 48.dp.roundToPx() }
+            @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+            object : BringIntoViewSpec {
+                override val scrollAnimationSpec: AnimationSpec<Float> =
+                    defaultBringIntoViewSpec.scrollAnimationSpec
+                override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+                    val childSize = kotlin.math.abs(size)
+                    val target = startPx.toFloat()
+                    val space = containerSize - target
+                    val leading = if (childSize <= containerSize && space < childSize) containerSize - childSize else target
+                    return offset - leading
+                }
+            }
+        }
+
+        CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalBringIntoViewSpec) {
+        val restoreIdx = lastFocusedItemIndex.coerceIn(0, (collection.folders.size - 1).coerceAtLeast(0))
+        val restoreFolder = collection.folders.getOrNull(restoreIdx)
+        val restoreFocusRequester = if (restoreFolder != null) {
+            itemFocusRequesters.getOrPut(folderFocusKey(restoreIdx, restoreFolder)) { FocusRequester() }
+        } else FocusRequester.Default
+
         LazyRow(
             state = listState,
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(rowFocusRequester)
-                .then(
-                    if (focusedItemIndex < 0 && collection.folders.isNotEmpty()) {
-                        Modifier.focusRestorer {
-                            val fallbackIndex = listState.firstVisibleItemIndex
-                                .coerceIn(0, (collection.folders.size - 1).coerceAtLeast(0))
-                            val fallbackFolder = collection.folders.getOrNull(fallbackIndex)
-                            if (fallbackFolder != null) {
-                                itemFocusRequesters.getOrPut(folderFocusKey(fallbackIndex, fallbackFolder)) { FocusRequester() }
-                            } else {
-                                rowFocusRequester
-                            }
-                        }
-                    } else {
-                        Modifier.focusRestorer()
-                    }
-                ),
+                .focusRestorer(restoreFocusRequester)
+                .focusGroup(),
             contentPadding = PaddingValues(start = 48.dp, end = 200.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -152,6 +172,9 @@ fun CollectionRowSection(
                 key = { index, folder -> folderFocusKey(index, folder) },
                 contentType = { _, _ -> "collection_folder" }
             ) { index, folder ->
+                val targetIndex = if (lastFocusedItemIndex >= 0) lastFocusedItemIndex else 0
+                val isEntryTarget = entryFocusRequester != null && index == targetIndex
+
                 FolderCard(
                     folder = folder,
                     collection = collection,
@@ -163,12 +186,14 @@ fun CollectionRowSection(
                         }
                         currentOnFolderFocused(collection, folder)
                     },
+                    modifier = if (isEntryTarget) Modifier.focusRequester(entryFocusRequester!!) else Modifier,
                     focusRequester = itemFocusRequesters.getOrPut(
                         folderFocusKey(index, folder)
                     ) { FocusRequester() }
                 )
             }
         }
+        } // CompositionLocalProvider
     }
 }
 

@@ -1,138 +1,69 @@
 package com.nuvio.tv.data.repository
 
-import com.nuvio.tv.data.remote.api.GitHubReleaseApi
-import com.nuvio.tv.data.remote.dto.GitHubContributorDto
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
+import com.nuvio.tv.data.remote.api.UniqueContributionsApi
+import com.nuvio.tv.data.remote.dto.UniqueContributorDto
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
 
 data class GitHubContributor(
-    val login: String,
+    val id: String,
+    val name: String,
+    val githubLogin: String?,
     val avatarUrl: String?,
     val profileUrl: String?,
     val totalContributions: Int,
     val tvContributions: Int,
-    val mobileContributions: Int
+    val mobileContributions: Int,
+    val webContributions: Int
 )
 
 @Singleton
 class GitHubContributorsRepository @Inject constructor(
-    private val gitHubApi: GitHubReleaseApi
+    private val contributionsApi: UniqueContributionsApi,
+    @param:Named("uniqueContributionsBaseUrl") private val contributionsBaseUrl: String
 ) {
 
     suspend fun getContributors(): Result<List<GitHubContributor>> = runCatching {
-        coroutineScope {
-            val tvDeferred = async { fetchRepoContributors(repo = TV_REPOSITORY) }
-            val mobileDeferred = async { fetchRepoContributors(repo = MOBILE_REPOSITORY) }
-
-            val tvResult = tvDeferred.await()
-            val mobileResult = mobileDeferred.await()
-
-            if (tvResult.isFailure && mobileResult.isFailure) {
-                throw (tvResult.exceptionOrNull() ?: mobileResult.exceptionOrNull() ?: IllegalStateException("Unable to load contributors"))
-            }
-
-            mergeContributors(
-                tvContributors = tvResult.getOrDefault(emptyList()),
-                mobileContributors = mobileResult.getOrDefault(emptyList())
-            )
+        if (contributionsBaseUrl.isBlank()) {
+            error("Contributors API is not configured.")
         }
-    }
 
-    private suspend fun fetchRepoContributors(repo: String): Result<List<GitHubContributorDto>> = runCatching {
-        val response = gitHubApi.getContributors(owner = OWNER, repo = repo)
+        val response = contributionsApi.getUniqueContributions()
         if (!response.isSuccessful) {
-            error("GitHub contributors API error for $repo: ${response.code()}")
-        }
-        response.body().orEmpty()
-    }
-
-    private fun mergeContributors(
-        tvContributors: List<GitHubContributorDto>,
-        mobileContributors: List<GitHubContributorDto>
-    ): List<GitHubContributor> {
-        val contributorsByLogin = linkedMapOf<String, MutableGitHubContributor>()
-
-        tvContributors.forEach { dto ->
-            val normalized = dto.toNormalizedContributor() ?: return@forEach
-            val existing = contributorsByLogin.getOrPut(normalized.login) {
-                MutableGitHubContributor(
-                    login = normalized.login,
-                    avatarUrl = normalized.avatarUrl,
-                    profileUrl = normalized.htmlUrl
-                )
-            }
-            existing.avatarUrl = existing.avatarUrl ?: normalized.avatarUrl
-            existing.profileUrl = existing.profileUrl ?: normalized.htmlUrl
-            existing.tvContributions += normalized.contributions
+            error("Contributors API error: ${response.code()}")
         }
 
-        mobileContributors.forEach { dto ->
-            val normalized = dto.toNormalizedContributor() ?: return@forEach
-            val existing = contributorsByLogin.getOrPut(normalized.login) {
-                MutableGitHubContributor(
-                    login = normalized.login,
-                    avatarUrl = normalized.avatarUrl,
-                    profileUrl = normalized.htmlUrl
-                )
-            }
-            existing.avatarUrl = existing.avatarUrl ?: normalized.avatarUrl
-            existing.profileUrl = existing.profileUrl ?: normalized.htmlUrl
-            existing.mobileContributions += normalized.contributions
-        }
-
-        return contributorsByLogin.values
-            .map { contributor ->
-                GitHubContributor(
-                    login = contributor.login,
-                    avatarUrl = contributor.avatarUrl,
-                    profileUrl = contributor.profileUrl,
-                    totalContributions = contributor.tvContributions + contributor.mobileContributions,
-                    tvContributions = contributor.tvContributions,
-                    mobileContributions = contributor.mobileContributions
-                )
-            }
+        response.body()
+            ?.contributors
+            .orEmpty()
+            .mapIndexedNotNull { index, contributor -> contributor.toContributor(index) }
             .sortedWith(
                 compareByDescending<GitHubContributor> { it.totalContributions }
                     .thenByDescending { it.tvContributions }
                     .thenByDescending { it.mobileContributions }
-                    .thenBy { it.login.lowercase() }
+                    .thenByDescending { it.webContributions }
+                    .thenBy { it.name.lowercase() }
             )
     }
 
-    private fun GitHubContributorDto.toNormalizedContributor(): NormalizedContributor? {
-        val normalizedLogin = login?.trim().orEmpty()
-        val normalizedContributions = contributions ?: 0
-        if (normalizedLogin.isBlank() || normalizedContributions <= 0) return null
-        if (type.equals("Bot", ignoreCase = true)) return null
+    private fun UniqueContributorDto.toContributor(index: Int): GitHubContributor? {
+        val normalizedName = name?.trim().orEmpty()
+        val normalizedTotal = total ?: 0
+        if (normalizedName.isBlank() || normalizedTotal <= 0) return null
 
-        return NormalizedContributor(
-            login = normalizedLogin,
-            avatarUrl = avatarUrl?.takeIf { it.isNotBlank() },
-            htmlUrl = htmlUrl?.takeIf { it.isNotBlank() },
-            contributions = normalizedContributions
+        val normalizedProfile = profile?.takeIf { it.isNotBlank() }
+
+        return GitHubContributor(
+            id = normalizedProfile ?: "$normalizedName|$index",
+            name = normalizedName,
+            githubLogin = normalizedProfile?.substringAfterLast('/')?.takeIf { it.isNotBlank() },
+            avatarUrl = avatar?.takeIf { it.isNotBlank() },
+            profileUrl = normalizedProfile,
+            totalContributions = normalizedTotal,
+            tvContributions = tv ?: 0,
+            mobileContributions = mobile ?: 0,
+            webContributions = web ?: 0
         )
-    }
-
-    private data class NormalizedContributor(
-        val login: String,
-        val avatarUrl: String?,
-        val htmlUrl: String?,
-        val contributions: Int
-    )
-
-    private data class MutableGitHubContributor(
-        val login: String,
-        var avatarUrl: String?,
-        var profileUrl: String?,
-        var tvContributions: Int = 0,
-        var mobileContributions: Int = 0
-    )
-
-    private companion object {
-        const val OWNER = "tapframe"
-        const val TV_REPOSITORY = "NuvioTV"
-        const val MOBILE_REPOSITORY = "nuviomobile"
     }
 }

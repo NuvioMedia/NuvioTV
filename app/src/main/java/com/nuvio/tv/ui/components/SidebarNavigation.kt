@@ -37,6 +37,8 @@ import androidx.compose.ui.text.font.FontWeight
 import com.nuvio.tv.R
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -118,22 +120,36 @@ private fun SidebarNavItem(
         label = "navItemBorder"
     )
 
-    Row(
+    Card(
+        onClick = { onNavigate(item.route) },
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .clip(NavItemShape)
-            .background(backgroundColor)
-            .border(width = 2.dp, color = borderColor, shape = NavItemShape)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .onFocusChanged { state ->
-                isFocused = state.isFocused
-            }
-            .clickable { onNavigate(item.route) }
-            .padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                isFocused = state.hasFocus
+            },
+        colors = CardDefaults.colors(
+            containerColor = backgroundColor,
+            focusedContainerColor = backgroundColor,
+        ),
+        border = CardDefaults.border(
+            border = androidx.tv.material3.Border.None,
+            focusedBorder = androidx.tv.material3.Border(
+                border = androidx.compose.foundation.BorderStroke(2.dp, borderColor),
+                shape = NavItemShape
+            )
+        ),
+        shape = CardDefaults.shape(shape = NavItemShape)
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
         Box(
             modifier = Modifier
                 .size(32.dp)
@@ -154,5 +170,6 @@ private fun SidebarNavItem(
             style = MaterialTheme.typography.titleMedium,
             color = if (isFocused || isSelected) NuvioColors.TextPrimary else NuvioColors.TextSecondary
         )
+    }
     }
 }

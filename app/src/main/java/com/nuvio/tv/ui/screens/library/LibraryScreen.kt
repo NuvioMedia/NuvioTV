@@ -291,7 +291,7 @@ fun LibraryScreen(
             )
         }
 
-        if (uiState.sourceMode == LibrarySourceMode.TRAKT) {
+        if (uiState.sourceMode == LibrarySourceMode.TRAKT && uiState.isTraktAuthenticated) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 LibraryActionsRow(
                     pending = uiState.pendingOperation,
@@ -305,13 +305,15 @@ fun LibraryScreen(
         if (uiState.visibleItems.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 val selectedTypeLabel = uiState.selectedTypeTab?.let { localizedTypeLabel(it.key) }?.lowercase() ?: stringResource(R.string.library_type_items)
-                val title = when (uiState.sourceMode) {
-                    LibrarySourceMode.LOCAL -> stringResource(R.string.library_empty_local_title, selectedTypeLabel)
-                    LibrarySourceMode.TRAKT -> stringResource(R.string.library_empty_trakt_title, selectedTypeLabel)
+                val title = when {
+                    uiState.sourceMode == LibrarySourceMode.TRAKT && !uiState.isTraktAuthenticated -> stringResource(R.string.library_empty_trakt_not_auth_title)
+                    uiState.sourceMode == LibrarySourceMode.TRAKT -> stringResource(R.string.library_empty_trakt_title, selectedTypeLabel)
+                    else -> stringResource(R.string.library_empty_local_title, selectedTypeLabel)
                 }
-                val subtitle = when (uiState.sourceMode) {
-                    LibrarySourceMode.LOCAL -> stringResource(R.string.library_empty_local_subtitle)
-                    LibrarySourceMode.TRAKT -> stringResource(R.string.library_empty_trakt_subtitle)
+                val subtitle = when {
+                    uiState.sourceMode == LibrarySourceMode.TRAKT && !uiState.isTraktAuthenticated -> stringResource(R.string.library_empty_trakt_not_auth_subtitle)
+                    uiState.sourceMode == LibrarySourceMode.TRAKT -> stringResource(R.string.library_empty_trakt_subtitle)
+                    else -> stringResource(R.string.library_empty_local_subtitle)
                 }
                 EmptyScreenState(
                     title = title,

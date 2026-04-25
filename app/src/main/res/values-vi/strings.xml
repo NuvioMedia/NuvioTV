@@ -126,16 +126,16 @@
     <string name="settings_profiles">Hồ sơ</string>
     <string name="settings_profiles_subtitle">Quản lý hồ sơ người dùng</string>
     <string name="settings_layout">Bố cục</string>
-    <string name="settings_layout_subtitle">Cấu trúc màn hình chính và kiểu poster.</string>
+    <string name="settings_layout_subtitle">Cấu trúc màn hình chính và kiểu poster</string>
     <string name="settings_plugins">Plugin</string>
-    <string name="settings_plugins_subtitle">Kho lưu trữ và nhà cung cấp.</string>
+    <string name="settings_plugins_subtitle">Kho lưu trữ và nhà cung cấp</string>
     <string name="settings_integration">Tích hợp</string>
     <string name="settings_playback">Trình phát</string>
-    <string name="settings_playback_subtitle">Trình phát, phụ đề và tự động phát.</string>
-    <string name="settings_trakt_subtitle">Mở màn hình kết nối Trakt.</string>
-    <string name="settings_about_subtitle">Phiên bản và điều khoản.</string>
+    <string name="settings_playback_subtitle">Trình phát, phụ đề và tự động phát</string>
+    <string name="settings_trakt_subtitle">Mở màn hình kết nối Trakt</string>
+    <string name="settings_about_subtitle">Phiên bản và điều khoản</string>
     <string name="settings_debug">Gỡ lỗi</string>
-    <string name="settings_debug_subtitle">Công cụ nhà phát triển và cờ tính năng.</string>
+    <string name="settings_debug_subtitle">Công cụ nhà phát triển và cờ tính năng</string>
     <string name="settings_plugins_section_subtitle">Quản lý kho lưu trữ, nhà cung cấp và trạng thái plugin</string>
     <string name="settings_account_section_subtitle">Tài khoản và trạng thái đồng bộ</string>
     <string name="account_stat_addons">addon</string>
@@ -144,7 +144,7 @@
     <string name="account_stat_progress">tiến độ</string>
     <string name="account_stat_watched">đã xem</string>
     <string name="settings_integrations_section">Tích hợp</string>
-    <string name="settings_integrations_section_subtitle">Chọn TMDB hoặc MDBList</string>
+    <string name="settings_integrations_section_subtitle">Quản lý tích hợp có sẵn</string>
     <string name="settings_tmdb_subtitle">Tuỳ chỉnh bổ sung metadata</string>
     <string name="settings_mdblist_subtitle">Nhà cung cấp xếp hạng bên ngoài</string>
     <string name="settings_animeskip_subtitle">Dấu thời gian bỏ qua intro/outro anime</string>
@@ -516,7 +516,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Hồ sơ</string>
-    <string name="profile_subtitle">Quản lý hồ sơ người dùng cho tài khoản này.</string>
+    <string name="profile_subtitle">Quản lý hồ sơ người dùng cho tài khoản này</string>
     <string name="profile_primary_label">Chính</string>
     <string name="profile_shares_primary">Dùng chung %1$s của hồ sơ chính</string>
     <string name="profile_edit_label">Chỉnh sửa</string>
@@ -891,4 +891,6 @@
     <string name="update_open_settings">Mở cài đặt</string>
     <string name="update_install">Cài đặt</string>
     <string name="update_ignore">Bỏ qua</string>
+    <string name="playback_player_auto">Tự động (Tốt nhất cho nội dung)</string>
+    <string name="playback_player_auto_desc">ExoPlayer cho Phim &amp; TV Show · MPV cho Anime</string>
 </resources>

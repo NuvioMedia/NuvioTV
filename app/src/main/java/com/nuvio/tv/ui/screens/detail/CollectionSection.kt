@@ -29,6 +29,7 @@ import com.nuvio.tv.ui.theme.NuvioColors
 @Composable
 fun CollectionSection(
     items: List<MetaPreview>,
+    title: String? = null,
     upFocusRequester: FocusRequester? = null,
     sectionFocusRequester: FocusRequester? = null,
     restoreItemId: String? = null,
@@ -67,8 +68,17 @@ fun CollectionSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp, bottom = 8.dp)
+            .padding(top = if (title.isNullOrBlank()) 8.dp else 20.dp, bottom = 8.dp)
     ) {
+        if (!title.isNullOrBlank()) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = NuvioColors.TextPrimary,
+                modifier = Modifier
+                    .padding(start = 48.dp, end = 48.dp, bottom = 8.dp)
+            )
+        }
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()

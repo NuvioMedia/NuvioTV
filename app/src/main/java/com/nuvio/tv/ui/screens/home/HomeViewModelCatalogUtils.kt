@@ -105,7 +105,10 @@ internal fun HomeViewModel.clearCatalogData() {
         catalogsMap.clear()
         catalogItemKeyIndex.clear()
         truncatedRowCache.clear()
+        pendingLazyCatalogs.clear()
+        placeholderDescriptors.clear()
     }
+    lazyLoadRequestedKeys.clear()
 }
 
 internal fun HomeViewModel.snapshotCatalogKeys(): Set<String> = synchronized(catalogStateLock) {

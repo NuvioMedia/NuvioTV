@@ -13,6 +13,9 @@ body:
         Please do not open a pull request for a new feature, major UX change, or broad cosmetic update unless a maintainer has explicitly approved it first.
         Unapproved feature PRs will usually be closed.
 
+        **Any large PR or change that is not a simple bug fix MUST be discussed and approved via a feature request issue first.**
+        PRs that introduce large changes without a linked, approved feature request **will not be reviewed at all** and will be closed immediately. No exceptions.
+
   - type: dropdown
     id: area
     attributes:

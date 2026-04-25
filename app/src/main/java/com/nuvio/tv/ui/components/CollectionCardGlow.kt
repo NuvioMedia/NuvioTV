@@ -12,14 +12,14 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.drawable.toBitmap
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.CardGlow
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Glow
-import coil.imageLoader
-import coil.request.ImageRequest
-import coil.request.SuccessResult
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.allowHardware
+import coil3.request.SuccessResult
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -57,11 +57,12 @@ fun rememberArtworkBackedCardGlow(
             val request = ImageRequest.Builder(context)
                 .data(imageUrl)
                 .allowHardware(false)
-                .size(96, 96)
+                .size(coil3.size.Size(96, 96))
                 .build()
             val result = context.imageLoader.execute(request)
-            val drawable = (result as? SuccessResult)?.drawable ?: return@withContext fallback
-            sampledGlowColor(drawable.toBitmap(width = 96, height = 96, config = Bitmap.Config.ARGB_8888))
+            val image = (result as? SuccessResult)?.image ?: return@withContext fallback
+            val bitmap = (image as? coil3.BitmapImage)?.bitmap ?: return@withContext fallback
+            sampledGlowColor(bitmap)
                 ?: fallback
         }
     }

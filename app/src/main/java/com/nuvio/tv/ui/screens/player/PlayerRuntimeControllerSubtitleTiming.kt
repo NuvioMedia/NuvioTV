@@ -76,6 +76,8 @@ internal fun PlayerRuntimeController.applySubtitleAutoSyncCue(cueStartTimeMs: Lo
             subtitleAutoSyncError = null
         )
     }
+    // Remember the delay so it survives to the next session (issue #1063).
+    persistTrackPreference()
     refreshActiveSubtitleTrackAfterTimingChange()
     scheduleHideSubtitleDelayOverlay()
 }

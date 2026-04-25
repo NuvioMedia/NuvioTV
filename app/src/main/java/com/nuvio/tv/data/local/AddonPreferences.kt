@@ -87,7 +87,8 @@ class AddonPreferences @Inject constructor(
     }
 
     suspend fun addAddon(url: String) {
-        if (profileManager.activeProfile?.usesPrimaryAddons == true) return
+           val active = profileManager.activeProfile
+           if (active != null && !active.isPrimary && active.usesPrimaryAddons) return
         store().edit { preferences ->
             val current = getCurrentList(preferences)
             val normalizedUrl = canonicalizeUrl(url)
@@ -97,7 +98,8 @@ class AddonPreferences @Inject constructor(
     }
 
     suspend fun removeAddon(url: String) {
-        if (profileManager.activeProfile?.usesPrimaryAddons == true) return
+           val active = profileManager.activeProfile
+           if (active != null && !active.isPrimary && active.usesPrimaryAddons) return
         store().edit { preferences ->
             val current = getCurrentList(preferences).toMutableList()
             val normalizedUrl = canonicalizeUrl(url)
@@ -113,7 +115,8 @@ class AddonPreferences @Inject constructor(
     }
 
     suspend fun setAddonOrder(urls: List<String>) {
-        if (profileManager.activeProfile?.usesPrimaryAddons == true) return
+            val active = profileManager.activeProfile
+            if (active != null && !active.isPrimary && active.usesPrimaryAddons) return
         store().edit { preferences ->
             preferences[orderedUrlsKey] = gson.toJson(urls.map(::canonicalizeUrl))
         }

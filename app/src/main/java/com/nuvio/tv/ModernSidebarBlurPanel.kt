@@ -5,8 +5,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,14 +27,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -47,15 +41,16 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeChild
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
 import com.nuvio.tv.ui.theme.NuvioColors
-import coil.compose.rememberAsyncImagePainter
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
 
 private val SidebarLeadingVisualSize = 34.dp
 private val SidebarContentGap = 14.dp
@@ -244,27 +239,33 @@ private fun SidebarNavigationItem(
 
     val contentColor = if (selected) Color(0xFF10151F) else Color.White
     val iconCircleColor = if (selected) Color(0xFFE7E2EF) else Color(0xFF6A6A74)
-    Row(
+    Card(
+        onClick = onClick,
         modifier = modifier
-            .clip(shape)
-            .background(backgroundColor)
-            .border(width = 1.5.dp, color = borderColor, shape = shape)
             .onFocusChanged {
-                isFocused = it.isFocused
-                onFocusChanged(it.isFocused)
+                isFocused = it.hasFocus
+                onFocusChanged(it.hasFocus)
             }
-            .focusable(enabled = focusEnabled)
-            .onPreviewKeyEvent { event ->
-                if (focusEnabled && event.type == KeyEventType.KeyUp &&
-                    (event.key == Key.Enter || event.key == Key.DirectionCenter || event.key == Key.NumPadEnter)
-                ) {
-                    onClick()
-                    true
-                } else false
-            }
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .focusProperties { canFocus = focusEnabled },
+        colors = CardDefaults.colors(
+            containerColor = backgroundColor,
+            focusedContainerColor = backgroundColor,
+        ),
+        border = CardDefaults.border(
+            border = androidx.tv.material3.Border.None,
+            focusedBorder = androidx.tv.material3.Border(
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, borderColor),
+                shape = shape
+            )
+        ),
+        shape = CardDefaults.shape(shape = shape)
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
         Box(
             modifier = Modifier
                 .size(SidebarLeadingVisualSize)
@@ -306,6 +307,7 @@ private fun SidebarNavigationItem(
             overflow = TextOverflow.Ellipsis
         )
     }
+    }
 }
 
 @Composable
@@ -331,27 +333,33 @@ private fun SidebarProfileItem(
         animationSpec = tween(durationMillis = 180),
         label = "profileItemBorder"
     )
-    Row(
+    Card(
+        onClick = onClick,
         modifier = modifier
-            .clip(shape)
-            .background(backgroundColor)
-            .border(width = 1.5.dp, color = borderColor, shape = shape)
             .onFocusChanged {
-                isFocused = it.isFocused
-                onFocusChanged(it.isFocused)
+                isFocused = it.hasFocus
+                onFocusChanged(it.hasFocus)
             }
-            .focusable(enabled = focusEnabled)
-            .onPreviewKeyEvent { event ->
-                if (focusEnabled && event.type == KeyEventType.KeyUp &&
-                    (event.key == Key.Enter || event.key == Key.DirectionCenter || event.key == Key.NumPadEnter)
-                ) {
-                    onClick()
-                    true
-                } else false
-            }
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .focusProperties { canFocus = focusEnabled },
+        colors = CardDefaults.colors(
+            containerColor = backgroundColor,
+            focusedContainerColor = backgroundColor,
+        ),
+        border = CardDefaults.border(
+            border = androidx.tv.material3.Border.None,
+            focusedBorder = androidx.tv.material3.Border(
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, borderColor),
+                shape = shape
+            )
+        ),
+        shape = CardDefaults.shape(shape = shape)
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
         Box(
             modifier = Modifier.size(SidebarLeadingVisualSize),
             contentAlignment = Alignment.Center
@@ -377,12 +385,17 @@ private fun SidebarProfileItem(
             overflow = TextOverflow.Ellipsis
         )
     }
+    }
 }
 
 @Composable
-private fun rememberRawSvgPainter(rawIconRes: Int): Painter = rememberAsyncImagePainter(
-    model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-        .data(rawIconRes)
-        .decoderFactory(SvgDecoder.Factory())
-        .build()
-)
+private fun rememberRawSvgPainter(rawIconRes: Int): Painter {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val sizePx = with(density) { 24.dp.roundToPx() }
+    return rememberAsyncImagePainter(
+        model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+            .data(rawIconRes)
+            .size(sizePx)
+            .build()
+    )
+}

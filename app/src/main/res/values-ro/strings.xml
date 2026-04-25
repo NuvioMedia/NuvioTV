@@ -120,16 +120,16 @@
     <string name="settings_profiles">Profile</string>
     <string name="settings_profiles_subtitle">Gestionează profilurile utilizatorilor</string>
     <string name="settings_layout">Aranjament</string>
-    <string name="settings_layout_subtitle">Structura paginii principale și stilurile afișajului.</string>
+    <string name="settings_layout_subtitle">Structura paginii principale și stilurile afișajului</string>
     <string name="settings_plugins">Plugin-uri</string>
-    <string name="settings_plugins_subtitle">Depozite și furnizori.</string>
-    <string name="settings_integration">Integrare</string>
+    <string name="settings_plugins_subtitle">Depozite și furnizori</string>
+    <string name="settings_integration">Integrări</string>
     <string name="settings_playback">Redare</string>
-    <string name="settings_playback_subtitle">Player, subtitrări și redare automată.</string>
-    <string name="settings_trakt_subtitle">Deschide ecranul de conectare Trakt.</string>
-    <string name="settings_about_subtitle">Versiune și politici.</string>
+    <string name="settings_playback_subtitle">Player, subtitrări și redare automată</string>
+    <string name="settings_trakt_subtitle">Deschide ecranul de conectare Trakt</string>
+    <string name="settings_about_subtitle">Versiune și politici</string>
     <string name="settings_debug">Depanare</string>
-    <string name="settings_debug_subtitle">Instrumente pentru dezvoltatori și steaguri de funcționalitate.</string>
+    <string name="settings_debug_subtitle">Instrumente pentru dezvoltatori și steaguri de funcționalitate</string>
     <string name="settings_plugins_section_subtitle">Gestionează depozitele, furnizorii și stările pluginurilor</string>
     <string name="settings_account_section_subtitle">Statutul contului și sincronizării</string>
     <string name="account_stat_addons">add-on-uri</string>
@@ -138,7 +138,7 @@
     <string name="account_stat_progress">progres</string>
     <string name="account_stat_watched">vizionate</string>
     <string name="settings_integrations_section">Integrări</string>
-    <string name="settings_integrations_section_subtitle">Alege setările TMDB sau MDBList</string>
+    <string name="settings_integrations_section_subtitle">Gestionați integrările disponibile</string>
     <string name="settings_tmdb_subtitle">Controale de îmbogățire a metadatelor</string>
     <string name="settings_mdblist_subtitle">Furnizori externi de evaluări</string>
 
@@ -482,7 +482,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profiluri</string>
-    <string name="profile_subtitle">Gestionează profilurile utilizatorului pentru acest cont.</string>
+    <string name="profile_subtitle">Gestionează profilurile utilizatorului pentru acest cont</string>
     <string name="profile_primary_label">Principal</string>
     <string name="profile_shares_primary">Împărtășește %1$s al profilului principal</string>
     <string name="profile_edit_label">Editează</string>
@@ -842,4 +842,6 @@
     <string name="update_open_settings">Deschide Setările</string>
     <string name="update_install">Instalează</string>
     <string name="update_ignore">Ignoră</string>
-  </resources>
+      <string name="playback_player_auto">Automat (Cel mai bun pentru conținut)</string>
+    <string name="playback_player_auto_desc">ExoPlayer pentru Filme și Seriale · MPV pentru Anime</string>
+</resources>

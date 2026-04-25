@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -61,10 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
@@ -90,11 +86,10 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
-import coil.decode.SvgDecoder
-import coil.imageLoader
-import coil.memory.MemoryCache
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.imageLoader
+import coil3.memory.MemoryCache
+import coil3.request.ImageRequest
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
@@ -108,6 +103,7 @@ import com.nuvio.tv.ui.components.TrailerPlayer
 import com.nuvio.tv.LocalSidebarExpanded
 import com.nuvio.tv.LocalContentFocusRequester
 import com.nuvio.tv.ui.theme.NuvioColors
+import com.nuvio.tv.ui.util.dpadVerticalFastScroll
 import kotlinx.coroutines.delay
 import android.view.KeyEvent as AndroidKeyEvent
 import kotlin.math.abs
@@ -116,6 +112,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 private const val MODERN_HERO_RAPID_NAV_THRESHOLD_MS = 130L
 private const val MODERN_HERO_RAPID_NAV_SETTLE_MS = 170L
+
 private fun buildPrefetchRequest(
     context: android.content.Context,
     url: String,
@@ -131,6 +128,8 @@ fun ModernHomeContent(
     uiState: HomeUiState,
     focusState: HomeScreenFocusState,
     enrichingItemId: String? = null,
+    lastEnrichedPreview: MetaPreview? = null,
+    enrichedPreviews: Map<String, MetaPreview> = emptyMap(),
     trailerPreviewUrls: Map<String, String>,
     trailerPreviewAudioUrls: Map<String, String>,
     onNavigateToDetail: (String, String, String) -> Unit,
@@ -146,7 +145,9 @@ fun ModernHomeContent(
     onNavigateToFolderDetail: (String, String) -> Unit = { _, _ -> },
     onItemFocus: (MetaPreview) -> Unit = {},
     onPreloadAdjacentItem: (MetaPreview) -> Unit = {},
-    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit
+    onSaveFocusState: (Int, Int, Int, Int, Map<String, Int>) -> Unit,
+    scrollToTopTrigger: Int = 0,
+    onRequestLazyCatalogLoad: (String) -> Unit = {}
 ) {
     val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
     val isSidebarExpanded = LocalSidebarExpanded.current
@@ -220,9 +221,15 @@ fun ModernHomeContent(
         derivedStateOf { verticalRowListState.isScrollInProgress }
     }
 
+    // Scroll to top when triggered from sidebar Home button.
+    LaunchedEffect(scrollToTopTrigger) {
+        if (scrollToTopTrigger > 0) {
+            verticalRowListState.scrollToItem(0, 0)
+        }
+    }
+
     // Tag JankStats with key UI states so jank reports are actionable.
     val currentView = LocalView.current
-    val focusManager = LocalFocusManager.current
     val metricsHolder = PerformanceMetricsState.getHolderForHierarchy(currentView)
     LaunchedEffect(isVerticalRowsScrolling) {
         metricsHolder.state?.putState("HomeScrolling", isVerticalRowsScrolling.toString())
@@ -251,6 +258,8 @@ fun ModernHomeContent(
     var pendingRowFocusKey by remember { mutableStateOf<String?>(null) }
     var pendingRowFocusIndex by remember { mutableStateOf<Int?>(null) }
     var pendingRowFocusNonce by remember { mutableIntStateOf(0) }
+    // Track row keys that are currently placeholders (empty items + isLoading).
+    val placeholderRowKeysRef = remember { mutableSetOf<String>() }
     var heroItem by remember {
         val initialHero = carouselRows.firstOrNull()?.items?.firstOrNull()?.heroPreview
         mutableStateOf<HeroPreview?>(initialHero)
@@ -259,9 +268,12 @@ fun ModernHomeContent(
     var restoredFromSavedState by remember { mutableStateOf(false) }
     var optionsItem by remember { mutableStateOf<ContinueWatchingItem?>(null) }
     val lastFocusedContinueWatchingIndexRef = remember { java.util.concurrent.atomic.AtomicInteger(-1) }
-    val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
     val lastHeroNavigationAtMsRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
     val heroFocusSettleDelayMsRef = remember { java.util.concurrent.atomic.AtomicLong(MODERN_HERO_FOCUS_DEBOUNCE_MS) }
+    // Surfaced from [Modifier.dpadVerticalFastScroll] so cards inside the
+    // LazyColumn can hide their focus chrome while the list is being dragged
+    // by a held DPAD_UP / DPAD_DOWN (see [LocalFastScrollActive] below).
+    var isFastScrolling by remember { mutableStateOf(false) }
     var focusedCatalogSelection by remember { mutableStateOf<FocusedCatalogSelection?>(null) }
     var lastRequestedTrailerFocusKey by remember { mutableStateOf<String?>(null) }
     var expandedCatalogFocusKey by remember { mutableStateOf<String?>(null) }
@@ -326,12 +338,36 @@ fun ModernHomeContent(
         loadMoreRequestedTotals.keys.retainAll(activeRowKeys)
         carouselRows.forEach { row ->
             val rowRequesters = itemFocusRequesters[row.key] ?: return@forEach
-            val allowedKeys = activeItemKeysByRow[row.key] ?: emptySet()
-            rowRequesters.keys.retainAll(allowedKeys)
+            // Prune FocusRequester entries beyond current item count
+            val maxIndex = row.items.size
+            rowRequesters.keys.removeAll { key ->
+                val idx = key.removePrefix("${row.key}_").toIntOrNull()
+                idx != null && idx >= maxIndex
+            }
         }
-        if (focusedCatalogSelection?.payload?.itemId !in activeCatalogItemIds) {
+        val staleSelection = focusedCatalogSelection?.payload?.itemId?.let { id ->
+            !id.startsWith("__placeholder_") && id !in activeCatalogItemIds
+        } ?: false
+        if (staleSelection) {
             focusedCatalogSelection = null
             expandedCatalogFocusKey = null
+        }
+        // After placeholder→data transition, update selection with real item
+        val currentSelection = focusedCatalogSelection
+        if (currentSelection != null && currentSelection.payload.itemId.startsWith("__placeholder_")) {
+            val activeKey = focusHolder.activeRowKey
+            val activeIdx = focusHolder.activeItemIndex
+            val activeRow = activeKey?.let(rowByKey::get)
+            val realItem = activeRow?.items?.getOrNull(activeIdx)
+            val realPayload = realItem?.payload as? ModernPayload.Catalog
+            if (realPayload != null && !realPayload.itemId.startsWith("__placeholder_")) {
+                focusedCatalogSelection = FocusedCatalogSelection(
+                    focusKey = realPayload.focusKey,
+                    payload = realPayload
+                )
+                lastRequestedTrailerFocusKey = null
+                expandedCatalogFocusKey = null
+            }
         }
 
         carouselRows.forEach { row ->
@@ -369,12 +405,6 @@ fun ModernHomeContent(
         val hadActiveRow = focusHolder.activeRowKey != null
         val existingActive = focusHolder.activeRowKey?.let(rowByKey::get)
         val firstRow = carouselRows.first()
-        // When new rows appear before the auto-selected row (e.g., catalogs
-        // load after collections), move focus to the new first row — but only
-        // if the user hasn't manually navigated away from the initial position.
-        // Detect if the auto-selected row is stale: new rows appeared
-        // above it (e.g., catalogs loaded after collections) and the user
-        // hasn't manually navigated away from the initial selection.
         val userStillOnAutoSelected = initialAutoSelectedKey != null &&
             focusHolder.activeRowKey == initialAutoSelectedKey
         val autoSelectedStale = hadActiveRow && existingActive != null &&
@@ -527,9 +557,40 @@ fun ModernHomeContent(
         }
         val activeItemId = activeCarouselItem?.metaPreview?.id
         val enrichmentActive = enrichingItemId != null && enrichingItemId == activeItemId
-        // When enrichment is active use heroItem (frozen), when done use activeCarouselItem
-        // which already has the enriched data from uiState update
-        val resolvedHero = if (enrichmentActive) heroItem else activeCarouselItem?.heroPreview ?: heroItem
+        // When enrichment is active use heroItem (frozen).  When done,
+        // prefer the freshly enriched MetaPreview (from lastEnrichedPreview)
+        // over the stale presentation data — the presentation pipeline
+        // skips rebuilds for item-level enrichment changes.
+        val enrichedHero = remember(enrichedPreviews, activeItemId) {
+            val enrichedItem = activeItemId?.let { enrichedPreviews[it] }
+            if (enrichedItem != null) {
+                HeroPreview(
+                    title = enrichedItem.name,
+                    logo = enrichedItem.logo,
+                    description = enrichedItem.description,
+                    contentTypeText = activeCarouselItem?.heroPreview?.contentTypeText,
+                    isSeries = isSeriesType(enrichedItem.apiType),
+                    yearText = activeCarouselItem?.heroPreview?.yearText,
+                    runtimeText = activeCarouselItem?.heroPreview?.runtimeText,
+                    imdbText = enrichedItem.imdbRating?.let { String.format("%.1f", it) },
+                    ageRatingText = enrichedItem.ageRating,
+                    statusText = enrichedItem.status,
+                    countryText = enrichedItem.country,
+                    languageText = enrichedItem.language?.uppercase(),
+                    genres = enrichedItem.genres.take(3),
+                    poster = enrichedItem.poster,
+                    backdrop = enrichedItem.backdropUrl,
+                    imageUrl = activeCarouselItem?.heroPreview?.imageUrl,
+                    frozenBackdropUrl = activeCarouselItem?.heroPreview?.frozenBackdropUrl,
+                    frozenLogoUrl = activeCarouselItem?.heroPreview?.frozenLogoUrl
+                )
+            } else null
+        }
+        val resolvedHero = when {
+            enrichmentActive -> heroItem
+            enrichedHero != null -> enrichedHero
+            else -> activeCarouselItem?.heroPreview ?: heroItem
+        }
         val activeRowFallbackBackdrop = remember(activeRow?.key, activeRow?.items?.size) {
             activeRow?.items?.firstNotNullOfOrNull { item ->
                 item.heroPreview.backdrop?.takeIf { it.isNotBlank() }
@@ -669,10 +730,8 @@ fun ModernHomeContent(
                     val rowListState = uiCaches.rowListStates[rowKey]
                     val firstVisibleIndex = rowListState?.firstVisibleItemIndex ?: 0
                     val safeIndex = firstVisibleIndex.coerceIn(0, ((row?.items?.size ?: 1) - 1).coerceAtLeast(0))
-                    val itemKey = row?.items?.getOrNull(safeIndex)?.key
-                    if (itemKey != null) {
-                        uiCaches.itemFocusRequesters[rowKey]?.get(itemKey) ?: FocusRequester.Default
-                    } else FocusRequester.Default
+                    val stableKey = "${rowKey}_$safeIndex"
+                    uiCaches.itemFocusRequesters[rowKey]?.get(stableKey) ?: FocusRequester.Default
                 } else FocusRequester.Default
             }
         }
@@ -740,7 +799,7 @@ fun ModernHomeContent(
         val verticalPrefetchImageLoader = verticalPrefetchContext.imageLoader
         val verticalPrefetchDensity = LocalDensity.current
         LaunchedEffect(verticalPrefetchImageLoader, verticalPrefetchDensity) {
-            val prefetchAheadRows = 2
+            val prefetchAheadRows = 3
             val prefetchItemsPerRow = 8
             snapshotFlow {
                 verticalRowListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
@@ -774,9 +833,37 @@ fun ModernHomeContent(
             }
         }
 
+        // Lazy catalog loading: trigger load after scroll settles
+        val latestOnRequestLazyCatalogLoad = rememberUpdatedState(onRequestLazyCatalogLoad)
+        val latestCarouselRowsForLazy = rememberUpdatedState(carouselRows)
+        LaunchedEffect(verticalRowListState) {
+            val prefetchAheadForLazy = 2
+            snapshotFlow {
+                val scrolling = verticalRowListState.isScrollInProgress
+                val info = verticalRowListState.layoutInfo
+                val firstVisible = info.visibleItemsInfo.firstOrNull()?.index ?: -1
+                val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
+                Triple(scrolling, firstVisible, lastVisible)
+            }.collect { (scrolling, firstVisible, lastVisible) ->
+                if (scrolling || lastVisible < 0) return@collect
+                // Small settle delay so rapid D-pad presses don't fire loads
+                delay(150)
+                // Re-check after delay — if scrolling resumed, skip
+                if (verticalRowListState.isScrollInProgress) return@collect
+                val rows = latestCarouselRowsForLazy.value
+                for (idx in firstVisible.coerceAtLeast(0)..(lastVisible + prefetchAheadForLazy)) {
+                    val row = rows.getOrNull(idx) ?: continue
+                    if (row.isLoading && row.items.firstOrNull()?.key?.startsWith("placeholder_") == true) {
+                        latestOnRequestLazyCatalogLoad.value(row.key)
+                    }
+                }
+            }
+        }
+
         CompositionLocalProvider(
             LocalBringIntoViewSpec provides verticalRowBringIntoViewSpec,
-            LocalVerticalRowsScrolling provides (uiState.memoryOnlyVerticalScroll && isVerticalRowsScrolling)
+            LocalVerticalRowsScrolling provides (uiState.memoryOnlyVerticalScroll && isVerticalRowsScrolling),
+            LocalFastScrollActive provides isFastScrolling
         ) {
             LazyColumn(
                 state = verticalRowListState,
@@ -789,39 +876,70 @@ fun ModernHomeContent(
                     .graphicsLayer { alpha = trailerContentAlpha }
                     .focusRequester(contentFocusRequester)
                     .focusRestorer { focusRestorerRequester }
-                    .onPreviewKeyEvent { event ->
-                        val native = event.nativeKeyEvent
-                       
-                    
-                        if (native.action == AndroidKeyEvent.ACTION_DOWN &&
-                            native.repeatCount > 0 &&
-                            (native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_DOWN ||
-                                native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_UP ||
-                                native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_LEFT ||
-                                native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_RIGHT)
-                        ) {
-                            val isVertical = native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_DOWN ||
-                                native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_UP
-                            val gateMs = if (isVertical) 112L else 80L
-                            val now = android.os.SystemClock.uptimeMillis()
-                            if (now - lastKeyRepeatDispatchRef.get() < gateMs) {
-                                return@onPreviewKeyEvent true // consume, too soon
+                    .dpadVerticalFastScroll(
+                        scrollableState = verticalRowListState,
+                        onFastScrollingChanged = { isFastScrolling = it },
+                        // Vertical bottom padding on this LazyColumn is viewport-sized so
+                        // the hero artwork stays visible beneath the first row. That means
+                        // scrolling "past" the last row would push it above the viewport
+                        // into the padding and the landing bringIntoView would yank the
+                        // list backwards — the user reads that as "the list got thrown
+                        // back up." Halt downward drag the moment the last row is fully
+                        // in view so focus lands on it cleanly instead.
+                        shouldHaltForward = {
+                            val info = verticalRowListState.layoutInfo
+                            val lastIdx = carouselRows.size - 1
+                            val lastVisible = info.visibleItemsInfo.lastOrNull { it.index == lastIdx }
+                            lastIdx >= 0 && lastVisible != null &&
+                                lastVisible.offset + lastVisible.size <= info.viewportEndOffset
+                        },
+                        resolveVerticalLanding = { sign ->
+                            // Pick the row to land on, then within that row the item key
+                            // the user was last focused on (tracked in [focusedItemByRow]).
+                            // The uiCaches requester maps (rowKey, itemKey) -> the actual
+                            // FocusRequester attached to the card.
+                            val layoutInfo = verticalRowListState.layoutInfo
+                            val visibleRows = layoutInfo.visibleItemsInfo
+                            val lastIdx = carouselRows.size - 1
+                            val viewportEnd = layoutInfo.viewportEndOffset
+                            // If the last row has fully entered the viewport from the
+                            // bottom, land on it directly. Without this the generic
+                            // "first fully visible" heuristic would pick a row near the
+                            // top and the follow-up bringIntoView would yank the list.
+                            val lastRowAtBottom = lastIdx >= 0 &&
+                                visibleRows.lastOrNull { it.index == lastIdx }?.let {
+                                    it.offset + it.size <= viewportEnd
+                                } == true
+                            // Upward drag (DPAD_UP): prefer the topmost visible row even
+                            // if its top edge is slightly above the viewport, because
+                            // that's the row the user was uncovering when they let go.
+                            // Skipping it onto the row below reads as "focus landed on
+                            // the previous row instead of the next one I was reaching
+                            // for." Accept it only if at least half visible so a 5 %
+                            // sliver doesn't trigger a large backwards bringIntoView snap.
+                            val upwardTopRow = if (sign < 0) {
+                                visibleRows.firstOrNull()?.takeIf {
+                                    it.offset > -it.size / 2
+                                }
+                            } else null
+                            val targetRowIndex = when {
+                                lastRowAtBottom -> lastIdx
+                                upwardTopRow != null -> upwardTopRow.index
+                                else ->
+                                    visibleRows.firstOrNull { it.offset >= 0 }?.index
+                                        ?: visibleRows.firstOrNull()?.index
+                                        ?: verticalRowListState.firstVisibleItemIndex
                             }
-                            lastKeyRepeatDispatchRef.set(now)
-                            val direction = when (native.keyCode) {
-                                AndroidKeyEvent.KEYCODE_DPAD_DOWN -> FocusDirection.Down
-                                AndroidKeyEvent.KEYCODE_DPAD_UP -> FocusDirection.Up
-                                AndroidKeyEvent.KEYCODE_DPAD_LEFT -> FocusDirection.Left
-                                AndroidKeyEvent.KEYCODE_DPAD_RIGHT -> FocusDirection.Right
-                                else -> null
+                            val targetRow = carouselRows.getOrNull(targetRowIndex)
+                            if (targetRow == null) null
+                            else {
+                                val savedIdx = (focusedItemByRow[targetRow.key] ?: 0)
+                                    .coerceIn(0, (targetRow.items.size - 1).coerceAtLeast(0))
+                                val targetStableKey = "${targetRow.key}_$savedIdx"
+                                uiCaches.requesterFor(targetRow.key, targetStableKey)
                             }
-                            if (direction != null) {
-                                focusManager.moveFocus(direction)
-                            }
-                            return@onPreviewKeyEvent true
-                        }
-                        false
-                    },
+                        },
+                    ),
                 contentPadding = PaddingValues(bottom = rowsViewportHeight),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
@@ -913,6 +1031,7 @@ fun ModernHomeContent(
                                 onCatalogItemLongPress = onCatalogItemLongPress,
                                 onItemFocus = onItemFocus,
                                 onPreloadAdjacentItem = onPreloadAdjacentItem,
+                                enrichedPreviews = enrichedPreviews,
                                 onCatalogSelectionFocused = remember(Unit) {
                                     { selection: FocusedCatalogSelection ->
                                         if (focusedCatalogSelection != selection) {
@@ -924,19 +1043,7 @@ fun ModernHomeContent(
                                 onNavigateToFolderDetail = onNavigateToFolderDetail,
                                 onLoadMoreCatalog = onLoadMoreCatalog,
                                 onBackdropInteraction = remember(Unit) { { expansionInteractionNonce++ } },
-                                onExpandedCatalogFocusKeyChange = remember(Unit) { { expandedCatalogFocusKey = it } },
-                                onGetVerticalFocusRequester = { _, isDown ->
-                                    val currentRowIndex = rowIndexByKey[row.key] ?: return@ModernRowSection FocusRequester.Default
-                                    val targetRowIndex = if (isDown) currentRowIndex + 1 else currentRowIndex - 1
-                                    val targetRow = latestCarouselRows.getOrNull(targetRowIndex) ?: return@ModernRowSection FocusRequester.Default
-
-                                    val targetSavedIndex = (focusedItemByRow[targetRow.key] ?: 0)
-                                        .coerceIn(0, (targetRow.items.size - 1).coerceAtLeast(0))
-                                    val targetItemKey = targetRow.items.getOrNull(targetSavedIndex)?.key
-                                    if (targetItemKey != null) {
-                                        uiCaches.requesterFor(targetRow.key, targetItemKey)
-                                    } else FocusRequester.Default
-                                }
+                                onExpandedCatalogFocusKeyChange = remember(Unit) { { expandedCatalogFocusKey = it } }
                             )
                 }
             }

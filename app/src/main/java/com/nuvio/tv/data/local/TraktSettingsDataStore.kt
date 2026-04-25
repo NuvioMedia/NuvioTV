@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
+import com.nuvio.tv.domain.model.LibrarySourceMode
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -40,6 +41,7 @@ class TraktSettingsDataStore @Inject constructor(
         const val DEFAULT_RATE_EPISODES_AFTER_WATCHING = true
         const val DEFAULT_RATING_PROMPT_VALUE = 6
         val DEFAULT_WATCH_PROGRESS_SOURCE = WatchProgressSource.TRAKT
+        val DEFAULT_LIBRARY_SOURCE_MODE = LibrarySourceMode.TRAKT
         const val MIN_CONTINUE_WATCHING_DAYS_CAP = 7
         const val MAX_CONTINUE_WATCHING_DAYS_CAP = 365
         const val MIN_RATING_PROMPT_VALUE = 1
@@ -57,6 +59,7 @@ class TraktSettingsDataStore @Inject constructor(
     private val rateMoviesAfterWatchingKey = booleanPreferencesKey("rate_movies_after_watching")
     private val rateEpisodesAfterWatchingKey = booleanPreferencesKey("rate_episodes_after_watching")
     private val defaultRatingPromptValueKey = intPreferencesKey("default_rating_prompt_value")
+    private val librarySourceModeKey = stringPreferencesKey("library_source_mode")
 
     val continueWatchingDaysCap: Flow<Int> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
@@ -182,5 +185,18 @@ class TraktSettingsDataStore @Inject constructor(
 
     private fun normalizeRatingPromptValue(rating: Int): Int {
         return rating.coerceIn(MIN_RATING_PROMPT_VALUE, MAX_RATING_PROMPT_VALUE)
+    }
+
+    val librarySourceMode: Flow<LibrarySourceMode> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs ->
+            val stored = prefs[librarySourceModeKey]
+            LibrarySourceMode.entries.firstOrNull { it.name == stored } ?: DEFAULT_LIBRARY_SOURCE_MODE
+        }
+    }
+
+    suspend fun setLibrarySourceMode(mode: LibrarySourceMode) {
+        store().edit { prefs ->
+            prefs[librarySourceModeKey] = mode.name
+        }
     }
 }

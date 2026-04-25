@@ -1,6 +1,7 @@
 package com.nuvio.tv.data.local
 
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import kotlinx.coroutines.flow.first
@@ -24,12 +25,19 @@ class TrackPreferenceDataStore @Inject constructor(
         private const val AUDIO_LANG = "audio_lang"
         private const val AUDIO_NAME = "audio_name"
         private const val AUDIO_TRACK_ID = "audio_track_id"
+        // Keyed per-videoId (not per-contentId) so that a delay calibrated for
+        // one episode is not blindly reapplied to the next episode where it is
+        // almost certainly wrong.
+        private const val SUB_DELAY_MS = "sub_delay_ms"
     }
 
     private fun store() = factory.get(profileManager.activeProfileId.value, FEATURE)
 
     private fun key(field: String, contentId: String) =
         stringPreferencesKey("$field|$contentId")
+
+    private fun intKey(field: String, id: String) =
+        intPreferencesKey("$field|$id")
 
     suspend fun save(contentId: String, pref: PersistedTrackPreference) {
         store().edit { prefs ->
@@ -56,7 +64,12 @@ class TrackPreferenceDataStore @Inject constructor(
         val audioLang = prefs[key(AUDIO_LANG, contentId)]
         val audioName = prefs[key(AUDIO_NAME, contentId)]
         val audioTrackId = prefs[key(AUDIO_TRACK_ID, contentId)]
-        if (subType == null && audioLang == null && audioName == null && audioTrackId == null) return null
+        if (
+            subType == null &&
+            audioLang == null &&
+            audioName == null &&
+            audioTrackId == null
+        ) return null
         return PersistedTrackPreference(
             subtitleType = subType,
             subtitleLanguage = prefs[key(SUB_LANG, contentId)],
@@ -69,6 +82,24 @@ class TrackPreferenceDataStore @Inject constructor(
             audioName = audioName,
             audioTrackId = audioTrackId
         )
+    }
+
+    /**
+     * Subtitle delay is persisted separately from audio/subtitle track selection
+     * because it has different locality: tracks sensibly apply to every episode
+     * of a series (same preferred language), but a delay calibrated against one
+     * release/encode rarely transfers to the next episode. Keying by videoId
+     * scopes the delay to exactly the video it was synced against. See #1063.
+     */
+    suspend fun saveSubtitleDelayMs(videoId: String, delayMs: Int?) {
+        store().edit { prefs ->
+            val k = intKey(SUB_DELAY_MS, videoId)
+            if (delayMs != null && delayMs != 0) prefs[k] = delayMs else prefs.remove(k)
+        }
+    }
+
+    suspend fun loadSubtitleDelayMs(videoId: String): Int? {
+        return store().data.first()[intKey(SUB_DELAY_MS, videoId)]
     }
 }
 

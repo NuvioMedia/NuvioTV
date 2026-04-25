@@ -47,7 +47,7 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
@@ -167,8 +167,18 @@ fun NextEpisodeCardOverlay(
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(2.dp))
+                    val nextEpisodeLabel = if (nextEpisode.isOtherType) {
+                        nextEpisode.title
+                    } else {
+                        val nextEpisodeCode = stringResource(
+                            R.string.season_episode_format,
+                            nextEpisode.season,
+                            nextEpisode.episode
+                        )
+                        "$nextEpisodeCode • ${nextEpisode.title}"
+                    }
                     Text(
-                        text = "S${nextEpisode.season}E${nextEpisode.episode} • ${nextEpisode.title}",
+                        text = nextEpisodeLabel,
                         color = Color.White,
                         fontSize = 14.sp,
                         maxLines = 1,

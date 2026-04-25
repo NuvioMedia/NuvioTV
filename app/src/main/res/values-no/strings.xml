@@ -204,14 +204,14 @@
     <string name="settings_profiles">Profiler</string>
     <string name="settings_profiles_subtitle">Administrer brukerprofiler</string>
     <string name="settings_layout">Oppsett</string>
-    <string name="settings_layout_subtitle">Hjemmestruktur og plakatstiler.</string>
+    <string name="settings_layout_subtitle">Hjemmestruktur og plakatstiler</string>
     <string name="settings_plugins">Programtillegg</string>
-    <string name="settings_plugins_subtitle">Arkiver og leverandører.</string>
-    <string name="settings_integration">Integrasjon</string>
+    <string name="settings_plugins_subtitle">Arkiver og leverandører</string>
+    <string name="settings_integration">Integrasjoner</string>
     <string name="settings_playback">Avspilling</string>
-    <string name="settings_playback_subtitle">Spiller, undertekster og autoavspilling.</string>
-    <string name="settings_trakt_subtitle">Åpne tilkoblingsside for Trakt.</string>
-    <string name="settings_about_subtitle">Versjon og retningslinjer.</string>
+    <string name="settings_playback_subtitle">Spiller, undertekster og autoavspilling</string>
+    <string name="settings_trakt_subtitle">Åpne tilkoblingsside for Trakt</string>
+    <string name="settings_about_subtitle">Versjon og retningslinjer</string>
     <string name="settings_network">Nettverkshastighet</string>
     <string name="settings_network_subtitle">Ventetid og nedlastingsdiagnostikk</string>
     <string name="settings_advanced">Avansert</string>
@@ -230,7 +230,7 @@
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Frakoblet</string>
     <string name="settings_debug">Feilsøking</string>
-    <string name="settings_debug_subtitle">Utviklerverktøy og funksjonsflagg.</string>
+    <string name="settings_debug_subtitle">Utviklerverktøy og funksjonsflagg</string>
     <string name="settings_plugins_section_subtitle">Administrer lagrer, leverandører og programtilleggstilstander</string>
     <string name="settings_account_section_subtitle">Kontostatus og synkroniseringsstatus</string>
     <string name="account_stat_addons">tillegg</string>
@@ -239,7 +239,7 @@
     <string name="account_stat_progress">progresjon</string>
     <string name="account_stat_watched">sett</string>
     <string name="settings_integrations_section">Integrasjoner</string>
-    <string name="settings_integrations_section_subtitle">Velg TMDB eller MDBList</string>
+    <string name="settings_integrations_section_subtitle">Administrer tilgjengelige integrasjoner</string>
     <string name="settings_tmdb_subtitle">Kontroller for metadataberikelse</string>
     <string name="settings_mdblist_subtitle">Eksterne vurderingsleverandører</string>
     <string name="settings_animeskip_subtitle">Tidsmerker for anime intro/outro</string>
@@ -674,7 +674,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profiler</string>
-    <string name="profile_subtitle">Administrer brukerprofiler for denne kontoen.</string>
+    <string name="profile_subtitle">Administrer brukerprofiler for denne kontoen</string>
     <string name="profile_manage_button">Administrer profiler</string>
     <string name="profile_manage_title">Administrer profiler</string>
     <string name="profile_manage_subtitle">Velg en profil for å redigere, bytte eller opprette en ny</string>
@@ -1133,4 +1133,6 @@
     <string name="update_ignore">Ignorer</string>
     <string name="watchlist_added">Lagt til ønskelisten</string>
     <string name="watchlist_removed">Fjernet fra ønskelisten</string>
+    <string name="playback_player_auto">Automatisk (Best for innhold)</string>
+    <string name="playback_player_auto_desc">ExoPlayer for filmer og serier · MPV for anime</string>
 </resources>

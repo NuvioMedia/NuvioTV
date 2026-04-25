@@ -56,6 +56,7 @@ class TmdbSettingsViewModel @Inject constructor(
             is TmdbSettingsEvent.ToggleProductions -> update { dataStore.setUseProductions(event.enabled) }
             is TmdbSettingsEvent.ToggleNetworks -> update { dataStore.setUseNetworks(event.enabled) }
             is TmdbSettingsEvent.ToggleEpisodes -> update { dataStore.setUseEpisodes(event.enabled) }
+            is TmdbSettingsEvent.ToggleTrailers -> update { dataStore.setUseTrailers(event.enabled) }
             is TmdbSettingsEvent.ToggleMoreLikeThis -> update { dataStore.setUseMoreLikeThis(event.enabled) }
             is TmdbSettingsEvent.ToggleCollections -> update { dataStore.setUseCollections(event.enabled) }
         }
@@ -79,6 +80,7 @@ data class TmdbSettingsUiState(
     val useProductions: Boolean = true,
     val useNetworks: Boolean = true,
     val useEpisodes: Boolean = true,
+    val useTrailers: Boolean = true,
     val useMoreLikeThis: Boolean = true,
     val useCollections: Boolean = true
 ) {
@@ -95,6 +97,7 @@ data class TmdbSettingsUiState(
         useProductions = settings.useProductions,
         useNetworks = settings.useNetworks,
         useEpisodes = settings.useEpisodes,
+        useTrailers = settings.useTrailers,
         useMoreLikeThis = settings.useMoreLikeThis,
         useCollections = settings.useCollections
     )
@@ -113,6 +116,7 @@ sealed class TmdbSettingsEvent {
     data class ToggleProductions(val enabled: Boolean) : TmdbSettingsEvent()
     data class ToggleNetworks(val enabled: Boolean) : TmdbSettingsEvent()
     data class ToggleEpisodes(val enabled: Boolean) : TmdbSettingsEvent()
+    data class ToggleTrailers(val enabled: Boolean) : TmdbSettingsEvent()
     data class ToggleMoreLikeThis(val enabled: Boolean) : TmdbSettingsEvent()
     data class ToggleCollections(val enabled: Boolean) : TmdbSettingsEvent()
 }

@@ -15,6 +15,7 @@ import com.nuvio.tv.data.local.WatchedSeriesStateHolder
 import com.nuvio.tv.data.repository.TraktAuthService
 import com.nuvio.tv.data.repository.TraktProgressService
 import com.nuvio.tv.data.repository.TraktTokenPollResult
+import com.nuvio.tv.domain.model.LibrarySourceMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -52,6 +53,7 @@ data class TraktUiState(
     val rateEpisodesAfterWatching: Boolean = TraktSettingsDataStore.DEFAULT_RATE_EPISODES_AFTER_WATCHING,
     val defaultRatingPromptValue: Int = TraktSettingsDataStore.DEFAULT_RATING_PROMPT_VALUE,
     val watchProgressSource: WatchProgressSource = TraktSettingsDataStore.DEFAULT_WATCH_PROGRESS_SOURCE,
+    val librarySourceMode: LibrarySourceMode = TraktSettingsDataStore.DEFAULT_LIBRARY_SOURCE_MODE,
     val connectedStats: TraktProgressService.TraktCachedStats? = null,
     val statusMessage: String? = null,
     val errorMessage: String? = null
@@ -208,6 +210,22 @@ class TraktViewModel @Inject constructor(
         }
     }
 
+    fun onLibrarySourceModeSelected(mode: LibrarySourceMode) {
+        viewModelScope.launch {
+            traktSettingsDataStore.setLibrarySourceMode(mode)
+            _uiState.update {
+                it.copy(
+                    librarySourceMode = mode,
+                    statusMessage = if (mode == LibrarySourceMode.TRAKT) {
+                        context.getString(R.string.trakt_library_source_trakt_selected)
+                    } else {
+                        context.getString(R.string.trakt_library_source_nuvio_selected)
+                    }
+                )
+            }
+        }
+    }
+
     fun onConnectClick() {
         if (!traktAuthService.hasRequiredCredentials()) {
             _uiState.update {
@@ -219,8 +237,15 @@ class TraktViewModel @Inject constructor(
             return
         }
 
+        // Guard against rapid re-entry — each double-tap would otherwise fire a
+        // fresh /oauth/device/code request and can trip Trakt's rate limiter (#1197).
+        // Flip isLoading synchronously here, before the launch, so two main-thread
+        // clicks can't both observe isLoading == false and start parallel
+        // coroutines (thanks Copilot).
+        if (_uiState.value.isLoading) return
+        _uiState.update { it.copy(isLoading = true, errorMessage = null, statusMessage = null) }
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null, statusMessage = null) }
             val result = traktAuthService.startDeviceAuth()
             _uiState.update { state ->
                 if (result.isSuccess) {
@@ -313,13 +338,15 @@ class TraktViewModel @Inject constructor(
                 traktSettingsDataStore.continueWatchingDaysCap,
                 traktSettingsDataStore.showUnairedNextUp,
                 traktSettingsDataStore.showMetaComments,
-                traktSettingsDataStore.watchProgressSource
-            ) { daysCap, showUnairedNextUp, showMetaComments, watchProgressSource ->
+                traktSettingsDataStore.watchProgressSource,
+                traktSettingsDataStore.librarySourceMode
+            ) { daysCap, showUnairedNextUp, showMetaComments, watchProgressSource, librarySourceMode ->
                 BaseSettingsSnapshot(
                     continueWatchingDaysCap = daysCap,
                     showUnairedNextUp = showUnairedNextUp,
                     showMetaComments = showMetaComments,
-                    watchProgressSource = watchProgressSource
+                    watchProgressSource = watchProgressSource,
+                    librarySourceMode = librarySourceMode
                 )
             }.combine(
                 combine(
@@ -341,7 +368,8 @@ class TraktViewModel @Inject constructor(
                     rateMoviesAfterWatching = ratingPrompt.rateMoviesAfterWatching,
                     rateEpisodesAfterWatching = ratingPrompt.rateEpisodesAfterWatching,
                     defaultRatingPromptValue = ratingPrompt.defaultRatingPromptValue,
-                    watchProgressSource = base.watchProgressSource
+                    watchProgressSource = base.watchProgressSource,
+                    librarySourceMode = base.librarySourceMode
                 )
             }.collectLatest { snapshot ->
                 _uiState.update {
@@ -352,7 +380,8 @@ class TraktViewModel @Inject constructor(
                         rateMoviesAfterWatching = snapshot.rateMoviesAfterWatching,
                         rateEpisodesAfterWatching = snapshot.rateEpisodesAfterWatching,
                         defaultRatingPromptValue = snapshot.defaultRatingPromptValue,
-                        watchProgressSource = snapshot.watchProgressSource
+                        watchProgressSource = snapshot.watchProgressSource,
+                        librarySourceMode = snapshot.librarySourceMode
                     )
                 }
             }
@@ -363,7 +392,8 @@ class TraktViewModel @Inject constructor(
         val continueWatchingDaysCap: Int,
         val showUnairedNextUp: Boolean,
         val showMetaComments: Boolean,
-        val watchProgressSource: WatchProgressSource
+        val watchProgressSource: WatchProgressSource,
+        val librarySourceMode: LibrarySourceMode
     )
 
     private data class RatingPromptSettingsSnapshot(
@@ -379,7 +409,8 @@ class TraktViewModel @Inject constructor(
         val rateMoviesAfterWatching: Boolean,
         val rateEpisodesAfterWatching: Boolean,
         val defaultRatingPromptValue: Int,
-        val watchProgressSource: WatchProgressSource
+        val watchProgressSource: WatchProgressSource,
+        val librarySourceMode: LibrarySourceMode
     )
 
     private fun applyAuthState(authState: TraktAuthState) {

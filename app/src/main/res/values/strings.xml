@@ -182,6 +182,7 @@
     <string name="cast_role_writer">Writer</string>
     <string name="detail_tab_ratings">Ratings</string>
     <string name="detail_tab_more_like_this">More like this</string>
+    <string name="detail_tab_trailer">Trailer</string>
     <string name="detail_more_like_this_powered_by_tmdb">Powered by TMDB</string>
     <string name="detail_more_like_this_powered_by_trakt">Powered by Trakt</string>
     <string name="detail_comments_title">Comments</string>
@@ -190,6 +191,8 @@
     <string name="detail_section_production">Production</string>
     <string name="detail_comments_empty">No Trakt reviews available yet.</string>
     <string name="detail_comments_error">Couldn\'t load Trakt reviews right now.</string>
+    <string name="detail_trailer_loading">Loading trailer...</string>
+    <string name="detail_trailer_error">Couldn\'t load trailer right now.</string>
     <string name="detail_comments_spoiler_hidden">Spoiler review. Press OK to reveal.</string>
     <string name="detail_comments_reveal_spoiler">Reveal spoiler</string>
     <string name="detail_comments_reveal_spoiler_hint">Press OK to reveal spoiler.</string>
@@ -266,18 +269,18 @@
     <string name="settings_profiles">Profiles</string>
     <string name="settings_profiles_subtitle">Manage user profiles</string>
     <string name="settings_layout">Layout</string>
-    <string name="settings_layout_subtitle">Home structure and poster styles.</string>
+    <string name="settings_layout_subtitle">Home structure and poster styles</string>
     <string name="settings_plugins">Plugins</string>
-    <string name="settings_plugins_subtitle">Repositories and providers.</string>
-    <string name="settings_integration">Integration</string>
+    <string name="settings_plugins_subtitle">Repositories and providers</string>
+    <string name="settings_integration">Integrations</string>
     <string name="settings_playback">Playback</string>
-    <string name="settings_playback_subtitle">Player, subtitles, and auto-play.</string>
-    <string name="settings_trakt_subtitle">Open Trakt connection screen.</string>
-    <string name="settings_about_subtitle">Version and policies.</string>
+    <string name="settings_playback_subtitle">Player, subtitles, and auto-play</string>
+    <string name="settings_trakt_subtitle">Open Trakt connection screen</string>
+    <string name="settings_about_subtitle">Version and policies</string>
     <string name="settings_network">Network speed</string>
     <string name="settings_network_subtitle">Latency and download diagnostics</string>
     <string name="settings_advanced">Advanced</string>
-    <string name="settings_advanced_subtitle">Run network speed diagnostics</string>
+    <string name="settings_advanced_subtitle">Network diagnostics and advanced options</string>
     <string name="network_speed_test_run">Run Speed Test</string>
     <string name="network_speed_test_running">Running Speed Test</string>
     <string name="network_speed_test_subtitle">Measure download speed and latency</string>
@@ -291,8 +294,11 @@
     <string name="network_connection_wifi">Wi-Fi</string>
     <string name="network_connection_ethernet">Ethernet</string>
     <string name="network_connection_offline">Offline</string>
+    <string name="advanced_clear_cw_cache">Clear Continue Watching Cache</string>
+    <string name="advanced_clear_cw_cache_subtitle">Remove cached thumbnails, titles, and enrichment data for Continue Watching</string>
+    <string name="advanced_clear_cw_cache_done">Cache cleared</string>
     <string name="settings_debug">Debug</string>
-    <string name="settings_debug_subtitle">Developer tools and feature flags.</string>
+    <string name="settings_debug_subtitle">Developer tools and feature flags</string>
     <string name="settings_plugins_section_subtitle">Manage repositories, providers, and plugin states</string>
     <string name="settings_account_section_subtitle">Account and sync status</string>
     <string name="account_stat_addons">addons</string>
@@ -352,7 +358,7 @@
     <string name="playback_osd_clock">OSD Clock</string>
     <string name="playback_skip_intro">Skip Intro</string>
     <string name="playback_skip_intro_sub">Use introdb.app to detect intros and recaps.</string>
-    <string name="playback_auto_frame_rate">Auto Frame Rate</string>
+    <string name="playback_auto_frame_rate">Auto Frame Rate &amp; Resolution</string>
     <string name="playback_section_player">Player &amp; Stream Selection</string>
     <string name="playback_section_player_desc">Player preference, auto-play, and source filtering.</string>
     <string name="playback_player">Player</string>
@@ -378,8 +384,18 @@
     <string name="playback_afr_on_start_stop_sub">Switch on start and restore on stop.</string>
     <string name="playback_resolution_matching">Resolution matching</string>
     <string name="playback_resolution_matching_sub">Allow display mode changes to match video resolution.</string>
+    <string name="playback_resolution_matching_unsupported_sub">Display reports only one resolution; matching may have no effect.</string>
+    <string name="playback_afr_capability_unsupported_title">Some settings may not work</string>
+    <string name="playback_afr_capability_both_problem_body">Auto Frame Rate and resolution matching are both enabled, but your display reports only one refresh rate and one resolution. Neither may take effect, and it is recommended to disable both.</string>
+    <string name="playback_afr_capability_only_afr_unsupported_body">Auto Frame Rate is enabled but your display reports only one refresh rate. Switching may have no effect, and it is recommended to disable.</string>
+    <string name="playback_afr_capability_only_res_unsupported_body">Resolution matching is enabled but your display reports only one resolution. Matching may have no effect, and it is recommended to disable.</string>
+    <string name="playback_afr_capability_disable_button">Disable AFR</string>
+    <string name="playback_afr_capability_disable_resolution_button">Disable resolution matching</string>
+    <string name="playback_afr_capability_disable_both_button">Disable both</string>
     <string name="playback_player_external_desc">Always open streams in an external app</string>
     <string name="playback_player_ask_desc">Choose the player each time</string>
+    <string name="playback_player_auto">Auto (Best for Content)</string>
+    <string name="playback_player_auto_desc">ExoPlayer for Movies &amp; TV Shows · MPV for Anime</string>
     <string name="playback_engine_exoplayer_desc">Best compatibility with current Nuvio features.</string>
     <string name="playback_engine_mvplayer_desc">Uses libmpv with Nuvio OSD controls. Experimental.</string>
 
@@ -669,6 +685,8 @@
     <string name="tmdb_networks_subtitle">Networks with logos from TMDB</string>
     <string name="tmdb_episodes_title">Episodes</string>
     <string name="tmdb_episodes_subtitle">Episode titles, overviews, thumbnails, and runtime from TMDB</string>
+    <string name="tmdb_trailers_title">Trailers</string>
+    <string name="tmdb_trailers_subtitle">Trailer candidates from TMDB videos for the detail trailer section</string>
     <string name="tmdb_more_like_this_title">More Like This</string>
     <string name="tmdb_more_like_this_subtitle">TMDB recommendation backdrops on detail page</string>
     <string name="tmdb_collections_title">Collections</string>
@@ -700,6 +718,14 @@
     <string name="trakt_watch_progress_dialog_subtitle">Choose whether resume and continue watching should use Trakt or Nuvio Sync while Trakt scrobbling stays active.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
+    <string name="trakt_library_source_title">Library Source</string>
+    <string name="trakt_library_source_subtitle">Choose which library to use for saving and viewing your collection</string>
+    <string name="trakt_library_source_dialog_title">Library Source</string>
+    <string name="trakt_library_source_dialog_subtitle">Choose where to save and manage your library items</string>
+    <string name="trakt_library_source_trakt">Trakt</string>
+    <string name="trakt_library_source_nuvio">Nuvio Library</string>
+    <string name="trakt_library_source_trakt_selected">Trakt library selected</string>
+    <string name="trakt_library_source_nuvio_selected">Nuvio library selected</string>
     <string name="trakt_setting_on">On</string>
     <string name="trakt_setting_off">Off</string>
     <string name="trakt_watch_progress_trakt_selected">Watch progress source set to Trakt</string>
@@ -806,7 +832,7 @@
 
     <!-- ProfileSettingsContent -->
     <string name="profile_title">Profiles</string>
-    <string name="profile_subtitle">Manage user profiles for this account.</string>
+    <string name="profile_subtitle">Manage user profiles for this account</string>
     <string name="profile_manage_button">Manage Profiles</string>
     <string name="profile_manage_title">Manage Profiles</string>
     <string name="profile_manage_subtitle">Select a profile to edit, switch, or create a new one</string>
@@ -866,6 +892,8 @@
     <string name="profile_pin_overlay_remove_verify_kicker">Security check required.</string>
     <string name="profile_pin_overlay_remove_verify_heading">Enter current PIN to remove lock for %1$s.</string>
     <string name="profile_pin_overlay_remove_verify_support">Enter the current 4-digit PIN to remove this lock.</string>
+    <string name="profile_pin_overlay_delete_verify_heading">Enter current PIN to delete %1$s.</string>
+    <string name="profile_pin_overlay_delete_verify_support">Enter the current 4-digit PIN before deleting this profile.</string>
     <string name="profile_pin_overlay_set_support">This PIN will be required before opening this profile.</string>
     <string name="profile_pin_overlay_confirm_support">Re-enter the same 4 digits to finish setup.</string>
     <string name="profile_pin_overlay_mismatch">PINs did not match. Enter a new PIN again.</string>
@@ -966,6 +994,8 @@
     <string name="parental_severity_mild">Mild</string>
     <string name="player_ends_at">Ends at %1$s</string>
     <string name="player_via">via %1$s</string>
+    <!-- Season/episode code shown in player UI (e.g. S01E02). %1$d = season, %2$d = episode. -->
+    <string name="season_episode_format">S%1$02dE%2$02d</string>
     <string name="player_subtitle_delay">Subtitles Delay</string>
     <string name="player_error_title">Playback Error</string>
     <string name="player_go_back">Go Back</string>
@@ -994,6 +1024,7 @@
     <string name="stream_info_source">Source</string>
     <string name="stream_info_subtitle_source_addon">Addon</string>
     <string name="stream_info_subtitle_source_embedded">Embedded</string>
+    <string name="stream_info_player_engine">Player Engine</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Sources</string>
@@ -1172,6 +1203,8 @@
     <string name="library_empty_trakt_title">No %1$s in this list</string>
     <string name="library_empty_local_subtitle">Start saving your favorites to see them here</string>
     <string name="library_empty_trakt_subtitle">Use + in details to add items to watchlist or lists</string>
+    <string name="library_empty_trakt_not_auth_title">Trakt not connected</string>
+    <string name="library_empty_trakt_not_auth_subtitle">Connect your Trakt account in Settings to view your Trakt library</string>
 
     <!-- AccountSettingsContent -->
     <string name="account_loading">Loading\u2026</string>
@@ -1365,6 +1398,7 @@
     <string name="profile_pin_invalid">Invalid PIN. Try again.</string>
     <string name="profile_pin_verify_error">Could not verify PIN. Try again.</string>
     <string name="profile_pin_incorrect">Current PIN is incorrect.</string>
+    <string name="profile_pin_current_required">This profile already has a PIN. Enter the current PIN to change it.</string>
 
     <!-- Account Screen -->
     <string name="account_signin_create_title">Sign In / Create Account</string>
@@ -1555,6 +1589,10 @@
     <string name="collections_editor_placeholder_backdrop">Backdrop image URL (optional)</string>
     <string name="collections_editor_placeholder_folder">Folder name</string>
     <string name="collections_editor_placeholder_gif">Animated GIF URL (plays only while focused)</string>
+    <string name="collections_editor_hero_backdrop">Hero Backdrop (Modern Home)</string>
+    <string name="collections_editor_placeholder_hero_backdrop">Custom hero backdrop URL (optional)</string>
+    <string name="collections_editor_title_logo">Title Logo (Modern Home)</string>
+    <string name="collections_editor_placeholder_title_logo">Custom title logo URL (optional)</string>
     <string name="collections_editor_genre_filter">Genre Filter</string>
     <string name="collections_editor_choose_genre">Choose</string>
     <string name="collections_editor_select_genre">Select genre</string>

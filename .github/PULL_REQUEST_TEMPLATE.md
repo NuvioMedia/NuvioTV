@@ -17,13 +17,18 @@
 
 ## Policy check
 
-<!-- Confirm these before requesting review -->
- - [ ] This PR is not cosmetic-only, unless it is a translation PR.
+<!-- ALL boxes must be checked or the PR will be closed without review. -->
+- [ ] This PR is not cosmetic-only, unless it is a translation PR.
 - [ ] This PR does not add a new major feature without prior approval.
 - [ ] This PR is small in scope and focused on one problem.
-- [ ] If this is a larger or directional change, I linked the issue where it was approved.
+- [ ] If this is a larger or directional change, I linked the **approved** feature request issue below.
 
-<!-- PRs that do not match this policy will usually be closed without merge. -->
+> **Large PRs without a linked, approved feature request issue will be closed immediately without review. No exceptions.**
+
+## Approved feature request (required for large/non-trivial PRs)
+
+<!-- Link the approved feature request issue. Delete this section ONLY for small bug fixes. -->
+<!-- Example: Approved in #123 -->
 
 ## Testing
 
