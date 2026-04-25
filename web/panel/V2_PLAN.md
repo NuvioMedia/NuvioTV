@@ -1,5 +1,7 @@
 # NuvioTV Web Panel — v2 implementation plan
 
+> **Status: v2 SHIPPED on `dev` (commits `1f9d7599` + follow-up).** Migration 008 applied; every domain in §3 has an edit form; partial-merge RPC is live; 24 round-trip tests guard schema drift. The notes below are kept for historical reference and to seed v3.
+>
 > **For the AI taking this over:** read this entire document before touching code. The blob schema discipline (§4) and the partial-merge RPC (§3) are the two things that will make or break this work — get them wrong and you silently corrupt users' settings. v0/v1 are already shipped and live; you're picking up at v2.
 
 ---
@@ -276,9 +278,35 @@ For the schema:
 ## 10. Ship the docs too
 
 When v2 is feature-complete:
-- Update `web/panel/README.md` "Status" section from "v1 (read-only MVP)" to "v2 (full edit)"
-- Add a CHANGELOG section listing what each domain's form supports
-- Bump the v2 status in this V2_PLAN.md to "completed" or delete the file in favor of a v3 plan
+- Update `web/panel/README.md` "Status" section from "v1 (read-only MVP)" to "v2 (full edit)" — **done**
+- Add a CHANGELOG section listing what each domain's form supports — README has it
+- Bump the v2 status in this V2_PLAN.md to "completed" or delete the file in favor of a v3 plan — **done** (header note above)
+
+## 12. v2 ship notes (post-mortem)
+
+Notes from actually shipping v2, useful to whoever picks up v3:
+
+- **`sync_push_addons` is asymmetric with the addons table.** The RPC only writes `url` + `sort_order` (per `AddonSyncService.kt:55-65`), so any panel-side toggle of `enabled` or rename of `name` would be wiped on the TV's next push. The panel intentionally does not surface those affordances for addons. Plugins are fine — `sync_push_plugins` writes all four fields.
+- **The Player and Layout dropdown options in v2 were guessed twice and corrected against the Kotlin enums in commit `<this one>`.** Don't trust hand-written option lists — grep `enum class` in `app/src/main/java/com/omnio/tv/data/local/PlayerSettingsDataStore.kt` and `app/src/main/java/com/omnio/tv/domain/model/` before editing.
+- **`avatar_catalog` is not seeded by any migration.** The bucket `avatars` is created public in migration 001 but the table is empty in fresh Supabase projects. Either seed it manually (insert rows pointing at storage paths) or, in v3, ship a seed migration. The panel's avatar dropdown is empty until rows exist.
+- **`emby_device_id` was a footgun in early drafts.** It's a per-device identifier excluded from sync; the panel never writes it. The Zod schema in `lib/settings/schemas.ts` does not list it — encoder will throw if a future PR tries to add it.
+- **`next_episode_threshold_percent_v2` (float) coexists with the legacy `next_episode_threshold_percent` (int)** for backward compat. The Player form exposes both; the round-trip test `player form save: legacy threshold is int, _v2 threshold is float` pins the type contract so a future "let's clean these up" PR fails loudly.
+- **The schema-drift detector works.** When `tmdb_settings` was extended on the Kotlin side mid-v2, `encodeFeature` threw on the unknown key, the test suite caught it before push, and the panel was updated in the same PR. This is the pattern §4 promised — keep doing it.
+
+## 13. v3 backlog (deferred from v2)
+
+Listed in the order they came up:
+
+1. **Trakt OAuth on web.** Currently the panel says "re-auth on a TV". Web-side OAuth would need the redirect URI registered with Trakt and a token-exchange Edge Function.
+2. **Plugin JS code editing.** v2 only edits plugin metadata; the JS lives on disk per device. Real editing means a Monaco-style editor + a Storage bucket for the code.
+3. **Collections image uploads to Supabase Storage.** Currently URL-only. Add a bucket, an upload action, and a picker.
+4. **Catalog source picker for Collections folders.** v2 marks `catalogSources` read-only — adding/removing requires walking the user's installed addons and listing each addon's catalogs.
+5. **New-profile creation from the panel.** `sync_push_profiles` already supports it, but UX-wise it interacts with PIN management which is also TV-only.
+6. **PIN management** (`set_profile_pin` / `clear_profile_pin`) from the panel.
+7. **`avatar_catalog` seed migration** — see §12.
+8. **Linked-device removal flow.** Currently read-only on `/devices`. The `unlink_device` RPC exists.
+9. **Bulk operations** (e.g. wipe library, wipe watched items) — currently only "delete profile data" wholesale.
+10. **A nice-to-have**: surface the partial-merge conflict more gracefully than "page refreshed" — show a diff of the user's pending edits vs. the server's new state and let them re-apply selectively.
 
 ## 11. Quick start for the new AI
 

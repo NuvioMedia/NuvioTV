@@ -11,6 +11,7 @@ import {
   encodeStringSet,
   EnvelopeDecodeError,
   parseBlob,
+  type EncodedFeature,
   type SettingsBlob,
 } from "./envelope";
 import { encodeFeature } from "./schemas";
@@ -298,5 +299,199 @@ describe("partial-merge simulation (mirrors migration 008's jsonb_set)", () => {
 
     // api_key is a stringPreferencesKey on the TV side — confirm it.
     expect(encoded.mdblist_api_key.type).toBe("string");
+  });
+
+  // --- the remaining 7 v2 blob domains -----------------------------------
+  // Each test:
+  //   1. Starts with an existing blob containing the target feature plus an
+  //      unrelated feature that MUST survive the partial-merge.
+  //   2. Encodes a representative user edit via encodeFeature.
+  //   3. Simulates the migration-008 jsonb_set merge.
+  //   4. Asserts the unrelated feature is byte-equal afterwards.
+  //   5. Asserts encode → parse → decode round-trips the user edit cleanly.
+  //   6. Asserts at least one envelope-type guard so a future schema-drift
+  //      that re-categorises a key (e.g. int → long) fails loudly here.
+
+  // Pick a decoy feature different from the one under test so the partial-merge
+  // can prove it left an unrelated subtree byte-equal.
+  function decoyFor(featureKey: string): { key: string; value: EncodedFeature } {
+    if (featureKey === "tmdb_settings") {
+      return {
+        key: "theme_settings",
+        value: { selected_theme: { type: "string", value: "DARK" } },
+      };
+    }
+    return {
+      key: "tmdb_settings",
+      value: {
+        tmdb_enabled: { type: "boolean", value: true },
+        tmdb_language: { type: "string", value: "en" },
+      },
+    };
+  }
+
+  function partialMergeRoundTrip(
+    featureKey: Parameters<typeof encodeFeature>[0],
+    userEdit: Record<string, unknown>,
+    expectedTypes: Record<string, string>
+  ) {
+    const decoy = decoyFor(featureKey);
+    const existing: SettingsBlob = {
+      version: 1,
+      features: {
+        [featureKey]: {},
+        [decoy.key]: decoy.value,
+      },
+    };
+    const encoded = encodeFeature(featureKey, userEdit);
+    const merged = simulatePartialMerge(existing, featureKey, encoded);
+    // The decoy feature must survive the partial-merge byte-equal.
+    expect(merged.features[decoy.key]).toEqual(decoy.value);
+    const reparsed = parseBlob(merged);
+    expect(decodeFeature(reparsed.features[featureKey] as EncodedFeature)).toEqual(
+      userEdit
+    );
+    for (const [key, expectedType] of Object.entries(expectedTypes)) {
+      expect(encoded[key]?.type, `${featureKey}.${key}`).toBe(expectedType);
+    }
+  }
+
+  it("animeskip form save round-trips and types match", () => {
+    partialMergeRoundTrip(
+      "animeskip_settings",
+      { animeskip_enabled: true, animeskip_client_id: "client-xyz" },
+      { animeskip_enabled: "boolean", animeskip_client_id: "string" }
+    );
+  });
+
+  it("emby form save round-trips and types match", () => {
+    partialMergeRoundTrip(
+      "emby_credentials",
+      {
+        emby_server_url: "https://emby.example.com",
+        emby_api_key: "secret",
+        emby_user_id: "user-uuid-123",
+      },
+      {
+        emby_server_url: "string",
+        emby_api_key: "string",
+        emby_user_id: "string",
+      }
+    );
+  });
+
+  it("trailer form save round-trips with int delay", () => {
+    // trailer_delay_seconds is intPreferencesKey — encoding as long would
+    // make the TV-side read return null and fall back to the default of 7.
+    partialMergeRoundTrip(
+      "trailer_settings",
+      { trailer_enabled: true, trailer_delay_seconds: 12 },
+      { trailer_enabled: "boolean", trailer_delay_seconds: "int" }
+    );
+  });
+
+  it("theme form save round-trips and uses string envelope (not enum)", () => {
+    // Both keys store the Kotlin enum's name() as a string. The encoder must
+    // emit type === "string", not some custom "enum" tag.
+    partialMergeRoundTrip(
+      "theme_settings",
+      { selected_theme: "OCEAN", selected_font: "DM_SANS" },
+      { selected_theme: "string", selected_font: "string" }
+    );
+  });
+
+  it("trakt form save round-trips, dismissed_next_up_keys is a sorted string_set", () => {
+    const encoded = encodeFeature("trakt_settings", {
+      continue_watching_days_cap: 90,
+      show_unaired_next_up: true,
+      show_meta_comments: false,
+      watch_progress_source: "TRAKT",
+      dismissed_next_up_keys: ["zulu|s1e1", "alpha|s1e1"],
+    });
+    expect(encoded.continue_watching_days_cap.type).toBe("int");
+    expect(encoded.show_unaired_next_up.type).toBe("boolean");
+    expect(encoded.watch_progress_source.type).toBe("string");
+    expect(encoded.dismissed_next_up_keys).toEqual({
+      type: "string_set",
+      value: ["alpha|s1e1", "zulu|s1e1"],
+    });
+
+    partialMergeRoundTrip(
+      "trakt_settings",
+      {
+        continue_watching_days_cap: 30,
+        show_unaired_next_up: false,
+        show_meta_comments: true,
+        watch_progress_source: "NUVIO_SYNC",
+        dismissed_next_up_keys: ["a", "b"],
+      },
+      {
+        continue_watching_days_cap: "int",
+        show_unaired_next_up: "boolean",
+        watch_progress_source: "string",
+        dismissed_next_up_keys: "string_set",
+      }
+    );
+  });
+
+  it("player form save: legacy threshold is int, _v2 threshold is float", () => {
+    // The TV reads next_episode_threshold_percent_v2 with floatPreferencesKey
+    // and the legacy next_episode_threshold_percent with intPreferencesKey.
+    // If either type is wrong the TV silently uses the default — this test
+    // pins both contracts.
+    const userEdit = {
+      player_preference: "INTERNAL",
+      internal_player_engine: "EXOPLAYER",
+      decoder_priority: 2,
+      preferred_audio_language: "eng",
+      next_episode_threshold_mode: "PERCENTAGE",
+      next_episode_threshold_percent: 95,
+      next_episode_threshold_percent_v2: 99.5,
+      next_episode_threshold_minutes_before_end: 3,
+      next_episode_threshold_minutes_before_end_v2: 2.5,
+      // Set already alphabetised — decode round-trips sets in sorted order
+      // (encoder sorts to match Kotlin's Set<String>.toSortedSet() write).
+      stream_auto_play_selected_addons: ["addonA", "addonB"],
+      min_buffer_ms: 30_000,
+    };
+    const encoded = encodeFeature("player_settings", userEdit);
+    expect(encoded.next_episode_threshold_percent.type).toBe("int");
+    expect(encoded.next_episode_threshold_percent_v2.type).toBe("float");
+    expect(encoded.next_episode_threshold_minutes_before_end.type).toBe("int");
+    expect(encoded.next_episode_threshold_minutes_before_end_v2.type).toBe("float");
+    expect(encoded.decoder_priority.type).toBe("int");
+    expect(encoded.min_buffer_ms.type).toBe("int");
+    // string_set must come out alphabetised even if user toggled in a different order.
+    expect(encoded.stream_auto_play_selected_addons).toEqual({
+      type: "string_set",
+      value: ["addonA", "addonB"],
+    });
+
+    partialMergeRoundTrip("player_settings", userEdit, {
+      next_episode_threshold_percent_v2: "float",
+      next_episode_threshold_percent: "int",
+    });
+  });
+
+  it("layout form save: poster dimensions are int, raw catalog json stays string", () => {
+    partialMergeRoundTrip(
+      "layout_settings",
+      {
+        selected_layout: "MODERN",
+        hero_section_enabled: true,
+        poster_card_width_dp: 140,
+        poster_card_height_dp: 200,
+        focused_poster_backdrop_trailer_playback_target: "HERO_MEDIA",
+        // home_catalog_order_keys ships a Gson-serialised JSON list as a single
+        // string — must round-trip as a single string, not get parsed.
+        home_catalog_order_keys: '["row.cinemeta.movie","row.cinemeta.series"]',
+      },
+      {
+        selected_layout: "string",
+        poster_card_width_dp: "int",
+        poster_card_height_dp: "int",
+        home_catalog_order_keys: "string",
+      }
+    );
   });
 });

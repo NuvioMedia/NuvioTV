@@ -27,7 +27,7 @@ const SECTIONS: { title: string; fields: Spec[] }[] = [
         key: "selected_layout",
         label: "Layout",
         kind: "select",
-        options: ["MODERN", "CLASSIC"],
+        options: ["MODERN", "CLASSIC", "GRID"],
       },
       {
         key: "has_chosen_layout",
@@ -176,7 +176,8 @@ const SECTIONS: { title: string; fields: Spec[] }[] = [
         key: "focused_poster_backdrop_trailer_playback_target",
         label: "Trailer playback target",
         kind: "select",
-        options: ["BACKDROP", "INLINE", "NONE"],
+        options: ["HERO_MEDIA", "EXPANDED_CARD"],
+        hint: "HERO_MEDIA = full hero backdrop; EXPANDED_CARD = inside the focused card.",
       },
     ],
   },
