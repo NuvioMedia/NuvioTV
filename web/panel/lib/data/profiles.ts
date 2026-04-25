@@ -34,3 +34,24 @@ export async function getProfile(profileIndex: number): Promise<Profile | null> 
   if (error) throw error;
   return (data as Profile) ?? null;
 }
+
+export interface AvatarEntry {
+  id: string;
+  display_name: string;
+  storage_path: string;
+  category: string;
+  bg_color: string | null;
+}
+
+export async function listAvatarCatalog(): Promise<AvatarEntry[]> {
+  const supabase = await createServerSupabase();
+  const { data, error } = await supabase.rpc("get_avatar_catalog");
+  if (error) throw error;
+  return ((data as AvatarEntry[]) ?? []).map((a) => ({
+    id: a.id,
+    display_name: a.display_name,
+    storage_path: a.storage_path,
+    category: a.category,
+    bg_color: a.bg_color ?? null,
+  }));
+}

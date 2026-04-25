@@ -1,4 +1,5 @@
-import { CheckCircle2, MinusCircle, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, MinusCircle, AlertTriangle, ChevronRight } from "lucide-react";
 import { getSettingsSnapshot } from "@/lib/data/settings";
 
 interface Props {
@@ -11,6 +12,7 @@ interface IntegrationRow {
   state: "connected" | "disabled" | "missing";
   detail?: string;
   warning?: string;
+  manageHref?: string;
 }
 
 function rowFromBoolean(
@@ -40,6 +42,7 @@ export default async function IntegrationsPage({ params }: Props) {
         tmdb.tmdb_enabled as boolean | undefined,
         typeof tmdb.tmdb_language === "string" ? `language: ${tmdb.tmdb_language}` : undefined
       ),
+      manageHref: `/p/${profileId}/integrations/tmdb`,
     },
     {
       name: "Trakt",
@@ -51,6 +54,7 @@ export default async function IntegrationsPage({ params }: Props) {
           : undefined,
       warning:
         "OAuth tokens stay on the TV. Re-auth from Settings → Integrations on a TV device.",
+      manageHref: `/p/${profileId}/integrations/trakt`,
     },
     {
       name: "MDBList",
@@ -61,6 +65,7 @@ export default async function IntegrationsPage({ params }: Props) {
           ? "api key set"
           : "no api key"
       ),
+      manageHref: `/p/${profileId}/integrations/mdblist`,
     },
     {
       name: "AnimeSkip",
@@ -72,6 +77,7 @@ export default async function IntegrationsPage({ params }: Props) {
           ? "client id set"
           : "no client id"
       ),
+      manageHref: `/p/${profileId}/integrations/animeskip`,
     },
     {
       name: "Emby",
@@ -87,6 +93,7 @@ export default async function IntegrationsPage({ params }: Props) {
         typeof emby.emby_server_url === "string"
           ? (emby.emby_server_url as string)
           : undefined,
+      manageHref: `/p/${profileId}/integrations/emby`,
     },
   ];
 
@@ -118,39 +125,63 @@ export default async function IntegrationsPage({ params }: Props) {
       )}
 
       <div className="grid gap-3 md:grid-cols-2">
-        {rows.map((row) => (
-          <div
-            key={row.name}
-            className="rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4"
-          >
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="font-medium text-slate-100">{row.name}</h2>
-              {row.state === "connected" && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-300">
-                  <CheckCircle2 className="h-3 w-3" /> connected
-                </span>
+        {rows.map((row) => {
+          const card = (
+            <>
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="font-medium text-slate-100">{row.name}</h2>
+                <div className="flex items-center gap-2">
+                  {row.state === "connected" && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-300">
+                      <CheckCircle2 className="h-3 w-3" /> connected
+                    </span>
+                  )}
+                  {row.state === "disabled" && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-700/50 px-2 py-0.5 text-xs text-slate-400">
+                      <MinusCircle className="h-3 w-3" /> disabled
+                    </span>
+                  )}
+                  {row.state === "missing" && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-700/50 px-2 py-0.5 text-xs text-slate-500">
+                      not configured
+                    </span>
+                  )}
+                  {row.manageHref && (
+                    <ChevronRight className="h-4 w-4 text-slate-500" />
+                  )}
+                </div>
+              </div>
+              <p className="text-sm text-slate-400">{row.blurb}</p>
+              {row.detail && (
+                <p className="mt-2 text-xs text-slate-500">{row.detail}</p>
               )}
-              {row.state === "disabled" && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-700/50 px-2 py-0.5 text-xs text-slate-400">
-                  <MinusCircle className="h-3 w-3" /> disabled
-                </span>
+              {row.warning && (
+                <p className="mt-3 inline-flex items-start gap-1 text-xs text-amber-300">
+                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                  {row.warning}
+                </p>
               )}
-              {row.state === "missing" && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-700/50 px-2 py-0.5 text-xs text-slate-500">
-                  not configured
-                </span>
-              )}
+            </>
+          );
+          const cls =
+            "rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4 transition";
+          if (row.manageHref) {
+            return (
+              <Link
+                key={row.name}
+                href={row.manageHref}
+                className={`${cls} hover:border-primary/60 hover:bg-slate-800/60`}
+              >
+                {card}
+              </Link>
+            );
+          }
+          return (
+            <div key={row.name} className={cls}>
+              {card}
             </div>
-            <p className="text-sm text-slate-400">{row.blurb}</p>
-            {row.detail && <p className="mt-2 text-xs text-slate-500">{row.detail}</p>}
-            {row.warning && (
-              <p className="mt-3 inline-flex items-start gap-1 text-xs text-amber-300">
-                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-                {row.warning}
-              </p>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

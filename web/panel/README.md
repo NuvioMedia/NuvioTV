@@ -8,28 +8,46 @@ collections, home layout, playback, linked devices.
 
 Backed by the same self-hosted Supabase the TV app uses.
 
-## Status — v1 (read-only MVP)
+## Status — v2 (full edit)
 
-What ships:
+Writes everywhere. Every domain has a Save bar; every blob domain uses the
+`sync_push_profile_settings_partial` RPC so concurrent edits to other
+features in the blob don't clobber each other. 17 round-trip tests.
 
-- Email/password login + signup (Supabase Auth), with a redirect-aware
-  middleware that gates every route except `/login`.
-- Profile picker at `/profiles` listing every profile on the account.
-- Profile-scoped shell at `/p/[profileId]` with a sidebar nav.
-- Read-only views for: Overview, Addons, Plugins, Integrations status,
-  Collections, Library + Watched, Settings (theme/layout/playback/trakt),
-  Linked Devices.
-- Migration `supabase/migrations/008_profile_settings_partial_merge.sql` —
-  partial-merge RPC, ready for v2 writes.
-- Envelope + Zod schemas mirroring the 10 TV-side `*DataStore.kt` files,
-  with 14 round-trip tests.
+What ships in v2:
 
-What does **not** ship in v1:
+- **Addons** — drag-to-reorder, add by manifest URL, remove. (No enable
+  toggle: the TV's `sync_push_addons` RPC writes only `url`+`sort_order`,
+  so any panel-side enable would be wiped on the next TV push.)
+- **Plugins** — drag-to-reorder, enable toggle, inline rename, remove.
+  Plugin JS code stays on the TV.
+- **Integrations** — sub-pages for TMDB, MDBList, AnimeSkip, Emby, Trakt.
+  Trakt OAuth still happens on the TV.
+- **Settings** — sub-pages for Theme, Layout, Trailers, Player.
+- **Collections** — reorder collections and folders, rename, pin to top,
+  cover emoji + image URL, tile shape. Catalog source picker stays TV-only
+  (deferred to v3).
+- **Manage profiles** — rename, recolor, change avatar (from `avatar_catalog`),
+  toggle `uses_primary_addons` / `uses_primary_plugins`, delete.
+- **Danger zone** — delete a profile's synced data; sign out from all
+  browsers (`supabase.auth.signOut({ scope: 'global' })`).
+- **`vercel.json`** — `ignoreCommand` skips deploys that don't touch
+  `web/panel/` or `supabase/migrations/`.
 
-- Any write — every form / button is read-only or surfaces "lands in v2".
-- Trakt OAuth on web (still TV-side).
+What does **not** ship in v2 (deferred to v3):
+
+- Trakt OAuth on web.
 - Plugin JS code editing.
-- Collections image uploads (external URLs only).
+- Collections image uploads (Supabase Storage integration).
+- Catalog source picker for Collections folders.
+- New-profile creation from the panel (TV-only).
+- PIN management (`set_profile_pin` / `clear_profile_pin`) from the panel.
+
+## Schema-drift discipline
+
+Every key in every TV-side `*DataStore.kt` is mirrored in
+`lib/settings/schemas.ts`. `encodeFeature` hard-fails on unknown keys —
+that's the schema-drift detector. See `CONTRIBUTING.md`.
 
 ## Local Development
 

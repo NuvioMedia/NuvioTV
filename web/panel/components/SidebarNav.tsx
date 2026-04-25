@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  AlertTriangle,
   Boxes,
   Folder,
   Home,
@@ -11,6 +12,7 @@ import {
   Settings,
   Smartphone,
   Sparkles,
+  UserCog,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -33,7 +35,9 @@ export default function SidebarNav({ profileIndex }: { profileIndex: number }) {
     { href: `${base}/collections`, label: "Collections", icon: Folder },
     { href: `${base}/library`, label: "Library", icon: Library },
     { href: `${base}/settings`, label: "Settings", icon: Settings },
+    { href: `${base}/profiles`, label: "Manage profiles", icon: UserCog },
     { href: `${base}/devices`, label: "Devices", icon: Smartphone },
+    { href: `${base}/danger`, label: "Danger zone", icon: AlertTriangle },
   ];
 
   return (

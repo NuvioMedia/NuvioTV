@@ -193,3 +193,110 @@ describe("full blob round-trip", () => {
     }
   });
 });
+
+describe("partial-merge simulation (mirrors migration 008's jsonb_set)", () => {
+  // Shape-equivalent of what sync_push_profile_settings_partial does on the server:
+  // jsonb_set(blob, '{features,<key>}', encoded_feature) — replaces the named
+  // feature subtree, leaves every other feature untouched.
+  function simulatePartialMerge(
+    existing: SettingsBlob,
+    featureKey: string,
+    newFeature: Record<string, { type: string; value: unknown }>
+  ): SettingsBlob {
+    return {
+      ...existing,
+      features: {
+        ...existing.features,
+        [featureKey]: newFeature as never,
+      },
+    };
+  }
+
+  it("tmdb form save: encode → merge → parse → decode preserves user edits and unrelated features", () => {
+    const existing: SettingsBlob = {
+      version: 1,
+      features: {
+        // Pretend TV pushed both tmdb and theme; user edits tmdb only.
+        tmdb_settings: {
+          tmdb_enabled: { type: "boolean", value: false },
+          tmdb_language: { type: "string", value: "en" },
+        },
+        theme_settings: {
+          selected_theme: { type: "string", value: "DARK" },
+          selected_font: { type: "string", value: "INTER" },
+        },
+      },
+    };
+
+    const userEdit = {
+      tmdb_enabled: true,
+      tmdb_language: "de",
+      tmdb_use_artwork: true,
+      tmdb_use_episodes: false,
+      tmdb_use_more_like_this: true,
+    };
+
+    const encoded = encodeFeature("tmdb_settings", userEdit);
+    const merged = simulatePartialMerge(existing, "tmdb_settings", encoded);
+
+    // Theme must survive untouched — that's the whole point of partial merge.
+    expect(merged.features.theme_settings).toEqual(existing.features.theme_settings);
+
+    // The merged blob must round-trip through parseBlob without loss.
+    const reparsed = parseBlob(merged);
+    expect(reparsed).toEqual(merged);
+
+    // Decoding the tmdb feature reproduces the exact user edit.
+    expect(decodeFeature(reparsed.features.tmdb_settings)).toEqual(userEdit);
+  });
+
+  it("envelope types match what TmdbSettingsDataStore.kt expects", () => {
+    const encoded = encodeFeature("tmdb_settings", {
+      tmdb_enabled: true,
+      tmdb_language: "fr",
+      tmdb_use_artwork: false,
+    });
+    // booleanPreferencesKey on the TV side requires type === "boolean";
+    // stringPreferencesKey requires type === "string". A mismatch silently
+    // makes the TV-side read fall back to the default — no error surfaces.
+    expect(encoded.tmdb_enabled.type).toBe("boolean");
+    expect(encoded.tmdb_language.type).toBe("string");
+    expect(encoded.tmdb_use_artwork.type).toBe("boolean");
+  });
+
+  it("mdblist form save: encode → merge → parse → decode preserves user edits and unrelated features", () => {
+    const existing: SettingsBlob = {
+      version: 1,
+      features: {
+        mdblist_settings: {
+          mdblist_enabled: { type: "boolean", value: false },
+          mdblist_api_key: { type: "string", value: "" },
+        },
+        tmdb_settings: {
+          tmdb_enabled: { type: "boolean", value: true },
+          tmdb_language: { type: "string", value: "en" },
+        },
+      },
+    };
+
+    const userEdit = {
+      mdblist_enabled: true,
+      mdblist_api_key: "abc-secret-123",
+      mdblist_show_imdb: true,
+      mdblist_show_trakt: false,
+      mdblist_show_metacritic: true,
+    };
+
+    const encoded = encodeFeature("mdblist_settings", userEdit);
+    const merged = simulatePartialMerge(existing, "mdblist_settings", encoded);
+
+    // tmdb subtree must survive untouched.
+    expect(merged.features.tmdb_settings).toEqual(existing.features.tmdb_settings);
+
+    const reparsed = parseBlob(merged);
+    expect(decodeFeature(reparsed.features.mdblist_settings)).toEqual(userEdit);
+
+    // api_key is a stringPreferencesKey on the TV side — confirm it.
+    expect(encoded.mdblist_api_key.type).toBe("string");
+  });
+});
