@@ -16,6 +16,9 @@ import com.nuvio.tv.core.util.filterReleasedItems
 import com.nuvio.tv.core.util.isUnreleased
 import com.nuvio.tv.domain.repository.AddonRepository
 import java.time.LocalDate
+import com.nuvio.tv.domain.model.ContentType
+import com.nuvio.tv.domain.model.MetaPreview
+import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.repository.CatalogRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -340,6 +343,45 @@ class SearchViewModel @Inject constructor(
                 }
             }
 
+            // Emit placeholder rows with shimmer items so the UI shows
+            // skeleton rows immediately instead of a spinner.
+            val placeholderRows = searchTargets.map { (addon, catalog) ->
+                val key = catalogKey(addonId = addon.id, type = catalog.apiType, catalogId = catalog.id)
+                val fakeItems = (0 until 8).map { i ->
+                    MetaPreview(
+                        id = "__placeholder_${key}_$i",
+                        type = ContentType.fromString(catalog.apiType),
+                        rawType = catalog.apiType,
+                        name = " ",
+                        poster = "placeholder://empty",
+                        posterShape = PosterShape.POSTER,
+                        background = null,
+                        logo = null,
+                        description = null,
+                        releaseInfo = " ",
+                        imdbRating = null,
+                        genres = emptyList()
+                    )
+                }
+                CatalogRow(
+                    addonId = addon.id,
+                    addonName = addon.displayName,
+                    addonBaseUrl = addon.baseUrl,
+                    catalogId = catalog.id,
+                    catalogName = catalog.name,
+                    type = ContentType.fromString(catalog.apiType),
+                    rawType = catalog.apiType,
+                    items = fakeItems,
+                    isLoading = true,
+                    hasMore = false,
+                    currentPage = 0,
+                    supportsSkip = false,
+                    skipStep = 0,
+                    extraArgs = emptyMap()
+                )
+            }
+            _uiState.update { it.copy(catalogRows = placeholderRows) }
+
             val jobs = searchTargets.map { (addon, catalog) ->
                 viewModelScope.launch {
                     loadCatalog(addon, catalog, query)
@@ -481,10 +523,27 @@ class SearchViewModel @Inject constructor(
 
     private fun updateCatalogRowsNow() {
         _uiState.update { state ->
-            val orderedRows = catalogOrder.mapNotNull { key -> catalogsMap[key] }
+            val orderedRows = catalogOrder.map { key ->
+                catalogsMap[key]
+                    ?: state.catalogRows.find {
+                        catalogKey(addonId = it.addonId, type = it.rawType, catalogId = it.catalogId) == key
+                    }
+            }.filterNotNull().filter { row ->
+                // Keep placeholder rows (shimmer) and rows with real items.
+                // Drop rows that came back empty from the API.
+                val isPlaceholder = row.isLoading &&
+                    row.items.firstOrNull()?.id?.startsWith("__placeholder_") == true
+                isPlaceholder || row.items.isNotEmpty()
+            }
             val filteredRows = if (hideUnreleasedContent) {
                 val today = LocalDate.now()
-                orderedRows.map { it.filterReleasedItems(today) }
+                orderedRows.map { row ->
+                    if (row.isLoading && row.items.firstOrNull()?.id?.startsWith("__placeholder_") == true) {
+                        row
+                    } else {
+                        row.filterReleasedItems(today)
+                    }
+                }
             } else {
                 orderedRows
             }

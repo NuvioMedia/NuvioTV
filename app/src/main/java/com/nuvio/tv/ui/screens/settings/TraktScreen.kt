@@ -188,9 +188,14 @@ fun TraktScreen(
             val remaining = expiresAt?.let { (it - nowMillis).coerceAtLeast(0L) } ?: 0L
             val contentScrollState = rememberScrollState()
 
-            Column(
+            Box(
                 modifier = Modifier
                     .weight(1f)
+                    .fillMaxWidth()
+            ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
                     .verticalScroll(contentScrollState),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -342,6 +347,8 @@ fun TraktScreen(
                         color = Color(0xFFFF6E6E)
                     )
                 }
+            }
+            SettingsVerticalScrollIndicators(state = contentScrollState)
             }
 
             Spacer(modifier = Modifier.height(16.dp))

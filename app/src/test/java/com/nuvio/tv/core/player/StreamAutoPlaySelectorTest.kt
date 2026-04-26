@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.player
 
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.domain.model.Stream
@@ -95,7 +96,11 @@ class StreamAutoPlaySelectorTest {
             preferBingeGroupInSelection = true
         )
 
-        assertEquals(allowedPluginMatch, selected)
+        if (AppFeaturePolicy.pluginsEnabled) {
+            assertEquals(allowedPluginMatch, selected)
+        } else {
+            assertEquals(filteredOutAddonMatch, selected)
+        }
     }
 
     @Test

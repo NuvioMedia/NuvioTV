@@ -248,6 +248,14 @@ fun CatalogRowSection(
             }
         }
 
+        val usesPlaceholderShimmer = catalogRow.isLoading &&
+            catalogRow.items.firstOrNull()?.poster?.startsWith("placeholder://") == true
+        val placeholderShimmerOffsetState = if (usesPlaceholderShimmer) {
+            rememberPlaceholderShimmerOffsetState(label = "classicPlaceholderShimmer")
+        } else {
+            null
+        }
+
         CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalBringIntoViewSpec) {
         LazyRow(
             state = listState,
@@ -289,6 +297,7 @@ fun CatalogRowSection(
                     item = item,
                     posterCardStyle = posterCardStyle,
                     showLabels = showPosterLabels,
+                    placeholderShimmerOffsetState = placeholderShimmerOffsetState,
                     focusedPosterBackdropExpandEnabled = focusedPosterBackdropExpandEnabled,
                     focusedPosterBackdropExpandDelaySeconds = focusedPosterBackdropExpandDelaySeconds,
                     focusedPosterBackdropTrailerEnabled = focusedPosterBackdropTrailerEnabled,

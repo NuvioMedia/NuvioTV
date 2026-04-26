@@ -39,7 +39,6 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -47,6 +46,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeChild
+import com.nuvio.tv.ui.components.AutoResizeText
 import com.nuvio.tv.ui.components.ProfileAvatarCircle
 import com.nuvio.tv.ui.theme.NuvioColors
 import coil3.compose.rememberAsyncImagePainter
@@ -296,15 +296,13 @@ private fun SidebarNavigationItem(
         }
         Spacer(modifier = Modifier.width(SidebarContentGap))
 
-        Text(
+        AutoResizeText(
             text = label,
             color = contentColor,
             modifier = Modifier
                 .weight(1f)
                 .graphicsLayer { alpha = labelAlpha },
-            style = androidx.tv.material3.MaterialTheme.typography.titleLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            style = androidx.tv.material3.MaterialTheme.typography.titleLarge
         )
     }
     }
@@ -372,7 +370,7 @@ private fun SidebarProfileItem(
             )
         }
         Spacer(modifier = Modifier.width(SidebarProfileContentGap))
-        Text(
+        AutoResizeText(
             text = profileName,
             color = Color.White,
             modifier = Modifier
@@ -380,9 +378,7 @@ private fun SidebarProfileItem(
                 .graphicsLayer { alpha = labelAlpha },
             style = androidx.tv.material3.MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.SemiBold
-            ),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            )
         )
     }
     }

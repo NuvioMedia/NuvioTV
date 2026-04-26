@@ -56,7 +56,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import com.nuvio.tv.R
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
@@ -1979,17 +1982,31 @@ class MetaDetailsViewModel @Inject constructor(
                 null
             }
 
-            val source = trailerService.getTrailerPlaybackSource(
-                title = meta.name,
-                year = year,
-                tmdbId = tmdbId,
-                type = meta.apiType
-            ) ?: meta.trailerYtIds.firstOrNull()?.let { ytId ->
-                trailerService.getTrailerPlaybackSourceFromYouTubeUrl(
-                    youtubeUrl = "https://www.youtube.com/watch?v=$ytId",
+            val source = if (AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+                trailerService.getTrailerPlaybackSource(
                     title = meta.name,
-                    year = year
-                )
+                    year = year,
+                    tmdbId = tmdbId,
+                    type = meta.apiType
+                ) ?: meta.trailerYtIds.firstOrNull()?.let { ytId ->
+                    trailerService.getTrailerPlaybackSourceFromYouTubeUrl(
+                        youtubeUrl = "https://www.youtube.com/watch?v=$ytId",
+                        title = meta.name,
+                        year = year
+                    )
+                }
+            } else {
+                val externalUrl = if (AppFeaturePolicy.externalTrailerPlaybackEnabled) {
+                    trailerService.getExternalTrailerUrl(
+                        tmdbId = tmdbId,
+                        type = meta.apiType
+                    ) ?: meta.trailerYtIds.firstOrNull()?.let { ytId ->
+                        "https://www.youtube.com/watch?v=$ytId"
+                    }
+                } else {
+                    null
+                }
+                externalUrl?.let { com.nuvio.tv.data.trailer.TrailerPlaybackSource(videoUrl = it) }
             }
             val url = source?.videoUrl
             val audioUrl = source?.audioUrl
@@ -2009,7 +2026,7 @@ class MetaDetailsViewModel @Inject constructor(
                 }
             }
 
-            if (url != null && isPlayButtonFocused) {
+            if (url != null && isPlayButtonFocused && AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
                 startIdleTimer()
             }
         }
@@ -2017,6 +2034,7 @@ class MetaDetailsViewModel @Inject constructor(
 
     private fun startIdleTimer() {
         idleTimerJob?.cancel()
+        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled) return
 
         val state = _uiState.value
         if (state.trailerUrl == null || state.isTrailerPlaying) return
@@ -2075,6 +2093,10 @@ class MetaDetailsViewModel @Inject constructor(
     private fun handleTrailerButtonClick() {
         val state = _uiState.value
         if (state.trailerUrl.isNullOrBlank()) return
+        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled) {
+            openExternalTrailer(state.trailerUrl)
+            return
+        }
         idleTimerJob?.cancel()
         isPlayButtonFocused = false
         setTrailerPlaybackState(
@@ -2107,6 +2129,11 @@ class MetaDetailsViewModel @Inject constructor(
                     selectedSharedTrailer = trailer
                 )
             }
+            return
+        }
+
+        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled && AppFeaturePolicy.externalTrailerPlaybackEnabled) {
+            openExternalTrailer("https://www.youtube.com/watch?v=$ytId")
             return
         }
 
@@ -2159,6 +2186,14 @@ class MetaDetailsViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+    private fun openExternalTrailer(url: String) {
+        runCatching {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
         }
     }
 

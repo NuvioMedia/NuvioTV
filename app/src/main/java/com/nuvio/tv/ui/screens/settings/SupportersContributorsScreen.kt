@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -526,8 +527,10 @@ private fun SupportersTabContent(
                 val firstRequester = uiState.supporters.firstOrNull()?.let { supporter ->
                     supporterFocusRequesters.getOrPut(supporter.key) { FocusRequester() }
                 } ?: FocusRequester()
+                val supportersListState = rememberLazyListState()
 
                 LazyColumn(
+                    state = supportersListState,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(14.dp)
@@ -549,6 +552,7 @@ private fun SupportersTabContent(
                         )
                     }
                 }
+                SettingsVerticalScrollIndicators(state = supportersListState)
             }
         }
     }
@@ -594,8 +598,10 @@ private fun ContributorsTabContent(
                 val firstRequester = uiState.contributors.firstOrNull()?.let { contributor ->
                     contributorFocusRequesters.getOrPut(contributor.id) { FocusRequester() }
                 } ?: FocusRequester()
+                val contributorsListState = rememberLazyListState()
 
                 LazyColumn(
+                    state = contributorsListState,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(14.dp)
@@ -617,6 +623,7 @@ private fun ContributorsTabContent(
                         )
                     }
                 }
+                SettingsVerticalScrollIndicators(state = contributorsListState)
             }
         }
     }

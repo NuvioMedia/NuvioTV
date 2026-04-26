@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.home
 
 import android.util.Log
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.tmdb.TmdbEnrichment
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
@@ -140,7 +141,8 @@ internal fun HomeViewModel.observeLayoutPreferencesPipeline() {
             modernHeroFullScreenBackdropEnabled = false,
             focusedBackdropExpandEnabled = focusedBackdropPrefs.expandEnabled,
             focusedBackdropExpandDelaySeconds = focusedBackdropPrefs.expandDelaySeconds,
-            focusedBackdropTrailerEnabled = focusedBackdropPrefs.trailerEnabled,
+            focusedBackdropTrailerEnabled = focusedBackdropPrefs.trailerEnabled &&
+                AppFeaturePolicy.inAppTrailerPlaybackEnabled,
             focusedBackdropTrailerMuted = focusedBackdropPrefs.trailerMuted,
             focusedBackdropTrailerPlaybackTarget = focusedBackdropPrefs.trailerPlaybackTarget,
             posterCardWidthDp = posterCardWidthDp,
@@ -323,6 +325,7 @@ internal fun HomeViewModel.requestTrailerPreviewPipeline(
     apiType: String,
     fallbackYtId: String? = null
 ) {
+    if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled) return
     if (startupGracePeriodActive) return
     if (activeTrailerPreviewItemId != itemId) {
         activeTrailerPreviewItemId = itemId

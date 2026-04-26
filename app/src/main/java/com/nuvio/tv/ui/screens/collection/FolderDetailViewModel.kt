@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.data.trailer.TrailerService
 import com.nuvio.tv.data.local.CollectionsDataStore
@@ -249,7 +250,8 @@ class FolderDetailViewModel @Inject constructor(
                     modernHeroFullScreenBackdropEnabled = modernFullScreenBackdrop,
                     focusedPosterBackdropExpandEnabled = focusedPosterBackdropExpandEnabled,
                     focusedPosterBackdropExpandDelaySeconds = focusedPosterBackdropExpandDelaySeconds,
-                    focusedPosterBackdropTrailerEnabled = focusedPosterBackdropTrailerEnabled,
+                    focusedPosterBackdropTrailerEnabled = focusedPosterBackdropTrailerEnabled &&
+                        AppFeaturePolicy.inAppTrailerPlaybackEnabled,
                     focusedPosterBackdropTrailerMuted = focusedPosterBackdropTrailerMuted,
                     focusedPosterBackdropTrailerPlaybackTarget = focusedPosterBackdropTrailerPlaybackTarget,
                     posterCardWidthDp = posterCardWidthDp,
@@ -791,6 +793,7 @@ class FolderDetailViewModel @Inject constructor(
     }
 
     fun requestTrailerPreview(itemId: String, title: String, releaseInfo: String?, apiType: String) {
+        if (!AppFeaturePolicy.inAppTrailerPlaybackEnabled) return
         if (activeTrailerPreviewItemId != itemId) {
             activeTrailerPreviewItemId = itemId
             trailerPreviewRequestVersion++

@@ -249,6 +249,10 @@
     <!-- ThemeSettingsScreen -->
     <string name="appearance_title">Appearance</string>
     <string name="appearance_subtitle">Choose your color theme, font and language</string>
+    <string name="appearance_color_theme">Color Theme</string>
+    <string name="appearance_color_theme_subtitle">Pick the accent color used across the app</string>
+    <string name="appearance_font_and_language">Font and Language</string>
+    <string name="appearance_font_and_language_subtitle">Choose the typeface and locale used throughout the app</string>
     <string name="cd_selected">Selected</string>
 
     <!-- AboutScreen -->
@@ -589,6 +593,8 @@
     <string name="layout_catalog_type_sub">Show type suffix next to catalog name (Movie/Series).</string>
     <string name="layout_hide_unreleased">Hide Unreleased Content</string>
     <string name="layout_hide_unreleased_sub">Hide movies and shows that haven\'t been released yet.</string>
+    <string name="layout_smooth_focus_scroll">Nuvio Focus Scrolling</string>
+    <string name="layout_smooth_focus_scroll_sub">Use Nuvio\'s custom focus scroll animation and positioning.</string>
     <string name="layout_section_detail">Detail Page</string>
     <string name="layout_section_detail_desc">Settings for the detail and episode screens.</string>
     <string name="layout_blur_unwatched">Blur Unwatched Episodes</string>

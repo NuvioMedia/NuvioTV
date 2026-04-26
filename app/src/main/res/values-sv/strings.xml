@@ -164,7 +164,7 @@
 
     <!-- AboutScreen -->
     <string name="about_title">Om appen</string>
-    <string name="about_subtitle">Appinformation, updatteringar, och rättsliga dokument</string>
+    <string name="about_subtitle">Appinformation, uppdateringar, och rättsliga dokument</string>
     <string name="about_made_with_love">Tillverkad med ❤️ av Tapframe och vänner</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_check_updates">Sök efter uppdateringar</string>
@@ -1214,4 +1214,418 @@
     <string name="update_up_to_date">Systemet är uppdaterat. Senaste ändringarna:</string>
     <string name="playback_player_auto">Automatiskt (Bäst för innehåll)</string>
     <string name="playback_player_auto_desc">ExoPlayer för filmer och serier · MPV för anime</string>
+
+    <!-- App name -->
+    <string name="app_name">Nuvio</string>
+
+    <!-- WebConfigServers -->
+    <string name="web_manage_addons_title">Hantera tillägg</string>
+    <string name="web_manage_addons_subtitle">Hantera tillägg, kataloger och samlingar</string>
+    <string name="web_add_addon_url">Lägg till tillägg via URL</string>
+    <string name="web_placeholder_url">https://example.com/manifest.json</string>
+    <string name="web_btn_add">Lägg till</string>
+    <string name="web_installed_addons">Installerade tillägg</string>
+    <string name="web_no_addons">Inga tillägg installerade</string>
+    <string name="web_home_catalogs">Hemkataloger och samlingar</string>
+    <string name="web_no_catalogs">Inga hemkataloger tillgängliga</string>
+    <string name="web_btn_save">Spara ändringar</string>
+    <string name="web_connection_lost">Anslutningen till TV förlorad</string>
+    <string name="web_btn_remove">Ta bort</string>
+    <string name="web_badge_new">Nytt</string>
+    <string name="web_badge_disabled">Inaktiverat</string>
+    <string name="web_btn_enable">Aktivera</string>
+    <string name="web_btn_disable">Inaktivera</string>
+    <string name="web_error_addon_exists">Detta tillägg finns redan i listan</string>
+    <string name="web_status_waiting_tv">Väntar på TV</string>
+    <string name="web_status_msg_waiting_tv">Bekräfta ändringarna på din TV för att tillämpa dem.</string>
+    <string name="web_status_changes_applied">Ändringar tillämpade</string>
+    <string name="web_status_msg_addon_updated">Din tilläggskonfiguration har uppdaterats på TV:n.</string>
+    <string name="web_status_msg_repo_updated">Din arkivkonfiguration har uppdaterats på TV:n.</string>
+    <string name="web_status_changes_rejected">Ändringar avvisade</string>
+    <string name="web_status_msg_changes_rejected">Ändringarna avvisades på TV:n. Din lista har återställts.</string>
+    <string name="web_status_error">Något gick fel</string>
+    <string name="web_error_failed_save">Kunde inte spara. Kontrollera anslutningen till TV:n.</string>
+    <string name="web_btn_dismiss">Stäng</string>
+    <string name="web_status_timeout">Tidsgräns nådd</string>
+    <string name="web_status_msg_timeout">Inget svar från TV:n. Försök igen.</string>
+    <string name="web_status_msg_connection_lost">TV-servern är inte längre tillgänglig. Ändringarna kan ha tillämpats.</string>
+    <string name="web_manage_repos_title">Hantera arkiv</string>
+    <string name="web_manage_repos_subtitle">Hantera dina arkiv</string>
+    <string name="web_add_repo_url">Lägg till arkiv via URL</string>
+    <string name="web_installed">Installerat</string>
+    <string name="web_no_repos">Inga arkiv installerade</string>
+    <string name="web_error_repo_exists">Detta arkiv finns redan i listan</string>
+    <string name="web_manage_collections_title">Hantera samlingar</string>
+    <string name="web_manage_collections_subtitle">Skapa och hantera dina anpassade samlingar</string>
+    <string name="web_status_msg_collections_updated">Dina samlingar har uppdaterats på TV:n.</string>
+    <string name="web_tab_addons">Tillägg</string>
+    <string name="web_tab_home_layout">Hemlayout</string>
+    <string name="web_tab_collections">Samlingar</string>
+    <string name="web_btn_enable_all">Aktivera alla</string>
+    <string name="web_btn_disable_all">Inaktivera alla</string>
+    <string name="web_btn_show_all">Visa alla</string>
+    <string name="web_btn_hide_all">Dölj alla</string>
+    <string name="web_btn_new_collection">+ Ny samling</string>
+    <string name="web_btn_export">Exportera</string>
+    <string name="web_btn_import">Importera</string>
+    <string name="web_no_collections">Inga samlingar ännu</string>
+    <string name="web_badge_collection">Samling</string>
+    <string name="web_import_collections_title">Importera samlingar</string>
+    <string name="web_import_tab_paste">Klistra in</string>
+    <string name="web_import_tab_file">Fil</string>
+    <string name="web_import_tab_url">URL</string>
+
+    <!-- CatalogRowSection -->
+    <string name="action_load_more">Ladda mer</string>
+
+    <!-- MetaDetailsScreen -->
+    <string name="detail_tab_trailer">Trailer</string>
+    <string name="detail_trailer_loading">Laddar trailer…</string>
+    <string name="detail_trailer_error">Kunde inte ladda trailer just nu.</string>
+
+    <!-- ThemeSettingsScreen -->
+    <string name="appearance_color_theme">Färgtema</string>
+    <string name="appearance_color_theme_subtitle">Välj accentfärgen som används i hela appen</string>
+    <string name="appearance_font_and_language">Typsnitt och språk</string>
+    <string name="appearance_font_and_language_subtitle">Välj teckensnitt och språk som används i hela appen</string>
+
+    <!-- Advanced settings (Continue Watching cache) -->
+    <string name="advanced_clear_cw_cache">Rensa cache för Fortsätt titta</string>
+    <string name="advanced_clear_cw_cache_subtitle">Ta bort cachade miniatyrer, titlar och berikande data för Fortsätt titta</string>
+    <string name="advanced_clear_cw_cache_done">Cache rensad</string>
+
+    <!-- PlaybackSettingsSections -->
+    <string name="playback_internal_player_engine">Intern motor</string>
+    <string name="playback_engine_exoplayer">ExoPlayer</string>
+    <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
+    <string name="playback_auto_switch_internal_player_on_error">Växla motor automatiskt vid startfel</string>
+    <string name="playback_auto_switch_internal_player_on_error_sub">Om strömstart misslyckas, växla automatiskt mellan ExoPlayer och libmpv.</string>
+    <string name="playback_resolution_matching_unsupported_sub">Skärmen rapporterar bara en upplösning; matchning kanske inte påverkar.</string>
+    <string name="playback_afr_capability_unsupported_title">Vissa inställningar kanske inte fungerar</string>
+    <string name="playback_afr_capability_both_problem_body">Automatisk bildfrekvens och upplösningsmatchning är båda aktiverade, men din skärm rapporterar bara en uppdateringsfrekvens och en upplösning. Ingendera kanske påverkar, så det rekommenderas att inaktivera båda.</string>
+    <string name="playback_afr_capability_only_afr_unsupported_body">Automatisk bildfrekvens är aktiverad men din skärm rapporterar bara en uppdateringsfrekvens. Växling kanske inte påverkar, så det rekommenderas att inaktivera.</string>
+    <string name="playback_afr_capability_only_res_unsupported_body">Upplösningsmatchning är aktiverad men din skärm rapporterar bara en upplösning. Matchning kanske inte påverkar, så det rekommenderas att inaktivera.</string>
+    <string name="playback_afr_capability_disable_button">Inaktivera AFR</string>
+    <string name="playback_afr_capability_disable_resolution_button">Inaktivera upplösningsmatchning</string>
+    <string name="playback_afr_capability_disable_both_button">Inaktivera båda</string>
+    <string name="playback_engine_exoplayer_desc">Bästa kompatibilitet med nuvarande Nuvio-funktioner.</string>
+    <string name="playback_engine_mvplayer_desc">Använder libmpv med Nuvios OSD-kontroller. Experimentellt.</string>
+
+    <!-- PlaybackAudioSettings -->
+    <string name="audio_lang_original">Originalspråk</string>
+    <string name="audio_lang_original_hint">Kräver att TMDB-berikning är aktiverad</string>
+    <string name="audio_mpv_hwdec_title">Hårdvaruavkodning (endast MPV)</string>
+    <string name="audio_mpv_hwdec_dialog_subtitle">Välj hur libmpv ska använda hårdvaruavkodare.</string>
+    <string name="audio_mpv_hwdec_legacy_direct_copy">Äldre (direkt -&gt; copy)</string>
+    <string name="audio_mpv_hwdec_legacy_direct_copy_desc">Tidigare standardbeteende: prova direkt hårdvara först, sedan copy-back.</string>
+    <string name="audio_mpv_hwdec_auto_safe">Auto (auto-safe)</string>
+    <string name="audio_mpv_hwdec_auto_safe_desc">Säkrare automatiskt läge med reserv när vissa hårdvaruavkodare misslyckas.</string>
+    <string name="audio_mpv_hwdec_hardware_copy">Hårdvara (copy) (mediacodec-copy)</string>
+    <string name="audio_mpv_hwdec_hardware_copy_desc">Använder hårdvaruavkodning med kopiering till mjukvaruminne.</string>
+    <string name="audio_mpv_hwdec_hardware_direct">Hårdvara (direkt) (mediacodec)</string>
+    <string name="audio_mpv_hwdec_hardware_direct_desc">Använder direkt hårdvaruavkodning. Snabbaste vägen på kompatibla enheter.</string>
+    <string name="audio_mpv_hwdec_disabled">Inaktiverad (no)</string>
+    <string name="audio_mpv_hwdec_disabled_desc">Inaktiverar hårdvaruavkodning och använder endast mjukvaruavkodning.</string>
+
+    <!-- PlaybackSubtitleSettings -->
+    <string name="sub_mode_overlay_canvas_sub">HDR-stöd med canvas-rendering. Kan blockera UI-tråden.</string>
+
+    <!-- LayoutSettingsScreen -->
+    <string name="layout_memory_only_scroll">Vertikal rullning endast minne</string>
+    <string name="layout_memory_only_scroll_sub">Hoppa över laddning av nya bilder vid vertikal rullning.</string>
+
+    <!-- TmdbSettingsScreen -->
+    <string name="tmdb_release_dates_title">Premiärdatum</string>
+    <string name="tmdb_release_dates_subtitle">Premiärdatum och sändningsdatum från TMDB</string>
+    <string name="tmdb_trailers_title">Trailers</string>
+    <string name="tmdb_trailers_subtitle">Trailerkandidater från TMDB-videor för trailer-sektionen på detaljsidan</string>
+
+    <!-- TraktScreen -->
+    <string name="qr_login_scan_prompt">Skanna QR och logga in på din telefon</string>
+    <string name="qr_login_start_failed">Kunde inte starta QR-inloggning</string>
+    <string name="qr_login_signing_in">Loggar in dig…</string>
+    <string name="qr_login_success">Inloggning lyckades</string>
+    <string name="qr_login_exchange_failed">Kunde inte slutföra QR-inloggning</string>
+    <string name="trakt_library_source_title">Bibliotekskälla</string>
+    <string name="trakt_library_source_subtitle">Välj vilket bibliotek som används för att spara och visa din samling</string>
+    <string name="trakt_library_source_dialog_title">Bibliotekskälla</string>
+    <string name="trakt_library_source_dialog_subtitle">Välj var du vill spara och hantera dina biblioteksobjekt</string>
+    <string name="trakt_library_source_trakt">Trakt</string>
+    <string name="trakt_library_source_nuvio">Nuvio-bibliotek</string>
+    <string name="trakt_library_source_trakt_selected">Trakt-bibliotek valt</string>
+    <string name="trakt_library_source_nuvio_selected">Nuvio-bibliotek valt</string>
+
+    <!-- ProfileSettingsContent -->
+    <string name="profile_edit_header">Redigera profil</string>
+
+    <!-- AddonManagerScreen -->
+    <string name="addon_manage_collections_from_phone_subtitle">Skanna en QR-kod för att hantera samlingar från din telefon</string>
+    <string name="addon_qr_collections_scan_instruction">Skanna med din telefon för att hantera samlingar</string>
+
+    <!-- StreamScreen / P2P -->
+    <string name="p2p_consent_title">P2P-streaming</string>
+    <string name="p2p_consent_body">Denna ström använder peer-to-peer (P2P)-teknik. Genom att aktivera P2P bekräftar och godkänner du att:\n\n• Din IP-adress kommer att vara synlig för andra peers i nätverket\n• Du är ensam ansvarig för det innehåll du ser\n• Du bekräftar att du har laglig rätt att se detta innehåll i din jurisdiktion\n• Nuvio är inte värd för, distribuerar eller kontrollerar något P2P-innehåll\n• Nuvio bär inget ansvar för rättsliga konsekvenser som uppstår vid din användning av P2P-streaming\n\nDu använder denna funktion helt på egen risk. P2P kan inaktiveras när som helst i Inställningar.</string>
+    <string name="p2p_consent_enable">Aktivera P2P</string>
+    <string name="p2p_consent_cancel">Avbryt</string>
+    <string name="settings_p2p_title">P2P-streaming</string>
+    <string name="settings_p2p_subtitle">Tillåt peer-to-peer (torrent)-strömmar</string>
+    <string name="settings_p2p_hide_stats_title">Dölj torrent-statistik</string>
+    <string name="settings_p2p_hide_stats_subtitle">Dölj buffer, seeds, peers och nedladdningshastighet under laddning och uppspelning</string>
+    <string name="p2p_download_title">Laddar ner P2P-motor</string>
+    <string name="p2p_download_subtitle">Detta är en engångsnedladdning som krävs för P2P-streaming.</string>
+
+    <!-- PlayerScreen -->
+    <string name="player_loading_preparing">Förbereder ström…</string>
+    <string name="player_loading_detecting_format">Identifierar strömformat…</string>
+    <string name="player_loading_subtitles">Hämtar undertexter…</string>
+    <string name="player_loading_subtitles_from">Hämtar undertexter från %1$d tillägg…</string>
+    <string name="player_loading_subtitles_progress">Hämtar undertexter… (%1$d / %2$d)</string>
+    <string name="player_loading_subtitles_addon">Undertexter: %1$s (%2$d / %3$d)</string>
+    <string name="player_loading_building">Bygger spelare…</string>
+    <string name="player_loading_starting">Startar ström…</string>
+    <string name="player_loading_buffering">Buffrar…</string>
+    <string name="player_loading_fallback_pcm_audio">Ljudspårsinitiering misslyckades – byter till PCM-ljud…</string>
+    <string name="player_loading_fallback_hevc_decoder">Avkodarinitiering misslyckades – byter till HEVC-avkodare…</string>
+    <string name="player_engine_switching_title">Växlar spelarmotor</string>
+    <string name="player_engine_switching_message">Start misslyckades. Växlar till %1$s…</string>
+    <string name="player_engine_switching_manual_message">Växlar till %1$s…</string>
+    <string name="playback_show_loading_status">Visa laddningsstatus</string>
+    <string name="playback_show_loading_status_sub">Visa stegvis förlopp medan spelaren initialiseras.</string>
+
+    <!-- Season/episode code shown in player UI -->
+    <string name="season_episode_format">S%1$02dE%2$02d</string>
+
+    <!-- StreamInfoOverlay -->
+    <string name="stream_info_player_engine">Spelarmotor</string>
+
+    <!-- Player aspect / engine -->
+    <string name="player_aspect_tunneling_unavailable">Ej tillgänglig under tunneluppspelning</string>
+    <string name="player_aspect_mode_slight_zoom">Lätt zoom</string>
+    <string name="player_aspect_mode_cinema_zoom">Bio-zoom</string>
+
+    <!-- SubtitleDialog -->
+    <string name="subtitle_built_in">Inbyggt</string>
+
+    <!-- SearchScreen -->
+    <string name="search_recent_title">Senaste sökningar</string>
+    <string name="search_recent_clear">Rensa historik</string>
+
+    <!-- LibraryScreen -->
+    <string name="library_empty_trakt_not_auth_title">Trakt inte anslutet</string>
+    <string name="library_empty_trakt_not_auth_subtitle">Anslut ditt Trakt-konto i Inställningar för att se ditt Trakt-bibliotek</string>
+
+    <!-- AccountScreen -->
+    <string name="account_signin_create_title">Logga in / Skapa konto</string>
+    <string name="account_signin_create_desc">Använd e-post och lösenord för att skapa eller logga in på ditt konto.</string>
+    <string name="account_generate_sync_desc">Skapa en kod på denna enhet så att andra enheter kan länka till den.</string>
+    <string name="account_enter_sync_desc">Länka denna enhet till en annan enhet med en synkkod.</string>
+    <string name="account_signed_in_as">Inloggad som</string>
+    <string name="account_generate_sync_signed_in_desc">Skapa en kod så att andra enheter kan synkronisera med detta konto.</string>
+    <string name="account_unknown_device">Okänd enhet</string>
+
+    <!-- Sync screens -->
+    <string name="sync_claim_linking">Länkar…</string>
+    <string name="sync_generate_generating">Genererar…</string>
+    <string name="sync_generate_code_btn">Generera kod</string>
+
+    <!-- Search -->
+    <string name="search_no_results_title">Inga resultat</string>
+    <string name="search_no_results_subtitle">Försök söka med andra nyckelord</string>
+    <string name="discover_disabled_title">Utforska är inaktiverat</string>
+    <string name="discover_disabled_subtitle">Aktivera Sök Utforska i inställningar</string>
+
+    <!-- Library -->
+    <string name="library_list_create_dialog_title">Skapa lista</string>
+    <string name="library_list_edit_dialog_title">Redigera lista</string>
+    <string name="library_sync_btn">Synka</string>
+    <string name="library_syncing_btn">Synkar…</string>
+
+    <!-- Error messages (shared) -->
+    <string name="error_network_required">Anslut till Wi-Fi eller Ethernet för att använda denna funktion</string>
+    <string name="error_server_ports_unavailable">Kunde inte starta servern. Alla portar är upptagna.</string>
+
+    <!-- Plugin errors -->
+    <string name="plugin_error_invalid_url">Ange en giltig URL</string>
+    <string name="plugin_error_add_repo">Misslyckades att lägga till arkiv: %1$s</string>
+    <string name="plugin_error_refresh">Misslyckades att uppdatera: %1$s</string>
+    <string name="plugin_error_test">Test misslyckades: %1$s</string>
+    <string name="plugin_test_no_results">Inga resultat hittades</string>
+    <string name="plugin_test_found_streams">Hittade %1$d strömmar</string>
+    <string name="plugin_risky_enable_title">Aktivera leverantör?</string>
+    <string name="plugin_risky_enable_message">%1$s är känt för att orsaka krascher på visst innehåll. Aktivera ändå?</string>
+    <string name="plugin_risky_enable_cancel">Avbryt</string>
+    <string name="plugin_risky_enable_confirm">Aktivera</string>
+    <string name="plugin_version">Version %1$s</string>
+
+    <!-- Trakt errors -->
+    <string name="trakt_error_code_expired">Enhetskoden har gått ut. Börja om.</string>
+    <string name="trakt_error_code_used">Enhetskoden har redan använts. Börja om.</string>
+    <string name="trakt_error_denied">Auktorisering nekad på Trakt.</string>
+
+    <!-- Account errors -->
+    <string name="account_error_signin_required">Logga in med ett konto först.</string>
+
+    <!-- Search errors -->
+    <string name="search_error_no_catalogs">Inga sökbara kataloger hittades i installerade tillägg</string>
+
+    <!-- Home errors -->
+    <string name="home_error_no_addons">Inga tillägg installerade</string>
+    <string name="home_error_no_catalog_addons">Inga katalogtillägg installerade</string>
+
+    <!-- Player errors -->
+    <string name="player_error_no_stream_url">Ingen ström-URL angiven</string>
+
+    <!-- Subtitle style -->
+    <string name="subtitle_style_weight">Vikt</string>
+
+    <!-- Stream screen -->
+    <string name="stream_episode_label">S%1$d E%2$d</string>
+
+    <!-- Episode ratings -->
+    <string name="ratings_season_label">S%1$d</string>
+    <string name="ratings_episode_label">E%1$d</string>
+
+    <!-- Profile PIN errors -->
+    <string name="profile_pin_save_error">Kunde inte spara PIN. Försök igen.</string>
+    <string name="profile_pin_locked">Profilen är låst. Försök igen om %1$ds.</string>
+    <string name="profile_pin_invalid">Ogiltig PIN. Försök igen.</string>
+    <string name="profile_pin_verify_error">Kunde inte verifiera PIN. Försök igen.</string>
+    <string name="profile_pin_incorrect">Nuvarande PIN är felaktig.</string>
+    <string name="profile_pin_current_required">Denna profil har redan en PIN. Ange den nuvarande PIN-koden för att ändra den.</string>
+    <string name="profile_pin_overlay_delete_verify_heading">Ange nuvarande PIN för att radera %1$s.</string>
+    <string name="profile_pin_overlay_delete_verify_support">Ange den nuvarande 4-siffriga PIN-koden innan du raderar denna profil.</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_play">Spela</string>
+    <string name="cd_pause">Paus</string>
+    <string name="cd_subtitles">Undertexter</string>
+    <string name="cd_audio_tracks">Ljudspår</string>
+    <string name="cd_sources">Källor</string>
+    <string name="cd_switch_player_engine">Byt spelarmotor</string>
+    <string name="cd_episodes">Avsnitt</string>
+    <string name="cd_playback_speed">Uppspelningshastighet</string>
+    <string name="cd_aspect_ratio">Bildförhållande</string>
+    <string name="cd_open_external_player">Öppna i extern spelare</string>
+    <string name="cd_stream_info">Strömningsinfo</string>
+    <string name="cd_more_actions">Fler åtgärder</string>
+    <string name="cd_close_more_actions">Stäng fler åtgärder</string>
+    <string name="cd_back">Tillbaka</string>
+    <string name="cd_next_episode_thumbnail">Miniatyr för nästa avsnitt</string>
+    <string name="cd_current">Aktuell</string>
+    <string name="cd_loading_backdrop">Laddar bakgrund</string>
+    <string name="cd_loading_logo">Laddar logotyp</string>
+    <string name="cd_move_up">Flytta upp</string>
+    <string name="cd_move_down">Flytta ner</string>
+    <string name="cd_edit">Redigera</string>
+    <string name="cd_delete">Radera</string>
+    <string name="cd_qr_code">QR-kod</string>
+    <string name="cd_add">Lägg till</string>
+    <string name="cd_refresh">Uppdatera</string>
+    <string name="cd_remove">Ta bort</string>
+    <string name="cd_preview">Förhandsvisning</string>
+    <string name="cd_test">Testa</string>
+    <string name="cd_unlink">Avlänka</string>
+    <string name="cd_nuvio_logo">NuvioTV</string>
+    <string name="cd_trakt_logo">Trakt-logotyp</string>
+    <string name="cd_trakt_qr">Trakt-aktiverings-QR</string>
+    <string name="cd_imdb">IMDb</string>
+    <string name="cd_open_discover">Öppna utforska</string>
+    <string name="cd_voice_search">Röstsökning</string>
+    <string name="cd_donation_qr">Donations-QR-kod</string>
+    <string name="cd_contributor_qr">QR-kod för bidragsgivarstöd</string>
+    <string name="cd_expand">Expandera %1$s</string>
+    <string name="cd_collapse">Fäll ihop %1$s</string>
+    <string name="cd_qr_login">QR-inloggningskod</string>
+    <string name="cd_nuvio">Nuvio</string>
+
+    <!-- Debug -->
+    <string name="debug_signin_success">Inloggad</string>
+    <string name="debug_generate_description">Debug-genererat %1$s objekt #%2$d</string>
+    <string name="debug_generate_result_failed">Misslyckades: %1$s</string>
+
+    <!-- Collection Management -->
+    <string name="collections_header">Samlingar</string>
+    <string name="collections_empty">Inga samlingar ännu. Skapa en för att organisera dina kataloger.</string>
+    <string name="collections_new">Ny samling</string>
+    <string name="collections_import">Importera</string>
+    <string name="collections_export_file">Exportera fil</string>
+    <string name="collections_saved_downloads">Sparat i Nedladdningar</string>
+    <string name="collections_export_failed">Export misslyckades</string>
+    <string name="collections_import_header">Importera samlingar</string>
+    <string name="collections_import_description">Importera samlingar från JSON. Kataloger från tillägg du inte har installerat visas med en varning.</string>
+    <string name="collections_cancel">Avbryt</string>
+    <string name="collections_mode_paste">Klistra in JSON</string>
+    <string name="collections_mode_file">Från fil</string>
+    <string name="collections_mode_url">Från URL</string>
+    <string name="collections_paste_clipboard">Klistra in från urklipp</string>
+    <string name="collections_validate">Validera</string>
+    <string name="collections_paste_hint">Klistra in JSON för samlingar här…</string>
+    <string name="collections_file_description">Läser nuvio-collections.json från Nedladdningar-mappen.</string>
+    <string name="collections_load_file">Ladda fil</string>
+    <string name="collections_file_loaded">Fil laddad (%1$d tecken)</string>
+    <string name="collections_fetch_url">Hämta URL</string>
+    <string name="collections_fetching">Hämtar…</string>
+    <string name="collections_valid_json">Giltig JSON</string>
+    <string name="collections_valid_summary">%1$d samling(ar), %2$d mapp(ar)</string>
+    <string name="collections_confirm_import">Bekräfta import</string>
+    <string name="collections_folder_count">%1$d mapp(ar)</string>
+
+    <!-- Collection Editor -->
+    <string name="collections_editor_row_title">Radnamn</string>
+    <string name="collections_editor_save">Spara</string>
+    <string name="collections_editor_backdrop">Bakgrundsbild</string>
+    <string name="collections_editor_pin_above">Fäst ovanför kataloger</string>
+    <string name="collections_editor_pin_above_desc">Visa denna samling ovanför alla vanliga hemkataloger. Flera fästa samlingar följer skapandeordningen.</string>
+    <string name="collections_editor_focus_glow">Fokusglöd</string>
+    <string name="collections_editor_focus_glow_desc">Använd det inbyggda TV-glödet på denna samlings anpassade katalogkort på hemskärmen</string>
+    <string name="collections_editor_view_mode">Visningsläge</string>
+    <string name="collections_editor_show_all_tab">Visa \"Alla\"-flik</string>
+    <string name="collections_editor_show_all_tab_desc">Kombinera alla kataloger i en flik</string>
+    <string name="collections_editor_folders">Mappar</string>
+    <string name="collections_editor_add_folder">Lägg till mapp</string>
+    <string name="collections_editor_edit_folder">Redigera mapp</string>
+    <string name="collections_editor_folder_title">Mappnamn</string>
+    <string name="collections_editor_cover">Omslag</string>
+    <string name="collections_editor_cover_none">Ingen</string>
+    <string name="collections_editor_cover_emoji">Emoji</string>
+    <string name="collections_editor_cover_image_url">Bild-URL</string>
+    <string name="collections_editor_focus_gif">Fokus-GIF</string>
+    <string name="collections_editor_play_gif">Spela GIF vid fokus</string>
+    <string name="collections_editor_tile_shape">Brickform</string>
+    <string name="collections_editor_hide_title">Dölj titel</string>
+    <string name="collections_editor_hide_title_desc">Visa endast omslagsbilden</string>
+    <string name="collections_editor_display">Visning</string>
+    <string name="collections_editor_catalogs">Kataloger</string>
+    <string name="collections_editor_add_catalog">Lägg till katalog</string>
+    <string name="collections_editor_select_catalogs">Välj kataloger</string>
+    <string name="collections_editor_done">Klar</string>
+    <string name="collections_editor_choose_emoji">Välj emoji</string>
+    <string name="collections_editor_back">Tillbaka</string>
+    <string name="collections_editor_edit_collection">Redigera samling</string>
+    <string name="collections_editor_catalog_count">%1$d katalog(er)</string>
+    <string name="collections_editor_view_mode_tabs">Flikar</string>
+    <string name="collections_editor_view_mode_rows">Rader</string>
+    <string name="collections_editor_view_mode_follow">Följ hemlayout</string>
+    <string name="collections_editor_shape_poster">Affisch</string>
+    <string name="collections_editor_shape_wide">Bred</string>
+    <string name="collections_editor_shape_square">Fyrkantig</string>
+    <string name="collections_editor_addon_missing">Tillägg ej installerat: %1$s</string>
+    <string name="collections_editor_placeholder_name">Samlingsnamn</string>
+    <string name="collections_editor_placeholder_backdrop">URL för bakgrundsbild (valfritt)</string>
+    <string name="collections_editor_placeholder_folder">Mappnamn</string>
+    <string name="collections_editor_placeholder_gif">URL till animerad GIF (spelas endast när fokuserad)</string>
+    <string name="collections_editor_hero_backdrop">Karusellbakgrund (Modern hem)</string>
+    <string name="collections_editor_placeholder_hero_backdrop">Anpassad karusellbakgrunds-URL (valfritt)</string>
+    <string name="collections_editor_title_logo">Titellogotyp (Modern hem)</string>
+    <string name="collections_editor_placeholder_title_logo">URL för anpassad titellogotyp (valfritt)</string>
+    <string name="collections_editor_genre_filter">Genrefilter</string>
+    <string name="collections_editor_choose_genre">Välj</string>
+    <string name="collections_editor_select_genre">Välj genre</string>
+    <string name="collections_editor_all_genres">Alla genrer</string>
+    <string name="collections_editor_genre_required">Genre krävs</string>
+    <string name="collections_editor_genre_optional">Genrefilter tillgängligt</string>
+    <string name="collections_card_title">Samlingar</string>
+    <string name="collections_card_subtitle">Gruppera kataloger i mappar på din hemskärm</string>
+    <string name="collections_tab_all">Alla</string>
+    <string name="collections_tab_combined">Kombinerat</string>
 </resources>

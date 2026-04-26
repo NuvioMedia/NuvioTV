@@ -10,10 +10,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -69,7 +71,11 @@ fun MDBListSettingsContent(
                 .fillMaxWidth()
                 .weight(1f)
         ) {
+            val mdbListState = rememberLazyListState()
+            Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
+                state = mdbListState,
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -169,6 +175,8 @@ fun MDBListSettingsContent(
                         onToggle = { viewModel.onEvent(MDBListSettingsEvent.ToggleMetacritic(!uiState.showMetacritic)) }
                     )
                 }
+            }
+            SettingsVerticalScrollIndicators(state = mdbListState)
             }
         }
     }

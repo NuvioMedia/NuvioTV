@@ -88,6 +88,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import com.nuvio.tv.core.runtime.PluginRuntimeHooks
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -108,6 +109,7 @@ import androidx.tv.material3.Text
 import androidx.tv.material3.rememberDrawerState
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.auth.AuthManager
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.data.local.AppOnboardingDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.ThemeDataStore
@@ -158,7 +160,8 @@ private data class MainUiPrefs(
     val hasChosenLayout: Boolean? = null,
     val sidebarCollapsed: Boolean = false,
     val modernSidebarEnabled: Boolean = false,
-    val modernSidebarBlurPref: Boolean = false
+    val modernSidebarBlurPref: Boolean = false,
+    val smoothBringIntoViewEnabled: Boolean = true
 )
 
 @AndroidEntryPoint
@@ -220,8 +223,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         window?.setBackgroundDrawable(null)
 
-        // Store Activity reference for CloudStream extensions that need it in plugin.load()
-        com.lagradost.cloudstream3.AcraApplication.setActivity(this)
+        PluginRuntimeHooks.onActivityCreate(this)
 
         window?.decorView?.post {
             val snapshot = com.nuvio.tv.core.player.DisplayCapabilities.detect(this)
@@ -293,13 +295,21 @@ class MainActivity : ComponentActivity() {
                     )
                 }.combine(layoutPreferenceDataStore.modernSidebarBlurEnabled) { prefs, modernSidebarBlurPref ->
                     prefs.copy(modernSidebarBlurPref = modernSidebarBlurPref)
+                }.combine(layoutPreferenceDataStore.smoothBringIntoViewEnabled) { prefs, smoothBringIntoViewEnabled ->
+                    prefs.copy(smoothBringIntoViewEnabled = smoothBringIntoViewEnabled)
                 }
             }
             val mainUiPrefs by mainUiPrefsFlow.collectAsState(initial = MainUiPrefs(hasChosenLayout = null))
 
             NuvioTheme(appTheme = mainUiPrefs.theme, appFont = mainUiPrefs.font) {
+                val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
+                val bringIntoViewSpec = if (mainUiPrefs.smoothBringIntoViewEnabled) {
+                    NuvioScrollDefaults.smoothScrollSpec
+                } else {
+                    defaultBringIntoViewSpec
+                }
                 CompositionLocalProvider(
-                    LocalBringIntoViewSpec provides NuvioScrollDefaults.smoothScrollSpec
+                    LocalBringIntoViewSpec provides bringIntoViewSpec
                 ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -392,9 +402,6 @@ class MainActivity : ComponentActivity() {
                     val modernSidebarBlurEnabled =
                         mainUiPrefs.modernSidebarBlurPref && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
                     val hideBuiltInHeadersForFloatingPill = modernSidebarEnabled && !sidebarCollapsed
-
-                    val updateViewModel: UpdateViewModel = hiltViewModel(this@MainActivity)
-                    val updateState by updateViewModel.uiState.collectAsState()
 
                     val startDestination = if (layoutChosen) Screen.Home.route else Screen.LayoutSelection.route
                     val navController = rememberNavController()
@@ -516,14 +523,18 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    UpdatePromptDialog(
-                        state = updateState,
-                        onDismiss = { updateViewModel.dismissDialog() },
-                        onDownload = { updateViewModel.downloadUpdate() },
-                        onInstall = { updateViewModel.installUpdateOrRequestPermission() },
-                        onIgnore = { updateViewModel.ignoreThisVersion() },
-                        onOpenUnknownSources = { updateViewModel.openUnknownSourcesSettings() }
-                    )
+                    if (AppFeaturePolicy.inAppUpdatesEnabled) {
+                        val updateViewModel: UpdateViewModel = hiltViewModel(this@MainActivity)
+                        val updateState by updateViewModel.uiState.collectAsState()
+                        UpdatePromptDialog(
+                            state = updateState,
+                            onDismiss = { updateViewModel.dismissDialog() },
+                            onDownload = { updateViewModel.downloadUpdate() },
+                            onInstall = { updateViewModel.installUpdateOrRequestPermission() },
+                            onIgnore = { updateViewModel.ignoreThisVersion() },
+                            onOpenUnknownSources = { updateViewModel.openUnknownSourcesSettings() }
+                        )
+                    }
                 }
             }
             }
@@ -560,7 +571,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        com.lagradost.cloudstream3.AcraApplication.setActivity(null)
+        PluginRuntimeHooks.onActivityDestroy()
     }
 }
 
@@ -876,11 +887,9 @@ private fun LegacySidebarButton(
             }
         )
         if (expanded) {
-            Text(
+            com.nuvio.tv.ui.components.AutoResizeText(
                 text = label,
                 color = contentColor,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 textAlign = TextAlign.Start,
                 modifier = Modifier
                     .align(Alignment.CenterStart)

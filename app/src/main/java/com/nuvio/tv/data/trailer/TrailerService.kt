@@ -111,6 +111,26 @@ class TrailerService(
         )?.videoUrl
     }
 
+    suspend fun getExternalTrailerUrl(
+        tmdbId: String?,
+        type: String?
+    ): String? = withContext(Dispatchers.IO) {
+        val numericTmdbId = tmdbId?.toIntOrNull() ?: return@withContext null
+        val mediaType = normalizeTmdbMediaType(type)
+        val tmdbLanguage = getPreferredTmdbTrailerLanguage()
+        val tmdbResults = when (mediaType) {
+            "movie" -> fetchTmdbMovieVideos(numericTmdbId, tmdbLanguage)
+            "tv" -> fetchTmdbTvVideos(numericTmdbId, tmdbLanguage)
+            else -> fetchTmdbMovieVideos(numericTmdbId, tmdbLanguage) + fetchTmdbTvVideos(numericTmdbId, tmdbLanguage)
+        }
+        rankTmdbVideoCandidates(tmdbResults)
+            .firstOrNull()
+            ?.key
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "https://www.youtube.com/watch?v=$it" }
+    }
+
     /**
      * TMDB-first resolution using /movie/{id}/videos or /tv/{id}/videos.
      */

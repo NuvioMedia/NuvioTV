@@ -191,6 +191,14 @@
     <string name="playback_afr_on_start_stop_sub">Przełącz przy starcie i przywróć przy zatrzymaniu.</string>
     <string name="playback_resolution_matching">Dopasowanie rozdzielczości</string>
     <string name="playback_resolution_matching_sub">Zezwól na zmianę trybu wyświetlania w celu dopasowania rozdzielczości wideo.</string>
+    <string name="playback_resolution_matching_unsupported_sub">Wyświetlacz zgłasza tylko jedną rozdzielczość; dopasowanie może nie mieć efektu.</string>
+    <string name="playback_afr_capability_unsupported_title">Niektóre ustawienia mogą nie działać</string>
+    <string name="playback_afr_capability_both_problem_body">Auto częstotliwość odświeżania i dopasowanie rozdzielczości są włączone, ale wyświetlacz zgłasza tylko jedną częstotliwość odświeżania i jedną rozdzielczość. Żadne z nich może nie zadziałać — zalecane jest wyłączenie obu.</string>
+    <string name="playback_afr_capability_only_afr_unsupported_body">Auto częstotliwość odświeżania jest włączona, ale wyświetlacz zgłasza tylko jedną częstotliwość odświeżania. Przełączanie może nie mieć efektu — zalecane jest wyłączenie.</string>
+    <string name="playback_afr_capability_only_res_unsupported_body">Dopasowanie rozdzielczości jest włączone, ale wyświetlacz zgłasza tylko jedną rozdzielczość. Dopasowanie może nie mieć efektu — zalecane jest wyłączenie.</string>
+    <string name="playback_afr_capability_disable_button">Wyłącz AFR</string>
+    <string name="playback_afr_capability_disable_resolution_button">Wyłącz dopasowanie rozdzielczości</string>
+    <string name="playback_afr_capability_disable_both_button">Wyłącz oba</string>
     <string name="playback_player_external_desc">Zawsze otwieraj strumienie w zewnętrznej aplikacji</string>
     <string name="playback_player_ask_desc">Wybieraj odtwarzacz za każdym razem</string>
 
@@ -1494,6 +1502,10 @@
     <string name="collections_editor_all_genres">Wszystkie gatunki</string>
     <string name="collections_editor_genre_required">Gatunek wymagany</string>
     <string name="collections_editor_genre_optional">Filtr gatunku dostępny</string>
+    <string name="collections_editor_hero_backdrop">Tło hero (Nowoczesny ekran główny)</string>
+    <string name="collections_editor_placeholder_hero_backdrop">URL niestandardowego tła hero (opcjonalnie)</string>
+    <string name="collections_editor_title_logo">Logo tytułu (Nowoczesny ekran główny)</string>
+    <string name="collections_editor_placeholder_title_logo">URL niestandardowego logo tytułu (opcjonalnie)</string>
     <string name="collections_card_title">Kolekcje</string>
     <string name="collections_card_subtitle">Grupuj katalogi w folderach na ekranie głównym</string>
     <string name="collections_tab_all">Wszystko</string>

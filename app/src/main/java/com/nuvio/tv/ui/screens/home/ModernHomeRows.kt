@@ -4,13 +4,7 @@ package com.nuvio.tv.ui.screens.home
 
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -49,7 +44,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
@@ -97,7 +91,9 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.components.ContinueWatchingCard
 import com.nuvio.tv.ui.components.MonochromePosterPlaceholder
 import com.nuvio.tv.ui.components.TrailerPlayer
+import com.nuvio.tv.ui.components.placeholderCardShimmer
 import com.nuvio.tv.ui.components.rememberArtworkBackedCardGlow
+import com.nuvio.tv.ui.components.rememberPlaceholderShimmerOffsetState
 import com.nuvio.tv.LocalSidebarExpanded
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlin.math.abs
@@ -174,6 +170,7 @@ private fun ModernCatalogRowItem(
     requester: FocusRequester,
     useLandscapePosters: Boolean,
     showLabels: Boolean,
+    placeholderShimmerOffsetState: State<Float>?,
     posterCardCornerRadius: Dp,
     portraitCatalogCardWidth: Dp,
     portraitCatalogCardHeight: Dp,
@@ -272,6 +269,7 @@ private fun ModernCatalogRowItem(
         item = item,
         useLandscapeOverlayTreatment = useLandscapePosters,
         showLabels = showLabels,
+        placeholderShimmerOffsetState = placeholderShimmerOffsetState,
         cardCornerRadius = posterCardCornerRadius,
         cardWidth = cardMetrics.width,
         cardHeight = cardMetrics.height,
@@ -699,6 +697,13 @@ internal fun ModernRowSection(
             val restoreIdx = lastFocusedIdx.coerceIn(0, (row.items.size - 1).coerceAtLeast(0))
             val restoreStableKey = "${row.key}_$restoreIdx"
             val restoreFocusRequester = uiCaches.requesterFor(rowKey, restoreStableKey)
+            val usesPlaceholderShimmer = row.isLoading &&
+                row.items.firstOrNull()?.imageUrl?.startsWith("placeholder://") == true
+            val placeholderShimmerOffsetState = if (usesPlaceholderShimmer) {
+                rememberPlaceholderShimmerOffsetState(label = "placeholderShimmer")
+            } else {
+                null
+            }
 
             LazyRow(
                 state = rowListState,
@@ -773,6 +778,7 @@ internal fun ModernRowSection(
                                 requester = requester,
                                 useLandscapePosters = useLandscapePosters,
                                 showLabels = showLabels,
+                                placeholderShimmerOffsetState = placeholderShimmerOffsetState,
                                 posterCardCornerRadius = posterCardCornerRadius,
                                 portraitCatalogCardWidth = portraitCatalogCardWidth,
                                 portraitCatalogCardHeight = portraitCatalogCardHeight,
@@ -816,6 +822,7 @@ private fun ModernCarouselCard(
     item: ModernCarouselItem,
     useLandscapeOverlayTreatment: Boolean,
     showLabels: Boolean,
+    placeholderShimmerOffsetState: State<Float>? = null,
     cardCornerRadius: Dp,
     cardWidth: Dp,
     cardHeight: Dp,
@@ -1084,33 +1091,14 @@ private fun ModernCarouselCard(
                     val isPlaceholderItem = imageUrl?.startsWith("placeholder://") == true
                     if (isPlaceholderItem) {
                         // Horizontal sweeping shimmer for placeholder cards
-                        val shimmerTransition = rememberInfiniteTransition(label = "placeholderShimmer")
-                        val shimmerOffset by shimmerTransition.animateFloat(
-                            initialValue = -1f,
-                            targetValue = 2f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(durationMillis = 1600, easing = LinearEasing),
-                                repeatMode = RepeatMode.Restart
-                            ),
-                            label = "shimmerOffset"
-                        )
-                        val shimmerBrush = remember(shimmerOffset) {
-                            Brush.linearGradient(
-                                colorStops = arrayOf(
-                                    0.0f to Color.Transparent,
-                                    0.4f to Color.White.copy(alpha = 0.07f),
-                                    0.5f to Color.White.copy(alpha = 0.13f),
-                                    0.6f to Color.White.copy(alpha = 0.07f),
-                                    1.0f to Color.Transparent
-                                ),
-                                start = Offset(shimmerOffset * 1000f, 0f),
-                                end = Offset((shimmerOffset + 0.6f) * 1000f, 0f)
+                        val effectivePlaceholderShimmerOffsetState =
+                            placeholderShimmerOffsetState ?: rememberPlaceholderShimmerOffsetState(
+                                label = "placeholderShimmer"
                             )
-                        }
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(shimmerBrush)
+                                .placeholderCardShimmer(effectivePlaceholderShimmerOffsetState)
                         )
                     } else if (hasImage) {
                         key(scrollPhaseKey) {

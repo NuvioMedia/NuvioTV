@@ -46,17 +46,23 @@ Download the latest APK from [GitHub Releases](https://github.com/tapframe/Nuvio
 ```bash
 git clone https://github.com/tapframe/NuvioTV.git
 cd NuvioTV
-./gradlew build
+```
+
+### Full Debug Build
+
+```bash
+./gradlew :app:compileFullDebugKotlin
+./gradlew :app:assembleFullDebug
 ```
 
 ### Running on Emulator or Device
 
 ```bash
-# Debug build
-./gradlew installDebug
+# Full debug build
+./gradlew :app:assembleFullDebug
 
 # Run on connected device
-adb shell am start -n com.nuvio.tv/.MainActivity
+adb shell am start -n com.nuviodebug.com/com.nuvio.tv.MainActivity
 ```
 
 ## Legal & DMCA

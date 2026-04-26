@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -249,6 +250,32 @@ fun SearchScreen(
 
     val trimmedQuery = remember(uiState.query) { uiState.query.trim() }
     val trimmedSubmittedQuery = remember(uiState.submittedQuery) { uiState.submittedQuery.trim() }
+
+    // Stable per-row state maps — mirrors ClassicHomeContent pattern so
+    // CatalogRowSection keeps focus when placeholder→real data transitions.
+    val searchRowStates = remember { mutableMapOf<String, LazyListState>() }
+    val searchRowFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val searchRowEntryFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val searchRowFocusedItemIndex = remember { mutableMapOf<String, Int>() }
+
+    // Clean up stale keys when the catalog rows change.
+    val visibleRowKeys = remember(uiState.catalogRows) {
+        uiState.catalogRows.mapTo(mutableSetOf()) {
+            "${it.addonId}_${it.apiType}_${it.catalogId}"
+        }
+    }
+    // Stable list of non-empty catalog rows — mirrors ClassicHomeContent's
+    // visibleHomeRows pattern so the LazyColumn receives a remember'd list.
+    val visibleCatalogRows = remember(uiState.catalogRows) {
+        uiState.catalogRows.filter { it.items.isNotEmpty() }
+    }
+    LaunchedEffect(visibleRowKeys) {
+        searchRowStates.keys.retainAll(visibleRowKeys)
+        searchRowFocusRequesters.keys.retainAll(visibleRowKeys)
+        searchRowEntryFocusRequesters.keys.retainAll(visibleRowKeys)
+        searchRowFocusedItemIndex.keys.retainAll(visibleRowKeys)
+    }
+
     val isDiscoverMode = remember(uiState.discoverEnabled, trimmedSubmittedQuery) {
         uiState.discoverEnabled && trimmedSubmittedQuery.isEmpty()
     }
@@ -530,6 +557,9 @@ fun SearchScreen(
                     }
 
                     uiState.isSearching && uiState.catalogRows.isEmpty() -> {
+                        // Placeholder shimmer rows are emitted by the ViewModel,
+                        // so this branch only fires if search targets haven't
+                        // been resolved yet (very brief).
                         item {
                             Box(
                                 modifier = Modifier
@@ -551,7 +581,7 @@ fun SearchScreen(
                         }
                     }
 
-                    uiState.catalogRows.isEmpty() || uiState.catalogRows.none { it.items.isNotEmpty() } -> {
+                    !uiState.isSearching && (visibleCatalogRows.isEmpty()) -> {
                         item {
                             EmptyScreenState(
                                 title = stringResource(R.string.search_no_results_title),
@@ -562,34 +592,46 @@ fun SearchScreen(
                     }
 
                     else -> {
-                        val visibleCatalogRows = uiState.catalogRows.filter { it.items.isNotEmpty() }
-
                         itemsIndexed(
                             items = visibleCatalogRows,
-                            key = { index, item ->
-                                "${item.addonId}_${item.type}_${item.catalogId}_${trimmedSubmittedQuery}_$index"
-                            }
+                            key = { _, item ->
+                                "${item.addonId}_${item.apiType}_${item.catalogId}"
+                            },
+                            contentType = { _, _ -> "catalog_row" }
                         ) { index, catalogRow ->
-                            val hasEnoughForSeeAll = catalogRow.items.size >= 15
-                            val truncatedRow = if (hasEnoughForSeeAll) {
-                                catalogRow.copy(items = catalogRow.items.take(14))
-                            } else catalogRow
+                            val catalogKey = "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}"
+                            val isPlaceholder = catalogRow.isLoading &&
+                                catalogRow.items.firstOrNull()?.id?.startsWith("__placeholder_") == true
+                            val hasEnoughForSeeAll = !isPlaceholder && catalogRow.items.size >= 15
+
+                            val listState = searchRowStates.getOrPut(catalogKey) { LazyListState() }
+                            val rowFocusRequester = searchRowFocusRequesters.getOrPut(catalogKey) { FocusRequester() }
+                            val entryFocusRequester = searchRowEntryFocusRequesters.getOrPut(catalogKey) { FocusRequester() }
+
                             CatalogRowSection(
-                                catalogRow = truncatedRow,
+                                catalogRow = catalogRow,
                                 showSeeAll = hasEnoughForSeeAll,
                                 showPosterLabels = uiState.posterLabelsEnabled,
                                 showAddonName = uiState.catalogAddonNameEnabled,
                                 showCatalogTypeSuffix = uiState.catalogTypeSuffixEnabled,
                                 enableRowFocusRestorer = true,
+                                rowFocusRequester = rowFocusRequester,
+                                entryFocusRequester = entryFocusRequester,
+                                listState = listState,
+                                restorerFocusedIndex = searchRowFocusedItemIndex[catalogKey] ?: -1,
                                 isItemWatched = { item ->
                                     val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
                                     if (isSeries) item.id in watchedSeriesIds else item.id in watchedMovieIds
                                 },
                                 focusedItemIndex = if (focusResults && index == 0) 0 else -1,
-                                onItemFocused = {
+                                onItemFocused = { itemIndex ->
                                     if (focusResults) {
                                         focusResults = false
                                     }
+                                    // User manually navigated to a row — cancel any
+                                    // pending auto-focus so it doesn't steal focus later.
+                                    pendingFocusMoveToResultsQuery = null
+                                    searchRowFocusedItemIndex[catalogKey] = itemIndex
                                 },
                                 onItemClick = { id, type, addonBaseUrl ->
                                     onNavigateToDetail(id, type, addonBaseUrl)

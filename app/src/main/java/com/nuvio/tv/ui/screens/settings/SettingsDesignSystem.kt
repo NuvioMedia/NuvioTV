@@ -386,7 +386,7 @@ internal fun SettingsToggleRow(
         },
         modifier = modifier
             .fillMaxWidth()
-            .height(62.dp)
+            .heightIn(min = 62.dp)
             .onFocusChanged { state ->
                 val nowFocused = state.isFocused
                 if (isFocused != nowFocused) {
@@ -409,8 +409,8 @@ internal fun SettingsToggleRow(
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 18.dp),
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -428,7 +428,7 @@ internal fun SettingsToggleRow(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary.copy(alpha = contentAlpha),
-                        maxLines = 1,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
@@ -516,7 +516,7 @@ internal fun SettingsActionRow(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = NuvioColors.TextSecondary.copy(alpha = contentAlpha),
-                        maxLines = 1,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
                 }

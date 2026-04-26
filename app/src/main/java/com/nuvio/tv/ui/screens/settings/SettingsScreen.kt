@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.GridView
@@ -54,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.ui.screens.plugin.PluginScreenContent
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
@@ -147,7 +150,7 @@ private fun rememberSettingsSectionSpecs() = listOf(
     SettingsSectionSpec(
         category = SettingsCategory.PLAYBACK,
         title = stringResource(R.string.settings_playback),
-        icon = Icons.Default.Settings,
+        icon = Icons.Rounded.PlayArrow,
         subtitle = stringResource(R.string.settings_playback_subtitle),
         destination = SettingsSectionDestination.Inline
     ),
@@ -199,6 +202,7 @@ fun SettingsScreen(
                 SettingsCategory.DEBUG -> BuildConfig.IS_DEBUG_BUILD
                 SettingsCategory.PROFILES -> isPrimaryProfileActive
                 SettingsCategory.ACCOUNT -> isPrimaryProfileActive
+                SettingsCategory.PLUGINS -> AppFeaturePolicy.pluginsEnabled
                 else -> true
             }
         }
@@ -280,67 +284,75 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 var railHadFocus by remember { mutableStateOf(false) }
+                val railListState = rememberLazyListState()
 
-                LazyColumn(
+                Box(
                     modifier = Modifier
-                        .focusRequester(railContainerFocusRequester)
                         .width(220.dp)
                         .fillMaxHeight()
-                        .onFocusChanged { state ->
-                            val justGainedFocus = !railHadFocus && state.hasFocus
-                            railHadFocus = state.hasFocus
-                            if (justGainedFocus) {
-                                val requester = railFocusRequesters[selectedCategory]
-                                val requested = if (requester != null) {
-                                    runCatching { requester.requestFocus() }.isSuccess
+                ) {
+                    LazyColumn(
+                        state = railListState,
+                        modifier = Modifier
+                            .focusRequester(railContainerFocusRequester)
+                            .fillMaxSize()
+                            .onFocusChanged { state ->
+                                val justGainedFocus = !railHadFocus && state.hasFocus
+                                railHadFocus = state.hasFocus
+                                if (justGainedFocus) {
+                                    val requester = railFocusRequesters[selectedCategory]
+                                    val requested = if (requester != null) {
+                                        runCatching { requester.requestFocus() }.isSuccess
+                                    } else {
+                                        false
+                                    }
+                                    if (!requested) {
+                                        focusManager.moveFocus(FocusDirection.Down)
+                                    }
+                                }
+                            }
+                            .onPreviewKeyEvent { event ->
+                                val toDetailKey = if (isRtl) Key.DirectionLeft else Key.DirectionRight
+                                if (event.type == KeyEventType.KeyDown && event.key == toDetailKey) {
+                                    allowDetailAutofocus = true
+                                    false
                                 } else {
                                     false
                                 }
-                                if (!requested) {
-                                    focusManager.moveFocus(FocusDirection.Down)
+                            },
+                        verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)
+                    ) {
+                        items(
+                            items = visibleSections,
+                            key = { it.category }
+                        ) { section ->
+                            SettingsRailButton(
+                                title = section.title,
+                                icon = section.icon,
+                                rawIconRes = section.rawIconRes,
+                                isSelected = selectedCategory == section.category,
+                                focusRequester = railFocusRequesters[section.category],
+                                onClick = {
+                                    if (section.destination == SettingsSectionDestination.External) {
+                                        when (section.category) {
+                                            SettingsCategory.ACCOUNT -> onNavigateToAuthQrSignIn()
+                                            SettingsCategory.TRAKT -> onNavigateToTrakt()
+                                            else -> Unit
+                                        }
+                                    } else {
+                                        if (section.category == SettingsCategory.INTEGRATION) {
+                                            integrationSection = IntegrationSettingsSection.Hub
+                                        }
+                                        allowDetailAutofocus = true
+                                        selectedCategory = section.category
+                                        pendingContentFocusCategory = section.category
+                                        pendingContentFocusRequestId += 1L
+                                    }
                                 }
-                            }
+                            )
                         }
-                        .onPreviewKeyEvent { event ->
-                            val toDetailKey = if (isRtl) Key.DirectionLeft else Key.DirectionRight
-                            if (event.type == KeyEventType.KeyDown && event.key == toDetailKey) {
-                                allowDetailAutofocus = true
-                                false
-                            } else {
-                                false
-                            }
-                        },
-                    verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)
-                ) {
-                    items(
-                        items = visibleSections,
-                        key = { it.category }
-                    ) { section ->
-                        SettingsRailButton(
-                            title = section.title,
-                            icon = section.icon,
-                            rawIconRes = section.rawIconRes,
-                            isSelected = selectedCategory == section.category,
-                            focusRequester = railFocusRequesters[section.category],
-                            onClick = {
-                                if (section.destination == SettingsSectionDestination.External) {
-                                    when (section.category) {
-                                        SettingsCategory.ACCOUNT -> onNavigateToAuthQrSignIn()
-                                        SettingsCategory.TRAKT -> onNavigateToTrakt()
-                                        else -> Unit
-                                    }
-                                } else {
-                                    if (section.category == SettingsCategory.INTEGRATION) {
-                                        integrationSection = IntegrationSettingsSection.Hub
-                                    }
-                                    allowDetailAutofocus = true
-                                    selectedCategory = section.category
-                                    pendingContentFocusCategory = section.category
-                                    pendingContentFocusRequestId += 1L
-                                }
-                            }
-                        )
                     }
+                    SettingsVerticalScrollIndicators(state = railListState)
                 }
 
                 Box(
@@ -428,7 +440,7 @@ fun SettingsScreen(
                                 null
                             }
                         )
-                        SettingsCategory.PLUGINS -> PluginsSettingsContent()
+                        SettingsCategory.PLUGINS -> if (AppFeaturePolicy.pluginsEnabled) PluginsSettingsContent()
                         SettingsCategory.ACCOUNT -> AccountSettingsInline(
                             onNavigateToAuthQrSignIn = onNavigateToAuthQrSignIn
                         )
@@ -541,38 +553,43 @@ private fun IntegrationSettingsContent(
                         .fillMaxWidth()
                         .weight(1f)
                 ) {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        item(key = "integration_hub_ai_subtitles") {
-                            SettingsActionRow(
-                                title = stringResource(R.string.playback_section_ai_subtitles),
-                                subtitle = stringResource(R.string.playback_section_ai_subtitles_desc),
-                                onClick = { onSelectSection(IntegrationSettingsSection.AiSubtitles) },
-                                modifier = Modifier.focusRequester(hubEntryFocusRequester)
-                            )
+                    val integrationHubState = rememberLazyListState()
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            state = integrationHubState,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            item(key = "integration_hub_ai_subtitles") {
+                                SettingsActionRow(
+                                    title = stringResource(R.string.playback_section_ai_subtitles),
+                                    subtitle = stringResource(R.string.playback_section_ai_subtitles_desc),
+                                    onClick = { onSelectSection(IntegrationSettingsSection.AiSubtitles) },
+                                    modifier = Modifier.focusRequester(hubEntryFocusRequester)
+                                )
+                            }
+                            item(key = "integration_hub_tmdb") {
+                                SettingsActionRow(
+                                    title = "TMDB",
+                                    subtitle = stringResource(R.string.settings_tmdb_subtitle),
+                                    onClick = { onSelectSection(IntegrationSettingsSection.Tmdb) }
+                                )
+                            }
+                            item(key = "integration_hub_mdblist") {
+                                SettingsActionRow(
+                                    title = "MDBList",
+                                    subtitle = stringResource(R.string.settings_mdblist_subtitle),
+                                    onClick = { onSelectSection(IntegrationSettingsSection.MdbList) }
+                                )
+                            }
+                            item(key = "integration_hub_animeskip") {
+                                SettingsActionRow(
+                                    title = "Anime-Skip",
+                                    subtitle = stringResource(R.string.settings_animeskip_subtitle),
+                                    onClick = { onSelectSection(IntegrationSettingsSection.AnimeSkip) }
+                                )
+                            }
                         }
-                        item(key = "integration_hub_tmdb") {
-                            SettingsActionRow(
-                                title = "TMDB",
-                                subtitle = stringResource(R.string.settings_tmdb_subtitle),
-                                onClick = { onSelectSection(IntegrationSettingsSection.Tmdb) }
-                            )
-                        }
-                        item(key = "integration_hub_mdblist") {
-                            SettingsActionRow(
-                                title = "MDBList",
-                                subtitle = stringResource(R.string.settings_mdblist_subtitle),
-                                onClick = { onSelectSection(IntegrationSettingsSection.MdbList) }
-                            )
-                        }
-                        item(key = "integration_hub_animeskip") {
-                            SettingsActionRow(
-                                title = "Anime-Skip",
-                                subtitle = stringResource(R.string.settings_animeskip_subtitle),
-                                onClick = { onSelectSection(IntegrationSettingsSection.AnimeSkip) }
-                            )
-                        }
+                        SettingsVerticalScrollIndicators(state = integrationHubState)
                     }
                 }
             }

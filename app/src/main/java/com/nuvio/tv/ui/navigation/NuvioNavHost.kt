@@ -14,6 +14,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.ui.screens.CatalogSeeAllScreen
 import com.nuvio.tv.ui.screens.LayoutSelectionScreen
 import com.nuvio.tv.ui.screens.detail.MetaDetailsScreen
@@ -1016,10 +1017,12 @@ fun NuvioNavHost(
             )
         }
 
-        composable(Screen.Plugins.route) {
-            PluginScreen(
-                onBackPress = { navController.popBackStack() }
-            )
+        if (AppFeaturePolicy.pluginsEnabled) {
+            composable(Screen.Plugins.route) {
+                PluginScreen(
+                    onBackPress = { navController.popBackStack() }
+                )
+            }
         }
 
         composable(Screen.Account.route) {

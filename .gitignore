@@ -11,6 +11,8 @@
 .DS_Store
 /build
 **/build/
+!app/src/**/java/**/core/build/
+!app/src/**/java/**/core/build/*.kt
 /captures
 .externalNativeBuild
 .cxx

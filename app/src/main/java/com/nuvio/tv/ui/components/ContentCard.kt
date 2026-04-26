@@ -19,19 +19,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,7 +36,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -90,6 +85,7 @@ fun ContentCard(
     focusRequester: FocusRequester? = null,
     posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
     showLabels: Boolean = true,
+    placeholderShimmerOffsetState: State<Float>? = null,
     focusedPosterBackdropExpandEnabled: Boolean = false,
     focusedPosterBackdropExpandDelaySeconds: Int = 3,
     focusedPosterBackdropTrailerEnabled: Boolean = false,
@@ -354,34 +350,17 @@ fun ContentCard(
             ) {
                 val isPlaceholderItem = imageUrl?.startsWith("placeholder://") == true
                 if (isPlaceholderItem) {
-                    val shimmerTransition = rememberInfiniteTransition(label = "classicPlaceholderShimmer")
-                    val shimmerOffset by shimmerTransition.animateFloat(
-                        initialValue = -1f,
-                        targetValue = 2f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(durationMillis = 1600, easing = LinearEasing),
-                            repeatMode = RepeatMode.Restart
-                        ),
-                        label = "shimmerOffset"
-                    )
-                    val shimmerBrush = remember(shimmerOffset) {
-                        Brush.linearGradient(
-                            colorStops = arrayOf(
-                                0.0f to Color.Transparent,
-                                0.4f to Color.White.copy(alpha = 0.07f),
-                                0.5f to Color.White.copy(alpha = 0.13f),
-                                0.6f to Color.White.copy(alpha = 0.07f),
-                                1.0f to Color.Transparent
-                            ),
-                            start = Offset(shimmerOffset * 1000f, 0f),
-                            end = Offset((shimmerOffset + 0.6f) * 1000f, 0f)
+                    val effectivePlaceholderShimmerOffsetState =
+                        placeholderShimmerOffsetState ?: rememberPlaceholderShimmerOffsetState(
+                            label = "classicPlaceholderShimmer"
                         )
-                    }
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(NuvioColors.BackgroundCard)
-                            .background(shimmerBrush)
+                            .placeholderCardShimmer(
+                                shimmerOffsetState = effectivePlaceholderShimmerOffsetState,
+                                backgroundColor = NuvioColors.BackgroundCard
+                            )
                     )
                 } else if (!imageUrl.isNullOrBlank()) {
                     key(scrollPhaseKey) {
