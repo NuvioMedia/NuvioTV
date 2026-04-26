@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
       - dev
-      - master
 
 concurrency:
   group: build-check-${{ github.ref }}
