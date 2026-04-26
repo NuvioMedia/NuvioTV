@@ -39,4 +39,6 @@ jobs:
           fi
 
       - name: Build
+        env:
+          CI_USE_DEBUG_SIGNING: true
         run: ./gradlew assembleFullDebug --no-daemon
