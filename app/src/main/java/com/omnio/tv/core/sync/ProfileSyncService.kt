@@ -7,6 +7,8 @@ import com.omnio.tv.data.local.ProfileDataStore
 import com.omnio.tv.data.remote.supabase.SupabaseProfileLockState
 import com.omnio.tv.data.remote.supabase.SupabaseProfile
 import com.omnio.tv.data.remote.supabase.SupabaseProfilePinVerifyResult
+import com.omnio.tv.domain.model.AgeRatingTier
+import com.omnio.tv.domain.model.TraktSharingMode
 import com.omnio.tv.domain.model.UserProfile
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.Dispatchers
@@ -50,6 +52,9 @@ class ProfileSyncService @Inject constructor(
                             put("uses_primary_addons", profile.usesPrimaryAddons)
                             put("uses_primary_plugins", profile.usesPrimaryPlugins)
                             put("avatar_id", profile.avatarId)
+                            put("is_kids", profile.isKids)
+                            put("max_age_rating", profile.maxAgeRating?.name)
+                            put("trakt_sharing", profile.traktSharing.name)
                         }
                     }
                 })
@@ -76,13 +81,19 @@ class ProfileSyncService @Inject constructor(
             Log.d(TAG, "pullFromRemote: fetched ${remote.size} profiles from Supabase")
 
             val profiles = remote.map { entry ->
+                val isPrimary = entry.profileIndex == 1
                 UserProfile(
                     id = entry.profileIndex,
                     name = entry.name,
                     avatarColorHex = entry.avatarColorHex,
                     usesPrimaryAddons = entry.usesPrimaryAddons,
                     usesPrimaryPlugins = entry.usesPrimaryPlugins,
-                    avatarId = entry.avatarId
+                    avatarId = entry.avatarId,
+                    isKids = !isPrimary && entry.isKids,
+                    maxAgeRating = if (!isPrimary && entry.isKids) {
+                        entry.maxAgeRating?.let { runCatching { AgeRatingTier.valueOf(it) }.getOrNull() }
+                    } else null,
+                    traktSharing = if (isPrimary) TraktSharingMode.OWN else TraktSharingMode.fromStorageString(entry.traktSharing)
                 )
             }
 

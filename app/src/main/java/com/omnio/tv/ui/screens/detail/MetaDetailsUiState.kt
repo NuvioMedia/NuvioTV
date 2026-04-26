@@ -19,6 +19,8 @@ data class MetaDetailsUiState(
     val isLoading: Boolean = true,
     val meta: Meta? = null,
     val error: String? = null,
+    val kidsRestricted: Boolean = false,
+    val kidsRestrictedMessage: String? = null,
     val selectedSeason: Int = 1,
     val seasons: List<Int> = emptyList(),
     val episodesForSeason: List<Video> = emptyList(),

@@ -39,6 +39,7 @@ class SearchViewModel @Inject constructor(
     private val searchHistoryDataStore: SearchHistoryDataStore,
     private val watchProgressRepository: com.omnio.tv.domain.repository.WatchProgressRepository,
     private val watchedSeriesStateHolder: com.omnio.tv.data.local.WatchedSeriesStateHolder,
+    private val kidsContentFilter: com.omnio.tv.core.profile.KidsContentFilter,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -480,11 +481,18 @@ class SearchViewModel @Inject constructor(
     private fun updateCatalogRowsNow() {
         _uiState.update { state ->
             val orderedRows = catalogOrder.mapNotNull { key -> catalogsMap[key] }
-            val filteredRows = if (hideUnreleasedContent) {
+            val releasedFiltered = if (hideUnreleasedContent) {
                 val today = LocalDate.now()
                 orderedRows.map { it.filterReleasedItems(today) }
             } else {
                 orderedRows
+            }
+            val filteredRows = if (kidsContentFilter.isActive) {
+                releasedFiltered.map { row ->
+                    row.copy(items = kidsContentFilter.filterPreviews(row.items))
+                }
+            } else {
+                releasedFiltered
             }
             state.copy(
                 catalogRows = filteredRows
@@ -694,11 +702,16 @@ class SearchViewModel @Inject constructor(
                         }
                         val merged = if (reset) incoming else (existing + incoming)
                         val rawDeduped = merged.distinctBy { "${it.apiType}:${it.id}" }
-                        val deduped = if (hideUnreleasedContent) {
+                        val releasedDeduped = if (hideUnreleasedContent) {
                             val today = LocalDate.now()
                             rawDeduped.filterNot { it.isUnreleased(today) }
                         } else {
                             rawDeduped
+                        }
+                        val deduped = if (kidsContentFilter.isActive) {
+                            kidsContentFilter.filterPreviews(releasedDeduped)
+                        } else {
+                            releasedDeduped
                         }
                         val shouldRevealBatch = !reset && revealBatchAfterNextDiscoverFetch
                         val visibleLimit = if (reset) {

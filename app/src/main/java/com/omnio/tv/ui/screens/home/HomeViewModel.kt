@@ -72,7 +72,8 @@ class HomeViewModel @Inject constructor(
     internal val watchedItemsPreferences: WatchedItemsPreferences,
     internal val watchedSeriesStateHolder: com.omnio.tv.data.local.WatchedSeriesStateHolder,
     internal val cwEnrichmentCache: ContinueWatchingEnrichmentCache,
-    internal val collectionsDataStore: CollectionsDataStore
+    internal val collectionsDataStore: CollectionsDataStore,
+    internal val kidsContentFilter: com.omnio.tv.core.profile.KidsContentFilter
 ) : ViewModel() {
     companion object {
         internal const val TAG = "HomeViewModel"

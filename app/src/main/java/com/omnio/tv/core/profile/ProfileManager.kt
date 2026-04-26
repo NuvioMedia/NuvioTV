@@ -3,6 +3,8 @@ package com.omnio.tv.core.profile
 import android.content.Context
 import com.omnio.tv.data.local.ProfileDataStore
 import com.omnio.tv.data.local.ProfileDataStoreFactory
+import com.omnio.tv.domain.model.AgeRatingTier
+import com.omnio.tv.domain.model.TraktSharingMode
 import com.omnio.tv.domain.model.UserProfile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -49,13 +51,16 @@ class ProfileManager @Inject constructor(
         avatarColorHex: String,
         usesPrimaryAddons: Boolean = false,
         usesPrimaryPlugins: Boolean = false,
-        avatarId: String? = null
-    ): Boolean {
+        avatarId: String? = null,
+        isKids: Boolean = false,
+        maxAgeRating: AgeRatingTier? = null,
+        traktSharing: TraktSharingMode = TraktSharingMode.OWN
+    ): Int? {
         val current = profiles.value
-        if (current.size >= 4) return false
+        if (current.size >= 4) return null
 
         val usedIds = current.map { it.id }.toSet()
-        val nextId = (2..4).firstOrNull { it !in usedIds } ?: return false
+        val nextId = (2..4).firstOrNull { it !in usedIds } ?: return null
 
         val profile = UserProfile(
             id = nextId,
@@ -63,11 +68,14 @@ class ProfileManager @Inject constructor(
             avatarColorHex = avatarColorHex,
             usesPrimaryAddons = usesPrimaryAddons,
             usesPrimaryPlugins = usesPrimaryPlugins,
-            avatarId = avatarId
+            avatarId = avatarId,
+            isKids = isKids,
+            maxAgeRating = if (isKids) maxAgeRating else null,
+            traktSharing = traktSharing
         )
         factory.markProfileCreated(nextId)
         profileDataStore.upsertProfile(profile)
-        return true
+        return nextId
     }
 
     suspend fun deleteProfile(id: Int): Boolean {
@@ -80,7 +88,16 @@ class ProfileManager @Inject constructor(
 
     suspend fun updateProfile(profile: UserProfile): Boolean {
         if (profiles.value.none { it.id == profile.id }) return false
-        profileDataStore.upsertProfile(profile)
+        val sanitized = if (profile.id == 1) {
+            profile.copy(
+                isKids = false,
+                maxAgeRating = null,
+                traktSharing = TraktSharingMode.OWN
+            )
+        } else profile.copy(
+            maxAgeRating = if (profile.isKids) profile.maxAgeRating else null
+        )
+        profileDataStore.upsertProfile(sanitized)
         return true
     }
 

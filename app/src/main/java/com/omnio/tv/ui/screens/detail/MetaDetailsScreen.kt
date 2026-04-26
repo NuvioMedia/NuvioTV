@@ -383,6 +383,12 @@ fun MetaDetailsScreen(
                 }
                 MetaDetailsSkeleton(backdropAware = !heroBackdropUrl.isNullOrBlank())
             }
+            uiState.kidsRestricted -> {
+                ErrorState(
+                    message = uiState.kidsRestrictedMessage ?: stringResource(R.string.kids_restricted_default),
+                    onRetry = null
+                )
+            }
             uiState.error != null -> {
                 ErrorState(
                     message = uiState.error ?: stringResource(R.string.error_generic),

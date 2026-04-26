@@ -90,6 +90,7 @@ import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import com.omnio.tv.R
 import com.omnio.tv.data.remote.supabase.AvatarCatalogItem
+import com.omnio.tv.domain.model.AgeRatingTier
 import com.omnio.tv.domain.model.UserProfile
 import com.omnio.tv.ui.components.AvatarPickerGrid
 import com.omnio.tv.ui.components.OmnioDialog
@@ -140,6 +141,7 @@ private sealed interface ProfilePinOverlayState {
     val profile: UserProfile
 
     data class Unlock(override val profile: UserProfile) : ProfilePinOverlayState
+    data class ExitUnlock(override val profile: UserProfile) : ProfilePinOverlayState
     data class Set(override val profile: UserProfile, val currentPin: String? = null) : ProfilePinOverlayState
     data class VerifyCurrentForChange(override val profile: UserProfile) : ProfilePinOverlayState
     data class VerifyCurrentForRemove(override val profile: UserProfile) : ProfilePinOverlayState
@@ -182,6 +184,7 @@ fun ProfileSelectionScreen(
     var pinOverlayState by remember { mutableStateOf<ProfilePinOverlayState?>(null) }
     var pinOverlayError by remember { mutableStateOf<String?>(null) }
     var pinActionMessage by remember { mutableStateOf<String?>(null) }
+    var exitGateCleared by remember { mutableStateOf(false) }
     val onProfileFocusedColorChange = remember {
         { colorHex: String ->
             focusedAvatarColor = parseProfileColor(colorHex)
@@ -213,6 +216,19 @@ fun ProfileSelectionScreen(
             focusedAvatarColor = parseProfileColor(activeProfile.avatarColorHex)
         } ?: profiles.firstOrNull()?.let { firstProfile ->
             focusedAvatarColor = parseProfileColor(firstProfile.avatarColorHex)
+        }
+    }
+
+    val activeProfile = profiles.firstOrNull { it.id == activeProfileId }
+    val needsExitGate = !isManagementMode &&
+        activeProfile != null &&
+        activeProfile.isKids &&
+        profilePinEnabled[activeProfileId] == true
+
+    LaunchedEffect(needsExitGate, exitGateCleared) {
+        if (needsExitGate && !exitGateCleared && pinOverlayState == null) {
+            pinOverlayError = null
+            pinOverlayState = ProfilePinOverlayState.ExitUnlock(activeProfile!!)
         }
     }
 
@@ -264,7 +280,7 @@ fun ProfileSelectionScreen(
                             suppressOptionsDialogFirstKeyUp = false
                             longPressedProfile = profile
                         } else {
-                            if (profilePinEnabled[profile.id] == true) {
+                            if (!profile.isKids && profilePinEnabled[profile.id] == true) {
                                 pinOverlayError = null
                                 pinOverlayState = ProfilePinOverlayState.Unlock(profile)
                             } else {
@@ -285,11 +301,38 @@ fun ProfileSelectionScreen(
                     errorMessage = pinOverlayError,
                     onClearError = { pinOverlayError = null },
                     onDismiss = {
-                        pinOverlayState = null
-                        pinOverlayError = null
+                        if (activePinOverlay is ProfilePinOverlayState.ExitUnlock) {
+                            // Cancelling the exit gate returns to where we came from
+                            // without entering the picker.
+                            pinOverlayError = null
+                            onBackPress?.invoke()
+                        } else {
+                            pinOverlayState = null
+                            pinOverlayError = null
+                        }
                     },
                     onSubmit = { pin ->
                         when (activePinOverlay) {
+                            is ProfilePinOverlayState.ExitUnlock -> {
+                                viewModel.verifyProfilePin(activePinOverlay.profile.id, pin) { result ->
+                                    result.onSuccess { verify ->
+                                        if (verify.unlocked) {
+                                            pinOverlayError = null
+                                            pinOverlayState = null
+                                            exitGateCleared = true
+                                        } else {
+                                            pinOverlayError = if (verify.retryAfterSeconds > 0) {
+                                                context.getString(R.string.profile_pin_locked, verify.retryAfterSeconds)
+                                            } else {
+                                                context.getString(R.string.profile_pin_invalid)
+                                            }
+                                        }
+                                    }.onFailure {
+                                        pinOverlayError = context.getString(R.string.profile_pin_verify_error)
+                                    }
+                                }
+                            }
+
                             is ProfilePinOverlayState.Set -> {
                                 viewModel.setProfilePin(
                                     activePinOverlay.profile.id,
@@ -381,8 +424,15 @@ fun ProfileSelectionScreen(
                 avatarCatalog = avatarCatalog,
                 isCreating = isCreating,
                 onDismiss = { showCreateProfile = false },
-                onCreateProfile = { name, colorHex, avatarId ->
-                    viewModel.createProfile(name, colorHex, avatarId)
+                onCreateProfile = { name, colorHex, avatarId, addonInitMode, isKids, maxAgeRating ->
+                    viewModel.createProfile(
+                        name = name,
+                        avatarColorHex = colorHex,
+                        avatarId = avatarId,
+                        addonInitMode = addonInitMode,
+                        isKids = isKids,
+                        maxAgeRating = maxAgeRating
+                    )
                     showCreateProfile = false
                 }
             )
@@ -1033,13 +1083,23 @@ private fun CreateProfileOverlay(
     avatarCatalog: List<AvatarCatalogItem>,
     isCreating: Boolean,
     onDismiss: () -> Unit,
-    onCreateProfile: (name: String, colorHex: String, avatarId: String?) -> Unit
+    onCreateProfile: (
+        name: String,
+        colorHex: String,
+        avatarId: String?,
+        addonInitMode: ProfileAddonInitMode,
+        isKids: Boolean,
+        maxAgeRating: AgeRatingTier?
+    ) -> Unit
 ) {
     BackHandler(onBack = onDismiss)
 
     var profileName by remember { mutableStateOf("") }
     var selectedColorHex by remember { mutableStateOf("#1E88E5") }
     var selectedAvatarId by remember { mutableStateOf<String?>(null) }
+    var addonInitMode by remember { mutableStateOf(ProfileAddonInitMode.LIVE_MIRROR) }
+    var isKids by remember { mutableStateOf(false) }
+    var maxAgeRating by remember { mutableStateOf<AgeRatingTier?>(AgeRatingTier.PG) }
     var focusedAvatarName by remember { mutableStateOf<String?>(null) }
     val selectedAvatar = remember(avatarCatalog, selectedAvatarId) {
         avatarCatalog.find { it.id == selectedAvatarId }
@@ -1108,7 +1168,14 @@ private fun CreateProfileOverlay(
                     isPrimary = true,
                     enabled = profileName.isNotBlank() && !isCreating,
                     onClick = {
-                        onCreateProfile(profileName, selectedColorHex, selectedAvatarId)
+                        onCreateProfile(
+                            profileName,
+                            selectedColorHex,
+                            selectedAvatarId,
+                            addonInitMode,
+                            isKids,
+                            if (isKids) maxAgeRating else null
+                        )
                     }
                 )
             }
@@ -1192,7 +1259,7 @@ private fun CreateProfileOverlay(
                             onAvatarFocused = { avatar ->
                                 focusedAvatarName = avatar?.displayName
                             },
-                            modifier = Modifier.heightIn(max = 320.dp)
+                            modifier = Modifier.heightIn(max = 240.dp)
                         )
 
                         Text(
@@ -1220,6 +1287,20 @@ private fun CreateProfileOverlay(
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    ProfileAccountOptionsSection(
+                        isCreating = true,
+                        showAddonOptions = true,
+                        addonInitMode = addonInitMode,
+                        onAddonInitModeChange = { addonInitMode = it },
+                        showKidsOptions = true,
+                        isKids = isKids,
+                        onIsKidsChange = { isKids = it },
+                        maxAgeRating = maxAgeRating,
+                        onMaxAgeRatingChange = { maxAgeRating = it }
+                    )
                 }
             }
 
@@ -1313,6 +1394,16 @@ private fun EditProfileOverlay(
     var selectedAvatarId by remember(profile.id, profile.avatarId) {
         mutableStateOf(profile.avatarId)
     }
+    var addonInitMode by remember(profile.id, profile.usesPrimaryAddons) {
+        mutableStateOf(
+            if (profile.usesPrimaryAddons) ProfileAddonInitMode.LIVE_MIRROR
+            else ProfileAddonInitMode.FRESH
+        )
+    }
+    var isKids by remember(profile.id, profile.isKids) { mutableStateOf(profile.isKids) }
+    var maxAgeRating by remember(profile.id, profile.maxAgeRating) {
+        mutableStateOf(profile.maxAgeRating ?: AgeRatingTier.PG)
+    }
     var focusedAvatarName by remember { mutableStateOf<String?>(null) }
     val selectedAvatar = remember(avatarCatalog, selectedAvatarId) {
         avatarCatalog.find { it.id == selectedAvatarId }
@@ -1398,7 +1489,10 @@ private fun EditProfileOverlay(
                             profile.copy(
                                 name = profileName,
                                 avatarColorHex = selectedColorHex,
-                                avatarId = selectedAvatarId
+                                avatarId = selectedAvatarId,
+                                usesPrimaryAddons = addonInitMode == ProfileAddonInitMode.LIVE_MIRROR,
+                                isKids = isKids,
+                                maxAgeRating = if (isKids) maxAgeRating else null
                             )
                         )
                     }
@@ -1484,7 +1578,7 @@ private fun EditProfileOverlay(
                             onAvatarFocused = { avatar ->
                                 focusedAvatarName = avatar?.displayName
                             },
-                            modifier = Modifier.heightIn(max = 320.dp)
+                            modifier = Modifier.heightIn(max = 240.dp)
                         )
 
                         Text(
@@ -1511,6 +1605,22 @@ private fun EditProfileOverlay(
                                 fontSize = 15.sp
                             )
                         }
+                    }
+
+                    if (!profile.isPrimary) {
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        ProfileAccountOptionsSection(
+                            isCreating = false,
+                            showAddonOptions = true,
+                            addonInitMode = addonInitMode,
+                            onAddonInitModeChange = { addonInitMode = it },
+                            showKidsOptions = true,
+                            isKids = isKids,
+                            onIsKidsChange = { isKids = it },
+                            maxAgeRating = maxAgeRating,
+                            onMaxAgeRatingChange = { maxAgeRating = it }
+                        )
                     }
                 }
             }
@@ -1706,6 +1816,7 @@ private fun ProfilePinOverlay(
         contentAlignment = Alignment.Center
     ) {
         val headingText = when {
+            state is ProfilePinOverlayState.ExitUnlock -> stringResource(R.string.profile_pin_overlay_exit_heading, state.profile.name)
             state is ProfilePinOverlayState.Unlock -> stringResource(R.string.profile_pin_overlay_unlock_heading, state.profile.name)
             state is ProfilePinOverlayState.VerifyCurrentForChange -> stringResource(R.string.profile_pin_overlay_change_verify_heading, state.profile.name)
             state is ProfilePinOverlayState.VerifyCurrentForRemove -> stringResource(R.string.profile_pin_overlay_remove_verify_heading, state.profile.name)
@@ -1716,6 +1827,7 @@ private fun ProfilePinOverlay(
             !resolvedErrorMessage.isNullOrEmpty() -> resolvedErrorMessage
             isWorking && isSingleEntryMode -> stringResource(R.string.profile_pin_verifying)
             isWorking -> stringResource(R.string.action_saving)
+            state is ProfilePinOverlayState.ExitUnlock -> stringResource(R.string.profile_pin_overlay_exit_support)
             state is ProfilePinOverlayState.Unlock -> stringResource(R.string.profile_pin_overlay_unlock_support)
             state is ProfilePinOverlayState.VerifyCurrentForChange -> stringResource(R.string.profile_pin_overlay_change_verify_support)
             state is ProfilePinOverlayState.VerifyCurrentForRemove -> stringResource(R.string.profile_pin_overlay_remove_verify_support)

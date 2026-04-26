@@ -72,7 +72,8 @@ class TraktScrobbleService @Inject constructor(
         item: TraktScrobbleItem,
         progressPercent: Float
     ) {
-        if (profileManager.activeProfileId.value != 1) return
+        val activeProfile = profileManager.activeProfile
+        if (activeProfile != null && !activeProfile.traktSharing.allowsScrobbleWrite) return
         if (!traktAuthService.getCurrentAuthState().isAuthenticated) return
         if (!traktAuthService.hasRequiredCredentials()) return
 

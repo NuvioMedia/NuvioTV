@@ -5,9 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.omnio.tv.core.profile.ProfileManager
 import com.omnio.tv.core.sync.ProfileSyncService
+import com.omnio.tv.data.local.AddonPreferences
 import com.omnio.tv.data.remote.supabase.SupabaseProfilePinVerifyResult
 import com.omnio.tv.data.remote.supabase.AvatarCatalogItem
 import com.omnio.tv.data.remote.supabase.AvatarRepository
+import com.omnio.tv.domain.model.AgeRatingTier
+import com.omnio.tv.domain.model.TraktSharingMode
 import com.omnio.tv.domain.model.UserProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,11 +19,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class ProfileAddonInitMode {
+    LIVE_MIRROR,
+    COPY_FROM_MAIN,
+    FRESH
+}
+
 @HiltViewModel
 class ProfileSelectionViewModel @Inject constructor(
     private val profileManager: ProfileManager,
     private val profileSyncService: ProfileSyncService,
-    private val avatarRepository: AvatarRepository
+    private val avatarRepository: AvatarRepository,
+    private val addonPreferences: AddonPreferences
 ) : ViewModel() {
     private var isAvatarCatalogLoading = false
 
@@ -79,17 +89,28 @@ class ProfileSelectionViewModel @Inject constructor(
     fun createProfile(
         name: String,
         avatarColorHex: String,
-        avatarId: String? = null
+        avatarId: String? = null,
+        addonInitMode: ProfileAddonInitMode = ProfileAddonInitMode.LIVE_MIRROR,
+        isKids: Boolean = false,
+        maxAgeRating: AgeRatingTier? = null,
+        traktSharing: TraktSharingMode = TraktSharingMode.OWN
     ) {
         if (_isCreating.value) return
         viewModelScope.launch {
             _isCreating.value = true
-            val success = profileManager.createProfile(
+            val newId = profileManager.createProfile(
                 name = name,
                 avatarColorHex = avatarColorHex,
-                avatarId = avatarId
+                avatarId = avatarId,
+                usesPrimaryAddons = addonInitMode == ProfileAddonInitMode.LIVE_MIRROR,
+                isKids = isKids,
+                maxAgeRating = if (isKids) maxAgeRating else null,
+                traktSharing = traktSharing
             )
-            if (success) {
+            if (newId != null) {
+                if (addonInitMode == ProfileAddonInitMode.COPY_FROM_MAIN) {
+                    addonPreferences.copyAddonsToProfile(newId)
+                }
                 profileSyncService.pushToRemote()
                 refreshProfilePinStates()
             }

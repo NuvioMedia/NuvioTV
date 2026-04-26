@@ -1527,4 +1527,40 @@
     <string name="collections_tab_all">All</string>
     <string name="collections_tab_combined">Combined</string>
 
+    <!-- Profile account options (Kids profile + addon mirroring) -->
+    <string name="profile_account_options_title">Account options</string>
+    <string name="profile_addon_mirror_title">Mirror Main profile\'s addons</string>
+    <string name="profile_addon_mirror_subtitle">Stay in sync — addons added on Main appear here automatically.</string>
+    <string name="profile_addon_copy_title">Copy Main\'s addons now</string>
+    <string name="profile_addon_copy_subtitle">Start with Main\'s current list. Future changes won\'t sync.</string>
+    <string name="profile_addon_copy_selected">Will copy</string>
+    <string name="profile_addon_copy_idle">Tap to copy</string>
+    <string name="profile_kids_toggle_title">Kids profile</string>
+    <string name="profile_kids_toggle_subtitle">Hide content above the chosen age rating.</string>
+    <string name="profile_kids_max_rating_label">Maximum age rating</string>
+    <string name="profile_kids_exit_pin_hint">Tip: long-press this profile in the picker to set a PIN. The PIN will be required to switch out of this Kids profile.</string>
+
+    <!-- Trakt sharing modes (per-profile) -->
+    <string name="trakt_sharing_section_title">Trakt account for this profile</string>
+    <string name="trakt_sharing_own_title">Use my own Trakt account</string>
+    <string name="trakt_sharing_own_subtitle">Sign in below. Your watching is private to this profile.</string>
+    <string name="trakt_sharing_shared_rw_title">Share Main profile\'s Trakt (read &amp; write)</string>
+    <string name="trakt_sharing_shared_rw_subtitle">Watching here counts toward %1$s\'s Trakt history.</string>
+    <string name="trakt_sharing_shared_rw_subtitle_default">Watching here counts toward Main profile\'s Trakt history.</string>
+    <string name="trakt_sharing_shared_readonly_title">Share Main profile\'s Trakt (read-only)</string>
+    <string name="trakt_sharing_shared_readonly_subtitle">See %1$s\'s progress, but never update it from this profile.</string>
+    <string name="trakt_sharing_shared_readonly_subtitle_default">See Main profile\'s progress, but never update it from this profile.</string>
+    <string name="trakt_sharing_status_main_disconnected">Main profile is not connected to Trakt yet.</string>
+    <string name="trakt_sharing_status_shared_rw">Using Main profile\'s Trakt — %1$s. Activity here writes to Main\'s history.</string>
+    <string name="trakt_sharing_status_shared_readonly">Using Main profile\'s Trakt — %1$s. Read-only — nothing here updates Main\'s history.</string>
+    <string name="trakt_sharing_status_connected_fallback">connected</string>
+
+    <!-- Kids content filter -->
+    <string name="kids_restricted_default">Restricted by Kids profile.</string>
+    <string name="kids_restricted_with_rating">Restricted to %1$s or below for this Kids profile.</string>
+
+    <!-- Kids profile exit PIN gate -->
+    <string name="profile_pin_overlay_exit_heading">Enter PIN to leave %1$s</string>
+    <string name="profile_pin_overlay_exit_support">Ask a parent to enter the PIN to switch profiles.</string>
+
 </resources>

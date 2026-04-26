@@ -6,7 +6,13 @@ data class UserProfile(
     val avatarColorHex: String,
     val usesPrimaryAddons: Boolean = false,
     val usesPrimaryPlugins: Boolean = false,
-    val avatarId: String? = null
+    val avatarId: String? = null,
+    val isKids: Boolean = false,
+    val maxAgeRating: AgeRatingTier? = null,
+    val traktSharing: TraktSharingMode = TraktSharingMode.OWN
 ) {
     val isPrimary: Boolean get() = id == 1
+
+    val entryPinRequiredCapable: Boolean get() = !isKids
+    val exitPinRequiredCapable: Boolean get() = isKids
 }

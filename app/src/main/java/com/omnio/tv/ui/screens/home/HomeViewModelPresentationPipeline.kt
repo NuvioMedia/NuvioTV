@@ -632,8 +632,14 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
         val itemIndex = row.items.indexOfFirst { it.id == itemId }
         if (itemIndex >= 0) {
             val merged = mergeItem(row.items[itemIndex])
-            if (merged != row.items[itemIndex]) {
-                val mutableItems = row.items.toMutableList()
+            val mutableItems = row.items.toMutableList()
+            val blockedByKidsFilter = kidsContentFilter.isActive &&
+                kidsContentFilter.filterPreviews(listOf(merged)).isEmpty()
+            if (blockedByKidsFilter) {
+                mutableItems.removeAt(itemIndex)
+                catalogsMap[key] = row.copy(items = mutableItems)
+                truncatedRowCache.remove(key)
+            } else if (merged != row.items[itemIndex]) {
                 mutableItems[itemIndex] = merged
                 catalogsMap[key] = row.copy(items = mutableItems)
                 truncatedRowCache.remove(key)
@@ -649,11 +655,17 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
                 row
             } else {
                 val mergedItem = mergeItem(row.items[itemIndex])
-                if (mergedItem == row.items[itemIndex]) {
+                val mutableItems = row.items.toMutableList()
+                val blockedByKidsFilter = kidsContentFilter.isActive &&
+                    kidsContentFilter.filterPreviews(listOf(mergedItem)).isEmpty()
+                if (blockedByKidsFilter) {
+                    changed = true
+                    mutableItems.removeAt(itemIndex)
+                    row.copy(items = mutableItems)
+                } else if (mergedItem == row.items[itemIndex]) {
                     row
                 } else {
                     changed = true
-                    val mutableItems = row.items.toMutableList()
                     mutableItems[itemIndex] = mergedItem
                     row.copy(items = mutableItems)
                 }

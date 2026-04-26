@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.omnio.tv.R
+import com.omnio.tv.core.profile.ProfileManager
+import com.omnio.tv.core.sync.ProfileSyncService
 import com.omnio.tv.core.sync.StartupSyncService
 import com.omnio.tv.core.sync.WatchedItemsSyncService
 import com.omnio.tv.data.local.TraktAuthDataStore
@@ -15,6 +17,7 @@ import com.omnio.tv.data.local.WatchedSeriesStateHolder
 import com.omnio.tv.data.repository.TraktAuthService
 import com.omnio.tv.data.repository.TraktProgressService
 import com.omnio.tv.data.repository.TraktTokenPollResult
+import com.omnio.tv.domain.model.TraktSharingMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -51,7 +54,9 @@ data class TraktUiState(
     val watchProgressSource: WatchProgressSource = TraktSettingsDataStore.DEFAULT_WATCH_PROGRESS_SOURCE,
     val connectedStats: TraktProgressService.TraktCachedStats? = null,
     val statusMessage: String? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val isPrimaryProfileActive: Boolean = true,
+    val traktSharing: TraktSharingMode = TraktSharingMode.OWN
 )
 
 @HiltViewModel
@@ -65,6 +70,8 @@ class TraktViewModel @Inject constructor(
     private val watchedItemsSyncService: WatchedItemsSyncService,
     private val watchedSeriesStateHolder: WatchedSeriesStateHolder,
     private val cwEnrichmentCache: com.omnio.tv.data.local.ContinueWatchingEnrichmentCache,
+    private val profileManager: ProfileManager,
+    private val profileSyncService: ProfileSyncService,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TraktUiState())
@@ -80,6 +87,35 @@ class TraktViewModel @Inject constructor(
         }
         observeSettings()
         observeAuthState()
+        observeActiveProfile()
+    }
+
+    fun onTraktSharingModeSelected(mode: TraktSharingMode) {
+        val active = profileManager.activeProfile ?: return
+        if (active.id == 1) return
+        if (active.traktSharing == mode) return
+        viewModelScope.launch {
+            profileManager.updateProfile(active.copy(traktSharing = mode))
+            profileSyncService.pushToRemote()
+        }
+    }
+
+    private fun observeActiveProfile() {
+        viewModelScope.launch {
+            combine(
+                profileManager.activeProfileId,
+                profileManager.profiles
+            ) { id, profiles ->
+                profiles.firstOrNull { it.id == id }
+            }.collectLatest { profile ->
+                _uiState.update {
+                    it.copy(
+                        isPrimaryProfileActive = profile?.id == 1,
+                        traktSharing = profile?.traktSharing ?: TraktSharingMode.OWN
+                    )
+                }
+            }
+        }
     }
 
     fun onContinueWatchingDaysCapSelected(days: Int) {

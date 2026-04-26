@@ -114,6 +114,16 @@ class AddonPreferences @Inject constructor(
         }
     }
 
+    suspend fun copyAddonsToProfile(targetProfileId: Int, sourceProfileId: Int = 1) {
+        if (targetProfileId == sourceProfileId) return
+        val sourcePrefs = factory.get(sourceProfileId, FEATURE).data.first()
+        val sourceList = getCurrentList(sourcePrefs)
+        factory.get(targetProfileId, FEATURE).edit { preferences ->
+            preferences[orderedUrlsKey] = gson.toJson(sourceList.map(::canonicalizeUrl))
+            preferences.remove(legacyUrlsKey)
+        }
+    }
+
     private fun getCurrentList(preferences: Preferences): List<String> {
         val json = preferences[orderedUrlsKey]
         return if (json != null) {

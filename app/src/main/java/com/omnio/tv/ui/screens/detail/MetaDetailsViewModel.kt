@@ -82,6 +82,8 @@ class MetaDetailsViewModel @Inject constructor(
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val watchedSeriesStateHolder: com.omnio.tv.data.local.WatchedSeriesStateHolder,
+    private val kidsContentFilter: com.omnio.tv.core.profile.KidsContentFilter,
+    private val profileManager: com.omnio.tv.core.profile.ProfileManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val itemId: String = savedStateHandle["itemId"] ?: ""
@@ -552,6 +554,20 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     private fun applyMeta(meta: Meta) {
+        if (kidsContentFilter.isActive && !kidsContentFilter.isAllowedDefinitive(meta)) {
+            val msg = kidsContentFilter.reasonBlocked(profileManager.activeProfile)
+                ?: context.getString(com.omnio.tv.R.string.kids_restricted_default)
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    meta = null,
+                    kidsRestricted = true,
+                    kidsRestrictedMessage = msg,
+                    error = null
+                )
+            }
+            return
+        }
         // Update the effective content ID so watch-progress observers pick up
         // the canonical ID (e.g. IMDB "tt0396375") instead of the navigation ID
         // (which may be "tmdb:13836").  Don't downgrade from an IMDB ID to a

@@ -29,7 +29,7 @@ import com.omnio.tv.ui.theme.OmnioColors
 @Composable
 fun ErrorState(
     message: String,
-    onRetry: () -> Unit,
+    onRetry: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     val displayMessage = buildErrorStatePresentation(
@@ -48,18 +48,20 @@ fun ErrorState(
             color = OmnioColors.TextSecondary,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = onRetry,
-            colors = ButtonDefaults.colors(
-                containerColor = OmnioColors.BackgroundCard,
-                contentColor = OmnioColors.TextPrimary,
-                focusedContainerColor = OmnioColors.FocusBackground,
-                focusedContentColor = OmnioColors.Primary
-            ),
-            shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
-        ) {
-            Text(stringResource(R.string.action_retry))
+        if (onRetry != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onRetry,
+                colors = ButtonDefaults.colors(
+                    containerColor = OmnioColors.BackgroundCard,
+                    contentColor = OmnioColors.TextPrimary,
+                    focusedContainerColor = OmnioColors.FocusBackground,
+                    focusedContentColor = OmnioColors.Primary
+                ),
+                shape = ButtonDefaults.shape(RoundedCornerShape(12.dp))
+            ) {
+                Text(stringResource(R.string.action_retry))
+            }
         }
     }
 }

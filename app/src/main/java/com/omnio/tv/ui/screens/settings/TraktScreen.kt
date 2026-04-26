@@ -58,6 +58,7 @@ import com.omnio.tv.core.qr.QrCodeGenerator
 import com.omnio.tv.data.local.TraktSettingsDataStore
 import com.omnio.tv.data.local.WatchProgressSource
 import com.omnio.tv.data.repository.TraktProgressService
+import com.omnio.tv.domain.model.TraktSharingMode
 import com.omnio.tv.ui.components.OmnioDialog
 import com.omnio.tv.ui.theme.OmnioColors
 import kotlinx.coroutines.delay
@@ -178,12 +179,24 @@ fun TraktScreen(
             val remaining = expiresAt?.let { (it - nowMillis).coerceAtLeast(0L) } ?: 0L
             val contentScrollState = rememberScrollState()
 
+            val isShared = uiState.traktSharing != TraktSharingMode.OWN
+            val showSharingSelector = !uiState.isPrimaryProfileActive
+
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(contentScrollState),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                if (showSharingSelector) {
+                    TraktSharingModeSelector(
+                        selected = uiState.traktSharing,
+                        onSelected = { viewModel.onTraktSharingModeSelected(it) },
+                        mainProfileUsername = uiState.username.takeIf { isShared }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -194,7 +207,7 @@ fun TraktScreen(
                         style = MaterialTheme.typography.titleLarge,
                         color = OmnioColors.TextPrimary
                     )
-                    if (uiState.mode == TraktConnectionMode.AWAITING_APPROVAL) {
+                    if (!isShared && uiState.mode == TraktConnectionMode.AWAITING_APPROVAL) {
                         Button(
                             onClick = { viewModel.onCancelDeviceFlow() },
                             colors = ButtonDefaults.colors(
@@ -207,7 +220,22 @@ fun TraktScreen(
                     }
                 }
 
-                if (uiState.mode == TraktConnectionMode.AWAITING_APPROVAL) {
+                if (isShared) {
+                    val displayUsername = uiState.username ?: stringResource(R.string.trakt_sharing_status_connected_fallback)
+                    val sharedStatus = when {
+                        uiState.mode != TraktConnectionMode.CONNECTED ->
+                            stringResource(R.string.trakt_sharing_status_main_disconnected)
+                        uiState.traktSharing == TraktSharingMode.SHARED_RW ->
+                            stringResource(R.string.trakt_sharing_status_shared_rw, displayUsername)
+                        else ->
+                            stringResource(R.string.trakt_sharing_status_shared_readonly, displayUsername)
+                    }
+                    Text(
+                        text = sharedStatus,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = OmnioColors.TextSecondary
+                    )
+                } else if (uiState.mode == TraktConnectionMode.AWAITING_APPROVAL) {
                     Text(
                         text = stringResource(R.string.trakt_awaiting_instruction),
                         style = MaterialTheme.typography.bodyLarge,

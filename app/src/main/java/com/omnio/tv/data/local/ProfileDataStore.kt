@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.omnio.tv.domain.model.AgeRatingTier
+import com.omnio.tv.domain.model.TraktSharingMode
 import com.omnio.tv.domain.model.UserProfile
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
@@ -121,7 +123,10 @@ internal data class ProfileJson(
     val avatarColorHex: String,
     val usesPrimaryAddons: Boolean = false,
     val usesPrimaryPlugins: Boolean = false,
-    val avatarId: String? = null
+    val avatarId: String? = null,
+    val isKids: Boolean = false,
+    val maxAgeRating: String? = null,
+    val traktSharing: String? = null
 ) {
     fun toDomain() = UserProfile(
         id = id,
@@ -129,7 +134,10 @@ internal data class ProfileJson(
         avatarColorHex = avatarColorHex,
         usesPrimaryAddons = usesPrimaryAddons,
         usesPrimaryPlugins = usesPrimaryPlugins,
-        avatarId = avatarId
+        avatarId = avatarId,
+        isKids = isKids && id != 1,
+        maxAgeRating = maxAgeRating?.let { runCatching { AgeRatingTier.valueOf(it) }.getOrNull() },
+        traktSharing = if (id == 1) TraktSharingMode.OWN else TraktSharingMode.fromStorageString(traktSharing)
     )
 
     companion object {
@@ -139,7 +147,10 @@ internal data class ProfileJson(
             avatarColorHex = profile.avatarColorHex,
             usesPrimaryAddons = profile.usesPrimaryAddons,
             usesPrimaryPlugins = profile.usesPrimaryPlugins,
-            avatarId = profile.avatarId
+            avatarId = profile.avatarId,
+            isKids = profile.isKids,
+            maxAgeRating = profile.maxAgeRating?.name,
+            traktSharing = profile.traktSharing.name
         )
     }
 }
