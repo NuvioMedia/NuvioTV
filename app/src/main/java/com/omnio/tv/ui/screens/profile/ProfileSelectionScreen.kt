@@ -23,6 +23,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -1182,10 +1184,11 @@ private fun CreateProfileOverlay(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            val createOverlayRightScroll = rememberScrollState()
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 360.dp),
+                    .heightIn(min = 360.dp, max = 480.dp),
                 verticalAlignment = Alignment.Top
             ) {
                 Column(
@@ -1231,7 +1234,9 @@ private fun CreateProfileOverlay(
                 Spacer(modifier = Modifier.width(ProfileSelectionSpacing.EditorDividerSpacing))
 
                 Column(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(createOverlayRightScroll),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
@@ -1501,10 +1506,11 @@ private fun EditProfileOverlay(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            val editOverlayRightScroll = rememberScrollState()
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 360.dp),
+                    .heightIn(min = 360.dp, max = 480.dp),
                 verticalAlignment = Alignment.Top
             ) {
                 Column(
@@ -1550,7 +1556,9 @@ private fun EditProfileOverlay(
                 Spacer(modifier = Modifier.width(ProfileSelectionSpacing.EditorDividerSpacing))
 
                 Column(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(editOverlayRightScroll),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(

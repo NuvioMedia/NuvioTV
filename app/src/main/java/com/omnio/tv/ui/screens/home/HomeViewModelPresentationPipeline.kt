@@ -628,21 +628,21 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
         trailerYtIds = if (incomingTrailerYtIds.isNotEmpty()) incomingTrailerYtIds else currentItem.trailerYtIds
     )
 
+    var kidsRecheckNeeded = false
     catalogsMap.forEach { (key, row) ->
         val itemIndex = row.items.indexOfFirst { it.id == itemId }
         if (itemIndex >= 0) {
             val merged = mergeItem(row.items[itemIndex])
-            val mutableItems = row.items.toMutableList()
-            val blockedByKidsFilter = kidsContentFilter.isActive &&
-                kidsContentFilter.filterPreviews(listOf(merged)).isEmpty()
-            if (blockedByKidsFilter) {
-                mutableItems.removeAt(itemIndex)
-                catalogsMap[key] = row.copy(items = mutableItems)
-                truncatedRowCache.remove(key)
-            } else if (merged != row.items[itemIndex]) {
+            if (merged != row.items[itemIndex]) {
+                val mutableItems = row.items.toMutableList()
                 mutableItems[itemIndex] = merged
                 catalogsMap[key] = row.copy(items = mutableItems)
                 truncatedRowCache.remove(key)
+                if (kidsContentFilter.isActive &&
+                    merged.ageRating != row.items[itemIndex].ageRating
+                ) {
+                    kidsRecheckNeeded = true
+                }
             }
         }
     }
@@ -655,23 +655,24 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
                 row
             } else {
                 val mergedItem = mergeItem(row.items[itemIndex])
-                val mutableItems = row.items.toMutableList()
-                val blockedByKidsFilter = kidsContentFilter.isActive &&
-                    kidsContentFilter.filterPreviews(listOf(mergedItem)).isEmpty()
-                if (blockedByKidsFilter) {
-                    changed = true
-                    mutableItems.removeAt(itemIndex)
-                    row.copy(items = mutableItems)
-                } else if (mergedItem == row.items[itemIndex]) {
+                if (mergedItem == row.items[itemIndex]) {
                     row
                 } else {
                     changed = true
+                    val mutableItems = row.items.toMutableList()
                     mutableItems[itemIndex] = mergedItem
                     row.copy(items = mutableItems)
                 }
             }
         }
         if (changed) state.copy(catalogRows = updatedRows) else state
+    }
+
+    if (kidsRecheckNeeded) {
+        // The newly merged ageRating may exceed the active Kids profile threshold.
+        // Let the catalog pipeline re-run as the single chokepoint so blocked items
+        // disappear in one batched emission instead of from inline mutation.
+        scheduleUpdateCatalogRows()
     }
 
     // If external meta brought new trailerYtIds and the item has no trailer resolved yet, retry.
