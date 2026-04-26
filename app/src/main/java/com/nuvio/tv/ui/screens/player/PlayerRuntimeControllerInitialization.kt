@@ -656,7 +656,6 @@ internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(
 
     val fetchedSubtitles = withTimeoutOrNull(STARTUP_SUBTITLE_PREFETCH_TIMEOUT_MS) {
         fetchAddonSubtitlesNow(
-            computeHash = false,
             onProgress = if (showLoadingStatus) { completed, total, addonName ->
                 val msg = if (completed == 0) {
                     context.getString(R.string.player_loading_subtitles_from, total)
