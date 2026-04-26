@@ -38,7 +38,11 @@ jobs:
             printf '%s' "$LOCAL_DEV_PROPERTIES_BASE64" | base64 --decode > local.dev.properties
           fi
 
+      - name: Create CI keystore
+        run: |
+          keytool -genkeypair -keystore nuviotv.jks -alias nuviotv \
+            -keyalg RSA -keysize 2048 -validity 1 \
+            -dname "CN=CI" -storepass 815787 -keypass 815787
+
       - name: Build
-        env:
-          CI_USE_DEBUG_SIGNING: true
         run: ./gradlew assembleFullDebug --no-daemon
