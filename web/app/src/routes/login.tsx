@@ -1,4 +1,4 @@
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase";
@@ -13,53 +13,58 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-type Mode = "signin" | "signup";
+// Sign-up is intentionally disabled here. New accounts are created via the
+// Android TV app (or by an admin in the Supabase dashboard). Flip this to
+// `true` to re-expose the sign-up toggle when registration reopens. See the
+// "Closed registration" section in web/app/README.md.
+const SIGNUP_ENABLED = false;
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<Mode>("signin");
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setInfo(null);
+    setIsPending(true);
 
-    if (mode === "signin") {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+    try {
+      if (mode === "signin") {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (signInError) {
+          setError(friendly(signInError.message));
+          return;
+        }
+        navigate({ to: "/profiles" });
+        return;
+      }
+
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
       });
-      if (signInError) {
-        setError(friendly(signInError.message));
+      if (signUpError) {
+        setError(friendly(signUpError.message));
         return;
       }
-      startTransition(() => {
-        navigate({ to: "/profiles" });
-      });
-      return;
-    }
-
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-    });
-    if (signUpError) {
-      setError(friendly(signUpError.message));
-      return;
-    }
-    if (!data.session) {
-      setInfo("Check your email to confirm your account, then sign in.");
-      setMode("signin");
-      return;
-    }
-    startTransition(() => {
+      if (!data.session) {
+        setInfo("Check your email to confirm your account, then sign in.");
+        setMode("signin");
+        return;
+      }
       navigate({ to: "/profiles" });
-    });
+    } finally {
+      setIsPending(false);
+    }
   }
 
   return (
@@ -116,17 +121,23 @@ function LoginPage() {
           {mode === "signin" ? "Sign in" : "Create account"}
         </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            setMode((m) => (m === "signin" ? "signup" : "signin"));
-            setError(null);
-            setInfo(null);
-          }}
-          className="block w-full text-center text-sm text-slate-400 hover:text-slate-200"
-        >
-          {mode === "signin" ? "Need an account? Sign up" : "Have an account? Sign in"}
-        </button>
+        {SIGNUP_ENABLED ? (
+          <button
+            type="button"
+            onClick={() => {
+              setMode((m) => (m === "signin" ? "signup" : "signin"));
+              setError(null);
+              setInfo(null);
+            }}
+            className="block w-full text-center text-sm text-slate-400 hover:text-slate-200"
+          >
+            {mode === "signin" ? "Need an account? Sign up" : "Have an account? Sign in"}
+          </button>
+        ) : (
+          <p className="text-center text-xs text-slate-500">
+            Registrations are closed. Sign up via the Android TV app or contact the admin.
+          </p>
+        )}
       </form>
     </main>
   );
@@ -141,5 +152,8 @@ function friendly(message: string): string {
   if (m.includes("invalid email")) return "Please enter a valid email address.";
   if (m.includes("password") && m.includes("short")) return "Password is too short.";
   if (m.includes("rate limit")) return "Too many attempts. Please try again later.";
+  if (m.includes("signups not allowed") || m.includes("signup is disabled")) {
+    return "Registrations are closed.";
+  }
   return message;
 }

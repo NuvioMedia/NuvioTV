@@ -42,6 +42,25 @@ Production target is Vercel. Push to a branch, link the project to the
 
 The Edge functions in `api/` deploy automatically.
 
+## Closed registration (current state)
+
+`web.omnio.tv` does **not** allow new sign-ups. The login form is sign-in
+only. To re-enable registrations, flip `SIGNUP_ENABLED` in
+[`src/routes/login.tsx`](src/routes/login.tsx) to `true` and redeploy.
+
+For belt-and-braces hardening, also disable email sign-up at the Supabase
+project level so a determined visitor can't bypass the UI by calling
+`supabase.auth.signUp()` from devtools:
+
+> Supabase dashboard → **Authentication** → **Providers** → **Email** →
+> uncheck "**Enable email signups**" → Save.
+
+That gate applies to **every** client (Android TV app, panel, tv-login, web
+app), so flipping it forces account creation through the dashboard's
+"Invite user" flow or `supabase.auth.admin.createUser()` from a server with
+the service role key. Leave it on if you still want Android-side sign-ups
+to work; rely on the UI gate alone in that case.
+
 ## Architecture
 
 See [`/Users/marcelloc/.claude/plans/make-a-plan-on-majestic-pascal.md`](../../../.claude/plans/make-a-plan-on-majestic-pascal.md)
