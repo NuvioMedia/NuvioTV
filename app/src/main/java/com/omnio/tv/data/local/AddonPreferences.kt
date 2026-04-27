@@ -124,6 +124,16 @@ class AddonPreferences @Inject constructor(
         }
     }
 
+    suspend fun addAddonToProfile(targetProfileId: Int, url: String) {
+        val normalizedUrl = canonicalizeUrl(url)
+        factory.get(targetProfileId, FEATURE).edit { preferences ->
+            val current = getCurrentList(preferences)
+            if (current.any { canonicalizeUrl(it).equals(normalizedUrl, ignoreCase = true) }) return@edit
+            preferences[orderedUrlsKey] = gson.toJson(current + normalizedUrl)
+            preferences.remove(legacyUrlsKey)
+        }
+    }
+
     private fun getCurrentList(preferences: Preferences): List<String> {
         val json = preferences[orderedUrlsKey]
         return if (json != null) {

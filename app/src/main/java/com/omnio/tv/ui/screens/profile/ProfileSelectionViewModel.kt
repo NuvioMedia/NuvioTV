@@ -12,6 +12,7 @@ import com.omnio.tv.data.remote.supabase.AvatarRepository
 import com.omnio.tv.domain.model.AgeRatingTier
 import com.omnio.tv.domain.model.TraktSharingMode
 import com.omnio.tv.domain.model.UserProfile
+import com.omnio.tv.domain.repository.AioMetadataRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +31,8 @@ class ProfileSelectionViewModel @Inject constructor(
     private val profileManager: ProfileManager,
     private val profileSyncService: ProfileSyncService,
     private val avatarRepository: AvatarRepository,
-    private val addonPreferences: AddonPreferences
+    private val addonPreferences: AddonPreferences,
+    private val aioMetadataRepository: AioMetadataRepository
 ) : ViewModel() {
     private var isAvatarCatalogLoading = false
 
@@ -111,6 +113,9 @@ class ProfileSelectionViewModel @Inject constructor(
                 if (addonInitMode == ProfileAddonInitMode.COPY_FROM_MAIN) {
                     addonPreferences.copyAddonsToProfile(newId)
                 }
+                if (isKids) {
+                    aioMetadataRepository.provisionForKidsProfile(newId, maxAgeRating)
+                }
                 profileSyncService.pushToRemote()
                 refreshProfilePinStates()
             }
@@ -122,7 +127,20 @@ class ProfileSelectionViewModel @Inject constructor(
         if (_isSaving.value) return
         viewModelScope.launch {
             _isSaving.value = true
+            val previous = profileManager.profiles.value.firstOrNull { it.id == profile.id }
             profileManager.updateProfile(profile)
+            // Provision a Kids-tuned AIOMetadata config the moment Kids is
+            // newly turned on for a profile, so that profile starts pulling
+            // pre-filtered catalogs on its next render. We don't auto-tear
+            // down the kids config when Kids is toggled off — the user can
+            // manage it through the standard AIOMetadata settings screen.
+            if (
+                profile.id != 1 &&
+                profile.isKids &&
+                previous?.isKids != true
+            ) {
+                aioMetadataRepository.provisionForKidsProfile(profile.id, profile.maxAgeRating)
+            }
             profileSyncService.pushToRemote()
             refreshProfilePinStates()
             _isSaving.value = false

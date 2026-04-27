@@ -6,10 +6,13 @@ import com.omnio.tv.core.auth.AuthManager
 import com.omnio.tv.core.profile.ProfileManager
 import com.omnio.tv.data.local.AioMetadataSettingsDataStore
 import com.omnio.tv.data.remote.api.AioMetadataApi
+import com.omnio.tv.data.local.AddonPreferences
 import com.omnio.tv.data.remote.dto.aiometadata.AioConfigInnerDto
 import com.omnio.tv.data.remote.dto.aiometadata.AioConfigLoadRequestDto
 import com.omnio.tv.data.remote.dto.aiometadata.AioConfigSaveRequestDto
 import com.omnio.tv.data.remote.dto.aiometadata.AioConfigUpdateRequestDto
+import com.omnio.tv.data.remote.dto.aiometadata.AioMetadataKidsConfig
+import com.omnio.tv.domain.model.AgeRatingTier
 import com.omnio.tv.domain.model.AioMetadataSettings
 import com.omnio.tv.domain.repository.AddonRepository
 import com.omnio.tv.domain.repository.AioMetadataRepository
@@ -43,6 +46,7 @@ class AioMetadataRepositoryImpl @Inject constructor(
     private val authManager: AuthManager,
     private val profileManager: ProfileManager,
     private val addonRepository: AddonRepository,
+    private val addonPreferences: AddonPreferences,
 ) : AioMetadataRepository {
 
     override val settings: Flow<AioMetadataSettings> = dataStore.settings
@@ -154,6 +158,68 @@ class AioMetadataRepositoryImpl @Inject constructor(
 
     override suspend fun getConfigPassword(): String? = dataStore.getConfigPassword()
 
+    override suspend fun provisionForKidsProfile(
+        targetProfileId: Int,
+        maxAgeRating: AgeRatingTier?,
+    ): Result<AioMetadataRepository.CreateConfigResult> = runCatching {
+        if (targetProfileId == 1) error("Cannot provision Kids AIO for the primary profile")
+
+        // Load Main's existing config so we can copy API keys and use them as
+        // the basis for the Kids tweaks. If Main hasn't set up AIOMetadata,
+        // nothing to fork from — bail and let the caller fall back.
+        val mainLink = fetchLink(profileId = 1)
+            ?: error("Main profile has no AIOMetadata config to copy from")
+        val mainPassword = mainLink.configPassword?.takeIf { it.isNotBlank() }
+            ?: error("Main profile AIOMetadata link missing password — open Main's AIOMetadata settings once to back-fill")
+
+        val mainLoad = api.loadConfig(mainLink.aioUuid, AioConfigLoadRequestDto(password = mainPassword))
+        if (!mainLoad.isSuccessful) {
+            error("loadConfig (main) failed: HTTP ${mainLoad.code()}")
+        }
+        val mainConfig = mainLoad.body()?.config
+            ?: error("loadConfig (main) empty body")
+
+        val kidsConfig = AioMetadataKidsConfig.build(mainConfig, maxAgeRating)
+
+        val kidsPassword = generatePassword()
+        val saveResponse = api.saveConfig(
+            AioConfigSaveRequestDto(config = kidsConfig, password = kidsPassword, addonPassword = null)
+        )
+        if (!saveResponse.isSuccessful) {
+            error("saveConfig (kids) failed: HTTP ${saveResponse.code()}")
+        }
+        val saveBody = saveResponse.body() ?: error("saveConfig (kids) empty body")
+        val manifestUrl = saveBody.installUrl ?: buildFallbackManifestUrl(saveBody.userUUID)
+
+        upsertLink(
+            aioUuid = saveBody.userUUID,
+            manifestUrl = manifestUrl,
+            enabled = true,
+            configPassword = kidsPassword,
+            profileId = targetProfileId,
+        )
+
+        dataStore.seedForProfile(
+            profileId = targetProfileId,
+            settings = AioMetadataSettings(
+                enabled = true,
+                aioUuid = saveBody.userUUID,
+                manifestUrl = manifestUrl,
+                lastSyncedAt = System.currentTimeMillis(),
+            ),
+            configPassword = kidsPassword,
+        )
+
+        // Add the new manifest to the Kids profile's addon list directly so we
+        // don't depend on the active profile being the Kids profile when this
+        // runs.
+        if (manifestUrl.isNotBlank()) {
+            addonPreferences.addAddonToProfile(targetProfileId, manifestUrl)
+        }
+
+        AioMetadataRepository.CreateConfigResult(uuid = saveBody.userUUID, manifestUrl = manifestUrl)
+    }.onFailure { Log.w(TAG, "provisionForKidsProfile failed", it) }
+
     override suspend fun setEnabled(enabled: Boolean, manifestUrl: String): Result<Unit> = runCatching {
         val profile = profileManager.activeProfile
         if (profile?.usesPrimaryAddons == true) {
@@ -193,18 +259,24 @@ class AioMetadataRepositoryImpl @Inject constructor(
     @Serializable
     private data class LinkRow(
         @SerialName("user_id") val userId: String,
+        @SerialName("profile_id") val profileId: Int = 1,
         @SerialName("aio_uuid") val aioUuid: String,
         val enabled: Boolean,
         @SerialName("manifest_url") val manifestUrl: String? = null,
         @SerialName("config_password") val configPassword: String? = null,
     )
 
-    private suspend fun fetchLink(): LinkRow? {
+    private fun activeProfileId(): Int = profileManager.activeProfileId.value
+
+    private suspend fun fetchLink(profileId: Int = activeProfileId()): LinkRow? {
         val userId = authManager.getEffectiveUserId() ?: return null
         return try {
             postgrest.from(TABLE)
                 .select {
-                    filter { eq("user_id", userId) }
+                    filter {
+                        eq("user_id", userId)
+                        eq("profile_id", profileId)
+                    }
                     limit(1)
                 }
                 .decodeList<LinkRow>()
@@ -220,11 +292,13 @@ class AioMetadataRepositoryImpl @Inject constructor(
         manifestUrl: String,
         enabled: Boolean,
         configPassword: String?,
+        profileId: Int = activeProfileId(),
     ) {
         val userId = authManager.getEffectiveUserId() ?: error("Not authenticated")
         postgrest.from(TABLE).upsert(
             LinkRow(
                 userId = userId,
+                profileId = profileId,
                 aioUuid = aioUuid,
                 enabled = enabled,
                 manifestUrl = manifestUrl,
@@ -239,6 +313,7 @@ class AioMetadataRepositoryImpl @Inject constructor(
         postgrest.from(TABLE).upsert(
             LinkRow(
                 userId = userId,
+                profileId = existing.profileId,
                 aioUuid = existing.aioUuid,
                 enabled = enabled,
                 manifestUrl = existing.manifestUrl,

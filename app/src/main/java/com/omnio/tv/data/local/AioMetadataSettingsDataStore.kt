@@ -85,4 +85,23 @@ class AioMetadataSettingsDataStore @Inject constructor(
     suspend fun clear() {
         store().edit { it.clear() }
     }
+
+    /**
+     * Seeds an entire AIO settings record for a specific profile (used when
+     * provisioning a separate Kids-profile AIO config from a different
+     * profile's context).
+     */
+    suspend fun seedForProfile(
+        profileId: Int,
+        settings: AioMetadataSettings,
+        configPassword: String,
+    ) {
+        store(profileId).edit { prefs ->
+            prefs[enabledKey] = settings.enabled
+            prefs[uuidKey] = settings.aioUuid
+            prefs[manifestUrlKey] = settings.manifestUrl
+            prefs[lastSyncedKey] = settings.lastSyncedAt
+            prefs[configPasswordKey] = configPassword
+        }
+    }
 }

@@ -66,7 +66,10 @@ class ProfileManager @Inject constructor(
             id = nextId,
             name = name.trim().ifEmpty { "Profile $nextId" },
             avatarColorHex = avatarColorHex,
-            usesPrimaryAddons = usesPrimaryAddons,
+            // Kids profiles run their own AIOMetadata config (with cert-filtered
+            // catalogs); they cannot live-mirror Main's addon list, otherwise
+            // the kid-tuned manifest gets shadowed by Main's addons.
+            usesPrimaryAddons = usesPrimaryAddons && !isKids,
             usesPrimaryPlugins = usesPrimaryPlugins,
             avatarId = avatarId,
             isKids = isKids,
@@ -95,7 +98,10 @@ class ProfileManager @Inject constructor(
                 traktSharing = TraktSharingMode.OWN
             )
         } else profile.copy(
-            maxAgeRating = if (profile.isKids) profile.maxAgeRating else null
+            maxAgeRating = if (profile.isKids) profile.maxAgeRating else null,
+            // Same invariant as createProfile: Kids profiles cannot mirror
+            // Main's addons (their kid-tuned manifest would be shadowed).
+            usesPrimaryAddons = profile.usesPrimaryAddons && !profile.isKids
         )
         profileDataStore.upsertProfile(sanitized)
         return true
