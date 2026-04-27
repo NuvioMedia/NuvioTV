@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.omnio.tv.domain.model.AgeRatingTier
+import com.omnio.tv.domain.model.AioSharingMode
 import com.omnio.tv.domain.model.TraktSharingMode
 import com.omnio.tv.domain.model.UserProfile
 import com.squareup.moshi.Moshi
@@ -126,7 +127,8 @@ internal data class ProfileJson(
     val avatarId: String? = null,
     val isKids: Boolean = false,
     val maxAgeRating: String? = null,
-    val traktSharing: String? = null
+    val traktSharing: String? = null,
+    val aioSharing: String? = null
 ) {
     fun toDomain() = UserProfile(
         id = id,
@@ -137,7 +139,8 @@ internal data class ProfileJson(
         avatarId = avatarId,
         isKids = isKids && id != 1,
         maxAgeRating = maxAgeRating?.let { runCatching { AgeRatingTier.valueOf(it) }.getOrNull() },
-        traktSharing = if (id == 1) TraktSharingMode.OWN else TraktSharingMode.fromStorageString(traktSharing)
+        traktSharing = if (id == 1) TraktSharingMode.OWN else TraktSharingMode.fromStorageString(traktSharing),
+        aioSharing = if (id == 1) AioSharingMode.INDEPENDENT else AioSharingMode.fromStorageString(aioSharing)
     )
 
     companion object {
@@ -150,7 +153,8 @@ internal data class ProfileJson(
             avatarId = profile.avatarId,
             isKids = profile.isKids,
             maxAgeRating = profile.maxAgeRating?.name,
-            traktSharing = profile.traktSharing.name
+            traktSharing = profile.traktSharing.name,
+            aioSharing = profile.aioSharing.name
         )
     }
 }

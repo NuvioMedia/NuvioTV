@@ -138,6 +138,7 @@ data class SupabaseProfile(
     @SerialName("is_kids") val isKids: Boolean = false,
     @SerialName("max_age_rating") val maxAgeRating: String? = null,
     @SerialName("trakt_sharing") val traktSharing: String = "OWN",
+    @SerialName("aio_sharing") val aioSharing: String = "INDEPENDENT",
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("updated_at") val updatedAt: String? = null
 )

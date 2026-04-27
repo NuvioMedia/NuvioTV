@@ -10,6 +10,7 @@ import com.omnio.tv.data.remote.supabase.SupabaseProfilePinVerifyResult
 import com.omnio.tv.data.remote.supabase.AvatarCatalogItem
 import com.omnio.tv.data.remote.supabase.AvatarRepository
 import com.omnio.tv.domain.model.AgeRatingTier
+import com.omnio.tv.domain.model.AioSharingMode
 import com.omnio.tv.domain.model.TraktSharingMode
 import com.omnio.tv.domain.model.UserProfile
 import com.omnio.tv.domain.repository.AioMetadataRepository
@@ -95,7 +96,8 @@ class ProfileSelectionViewModel @Inject constructor(
         addonInitMode: ProfileAddonInitMode = ProfileAddonInitMode.LIVE_MIRROR,
         isKids: Boolean = false,
         maxAgeRating: AgeRatingTier? = null,
-        traktSharing: TraktSharingMode = TraktSharingMode.OWN
+        traktSharing: TraktSharingMode = TraktSharingMode.OWN,
+        aioSharing: AioSharingMode = AioSharingMode.INDEPENDENT
     ) {
         if (_isCreating.value) return
         viewModelScope.launch {
@@ -107,14 +109,21 @@ class ProfileSelectionViewModel @Inject constructor(
                 usesPrimaryAddons = addonInitMode == ProfileAddonInitMode.LIVE_MIRROR,
                 isKids = isKids,
                 maxAgeRating = if (isKids) maxAgeRating else null,
-                traktSharing = traktSharing
+                traktSharing = traktSharing,
+                aioSharing = aioSharing
             )
             if (newId != null) {
                 if (addonInitMode == ProfileAddonInitMode.COPY_FROM_MAIN) {
                     addonPreferences.copyAddonsToProfile(newId)
                 }
-                if (isKids) {
-                    aioMetadataRepository.provisionForKidsProfile(newId, maxAgeRating)
+                // Spawn a per-profile AIO config when this profile needs its
+                // own (Kids always; or whenever the user picked any sharing
+                // mode other than INDEPENDENT for a regular profile).
+                if (isKids || aioSharing != AioSharingMode.INDEPENDENT) {
+                    aioMetadataRepository.provisionFromMain(
+                        targetProfileId = newId,
+                        kidsMaxAgeRating = if (isKids) maxAgeRating else null,
+                    )
                 }
                 profileSyncService.pushToRemote()
                 refreshProfilePinStates()
@@ -129,17 +138,23 @@ class ProfileSelectionViewModel @Inject constructor(
             _isSaving.value = true
             val previous = profileManager.profiles.value.firstOrNull { it.id == profile.id }
             profileManager.updateProfile(profile)
-            // Provision a Kids-tuned AIOMetadata config the moment Kids is
-            // newly turned on for a profile, so that profile starts pulling
-            // pre-filtered catalogs on its next render. We don't auto-tear
-            // down the kids config when Kids is toggled off — the user can
-            // manage it through the standard AIOMetadata settings screen.
-            if (
-                profile.id != 1 &&
-                profile.isKids &&
-                previous?.isKids != true
-            ) {
-                aioMetadataRepository.provisionForKidsProfile(profile.id, profile.maxAgeRating)
+            // Provision a per-profile AIOMetadata config when a non-primary
+            // profile gains its own AIO presence — either by becoming Kids,
+            // or by switching from INDEPENDENT to a mirror mode. We don't
+            // auto-tear-down on the reverse: the user can manage that config
+            // via the standard AIOMetadata settings screen if they want to.
+            val needsProvision = profile.id != 1 && (
+                (profile.isKids && previous?.isKids != true) ||
+                (
+                    profile.aioSharing != AioSharingMode.INDEPENDENT &&
+                    previous?.aioSharing == AioSharingMode.INDEPENDENT
+                )
+            )
+            if (needsProvision) {
+                aioMetadataRepository.provisionFromMain(
+                    targetProfileId = profile.id,
+                    kidsMaxAgeRating = if (profile.isKids) profile.maxAgeRating else null,
+                )
             }
             profileSyncService.pushToRemote()
             refreshProfilePinStates()

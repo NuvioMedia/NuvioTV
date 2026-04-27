@@ -8,6 +8,7 @@ import com.omnio.tv.data.remote.supabase.SupabaseProfileLockState
 import com.omnio.tv.data.remote.supabase.SupabaseProfile
 import com.omnio.tv.data.remote.supabase.SupabaseProfilePinVerifyResult
 import com.omnio.tv.domain.model.AgeRatingTier
+import com.omnio.tv.domain.model.AioSharingMode
 import com.omnio.tv.domain.model.TraktSharingMode
 import com.omnio.tv.domain.model.UserProfile
 import io.github.jan.supabase.postgrest.Postgrest
@@ -55,6 +56,7 @@ class ProfileSyncService @Inject constructor(
                             put("is_kids", profile.isKids)
                             put("max_age_rating", profile.maxAgeRating?.name)
                             put("trakt_sharing", profile.traktSharing.name)
+                            put("aio_sharing", profile.aioSharing.name)
                         }
                     }
                 })
@@ -93,7 +95,8 @@ class ProfileSyncService @Inject constructor(
                     maxAgeRating = if (!isPrimary && entry.isKids) {
                         entry.maxAgeRating?.let { runCatching { AgeRatingTier.valueOf(it) }.getOrNull() }
                     } else null,
-                    traktSharing = if (isPrimary) TraktSharingMode.OWN else TraktSharingMode.fromStorageString(entry.traktSharing)
+                    traktSharing = if (isPrimary) TraktSharingMode.OWN else TraktSharingMode.fromStorageString(entry.traktSharing),
+                    aioSharing = if (isPrimary) AioSharingMode.INDEPENDENT else AioSharingMode.fromStorageString(entry.aioSharing)
                 )
             }
 

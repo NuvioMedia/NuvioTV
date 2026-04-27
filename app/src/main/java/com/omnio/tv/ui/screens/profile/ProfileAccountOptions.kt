@@ -40,6 +40,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import com.omnio.tv.R
 import com.omnio.tv.domain.model.AgeRatingTier
+import com.omnio.tv.domain.model.AioSharingMode
 import com.omnio.tv.ui.theme.OmnioColors
 
 private val SectionShape = RoundedCornerShape(14.dp)
@@ -55,6 +56,8 @@ internal fun ProfileAccountOptionsSection(
     onIsKidsChange: (Boolean) -> Unit,
     maxAgeRating: AgeRatingTier?,
     onMaxAgeRatingChange: (AgeRatingTier) -> Unit,
+    aioSharing: AioSharingMode,
+    onAioSharingChange: (AioSharingMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (!showAddonOptions && !showKidsOptions) return
@@ -126,6 +129,48 @@ internal fun ProfileAccountOptionsSection(
                 )
             }
         }
+
+        // AIOMetadata sharing — applies to non-primary profiles. Determines
+        // whether the profile keeps its own AIO config in lock-step with Main
+        // (FULL_MIRROR), pulls only the API keys (KEYS_ONLY), or stays
+        // independent. Kids profiles can't FULL_MIRROR (it would discard the
+        // kid-tuned catalogs), so we hide that row when isKids is true.
+        Text(
+            text = stringResource(R.string.profile_aio_section_title),
+            color = OmnioColors.TextSecondary,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+
+        if (!isKids) {
+            ProfileToggleRow(
+                title = stringResource(R.string.profile_aio_full_mirror_title),
+                subtitle = stringResource(R.string.profile_aio_full_mirror_subtitle),
+                checked = aioSharing == AioSharingMode.FULL_MIRROR,
+                onCheckedChange = { picked ->
+                    onAioSharingChange(
+                        if (picked) AioSharingMode.FULL_MIRROR else AioSharingMode.INDEPENDENT
+                    )
+                }
+            )
+        }
+
+        ProfileToggleRow(
+            title = stringResource(R.string.profile_aio_keys_only_title),
+            subtitle = if (isKids) {
+                stringResource(R.string.profile_aio_keys_only_subtitle_kids)
+            } else {
+                stringResource(R.string.profile_aio_keys_only_subtitle)
+            },
+            checked = aioSharing == AioSharingMode.KEYS_ONLY ||
+                (isKids && aioSharing != AioSharingMode.INDEPENDENT),
+            onCheckedChange = { picked ->
+                onAioSharingChange(
+                    if (picked) AioSharingMode.KEYS_ONLY else AioSharingMode.INDEPENDENT
+                )
+            }
+        )
     }
 }
 

@@ -93,6 +93,7 @@ import androidx.compose.ui.res.stringResource
 import com.omnio.tv.R
 import com.omnio.tv.data.remote.supabase.AvatarCatalogItem
 import com.omnio.tv.domain.model.AgeRatingTier
+import com.omnio.tv.domain.model.AioSharingMode
 import com.omnio.tv.domain.model.UserProfile
 import com.omnio.tv.ui.components.AvatarPickerGrid
 import com.omnio.tv.ui.components.OmnioDialog
@@ -426,14 +427,15 @@ fun ProfileSelectionScreen(
                 avatarCatalog = avatarCatalog,
                 isCreating = isCreating,
                 onDismiss = { showCreateProfile = false },
-                onCreateProfile = { name, colorHex, avatarId, addonInitMode, isKids, maxAgeRating ->
+                onCreateProfile = { name, colorHex, avatarId, addonInitMode, isKids, maxAgeRating, aioSharing ->
                     viewModel.createProfile(
                         name = name,
                         avatarColorHex = colorHex,
                         avatarId = avatarId,
                         addonInitMode = addonInitMode,
                         isKids = isKids,
-                        maxAgeRating = maxAgeRating
+                        maxAgeRating = maxAgeRating,
+                        aioSharing = aioSharing
                     )
                     showCreateProfile = false
                 }
@@ -1091,7 +1093,8 @@ private fun CreateProfileOverlay(
         avatarId: String?,
         addonInitMode: ProfileAddonInitMode,
         isKids: Boolean,
-        maxAgeRating: AgeRatingTier?
+        maxAgeRating: AgeRatingTier?,
+        aioSharing: AioSharingMode
     ) -> Unit
 ) {
     BackHandler(onBack = onDismiss)
@@ -1102,6 +1105,7 @@ private fun CreateProfileOverlay(
     var addonInitMode by remember { mutableStateOf(ProfileAddonInitMode.LIVE_MIRROR) }
     var isKids by remember { mutableStateOf(false) }
     var maxAgeRating by remember { mutableStateOf<AgeRatingTier?>(AgeRatingTier.PG) }
+    var aioSharing by remember { mutableStateOf(AioSharingMode.INDEPENDENT) }
     var focusedAvatarName by remember { mutableStateOf<String?>(null) }
     val selectedAvatar = remember(avatarCatalog, selectedAvatarId) {
         avatarCatalog.find { it.id == selectedAvatarId }
@@ -1176,7 +1180,8 @@ private fun CreateProfileOverlay(
                             selectedAvatarId,
                             addonInitMode,
                             isKids,
-                            if (isKids) maxAgeRating else null
+                            if (isKids) maxAgeRating else null,
+                            aioSharing
                         )
                     }
                 )
@@ -1304,7 +1309,9 @@ private fun CreateProfileOverlay(
                         isKids = isKids,
                         onIsKidsChange = { isKids = it },
                         maxAgeRating = maxAgeRating,
-                        onMaxAgeRatingChange = { maxAgeRating = it }
+                        onMaxAgeRatingChange = { maxAgeRating = it },
+                        aioSharing = aioSharing,
+                        onAioSharingChange = { aioSharing = it }
                     )
                 }
             }
@@ -1409,6 +1416,9 @@ private fun EditProfileOverlay(
     var maxAgeRating by remember(profile.id, profile.maxAgeRating) {
         mutableStateOf(profile.maxAgeRating ?: AgeRatingTier.PG)
     }
+    var aioSharing by remember(profile.id, profile.aioSharing) {
+        mutableStateOf(profile.aioSharing)
+    }
     var focusedAvatarName by remember { mutableStateOf<String?>(null) }
     val selectedAvatar = remember(avatarCatalog, selectedAvatarId) {
         avatarCatalog.find { it.id == selectedAvatarId }
@@ -1497,7 +1507,8 @@ private fun EditProfileOverlay(
                                 avatarId = selectedAvatarId,
                                 usesPrimaryAddons = addonInitMode == ProfileAddonInitMode.LIVE_MIRROR,
                                 isKids = isKids,
-                                maxAgeRating = if (isKids) maxAgeRating else null
+                                maxAgeRating = if (isKids) maxAgeRating else null,
+                                aioSharing = aioSharing
                             )
                         )
                     }
@@ -1627,7 +1638,9 @@ private fun EditProfileOverlay(
                             isKids = isKids,
                             onIsKidsChange = { isKids = it },
                             maxAgeRating = maxAgeRating,
-                            onMaxAgeRatingChange = { maxAgeRating = it }
+                            onMaxAgeRatingChange = { maxAgeRating = it },
+                            aioSharing = aioSharing,
+                            onAioSharingChange = { aioSharing = it }
                         )
                     }
                 }

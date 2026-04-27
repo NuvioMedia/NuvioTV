@@ -9,7 +9,8 @@ data class UserProfile(
     val avatarId: String? = null,
     val isKids: Boolean = false,
     val maxAgeRating: AgeRatingTier? = null,
-    val traktSharing: TraktSharingMode = TraktSharingMode.OWN
+    val traktSharing: TraktSharingMode = TraktSharingMode.OWN,
+    val aioSharing: AioSharingMode = AioSharingMode.INDEPENDENT
 ) {
     val isPrimary: Boolean get() = id == 1
 

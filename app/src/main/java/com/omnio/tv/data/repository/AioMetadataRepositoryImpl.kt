@@ -14,6 +14,7 @@ import com.omnio.tv.data.remote.dto.aiometadata.AioConfigUpdateRequestDto
 import com.omnio.tv.data.remote.dto.aiometadata.AioMetadataKidsConfig
 import com.omnio.tv.domain.model.AgeRatingTier
 import com.omnio.tv.domain.model.AioMetadataSettings
+import com.omnio.tv.domain.model.AioSharingMode
 import com.omnio.tv.domain.repository.AddonRepository
 import com.omnio.tv.domain.repository.AioMetadataRepository
 import io.github.jan.supabase.postgrest.Postgrest
@@ -153,20 +154,72 @@ class AioMetadataRepositoryImpl @Inject constructor(
                     }
                 }
             }
+
+            // Only Main acts as the source for fan-out. Sibling profiles in
+            // FULL_MIRROR/KEYS_ONLY pick up the new keys (and, for FULL_MIRROR,
+            // the rest of the config with their own kid-tweaks layered back on).
+            if (activeProfileId() == 1) {
+                runCatching { propagateMainConfigToSiblings(config) }
+                    .onFailure { Log.w(TAG, "propagateMainConfigToSiblings failed", it) }
+            }
             config
         }.onFailure { Log.w(TAG, "updateConfig failed", it) }
 
+    private suspend fun propagateMainConfigToSiblings(mainConfig: AioConfigInnerDto) {
+        val mainKeys = mainConfig.apiKeys
+        profileManager.profiles.value
+            .filter { it.id != 1 && it.aioSharing != AioSharingMode.INDEPENDENT }
+            .forEach { sibling ->
+                val link = fetchLink(profileId = sibling.id) ?: return@forEach
+                val siblingPassword = link.configPassword?.takeIf { it.isNotBlank() } ?: return@forEach
+
+                val targetConfig = when (sibling.aioSharing) {
+                    AioSharingMode.FULL_MIRROR -> if (sibling.isKids) {
+                        // Kids profile in FULL_MIRROR is degenerate (Kids should
+                        // not adopt Main's catalogs verbatim). Re-derive the
+                        // kid-tuned shape from Main and just ensure keys match.
+                        AioMetadataKidsConfig.build(mainConfig, sibling.maxAgeRating)
+                    } else {
+                        mainConfig
+                    }
+                    AioSharingMode.KEYS_ONLY -> {
+                        val loadResp = api.loadConfig(
+                            link.aioUuid,
+                            AioConfigLoadRequestDto(password = siblingPassword)
+                        )
+                        if (!loadResp.isSuccessful) return@forEach
+                        val current = loadResp.body()?.config ?: return@forEach
+                        if (current.apiKeys == mainKeys) return@forEach
+                        current.copy(apiKeys = mainKeys)
+                    }
+                    AioSharingMode.INDEPENDENT -> return@forEach
+                }
+
+                val updateResp = api.updateConfig(
+                    uuid = link.aioUuid,
+                    body = AioConfigUpdateRequestDto(
+                        config = targetConfig,
+                        password = siblingPassword,
+                        addonPassword = null
+                    ),
+                )
+                if (!updateResp.isSuccessful) {
+                    Log.w(TAG, "fan-out updateConfig failed for profile ${sibling.id}: HTTP ${updateResp.code()}")
+                }
+            }
+    }
+
     override suspend fun getConfigPassword(): String? = dataStore.getConfigPassword()
 
-    override suspend fun provisionForKidsProfile(
+    override suspend fun provisionFromMain(
         targetProfileId: Int,
-        maxAgeRating: AgeRatingTier?,
+        kidsMaxAgeRating: AgeRatingTier?,
     ): Result<AioMetadataRepository.CreateConfigResult> = runCatching {
-        if (targetProfileId == 1) error("Cannot provision Kids AIO for the primary profile")
+        if (targetProfileId == 1) error("Cannot provision a per-profile AIO for the primary profile")
 
-        // Load Main's existing config so we can copy API keys and use them as
-        // the basis for the Kids tweaks. If Main hasn't set up AIOMetadata,
-        // nothing to fork from — bail and let the caller fall back.
+        // Load Main's existing config so we can copy API keys and use it as
+        // the basis. If Main hasn't set up AIOMetadata yet there's nothing to
+        // fork from — bail and let the caller decide how to recover.
         val mainLink = fetchLink(profileId = 1)
             ?: error("Main profile has no AIOMetadata config to copy from")
         val mainPassword = mainLink.configPassword?.takeIf { it.isNotBlank() }
@@ -179,23 +232,29 @@ class AioMetadataRepositoryImpl @Inject constructor(
         val mainConfig = mainLoad.body()?.config
             ?: error("loadConfig (main) empty body")
 
-        val kidsConfig = AioMetadataKidsConfig.build(mainConfig, maxAgeRating)
+        // Kids profiles get the cert-filtered catalog overlay; everything else
+        // gets a verbatim copy of Main's config (keys + catalogs + settings).
+        val initialConfig = if (kidsMaxAgeRating != null) {
+            AioMetadataKidsConfig.build(mainConfig, kidsMaxAgeRating)
+        } else {
+            mainConfig
+        }
 
-        val kidsPassword = generatePassword()
+        val targetPassword = generatePassword()
         val saveResponse = api.saveConfig(
-            AioConfigSaveRequestDto(config = kidsConfig, password = kidsPassword, addonPassword = null)
+            AioConfigSaveRequestDto(config = initialConfig, password = targetPassword, addonPassword = null)
         )
         if (!saveResponse.isSuccessful) {
-            error("saveConfig (kids) failed: HTTP ${saveResponse.code()}")
+            error("saveConfig failed: HTTP ${saveResponse.code()}")
         }
-        val saveBody = saveResponse.body() ?: error("saveConfig (kids) empty body")
+        val saveBody = saveResponse.body() ?: error("saveConfig empty body")
         val manifestUrl = saveBody.installUrl ?: buildFallbackManifestUrl(saveBody.userUUID)
 
         upsertLink(
             aioUuid = saveBody.userUUID,
             manifestUrl = manifestUrl,
             enabled = true,
-            configPassword = kidsPassword,
+            configPassword = targetPassword,
             profileId = targetProfileId,
         )
 
@@ -207,18 +266,17 @@ class AioMetadataRepositoryImpl @Inject constructor(
                 manifestUrl = manifestUrl,
                 lastSyncedAt = System.currentTimeMillis(),
             ),
-            configPassword = kidsPassword,
+            configPassword = targetPassword,
         )
 
-        // Add the new manifest to the Kids profile's addon list directly so we
-        // don't depend on the active profile being the Kids profile when this
-        // runs.
+        // Add the new manifest to the target profile's addon list directly so
+        // we don't depend on it being the active profile right now.
         if (manifestUrl.isNotBlank()) {
             addonPreferences.addAddonToProfile(targetProfileId, manifestUrl)
         }
 
         AioMetadataRepository.CreateConfigResult(uuid = saveBody.userUUID, manifestUrl = manifestUrl)
-    }.onFailure { Log.w(TAG, "provisionForKidsProfile failed", it) }
+    }.onFailure { Log.w(TAG, "provisionFromMain failed", it) }
 
     override suspend fun setEnabled(enabled: Boolean, manifestUrl: String): Result<Unit> = runCatching {
         val profile = profileManager.activeProfile

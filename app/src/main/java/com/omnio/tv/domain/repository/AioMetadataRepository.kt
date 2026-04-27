@@ -24,19 +24,20 @@ interface AioMetadataRepository {
     suspend fun getConfigPassword(): String?
 
     /**
-     * Provisions a Kids-tuned AIOMetadata config for [targetProfileId] derived
-     * from the Main profile's existing config. Copies API keys (TMDB, TVDB,
-     * Fanart, MAL, etc.) and applies cert/genre filters scaled to
-     * [maxAgeRating]. Saves to upstream, persists the bridge row, and adds the
+     * Provisions a fresh AIOMetadata config for [targetProfileId] derived from
+     * the Main profile's existing config. Copies API keys (TMDB, TVDB, Fanart,
+     * MAL, etc.); applies Kids-tuned catalog filters when [kidsMaxAgeRating]
+     * is non-null. Saves to upstream, persists the bridge row, and adds the
      * resulting manifest URL to [targetProfileId]'s addon list.
      *
-     * Returns the new [CreateConfigResult] on success. No-op (returns failure)
-     * if Main has not configured AIOMetadata yet — caller can fall back to the
-     * client-side filter in that case.
+     * The [sharingMode] is recorded by the caller on the profile itself; this
+     * function only handles the initial provisioning step. Future Main updates
+     * are propagated automatically through [updateConfig]'s fan-out based on
+     * each profile's stored sharing mode.
      */
-    suspend fun provisionForKidsProfile(
+    suspend fun provisionFromMain(
         targetProfileId: Int,
-        maxAgeRating: AgeRatingTier?,
+        kidsMaxAgeRating: AgeRatingTier? = null,
     ): Result<CreateConfigResult>
 
     data class CreateConfigResult(val uuid: String, val manifestUrl: String)

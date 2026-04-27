@@ -4,6 +4,7 @@ import android.content.Context
 import com.omnio.tv.data.local.ProfileDataStore
 import com.omnio.tv.data.local.ProfileDataStoreFactory
 import com.omnio.tv.domain.model.AgeRatingTier
+import com.omnio.tv.domain.model.AioSharingMode
 import com.omnio.tv.domain.model.TraktSharingMode
 import com.omnio.tv.domain.model.UserProfile
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -54,7 +55,8 @@ class ProfileManager @Inject constructor(
         avatarId: String? = null,
         isKids: Boolean = false,
         maxAgeRating: AgeRatingTier? = null,
-        traktSharing: TraktSharingMode = TraktSharingMode.OWN
+        traktSharing: TraktSharingMode = TraktSharingMode.OWN,
+        aioSharing: AioSharingMode = AioSharingMode.INDEPENDENT
     ): Int? {
         val current = profiles.value
         if (current.size >= 4) return null
@@ -74,7 +76,13 @@ class ProfileManager @Inject constructor(
             avatarId = avatarId,
             isKids = isKids,
             maxAgeRating = if (isKids) maxAgeRating else null,
-            traktSharing = traktSharing
+            traktSharing = traktSharing,
+            // Kids profiles cannot adopt Main's full config — only KEYS_ONLY
+            // or INDEPENDENT make sense. FULL_MIRROR would discard the
+            // kid-tuned catalogs.
+            aioSharing = if (isKids && aioSharing == AioSharingMode.FULL_MIRROR) {
+                AioSharingMode.KEYS_ONLY
+            } else aioSharing
         )
         factory.markProfileCreated(nextId)
         profileDataStore.upsertProfile(profile)
@@ -95,13 +103,17 @@ class ProfileManager @Inject constructor(
             profile.copy(
                 isKids = false,
                 maxAgeRating = null,
-                traktSharing = TraktSharingMode.OWN
+                traktSharing = TraktSharingMode.OWN,
+                aioSharing = AioSharingMode.INDEPENDENT
             )
         } else profile.copy(
             maxAgeRating = if (profile.isKids) profile.maxAgeRating else null,
             // Same invariant as createProfile: Kids profiles cannot mirror
             // Main's addons (their kid-tuned manifest would be shadowed).
-            usesPrimaryAddons = profile.usesPrimaryAddons && !profile.isKids
+            usesPrimaryAddons = profile.usesPrimaryAddons && !profile.isKids,
+            aioSharing = if (profile.isKids && profile.aioSharing == AioSharingMode.FULL_MIRROR) {
+                AioSharingMode.KEYS_ONLY
+            } else profile.aioSharing
         )
         profileDataStore.upsertProfile(sanitized)
         return true

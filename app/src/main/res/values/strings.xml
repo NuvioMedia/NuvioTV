@@ -1563,4 +1563,12 @@
     <string name="profile_pin_overlay_exit_heading">Enter PIN to leave %1$s</string>
     <string name="profile_pin_overlay_exit_support">Ask a parent to enter the PIN to switch profiles.</string>
 
+    <!-- AIOMetadata per-profile sharing -->
+    <string name="profile_aio_section_title">AIOMetadata for this profile</string>
+    <string name="profile_aio_full_mirror_title">Mirror Main\'s AIOMetadata fully</string>
+    <string name="profile_aio_full_mirror_subtitle">Same API keys, catalogs, and settings as Main. Updates on Main propagate here.</string>
+    <string name="profile_aio_keys_only_title">Mirror Main\'s API keys only</string>
+    <string name="profile_aio_keys_only_subtitle">This profile keeps its own catalogs and settings. When you rotate a key on Main, it updates here too.</string>
+    <string name="profile_aio_keys_only_subtitle_kids">Kid-friendly catalogs, but TMDB/TVDB keys are kept in sync with Main.</string>
+
 </resources>
