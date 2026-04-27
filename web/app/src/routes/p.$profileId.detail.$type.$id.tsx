@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, Star, Tag, Play } from "lucide-react";
 import { fetchMeta, CINEMETA_BASE } from "@omnio/shared/addon";
+import type { MetaVideo } from "@omnio/shared/addon";
 import { PROXY_URL } from "@/lib/proxy";
 import { parseProfileId } from "@/lib/profileContext";
 
@@ -113,40 +115,120 @@ function DetailPage() {
         </div>
 
         {isSeries && meta.videos && meta.videos.length > 0 && (
-          <section>
-            <h2 className="mb-3 text-lg font-medium">Episodes</h2>
-            <ul className="divide-y divide-slate-800/60 rounded-lg border border-slate-800 bg-slate-900/40">
-              {meta.videos
-                .filter((v) => v.season != null && v.episode != null)
-                .slice(0, 50)
-                .map((v) => (
-                  <li key={v.id} className="flex items-center gap-3 p-3 hover:bg-slate-800/40">
-                    <div className="w-16 shrink-0 text-xs text-slate-500">
-                      S{v.season}·E{v.episode}
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm text-slate-200">{v.title}</div>
-                      {v.overview && (
-                        <div className="line-clamp-2 text-xs text-slate-500">{v.overview}</div>
-                      )}
-                    </div>
-                    <Link
-                      to="/p/$profileId/stream/$type/$id"
-                      params={{
-                        profileId: String(profileId),
-                        type: params.type,
-                        id: `${meta.id}:${v.season}:${v.episode}`,
-                      }}
-                      className="rounded-md bg-slate-800 px-3 py-1 text-xs text-slate-200 hover:bg-primary"
-                    >
-                      Play
-                    </Link>
-                  </li>
-                ))}
-            </ul>
-          </section>
+          <SeasonsView
+            videos={meta.videos}
+            metaId={meta.id}
+            type={params.type}
+            profileId={profileId}
+          />
         )}
       </div>
     </div>
+  );
+}
+
+// Group videos by season, with a "Specials" bucket for season 0 / missing.
+// Cinemeta sometimes returns every episode flat under season 0 when its TVDB
+// data is patchy — we still expose them under a "Specials" tab so the user can
+// pick something rather than seeing 46 ungrouped entries.
+function groupBySeason(
+  videos: MetaVideo[]
+): { key: number; label: string; videos: MetaVideo[] }[] {
+  const groups = new Map<number, MetaVideo[]>();
+  for (const v of videos) {
+    if (v.episode == null) continue;
+    const season = v.season ?? 0;
+    const list = groups.get(season) ?? [];
+    list.push(v);
+    groups.set(season, list);
+  }
+  const sorted = Array.from(groups.entries()).sort((a, b) => {
+    // Specials (0) always last unless it's the only group.
+    if (a[0] === 0) return 1;
+    if (b[0] === 0) return -1;
+    return a[0] - b[0];
+  });
+  return sorted.map(([key, vids]) => ({
+    key,
+    label: key === 0 ? "Specials" : `Season ${key}`,
+    videos: vids.sort((a, b) => (a.episode ?? 0) - (b.episode ?? 0)),
+  }));
+}
+
+function SeasonsView({
+  videos,
+  metaId,
+  type,
+  profileId,
+}: {
+  videos: MetaVideo[];
+  metaId: string;
+  type: string;
+  profileId: number;
+}) {
+  const groups = groupBySeason(videos);
+  const defaultKey = groups.find((g) => g.key !== 0)?.key ?? groups[0]?.key ?? 1;
+  const [activeKey, setActiveKey] = useState<number>(defaultKey);
+
+  if (groups.length === 0) return null;
+  const active = groups.find((g) => g.key === activeKey) ?? groups[0]!;
+
+  return (
+    <section>
+      <div className="mb-3 flex items-baseline justify-between">
+        <h2 className="text-lg font-medium">Episodes</h2>
+        <span className="text-xs text-slate-500">
+          {active.videos.length} {active.videos.length === 1 ? "episode" : "episodes"}
+        </span>
+      </div>
+
+      {groups.length > 1 && (
+        <div className="scroll-row mb-3 -mx-2 flex gap-1 overflow-x-auto px-2">
+          {groups.map((g) => (
+            <button
+              key={g.key}
+              type="button"
+              onClick={() => setActiveKey(g.key)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs ${
+                g.key === active.key
+                  ? "bg-primary text-white"
+                  : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+              }`}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <ul className="divide-y divide-slate-800/60 rounded-lg border border-slate-800 bg-slate-900/40">
+        {active.videos.map((v) => (
+          <li key={v.id}>
+            <Link
+              to="/p/$profileId/stream/$type/$id"
+              params={{
+                profileId: String(profileId),
+                type,
+                id: `${metaId}:${v.season ?? 0}:${v.episode}`,
+              }}
+              className="flex items-center gap-3 p-3 transition hover:bg-slate-800/40"
+            >
+              <div className="w-16 shrink-0 text-xs text-slate-500">
+                {active.key === 0 ? "Special" : `S${v.season}·E${v.episode}`}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm text-slate-200">{v.title}</div>
+                {v.overview && (
+                  <div className="line-clamp-2 text-xs text-slate-500">{v.overview}</div>
+                )}
+              </div>
+              <span className="flex h-9 min-w-[44px] items-center gap-1 rounded-md bg-slate-800 px-3 text-xs text-slate-200">
+                <Play className="h-3 w-3" /> Play
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

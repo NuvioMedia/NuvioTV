@@ -170,29 +170,71 @@ async function searchByImdb(
   imdbId: string,
   itemType: "Movie" | "Series"
 ): Promise<EmbyItem | null> {
-  const params = new URLSearchParams({
+  // Different Emby versions store the provider name with different casing
+  // ("Imdb" vs "imdb") and the AnyProviderIdEquals query is sometimes
+  // case-sensitive. Try the common variants in order.
+  const variants = [`imdb.${imdbId}`, `Imdb.${imdbId}`, `IMDB.${imdbId}`];
+  for (const variant of variants) {
+    const item = await runItemsSearch(creds, {
+      IncludeItemTypes: itemType,
+      Recursive: "true",
+      AnyProviderIdEquals: variant,
+      Fields: "ProviderIds,RunTimeTicks",
+      Limit: "5",
+    });
+    if (item) return item;
+  }
+
+  // Fall back to a wider scan — pull every item of this type and filter by
+  // ProviderIds client-side. Slow on large libraries but reliable when
+  // AnyProviderIdEquals isn't matching for whatever server-version reason.
+  console.info(`[emby] AnyProviderIdEquals returned nothing for ${imdbId}; falling back to scan`);
+  const candidates = await runItemsSearchMany(creds, {
     IncludeItemTypes: itemType,
     Recursive: "true",
-    AnyProviderIdEquals: `imdb.${imdbId}`,
-    Fields: "ProviderIds,RunTimeTicks",
-    Limit: "5",
+    Fields: "ProviderIds",
+    Limit: "10000",
   });
+  const target = imdbId.toLowerCase();
+  const match = candidates.find((it) => {
+    const ids = it.ProviderIds ?? {};
+    return Object.entries(ids).some(([key, value]) => {
+      if (key.toLowerCase() !== "imdb") return false;
+      return String(value).toLowerCase() === target;
+    });
+  });
+  if (match) {
+    console.info(`[emby] scan found ${itemType} ${match.Name} for ${imdbId}`);
+  }
+  return match ?? null;
+}
 
-  const response = await fetch(
-    `${creds.serverUrl}/Users/${creds.userId}/Items?${params.toString()}`,
-    { headers: authHeader(creds) }
-  ).catch((e) => {
+async function runItemsSearch(
+  creds: EmbyCreds,
+  query: Record<string, string>
+): Promise<EmbyItem | null> {
+  const items = await runItemsSearchMany(creds, query);
+  return items[0] ?? null;
+}
+
+async function runItemsSearchMany(
+  creds: EmbyCreds,
+  query: Record<string, string>
+): Promise<EmbyItem[]> {
+  const params = new URLSearchParams(query);
+  const url = `${creds.serverUrl}/Users/${creds.userId}/Items?${params.toString()}`;
+  const response = await fetch(url, { headers: authHeader(creds) }).catch((e) => {
     console.warn(`[emby] /Users/{id}/Items search failed`, e);
     return null;
   });
   if (!response || !response.ok) {
     console.warn(
-      `[emby] /Users/{id}/Items returned ${response?.status ?? "no response"} for imdb=${imdbId}`
+      `[emby] /Users/{id}/Items returned ${response?.status ?? "no response"} for query=${params.toString()}`
     );
-    return null;
+    return [];
   }
   const data = (await response.json().catch(() => null)) as { Items?: EmbyItem[] } | null;
-  return data?.Items?.[0] ?? null;
+  return data?.Items ?? [];
 }
 
 // PlaybackInfo response shape — only the bits we consume.
