@@ -66,11 +66,23 @@ export function Player({
     let hls: Hls | null = null;
     let shakaPlayer: shaka.Player | null = null;
 
+    // Once the source has attached and the browser knows enough to start
+    // decoding, kick off playback explicitly. Chrome's autoplay policy is
+    // satisfied by the user gesture in the stream picker, but the gesture
+    // window can close while hls.js is still fetching the manifest — at that
+    // point the `autoPlay` attribute alone is no longer enough.
+    function tryAutoPlay() {
+      void video!.play().catch(() => {
+        // User-gesture-required errors land here; the user can hit play themselves.
+      });
+    }
+
     if (isDash) {
       shakaPlayer = new shaka.Player();
       shakaPlayer
         .attach(video)
         .then(() => shakaPlayer!.load(src))
+        .then(() => tryAutoPlay())
         .catch((e: shaka.util.Error) => {
           setError(`DASH error: ${e.message ?? e.code}`);
         });
@@ -86,6 +98,7 @@ export function Player({
           else setError(`HLS fatal: ${data.details}`);
         }
       });
+      hls.on(Hls.Events.MANIFEST_PARSED, tryAutoPlay);
       hls.attachMedia(video);
       hls.loadSource(src);
       hlsRef.current = hls;
@@ -94,6 +107,9 @@ export function Player({
       video.src = src;
       hlsRef.current = null;
       setHlsInstance(null);
+      // Native HLS on Safari + progressive MP4 — fire on loadedmetadata.
+      const onCanAttempt = () => tryAutoPlay();
+      video.addEventListener("loadedmetadata", onCanAttempt, { once: true });
     }
 
     if (initialPosition > 0) {
@@ -273,12 +289,15 @@ export function Player({
 
   return (
     <div ref={containerRef} className="relative h-full w-full">
+      {/* No crossOrigin attribute — Chrome routes CORS-tainted videos through a
+          different YUV→RGB decode path that produces a green tint with some
+          GPU drivers. JASSUB only overlays a canvas, it never samples pixels
+          from the video, so we don't need the attribute. */}
       <video
         ref={videoRef}
         controls
         autoPlay
         playsInline
-        crossOrigin="anonymous"
         className="h-full w-full bg-black"
       />
       <PlayerGestures video={videoRef.current} />

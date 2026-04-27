@@ -35,7 +35,10 @@ function PlayerPage() {
   }
 
   return (
-    <div className="relative h-[100dvh] w-full bg-black">
+    // Player is a full-viewport overlay — fixed positioning takes it out of the
+    // profile layout's flow so neither the desktop top header nor the mobile
+    // bottom tab bar can clip the native <video controls> bar.
+    <div className="fixed inset-0 z-30 bg-black">
       <button
         type="button"
         onClick={() =>
