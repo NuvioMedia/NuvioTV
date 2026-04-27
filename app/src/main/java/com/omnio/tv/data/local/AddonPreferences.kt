@@ -134,6 +134,20 @@ class AddonPreferences @Inject constructor(
         }
     }
 
+    suspend fun removeAddonFromProfile(targetProfileId: Int, url: String) {
+        val normalizedUrl = canonicalizeUrl(url)
+        factory.get(targetProfileId, FEATURE).edit { preferences ->
+            val current = getCurrentList(preferences).toMutableList()
+            val idx = current.indexOfFirst {
+                canonicalizeUrl(it).equals(normalizedUrl, ignoreCase = true)
+            }
+            if (idx == -1) return@edit
+            current.removeAt(idx)
+            preferences[orderedUrlsKey] = gson.toJson(current)
+            preferences.remove(legacyUrlsKey)
+        }
+    }
+
     private fun getCurrentList(preferences: Preferences): List<String> {
         val json = preferences[orderedUrlsKey]
         return if (json != null) {

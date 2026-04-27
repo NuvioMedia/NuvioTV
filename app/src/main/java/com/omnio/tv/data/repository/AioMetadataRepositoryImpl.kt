@@ -269,8 +269,15 @@ class AioMetadataRepositoryImpl @Inject constructor(
             configPassword = targetPassword,
         )
 
-        // Add the new manifest to the target profile's addon list directly so
-        // we don't depend on it being the active profile right now.
+        // Swap Main's AIO manifest URL out of the target profile's addon list
+        // (if it ended up there via a "copy addons from main" snapshot), then
+        // add the new per-profile manifest. Without this, the Kids profile
+        // would carry both manifests and Main's un-filtered catalogs would
+        // shadow the kid-tuned ones.
+        val mainManifestUrl = mainLink.manifestUrl?.takeIf { it.isNotBlank() }
+        if (mainManifestUrl != null) {
+            addonPreferences.removeAddonFromProfile(targetProfileId, mainManifestUrl)
+        }
         if (manifestUrl.isNotBlank()) {
             addonPreferences.addAddonToProfile(targetProfileId, manifestUrl)
         }

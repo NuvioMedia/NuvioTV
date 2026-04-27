@@ -102,23 +102,35 @@ class ProfileSelectionViewModel @Inject constructor(
         if (_isCreating.value) return
         viewModelScope.launch {
             _isCreating.value = true
+            // Kids profiles cannot live-mirror Main's addon list (their
+            // kid-tuned AIO manifest would be shadowed). If the user picked
+            // LIVE_MIRROR for a Kids profile, snapshot Main's addons instead
+            // so the profile inherits stream addons (Torrentio, RD, etc.) —
+            // otherwise Play would find no stream provider on the new
+            // profile.
+            val effectiveAddonInitMode = if (isKids && addonInitMode == ProfileAddonInitMode.LIVE_MIRROR) {
+                ProfileAddonInitMode.COPY_FROM_MAIN
+            } else addonInitMode
+
             val newId = profileManager.createProfile(
                 name = name,
                 avatarColorHex = avatarColorHex,
                 avatarId = avatarId,
-                usesPrimaryAddons = addonInitMode == ProfileAddonInitMode.LIVE_MIRROR,
+                usesPrimaryAddons = effectiveAddonInitMode == ProfileAddonInitMode.LIVE_MIRROR,
                 isKids = isKids,
                 maxAgeRating = if (isKids) maxAgeRating else null,
                 traktSharing = traktSharing,
                 aioSharing = aioSharing
             )
             if (newId != null) {
-                if (addonInitMode == ProfileAddonInitMode.COPY_FROM_MAIN) {
+                if (effectiveAddonInitMode == ProfileAddonInitMode.COPY_FROM_MAIN) {
                     addonPreferences.copyAddonsToProfile(newId)
                 }
                 // Spawn a per-profile AIO config when this profile needs its
                 // own (Kids always; or whenever the user picked any sharing
-                // mode other than INDEPENDENT for a regular profile).
+                // mode other than INDEPENDENT for a regular profile). The
+                // provisioning step also swaps Main's AIO manifest out of
+                // the addon list and inserts the new per-profile one.
                 if (isKids || aioSharing != AioSharingMode.INDEPENDENT) {
                     aioMetadataRepository.provisionFromMain(
                         targetProfileId = newId,
@@ -138,13 +150,23 @@ class ProfileSelectionViewModel @Inject constructor(
             _isSaving.value = true
             val previous = profileManager.profiles.value.firstOrNull { it.id == profile.id }
             profileManager.updateProfile(profile)
+            val becameKids = profile.id != 1 && profile.isKids && previous?.isKids != true
+            // When a profile transitions into Kids, ProfileManager has just
+            // forced usesPrimaryAddons=false. If the profile was previously
+            // live-mirroring Main, its own addon list is likely empty —
+            // snapshot Main's addons now so the profile keeps its stream
+            // providers (Torrentio, RD, etc.). The next provisionFromMain
+            // step will swap Main's AIO manifest out of that list.
+            if (becameKids && previous?.usesPrimaryAddons == true) {
+                addonPreferences.copyAddonsToProfile(profile.id)
+            }
             // Provision a per-profile AIOMetadata config when a non-primary
             // profile gains its own AIO presence — either by becoming Kids,
             // or by switching from INDEPENDENT to a mirror mode. We don't
             // auto-tear-down on the reverse: the user can manage that config
             // via the standard AIOMetadata settings screen if they want to.
             val needsProvision = profile.id != 1 && (
-                (profile.isKids && previous?.isKids != true) ||
+                becameKids ||
                 (
                     profile.aioSharing != AioSharingMode.INDEPENDENT &&
                     previous?.aioSharing == AioSharingMode.INDEPENDENT
