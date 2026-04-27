@@ -2,6 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import shaka from "shaka-player/dist/shaka-player.compiled";
 import { recordWatchedItem, upsertWatchProgress } from "@/lib/watchProgress";
+import { scrobbleStart, scrobblePause, scrobbleStop } from "@/lib/trakt";
+import {
+  loadEmbyCreds,
+  findItemByImdb,
+  reportPlaying,
+  reportProgress,
+  reportStopped,
+  type EmbyCreds,
+} from "@/lib/emby";
 import { TrackMenu } from "./TrackMenu";
 import { Subtitles, type SubtitleSource } from "./Subtitles";
 
@@ -38,6 +47,9 @@ export function Player({
   const [ready, setReady] = useState(false);
   const watchedReportedRef = useRef(false);
   const lastProgressWriteRef = useRef(0);
+  const scrobbleStateRef = useRef<"idle" | "started" | "paused">("idle");
+  const embyRef = useRef<{ creds: EmbyCreds; itemId: string } | null>(null);
+  const lastEmbyProgressRef = useRef(0);
 
   // Source attach. Three paths:
   //   - DASH (.mpd) → shaka-player
@@ -102,6 +114,32 @@ export function Player({
     };
   }, [src, initialPosition]);
 
+  // Resolve an Emby item id once per content. If the user hasn't configured
+  // Emby for this profile, or the item isn't on their server, we silently skip.
+  useEffect(() => {
+    let cancelled = false;
+    embyRef.current = null;
+
+    void (async () => {
+      const creds = await loadEmbyCreds(profileId).catch(() => null);
+      if (!creds || cancelled) return;
+      const item = await findItemByImdb(creds, contentId, season, episode).catch(() => null);
+      if (!item || cancelled) return;
+      embyRef.current = { creds, itemId: item.Id };
+    })();
+
+    return () => {
+      cancelled = true;
+      const ref = embyRef.current;
+      const video = videoRef.current;
+      if (ref && video) {
+        const positionMs = Math.floor(video.currentTime * 1000);
+        void reportStopped(ref.creds, { itemId: ref.itemId, positionMs });
+      }
+      embyRef.current = null;
+    };
+  }, [profileId, contentId, season, episode]);
+
   // Watch-progress sync. We debounce writes via PROGRESS_INTERVAL_MS so the
   // user's moving timeline doesn't generate a row per second.
   useEffect(() => {
@@ -140,11 +178,81 @@ export function Player({
       }
     }
 
+    function progressPct(): number {
+      if (!video) return 0;
+      if (!Number.isFinite(video.duration) || video.duration <= 0) return 0;
+      return (video.currentTime / video.duration) * 100;
+    }
+
+    function scrobbleArgs() {
+      // Trakt only accepts IMDb-style ids. Stremio addons usually use them directly.
+      return {
+        profileId,
+        contentType,
+        imdbId: contentId,
+        season,
+        episode,
+        progressPct: progressPct(),
+      };
+    }
+
+    function embyArgs() {
+      if (!video) return null;
+      const ref = embyRef.current;
+      if (!ref) return null;
+      return {
+        creds: ref.creds,
+        itemId: ref.itemId,
+        positionMs: Math.floor(video.currentTime * 1000),
+      };
+    }
+
     function onTimeUpdate() {
       writeProgress();
+      // Emby progress reports every 10s — Emby clients typically tick at this rate.
+      const now = Date.now();
+      if (now - lastEmbyProgressRef.current >= 10_000) {
+        lastEmbyProgressRef.current = now;
+        const args = embyArgs();
+        if (args) {
+          void reportProgress(args.creds, {
+            itemId: args.itemId,
+            positionMs: args.positionMs,
+            isPaused: !!video?.paused,
+          });
+        }
+      }
     }
     function onPause() {
       writeProgress();
+      if (scrobbleStateRef.current === "started") {
+        scrobbleStateRef.current = "paused";
+        void scrobblePause(scrobbleArgs()).catch((e) => console.warn("trakt pause", e));
+      }
+      const args = embyArgs();
+      if (args) {
+        void reportProgress(args.creds, { ...args, isPaused: true });
+      }
+    }
+    function onPlay() {
+      if (scrobbleStateRef.current !== "started") {
+        scrobbleStateRef.current = "started";
+        void scrobbleStart(scrobbleArgs()).catch((e) => console.warn("trakt start", e));
+      }
+      const args = embyArgs();
+      if (args) {
+        void reportPlaying(args.creds, args);
+      }
+    }
+    function onEnded() {
+      if (scrobbleStateRef.current !== "idle") {
+        const args = scrobbleArgs();
+        // Trakt marks watched at >= 80%; we report the actual progress.
+        scrobbleStateRef.current = "idle";
+        void scrobbleStop(args).catch((e) => console.warn("trakt stop", e));
+      }
+      const args = embyArgs();
+      if (args) void reportStopped(args.creds, args);
     }
     function onLoadedMetadata() {
       setReady(true);
@@ -152,12 +260,21 @@ export function Player({
 
     video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("pause", onPause);
+    video.addEventListener("play", onPlay);
+    video.addEventListener("ended", onEnded);
     video.addEventListener("loadedmetadata", onLoadedMetadata);
     return () => {
       video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("pause", onPause);
+      video.removeEventListener("play", onPlay);
+      video.removeEventListener("ended", onEnded);
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
       writeProgress();
+      if (scrobbleStateRef.current !== "idle") {
+        const args = scrobbleArgs();
+        scrobbleStateRef.current = "idle";
+        void scrobbleStop(args).catch((e) => console.warn("trakt stop on unmount", e));
+      }
     };
   }, [profileId, contentId, contentType, videoId, season, episode]);
 

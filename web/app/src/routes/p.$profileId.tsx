@@ -45,14 +45,14 @@ function ProfileLayout() {
             Switch profile
           </Link>
           <span className="hidden h-4 w-px bg-slate-700 sm:block" />
-          <button
-            type="button"
-            onClick={() => alert("Settings coming in Phase 3")}
+          <Link
+            to="/p/$profileId/settings/trakt"
+            params={{ profileId: String(profileId) }}
             className="flex items-center gap-1 text-slate-400 hover:text-slate-200"
           >
             <Settings className="h-4 w-4" />
             Settings
-          </button>
+          </Link>
         </div>
       </header>
       <main className="flex-1">
