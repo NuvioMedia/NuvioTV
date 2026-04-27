@@ -11,7 +11,7 @@ import { useAddons } from "@/lib/useAddons";
 import { useEnabledPlugins } from "@/lib/usePlugins";
 import { callPlugin } from "@/plugin/manager";
 import { saveHandoff } from "@/lib/streamHandoff";
-import { loadEmbyCreds, getEmbyStreams } from "@/lib/emby";
+import { loadEmbyCreds, getEmbyStreams, type EmbyLookupState } from "@/lib/emby";
 
 export const Route = createFileRoute("/p/$profileId/stream/$type/$id")({
   component: StreamPickerPage,
@@ -29,6 +29,11 @@ interface ScoredStream {
   stream: AddonStream;
   score: number;
   compatibility: StreamCompatibility;
+}
+
+interface StreamFetchResult {
+  scored: ScoredStream[];
+  embyState: EmbyLookupState;
 }
 
 function StreamPickerPage() {
@@ -58,7 +63,7 @@ function StreamPickerPage() {
       sources.map((s) => s.url),
       plugins.map((p) => p.url),
     ],
-    queryFn: async (): Promise<ScoredStream[]> => {
+    queryFn: async (): Promise<StreamFetchResult> => {
       const [season, episode] = parseSeasonEpisode(params.id);
       const baseId = params.id.split(":")[0]!;
 
@@ -102,11 +107,16 @@ function StreamPickerPage() {
 
       // Emby — read creds from profile_settings, then ask the user's server
       // for MediaSources matching this IMDb id. Empty array if not configured.
-      const embyResult = (async (): Promise<RawScored[]> => {
+      const embyResult = (async (): Promise<{
+        scored: RawScored[];
+        state: EmbyLookupState;
+      }> => {
         const creds = await loadEmbyCreds(profileId).catch(() => null);
-        if (!creds) return [];
-        const candidates = await getEmbyStreams(creds, baseId, season, episode);
-        return candidates.map((c): RawScored => ({
+        if (!creds) {
+          return { scored: [], state: { kind: "no-creds" } };
+        }
+        const result = await getEmbyStreams(creds, baseId, season, episode);
+        const scored = result.streams.map((c): RawScored => ({
           source: "Emby",
           sourceKind: "emby" as const,
           stream: {
@@ -123,9 +133,17 @@ function StreamPickerPage() {
           } as AddonStream,
           embyMeta: { isTranscoding: c.isTranscoding },
         }));
-      })().catch((e) => {
+        return { scored, state: result.state };
+      })().catch((e: Error) => {
         console.warn("emby lookup failed", e);
-        return [] as RawScored[];
+        return {
+          scored: [] as RawScored[],
+          state: {
+            kind: "network-error" as const,
+            step: "outer",
+            message: e.message,
+          } satisfies EmbyLookupState,
+        };
       });
 
       const [addonsRes, pluginsRes, embyRes] = await Promise.all([
@@ -136,10 +154,10 @@ function StreamPickerPage() {
       const flat: RawScored[] = [
         ...addonsRes.flatMap((r) => (r.status === "fulfilled" ? r.value : [])),
         ...pluginsRes.flatMap((r) => (r.status === "fulfilled" ? r.value : [])),
-        ...embyRes,
+        ...embyRes.scored,
       ];
 
-      return flat
+      const scored = flat
         .filter((entry) => entry.stream.url || entry.stream.externalUrl)
         .map((entry): ScoredStream => {
           if (entry.sourceKind === "emby") {
@@ -168,6 +186,8 @@ function StreamPickerPage() {
           };
         })
         .sort((a, b) => b.score - a.score);
+
+      return { scored, embyState: embyRes.state };
     },
   });
 
@@ -241,7 +261,14 @@ function StreamPickerPage() {
         </div>
       )}
 
-      {streamQueries.data && streamQueries.data.length === 0 && (
+      {streamQueries.data && (
+        <EmbyDiagnosticsRow
+          state={streamQueries.data.embyState}
+          hasEmbyStreams={streamQueries.data.scored.some((s) => s.sourceKind === "emby")}
+        />
+      )}
+
+      {streamQueries.data && streamQueries.data.scored.length === 0 && (
         <div className="rounded-lg border border-slate-700/50 bg-slate-800/40 p-6 text-slate-300">
           <p className="mb-2 font-medium">No streams found.</p>
           <p className="text-sm text-slate-400">
@@ -251,18 +278,9 @@ function StreamPickerPage() {
         </div>
       )}
 
-      {streamQueries.data && streamQueries.data.some((s) => s.sourceKind === "emby") && (
-        <div className="rounded-lg border border-violet-500/30 bg-violet-500/10 p-3 text-xs text-violet-200">
-          <strong className="font-medium">Emby streams transcode at your server.</strong> Codecs
-          your browser can't decode (AC3/EAC3/DTS/TrueHD, MKV, HEVC) play fine — your Emby
-          machine remuxes/transcodes on the fly to a browser-friendly HLS stream. Pick the Emby
-          row to take advantage.
-        </div>
-      )}
-
-      {streamQueries.data && streamQueries.data.length > 0 && (
+      {streamQueries.data && streamQueries.data.scored.length > 0 && (
         <ul className="divide-y divide-slate-800/60 overflow-hidden rounded-lg border border-slate-800 bg-slate-900/40">
-          {streamQueries.data.map((entry, i) => {
+          {streamQueries.data.scored.map((entry, i) => {
             const disabled =
               (!entry.stream.url && !entry.stream.externalUrl) || pendingProbeIdx === i;
             return (
@@ -348,6 +366,64 @@ interface RawScored {
   sourceKind: "addon" | "plugin" | "emby";
   stream: AddonStream;
   embyMeta?: { isTranscoding: boolean };
+}
+
+function EmbyDiagnosticsRow({
+  state,
+  hasEmbyStreams,
+}: {
+  state: EmbyLookupState;
+  hasEmbyStreams: boolean;
+}) {
+  // The success-with-streams banner — explains transcoding so users pick Emby.
+  if (state.kind === "ok" && hasEmbyStreams) {
+    return (
+      <div className="rounded-lg border border-violet-500/30 bg-violet-500/10 p-3 text-xs text-violet-200">
+        <strong className="font-medium">Emby streams transcode at your server.</strong> Codecs
+        your browser can't decode (AC3/EAC3/DTS/TrueHD, MKV, HEVC) play fine — your Emby machine
+        remuxes/transcodes on the fly to a browser-friendly HLS stream. Pick the Emby row to take
+        advantage.
+      </div>
+    );
+  }
+
+  // Silent if Emby simply isn't configured — that's not a problem worth surfacing.
+  if (state.kind === "no-creds") return null;
+
+  // Surface every other failure mode so the user can see *why* Emby was empty
+  // instead of guessing. Keeps the banner subdued so it doesn't crowd the row.
+  let title = "Emby returned no streams";
+  let detail: React.ReactNode = null;
+  if (state.kind === "not-found") {
+    title = `Emby couldn't find this ${state.what}`;
+    detail = (
+      <>
+        Searched for IMDb id <code className="rounded bg-slate-800 px-1">{state.imdbId}</code>.
+        Make sure the title is in your Emby library and that its metadata includes the IMDb
+        provider id.
+      </>
+    );
+  } else if (state.kind === "no-media-sources") {
+    title = `"${state.itemName}" has no playable media on Emby`;
+    detail = "The item exists but Emby reported no playable files.";
+  } else if (state.kind === "network-error") {
+    title = `Emby request failed`;
+    detail = (
+      <>
+        Step <code className="rounded bg-slate-800 px-1">{state.step}</code>: {state.message}.
+        Most often this is a CORS rejection or an unreachable server URL — confirm
+        <code className="ml-1 rounded bg-slate-800 px-1">web.omnio.tv</code> is allowed in your
+        Emby Network → Allowed CORS hosts.
+      </>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-slate-700/50 bg-slate-900/40 p-3 text-xs text-slate-400">
+      <div className="font-medium text-slate-300">{title}</div>
+      {detail && <div className="mt-1">{detail}</div>}
+    </div>
+  );
 }
 
 function parseSeasonEpisode(id: string): [number | null, number | null] {

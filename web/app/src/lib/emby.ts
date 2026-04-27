@@ -285,6 +285,21 @@ export interface EmbyStreamCandidate {
   isTranscoding: boolean;
 }
 
+// Diagnostic state surfaced to the picker so the user can see *why* Emby
+// returned no streams. Without this, a CORS rejection or a missing series
+// looks identical to "Emby disabled" — opaque and frustrating.
+export type EmbyLookupState =
+  | { kind: "no-creds" }
+  | { kind: "network-error"; step: string; message: string }
+  | { kind: "not-found"; what: "movie" | "series" | "episode"; imdbId: string }
+  | { kind: "no-media-sources"; itemName: string }
+  | { kind: "ok"; count: number };
+
+export interface EmbyLookupResult {
+  streams: EmbyStreamCandidate[];
+  state: EmbyLookupState;
+}
+
 // Resolve the IMDb id to one or more Emby playback URLs. We hit
 // /Items/{id}/PlaybackInfo so the server tells us which sources can direct-play
 // vs need transcode, and gives us the TranscodingUrl with a fresh PlaySessionId.
@@ -293,36 +308,64 @@ export async function getEmbyStreams(
   imdbId: string,
   season: number | null,
   episode: number | null
-): Promise<EmbyStreamCandidate[]> {
-  const item = await findItemByImdb(creds, imdbId, season, episode).catch((e) => {
+): Promise<EmbyLookupResult> {
+  let item: EmbyItem | null;
+  try {
+    item = await findItemByImdb(creds, imdbId, season, episode);
+  } catch (e) {
+    const msg = (e as Error).message ?? String(e);
     console.warn("[emby] findItemByImdb threw", e);
-    return null;
-  });
-  if (!item) return [];
+    return {
+      streams: [],
+      state: { kind: "network-error", step: "find-item", message: msg },
+    };
+  }
+  if (!item) {
+    const what = season != null ? (episode != null ? "episode" : "series") : "movie";
+    return { streams: [], state: { kind: "not-found", what, imdbId } };
+  }
 
-  const response = await fetch(
-    `${creds.serverUrl}/Items/${item.Id}/PlaybackInfo?UserId=${encodeURIComponent(creds.userId)}`,
-    {
-      method: "POST",
-      headers: { ...authHeader(creds), "content-type": "application/json" },
-      body: JSON.stringify({ DeviceProfile: deviceProfile() }),
-    }
-  ).catch((e) => {
+  let response: Response | null = null;
+  try {
+    response = await fetch(
+      `${creds.serverUrl}/Items/${item.Id}/PlaybackInfo?UserId=${encodeURIComponent(creds.userId)}`,
+      {
+        method: "POST",
+        headers: { ...authHeader(creds), "content-type": "application/json" },
+        body: JSON.stringify({ DeviceProfile: deviceProfile() }),
+      }
+    );
+  } catch (e) {
+    const msg = (e as Error).message ?? String(e);
     console.warn("[emby] /PlaybackInfo POST failed", e);
-    return null;
-  });
-  if (!response || !response.ok) {
-    console.warn(`[emby] /PlaybackInfo returned ${response?.status ?? "no response"}`);
-    return [];
+    return {
+      streams: [],
+      state: { kind: "network-error", step: "playback-info", message: msg },
+    };
+  }
+  if (!response.ok) {
+    console.warn(`[emby] /PlaybackInfo returned ${response.status}`);
+    return {
+      streams: [],
+      state: {
+        kind: "network-error",
+        step: "playback-info",
+        message: `HTTP ${response.status}`,
+      },
+    };
   }
 
   const info = (await response.json().catch(() => null)) as PlaybackInfoResponse | null;
   if (!info?.MediaSources?.length) {
     console.info(`[emby] item ${item.Id} (${item.Name}) has no MediaSources`);
-    return [];
+    return {
+      streams: [],
+      state: { kind: "no-media-sources", itemName: item.Name },
+    };
   }
 
-  return info.MediaSources.map((source): EmbyStreamCandidate => {
+  const itemRef = item;
+  const streams = info.MediaSources.map((source): EmbyStreamCandidate => {
     const videoStream = source.MediaStreams?.find((s) => s.Type === "Video");
     const audioStreams = source.MediaStreams?.filter((s) => s.Type === "Audio") ?? [];
     const subtitleStreams = source.MediaStreams?.filter((s) => s.Type === "Subtitle") ?? [];
@@ -346,12 +389,12 @@ export async function getEmbyStreams(
       }
     } else {
       // Last-ditch: master.m3u8 universal endpoint.
-      url = `${creds.serverUrl}/Videos/${item.Id}/master.m3u8?MediaSourceId=${encodeURIComponent(source.Id)}&VideoCodec=h264&AudioCodec=aac&MaxAudioChannels=2&api_key=${encodeURIComponent(creds.apiKey)}`;
+      url = `${creds.serverUrl}/Videos/${itemRef.Id}/master.m3u8?MediaSourceId=${encodeURIComponent(source.Id)}&VideoCodec=h264&AudioCodec=aac&MaxAudioChannels=2&api_key=${encodeURIComponent(creds.apiKey)}`;
     }
 
     return {
       url,
-      title: source.Name || item.Name,
+      title: source.Name || itemRef.Name,
       filename: source.Path?.split("/").pop() ?? undefined,
       size: source.Size,
       videoCodec: videoStream?.Codec,
@@ -362,6 +405,8 @@ export async function getEmbyStreams(
       isTranscoding,
     };
   });
+
+  return { streams, state: { kind: "ok", count: streams.length } };
 }
 
 // 1 tick = 100 ns; Emby's PositionTicks expects 100-ns ticks.
