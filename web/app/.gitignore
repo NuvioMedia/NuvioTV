@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.env.local
+.vercel
+src/routeTree.gen.ts
+*.log
+.DS_Store
