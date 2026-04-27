@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { Player } from "@/components/Player";
 import { parseProfileId } from "@/lib/profileContext";
+import { readHandoff } from "@/lib/streamHandoff";
 
 interface PlayerSearch {
   src: string;
@@ -22,6 +24,7 @@ function PlayerPage() {
 
   const baseId = params.id.split(":")[0]!;
   const [season, episode] = parseEpisodeFromId(params.id);
+  const handoff = useMemo(() => readHandoff(params.type, params.id), [params.type, params.id]);
 
   if (!search.src) {
     return (
@@ -53,6 +56,7 @@ function PlayerPage() {
         videoId={params.id}
         season={season}
         episode={episode}
+        subtitles={handoff?.subtitles ?? []}
       />
     </div>
   );

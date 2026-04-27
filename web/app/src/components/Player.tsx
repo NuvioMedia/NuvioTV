@@ -3,6 +3,7 @@ import Hls from "hls.js";
 import shaka from "shaka-player/dist/shaka-player.compiled";
 import { recordWatchedItem, upsertWatchProgress } from "@/lib/watchProgress";
 import { TrackMenu } from "./TrackMenu";
+import { Subtitles, type SubtitleSource } from "./Subtitles";
 
 interface PlayerProps {
   src: string;
@@ -13,6 +14,7 @@ interface PlayerProps {
   season: number | null;
   episode: number | null;
   initialPosition?: number;
+  subtitles?: SubtitleSource[];
 }
 
 const PROGRESS_INTERVAL_MS = 5_000;
@@ -27,6 +29,7 @@ export function Player({
   season,
   episode,
   initialPosition = 0,
+  subtitles = [],
 }: PlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -169,6 +172,7 @@ export function Player({
         className="h-full w-full bg-black"
       />
       <TrackMenu video={videoRef.current} hls={hlsInstance} />
+      <Subtitles video={videoRef.current} candidates={subtitles} />
       {!ready && !error && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-slate-500">
           Loading…

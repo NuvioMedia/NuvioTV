@@ -8,6 +8,9 @@ import { scoreStream, type Compatibility } from "@omnio/shared/codec";
 import { PROXY_URL, probeStream } from "@/lib/proxy";
 import { parseProfileId } from "@/lib/profileContext";
 import { useAddons } from "@/lib/useAddons";
+import { useEnabledPlugins } from "@/lib/usePlugins";
+import { callPlugin } from "@/plugin/manager";
+import { saveHandoff } from "@/lib/streamHandoff";
 
 export const Route = createFileRoute("/p/$profileId/stream/$type/$id")({
   component: StreamPickerPage,
@@ -36,11 +39,21 @@ function StreamPickerPage() {
     ? addons.filter((a) => a.enabled).map((a) => ({ url: a.url, name: a.name }))
     : [{ url: CINEMETA_BASE, name: "Cinemeta" }]
   );
+  const { data: plugins = [] } = useEnabledPlugins(profileId);
 
   const streamQueries = useQuery({
-    queryKey: ["streams", params.type, params.id, sources.map((s) => s.url)],
+    queryKey: [
+      "streams",
+      params.type,
+      params.id,
+      sources.map((s) => s.url),
+      plugins.map((p) => p.url),
+    ],
     queryFn: async (): Promise<ScoredStream[]> => {
-      const results = await Promise.allSettled(
+      const [season, episode] = parseSeasonEpisode(params.id);
+      const baseId = params.id.split(":")[0]!;
+
+      const addonResults = Promise.allSettled(
         sources.map((src) =>
           fetchStreams(src.url, params.type, params.id, { proxyUrl: PROXY_URL }).then((res) =>
             res.streams.map((s) => ({ source: src.name ?? src.url, stream: s }))
@@ -48,7 +61,36 @@ function StreamPickerPage() {
         )
       );
 
-      const flat = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+      // Plugins return raw stream objects; we coerce them to AddonStream shape.
+      const pluginResults = Promise.allSettled(
+        plugins.map(async (p) => {
+          const result = await callPlugin(p.url, {
+            tmdbId: baseId,
+            mediaType: params.type === "series" ? "series" : "movie",
+            season: season ?? undefined,
+            episode: episode ?? undefined,
+          });
+          if (!result.ok) {
+            console.warn(`plugin ${p.url} failed`, result.error);
+            return [];
+          }
+          return result.streams.map((s) => ({
+            source: p.name ?? "Plugin",
+            stream: {
+              url: s.url,
+              title: s.title ?? s.filename,
+              description: s.description,
+              behaviorHints: s.filename ? { filename: s.filename } : undefined,
+            } as AddonStream,
+          }));
+        })
+      );
+
+      const [addonsRes, pluginsRes] = await Promise.all([addonResults, pluginResults]);
+      const flat = [
+        ...addonsRes.flatMap((r) => (r.status === "fulfilled" ? r.value : [])),
+        ...pluginsRes.flatMap((r) => (r.status === "fulfilled" ? r.value : [])),
+      ];
       return flat
         .filter((entry) => entry.stream.url || entry.stream.externalUrl)
         .map((entry) => {
@@ -63,6 +105,20 @@ function StreamPickerPage() {
         .sort((a, b) => b.score - a.score);
     },
   });
+
+  function navigateToPlayer(s: AddonStream) {
+    if (!s.url) return;
+    saveHandoff(params.type, params.id, {
+      src: s.url,
+      subtitles: (s.subtitles ?? []).map((sub) => ({ url: sub.url, lang: sub.lang })),
+      detailId: params.id.split(":")[0]!,
+    });
+    navigate({
+      to: "/p/$profileId/player/$type/$id",
+      params: { profileId: String(profileId), type: params.type, id: params.id },
+      search: { src: s.url },
+    });
+  }
 
   async function handlePlay(idx: number, entry: ScoredStream) {
     const s = entry.stream;
@@ -91,22 +147,14 @@ function StreamPickerPage() {
       }
     }
 
-    navigate({
-      to: "/p/$profileId/player/$type/$id",
-      params: { profileId: String(profileId), type: params.type, id: params.id },
-      search: { src: s.url },
-    });
+    navigateToPlayer(s);
   }
 
   function playAnyway() {
-    if (!probeWarning?.stream.url) return;
-    const url = probeWarning.stream.url;
+    if (!probeWarning?.stream) return;
+    const stream = probeWarning.stream;
     setProbeWarning(null);
-    navigate({
-      to: "/p/$profileId/player/$type/$id",
-      params: { profileId: String(profileId), type: params.type, id: params.id },
-      search: { src: url },
-    });
+    navigateToPlayer(stream);
   }
 
   return (
@@ -215,6 +263,17 @@ function StreamPickerPage() {
       )}
     </div>
   );
+}
+
+function parseSeasonEpisode(id: string): [number | null, number | null] {
+  const parts = id.split(":");
+  if (parts.length < 3) return [null, null];
+  const season = Number(parts[1]);
+  const episode = Number(parts[2]);
+  return [
+    Number.isFinite(season) ? season : null,
+    Number.isFinite(episode) ? episode : null,
+  ];
 }
 
 function probeIssue(probe: {
