@@ -628,7 +628,6 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
         trailerYtIds = if (incomingTrailerYtIds.isNotEmpty()) incomingTrailerYtIds else currentItem.trailerYtIds
     )
 
-    var kidsRecheckNeeded = false
     catalogsMap.forEach { (key, row) ->
         val itemIndex = row.items.indexOfFirst { it.id == itemId }
         if (itemIndex >= 0) {
@@ -638,41 +637,46 @@ private fun HomeViewModel.updateCatalogItemWithMeta(itemId: String, meta: Meta) 
                 mutableItems[itemIndex] = merged
                 catalogsMap[key] = row.copy(items = mutableItems)
                 truncatedRowCache.remove(key)
-                if (kidsContentFilter.isActive &&
-                    merged.ageRating != row.items[itemIndex].ageRating
-                ) {
-                    kidsRecheckNeeded = true
-                }
             }
         }
     }
 
-    _uiState.update { state ->
-        var changed = false
-        val updatedRows = state.catalogRows.map { row ->
-            val itemIndex = row.items.indexOfFirst { it.id == itemId }
-            if (itemIndex < 0) {
-                row
-            } else {
-                val mergedItem = mergeItem(row.items[itemIndex])
-                if (mergedItem == row.items[itemIndex]) {
+    val mergedSample = catalogsMap.values.firstNotNullOfOrNull { row ->
+        row.items.firstOrNull { it.id == itemId }
+    }
+    val blockedByKids = kidsContentFilter.isActive &&
+        mergedSample != null &&
+        kidsContentFilter.filterPreviews(listOf(mergedSample)).isEmpty()
+
+    if (blockedByKids) {
+        // The merged ageRating now exceeds the active Kids ceiling. Skip the
+        // direct uiState merge so we don't briefly show the item with new
+        // metadata before the pipeline removes it. Use the longer-debounced
+        // kids-recheck scheduler so the entire enrichment storm coalesces
+        // into a single pipeline run — otherwise hero/grid recompute (and
+        // visibly reshuffle) on every blocked item that gets enriched.
+        scheduleKidsFilterRecheck()
+    } else {
+        _uiState.update { state ->
+            var changed = false
+            val updatedRows = state.catalogRows.map { row ->
+                val itemIndex = row.items.indexOfFirst { it.id == itemId }
+                if (itemIndex < 0) {
                     row
                 } else {
-                    changed = true
-                    val mutableItems = row.items.toMutableList()
-                    mutableItems[itemIndex] = mergedItem
-                    row.copy(items = mutableItems)
+                    val mergedItem = mergeItem(row.items[itemIndex])
+                    if (mergedItem == row.items[itemIndex]) {
+                        row
+                    } else {
+                        changed = true
+                        val mutableItems = row.items.toMutableList()
+                        mutableItems[itemIndex] = mergedItem
+                        row.copy(items = mutableItems)
+                    }
                 }
             }
+            if (changed) state.copy(catalogRows = updatedRows) else state
         }
-        if (changed) state.copy(catalogRows = updatedRows) else state
-    }
-
-    if (kidsRecheckNeeded) {
-        // The newly merged ageRating may exceed the active Kids profile threshold.
-        // Let the catalog pipeline re-run as the single chokepoint so blocked items
-        // disappear in one batched emission instead of from inline mutation.
-        scheduleUpdateCatalogRows()
     }
 
     // If external meta brought new trailerYtIds and the item has no trailer resolved yet, retry.
