@@ -1,10 +1,11 @@
+import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Play, AlertTriangle, ExternalLink } from "lucide-react";
+import { Play, AlertTriangle, ExternalLink, Loader2 } from "lucide-react";
 import { fetchStreams, CINEMETA_BASE } from "@omnio/shared/addon";
 import type { AddonStream } from "@omnio/shared/addon";
 import { scoreStream, type Compatibility } from "@omnio/shared/codec";
-import { PROXY_URL } from "@/lib/proxy";
+import { PROXY_URL, probeStream } from "@/lib/proxy";
 import { parseProfileId } from "@/lib/profileContext";
 import { useAddons } from "@/lib/useAddons";
 
@@ -24,6 +25,12 @@ function StreamPickerPage() {
   const profileId = parseProfileId(params.profileId);
   const navigate = useNavigate();
   const { data: addons } = useAddons(profileId);
+  const [pendingProbeIdx, setPendingProbeIdx] = useState<number | null>(null);
+  const [probeWarning, setProbeWarning] = useState<{
+    idx: number;
+    stream: AddonStream;
+    reason: string;
+  } | null>(null);
 
   const sources = (addons && addons.length > 0
     ? addons.filter((a) => a.enabled).map((a) => ({ url: a.url, name: a.name }))
@@ -57,15 +64,48 @@ function StreamPickerPage() {
     },
   });
 
-  function handlePlay(s: AddonStream) {
+  async function handlePlay(idx: number, entry: ScoredStream) {
+    const s = entry.stream;
     if (!s.url) {
       if (s.externalUrl) window.open(s.externalUrl, "_blank", "noopener");
       return;
     }
+
+    // Skip probe + go straight to player when filename hints already say "native".
+    // For anything weaker, do a HEAD/Range probe so we surface MKV / DTS issues
+    // before the user stares at a black <video>.
+    if (entry.compatibility !== "native") {
+      setPendingProbeIdx(idx);
+      try {
+        const probe = await probeStream(s.url);
+        const reason = probeIssue(probe);
+        if (reason) {
+          setProbeWarning({ idx, stream: s, reason });
+          setPendingProbeIdx(null);
+          return;
+        }
+      } catch (err) {
+        console.warn("probe failed, proceeding to play", err);
+      } finally {
+        setPendingProbeIdx(null);
+      }
+    }
+
     navigate({
       to: "/p/$profileId/player/$type/$id",
       params: { profileId: String(profileId), type: params.type, id: params.id },
       search: { src: s.url },
+    });
+  }
+
+  function playAnyway() {
+    if (!probeWarning?.stream.url) return;
+    const url = probeWarning.stream.url;
+    setProbeWarning(null);
+    navigate({
+      to: "/p/$profileId/player/$type/$id",
+      params: { profileId: String(profileId), type: params.type, id: params.id },
+      search: { src: url },
     });
   }
 
@@ -117,11 +157,17 @@ function StreamPickerPage() {
               </div>
               <button
                 type="button"
-                onClick={() => handlePlay(entry.stream)}
-                disabled={!entry.stream.url && !entry.stream.externalUrl}
+                onClick={() => handlePlay(i, entry)}
+                disabled={
+                  (!entry.stream.url && !entry.stream.externalUrl) || pendingProbeIdx === i
+                }
                 className="flex items-center gap-1 rounded-md bg-slate-800 px-3 py-1.5 text-xs text-slate-200 hover:bg-primary disabled:opacity-40"
               >
-                {entry.stream.url ? (
+                {pendingProbeIdx === i ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" /> Probing…
+                  </>
+                ) : entry.stream.url ? (
                   <>
                     <Play className="h-3 w-3" /> Play
                   </>
@@ -135,8 +181,59 @@ function StreamPickerPage() {
           ))}
         </ul>
       )}
+
+      {probeWarning && (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/70 p-4">
+          <div className="max-w-md space-y-4 rounded-2xl border border-amber-500/40 bg-slate-900 p-6">
+            <div className="flex items-center gap-2 text-amber-300">
+              <AlertTriangle className="h-5 w-5" />
+              <h2 className="text-lg font-semibold">Stream may not play in your browser</h2>
+            </div>
+            <p className="text-sm text-slate-300">{probeWarning.reason}</p>
+            <p className="text-xs text-slate-500">
+              The OmnioTV Android app handles this format natively. In the browser, you can try
+              anyway — we'll fall back to the next stream if it fails.
+            </p>
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setProbeWarning(null)}
+                className="flex-1 rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-primary"
+              >
+                Pick another
+              </button>
+              <button
+                type="button"
+                onClick={playAnyway}
+                className="flex-1 rounded-lg bg-amber-500/80 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-amber-400"
+              >
+                Play anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function probeIssue(probe: {
+  contentType: string | null;
+  isMkv: boolean;
+  isHls: boolean;
+  isDash: boolean;
+  isMp4: boolean;
+}): string | null {
+  if (probe.isMkv) {
+    return "This stream is in MKV format, which most browsers cannot play without remuxing.";
+  }
+  if (probe.contentType && /audio\/(ac3|eac3|dts|truehd)/i.test(probe.contentType)) {
+    return "This stream uses an audio codec (Dolby AC3/EAC3/DTS/TrueHD) browsers don't support.";
+  }
+  if (!probe.isHls && !probe.isDash && !probe.isMp4 && probe.contentType) {
+    return `Unrecognized media type "${probe.contentType}" — browser playback is unlikely.`;
+  }
+  return null;
 }
 
 function CompatibilityBadge({ value }: { value: Compatibility }) {

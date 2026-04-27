@@ -1,72 +1,92 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { fetchCatalog, CINEMETA_BASE } from "@omnio/shared/addon";
+import { fetchCatalog } from "@omnio/shared/addon";
 import type { MetaPreview } from "@omnio/shared/addon";
 import { PROXY_URL } from "@/lib/proxy";
 import { parseProfileId } from "@/lib/profileContext";
+import {
+  useEnabledAddons,
+  useAddonManifests,
+  flattenCatalogs,
+  type CatalogRow,
+} from "@/lib/useAddonManifests";
 
 export const Route = createFileRoute("/p/$profileId/")({
   component: HomePage,
 });
 
-const ROWS = [
-  { type: "movie", id: "top", title: "Popular Movies" },
-  { type: "series", id: "top", title: "Popular Series" },
-  { type: "movie", id: "year", title: "Recent Movies" },
-];
-
 function HomePage() {
   const params = Route.useParams();
   const profileId = parseProfileId(params.profileId);
 
+  const { data: addons = [], isLoading: addonsLoading } = useEnabledAddons(profileId);
+  const manifests = useAddonManifests(addons);
+  const rows = flattenCatalogs(manifests, 12);
+
+  const allManifestsLoaded = manifests.every((m) => m.manifest !== null || m.error !== null);
+
   return (
     <div className="mx-auto w-full max-w-7xl space-y-10 p-6">
       <h1 className="text-2xl font-semibold">Home</h1>
-      {ROWS.map((row) => (
-        <CatalogRow
-          key={`${row.type}/${row.id}`}
-          profileId={profileId}
-          type={row.type}
-          catalogId={row.id}
-          title={row.title}
-        />
-      ))}
+      {addonsLoading || !allManifestsLoaded ? (
+        <div className="text-slate-400">Loading addons…</div>
+      ) : rows.length === 0 ? (
+        <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-6 text-sm text-slate-400">
+          No catalogs available. Make sure your addons are enabled in the panel.
+        </div>
+      ) : (
+        rows.map((row) => (
+          <CatalogSection
+            key={`${row.addonUrl}|${row.catalog.type}|${row.catalog.id}`}
+            profileId={profileId}
+            row={row}
+          />
+        ))
+      )}
     </div>
   );
 }
 
-function CatalogRow({
-  profileId,
-  type,
-  catalogId,
-  title,
-}: {
-  profileId: number;
-  type: string;
-  catalogId: string;
-  title: string;
-}) {
+function CatalogSection({ profileId, row }: { profileId: number; row: CatalogRow }) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ["catalog", CINEMETA_BASE, type, catalogId],
-    queryFn: () => fetchCatalog(CINEMETA_BASE, type, catalogId, {}, { proxyUrl: PROXY_URL }),
+    queryKey: ["catalog", row.addonUrl, row.catalog.type, row.catalog.id],
+    queryFn: () =>
+      fetchCatalog(row.addonUrl, row.catalog.type, row.catalog.id, {}, { proxyUrl: PROXY_URL }),
+    staleTime: 5 * 60_000,
   });
+
+  if (error) {
+    // Silent skip — addon-row errors shouldn't break the whole page.
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <section>
+        <h2 className="mb-3 text-lg font-medium text-slate-200">{row.catalog.name}</h2>
+        <SkeletonRow />
+      </section>
+    );
+  }
+
+  if (!data || data.metas.length === 0) return null;
 
   return (
     <section>
-      <h2 className="mb-3 text-lg font-medium text-slate-200">{title}</h2>
-      {isLoading && <SkeletonRow />}
-      {error && (
-        <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
-          Failed to load — {(error as Error).message}
-        </div>
-      )}
-      {data && (
-        <div className="scroll-row -mx-2 flex gap-3 overflow-x-auto px-2 pb-2">
-          {data.metas.map((meta) => (
-            <PosterCard key={meta.id} profileId={profileId} meta={meta} contentType={type} />
-          ))}
-        </div>
-      )}
+      <div className="mb-3 flex items-baseline justify-between">
+        <h2 className="text-lg font-medium text-slate-200">{row.catalog.name}</h2>
+        <span className="text-xs text-slate-500">{row.addonName}</span>
+      </div>
+      <div className="scroll-row -mx-2 flex gap-3 overflow-x-auto px-2 pb-2">
+        {data.metas.slice(0, 30).map((meta) => (
+          <PosterCard
+            key={meta.id}
+            profileId={profileId}
+            meta={meta}
+            contentType={row.catalog.type}
+          />
+        ))}
+      </div>
     </section>
   );
 }

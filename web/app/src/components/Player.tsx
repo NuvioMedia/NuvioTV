@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
+import shaka from "shaka-player/dist/shaka-player.compiled";
 import { recordWatchedItem, upsertWatchProgress } from "@/lib/watchProgress";
+import { TrackMenu } from "./TrackMenu";
 
 interface PlayerProps {
   src: string;
@@ -27,12 +29,17 @@ export function Player({
   initialPosition = 0,
 }: PlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const hlsRef = useRef<Hls | null>(null);
+  const [hlsInstance, setHlsInstance] = useState<Hls | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const watchedReportedRef = useRef(false);
   const lastProgressWriteRef = useRef(0);
 
-  // Source attach: HLS via hls.js where supported, native video.src otherwise.
+  // Source attach. Three paths:
+  //   - DASH (.mpd) → shaka-player
+  //   - HLS (.m3u8) → native on Safari, hls.js elsewhere
+  //   - everything else (MP4 etc) → set src directly
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -40,9 +47,19 @@ export function Player({
     setReady(false);
 
     const isHls = /\.m3u8(\?|$)/i.test(src);
+    const isDash = /\.mpd(\?|$)/i.test(src);
     let hls: Hls | null = null;
+    let shakaPlayer: shaka.Player | null = null;
 
-    if (isHls && Hls.isSupported() && !video.canPlayType("application/vnd.apple.mpegurl")) {
+    if (isDash) {
+      shakaPlayer = new shaka.Player();
+      shakaPlayer
+        .attach(video)
+        .then(() => shakaPlayer!.load(src))
+        .catch((e: shaka.util.Error) => {
+          setError(`DASH error: ${e.message ?? e.code}`);
+        });
+    } else if (isHls && Hls.isSupported() && !video.canPlayType("application/vnd.apple.mpegurl")) {
       hls = new Hls({
         lowLatencyMode: false,
         backBufferLength: 60,
@@ -56,8 +73,12 @@ export function Player({
       });
       hls.attachMedia(video);
       hls.loadSource(src);
+      hlsRef.current = hls;
+      setHlsInstance(hls);
     } else {
       video.src = src;
+      hlsRef.current = null;
+      setHlsInstance(null);
     }
 
     if (initialPosition > 0) {
@@ -68,6 +89,11 @@ export function Player({
       if (hls) {
         hls.destroy();
       }
+      if (shakaPlayer) {
+        void shakaPlayer.destroy();
+      }
+      hlsRef.current = null;
+      setHlsInstance(null);
       video.removeAttribute("src");
       video.load();
     };
@@ -142,6 +168,7 @@ export function Player({
         crossOrigin="anonymous"
         className="h-full w-full bg-black"
       />
+      <TrackMenu video={videoRef.current} hls={hlsInstance} />
       {!ready && !error && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-slate-500">
           Loading…

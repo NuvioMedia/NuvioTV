@@ -29,7 +29,6 @@ function ProfileLayout() {
             to="/p/$profileId/search"
             params={{ profileId: String(profileId) }}
             icon={<Search className="h-4 w-4" />}
-            disabled
           >
             Search
           </NavLink>
@@ -37,7 +36,6 @@ function ProfileLayout() {
             to="/p/$profileId/library"
             params={{ profileId: String(profileId) }}
             icon={<Library className="h-4 w-4" />}
-            disabled
           >
             Library
           </NavLink>
@@ -69,23 +67,13 @@ function NavLink({
   params,
   icon,
   children,
-  disabled,
 }: {
   to: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params: any;
   icon: React.ReactNode;
   children: React.ReactNode;
-  disabled?: boolean;
 }) {
-  if (disabled) {
-    return (
-      <span className="flex cursor-not-allowed items-center gap-1.5 rounded-md px-3 py-1.5 text-slate-600">
-        {icon}
-        {children}
-      </span>
-    );
-  }
   return (
     <Link
       to={to}
