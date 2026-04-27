@@ -11,16 +11,24 @@ import { useAddons } from "@/lib/useAddons";
 import { useEnabledPlugins } from "@/lib/usePlugins";
 import { callPlugin } from "@/plugin/manager";
 import { saveHandoff } from "@/lib/streamHandoff";
+import { loadEmbyCreds, getEmbyStreams } from "@/lib/emby";
 
 export const Route = createFileRoute("/p/$profileId/stream/$type/$id")({
   component: StreamPickerPage,
 });
 
+// Compatibility tag — adds a fifth value beyond what @omnio/shared/codec ships
+// with. Emby streams always go through the user's server, which transparently
+// remuxes / transcodes; we surface this as its own badge so the user knows the
+// codec problem is solved upstream.
+type StreamCompatibility = Compatibility | "embyTranscode";
+
 interface ScoredStream {
   source: string;
+  sourceKind: "addon" | "plugin" | "emby";
   stream: AddonStream;
   score: number;
-  compatibility: Compatibility;
+  compatibility: StreamCompatibility;
 }
 
 function StreamPickerPage() {
@@ -46,6 +54,7 @@ function StreamPickerPage() {
       "streams",
       params.type,
       params.id,
+      profileId,
       sources.map((s) => s.url),
       plugins.map((p) => p.url),
     ],
@@ -56,14 +65,18 @@ function StreamPickerPage() {
       const addonResults = Promise.allSettled(
         sources.map((src) =>
           fetchStreams(src.url, params.type, params.id, { proxyUrl: PROXY_URL }).then((res) =>
-            res.streams.map((s) => ({ source: src.name ?? src.url, stream: s }))
+            res.streams.map((s): RawScored => ({
+              source: src.name ?? src.url,
+              sourceKind: "addon" as const,
+              stream: s,
+            }))
           )
         )
       );
 
       // Plugins return raw stream objects; we coerce them to AddonStream shape.
       const pluginResults = Promise.allSettled(
-        plugins.map(async (p) => {
+        plugins.map(async (p): Promise<RawScored[]> => {
           const result = await callPlugin(p.url, {
             tmdbId: baseId,
             mediaType: params.type === "series" ? "series" : "movie",
@@ -76,6 +89,7 @@ function StreamPickerPage() {
           }
           return result.streams.map((s) => ({
             source: p.name ?? "Plugin",
+            sourceKind: "plugin" as const,
             stream: {
               url: s.url,
               title: s.title ?? s.filename,
@@ -86,21 +100,72 @@ function StreamPickerPage() {
         })
       );
 
-      const [addonsRes, pluginsRes] = await Promise.all([addonResults, pluginResults]);
-      const flat = [
+      // Emby — read creds from profile_settings, then ask the user's server
+      // for MediaSources matching this IMDb id. Empty array if not configured.
+      const embyResult = (async (): Promise<RawScored[]> => {
+        const creds = await loadEmbyCreds(profileId).catch(() => null);
+        if (!creds) return [];
+        const candidates = await getEmbyStreams(creds, baseId, season, episode);
+        return candidates.map((c): RawScored => ({
+          source: "Emby",
+          sourceKind: "emby" as const,
+          stream: {
+            url: c.url,
+            title: c.title,
+            description: [
+              c.videoCodec,
+              c.audioCodec,
+              c.size ? `${(c.size / 1024 / 1024 / 1024).toFixed(1)} GB` : null,
+            ]
+              .filter(Boolean)
+              .join(" • "),
+            behaviorHints: c.filename ? { filename: c.filename } : undefined,
+          } as AddonStream,
+          embyMeta: { isTranscoding: c.isTranscoding },
+        }));
+      })().catch((e) => {
+        console.warn("emby lookup failed", e);
+        return [] as RawScored[];
+      });
+
+      const [addonsRes, pluginsRes, embyRes] = await Promise.all([
+        addonResults,
+        pluginResults,
+        embyResult,
+      ]);
+      const flat: RawScored[] = [
         ...addonsRes.flatMap((r) => (r.status === "fulfilled" ? r.value : [])),
         ...pluginsRes.flatMap((r) => (r.status === "fulfilled" ? r.value : [])),
+        ...embyRes,
       ];
+
       return flat
         .filter((entry) => entry.stream.url || entry.stream.externalUrl)
-        .map((entry) => {
+        .map((entry): ScoredStream => {
+          if (entry.sourceKind === "emby") {
+            // Emby transcodes server-side, so playability is a non-issue. We
+            // give it a strong score so it floats above ambiguous addon entries.
+            return {
+              source: entry.source,
+              sourceKind: entry.sourceKind,
+              stream: entry.stream,
+              score: 5,
+              compatibility: "embyTranscode",
+            };
+          }
           const { score, compatibility } = scoreStream({
             filename: entry.stream.behaviorHints?.filename,
             url: entry.stream.url,
             title: entry.stream.title,
             description: entry.stream.description,
           });
-          return { ...entry, score, compatibility };
+          return {
+            source: entry.source,
+            sourceKind: entry.sourceKind,
+            stream: entry.stream,
+            score,
+            compatibility,
+          };
         })
         .sort((a, b) => b.score - a.score);
     },
@@ -127,10 +192,9 @@ function StreamPickerPage() {
       return;
     }
 
-    // Skip probe + go straight to player when filename hints already say "native".
-    // For anything weaker, do a HEAD/Range probe so we surface MKV / DTS issues
-    // before the user stares at a black <video>.
-    if (entry.compatibility !== "native") {
+    // Skip probe + go straight to player when filename hints already say "native"
+    // OR when this is an Emby source (the server already negotiated playback).
+    if (entry.compatibility !== "native" && entry.sourceKind !== "emby") {
       setPendingProbeIdx(idx);
       try {
         const probe = await probeStream(s.url);
@@ -184,6 +248,15 @@ function StreamPickerPage() {
             Add a stream-providing addon (Torrentio + RealDebrid, OpenSubtitles-Stream, etc.) in the
             panel for this profile.
           </p>
+        </div>
+      )}
+
+      {streamQueries.data && streamQueries.data.some((s) => s.sourceKind === "emby") && (
+        <div className="rounded-lg border border-violet-500/30 bg-violet-500/10 p-3 text-xs text-violet-200">
+          <strong className="font-medium">Emby streams transcode at your server.</strong> Codecs
+          your browser can't decode (AC3/EAC3/DTS/TrueHD, MKV, HEVC) play fine — your Emby
+          machine remuxes/transcodes on the fly to a browser-friendly HLS stream. Pick the Emby
+          row to take advantage.
         </div>
       )}
 
@@ -265,6 +338,13 @@ function StreamPickerPage() {
   );
 }
 
+interface RawScored {
+  source: string;
+  sourceKind: "addon" | "plugin" | "emby";
+  stream: AddonStream;
+  embyMeta?: { isTranscoding: boolean };
+}
+
 function parseSeasonEpisode(id: string): [number | null, number | null] {
   const parts = id.split(":");
   if (parts.length < 3) return [null, null];
@@ -295,7 +375,16 @@ function probeIssue(probe: {
   return null;
 }
 
-function CompatibilityBadge({ value }: { value: Compatibility }) {
+function CompatibilityBadge({ value }: { value: StreamCompatibility }) {
+  if (value === "embyTranscode")
+    return (
+      <span
+        className="w-24 rounded-full bg-violet-500/20 px-2 py-0.5 text-center text-[10px] uppercase tracking-wide text-violet-300"
+        title="Emby server handles transcoding — any codec plays"
+      >
+        Emby
+      </span>
+    );
   if (value === "native")
     return (
       <span className="w-24 rounded-full bg-emerald-500/20 px-2 py-0.5 text-center text-[10px] uppercase tracking-wide text-emerald-300">

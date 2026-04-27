@@ -128,6 +128,163 @@ export async function findItemByImdb(
   return data.Items?.[0] ?? null;
 }
 
+// PlaybackInfo response shape — only the bits we consume.
+interface EmbyMediaStream {
+  Type: "Video" | "Audio" | "Subtitle" | string;
+  Codec?: string;
+  Language?: string;
+  DisplayTitle?: string;
+  IsDefault?: boolean;
+}
+
+interface EmbyMediaSource {
+  Id: string;
+  Name: string;
+  Container?: string;
+  Size?: number;
+  Path?: string;
+  Bitrate?: number;
+  TranscodingUrl?: string;
+  TranscodingSubProtocol?: string;
+  DirectStreamUrl?: string;
+  SupportsDirectPlay?: boolean;
+  SupportsDirectStream?: boolean;
+  SupportsTranscoding?: boolean;
+  MediaStreams?: EmbyMediaStream[];
+}
+
+interface PlaybackInfoResponse {
+  MediaSources?: EmbyMediaSource[];
+  PlaySessionId?: string;
+}
+
+// Permissive device profile — tells Emby we can play H.264/AAC directly via MSE,
+// AV1 + Opus where the browser supports them. Anything else gets transcoded
+// to HLS H.264/AAC via TranscodingUrl. Subtitles are requested as external VTT
+// (browser <track>) or ASS (rendered by JASSUB on our side).
+function deviceProfile() {
+  return {
+    MaxStreamingBitrate: 20_000_000,
+    MaxStaticBitrate: 100_000_000,
+    MusicStreamingTranscodingBitrate: 192_000,
+    DirectPlayProfiles: [
+      {
+        Container: "mp4,m4v,webm",
+        Type: "Video",
+        VideoCodec: "h264,vp9,av1",
+        AudioCodec: "aac,mp3,opus,flac",
+      },
+      {
+        Container: "mp3,aac,m4a,flac,opus,ogg",
+        Type: "Audio",
+      },
+    ],
+    TranscodingProfiles: [
+      {
+        Container: "ts",
+        Type: "Video",
+        AudioCodec: "aac",
+        VideoCodec: "h264",
+        Protocol: "hls",
+        MaxAudioChannels: "2",
+        MinSegments: 2,
+        BreakOnNonKeyFrames: true,
+      },
+    ],
+    ContainerProfiles: [],
+    CodecProfiles: [],
+    ResponseProfiles: [],
+    SubtitleProfiles: [
+      { Format: "vtt", Method: "External" },
+      { Format: "ass", Method: "External" },
+      { Format: "ssa", Method: "External" },
+      { Format: "srt", Method: "External" },
+    ],
+  };
+}
+
+export interface EmbyStreamCandidate {
+  url: string;
+  title: string;
+  filename?: string;
+  size?: number;
+  videoCodec?: string;
+  audioCodec?: string;
+  audioLanguages: string[];
+  subtitleLanguages: string[];
+  isDirectPlay: boolean;
+  // Emby will transcode server-side if direct play isn't possible — meaning
+  // AC3/DTS/MKV all become browser-playable HLS at the edge of the LAN.
+  isTranscoding: boolean;
+}
+
+// Resolve the IMDb id to one or more Emby playback URLs. We hit
+// /Items/{id}/PlaybackInfo so the server tells us which sources can direct-play
+// vs need transcode, and gives us the TranscodingUrl with a fresh PlaySessionId.
+export async function getEmbyStreams(
+  creds: EmbyCreds,
+  imdbId: string,
+  season: number | null,
+  episode: number | null
+): Promise<EmbyStreamCandidate[]> {
+  const item = await findItemByImdb(creds, imdbId, season, episode).catch(() => null);
+  if (!item) return [];
+
+  const response = await fetch(
+    `${creds.serverUrl}/Items/${item.Id}/PlaybackInfo?UserId=${encodeURIComponent(creds.userId)}`,
+    {
+      method: "POST",
+      headers: { ...authHeader(creds), "content-type": "application/json" },
+      body: JSON.stringify({ DeviceProfile: deviceProfile() }),
+    }
+  ).catch(() => null);
+  if (!response || !response.ok) return [];
+
+  const info = (await response.json().catch(() => null)) as PlaybackInfoResponse | null;
+  if (!info?.MediaSources?.length) return [];
+
+  return info.MediaSources.map((source): EmbyStreamCandidate => {
+    const videoStream = source.MediaStreams?.find((s) => s.Type === "Video");
+    const audioStreams = source.MediaStreams?.filter((s) => s.Type === "Audio") ?? [];
+    const subtitleStreams = source.MediaStreams?.filter((s) => s.Type === "Subtitle") ?? [];
+
+    const isDirectPlay = !!source.SupportsDirectPlay && !!source.SupportsDirectStream;
+    const isTranscoding = !isDirectPlay;
+
+    // For direct play we use the static stream endpoint; for everything else
+    // we use Emby's TranscodingUrl (server emits browser-friendly HLS).
+    let url: string;
+    if (isDirectPlay) {
+      url = `${creds.serverUrl}/Videos/${source.Id}/stream?Static=true&MediaSourceId=${encodeURIComponent(source.Id)}&api_key=${encodeURIComponent(creds.apiKey)}`;
+    } else if (source.TranscodingUrl) {
+      url = source.TranscodingUrl.startsWith("http")
+        ? source.TranscodingUrl
+        : `${creds.serverUrl}${source.TranscodingUrl}`;
+      // TranscodingUrl from Emby usually omits api_key; append it.
+      const sep = url.includes("?") ? "&" : "?";
+      if (!url.includes("api_key=")) {
+        url = `${url}${sep}api_key=${encodeURIComponent(creds.apiKey)}`;
+      }
+    } else {
+      // Last-ditch: master.m3u8 universal endpoint.
+      url = `${creds.serverUrl}/Videos/${item.Id}/master.m3u8?MediaSourceId=${encodeURIComponent(source.Id)}&VideoCodec=h264&AudioCodec=aac&MaxAudioChannels=2&api_key=${encodeURIComponent(creds.apiKey)}`;
+    }
+
+    return {
+      url,
+      title: source.Name || item.Name,
+      filename: source.Path?.split("/").pop() ?? undefined,
+      size: source.Size,
+      videoCodec: videoStream?.Codec,
+      audioCodec: audioStreams[0]?.Codec,
+      audioLanguages: audioStreams.map((a) => a.Language ?? "und").filter((l) => l !== "und"),
+      subtitleLanguages: subtitleStreams.map((s) => s.Language ?? "und").filter((l) => l !== "und"),
+      isDirectPlay,
+      isTranscoding,
+    };
+  });
+}
+
 // 1 tick = 100 ns; Emby's PositionTicks expects 100-ns ticks.
 function ticks(ms: number): number {
   return Math.floor(ms * 10_000);
