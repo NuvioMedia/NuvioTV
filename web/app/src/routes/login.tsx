@@ -63,7 +63,7 @@ function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center p-6">
+    <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col justify-center p-6">
       <h1 className="mb-6 text-3xl font-semibold tracking-tight">OmnioTV</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

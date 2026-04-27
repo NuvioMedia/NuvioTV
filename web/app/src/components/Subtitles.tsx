@@ -138,14 +138,20 @@ export function Subtitles({ video, candidates }: SubtitlesProps) {
   }
 
   return (
-    <div className="absolute right-4 bottom-20 z-10 flex flex-col items-end gap-2">
+    <div
+      className="absolute z-10 flex flex-col items-end gap-2"
+      style={{
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 130px)",
+        right: "max(env(safe-area-inset-right, 0px), 16px)",
+      }}
+    >
       {error && (
         <div className="rounded-md bg-red-500/30 px-3 py-1 text-xs text-red-100">{error}</div>
       )}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 rounded-full bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur hover:bg-black/80"
+        className="flex h-11 min-w-[44px] items-center gap-1 rounded-full bg-black/60 px-3 text-xs text-white backdrop-blur hover:bg-black/80"
       >
         <SubtitlesIcon className="h-4 w-4" />
         {active ? `CC: ${active.lang}` : "Subtitles"}

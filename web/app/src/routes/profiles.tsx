@@ -30,7 +30,7 @@ function ProfilesPage() {
   });
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col p-6">
+    <main className="mx-auto flex min-h-[100dvh] w-full max-w-3xl flex-col p-6">
       <header className="mb-8 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Pick a profile</h1>
         <button

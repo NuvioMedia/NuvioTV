@@ -261,45 +261,50 @@ function StreamPickerPage() {
       )}
 
       {streamQueries.data && streamQueries.data.length > 0 && (
-        <ul className="divide-y divide-slate-800/60 rounded-lg border border-slate-800 bg-slate-900/40">
-          {streamQueries.data.map((entry, i) => (
-            <li key={i} className="flex items-center gap-3 p-3 hover:bg-slate-800/40">
-              <CompatibilityBadge value={entry.compatibility} />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm text-slate-200">
-                  {entry.stream.title ?? entry.stream.name ?? "Untitled"}
-                </div>
-                <div className="text-xs text-slate-500">
-                  {entry.source}
-                  {entry.stream.behaviorHints?.filename
-                    ? ` • ${entry.stream.behaviorHints.filename}`
-                    : ""}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => handlePlay(i, entry)}
-                disabled={
-                  (!entry.stream.url && !entry.stream.externalUrl) || pendingProbeIdx === i
-                }
-                className="flex items-center gap-1 rounded-md bg-slate-800 px-3 py-1.5 text-xs text-slate-200 hover:bg-primary disabled:opacity-40"
-              >
-                {pendingProbeIdx === i ? (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin" /> Probing…
-                  </>
-                ) : entry.stream.url ? (
-                  <>
-                    <Play className="h-3 w-3" /> Play
-                  </>
-                ) : (
-                  <>
-                    <ExternalLink className="h-3 w-3" /> Open
-                  </>
-                )}
-              </button>
-            </li>
-          ))}
+        <ul className="divide-y divide-slate-800/60 overflow-hidden rounded-lg border border-slate-800 bg-slate-900/40">
+          {streamQueries.data.map((entry, i) => {
+            const disabled =
+              (!entry.stream.url && !entry.stream.externalUrl) || pendingProbeIdx === i;
+            return (
+              <li key={i}>
+                {/* The whole row is the tap target on mobile so users don't have to hit a tiny "Play" button. */}
+                <button
+                  type="button"
+                  onClick={() => handlePlay(i, entry)}
+                  disabled={disabled}
+                  className="flex w-full items-center gap-3 p-3 text-left transition hover:bg-slate-800/40 disabled:opacity-40 sm:gap-4 sm:p-3"
+                >
+                  <CompatibilityBadge value={entry.compatibility} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm text-slate-200">
+                      {entry.stream.title ?? entry.stream.name ?? "Untitled"}
+                    </div>
+                    <div className="truncate text-xs text-slate-500">
+                      {entry.source}
+                      {entry.stream.behaviorHints?.filename
+                        ? ` • ${entry.stream.behaviorHints.filename}`
+                        : ""}
+                    </div>
+                  </div>
+                  <span className="flex h-11 min-w-[44px] items-center gap-1 rounded-md bg-slate-800 px-3 text-xs text-slate-200">
+                    {pendingProbeIdx === i ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" /> Probing
+                      </>
+                    ) : entry.stream.url ? (
+                      <>
+                        <Play className="h-4 w-4" /> Play
+                      </>
+                    ) : (
+                      <>
+                        <ExternalLink className="h-4 w-4" /> Open
+                      </>
+                    )}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
 

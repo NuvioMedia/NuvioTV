@@ -35,7 +35,7 @@ function PlayerPage() {
   }
 
   return (
-    <div className="relative h-screen w-full bg-black">
+    <div className="relative h-[100dvh] w-full bg-black">
       <button
         type="button"
         onClick={() =>
@@ -44,7 +44,13 @@ function PlayerPage() {
             params: { profileId: String(profileId), type: params.type, id: baseId },
           })
         }
-        className="absolute left-4 top-4 z-20 flex items-center gap-1 rounded-full bg-black/60 px-3 py-1.5 text-sm text-white backdrop-blur hover:bg-black/80"
+        // Safe-area inset keeps the back button below the iOS notch / status bar
+        // while still hugging the corner on desktop.
+        style={{
+          top: "max(env(safe-area-inset-top, 0px), 16px)",
+          left: "max(env(safe-area-inset-left, 0px), 16px)",
+        }}
+        className="absolute z-20 flex min-h-[44px] items-center gap-1 rounded-full bg-black/60 px-3 py-2 text-sm text-white backdrop-blur hover:bg-black/80"
       >
         <ArrowLeft className="h-4 w-4" /> Back
       </button>

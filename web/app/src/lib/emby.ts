@@ -39,7 +39,12 @@ export async function loadEmbyCreds(profileId: number): Promise<EmbyCreds | null
   const serverUrl = decoded.emby_server_url;
   const apiKey = decoded.emby_api_key;
   const userId = decoded.emby_user_id;
-  if (!serverUrl || !apiKey || !userId) return null;
+  if (!serverUrl || !apiKey || !userId) {
+    console.info(
+      `[emby] no creds for profile ${profileId} (server=${!!serverUrl} key=${!!apiKey} user=${!!userId})`
+    );
+    return null;
+  }
   return { serverUrl: trimBase(serverUrl), apiKey, userId };
 }
 
@@ -97,35 +102,97 @@ interface EmbyItem {
   Id: string;
   Name: string;
   RunTimeTicks?: number;
+  IndexNumber?: number;
+  ParentIndexNumber?: number;
+  ProviderIds?: Record<string, string>;
 }
 
-// Emby's "find by IMDb id" endpoint. Cheap call, returns 0 or 1 item.
+// Emby tags items with stream-provider ids (`imdb`, `tmdb`, `tvdb`). The path
+// for movies vs series is different: movies have the IMDb id directly on the
+// item, but episodes don't carry the show's IMDb id — only the parent Series
+// item does. So for series we do a two-step lookup.
 export async function findItemByImdb(
   creds: EmbyCreds,
   imdbId: string,
   season?: number | null,
   episode?: number | null
 ): Promise<EmbyItem | null> {
+  // Movies: direct IMDb match on Movie items.
+  if (season == null || episode == null) {
+    const item = await searchByImdb(creds, imdbId, "Movie");
+    if (!item) {
+      console.info(`[emby] no Movie item with imdb=${imdbId}`);
+    }
+    return item;
+  }
+
+  // Series episode: find the Series first, then look up the episode by season +
+  // index. We never search "Episode" by IMDb id because episodes typically
+  // don't carry the show's IMDb id in ProviderIds.
+  const series = await searchByImdb(creds, imdbId, "Series");
+  if (!series) {
+    console.info(`[emby] no Series item with imdb=${imdbId}`);
+    return null;
+  }
+
+  const episodesResp = await fetch(
+    `${creds.serverUrl}/Shows/${series.Id}/Episodes?` +
+      new URLSearchParams({
+        UserId: creds.userId,
+        Season: String(season),
+        Fields: "ProviderIds",
+      }).toString(),
+    { headers: authHeader(creds) }
+  ).catch((e) => {
+    console.warn("[emby] /Shows/{id}/Episodes failed", e);
+    return null;
+  });
+
+  if (!episodesResp || !episodesResp.ok) {
+    console.warn(
+      `[emby] /Shows/{id}/Episodes returned ${episodesResp?.status ?? "no response"}`
+    );
+    return null;
+  }
+
+  const data = (await episodesResp.json().catch(() => null)) as { Items?: EmbyItem[] } | null;
+  const found = data?.Items?.find((it) => it.IndexNumber === episode);
+  if (!found) {
+    console.info(
+      `[emby] series ${series.Name} (${series.Id}) found but no S${season}E${episode} on this server`
+    );
+  }
+  return found ?? null;
+}
+
+async function searchByImdb(
+  creds: EmbyCreds,
+  imdbId: string,
+  itemType: "Movie" | "Series"
+): Promise<EmbyItem | null> {
   const params = new URLSearchParams({
-    IncludeItemTypes: season != null ? "Episode" : "Movie",
+    IncludeItemTypes: itemType,
     Recursive: "true",
     AnyProviderIdEquals: `imdb.${imdbId}`,
     Fields: "ProviderIds,RunTimeTicks",
-    Limit: "20",
+    Limit: "5",
   });
-  if (season != null) {
-    params.set("ParentIndexNumber", String(season));
-  }
-  if (episode != null) {
-    params.set("IndexNumber", String(episode));
-  }
 
-  const response = await fetch(`${creds.serverUrl}/Users/${creds.userId}/Items?${params.toString()}`, {
-    headers: authHeader(creds),
+  const response = await fetch(
+    `${creds.serverUrl}/Users/${creds.userId}/Items?${params.toString()}`,
+    { headers: authHeader(creds) }
+  ).catch((e) => {
+    console.warn(`[emby] /Users/{id}/Items search failed`, e);
+    return null;
   });
-  if (!response.ok) return null;
-  const data = (await response.json()) as { Items?: EmbyItem[] };
-  return data.Items?.[0] ?? null;
+  if (!response || !response.ok) {
+    console.warn(
+      `[emby] /Users/{id}/Items returned ${response?.status ?? "no response"} for imdb=${imdbId}`
+    );
+    return null;
+  }
+  const data = (await response.json().catch(() => null)) as { Items?: EmbyItem[] } | null;
+  return data?.Items?.[0] ?? null;
 }
 
 // PlaybackInfo response shape — only the bits we consume.
@@ -227,7 +294,10 @@ export async function getEmbyStreams(
   season: number | null,
   episode: number | null
 ): Promise<EmbyStreamCandidate[]> {
-  const item = await findItemByImdb(creds, imdbId, season, episode).catch(() => null);
+  const item = await findItemByImdb(creds, imdbId, season, episode).catch((e) => {
+    console.warn("[emby] findItemByImdb threw", e);
+    return null;
+  });
   if (!item) return [];
 
   const response = await fetch(
@@ -237,11 +307,20 @@ export async function getEmbyStreams(
       headers: { ...authHeader(creds), "content-type": "application/json" },
       body: JSON.stringify({ DeviceProfile: deviceProfile() }),
     }
-  ).catch(() => null);
-  if (!response || !response.ok) return [];
+  ).catch((e) => {
+    console.warn("[emby] /PlaybackInfo POST failed", e);
+    return null;
+  });
+  if (!response || !response.ok) {
+    console.warn(`[emby] /PlaybackInfo returned ${response?.status ?? "no response"}`);
+    return [];
+  }
 
   const info = (await response.json().catch(() => null)) as PlaybackInfoResponse | null;
-  if (!info?.MediaSources?.length) return [];
+  if (!info?.MediaSources?.length) {
+    console.info(`[emby] item ${item.Id} (${item.Name}) has no MediaSources`);
+    return [];
+  }
 
   return info.MediaSources.map((source): EmbyStreamCandidate => {
     const videoStream = source.MediaStreams?.find((s) => s.Type === "Video");

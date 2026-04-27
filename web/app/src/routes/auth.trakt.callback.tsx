@@ -78,7 +78,7 @@ function TraktCallback() {
   }, [search.code, search.state, search.error, navigate]);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-4 p-6 text-center">
+    <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col items-center justify-center gap-4 p-6 text-center">
       {status === "exchanging" && (
         <>
           <Loader2 className="h-8 w-8 animate-spin text-primary" />

@@ -12,6 +12,8 @@ import {
   type EmbyCreds,
 } from "@/lib/emby";
 import { TrackMenu } from "./TrackMenu";
+import { PlayerControls } from "./PlayerControls";
+import { PlayerGestures } from "./PlayerGestures";
 import { Subtitles, type SubtitleSource } from "./Subtitles";
 
 interface PlayerProps {
@@ -41,6 +43,7 @@ export function Player({
   subtitles = [],
 }: PlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [hlsInstance, setHlsInstance] = useState<Hls | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -279,7 +282,7 @@ export function Player({
   }, [profileId, contentId, contentType, videoId, season, episode]);
 
   return (
-    <div className="relative h-full w-full">
+    <div ref={containerRef} className="relative h-full w-full">
       <video
         ref={videoRef}
         controls
@@ -288,6 +291,8 @@ export function Player({
         crossOrigin="anonymous"
         className="h-full w-full bg-black"
       />
+      <PlayerGestures video={videoRef.current} />
+      <PlayerControls video={videoRef.current} containerEl={containerRef.current} />
       <TrackMenu video={videoRef.current} hls={hlsInstance} />
       <Subtitles video={videoRef.current} candidates={subtitles} />
       {!ready && !error && (

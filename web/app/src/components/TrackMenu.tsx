@@ -145,7 +145,14 @@ export function TrackMenu({ video, hls }: TrackMenuProps) {
   if (audio.length === 0 && text.length === 0 && quality.length === 0) return null;
 
   return (
-    <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+    <div
+      className="absolute z-10 flex items-center gap-2"
+      style={{
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 80px)",
+        right: "max(env(safe-area-inset-right, 0px), 16px)",
+      }}
+
+    >
       {audio.length > 1 && (
         <Pill
           icon={<Volume2 className="h-4 w-4" />}
@@ -209,7 +216,7 @@ function Pill({
       <button
         type="button"
         onClick={onToggle}
-        className="flex items-center gap-1 rounded-full bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur hover:bg-black/80"
+        className="flex h-11 min-w-[44px] items-center gap-1 rounded-full bg-black/60 px-3 text-xs text-white backdrop-blur hover:bg-black/80"
       >
         {icon}
         {label}
