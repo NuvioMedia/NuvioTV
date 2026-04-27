@@ -3,14 +3,7 @@ import Hls from "hls.js";
 import shaka from "shaka-player/dist/shaka-player.compiled";
 import { recordWatchedItem, upsertWatchProgress } from "@/lib/watchProgress";
 import { scrobbleStart, scrobblePause, scrobbleStop } from "@/lib/trakt";
-import {
-  loadEmbyCreds,
-  findItemByImdb,
-  reportPlaying,
-  reportProgress,
-  reportStopped,
-  type EmbyCreds,
-} from "@/lib/emby";
+import { loadEmbyCreds, EmbySession } from "@/lib/emby";
 import { TrackMenu } from "./TrackMenu";
 import { PlayerControls } from "./PlayerControls";
 import { PlayerGestures } from "./PlayerGestures";
@@ -26,6 +19,10 @@ interface PlayerProps {
   episode: number | null;
   initialPosition?: number;
   subtitles?: SubtitleSource[];
+  // Set when the chosen stream came from the user's Emby server. The player
+  // uses this to spin up a Now-Playing session against Emby. Skipped entirely
+  // for non-Emby streams — Emby would have nothing to scrobble against.
+  emby?: { itemId: string; mediaSourceId: string };
 }
 
 const PROGRESS_INTERVAL_MS = 5_000;
@@ -41,6 +38,7 @@ export function Player({
   episode,
   initialPosition = 0,
   subtitles = [],
+  emby,
 }: PlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -51,8 +49,7 @@ export function Player({
   const watchedReportedRef = useRef(false);
   const lastProgressWriteRef = useRef(0);
   const scrobbleStateRef = useRef<"idle" | "started" | "paused">("idle");
-  const embyRef = useRef<{ creds: EmbyCreds; itemId: string } | null>(null);
-  const lastEmbyProgressRef = useRef(0);
+  const embySessionRef = useRef<EmbySession | null>(null);
 
   // Source attach. Three paths:
   //   - DASH (.mpd) → shaka-player
@@ -117,31 +114,35 @@ export function Player({
     };
   }, [src, initialPosition]);
 
-  // Resolve an Emby item id once per content. If the user hasn't configured
-  // Emby for this profile, or the item isn't on their server, we silently skip.
+  // Spin up an Emby session only when the chosen stream actually came from the
+  // user's Emby server. Mirrors the Android `isCurrentStreamFromEmbyProvider`
+  // gate — reporting against Emby for, say, a torrent stream produces empty
+  // sessions with no usable activity-log entry.
   useEffect(() => {
     let cancelled = false;
-    embyRef.current = null;
+    embySessionRef.current = null;
+
+    if (!emby) return;
 
     void (async () => {
       const creds = await loadEmbyCreds(profileId).catch(() => null);
       if (!creds || cancelled) return;
-      const item = await findItemByImdb(creds, contentId, season, episode).catch(() => null);
-      if (!item || cancelled) return;
-      embyRef.current = { creds, itemId: item.Id };
+      embySessionRef.current = new EmbySession(creds);
     })();
 
     return () => {
       cancelled = true;
-      const ref = embyRef.current;
+      const session = embySessionRef.current;
       const video = videoRef.current;
-      if (ref && video) {
-        const positionMs = Math.floor(video.currentTime * 1000);
-        void reportStopped(ref.creds, { itemId: ref.itemId, positionMs });
+      if (session) {
+        const positionMs = video ? Math.floor(video.currentTime * 1000) : 0;
+        // reportStop uses keepalive: true internally so it survives the route
+        // unmount → page-unload race.
+        session.reportStop(positionMs);
       }
-      embyRef.current = null;
+      embySessionRef.current = null;
     };
-  }, [profileId, contentId, season, episode]);
+  }, [profileId, emby]);
 
   // Watch-progress sync. We debounce writes via PROGRESS_INTERVAL_MS so the
   // user's moving timeline doesn't generate a row per second.
@@ -199,31 +200,16 @@ export function Player({
       };
     }
 
-    function embyArgs() {
-      if (!video) return null;
-      const ref = embyRef.current;
-      if (!ref) return null;
-      return {
-        creds: ref.creds,
-        itemId: ref.itemId,
-        positionMs: Math.floor(video.currentTime * 1000),
-      };
+    function currentPositionMs(): number {
+      return video ? Math.floor(video.currentTime * 1000) : 0;
     }
 
     function onTimeUpdate() {
       writeProgress();
-      // Emby progress reports every 10s — Emby clients typically tick at this rate.
-      const now = Date.now();
-      if (now - lastEmbyProgressRef.current >= 10_000) {
-        lastEmbyProgressRef.current = now;
-        const args = embyArgs();
-        if (args) {
-          void reportProgress(args.creds, {
-            itemId: args.itemId,
-            positionMs: args.positionMs,
-            isPaused: !!video?.paused,
-          });
-        }
+      // Emby progress is throttled to 10s inside EmbySession.reportProgress.
+      const session = embySessionRef.current;
+      if (session && emby) {
+        void session.reportProgress(currentPositionMs(), !!video?.paused);
       }
     }
     function onPause() {
@@ -232,9 +218,11 @@ export function Player({
         scrobbleStateRef.current = "paused";
         void scrobblePause(scrobbleArgs()).catch((e) => console.warn("trakt pause", e));
       }
-      const args = embyArgs();
-      if (args) {
-        void reportProgress(args.creds, { ...args, isPaused: true });
+      const session = embySessionRef.current;
+      if (session && emby) {
+        // Force-flush so the pause shows up immediately in Now Playing
+        // instead of waiting for the next 10s tick.
+        void session.reportProgress(currentPositionMs(), true, true);
       }
     }
     function onPlay() {
@@ -242,9 +230,9 @@ export function Player({
         scrobbleStateRef.current = "started";
         void scrobbleStart(scrobbleArgs()).catch((e) => console.warn("trakt start", e));
       }
-      const args = embyArgs();
-      if (args) {
-        void reportPlaying(args.creds, args);
+      const session = embySessionRef.current;
+      if (session && emby) {
+        void session.reportStart(emby.itemId, emby.mediaSourceId, currentPositionMs());
       }
     }
     function onEnded() {
@@ -254,8 +242,10 @@ export function Player({
         scrobbleStateRef.current = "idle";
         void scrobbleStop(args).catch((e) => console.warn("trakt stop", e));
       }
-      const args = embyArgs();
-      if (args) void reportStopped(args.creds, args);
+      const session = embySessionRef.current;
+      if (session) {
+        session.reportStop(currentPositionMs());
+      }
     }
     function onLoadedMetadata() {
       setReady(true);

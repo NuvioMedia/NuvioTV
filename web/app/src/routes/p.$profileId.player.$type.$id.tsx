@@ -63,6 +63,7 @@ function PlayerPage() {
         season={season}
         episode={episode}
         subtitles={handoff?.subtitles ?? []}
+        emby={handoff?.emby}
       />
     </div>
   );

@@ -29,6 +29,7 @@ interface ScoredStream {
   stream: AddonStream;
   score: number;
   compatibility: StreamCompatibility;
+  embyMeta?: { isTranscoding: boolean; itemId: string; mediaSourceId: string };
 }
 
 interface StreamFetchResult {
@@ -131,7 +132,11 @@ function StreamPickerPage() {
               .join(" • "),
             behaviorHints: c.filename ? { filename: c.filename } : undefined,
           } as AddonStream,
-          embyMeta: { isTranscoding: c.isTranscoding },
+          embyMeta: {
+            isTranscoding: c.isTranscoding,
+            itemId: c.itemId,
+            mediaSourceId: c.mediaSourceId,
+          },
         }));
         return { scored, state: result.state };
       })().catch((e: Error) => {
@@ -169,6 +174,7 @@ function StreamPickerPage() {
               stream: entry.stream,
               score: 5,
               compatibility: "embyTranscode",
+              embyMeta: entry.embyMeta,
             };
           }
           const { score, compatibility } = scoreStream({
@@ -191,12 +197,15 @@ function StreamPickerPage() {
     },
   });
 
-  function navigateToPlayer(s: AddonStream) {
+  function navigateToPlayer(s: AddonStream, embyMeta?: ScoredStream["embyMeta"]) {
     if (!s.url) return;
     saveHandoff(params.type, params.id, {
       src: s.url,
       subtitles: (s.subtitles ?? []).map((sub) => ({ url: sub.url, lang: sub.lang })),
       detailId: params.id.split(":")[0]!,
+      emby: embyMeta
+        ? { itemId: embyMeta.itemId, mediaSourceId: embyMeta.mediaSourceId }
+        : undefined,
     });
     navigate({
       to: "/p/$profileId/player/$type/$id",
@@ -231,7 +240,7 @@ function StreamPickerPage() {
       }
     }
 
-    navigateToPlayer(s);
+    navigateToPlayer(s, entry.embyMeta);
   }
 
   function playAnyway() {
@@ -365,7 +374,11 @@ interface RawScored {
   source: string;
   sourceKind: "addon" | "plugin" | "emby";
   stream: AddonStream;
-  embyMeta?: { isTranscoding: boolean };
+  embyMeta?: {
+    isTranscoding: boolean;
+    itemId: string;
+    mediaSourceId: string;
+  };
 }
 
 function EmbyDiagnosticsRow({

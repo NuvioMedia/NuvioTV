@@ -9,6 +9,12 @@ interface HandoffPayload {
   subtitles: SubtitleSource[];
   // Where the user came from, so the player Back button can return correctly.
   detailId: string;
+  // Set when the chosen stream came from the user's Emby server. The player
+  // uses these to start a stateful Now-Playing session against Emby.
+  emby?: {
+    itemId: string;
+    mediaSourceId: string;
+  };
 }
 
 function key(contentType: string, contentId: string): string {

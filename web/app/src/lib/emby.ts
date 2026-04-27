@@ -23,9 +23,19 @@ const DEVICE_ID =
     : Math.random().toString(36).slice(2)) + "-omnio-web";
 
 function authHeader(creds: EmbyCreds): Record<string, string> {
+  // The UserId="..." segment is essential — without it, sessions started by an
+  // API key have session.UserId == null and Emby's activity-log handler bails,
+  // so "User played X" entries never get written even though Now Playing is
+  // visible. Mirrors the Android fix in commit 17249f39.
+  const auth =
+    `MediaBrowser Client="OmnioTV-Web", Device="Browser"` +
+    `, DeviceId="${DEVICE_ID}"` +
+    `, Version="0.1.0"` +
+    `, Token="${creds.apiKey}"` +
+    (creds.userId ? `, UserId="${creds.userId}"` : "");
   return {
     "x-emby-token": creds.apiKey,
-    "x-emby-authorization": `MediaBrowser Client="OmnioTV-Web", Device="Browser", DeviceId="${DEVICE_ID}", Version="0.1.0", Token="${creds.apiKey}"`,
+    "x-emby-authorization": auth,
   };
 }
 
@@ -314,6 +324,8 @@ function deviceProfile() {
 
 export interface EmbyStreamCandidate {
   url: string;
+  itemId: string;
+  mediaSourceId: string;
   title: string;
   filename?: string;
   size?: number;
@@ -436,6 +448,8 @@ export async function getEmbyStreams(
 
     return {
       url,
+      itemId: itemRef.Id,
+      mediaSourceId: source.Id,
       title: source.Name || itemRef.Name,
       filename: source.Path?.split("/").pop() ?? undefined,
       size: source.Size,
@@ -456,36 +470,145 @@ function ticks(ms: number): number {
   return Math.floor(ms * 10_000);
 }
 
-interface ScrobbleArgs {
-  itemId: string;
-  positionMs: number;
-  isPaused?: boolean;
-}
+const PROGRESS_INTERVAL_MS = 10_000;
 
-export async function reportPlaying(creds: EmbyCreds, args: ScrobbleArgs): Promise<void> {
-  await fetch(`${creds.serverUrl}/Sessions/Playing`, {
-    method: "POST",
-    headers: { ...authHeader(creds), "content-type": "application/json" },
-    body: JSON.stringify({ ItemId: args.itemId, PositionTicks: ticks(args.positionMs) }),
-  }).catch(() => {});
-}
+// Stateful Emby playback session — mirrors Android's EmbySessionService.
+// Emby's Start/Progress/Stop endpoints are stateful: PlaySessionId must be
+// generated once on Start and reused throughout. Without that, Now Playing
+// shows the live session but the activity-log handler can't reconcile a
+// missing PlaySessionId and skips the "User played X" entry.
+//
+// We expose this as a class instance per Player mount. The browser's
+// page-unload race is handled with `keepalive: true` on the Stop request,
+// the web equivalent of the SupervisorJob singleton-scope fix in
+// commit 77704c4d.
+export class EmbySession {
+  private creds: EmbyCreds;
+  private currentItemId: string | null = null;
+  private currentMediaSourceId: string | null = null;
+  private currentPlaySessionId: string | null = null;
+  private hasReportedStart = false;
+  private lastProgressReportMs = 0;
 
-export async function reportProgress(creds: EmbyCreds, args: ScrobbleArgs): Promise<void> {
-  await fetch(`${creds.serverUrl}/Sessions/Playing/Progress`, {
-    method: "POST",
-    headers: { ...authHeader(creds), "content-type": "application/json" },
-    body: JSON.stringify({
-      ItemId: args.itemId,
-      PositionTicks: ticks(args.positionMs),
-      IsPaused: !!args.isPaused,
-    }),
-  }).catch(() => {});
-}
+  constructor(creds: EmbyCreds) {
+    this.creds = creds;
+  }
 
-export async function reportStopped(creds: EmbyCreds, args: ScrobbleArgs): Promise<void> {
-  await fetch(`${creds.serverUrl}/Sessions/Playing/Stopped`, {
-    method: "POST",
-    headers: { ...authHeader(creds), "content-type": "application/json" },
-    body: JSON.stringify({ ItemId: args.itemId, PositionTicks: ticks(args.positionMs) }),
-  }).catch(() => {});
+  async reportStart(itemId: string, mediaSourceId: string, positionMs = 0): Promise<void> {
+    if (
+      this.hasReportedStart &&
+      this.currentItemId === itemId &&
+      this.currentMediaSourceId === mediaSourceId
+    ) {
+      return;
+    }
+
+    const playSessionId = crypto.randomUUID();
+    const payload = {
+      ItemId: itemId,
+      MediaSourceId: mediaSourceId,
+      PlaySessionId: playSessionId,
+      PositionTicks: ticks(positionMs),
+      CanSeek: true,
+      IsPaused: false,
+      PlayMethod: "DirectStream" as const,
+      QueueableMediaTypes: ["Video"],
+    };
+
+    try {
+      const response = await fetch(`${this.creds.serverUrl}/Sessions/Playing`, {
+        method: "POST",
+        headers: { ...authHeader(this.creds), "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        this.currentItemId = itemId;
+        this.currentMediaSourceId = mediaSourceId;
+        this.currentPlaySessionId = playSessionId;
+        this.hasReportedStart = true;
+        this.lastProgressReportMs = Date.now();
+        console.info(`[emby] reported playback start: ${itemId}`);
+      } else {
+        console.warn(`[emby] /Sessions/Playing returned ${response.status}`);
+      }
+    } catch (err) {
+      console.warn("[emby] reportStart failed", err);
+    }
+  }
+
+  async reportProgress(positionMs: number, isPaused = false, force = false): Promise<void> {
+    if (!this.hasReportedStart) return;
+    if (!this.currentItemId || !this.currentMediaSourceId || !this.currentPlaySessionId) return;
+
+    const now = Date.now();
+    if (!force && now - this.lastProgressReportMs < PROGRESS_INTERVAL_MS) return;
+
+    const payload = {
+      ItemId: this.currentItemId,
+      MediaSourceId: this.currentMediaSourceId,
+      PlaySessionId: this.currentPlaySessionId,
+      PositionTicks: ticks(positionMs),
+      CanSeek: true,
+      IsPaused: isPaused,
+      PlayMethod: "DirectStream" as const,
+      EventName: "TimeUpdate" as const,
+    };
+
+    try {
+      const response = await fetch(`${this.creds.serverUrl}/Sessions/Playing/Progress`, {
+        method: "POST",
+        headers: { ...authHeader(this.creds), "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        this.lastProgressReportMs = now;
+      }
+    } catch (err) {
+      console.warn("[emby] reportProgress failed", err);
+    }
+  }
+
+  reportStop(positionMs = 0): void {
+    const itemId = this.currentItemId;
+    const mediaSourceId = this.currentMediaSourceId;
+    const playSessionId = this.currentPlaySessionId;
+    const wasStarted = this.hasReportedStart;
+    this.reset();
+
+    if (!wasStarted || !itemId || !mediaSourceId || !playSessionId) return;
+
+    // `keepalive: true` is the browser equivalent of Android's SupervisorJob:
+    // it tells the browser to finish this fetch even if the page is
+    // unloading, so navigating away from /player still triggers the stop
+    // event and Emby writes its activity-log entry.
+    const payload = {
+      ItemId: itemId,
+      MediaSourceId: mediaSourceId,
+      PlaySessionId: playSessionId,
+      PositionTicks: ticks(positionMs),
+    };
+
+    fetch(`${this.creds.serverUrl}/Sessions/Playing/Stopped`, {
+      method: "POST",
+      headers: { ...authHeader(this.creds), "content-type": "application/json" },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    })
+      .then((r) => {
+        if (r.ok) {
+          console.info(`[emby] reported playback stopped at ${positionMs}ms`);
+        } else {
+          console.warn(`[emby] /Sessions/Playing/Stopped returned ${r.status}`);
+        }
+      })
+      .catch((err) => console.warn("[emby] reportStop failed", err));
+  }
+
+  reset(): void {
+    this.currentItemId = null;
+    this.currentMediaSourceId = null;
+    this.currentPlaySessionId = null;
+    this.hasReportedStart = false;
+    this.lastProgressReportMs = 0;
+  }
 }
