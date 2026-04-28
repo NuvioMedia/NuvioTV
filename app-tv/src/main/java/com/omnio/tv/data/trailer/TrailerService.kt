@@ -1,7 +1,7 @@
 package com.omnio.tv.data.trailer
 
 import android.util.Log
-import com.omnio.tv.core.tmdb.TmdbService
+import com.omnio.tv.domain.tmdb.TmdbService
 import com.omnio.tv.data.local.TmdbSettingsDataStore
 import com.omnio.tv.data.remote.api.TmdbApi
 import com.omnio.tv.data.remote.api.TmdbVideoResult

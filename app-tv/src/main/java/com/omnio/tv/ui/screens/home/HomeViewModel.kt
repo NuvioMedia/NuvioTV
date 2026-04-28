@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.omnio.tv.core.player.StreamAutoPlayPolicy
 import com.omnio.tv.core.tmdb.TmdbMetadataService
-import com.omnio.tv.core.tmdb.TmdbService
+import com.omnio.tv.domain.tmdb.TmdbService
 import com.omnio.tv.data.local.AuthSessionNoticeDataStore
 import com.omnio.tv.data.local.LayoutPreferenceDataStore
 import com.omnio.tv.data.local.PlayerSettingsDataStore

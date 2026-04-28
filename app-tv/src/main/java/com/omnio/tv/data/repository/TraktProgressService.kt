@@ -67,7 +67,7 @@ class TraktProgressService @Inject constructor(
     private val traktApi: TraktApi,
     private val traktAuthService: TraktAuthService,
     private val metaRepository: MetaRepository,
-    private val tmdbService: com.omnio.tv.core.tmdb.TmdbService,
+    private val tmdbService: com.omnio.tv.domain.tmdb.TmdbService,
     private val traktSettingsDataStore: TraktSettingsDataStore,
     private val traktEpisodeMappingService: TraktEpisodeMappingService
 ) {

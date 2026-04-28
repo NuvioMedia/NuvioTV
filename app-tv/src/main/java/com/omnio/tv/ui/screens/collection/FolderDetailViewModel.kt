@@ -97,7 +97,7 @@ class FolderDetailViewModel @Inject constructor(
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val watchProgressRepository: WatchProgressRepository,
     private val watchedSeriesStateHolder: com.omnio.tv.data.local.WatchedSeriesStateHolder,
-    private val tmdbService: com.omnio.tv.core.tmdb.TmdbService,
+    private val tmdbService: com.omnio.tv.domain.tmdb.TmdbService,
     private val tmdbMetadataService: com.omnio.tv.core.tmdb.TmdbMetadataService,
     private val tmdbSettingsDataStore: com.omnio.tv.data.local.TmdbSettingsDataStore,
     private val mdbListRepository: com.omnio.tv.data.repository.MDBListRepository,

@@ -1,7 +1,7 @@
 package com.omnio.tv.data.repository
 
 import android.util.Log
-import com.omnio.tv.core.tmdb.TmdbService
+import com.omnio.tv.domain.tmdb.TmdbService
 import com.omnio.tv.data.local.MDBListSettingsDataStore
 import com.omnio.tv.data.remote.api.MDBListApi
 import com.omnio.tv.data.remote.dto.mdblist.MDBListRatingRequestDto

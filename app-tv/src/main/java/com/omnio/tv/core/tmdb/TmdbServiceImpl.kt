@@ -3,6 +3,7 @@ package com.omnio.tv.core.tmdb
 import android.util.Log
 import com.omnio.tv.BuildConfig
 import com.omnio.tv.data.remote.api.TmdbApi
+import com.omnio.tv.domain.tmdb.TmdbService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -19,9 +20,9 @@ private val TMDB_API_KEY = BuildConfig.TMDB_API_KEY
  * Provides caching to avoid redundant API calls.
  */
 @Singleton
-class TmdbService @Inject constructor(
+class TmdbServiceImpl @Inject constructor(
     private val tmdbApi: TmdbApi
-) {
+) : TmdbService {
     // Cache: IMDB ID -> TMDB ID
     private val imdbToTmdbCache = ConcurrentHashMap<String, Int>()
     
@@ -38,7 +39,7 @@ class TmdbService @Inject constructor(
      * @param mediaType The media type ("movie" or "series"/"tv")
      * @return The TMDB ID, or null if not found
      */
-    suspend fun imdbToTmdb(imdbId: String, mediaType: String): Int? = withContext(Dispatchers.IO) {
+    override suspend fun imdbToTmdb(imdbId: String, mediaType: String): Int? = withContext(Dispatchers.IO) {
         // Validate IMDB ID format
         if (!imdbId.startsWith("tt")) {
             Log.w(TAG, "Invalid IMDB ID format: $imdbId")
@@ -103,7 +104,7 @@ class TmdbService @Inject constructor(
      * @param mediaType The media type ("movie" or "series"/"tv")
      * @return The IMDB ID, or null if not found
      */
-    suspend fun tmdbToImdb(tmdbId: Int, mediaType: String): String? = withContext(Dispatchers.IO) {
+    override suspend fun tmdbToImdb(tmdbId: Int, mediaType: String): String? = withContext(Dispatchers.IO) {
         // Check cache first
         tmdbToImdbCache[tmdbId]?.let { cached ->
             Log.d(TAG, "Cache hit: TMDB $tmdbId -> IMDB $cached")
@@ -156,7 +157,7 @@ class TmdbService @Inject constructor(
      * @param mediaType The media type
      * @return The TMDB ID as a string, or null if conversion failed
      */
-    suspend fun ensureTmdbId(videoId: String, mediaType: String): String? {
+    override suspend fun ensureTmdbId(videoId: String, mediaType: String): String? {
         // Check if it's already a TMDB ID (numeric or prefixed)
         val cleanId = videoId
             .removePrefix("tmdb:")
@@ -200,7 +201,7 @@ class TmdbService @Inject constructor(
     /**
      * Clear all caches
      */
-    fun clearCache() {
+    override fun clearCache() {
         imdbToTmdbCache.clear()
         tmdbToImdbCache.clear()
         Log.d(TAG, "Cache cleared")
@@ -209,10 +210,10 @@ class TmdbService @Inject constructor(
     /**
      * Pre-populate cache with known mappings
      */
-    fun preCacheMapping(imdbId: String, tmdbId: Int) {
+    override fun preCacheMapping(imdbId: String, tmdbId: Int) {
         imdbToTmdbCache[imdbId] = tmdbId
         tmdbToImdbCache[tmdbId] = imdbId
     }
 
-    fun apiKey(): String = TMDB_API_KEY
+    override fun apiKey(): String = TMDB_API_KEY
 }
