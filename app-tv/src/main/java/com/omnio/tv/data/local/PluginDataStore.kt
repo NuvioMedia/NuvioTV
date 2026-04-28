@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.omnio.tv.core.profile.ProfileManager
+import com.omnio.tv.domain.profile.ProfileManager
 import com.omnio.tv.domain.model.PluginRepository
 import com.omnio.tv.domain.model.ScraperInfo
 import com.squareup.moshi.Moshi

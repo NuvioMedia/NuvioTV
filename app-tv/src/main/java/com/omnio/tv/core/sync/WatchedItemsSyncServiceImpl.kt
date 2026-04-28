@@ -3,7 +3,7 @@ package com.omnio.tv.core.sync
 import android.util.Log
 import com.omnio.tv.domain.auth.AuthManager
 import com.omnio.tv.domain.sync.WatchedItemsSyncService
-import com.omnio.tv.core.profile.ProfileManager
+import com.omnio.tv.domain.profile.ProfileManager
 import com.omnio.tv.data.local.TraktAuthDataStore
 import com.omnio.tv.data.local.TraktSettingsDataStore
 import com.omnio.tv.data.local.WatchProgressSource

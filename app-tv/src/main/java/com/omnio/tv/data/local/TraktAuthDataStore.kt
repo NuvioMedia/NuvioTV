@@ -8,7 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.omnio.tv.core.profile.ProfileManager
+import com.omnio.tv.domain.profile.ProfileManager
 import com.omnio.tv.data.remote.dto.trakt.TraktDeviceCodeResponseDto
 import com.omnio.tv.data.remote.dto.trakt.TraktTokenResponseDto
 import dagger.hilt.android.qualifiers.ApplicationContext

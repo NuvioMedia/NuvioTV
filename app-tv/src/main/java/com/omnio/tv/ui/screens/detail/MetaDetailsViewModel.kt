@@ -83,7 +83,7 @@ class MetaDetailsViewModel @Inject constructor(
     private val playerSettingsDataStore: PlayerSettingsDataStore,
     private val watchedSeriesStateHolder: com.omnio.tv.data.local.WatchedSeriesStateHolder,
     private val kidsContentFilter: com.omnio.tv.core.profile.KidsContentFilter,
-    private val profileManager: com.omnio.tv.core.profile.ProfileManager,
+    private val profileManager: com.omnio.tv.domain.profile.ProfileManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val itemId: String = savedStateHandle["itemId"] ?: ""

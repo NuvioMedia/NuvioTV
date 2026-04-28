@@ -7,7 +7,7 @@ import com.omnio.tv.data.remote.dto.trakt.TraktIdsDto
 import com.omnio.tv.data.remote.dto.trakt.TraktMovieDto
 import com.omnio.tv.data.remote.dto.trakt.TraktScrobbleRequestDto
 import com.omnio.tv.data.remote.dto.trakt.TraktShowDto
-import com.omnio.tv.core.profile.ProfileManager
+import com.omnio.tv.domain.profile.ProfileManager
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs

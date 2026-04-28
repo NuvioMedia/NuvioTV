@@ -8,7 +8,7 @@ import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.core.qr.QrCodeGenerator
 import com.omnio.tv.core.server.AddonConfigServer
 import com.omnio.tv.core.server.DeviceIpAddress
-import com.omnio.tv.core.profile.ProfileManager
+import com.omnio.tv.domain.profile.ProfileManager
 import com.omnio.tv.data.local.LayoutPreferenceDataStore
 import com.omnio.tv.domain.model.Addon
 import com.omnio.tv.domain.model.CatalogDescriptor

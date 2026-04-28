@@ -3,7 +3,7 @@ package com.omnio.tv.data.local
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.omnio.tv.core.profile.ProfileManager
+import com.omnio.tv.domain.profile.ProfileManager
 import kotlinx.coroutines.flow.first
 import org.json.JSONObject
 import java.security.MessageDigest

@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.omnio.tv.R
-import com.omnio.tv.core.profile.ProfileManager
+import com.omnio.tv.domain.profile.ProfileManager
 import com.omnio.tv.core.sync.ProfileSyncService
 import com.omnio.tv.core.sync.StartupSyncService
 import com.omnio.tv.domain.sync.WatchedItemsSyncService

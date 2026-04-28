@@ -7,7 +7,7 @@ import com.omnio.tv.domain.sync.AddonSyncService
 import com.omnio.tv.domain.sync.LibrarySyncService
 import com.omnio.tv.domain.sync.WatchProgressSyncService
 import com.omnio.tv.domain.sync.WatchedItemsSyncService
-import com.omnio.tv.core.profile.ProfileManager
+import com.omnio.tv.domain.profile.ProfileManager
 import com.omnio.tv.data.local.LibraryPreferences
 import com.omnio.tv.data.local.TraktAuthDataStore
 import com.omnio.tv.data.local.WatchProgressPreferences

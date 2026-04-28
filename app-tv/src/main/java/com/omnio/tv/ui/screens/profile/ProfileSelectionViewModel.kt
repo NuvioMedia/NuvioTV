@@ -3,7 +3,7 @@ package com.omnio.tv.ui.screens.profile
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.omnio.tv.core.profile.ProfileManager
+import com.omnio.tv.domain.profile.ProfileManager
 import com.omnio.tv.core.sync.ProfileSyncService
 import com.omnio.tv.data.local.AddonPreferences
 import com.omnio.tv.data.remote.supabase.SupabaseProfilePinVerifyResult

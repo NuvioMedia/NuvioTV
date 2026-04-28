@@ -1,13 +1,18 @@
 package com.omnio.tv.core.di
 
+import com.omnio.tv.core.profile.ProfileManagerImpl
+import com.omnio.tv.domain.profile.ProfileManager
+import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object ProfileModule {
-    // ProfileDataStore, ProfileDataStoreFactory, and ProfileManager are all @Singleton
-    // with @Inject constructors, so Hilt can provide them automatically.
-    // This module exists as a marker and for any future explicit @Provides if needed.
+abstract class ProfileModule {
+
+    @Binds
+    @Singleton
+    abstract fun bindProfileManager(impl: ProfileManagerImpl): ProfileManager
 }

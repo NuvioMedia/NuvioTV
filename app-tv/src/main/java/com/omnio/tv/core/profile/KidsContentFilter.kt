@@ -6,6 +6,7 @@ import com.omnio.tv.domain.model.AgeRatingTier
 import com.omnio.tv.domain.model.Meta
 import com.omnio.tv.domain.model.MetaPreview
 import com.omnio.tv.domain.model.UserProfile
+import com.omnio.tv.domain.profile.ProfileManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton

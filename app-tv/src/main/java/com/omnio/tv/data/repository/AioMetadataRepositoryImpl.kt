@@ -3,7 +3,7 @@ package com.omnio.tv.data.repository
 import android.util.Log
 import com.omnio.tv.BuildConfig
 import com.omnio.tv.domain.auth.AuthManager
-import com.omnio.tv.core.profile.ProfileManager
+import com.omnio.tv.domain.profile.ProfileManager
 import com.omnio.tv.data.local.AioMetadataSettingsDataStore
 import com.omnio.tv.data.remote.api.AioMetadataApi
 import com.omnio.tv.data.local.AddonPreferences

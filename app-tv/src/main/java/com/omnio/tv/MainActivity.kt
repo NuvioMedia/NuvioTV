@@ -104,7 +104,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import androidx.tv.material3.rememberDrawerState
-import com.omnio.tv.core.profile.ProfileManager
+import com.omnio.tv.domain.profile.ProfileManager
 import com.omnio.tv.domain.auth.AuthManager
 import com.omnio.tv.data.local.AppOnboardingDataStore
 import com.omnio.tv.data.local.LayoutPreferenceDataStore
