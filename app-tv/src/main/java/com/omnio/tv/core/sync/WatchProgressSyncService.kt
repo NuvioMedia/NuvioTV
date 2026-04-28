@@ -236,8 +236,8 @@ class WatchProgressSyncService @Inject constructor(
                 progress.episode != null
             if (!isSeriesMirrorKey) return@forEach
 
-            val season = progress.season
-            val episode = progress.episode
+            val season = progress.season!!
+            val episode = progress.episode!!
             val episodeKey = episodeKey(
                 contentId = progress.contentId,
                 season = season,

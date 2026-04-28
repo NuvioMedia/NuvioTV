@@ -1,11 +1,9 @@
 package com.omnio.tv.domain.model
 
-import androidx.compose.runtime.Immutable
 
 /**
  * Represents the watch progress for a content item (movie or episode).
  */
-@Immutable
 data class WatchProgress(
     val contentId: String,           // IMDB ID of the movie/series
     val contentType: String,         // "movie" or "series"
@@ -85,7 +83,6 @@ data class WatchProgress(
 /**
  * Represents the next item to watch for a series or a movie to resume.
  */
-@Immutable
 data class NextToWatch(
     val watchProgress: WatchProgress?,  // Null if nothing has been watched yet
     val isResume: Boolean,              // True if resuming current item, false if next episode

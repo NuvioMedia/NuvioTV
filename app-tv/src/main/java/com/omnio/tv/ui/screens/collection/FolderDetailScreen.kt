@@ -185,7 +185,7 @@ private fun FolderHeader(folder: com.omnio.tv.domain.model.CollectionFolder) {
             )
         } else if (!folder.coverEmoji.isNullOrBlank()) {
             Text(
-                text = folder.coverEmoji,
+                text = folder.coverEmoji!!,
                 style = MaterialTheme.typography.headlineLarge
             )
         }
@@ -239,7 +239,7 @@ private fun TabbedGridContent(
             )
         } else if (!folder.coverEmoji.isNullOrBlank()) {
             Text(
-                text = folder.coverEmoji,
+                text = folder.coverEmoji!!,
                 style = MaterialTheme.typography.headlineLarge
             )
         }

@@ -1,9 +1,7 @@
 package com.omnio.tv.domain.model
 
-import androidx.compose.runtime.Immutable
 import com.omnio.tv.domain.util.languageCodeToName
 
-@Immutable
 data class Subtitle(
     val id: String,
     val url: String,

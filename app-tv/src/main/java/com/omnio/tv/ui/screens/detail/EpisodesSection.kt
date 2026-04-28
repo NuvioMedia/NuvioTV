@@ -347,7 +347,7 @@ fun EpisodesRow(
         val firstEpisodeInSeason = dedupedEpisodes.minByOrNull { it.episode ?: Int.MAX_VALUE }
         val hasPreviousEpisodes = selectedEpisode.episode != null &&
             firstEpisodeInSeason?.episode != null &&
-            selectedEpisode.episode > firstEpisodeInSeason.episode
+            selectedEpisode.episode!! > firstEpisodeInSeason.episode!!
 
         EpisodeOptionsDialog(
             episode = selectedEpisode,

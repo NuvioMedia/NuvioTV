@@ -1,8 +1,6 @@
 package com.omnio.tv.domain.model
 
-import androidx.compose.runtime.Immutable
 
-@Immutable
 data class Addon(
     val id: String,
     val name: String,
@@ -24,7 +22,6 @@ data class Addon(
     val timestamp: Long? = null
 )
 
-@Immutable
 data class CatalogDescriptor(
     val type: ContentType,
     val rawType: String = type.toApiString(),
@@ -41,7 +38,6 @@ data class CatalogDescriptor(
         get() = type.toApiString(rawType)
 }
 
-@Immutable
 data class CatalogExtra(
     val name: String,
     val isRequired: Boolean = false,
@@ -50,21 +46,18 @@ data class CatalogExtra(
     val optionsLimit: Int? = null
 )
 
-@Immutable
 data class AddonResource(
     val name: String,
     val types: List<String>,
     val idPrefixes: List<String>?
 )
 
-@Immutable
 data class AddonBehaviorHints(
     val configurable: Boolean? = null,
     val configurationRequired: Boolean? = null,
     val newEpisodeNotifications: Boolean? = null
 )
 
-@Immutable
 data class StremioAddonsConfig(
     val issuer: String? = null,
     val signature: String? = null

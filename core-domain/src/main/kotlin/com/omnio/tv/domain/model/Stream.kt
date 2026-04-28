@@ -1,11 +1,9 @@
 package com.omnio.tv.domain.model
 
-import androidx.compose.runtime.Immutable
 
 /**
  * Represents a stream source from addons, local plugins, or external media providers.
  */
-@Immutable
 data class Stream(
     val name: String?,
     val title: String?,
@@ -53,7 +51,6 @@ data class Stream(
     fun getDisplayDescription(): String? = description ?: title
 }
 
-@Immutable
 data class StreamBehaviorHints(
     val notWebReady: Boolean?,
     val bingeGroup: String?,
@@ -64,7 +61,6 @@ data class StreamBehaviorHints(
     val filename: String? = null
 )
 
-@Immutable
 data class ProxyHeaders(
     val request: Map<String, String>?,
     val response: Map<String, String>?
@@ -73,7 +69,6 @@ data class ProxyHeaders(
 /**
  * Represents streams grouped by addon source
  */
-@Immutable
 data class AddonStreams(
     val addonName: String,
     val addonLogo: String?,

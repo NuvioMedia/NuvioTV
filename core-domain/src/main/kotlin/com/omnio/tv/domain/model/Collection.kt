@@ -1,8 +1,6 @@
 package com.omnio.tv.domain.model
 
-import androidx.compose.runtime.Immutable
 
-@Immutable
 data class CollectionCatalogSource(
     val addonId: String,
     val type: String,
@@ -10,7 +8,6 @@ data class CollectionCatalogSource(
     val genre: String? = null
 )
 
-@Immutable
 data class CollectionFolder(
     val id: String,
     val title: String,
@@ -23,7 +20,6 @@ data class CollectionFolder(
     val catalogSources: List<CollectionCatalogSource> = emptyList()
 )
 
-@Immutable
 data class Collection(
     val id: String,
     val title: String,

@@ -1726,7 +1726,7 @@ class MetaDetailsViewModel @Inject constructor(
 
         viewModelScope.launch {
             val previous = meta.videos.filter { v ->
-                v.season == targetSeason && v.episode != null && v.episode < targetEpisode
+                v.season == targetSeason && v.episode != null && v.episode!! < targetEpisode
             }
             val unwatched = previous.filter { v ->
                 val s = v.season!!

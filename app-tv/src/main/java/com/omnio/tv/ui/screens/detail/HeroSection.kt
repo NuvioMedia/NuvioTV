@@ -311,7 +311,7 @@ fun HeroContentSection(
                     // Always show series/movie description, not episode description
                     if (meta.description != null) {
                         Text(
-                            text = meta.description,
+                            text = meta.description!!,
                             style = MaterialTheme.typography.bodyMedium,
                             color = OmnioColors.TextPrimary,
                             overflow = TextOverflow.Clip,

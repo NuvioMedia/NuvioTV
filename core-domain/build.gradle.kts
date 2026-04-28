@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.ksp)
 }
 
 java {
@@ -11,4 +12,10 @@ kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
     }
+}
+
+dependencies {
+    api(libs.coroutines.core)
+    api(libs.moshi)
+    ksp(libs.moshi.codegen)
 }

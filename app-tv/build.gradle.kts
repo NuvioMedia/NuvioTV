@@ -236,6 +236,9 @@ dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
 
     baselineProfile(project(":baselineprofile"))
+
+    implementation(project(":core-domain"))
+
     implementation(libs.androidx.core.ktx)
     implementation("androidx.core:core-splashscreen:1.2.0")
     implementation(libs.androidx.appcompat)

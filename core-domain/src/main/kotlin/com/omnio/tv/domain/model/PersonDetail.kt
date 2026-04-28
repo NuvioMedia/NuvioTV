@@ -1,8 +1,6 @@
 package com.omnio.tv.domain.model
 
-import androidx.compose.runtime.Immutable
 
-@Immutable
 data class PersonDetail(
     val tmdbId: Int,
     val name: String,

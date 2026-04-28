@@ -1,8 +1,6 @@
 package com.omnio.tv.domain.model
 
-import androidx.compose.runtime.Immutable
 
-@Immutable
 data class Meta(
     val id: String,
     val type: ContentType,
@@ -85,7 +83,6 @@ data class Meta(
     }
 }
 
-@Immutable
 data class MetaCastMember(
     val name: String,
     val character: String? = null,
@@ -93,14 +90,12 @@ data class MetaCastMember(
     val tmdbId: Int? = null
 )
 
-@Immutable
 data class MetaCompany(
     val name: String,
     val logo: String? = null,
     val tmdbId: Int? = null
 )
 
-@Immutable
 data class Video(
     val id: String,
     val title: String,
@@ -114,20 +109,17 @@ data class Video(
     val available: Boolean? = null
 )
 
-@Immutable
 data class MetaLink(
     val name: String,
     val category: String,
     val url: String
 )
 
-@Immutable
 data class MetaBehaviorHints(
     val defaultVideoId: String? = null,
     val hasScheduledVideos: Boolean? = null
 )
 
-@Immutable
 data class MetaTrailer(
     val source: String? = null,
     val type: String? = null,
@@ -136,13 +128,11 @@ data class MetaTrailer(
     val lang: String? = null
 )
 
-@Immutable
 data class MetaReleaseDateCountry(
     val countryCode: String,
     val releaseDates: List<MetaReleaseDate> = emptyList()
 )
 
-@Immutable
 data class MetaReleaseDate(
     val certification: String? = null,
     val descriptors: List<String> = emptyList(),

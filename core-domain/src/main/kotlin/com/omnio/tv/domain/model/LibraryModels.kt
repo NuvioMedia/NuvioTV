@@ -1,8 +1,6 @@
 package com.omnio.tv.domain.model
 
-import androidx.compose.runtime.Immutable
 
-@Immutable
 data class LibraryEntry(
     val id: String,
     val type: String,
@@ -59,7 +57,6 @@ enum class TraktListPrivacy(val apiValue: String) {
     }
 }
 
-@Immutable
 data class LibraryListTab(
     val key: String,
     val title: String,
@@ -77,17 +74,14 @@ data class LibraryListTab(
     }
 }
 
-@Immutable
 data class ListMembershipSnapshot(
     val listMembership: Map<String, Boolean> = emptyMap()
 )
 
-@Immutable
 data class ListMembershipChanges(
     val desiredMembership: Map<String, Boolean>
 )
 
-@Immutable
 data class LibraryEntryInput(
     val itemId: String,
     val itemType: String,

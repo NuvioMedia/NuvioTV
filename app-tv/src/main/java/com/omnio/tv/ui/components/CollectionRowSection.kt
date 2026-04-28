@@ -269,7 +269,7 @@ private fun FolderCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = folder.coverEmoji,
+                        text = folder.coverEmoji!!,
                         fontSize = 48.sp
                     )
                 }
