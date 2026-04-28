@@ -11,12 +11,12 @@ import com.omnio.tv.domain.auth.AuthManager
 import com.omnio.tv.domain.plugin.PluginManager
 import com.omnio.tv.core.profile.ProfileManager
 import com.omnio.tv.core.qr.QrCodeGenerator
-import com.omnio.tv.core.sync.AddonSyncService
-import com.omnio.tv.core.sync.LibrarySyncService
+import com.omnio.tv.domain.sync.AddonSyncService
+import com.omnio.tv.domain.sync.LibrarySyncService
 import com.omnio.tv.core.sync.PluginSyncService
 import com.omnio.tv.core.sync.ProfileSyncService
-import com.omnio.tv.core.sync.WatchProgressSyncService
-import com.omnio.tv.core.sync.WatchedItemsSyncService
+import com.omnio.tv.domain.sync.WatchProgressSyncService
+import com.omnio.tv.domain.sync.WatchedItemsSyncService
 import com.omnio.tv.core.sync.ProfileSettingsSyncService
 import com.omnio.tv.data.local.LibraryPreferences
 import com.omnio.tv.data.local.WatchedItemsPreferences

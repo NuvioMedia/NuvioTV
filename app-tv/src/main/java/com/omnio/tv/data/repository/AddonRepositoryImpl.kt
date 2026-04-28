@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import com.omnio.tv.domain.auth.AuthManager
-import com.omnio.tv.core.sync.AddonSyncService
+import com.omnio.tv.domain.sync.AddonSyncService
 import javax.inject.Inject
 
 class AddonRepositoryImpl @Inject constructor(

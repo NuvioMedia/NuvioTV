@@ -7,7 +7,7 @@ import com.omnio.tv.R
 import com.omnio.tv.core.profile.ProfileManager
 import com.omnio.tv.core.sync.ProfileSyncService
 import com.omnio.tv.core.sync.StartupSyncService
-import com.omnio.tv.core.sync.WatchedItemsSyncService
+import com.omnio.tv.domain.sync.WatchedItemsSyncService
 import com.omnio.tv.data.local.TraktAuthDataStore
 import com.omnio.tv.data.local.TraktAuthState
 import com.omnio.tv.data.local.TraktSettingsDataStore

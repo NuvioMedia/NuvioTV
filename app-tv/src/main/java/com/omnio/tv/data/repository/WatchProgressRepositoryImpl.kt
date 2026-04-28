@@ -2,8 +2,8 @@ package com.omnio.tv.data.repository
 
 import com.omnio.tv.domain.auth.AuthManager
 import com.omnio.tv.domain.result.NetworkResult
-import com.omnio.tv.core.sync.WatchProgressSyncService
-import com.omnio.tv.core.sync.WatchedItemsSyncService
+import com.omnio.tv.domain.sync.WatchProgressSyncService
+import com.omnio.tv.domain.sync.WatchedItemsSyncService
 import android.util.Log
 import com.omnio.tv.data.local.TraktAuthDataStore
 import com.omnio.tv.data.local.TraktSettingsDataStore

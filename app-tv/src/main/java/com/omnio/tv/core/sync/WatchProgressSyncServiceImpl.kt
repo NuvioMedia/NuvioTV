@@ -2,6 +2,7 @@ package com.omnio.tv.core.sync
 
 import android.util.Log
 import com.omnio.tv.domain.auth.AuthManager
+import com.omnio.tv.domain.sync.WatchProgressSyncService
 import com.omnio.tv.core.profile.ProfileManager
 import com.omnio.tv.data.local.TraktAuthDataStore
 import com.omnio.tv.data.local.TraktSettingsDataStore
@@ -24,14 +25,14 @@ import javax.inject.Singleton
 private const val TAG = "WatchProgressSyncService"
 
 @Singleton
-class WatchProgressSyncService @Inject constructor(
+class WatchProgressSyncServiceImpl @Inject constructor(
     private val authManager: AuthManager,
     private val postgrest: Postgrest,
     private val watchProgressPreferences: WatchProgressPreferences,
     private val traktAuthDataStore: TraktAuthDataStore,
     private val traktSettingsDataStore: TraktSettingsDataStore,
     private val profileManager: ProfileManager
-) {
+) : WatchProgressSyncService {
     private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
         return try {
             block()
@@ -41,13 +42,13 @@ class WatchProgressSyncService @Inject constructor(
         }
     }
 
-    suspend fun shouldUseSupabaseWatchProgressSync(): Boolean {
+    override suspend fun shouldUseSupabaseWatchProgressSync(): Boolean {
         val hasEffectiveTraktConnection = traktAuthDataStore.isEffectivelyAuthenticated.first()
         val source = traktSettingsDataStore.watchProgressSource.first()
         return !(hasEffectiveTraktConnection && source == WatchProgressSource.TRAKT)
     }
 
-    suspend fun deleteFromRemote(keys: Collection<String>): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun deleteFromRemote(keys: Collection<String>): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (!shouldUseSupabaseWatchProgressSync()) {
                 return@withContext Result.success(Unit)
@@ -83,7 +84,7 @@ class WatchProgressSyncService @Inject constructor(
      * Push all local watch progress to Supabase via RPC.
      * Skips if Trakt is connected (Trakt handles progress when active).
      */
-    suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (!shouldUseSupabaseWatchProgressSync()) {
                 Log.d(TAG, "Using Trakt watch progress, skipping watch progress push")
@@ -131,7 +132,7 @@ class WatchProgressSyncService @Inject constructor(
     }
 
     
-    suspend fun pushSingleToRemote(key: String, progress: WatchProgress): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun pushSingleToRemote(key: String, progress: WatchProgress): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (!shouldUseSupabaseWatchProgressSync()) {
                 Log.d(TAG, "Using Trakt watch progress, skipping single watch progress push")
@@ -174,7 +175,7 @@ class WatchProgressSyncService @Inject constructor(
      * bypassing RLS (which would block linked devices from reading owner data).
      * Skips if Trakt is connected. Caller is responsible for merging into local.
      */
-    suspend fun pullFromRemote(): Result<List<Pair<String, WatchProgress>>> = withContext(Dispatchers.IO) {
+    override suspend fun pullFromRemote(): Result<List<Pair<String, WatchProgress>>> = withContext(Dispatchers.IO) {
         try {
             if (!shouldUseSupabaseWatchProgressSync()) {
                 Log.d(TAG, "Using Trakt watch progress, skipping watch progress pull")

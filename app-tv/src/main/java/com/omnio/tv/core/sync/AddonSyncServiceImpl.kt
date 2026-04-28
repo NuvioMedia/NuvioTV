@@ -2,6 +2,7 @@ package com.omnio.tv.core.sync
 
 import android.util.Log
 import com.omnio.tv.domain.auth.AuthManager
+import com.omnio.tv.domain.sync.AddonSyncService
 import com.omnio.tv.core.profile.ProfileManager
 import com.omnio.tv.data.local.AddonPreferences
 import com.omnio.tv.data.remote.supabase.SupabaseAddon
@@ -19,12 +20,12 @@ import javax.inject.Singleton
 private const val TAG = "AddonSyncService"
 
 @Singleton
-class AddonSyncService @Inject constructor(
+class AddonSyncServiceImpl @Inject constructor(
     private val postgrest: Postgrest,
     private val authManager: AuthManager,
     private val addonPreferences: AddonPreferences,
     private val profileManager: ProfileManager
-) {
+) : AddonSyncService {
     private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
         return try {
             block()
@@ -38,7 +39,7 @@ class AddonSyncService @Inject constructor(
      * Push local addon URLs to Supabase via RPC.
      * Uses a SECURITY DEFINER function to handle RLS for linked devices.
      */
-    suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val activeProfile = profileManager.activeProfile
             val profileId = profileManager.activeProfileId.value
@@ -76,7 +77,7 @@ class AddonSyncService @Inject constructor(
         }
     }
 
-    suspend fun getRemoteAddonUrls(): Result<List<String>> = withContext(Dispatchers.IO) {
+    override suspend fun getRemoteAddonUrls(): Result<List<String>> = withContext(Dispatchers.IO) {
         try {
             val effectiveUserId = authManager.getEffectiveUserId(fallbackToOwnIdOnFailure = false)
                 ?: return@withContext Result.failure(

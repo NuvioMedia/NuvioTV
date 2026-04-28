@@ -2,6 +2,7 @@ package com.omnio.tv.core.sync
 
 import android.util.Log
 import com.omnio.tv.domain.auth.AuthManager
+import com.omnio.tv.domain.sync.LibrarySyncService
 import com.omnio.tv.core.profile.ProfileManager
 import com.omnio.tv.data.local.LibraryPreferences
 import com.omnio.tv.data.local.TraktAuthDataStore
@@ -24,13 +25,13 @@ private const val TAG = "LibrarySyncService"
 private const val PULL_PAGE_SIZE = 500
 
 @Singleton
-class LibrarySyncService @Inject constructor(
+class LibrarySyncServiceImpl @Inject constructor(
     private val authManager: AuthManager,
     private val postgrest: Postgrest,
     private val libraryPreferences: LibraryPreferences,
     private val traktAuthDataStore: TraktAuthDataStore,
     private val profileManager: ProfileManager
-) {
+) : LibrarySyncService {
     private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
         return try {
             block()
@@ -40,7 +41,7 @@ class LibrarySyncService @Inject constructor(
         }
     }
 
-    suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (traktAuthDataStore.isAuthenticated.first()) {
                 Log.d(TAG, "Trakt connected, skipping library push")
@@ -86,7 +87,7 @@ class LibrarySyncService @Inject constructor(
         }
     }
 
-    suspend fun pullFromRemote(): Result<List<SavedLibraryItem>> = withContext(Dispatchers.IO) {
+    override suspend fun pullFromRemote(): Result<List<SavedLibraryItem>> = withContext(Dispatchers.IO) {
         try {
             if (traktAuthDataStore.isAuthenticated.first()) {
                 Log.d(TAG, "Trakt connected, skipping library pull")

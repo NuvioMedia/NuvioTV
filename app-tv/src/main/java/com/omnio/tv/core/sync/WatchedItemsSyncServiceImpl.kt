@@ -2,6 +2,7 @@ package com.omnio.tv.core.sync
 
 import android.util.Log
 import com.omnio.tv.domain.auth.AuthManager
+import com.omnio.tv.domain.sync.WatchedItemsSyncService
 import com.omnio.tv.core.profile.ProfileManager
 import com.omnio.tv.data.local.TraktAuthDataStore
 import com.omnio.tv.data.local.TraktSettingsDataStore
@@ -25,14 +26,14 @@ private const val TAG = "WatchedItemsSyncService"
 private const val WATCHED_ITEMS_PAGE_SIZE = 900
 
 @Singleton
-class WatchedItemsSyncService @Inject constructor(
+class WatchedItemsSyncServiceImpl @Inject constructor(
     private val authManager: AuthManager,
     private val postgrest: Postgrest,
     private val watchedItemsPreferences: WatchedItemsPreferences,
     private val traktAuthDataStore: TraktAuthDataStore,
     private val traktSettingsDataStore: TraktSettingsDataStore,
     private val profileManager: ProfileManager
-) {
+) : WatchedItemsSyncService {
     private suspend fun <T> withJwtRefreshRetry(block: suspend () -> T): T {
         return try {
             block()
@@ -48,7 +49,7 @@ class WatchedItemsSyncService @Inject constructor(
         return !(hasEffectiveTraktConnection && source == WatchProgressSource.TRAKT)
     }
 
-    suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun pushToRemote(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (!shouldUseSupabaseWatchProgressSync()) {
                 Log.d(TAG, "Using Trakt watch progress, skipping watched items push")
@@ -88,7 +89,7 @@ class WatchedItemsSyncService @Inject constructor(
         }
     }
 
-    suspend fun pullFromRemote(): Result<List<WatchedItem>> = withContext(Dispatchers.IO) {
+    override suspend fun pullFromRemote(): Result<List<WatchedItem>> = withContext(Dispatchers.IO) {
         try {
             if (!shouldUseSupabaseWatchProgressSync()) {
                 Log.d(TAG, "Using Trakt watch progress, skipping watched items pull")
@@ -135,7 +136,7 @@ class WatchedItemsSyncService @Inject constructor(
         }
     }
 
-    suspend fun deleteFromRemote(
+    override suspend fun deleteFromRemote(
         contentId: String,
         season: Int?,
         episode: Int?
@@ -168,7 +169,7 @@ class WatchedItemsSyncService @Inject constructor(
         }
     }
 
-    suspend fun deleteFromRemoteBatch(
+    override suspend fun deleteFromRemoteBatch(
         contentId: String,
         episodes: List<Pair<Int, Int>>
     ): Result<Unit> = withContext(Dispatchers.IO) {
