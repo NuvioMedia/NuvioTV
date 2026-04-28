@@ -133,6 +133,103 @@ docker logs -f aiometadata-aiometadata-1  # addon logs
 curl -s http://127.0.0.1:3232/configure/ | head -20   # only works if override binds the port
 ```
 
+## Managing the GitHub Actions runner
+
+Installed at `~/git/actions-runner/` as a systemd service:
+`actions.runner.TheMrClaus-OmnioTV.aiometadata-runner.service`.
+
+### Start / stop / status
+
+From the runner directory:
+
+```bash
+cd ~/git/actions-runner
+sudo ./svc.sh start      # start the service
+sudo ./svc.sh stop       # stop it (queued workflows will wait)
+sudo ./svc.sh status     # is it running?
+```
+
+Equivalent via systemd if you'd rather skip the cd:
+
+```bash
+sudo systemctl start  actions.runner.TheMrClaus-OmnioTV.aiometadata-runner.service
+sudo systemctl stop   actions.runner.TheMrClaus-OmnioTV.aiometadata-runner.service
+sudo systemctl status actions.runner.TheMrClaus-OmnioTV.aiometadata-runner.service
+```
+
+The service is enabled at boot, so it survives reboots without intervention.
+
+### Confirm GitHub sees the runner
+
+```bash
+gh api /repos/TheMrClaus/OmnioTV/actions/runners \
+  --jq '.runners[] | {name, status, busy, labels: [.labels[].name]}'
+```
+
+`status: online, busy: false` with the `aiometadata` label means it's ready
+to pick up the next workflow run.
+
+### Logs
+
+```bash
+# Service / lifecycle logs
+journalctl -u actions.runner.TheMrClaus-OmnioTV.aiometadata-runner.service -f
+
+# Per-job execution logs (rotates per workflow run)
+ls -lth ~/git/actions-runner/_diag/
+tail -f ~/git/actions-runner/_diag/Worker_*.log
+```
+
+For workflow output, `gh run view <id> --log` or the Actions UI is more
+useful — those are the same files but rendered.
+
+### Updating the runner binary
+
+The runner auto-updates within a major version when GitHub publishes a
+new build, so this is rarely needed. For a manual upgrade (or major
+version bump):
+
+```bash
+cd ~/git/actions-runner
+sudo ./svc.sh stop
+
+# Pick a version from https://github.com/actions/runner/releases
+VERSION=2.334.0
+curl -fsSL -o runner.tar.gz \
+  https://github.com/actions/runner/releases/download/v$VERSION/actions-runner-linux-x64-$VERSION.tar.gz
+tar xzf runner.tar.gz && rm runner.tar.gz
+
+sudo ./svc.sh start
+```
+
+Existing config + labels survive — no re-registration needed.
+
+### Removing the runner
+
+Only when decommissioning or moving the runner elsewhere:
+
+```bash
+TOKEN=$(gh api -X POST /repos/TheMrClaus/OmnioTV/actions/runners/remove-token --jq .token)
+
+cd ~/git/actions-runner
+sudo ./svc.sh stop
+sudo ./svc.sh uninstall
+./config.sh remove --token "$TOKEN"
+cd .. && rm -rf actions-runner
+```
+
+### Common issues
+
+- **Workflow stays "Queued" forever** → runner is offline, or its labels
+  don't match `runs-on: [self-hosted, aiometadata]`. Check `svc.sh status`
+  and the runners page in GitHub Settings.
+- **`docker: permission denied`** in the deploy step → the runner's user
+  isn't in the `docker` group. `sudo usermod -aG docker $USER` and restart
+  the service (group membership is read at process start).
+- **"Runner connect error"** in service logs → outbound HTTPS to
+  `*.actions.githubusercontent.com` is blocked. The runner only needs
+  egress; never inbound.
+
 ## Cutover from Fly
 
 When you're ready to retire the Fly deploy:
