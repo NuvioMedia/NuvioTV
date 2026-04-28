@@ -18,6 +18,7 @@ import com.nuvio.tv.R
 import com.nuvio.tv.ui.components.formatContinueWatchingProgressLabel
 
 internal val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
+internal val YEAR_RANGE_REGEX = Regex("""^((19|20)\d{2})\s*[-–]\s*((19|20)\d{2})?$""")
 internal const val MODERN_HERO_TEXT_WIDTH_FRACTION = 0.42f
 internal const val MODERN_HERO_MEDIA_WIDTH_FRACTION = 0.72f
 internal const val MODERN_TRAILER_OVERSCAN_ZOOM = 1.35f
@@ -306,7 +307,7 @@ internal fun buildContinueWatchingItem(
                 description = item.episodeDescription ?: item.progress.episodeTitle?.localizeEpisodeTitle(context),
                 contentTypeText = episodeLabel,
                 isSeries = isSeries,
-                yearText = extractYear(item.releaseInfo),
+                yearText = extractYearOrRange(item.releaseInfo),
                 secondaryHighlightText = secondaryHighlightText,
                 imdbText = item.episodeImdbRating?.let { String.format("%.1f", it) },
                 genres = item.genres,
@@ -335,7 +336,7 @@ internal fun buildContinueWatchingItem(
                     ?: item.info.airDateLabel?.let { airsDateTemplate.format(it) },
                 contentTypeText = episodeLabel,
                 isSeries = true,
-                yearText = extractYear(item.info.releaseInfo),
+                yearText = extractYearOrRange(item.info.releaseInfo),
                 secondaryHighlightText = secondaryHighlightText,
                 imdbText = item.info.imdbRating?.let { String.format("%.1f", it) },
                 genres = item.info.genres,
@@ -578,6 +579,19 @@ internal fun extractYear(releaseInfo: String?): String? {
     return YEAR_REGEX.find(releaseInfo)?.value
 }
 
+internal fun extractYearOrRange(releaseInfo: String?): String? {
+    if (releaseInfo.isNullOrBlank()) return null
+    val trimmed = releaseInfo.trim()
+    val match = YEAR_RANGE_REGEX.find(trimmed)
+    if (match != null) {
+        val startYear = match.groupValues[1]
+        val endYear = match.groupValues[3]
+        // "2022-2025" → "2022–2025", but "2024-" → "2024"
+        return if (endYear.isNotBlank()) "$startYear–$endYear" else startYear
+    }
+    return YEAR_REGEX.find(trimmed)?.value
+}
+
 @Volatile
 private var cachedDateFormatLocale: java.util.Locale? = null
 @Volatile
@@ -604,7 +618,7 @@ internal fun extractYearText(type: ContentType, releaseInfo: String?, released: 
             }
         if (full != null) return full
     }
-    return extractYear(releaseInfo)
+    return extractYearOrRange(releaseInfo)
 }
 
 private val HOURS_REGEX = "(\\d+)\\s*h".toRegex()

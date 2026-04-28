@@ -413,8 +413,8 @@ class HomeViewModel @Inject constructor(
                         _uiState.update { it.copy(continueWatchingItems = emptyList()) }
                         // Clear disk cache for current profile.
                         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                            runCatching { cwEnrichmentCache.saveNextUpSnapshot(emptyList()) }
-                            runCatching { cwEnrichmentCache.saveInProgressSnapshot(emptyList()) }
+                            runCatching { cwEnrichmentCache.saveNextUpSnapshot(emptyList(), force = true) }
+                            runCatching { cwEnrichmentCache.saveInProgressSnapshot(emptyList(), force = true) }
                         }
                         // Reload CW from fresh source.
                         loadContinueWatching()

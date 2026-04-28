@@ -136,6 +136,7 @@ private fun CompanyLogoCard(
             .then(
                 if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
             ),
+        shape = CardDefaults.shape(shape = RoundedCornerShape(8.dp)),
         colors = CardDefaults.colors(
             containerColor = Color.White,
             focusedContainerColor = Color.White
@@ -143,7 +144,7 @@ private fun CompanyLogoCard(
         border = CardDefaults.border(
             focusedBorder = Border(
                 border = androidx.compose.foundation.BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(8.dp)
             )
         ),
         scale = CardDefaults.scale(focusedScale = 1.03f)
@@ -152,7 +153,7 @@ private fun CompanyLogoCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(8.dp))
                 .background(Color.White),
         contentAlignment = Alignment.Center
         ) {
