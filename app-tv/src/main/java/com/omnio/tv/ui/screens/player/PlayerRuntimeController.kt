@@ -6,7 +6,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
-import com.omnio.tv.core.plugin.PluginManager
+import com.omnio.tv.domain.plugin.PluginManager
 import com.omnio.tv.data.local.InternalPlayerEngine
 import com.omnio.tv.data.local.MpvHardwareDecodeMode
 import com.omnio.tv.data.local.NextEpisodeThresholdMode

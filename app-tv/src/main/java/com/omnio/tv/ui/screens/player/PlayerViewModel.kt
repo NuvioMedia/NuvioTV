@@ -5,7 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.exoplayer.ExoPlayer
-import com.omnio.tv.core.plugin.PluginManager
+import com.omnio.tv.domain.plugin.PluginManager
 import com.omnio.tv.data.local.PlayerSettingsDataStore
 import com.omnio.tv.data.local.StreamLinkCacheDataStore
 import com.omnio.tv.data.repository.ParentalGuideRepository

@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.omnio.tv.R
-import com.omnio.tv.core.plugin.PluginManager
+import com.omnio.tv.domain.plugin.PluginManager
 import com.omnio.tv.core.profile.ProfileManager
 import com.omnio.tv.core.qr.QrCodeGenerator
 import com.omnio.tv.core.server.DeviceIpAddress

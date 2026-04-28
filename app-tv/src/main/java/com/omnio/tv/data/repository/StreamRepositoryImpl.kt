@@ -5,7 +5,7 @@ import android.util.Log
 import com.omnio.tv.R
 import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.core.network.safeApiCall
-import com.omnio.tv.core.plugin.PluginManager
+import com.omnio.tv.domain.plugin.PluginManager
 import com.omnio.tv.core.tmdb.TmdbService
 import com.omnio.tv.data.mapper.toDomain
 import com.omnio.tv.data.remote.api.AddonApi

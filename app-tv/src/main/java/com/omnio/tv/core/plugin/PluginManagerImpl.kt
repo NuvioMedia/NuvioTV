@@ -8,6 +8,7 @@ import com.omnio.tv.domain.model.PluginManifest
 import com.omnio.tv.domain.model.PluginRepository
 import com.omnio.tv.domain.model.ScraperInfo
 import com.omnio.tv.domain.model.ScraperManifestInfo
+import com.omnio.tv.domain.plugin.PluginManager
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
@@ -40,12 +41,12 @@ private const val MAX_RESPONSE_SIZE = 5 * 1024 * 1024L
 private const val MANIFEST_SUFFIX = "/manifest.json"
 
 @Singleton
-class PluginManager @Inject constructor(
+class PluginManagerImpl @Inject constructor(
     private val dataStore: PluginDataStore,
     private val runtime: PluginRuntime,
     private val pluginSyncService: com.omnio.tv.core.sync.PluginSyncService,
     private val authManager: AuthManager
-) {
+) : PluginManager {
     private val moshi = Moshi.Builder()
         .addLast(KotlinJsonAdapterFactory())
         .build()
@@ -86,19 +87,19 @@ class PluginManager @Inject constructor(
     private val scraperSemaphore = Semaphore(MAX_CONCURRENT_SCRAPERS)
     
     // Flow of all repositories
-    val repositories: Flow<List<PluginRepository>> = dataStore.repositories
-    
+    override val repositories: Flow<List<PluginRepository>> = dataStore.repositories
+
     // Flow of all scrapers
-    val scrapers: Flow<List<ScraperInfo>> = dataStore.scrapers
-    
+    override val scrapers: Flow<List<ScraperInfo>> = dataStore.scrapers
+
     // Flow of plugins enabled state
-    val pluginsEnabled: Flow<Boolean> = dataStore.pluginsEnabled
-    
+    override val pluginsEnabled: Flow<Boolean> = dataStore.pluginsEnabled
+
     private val syncScope = kotlinx.coroutines.CoroutineScope(
         kotlinx.coroutines.SupervisorJob() + Dispatchers.IO
     )
 
-    var isSyncingFromRemote = false
+    override var isSyncingFromRemote = false
 
     private var syncJob: kotlinx.coroutines.Job? = null
 
@@ -121,7 +122,7 @@ class PluginManager @Inject constructor(
     }
 
     // Combined flow of enabled scrapers
-    val enabledScrapers: Flow<List<ScraperInfo>> = combine(
+    override val enabledScrapers: Flow<List<ScraperInfo>> = combine(
         scrapers,
         pluginsEnabled
     ) { scraperList, enabled ->
@@ -131,7 +132,7 @@ class PluginManager @Inject constructor(
     /**
      * Add a new repository from manifest URL
      */
-    suspend fun addRepository(manifestUrl: String): Result<PluginRepository> = withContext(Dispatchers.IO) {
+    override suspend fun addRepository(manifestUrl: String): Result<PluginRepository> = withContext(Dispatchers.IO) {
         try {
             val canonicalManifestUrl = canonicalizeManifestUrl(manifestUrl)
             Log.d(TAG, "Adding repository from: $canonicalManifestUrl")
@@ -169,7 +170,7 @@ class PluginManager @Inject constructor(
     /**
      * Remove a repository and its scrapers
      */
-    suspend fun removeRepository(repoId: String) {
+    override suspend fun removeRepository(repoId: String) {
         val scraperList = dataStore.scrapers.first()
         
         // Remove all scrapers from this repo
@@ -187,9 +188,9 @@ class PluginManager @Inject constructor(
     }
 
     
-    suspend fun reconcileWithRemoteRepoUrls(
+    override suspend fun reconcileWithRemoteRepoUrls(
         remoteUrls: List<String>,
-        removeMissingLocal: Boolean = true
+        removeMissingLocal: Boolean
     ) {
         val normalizedRemote = remoteUrls
             .map { canonicalizeManifestUrl(it) }
@@ -237,7 +238,7 @@ class PluginManager @Inject constructor(
     /**
      * Refresh a repository - re-download manifest and scrapers
      */
-    suspend fun refreshRepository(repoId: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun refreshRepository(repoId: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val repo = dataStore.repositories.first().find { it.id == repoId }
                 ?: return@withContext Result.failure(Exception("Repository not found"))
@@ -266,7 +267,7 @@ class PluginManager @Inject constructor(
     /**
      * Toggle scraper enabled state
      */
-    suspend fun toggleScraper(scraperId: String, enabled: Boolean) {
+    override suspend fun toggleScraper(scraperId: String, enabled: Boolean) {
         val scraperList = dataStore.scrapers.first()
         val updatedScrapers = scraperList.map { scraper ->
             if (scraper.id == scraperId) scraper.copy(enabled = enabled) else scraper
@@ -277,18 +278,18 @@ class PluginManager @Inject constructor(
     /**
      * Toggle plugins globally enabled
      */
-    suspend fun setPluginsEnabled(enabled: Boolean) {
+    override suspend fun setPluginsEnabled(enabled: Boolean) {
         dataStore.setPluginsEnabled(enabled)
     }
     
     /**
      * Execute all enabled scrapers for a given media
      */
-    suspend fun executeScrapers(
+    override suspend fun executeScrapers(
         tmdbId: String,
         mediaType: String,
-        season: Int? = null,
-        episode: Int? = null
+        season: Int?,
+        episode: Int?
     ): List<LocalScraperResult> = coroutineScope {
         if (!dataStore.pluginsEnabled.first()) {
             return@coroutineScope emptyList()
@@ -318,11 +319,11 @@ class PluginManager @Inject constructor(
      * Execute all enabled scrapers and emit results as each scraper completes.
      * Returns a Flow that emits (scraperName, results) pairs.
      */
-    fun executeScrapersStreaming(
+    override fun executeScrapersStreaming(
         tmdbId: String,
         mediaType: String,
-        season: Int? = null,
-        episode: Int? = null
+        season: Int?,
+        episode: Int?
     ): Flow<Pair<String, List<LocalScraperResult>>> = channelFlow {
         val enabledList = enabledScrapers.first()
             .filter { it.supportsType(mediaType) }
@@ -394,7 +395,7 @@ class PluginManager @Inject constructor(
     /**
      * Execute a single scraper
      */
-    suspend fun executeScraper(
+    override suspend fun executeScraper(
         scraper: ScraperInfo,
         tmdbId: String,
         mediaType: String,
@@ -449,7 +450,7 @@ class PluginManager @Inject constructor(
     /**
      * Test a scraper with sample data
      */
-    suspend fun testScraper(scraperId: String): Result<List<LocalScraperResult>> {
+    override suspend fun testScraper(scraperId: String): Result<List<LocalScraperResult>> {
         val scraper = dataStore.scrapers.first().find { it.id == scraperId }
             ?: return Result.failure(Exception("Scraper not found"))
         

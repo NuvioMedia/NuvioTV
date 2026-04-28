@@ -6,7 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.omnio.tv.R
-import com.omnio.tv.core.plugin.PluginManager
+import com.omnio.tv.domain.plugin.PluginManager
 import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.core.player.StreamAutoPlayPolicy
 import com.omnio.tv.core.player.StreamAutoPlaySelector

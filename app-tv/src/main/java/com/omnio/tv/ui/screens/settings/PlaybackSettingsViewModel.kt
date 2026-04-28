@@ -1,7 +1,7 @@
 package com.omnio.tv.ui.screens.settings
 
 import androidx.lifecycle.ViewModel
-import com.omnio.tv.core.plugin.PluginManager
+import com.omnio.tv.domain.plugin.PluginManager
 import com.omnio.tv.data.local.LibassRenderType
 import com.omnio.tv.data.local.InternalPlayerEngine
 import com.omnio.tv.data.local.PlayerSettings
