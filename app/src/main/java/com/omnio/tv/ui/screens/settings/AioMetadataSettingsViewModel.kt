@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.omnio.tv.BuildConfig
 import com.omnio.tv.R
 import com.omnio.tv.core.profile.ProfileManager
-import com.omnio.tv.data.remote.dto.aiometadata.AioConfigInnerDto
+import com.omnio.tv.domain.model.AioConfigInnerDto
 import com.omnio.tv.data.remote.dto.aiometadata.AioMetadataDefaultConfig
 import com.omnio.tv.domain.model.AioMetadataProvider
 import com.omnio.tv.domain.repository.AioMetadataRepository

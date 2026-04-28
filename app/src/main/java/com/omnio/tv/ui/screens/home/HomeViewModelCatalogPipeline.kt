@@ -3,7 +3,7 @@ package com.omnio.tv.ui.screens.home
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import com.omnio.tv.R
-import com.omnio.tv.core.network.NetworkResult
+import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.domain.model.Addon
 import com.omnio.tv.domain.model.CatalogDescriptor
 import com.omnio.tv.domain.model.CatalogRow

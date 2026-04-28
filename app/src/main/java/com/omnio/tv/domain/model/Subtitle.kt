@@ -1,7 +1,7 @@
 package com.omnio.tv.domain.model
 
 import androidx.compose.runtime.Immutable
-import com.omnio.tv.ui.util.languageCodeToName
+import com.omnio.tv.domain.util.languageCodeToName
 
 @Immutable
 data class Subtitle(
@@ -14,6 +14,6 @@ data class Subtitle(
     fun getDisplayLanguage(): String = languageCodeToName(lang)
 
     companion object {
-        fun languageCodeToName(code: String): String = com.omnio.tv.ui.util.languageCodeToName(code)
+        fun languageCodeToName(code: String): String = com.omnio.tv.domain.util.languageCodeToName(code)
     }
 }

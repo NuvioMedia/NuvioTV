@@ -2,9 +2,11 @@ package com.omnio.tv.data.repository
 
 import android.util.Log
 import com.omnio.tv.core.auth.AuthManager
-import com.omnio.tv.data.remote.supabase.ClaimSyncResult
+import com.omnio.tv.data.remote.supabase.SupabaseClaimSyncResult
 import com.omnio.tv.data.remote.supabase.SupabaseLinkedDevice
 import com.omnio.tv.data.remote.supabase.SyncCodeResult
+import com.omnio.tv.domain.model.ClaimSyncResult
+import com.omnio.tv.domain.model.LinkedDevice
 import com.omnio.tv.domain.repository.SyncRepository
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.serialization.json.buildJsonObject
@@ -60,13 +62,13 @@ class SyncRepositoryImpl @Inject constructor(
                 if (deviceName != null) put("p_device_name", deviceName)
             }
             val response = postgrest.rpc("claim_sync_code", params)
-            val results = response.decodeList<ClaimSyncResult>()
+            val results = response.decodeList<SupabaseClaimSyncResult>()
             val result = results.firstOrNull()
                 ?: return Result.failure(Exception("Empty response from claim_sync_code"))
             if (result.success) {
                 authManager.clearEffectiveUserIdCache()
             }
-            Result.success(result)
+            Result.success(result.toDomain())
         } catch (e: Exception) {
             Log.e(TAG, "Failed to claim sync code", e)
             Result.failure(e)
@@ -85,17 +87,31 @@ class SyncRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getLinkedDevices(): Result<List<SupabaseLinkedDevice>> {
+    override suspend fun getLinkedDevices(): Result<List<LinkedDevice>> {
         return try {
             val userId = authManager.getEffectiveUserId()
                 ?: return Result.failure(Exception("Not authenticated"))
-            val result = postgrest.from("linked_devices")
+            val rows = postgrest.from("linked_devices")
                 .select { filter { eq("owner_id", userId) } }
                 .decodeList<SupabaseLinkedDevice>()
-            Result.success(result)
+            Result.success(rows.map { it.toDomain() })
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get linked devices", e)
             Result.failure(e)
         }
     }
+
+    private fun SupabaseClaimSyncResult.toDomain() = ClaimSyncResult(
+        ownerId = ownerId,
+        success = success,
+        message = message
+    )
+
+    private fun SupabaseLinkedDevice.toDomain() = LinkedDevice(
+        id = id,
+        ownerId = ownerId,
+        deviceUserId = deviceUserId,
+        deviceName = deviceName,
+        linkedAt = linkedAt
+    )
 }

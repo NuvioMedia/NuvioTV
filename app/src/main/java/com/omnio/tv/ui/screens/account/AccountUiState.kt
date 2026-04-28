@@ -1,8 +1,8 @@
 package com.omnio.tv.ui.screens.account
 
 import android.graphics.Bitmap
-import com.omnio.tv.data.remote.supabase.SupabaseLinkedDevice
 import com.omnio.tv.domain.model.AuthState
+import com.omnio.tv.domain.model.LinkedDevice
 
 data class AccountConnectedStats(
     val addons: Int = 0,
@@ -39,7 +39,7 @@ data class AccountUiState(
     val error: String? = null,
     val generatedSyncCode: String? = null,
     val syncClaimSuccess: Boolean = false,
-    val linkedDevices: List<SupabaseLinkedDevice> = emptyList(),
+    val linkedDevices: List<LinkedDevice> = emptyList(),
     val effectiveOwnerId: String? = null,
     val connectedStats: AccountConnectedStats? = null,
     val syncOverview: SyncOverview? = null,

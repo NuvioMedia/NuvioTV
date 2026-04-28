@@ -3,7 +3,7 @@ package com.omnio.tv.data.repository
 import android.content.Context
 import android.util.Log
 import com.omnio.tv.R
-import com.omnio.tv.core.network.NetworkResult
+import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.core.network.safeApiCall
 import com.omnio.tv.core.plugin.PluginManager
 import com.omnio.tv.core.tmdb.TmdbService

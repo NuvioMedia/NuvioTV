@@ -1,5 +1,6 @@
 package com.omnio.tv.core.network
 
+import com.omnio.tv.domain.result.NetworkResult
 import retrofit2.Response
 
 suspend fun <T> safeApiCall(apiCall: suspend () -> Response<T>): NetworkResult<T> {

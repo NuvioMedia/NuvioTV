@@ -39,7 +39,7 @@ data class SyncCodeResult(
 )
 
 @Serializable
-data class ClaimSyncResult(
+data class SupabaseClaimSyncResult(
     @SerialName("result_owner_id") val ownerId: String? = null,
     val success: Boolean,
     val message: String

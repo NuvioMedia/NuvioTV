@@ -1,5 +1,6 @@
 package com.omnio.tv.data.remote.dto.aiometadata
 
+import com.omnio.tv.domain.model.AioConfigInnerDto
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import org.junit.Assert.assertEquals

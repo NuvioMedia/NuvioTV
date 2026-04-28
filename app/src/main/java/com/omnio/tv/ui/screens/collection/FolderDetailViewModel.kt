@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.omnio.tv.core.network.NetworkResult
+import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.data.trailer.TrailerService
 import com.omnio.tv.data.local.CollectionsDataStore
 import com.omnio.tv.data.local.LayoutPreferenceDataStore

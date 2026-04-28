@@ -1,6 +1,6 @@
 package com.omnio.tv.domain.repository
 
-import com.omnio.tv.core.network.NetworkResult
+import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.domain.model.Meta
 import kotlinx.coroutines.flow.Flow
 

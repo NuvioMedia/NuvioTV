@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import javax.inject.Inject
 import javax.inject.Singleton
-import com.omnio.tv.ui.util.languageCodeToName
+import com.omnio.tv.domain.util.languageCodeToName
 
 /**
  * Available subtitle languages

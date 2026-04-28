@@ -45,7 +45,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.omnio.tv.R
 import com.omnio.tv.ui.theme.OmnioColors
-import com.omnio.tv.ui.util.languageCodeToName
+import com.omnio.tv.domain.util.languageCodeToName
 import kotlinx.coroutines.delay
 
 @Composable

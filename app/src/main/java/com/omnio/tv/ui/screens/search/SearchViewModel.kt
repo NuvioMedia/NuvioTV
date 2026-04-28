@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.omnio.tv.R
-import com.omnio.tv.core.network.NetworkResult
+import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.data.local.LayoutPreferenceDataStore
 import com.omnio.tv.data.local.SearchHistoryDataStore
 import com.omnio.tv.domain.model.Addon

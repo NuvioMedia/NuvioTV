@@ -1,7 +1,7 @@
 package com.omnio.tv.ui.screens.player
 
 import androidx.media3.common.MimeTypes
-import com.omnio.tv.ui.util.LANGUAGE_OVERRIDES
+import com.omnio.tv.domain.util.LANGUAGE_OVERRIDES
 
 internal object PlayerSubtitleUtils {
     fun normalizeLanguageCode(lang: String): String {

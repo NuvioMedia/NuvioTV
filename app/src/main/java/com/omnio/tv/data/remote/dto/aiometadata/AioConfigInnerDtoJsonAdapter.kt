@@ -1,5 +1,6 @@
 package com.omnio.tv.data.remote.dto.aiometadata
 
+import com.omnio.tv.domain.model.AioConfigInnerDto
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonReader
 import com.squareup.moshi.JsonWriter

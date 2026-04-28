@@ -1,7 +1,7 @@
 package com.omnio.tv.ui.screens.player
 
 import com.omnio.tv.R
-import com.omnio.tv.core.network.NetworkResult
+import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.domain.model.Meta
 import com.omnio.tv.domain.model.Stream
 import kotlinx.coroutines.delay

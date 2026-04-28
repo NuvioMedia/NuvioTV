@@ -3,7 +3,7 @@ package com.omnio.tv.data.repository
 import android.os.SystemClock
 import android.util.Log
 import com.omnio.tv.BuildConfig
-import com.omnio.tv.core.network.NetworkResult
+import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.data.local.TraktSettingsDataStore
 import com.omnio.tv.data.remote.api.TraktApi
 import com.omnio.tv.data.remote.dto.trakt.TraktEpisodeDto

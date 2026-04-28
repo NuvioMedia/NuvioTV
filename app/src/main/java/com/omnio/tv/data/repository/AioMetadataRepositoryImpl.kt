@@ -7,7 +7,7 @@ import com.omnio.tv.core.profile.ProfileManager
 import com.omnio.tv.data.local.AioMetadataSettingsDataStore
 import com.omnio.tv.data.remote.api.AioMetadataApi
 import com.omnio.tv.data.local.AddonPreferences
-import com.omnio.tv.data.remote.dto.aiometadata.AioConfigInnerDto
+import com.omnio.tv.domain.model.AioConfigInnerDto
 import com.omnio.tv.data.remote.dto.aiometadata.AioConfigLoadRequestDto
 import com.omnio.tv.data.remote.dto.aiometadata.AioConfigSaveRequestDto
 import com.omnio.tv.data.remote.dto.aiometadata.AioConfigUpdateRequestDto

@@ -27,7 +27,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.omnio.tv.R
 import com.omnio.tv.ui.theme.OmnioColors
-import com.omnio.tv.ui.util.languageCodeToName
+import com.omnio.tv.domain.util.languageCodeToName
 
 @Composable
 fun StreamInfoOverlay(

@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.omnio.tv.core.network.NetworkResult
+import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.core.network.safeApiCall
 import com.omnio.tv.data.local.AddonPreferences
 import com.omnio.tv.data.mapper.toDomain

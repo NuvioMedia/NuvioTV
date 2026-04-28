@@ -1,6 +1,6 @@
 package com.omnio.tv.domain.repository
 
-import com.omnio.tv.data.remote.dto.aiometadata.AioConfigInnerDto
+import com.omnio.tv.domain.model.AioConfigInnerDto
 import com.omnio.tv.domain.model.AgeRatingTier
 import com.omnio.tv.domain.model.AioMetadataSettings
 import kotlinx.coroutines.flow.Flow

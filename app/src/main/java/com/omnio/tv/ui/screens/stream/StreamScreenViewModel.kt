@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.omnio.tv.R
 import com.omnio.tv.core.plugin.PluginManager
-import com.omnio.tv.core.network.NetworkResult
+import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.core.player.StreamAutoPlayPolicy
 import com.omnio.tv.core.player.StreamAutoPlaySelector
 import com.omnio.tv.data.local.PlayerPreference

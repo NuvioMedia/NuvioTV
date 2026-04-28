@@ -1,6 +1,7 @@
 package com.omnio.tv.data.remote.dto.aiometadata
 
 import com.omnio.tv.domain.model.AgeRatingTier
+import com.omnio.tv.domain.model.AioConfigInnerDto
 
 /**
  * Builds a Kids-profile AIOMetadata configuration by deriving from the Main

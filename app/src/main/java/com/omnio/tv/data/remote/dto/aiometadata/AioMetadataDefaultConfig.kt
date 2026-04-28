@@ -2,6 +2,7 @@ package com.omnio.tv.data.remote.dto.aiometadata
 
 import android.content.Context
 import com.omnio.tv.R
+import com.omnio.tv.domain.model.AioConfigInnerDto
 import org.json.JSONArray
 import org.json.JSONObject
 

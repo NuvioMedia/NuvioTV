@@ -1,7 +1,7 @@
 package com.omnio.tv.ui.screens.player
 
 import androidx.media3.common.util.UnstableApi
-import com.omnio.tv.core.network.NetworkResult
+import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.core.player.StreamAutoPlaySelector
 import com.omnio.tv.data.local.StreamAutoPlayMode
 import com.omnio.tv.data.local.StreamAutoPlaySource

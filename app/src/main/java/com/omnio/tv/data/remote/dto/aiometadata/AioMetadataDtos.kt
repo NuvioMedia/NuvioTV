@@ -1,5 +1,6 @@
 package com.omnio.tv.data.remote.dto.aiometadata
 
+import com.omnio.tv.domain.model.AioConfigInnerDto
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
@@ -12,17 +13,11 @@ import com.squareup.moshi.JsonClass
  * rest (catalogs, settings) as untyped maps so upstream can add knobs without
  * forcing a DTO bump.
  *
- * [AioConfigInnerDto] uses a custom Moshi adapter ([AioConfigInnerDtoJsonAdapter])
- * so the `settings` catch-all serializes as flat root fields on the wire —
- * that's the shape the upstream web `/configure` UI expects.
+ * [AioConfigInnerDto] is defined in the domain layer; on the wire it uses a
+ * custom Moshi adapter ([AioConfigInnerDtoJsonAdapter]) so the `settings`
+ * catch-all serializes as flat root fields — the shape the upstream web
+ * `/configure` UI expects.
  */
-
-data class AioConfigInnerDto(
-    val providers: Map<String, Any?> = emptyMap(),
-    val apiKeys: Map<String, String> = emptyMap(),
-    val catalogs: List<Map<String, Any?>> = emptyList(),
-    val settings: Map<String, Any?> = emptyMap(),
-)
 
 @JsonClass(generateAdapter = true)
 data class AioConfigSaveRequestDto(

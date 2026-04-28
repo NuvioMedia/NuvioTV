@@ -261,7 +261,7 @@ private fun AccountInfoCard(label: String, value: String) {
 
 @Composable
 private fun LinkedDevicesSection(
-    devices: List<com.omnio.tv.data.remote.supabase.SupabaseLinkedDevice>,
+    devices: List<com.omnio.tv.domain.model.LinkedDevice>,
     onUnlink: (String) -> Unit
 ) {
     Column {

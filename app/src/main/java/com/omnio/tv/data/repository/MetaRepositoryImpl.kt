@@ -2,7 +2,7 @@ package com.omnio.tv.data.repository
 
 import android.content.Context
 import android.util.Log
-import com.omnio.tv.core.network.NetworkResult
+import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.core.network.safeApiCall
 import com.omnio.tv.data.mapper.toDomain
 import com.omnio.tv.data.remote.api.AddonApi

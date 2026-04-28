@@ -17,7 +17,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
-import com.omnio.tv.ui.util.languageCodeToName
+import com.omnio.tv.domain.util.languageCodeToName
 
 internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
     logSwitchTrace(

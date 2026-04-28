@@ -3,7 +3,7 @@ package com.omnio.tv.ui.screens.home
 import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.viewModelScope
-import com.omnio.tv.core.network.NetworkResult
+import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.data.local.TraktSettingsDataStore
 import com.omnio.tv.data.local.WatchedItemsPreferences
 import com.omnio.tv.domain.model.ContentType
