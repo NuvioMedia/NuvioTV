@@ -1578,15 +1578,27 @@ class MetaDetailsViewModel @Inject constructor(
 
             if (latestProgress.isCompleted() && matchedIndex >= 0) {
                 val next = episodes.getOrNull(matchedIndex + 1)
+                // Only advance to the immediate next episode if it has not
+                // already been watched. Without this guard, a series whose
+                // most-recent progress entry is S1E1 (and where every later
+                // episode is also marked completed, for example via Trakt
+                // sync or the Mark-Watched action) would launch playback at
+                // S1E2 even though the whole series is fully watched. Falling
+                // through to the comprehensive scan below correctly returns
+                // S1E1 in that case (issue #1016).
                 if (next != null) {
-                    return NextToWatch(
-                        watchProgress = null,
-                        isResume = false,
-                        nextVideoId = next.id,
-                        nextSeason = next.season,
-                        nextEpisode = next.episode,
-                        displayText = context.getString(R.string.detail_btn_next_episode, next.season, next.episode)
-                    )
+                    val nextProgress = fallbackProgressMap[next.season to next.episode]
+                    val nextAlreadyWatched = nextProgress?.isCompleted() == true
+                    if (!nextAlreadyWatched) {
+                        return NextToWatch(
+                            watchProgress = null,
+                            isResume = false,
+                            nextVideoId = next.id,
+                            nextSeason = next.season,
+                            nextEpisode = next.episode,
+                            displayText = context.getString(R.string.detail_btn_next_episode, next.season, next.episode)
+                        )
+                    }
                 }
             }
         }

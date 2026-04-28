@@ -33,6 +33,19 @@ data class WatchProgress(
         const val SOURCE_TRAKT_PLAYBACK = "trakt_playback"
         const val SOURCE_TRAKT_HISTORY = "trakt_history"
         const val SOURCE_TRAKT_SHOW_PROGRESS = "trakt_show_progress"
+
+        /**
+         * Fraction of the runtime past which content is considered fully watched.
+         * Bumped from 0.85 to 0.90 to reduce premature completion: at 0.85 a 2h
+         * movie was being marked complete with 18 minutes still remaining if the
+         * user happened to exit briefly past that point. 0.90 matches Plex and
+         * Jellyfin defaults and leaves enough headroom for long endings, while
+         * still firing reliably during real end-of-content playback. See #1467.
+         */
+        const val COMPLETION_THRESHOLD: Float = 0.90f
+
+        /** Minimum fraction of the runtime to consider playback "started". */
+        const val IN_PROGRESS_START_THRESHOLD: Float = 0.02f
     }
 
     /**
@@ -47,15 +60,18 @@ data class WatchProgress(
         }
 
     /**
-     * Returns true if the content has been watched past the threshold (default 85%)
+     * Returns true if the content has been watched past the threshold
+     * (default [COMPLETION_THRESHOLD]).
      */
-    fun isCompleted(threshold: Float = 0.85f): Boolean = progressPercentage >= threshold
+    fun isCompleted(threshold: Float = COMPLETION_THRESHOLD): Boolean = progressPercentage >= threshold
 
     /**
-     * Returns true if the content has been started but not completed
+     * Returns true if the content has been started but not completed.
      */
-    fun isInProgress(startThreshold: Float = 0.02f, endThreshold: Float = 0.85f): Boolean =
-        progressPercentage >= startThreshold && progressPercentage < endThreshold
+    fun isInProgress(
+        startThreshold: Float = IN_PROGRESS_START_THRESHOLD,
+        endThreshold: Float = COMPLETION_THRESHOLD
+    ): Boolean = progressPercentage >= startThreshold && progressPercentage < endThreshold
 
     /**
      * Returns the remaining time in milliseconds
