@@ -13,6 +13,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
 import java.util.Locale
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDp
@@ -1037,12 +1038,20 @@ private fun ModernSidebarScaffold(
     )
     val sidebarSlideX by animateDpAsState(
         targetValue = if (sidebarVisible) 0.dp else (-24).dp,
-        animationSpec = tween(durationMillis = 205, easing = FastOutSlowInEasing),
+        animationSpec = if (sidebarVisible) {
+            tween(durationMillis = 400, easing = FastOutSlowInEasing)
+        } else {
+            tween(durationMillis = 300, easing = FastOutLinearInEasing)
+        },
         label = "sidebarSlideX"
     )
     val sidebarSurfaceAlpha by animateFloatAsState(
         targetValue = if (sidebarVisible) 1f else 0f,
-        animationSpec = tween(durationMillis = 135, easing = FastOutSlowInEasing),
+        animationSpec = if (sidebarVisible) {
+            tween(durationMillis = 400, easing = FastOutSlowInEasing)
+        } else {
+            tween(durationMillis = 300, easing = FastOutLinearInEasing)
+        },
         label = "sidebarSurfaceAlpha"
     )
     val shouldApplySidebarHaze = showSidebar && modernSidebarBlurEnabled && (
