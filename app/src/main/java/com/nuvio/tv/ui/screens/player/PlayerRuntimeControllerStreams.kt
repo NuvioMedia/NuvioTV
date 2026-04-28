@@ -963,14 +963,6 @@ internal fun PlayerRuntimeController.playNextEpisode() {
                         playerSettings.streamAutoPlayNextEpisodeEnabled ||
                             playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode
                         )
-            // When the only reason for auto-selecting in MANUAL mode is the
-            // binge-group preference (next-episode auto-play is off), fall
-            // back to the stream picker if no binge-group match is found
-            // instead of picking the first available stream.
-            val bingeGroupOnlyManualMode =
-                shouldAutoSelectInManualMode &&
-                    !playerSettings.streamAutoPlayNextEpisodeEnabled &&
-                    playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode
             if (playerSettings.streamAutoPlayMode == StreamAutoPlayMode.MANUAL && !shouldAutoSelectInManualMode) {
                 _uiState.update {
                     it.copy(
@@ -1044,8 +1036,7 @@ internal fun PlayerRuntimeController.playNextEpisode() {
                     } else {
                         null
                     },
-                    preferBingeGroupInSelection = playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode,
-                    bingeGroupOnly = bingeGroupOnlyManualMode
+                    preferBingeGroupInSelection = playerSettings.streamAutoPlayPreferBingeGroupForNextEpisode
                 )
             }
 

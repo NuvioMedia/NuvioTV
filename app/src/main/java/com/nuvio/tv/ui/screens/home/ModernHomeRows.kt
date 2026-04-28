@@ -869,11 +869,7 @@ private fun ModernCarouselCard(
     val cardShape = remember(cardCornerRadius) { RoundedCornerShape(cardCornerRadius) }
     val context = LocalContext.current
     val density = LocalDensity.current
-    val expandedCardWidth = if (useLandscapeOverlayTreatment) {
-        cardWidth
-    } else {
-        cardHeight * (16f / 9f)
-    }
+    val expandedCardWidth = cardHeight * (16f / 9f)
     val targetCardWidth = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
         expandedCardWidth
     } else {
@@ -913,14 +909,9 @@ private fun ModernCarouselCard(
     val effectiveBackdropUrl = frozenBackdropUrl.value
     var isFocused by remember { mutableStateOf(false) }
     val payload = item.payload as? ModernPayload.CollectionFolder
-    val isCollectionFolder = item.payload is ModernPayload.CollectionFolder
     val baseImageUrl = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
-        if (useLandscapeOverlayTreatment) {
-            effectiveBackdropUrl ?: item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
-        } else {
-            item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
-        }
-    } else if (useLandscapeOverlayTreatment && !isCollectionFolder) {
+        item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
+    } else if (useLandscapeOverlayTreatment) {
         effectiveBackdropUrl ?: item.heroPreview.poster
     } else {
         item.imageUrl ?: item.heroPreview.poster ?: item.heroPreview.backdrop
@@ -1119,7 +1110,7 @@ private fun ModernCarouselCard(
                 }
 
                 Box(modifier = mediaLayerModifier) {
-                    val isPlaceholderItem = item.imageUrl?.startsWith("placeholder://") == true
+                    val isPlaceholderItem = imageUrl?.startsWith("placeholder://") == true
                     if (isPlaceholderItem) {
                         // Horizontal sweeping shimmer for placeholder cards
                         val effectivePlaceholderShimmerOffsetState =

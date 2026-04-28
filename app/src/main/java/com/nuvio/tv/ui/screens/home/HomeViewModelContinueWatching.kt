@@ -499,29 +499,6 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                         count = initialItems.size,
                         elapsedMs = SystemClock.elapsedRealtime() - cycleStartMs
                     )
-                    // Persist in-progress snapshot early so force-close doesn't lose items
-                    if (inProgressOnly.isNotEmpty()) {
-                        viewModelScope.launch(Dispatchers.IO) {
-                            val brokenUrls = com.nuvio.tv.ui.components.brokenImageUrls
-                            val ipSnap = inProgressOnly.map { item ->
-                                com.nuvio.tv.data.local.CachedInProgressItem(
-                                    contentId = item.progress.contentId, contentType = item.progress.contentType,
-                                    name = item.progress.name, poster = item.progress.poster,
-                                    backdrop = item.progress.backdrop, logo = item.progress.logo,
-                                    videoId = item.progress.videoId, season = item.progress.season,
-                                    episode = item.progress.episode, episodeTitle = item.progress.episodeTitle,
-                                    position = item.progress.position, duration = item.progress.duration,
-                                    lastWatched = item.progress.lastWatched, progressPercent = item.progress.progressPercent,
-                                    episodeThumbnail = item.episodeThumbnail?.takeIf { it !in brokenUrls },
-                                    episodeDescription = item.episodeDescription,
-                                    episodeImdbRating = item.episodeImdbRating,
-                                    genres = item.genres, releaseInfo = item.releaseInfo,
-                                    contentLanguage = item.contentLanguage
-                                )
-                            }
-                            runCatching { cwEnrichmentCache.saveInProgressSnapshot(ipSnap) }
-                        }
-                    }
                 }
 
                 debug.markPhase("build-next-up")
@@ -1033,8 +1010,8 @@ internal fun HomeViewModel.loadContinueWatchingPipeline() {
                             contentLanguage = ip.contentLanguage
                         )
                     }
-                    runCatching { cwEnrichmentCache.saveNextUpSnapshot(nextUpSnap, force = true) }
-                    runCatching { cwEnrichmentCache.saveInProgressSnapshot(ipSnap, force = true) }
+                    runCatching { cwEnrichmentCache.saveNextUpSnapshot(nextUpSnap) }
+                    runCatching { cwEnrichmentCache.saveInProgressSnapshot(ipSnap) }
                 }
 
                 // Rich metadata only runs after the final lightweight CW list is visible.
@@ -2206,10 +2183,10 @@ private fun HomeViewModel.persistLocalContinueWatchingMetadata(
 
     viewModelScope.launch(Dispatchers.IO) {
         if (nextUpSnapshot.isNotEmpty()) {
-            runCatching { cwEnrichmentCache.saveNextUpSnapshot(nextUpSnapshot, force = true) }
+            runCatching { cwEnrichmentCache.saveNextUpSnapshot(nextUpSnapshot) }
         }
         if (inProgressSnapshot.isNotEmpty()) {
-            runCatching { cwEnrichmentCache.saveInProgressSnapshot(inProgressSnapshot, force = true) }
+            runCatching { cwEnrichmentCache.saveInProgressSnapshot(inProgressSnapshot) }
         }
         val persistable = localItems.filter { it.hasRenderableMetadata() }
         if (persistable.isEmpty()) return@launch

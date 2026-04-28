@@ -1036,22 +1036,19 @@ private fun ModernSidebarScaffold(
         },
         label = "sidebarWidth"
     )
+    val (animationDuration, animationEasing) = if (sidebarVisible) {
+        400 to FastOutSlowInEasing
+    } else {
+        300 to FastOutLinearInEasing
+    }
     val sidebarSlideX by animateDpAsState(
         targetValue = if (sidebarVisible) 0.dp else (-24).dp,
-        animationSpec = if (sidebarVisible) {
-            tween(durationMillis = 400, easing = FastOutSlowInEasing)
-        } else {
-            tween(durationMillis = 300, easing = FastOutLinearInEasing)
-        },
+        animationSpec = tween(durationMillis = animationDuration, easing = animationEasing),
         label = "sidebarSlideX"
     )
     val sidebarSurfaceAlpha by animateFloatAsState(
         targetValue = if (sidebarVisible) 1f else 0f,
-        animationSpec = if (sidebarVisible) {
-            tween(durationMillis = 400, easing = FastOutSlowInEasing)
-        } else {
-            tween(durationMillis = 300, easing = FastOutLinearInEasing)
-        },
+        animationSpec = tween(durationMillis = animationDuration, easing = animationEasing),
         label = "sidebarSurfaceAlpha"
     )
     val shouldApplySidebarHaze = showSidebar && modernSidebarBlurEnabled && (

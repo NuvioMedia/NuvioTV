@@ -412,7 +412,6 @@ private fun TmdbEntityHero(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun EntityRailRow(
     rail: TmdbEntityRail,
@@ -477,34 +476,11 @@ private fun EntityRailRow(
             modifier = Modifier.padding(horizontal = 48.dp)
         )
         Spacer(modifier = Modifier.height(8.dp))
-        val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
-        val localDensity = LocalDensity.current
-        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
-        val rowBringIntoViewSpec = remember(localDensity, defaultBringIntoViewSpec) {
-            val startPx = with(localDensity) { 48.dp.roundToPx() }
-            object : BringIntoViewSpec {
-                override val scrollAnimationSpec: AnimationSpec<Float> =
-                    defaultBringIntoViewSpec.scrollAnimationSpec
-
-                override fun calculateScrollDistance(
-                    offset: Float,
-                    size: Float,
-                    containerSize: Float
-                ): Float {
-                    val childSize = kotlin.math.abs(size)
-                    val target = startPx.toFloat()
-                    val space = containerSize - target
-                    val leading = if (childSize <= containerSize && space < childSize) containerSize - childSize else target
-                    return offset - leading
-                }
-            }
-        }
-        CompositionLocalProvider(LocalBringIntoViewSpec provides rowBringIntoViewSpec) {
-            LazyRow(
-                state = rowListState,
-                contentPadding = PaddingValues(horizontal = 48.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+        LazyRow(
+            state = rowListState,
+            contentPadding = PaddingValues(horizontal = 48.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             itemsIndexed(
                 items = rail.items,
                 key = { _, item -> item.id }
@@ -522,7 +498,6 @@ private fun EntityRailRow(
                     }
                 )
             }
-        }
         }
     }
 }

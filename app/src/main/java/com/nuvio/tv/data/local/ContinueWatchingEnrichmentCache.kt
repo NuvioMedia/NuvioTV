@@ -73,15 +73,10 @@ class ContinueWatchingEnrichmentCache @Inject constructor(
 ) {
     companion object {
         private const val TAG = "CwEnrichCache"
-        private const val THROTTLE_MS = 1_000L
     }
 
     private val gson = Gson()
     private val mutex = Mutex()
-    @Volatile private var lastNextUpWriteMs = 0L
-    @Volatile private var lastInProgressWriteMs = 0L
-    @Volatile private var lastNextUpHash = 0
-    @Volatile private var lastInProgressHash = 0
 
     /** Incremented when cache is cleared; observers can collect to trigger refresh. */
     private val _cacheCleared = kotlinx.coroutines.flow.MutableStateFlow(0)
@@ -110,22 +105,11 @@ class ContinueWatchingEnrichmentCache @Inject constructor(
         }
     }
 
-    /**
-     * @param force bypass throttle and content-change check (use at end of pipeline or for clears)
-     */
-    suspend fun saveNextUpSnapshot(items: List<CachedNextUpItem>, force: Boolean = false) = withContext(Dispatchers.IO) {
-        val contentHash = items.hashCode()
-        if (!force) {
-            if (contentHash == lastNextUpHash) return@withContext
-            val now = System.currentTimeMillis()
-            if (now - lastNextUpWriteMs < THROTTLE_MS) return@withContext
-        }
+    suspend fun saveNextUpSnapshot(items: List<CachedNextUpItem>) = withContext(Dispatchers.IO) {
         mutex.withLock {
             try {
                 val file = nextUpFile()
-                atomicWrite(file, gson.toJson(items))
-                lastNextUpWriteMs = System.currentTimeMillis()
-                lastNextUpHash = contentHash
+                file.writeText(gson.toJson(items))
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to write next-up cache: ${e.message}")
             }
@@ -155,22 +139,11 @@ class ContinueWatchingEnrichmentCache @Inject constructor(
         }
     }
 
-    /**
-     * @param force bypass throttle and content-change check (use at end of pipeline or for clears)
-     */
-    suspend fun saveInProgressSnapshot(items: List<CachedInProgressItem>, force: Boolean = false) = withContext(Dispatchers.IO) {
-        val contentHash = items.hashCode()
-        if (!force) {
-            if (contentHash == lastInProgressHash) return@withContext
-            val now = System.currentTimeMillis()
-            if (now - lastInProgressWriteMs < THROTTLE_MS) return@withContext
-        }
+    suspend fun saveInProgressSnapshot(items: List<CachedInProgressItem>) = withContext(Dispatchers.IO) {
         mutex.withLock {
             try {
                 val file = inProgressFile()
-                atomicWrite(file, gson.toJson(items))
-                lastInProgressWriteMs = System.currentTimeMillis()
-                lastInProgressHash = contentHash
+                file.writeText(gson.toJson(items))
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to write in-progress cache: ${e.message}")
             }
@@ -191,16 +164,6 @@ class ContinueWatchingEnrichmentCache @Inject constructor(
             }
         }
         _cacheCleared.value++
-    }
-
-    private fun atomicWrite(target: File, content: String) {
-        val tmp = File(target.parentFile, "${target.name}.tmp")
-        tmp.writeText(content)
-        if (!tmp.renameTo(target)) {
-            // renameTo can fail on some filesystems; fall back to copy+delete
-            tmp.copyTo(target, overwrite = true)
-            tmp.delete()
-        }
     }
 
 }
