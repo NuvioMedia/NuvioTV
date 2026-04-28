@@ -1,6 +1,6 @@
 package com.omnio.tv.core.di
 
-import com.omnio.tv.BuildConfig
+import com.omnio.tv.core.platform.BuildConfig
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

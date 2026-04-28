@@ -1,7 +1,7 @@
 package com.omnio.tv.core.auth
 
 import android.util.Log
-import com.omnio.tv.BuildConfig
+import com.omnio.tv.core.platform.BuildConfig
 import com.omnio.tv.data.local.AuthSessionNoticeDataStore
 import com.omnio.tv.domain.auth.AuthManager
 import com.omnio.tv.domain.model.AuthState

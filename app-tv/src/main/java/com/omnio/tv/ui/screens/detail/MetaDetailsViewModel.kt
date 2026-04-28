@@ -1169,7 +1169,7 @@ class MetaDetailsViewModel @Inject constructor(
         }
 
         if (enrichment?.collectionId != null) {
-            loadCollectionAsync(enrichment.collectionId, enrichment.collectionName, settings)
+            loadCollectionAsync(enrichment.collectionId!!, enrichment.collectionName, settings)
         }
 
         return updated

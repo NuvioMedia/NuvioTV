@@ -2,7 +2,7 @@ package com.omnio.tv.core.di
 
 import android.content.Context
 import android.util.Log
-import com.omnio.tv.BuildConfig
+import com.omnio.tv.core.platform.BuildConfig
 import com.omnio.tv.data.local.EmbyCredentialsDataStore
 import com.omnio.tv.data.remote.api.AddonApi
 import com.omnio.tv.data.remote.api.AioMetadataApi

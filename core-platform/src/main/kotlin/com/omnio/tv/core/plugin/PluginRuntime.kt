@@ -6,7 +6,7 @@ import com.dokar.quickjs.binding.function
 import com.dokar.quickjs.quickJs
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import com.omnio.tv.BuildConfig
+import com.omnio.tv.core.platform.BuildConfig
 import com.omnio.tv.domain.model.LocalScraperResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

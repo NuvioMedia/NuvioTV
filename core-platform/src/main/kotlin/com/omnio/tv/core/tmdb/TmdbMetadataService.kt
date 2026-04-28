@@ -1,7 +1,7 @@
 package com.omnio.tv.core.tmdb
 
 import android.util.Log
-import com.omnio.tv.BuildConfig
+import com.omnio.tv.core.platform.BuildConfig
 import com.omnio.tv.data.remote.api.TmdbApi
 import com.omnio.tv.data.remote.api.TmdbDiscoverResult
 import com.omnio.tv.data.remote.api.TmdbEpisode

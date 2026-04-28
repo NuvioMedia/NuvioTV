@@ -1,7 +1,7 @@
 package com.omnio.tv.core.profile
 
 import android.content.Context
-import com.omnio.tv.R
+import com.omnio.tv.core.platform.R
 import com.omnio.tv.domain.model.AgeRatingTier
 import com.omnio.tv.domain.model.Meta
 import com.omnio.tv.domain.model.MetaPreview

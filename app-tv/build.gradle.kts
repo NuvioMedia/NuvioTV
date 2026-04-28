@@ -239,6 +239,7 @@ dependencies {
 
     implementation(project(":core-domain"))
     implementation(project(":core-data"))
+    implementation(project(":core-platform"))
 
     implementation(libs.androidx.core.ktx)
     implementation("androidx.core:core-splashscreen:1.2.0")

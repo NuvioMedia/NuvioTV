@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Consumed by KidsContentFilter when a kids profile blocks content above its tier. -->
+    <string name="kids_restricted_with_rating">Restricted to %1$s or below for this Kids profile.</string>
+</resources>
