@@ -67,6 +67,13 @@ private val PANEL_OUTLINE_COLORS = listOf(
     Color(0xFFFF5C5C)
 )
 
+private val PANEL_BACKGROUND_COLORS = listOf(
+    Color.Black,
+    Color(0xFF1A1A2E),
+    Color(0xFF1C1C1C),
+    Color.White
+)
+
 private val StyleCardWidth = 220.dp
 private val StyleCardHeight = 102.dp
 private val StyleCardGap = 12.dp
@@ -91,7 +98,7 @@ internal fun SubtitleStyleSidePanel(
     Column(
         modifier = modifier
             .width(760.dp)
-            .height(330.dp)
+            .height(440.dp)
             .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
             .background(Color(0xFF101010))
             .padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 10.dp)
@@ -151,6 +158,54 @@ internal fun SubtitleStyleSidePanel(
                             isEnabled = subtitleStyle.bold,
                             onClick = { onEvent(PlayerEvent.OnSetSubtitleBold(!subtitleStyle.bold)) }
                         )
+                    }
+                }
+                SubtitleStyleSection(
+                    title = stringResource(R.string.subtitle_style_background),
+                    centerContent = false,
+                    modifier = Modifier
+                        .width(StyleCardWidth)
+                        .height(140.dp)
+                ) {
+                    val bgColor = Color(subtitleStyle.backgroundColor)
+                    val bgAlphaPercent = (bgColor.alpha * 100f).roundToInt().coerceIn(0, 100)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            PANEL_BACKGROUND_COLORS.forEach { color ->
+                                SubtitleStyleColorChip(
+                                    color = color,
+                                    isSelected = bgColor.alpha > 0f && bgColor.copy(alpha = 1f).toArgb() == color.copy(alpha = 1f).toArgb(),
+                                    onClick = {
+                                        val currentAlpha = bgColor.alpha
+                                        val newAlpha = if (currentAlpha == 0f) 0.5f else currentAlpha
+                                        onEvent(PlayerEvent.OnSetSubtitleBackgroundColor(color.copy(alpha = newAlpha).toArgb()))
+                                    }
+                                )
+                            }
+                        }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SubtitleStyleStepperButton(
+                                icon = Icons.Default.Remove,
+                                onClick = {
+                                    val newAlpha = (bgAlphaPercent - 10).coerceAtLeast(0) / 100f
+                                    onEvent(PlayerEvent.OnSetSubtitleBackgroundColor(bgColor.copy(alpha = newAlpha).toArgb()))
+                                }
+                            )
+                            SubtitleStyleValueDisplay(text = "$bgAlphaPercent%")
+                            SubtitleStyleStepperButton(
+                                icon = Icons.Default.Add,
+                                onClick = {
+                                    val newAlpha = (bgAlphaPercent + 10).coerceAtMost(100) / 100f
+                                    onEvent(PlayerEvent.OnSetSubtitleBackgroundColor(bgColor.copy(alpha = newAlpha).toArgb()))
+                                }
+                            )
+                        }
                     }
                 }
             }
