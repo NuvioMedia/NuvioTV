@@ -79,4 +79,33 @@ class CollectionsDataStoreSourceMigrationTest {
         assertTrue(json.contains("\"tmdbSourceType\":\"COMPANY\""))
         assertTrue(json.contains("\"tmdbId\":420"))
     }
+
+    @Test
+    fun `import and export preserve folder hero video url`() {
+        val collection = com.nuvio.tv.domain.model.Collection(
+            id = "collection",
+            title = "Videos",
+            folders = listOf(
+                com.nuvio.tv.domain.model.CollectionFolder(
+                    id = "folder",
+                    title = "Featured",
+                    heroBackdropUrl = "https://example.com/backdrop.jpg",
+                    heroVideoUrl = "https://example.com/hero.mp4",
+                    sources = listOf(
+                        AddonCatalogCollectionSource(
+                            addonId = "addon",
+                            type = "movie",
+                            catalogId = "popular"
+                        )
+                    )
+                )
+            )
+        )
+
+        val json = store.exportToJson(listOf(collection))
+        val folder = store.importFromJson(json).single().folders.single()
+
+        assertTrue(json.contains("\"heroVideoUrl\":\"https://example.com/hero.mp4\""))
+        assertEquals("https://example.com/hero.mp4", folder.heroVideoUrl)
+    }
 }

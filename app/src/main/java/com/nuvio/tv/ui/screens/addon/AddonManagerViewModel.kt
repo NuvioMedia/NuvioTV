@@ -613,6 +613,7 @@ class AddonManagerViewModel @Inject constructor(
                         tileShape = folder.tileShape.name,
                         hideTitle = folder.hideTitle,
                         heroBackdropUrl = folder.heroBackdropUrl,
+                        heroVideoUrl = folder.heroVideoUrl,
                         titleLogoUrl = folder.titleLogoUrl,
                         catalogSources = folder.catalogSources.map { src ->
                             CatalogSourceInfo(

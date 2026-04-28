@@ -1647,6 +1647,8 @@
     <string name="collections_editor_placeholder_gif">Animated GIF URL (plays only while focused)</string>
     <string name="collections_editor_hero_backdrop">Hero Backdrop (Modern Home)</string>
     <string name="collections_editor_placeholder_hero_backdrop">Custom hero backdrop URL (optional)</string>
+    <string name="collections_editor_hero_video">Hero Video (Modern Home)</string>
+    <string name="collections_editor_placeholder_hero_video">Custom hero video URL (optional)</string>
     <string name="collections_editor_title_logo">Title Logo (Modern Home)</string>
     <string name="collections_editor_placeholder_title_logo">Custom title logo URL (optional)</string>
     <string name="collections_editor_genre_filter">Genre Filter</string>

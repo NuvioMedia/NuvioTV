@@ -80,6 +80,7 @@ data class CollectionFolder(
     val hideTitle: Boolean = false,
     val sources: List<CollectionSource> = emptyList(),
     val heroBackdropUrl: String? = null,
+    val heroVideoUrl: String? = null,
     val titleLogoUrl: String? = null
 ) {
     val catalogSources: List<CollectionCatalogSource>

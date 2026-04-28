@@ -428,6 +428,16 @@ fun FolderEditorContent(
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
+                Text(stringResource(R.string.collections_editor_hero_video), style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
+                Spacer(modifier = Modifier.height(8.dp))
+                NuvioTextField(
+                    value = folder.heroVideoUrl.orEmpty(),
+                    onValueChange = { viewModel.updateFolderHeroVideoUrl(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = stringResource(R.string.collections_editor_placeholder_hero_video)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(stringResource(R.string.collections_editor_title_logo), style = MaterialTheme.typography.labelLarge, color = NuvioColors.TextSecondary)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(

@@ -1125,6 +1125,7 @@ var i18n = {
   focusGif: '${context.getString(R.string.collections_editor_focus_gif).replace("'", "\\'")}',
   playGif: '${context.getString(R.string.collections_editor_play_gif).replace("'", "\\'")}',
   heroBackdrop: '${context.getString(R.string.collections_editor_hero_backdrop).replace("'", "\\'")}',
+  heroVideo: '${context.getString(R.string.collections_editor_hero_video).replace("'", "\\'")}',
   titleLogo: '${context.getString(R.string.collections_editor_title_logo).replace("'", "\\'")}',
   tileShape: '${context.getString(R.string.collections_editor_tile_shape).replace("'", "\\'")}',
   hideTitle: '${context.getString(R.string.collections_editor_hide_title).replace("'", "\\'")}',
@@ -1955,7 +1956,7 @@ function updateCollectionTitle(ci, val) {
 }
 
 function addFolder(ci) {
-  collections[ci].folders.push({ id: generateId(), title: 'New Folder', coverImageUrl: null, focusGifUrl: null, focusGifEnabled: true, coverEmoji: null, tileShape: 'SQUARE', hideTitle: false, heroBackdropUrl: null, titleLogoUrl: null, catalogSources: [], sources: [] });
+  collections[ci].folders.push({ id: generateId(), title: 'New Folder', coverImageUrl: null, focusGifUrl: null, focusGifEnabled: true, coverEmoji: null, tileShape: 'SQUARE', hideTitle: false, heroBackdropUrl: null, heroVideoUrl: null, titleLogoUrl: null, catalogSources: [], sources: [] });
   expandedFolder = ci + '-' + (collections[ci].folders.length - 1);
   renderCollections();
 }
@@ -2009,6 +2010,10 @@ function updateFolderHeroBackdropUrl(ci, fi, val) {
   } else {
     if (img) img.style.display = 'none';
   }
+}
+
+function updateFolderHeroVideoUrl(ci, fi, val) {
+  collections[ci].folders[fi].heroVideoUrl = val || null;
 }
 
 function updateFolderTitleLogoUrl(ci, fi, val) {
@@ -2706,6 +2711,10 @@ function renderCollections() {
                 '<span class="folder-setting-label">' + i18n.heroBackdrop + '</span>' +
                 '<img id="hero-backdrop-preview-' + ci + '-' + fi + '" src="' + escapeAttr(folder.heroBackdropUrl || '') + '" style="' + (folder.heroBackdropUrl ? '' : 'display:none') + '" onerror="this.style.display=\'none\'">' +
                 '<input type="url" placeholder="Hero backdrop URL" value="' + escapeAttr(folder.heroBackdropUrl || '') + '" oninput="updateFolderHeroBackdropUrl(' + ci + ',' + fi + ',this.value)">' +
+              '</div>' +
+              '<div class="folder-setting-item">' +
+                '<span class="folder-setting-label">' + i18n.heroVideo + '</span>' +
+                '<input type="url" placeholder="Hero video URL" value="' + escapeAttr(folder.heroVideoUrl || '') + '" oninput="updateFolderHeroVideoUrl(' + ci + ',' + fi + ',this.value)">' +
               '</div>' +
               '<div class="folder-setting-item">' +
                 '<span class="folder-setting-label">' + i18n.titleLogo + '</span>' +

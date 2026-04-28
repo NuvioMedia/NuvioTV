@@ -296,6 +296,12 @@ class CollectionEditorViewModel @Inject constructor(
         }
     }
 
+    fun updateFolderHeroVideoUrl(url: String) {
+        _uiState.update { state ->
+            state.copy(editingFolder = state.editingFolder?.copy(heroVideoUrl = url.ifBlank { null }))
+        }
+    }
+
     fun updateFolderTitleLogoUrl(url: String) {
         _uiState.update { state ->
             state.copy(editingFolder = state.editingFolder?.copy(titleLogoUrl = url.ifBlank { null }))
@@ -805,6 +811,7 @@ class CollectionEditorViewModel @Inject constructor(
             title = rawFolder.title.ifBlank { "Untitled" },
             coverImageUrl = rawFolder.coverImageUrl?.ifBlank { null },
             heroBackdropUrl = rawFolder.heroBackdropUrl?.ifBlank { null },
+            heroVideoUrl = rawFolder.heroVideoUrl?.ifBlank { null },
             titleLogoUrl = rawFolder.titleLogoUrl?.ifBlank { null }
         )
         val editingFolder = cleanedFolder
