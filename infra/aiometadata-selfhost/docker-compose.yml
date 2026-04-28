@@ -2,7 +2,10 @@ name: aiometadata
 
 services:
   postgres:
-    image: postgres:16-alpine
+    # Pinned to 17 to match Neon (the upstream addon's reference deploy
+    # uses Neon, so dumps/migrations come from a PG 17 server). Using 16
+    # here breaks restore on `\restrict` and `transaction_timeout` GUC.
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: aiometadata
