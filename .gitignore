@@ -11,6 +11,8 @@
 .DS_Store
 /build
 **/build/
+!app/src/**/java/**/core/build/
+!app/src/**/java/**/core/build/*.kt
 /captures
 .externalNativeBuild
 .cxx
@@ -37,9 +39,13 @@ benchmark
 db/
 backups/
 .supabase_db.env
-scripts
-supabase
+scripts/*
+!scripts/release_beta.py
+/supabase
 tv-samples
 HOME_UI_OPTIMIZATION_NOTES.local.md
 .kotlin/
 bugs/
+avatars/
+logs
+AGENTS.md

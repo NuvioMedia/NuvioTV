@@ -14,14 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.tv.material3.Icon
-import com.nuvio.tv.R
 import com.nuvio.tv.ui.theme.NuvioColors
 
 @Composable
@@ -39,8 +35,6 @@ fun MonochromePosterPlaceholder(
             )
         )
     }
-    val context = LocalContext.current
-    val playPainter = rememberRawSvgPainter(context = context, rawRes = R.raw.ic_player_play)
 
     Box(
         modifier = modifier
@@ -63,27 +57,13 @@ fun MonochromePosterPlaceholder(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                painter = playPainter,
+                imageVector = Icons.Filled.PlayArrow,
                 contentDescription = null,
-                tint = Color.Unspecified,
+                tint = NuvioColors.BackgroundCard.copy(alpha = 0.8f),
                 modifier = Modifier
-                    .size(18.dp)
+                    .size(24.dp)
                     .offset(x = 1.dp)
             )
         }
     }
-}
-
-@Composable
-private fun rememberRawSvgPainter(
-    context: android.content.Context,
-    @androidx.annotation.RawRes rawRes: Int
-): Painter {
-    val model = remember(rawRes, context) {
-        ImageRequest.Builder(context)
-            .data(rawRes)
-            .decoderFactory(SvgDecoder.Factory())
-            .build()
-    }
-    return rememberAsyncImagePainter(model = model)
 }

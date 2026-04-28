@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -28,12 +29,16 @@ import com.nuvio.tv.ui.theme.NuvioColors
 @Composable
 fun CollectionSection(
     items: List<MetaPreview>,
+    title: String? = null,
     upFocusRequester: FocusRequester? = null,
+    downFocusRequester: FocusRequester? = null,
+    sectionFocusRequester: FocusRequester? = null,
     restoreItemId: String? = null,
     restoreFocusToken: Int = 0,
     onRestoreFocusHandled: () -> Unit = {},
     onItemFocused: (MetaPreview) -> Unit = {},
-    onItemClick: (MetaPreview) -> Unit
+    onItemClick: (MetaPreview) -> Unit,
+    onItemLongPress: (MetaPreview) -> Unit = {}
 ) {
     if (items.isEmpty()) return
 
@@ -65,11 +70,21 @@ fun CollectionSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp, bottom = 8.dp)
+            .padding(top = if (title.isNullOrBlank()) 8.dp else 20.dp, bottom = 8.dp)
     ) {
+        if (!title.isNullOrBlank()) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = NuvioColors.TextPrimary,
+                modifier = Modifier
+                    .padding(start = 48.dp, end = 48.dp, bottom = 8.dp)
+            )
+        }
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (sectionFocusRequester != null) Modifier.focusRequester(sectionFocusRequester) else Modifier)
                 .focusRestorer { firstItemFocusRequester },
             contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -83,18 +98,20 @@ fun CollectionSection(
                 val focusRequester = when {
                     isRestoreTarget -> restoreFocusRequester
                     isFirstItem -> firstItemFocusRequester
-                    else -> itemFocusRequesters.getOrPut(item.id) { FocusRequester() }
+                    else -> remember(item.id) { itemFocusRequesters.getOrPut(item.id) { FocusRequester() } }
                 }
 
                 Column {
                     GridContentCard(
                         item = item,
                         onClick = { onItemClick(item) },
+                        onLongPress = { onItemLongPress(item) },
                         posterCardStyle = landscapeStyle,
                         showLabel = true,
                         imageCrossfade = true,
                         focusRequester = focusRequester,
                         upFocusRequester = upFocusRequester,
+                        downFocusRequester = downFocusRequester,
                         onFocused = {
                             onItemFocused(item)
                             if (isRestoreTarget && restoreFocusToken > 0) {

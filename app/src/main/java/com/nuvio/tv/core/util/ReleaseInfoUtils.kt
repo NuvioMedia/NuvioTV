@@ -10,6 +10,16 @@ private val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
 private val ISO_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE
 
 fun MetaPreview.isUnreleased(today: LocalDate): Boolean {
+    released?.trim()?.takeIf { it.isNotEmpty() }?.let { rawReleased ->
+        val releaseDate = rawReleased.substringBefore('T')
+        try {
+            val date = LocalDate.parse(releaseDate, ISO_DATE_FORMATTER)
+            return date.isAfter(today)
+        } catch (_: DateTimeParseException) {
+            
+        }
+    }
+
     val info = releaseInfo ?: return false
     // Try full date parse first (e.g. "2026-06-15")
     try {

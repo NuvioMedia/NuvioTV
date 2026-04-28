@@ -10,11 +10,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 
 @Composable
 fun ProfileAvatarCircle(
@@ -22,7 +27,8 @@ fun ProfileAvatarCircle(
     colorHex: String,
     modifier: Modifier = Modifier,
     size: Dp = 80.dp,
-    isSelected: Boolean = false
+    isSelected: Boolean = false,
+    avatarImageUrl: String? = null
 ) {
     val avatarColor = runCatching { Color(android.graphics.Color.parseColor(colorHex)) }
         .getOrDefault(Color(0xFF1E88E5))
@@ -43,11 +49,25 @@ fun ProfileAvatarCircle(
             ),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = initial,
-            color = Color.White,
-            fontSize = fontSize,
-            fontWeight = FontWeight.Bold
-        )
+        if (avatarImageUrl != null) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(avatarImageUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = name,
+                modifier = Modifier
+                    .size(size)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Text(
+                text = initial,
+                color = Color.White,
+                fontSize = fontSize,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }

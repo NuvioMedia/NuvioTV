@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
+import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
 import com.nuvio.tv.domain.model.Stream
 import kotlinx.coroutines.delay
@@ -28,10 +29,16 @@ internal fun PlayerRuntimeController.fetchMetaDetails(id: String?, type: String?
             }
         }
     }
+
+    scope.launch {
+        enrichDescriptionFromTmdb(id, type)
+    }
 }
 
 internal fun PlayerRuntimeController.applyMetaDetails(meta: Meta) {
     metaVideos = meta.videos
+    metaGenres = meta.genres
+    metaCountry = meta.country
     val description = resolveDescription(meta)
 
     _uiState.update { state ->
@@ -63,11 +70,87 @@ internal fun PlayerRuntimeController.updateEpisodeDescription() {
     if (!overview.isNullOrBlank()) {
         _uiState.update { it.copy(description = overview) }
     }
+
+    // Re-enrich from TMDB for the new episode.
+    scope.launch {
+        enrichDescriptionFromTmdb(contentId, contentType)
+    }
+}
+
+private suspend fun PlayerRuntimeController.enrichDescriptionFromTmdb(id: String?, type: String?) {
+    if (id.isNullOrBlank() || type.isNullOrBlank()) return
+    val settings = tmdbSettingsDataStore.settings.first()
+    if (!settings.enabled || !settings.useBasicInfo) return
+
+    val tmdbId = runCatching { tmdbService.ensureTmdbId(id, type) }.getOrNull() ?: return
+    val contentType = when (type.lowercase()) {
+        "series", "tv" -> ContentType.SERIES
+        else -> ContentType.MOVIE
+    }
+    val enrichment = runCatching {
+        tmdbMetadataService.fetchEnrichment(
+            tmdbId = tmdbId,
+            contentType = contentType,
+            language = settings.language
+        )
+    }.getOrNull() ?: return
+
+    val isSeries = type.lowercase() in listOf("series", "tv")
+    val season = currentSeason
+    val episode = currentEpisode
+
+    // For series, try to get episode-level overview and title from TMDB.
+    val episodeEnrichment = if (isSeries && season != null && episode != null) {
+        runCatching {
+            tmdbMetadataService.fetchEpisodeEnrichment(
+                tmdbId = tmdbId,
+                seasonNumbers = listOf(season),
+                language = settings.language
+            )[season to episode]
+        }.getOrNull()
+    } else null
+
+    val tmdbDescription = episodeEnrichment?.overview ?: enrichment.description
+    if (settings.useBasicInfo && !tmdbDescription.isNullOrBlank()) {
+        _uiState.update { it.copy(description = tmdbDescription) }
+    }
+
+    // Enrich title from TMDB (localized).
+    if (settings.useBasicInfo) {
+        val tmdbTitle = enrichment.localizedTitle
+        if (!tmdbTitle.isNullOrBlank()) {
+            _uiState.update { it.copy(title = tmdbTitle) }
+        }
+    }
+
+    // Enrich logo from TMDB if artwork is enabled.
+    if (settings.useArtwork) {
+        val tmdbLogo = enrichment.logo
+        if (!tmdbLogo.isNullOrBlank()) {
+            _uiState.update { it.copy(logo = tmdbLogo) }
+        }
+    }
+
+    // Also enrich episode title from TMDB if available.
+    if (settings.useBasicInfo) {
+        val tmdbEpisodeTitle = episodeEnrichment?.title
+        if (!tmdbEpisodeTitle.isNullOrBlank()) {
+            _uiState.update { it.copy(currentEpisodeTitle = tmdbEpisodeTitle) }
+        }
+    }
+
+    // Enrich cast from TMDB if addon didn't provide any.
+    if (settings.useBasicInfo && enrichment.castMembers.isNotEmpty()) {
+        _uiState.update { state ->
+            if (state.castMembers.isEmpty()) state.copy(castMembers = enrichment.castMembers)
+            else state
+        }
+    }
 }
 
 internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boolean) {
     val normalizedType = contentType?.lowercase()
-    if (normalizedType !in listOf("series", "tv")) {
+    if (normalizedType !in listOf("series", "tv", "other")) {
         nextEpisodeVideo = null
         _uiState.update {
             it.copy(
@@ -77,6 +160,50 @@ internal fun PlayerRuntimeController.recomputeNextEpisode(resetVisibility: Boole
                 nextEpisodeAutoPlaySearching = false,
                 nextEpisodeAutoPlaySourceName = null,
                 nextEpisodeAutoPlayCountdownSec = null
+            )
+        }
+        return
+    }
+
+    // For "other" type, videos lack season/episode - resolve next by
+    // position in the video list using the current video ID.
+    if (normalizedType == "other") {
+        val currentId = currentVideoId
+        val idx = if (currentId != null) metaVideos.indexOfFirst { it.id == currentId } else -1
+        val resolvedNext = if (idx >= 0 && idx < metaVideos.size - 1) metaVideos[idx + 1] else null
+        nextEpisodeVideo = resolvedNext
+        if (resolvedNext == null) {
+            _uiState.update {
+                it.copy(
+                    nextEpisode = null,
+                    showNextEpisodeCard = false,
+                    nextEpisodeCardDismissed = false,
+                    nextEpisodeAutoPlaySearching = false,
+                    nextEpisodeAutoPlaySourceName = null,
+                    nextEpisodeAutoPlayCountdownSec = null
+                )
+            }
+            return
+        }
+        val nextInfo = NextEpisodeInfo(
+            videoId = resolvedNext.id,
+            season = resolvedNext.season ?: 1,
+            episode = resolvedNext.episode ?: (idx + 2),
+            title = resolvedNext.title,
+            thumbnail = resolvedNext.thumbnail,
+            overview = resolvedNext.overview,
+            released = resolvedNext.released,
+            hasAired = true,
+            unairedMessage = null,
+            isOtherType = true
+        )
+        _uiState.update { state ->
+            val sameEpisode = state.nextEpisode?.videoId == nextInfo.videoId
+            val shouldResetVisibility = resetVisibility || !sameEpisode
+            state.copy(
+                nextEpisode = nextInfo,
+                showNextEpisodeCard = if (shouldResetVisibility) false else state.showNextEpisodeCard,
+                nextEpisodeCardDismissed = if (shouldResetVisibility) false else state.nextEpisodeCardDismissed
             )
         }
         return

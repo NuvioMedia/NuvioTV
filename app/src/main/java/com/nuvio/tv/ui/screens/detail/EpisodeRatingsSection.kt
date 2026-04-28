@@ -49,6 +49,7 @@ fun EpisodeRatingsSection(
     modifier: Modifier = Modifier,
     title: String = "Ratings",
     upFocusRequester: FocusRequester? = null,
+    downFocusRequester: FocusRequester? = null,
     firstItemFocusRequester: FocusRequester? = null
 ) {
     val seasonNumbers = remember(episodes) {
@@ -101,7 +102,14 @@ fun EpisodeRatingsSection(
     }
     val hasTitle = title.isNotBlank()
     val upFocusModifier = if (upFocusRequester != null) {
-        Modifier.focusProperties { up = upFocusRequester }
+        Modifier.focusProperties {
+            up = upFocusRequester
+            if (downFocusRequester != null) {
+                down = downFocusRequester
+            }
+        }
+    } else if (downFocusRequester != null) {
+        Modifier.focusProperties { down = downFocusRequester }
     } else {
         Modifier
     }
@@ -129,7 +137,7 @@ fun EpisodeRatingsSection(
                     modifier = Modifier.padding(horizontal = 48.dp, vertical = 12.dp)
                 )
             }
-            !error.isNullOrBlank() -> {
+            error != null -> {
                 Text(
                     text = error,
                     style = MaterialTheme.typography.bodyMedium,
@@ -188,7 +196,7 @@ fun EpisodeRatingsSection(
                             scale = CardDefaults.scale(focusedScale = 1f)
                         ) {
                             Text(
-                                text = "S$season",
+                                text = stringResource(R.string.ratings_season_label, season),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = NuvioColors.TextPrimary,
                                 modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp)
@@ -217,7 +225,14 @@ fun EpisodeRatingsSection(
                         Card(
                             onClick = { },
                             modifier = if (selectedSeasonUpRequester != null) {
-                                Modifier.focusProperties { up = selectedSeasonUpRequester }
+                                Modifier.focusProperties {
+                                    up = selectedSeasonUpRequester
+                                    if (downFocusRequester != null) {
+                                        down = downFocusRequester
+                                    }
+                                }
+                            } else if (downFocusRequester != null) {
+                                Modifier.focusProperties { down = downFocusRequester }
                             } else {
                                 Modifier
                             },
@@ -242,7 +257,7 @@ fun EpisodeRatingsSection(
                                 verticalArrangement = Arrangement.Center
                             ) {
                                 Text(
-                                    text = "E${episodeRating.episodeNumber}",
+                                    text = stringResource(R.string.ratings_episode_label, episodeRating.episodeNumber),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = episodeRating.chipTextColor
                                 )

@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -37,17 +39,23 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
-import coil.decode.SvgDecoder
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import androidx.compose.ui.res.stringResource
+import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
@@ -62,12 +70,14 @@ fun HeroCarousel(
     onItemClick: (MetaPreview) -> Unit,
     onItemFocus: (MetaPreview) -> Unit = {},
     focusRequester: FocusRequester? = null,
+    fullWidth: Dp = Dp.Unspecified,
     modifier: Modifier = Modifier
 ) {
     if (items.isEmpty()) return
 
     var activeIndex by remember { mutableIntStateOf(0) }
     var isFocused by remember { mutableStateOf(false) }
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     LaunchedEffect(activeIndex, isFocused) {
         if (!isFocused) return@LaunchedEffect
@@ -88,7 +98,12 @@ fun HeroCarousel(
 
     Box(
         modifier = modifier
-            .fillMaxWidth()
+            .then(
+                if (fullWidth != Dp.Unspecified)
+                    Modifier.requiredWidth(fullWidth)
+                else
+                    Modifier.fillMaxWidth()
+            )
             .height(400.dp)
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .focusable()
@@ -97,16 +112,18 @@ fun HeroCarousel(
                 if (event.type == KeyEventType.KeyDown) {
                     when (event.key) {
                         Key.DirectionLeft -> {
-                            if (activeIndex > 0) {
-                                activeIndex--
-                                true
-                            } else false
+                            if (isRtl) {
+                                if (activeIndex < items.size - 1) { activeIndex++; true } else false
+                            } else {
+                                if (activeIndex > 0) { activeIndex--; true } else false
+                            }
                         }
                         Key.DirectionRight -> {
-                            if (activeIndex < items.size - 1) {
-                                activeIndex++
-                                true
-                            } else false
+                            if (isRtl) {
+                                if (activeIndex > 0) { activeIndex--; true } else false
+                            } else {
+                                if (activeIndex < items.size - 1) { activeIndex++; true } else false
+                            }
                         }
                         else -> false
                     }
@@ -181,9 +198,10 @@ private fun HeroCarouselSlide(
     }
     val requestHeightPx = remember(density) { with(density) { 400.dp.roundToPx() } }
     val logoRequestHeightPx = remember(density) { with(density) { 80.dp.roundToPx() } }
-    val backgroundModel = remember(context, item.background, requestWidthPx, requestHeightPx) {
+    val backdropUrl = item.backdropUrl
+    val backgroundModel = remember(context, backdropUrl, requestWidthPx, requestHeightPx) {
         ImageRequest.Builder(context)
-            .data(item.background)
+            .data(backdropUrl)
             .crossfade(false)
             .size(width = requestWidthPx, height = requestHeightPx)
             .build()
@@ -295,12 +313,11 @@ private fun HeroCarouselSlide(
                         val imdbModel = remember(context) {
                             ImageRequest.Builder(context)
                                 .data(com.nuvio.tv.R.raw.imdb_logo_2016)
-                                .decoderFactory(SvgDecoder.Factory())
                                 .build()
                         }
                         AsyncImage(
                             model = imdbModel,
-                            contentDescription = "IMDB",
+                            contentDescription = stringResource(R.string.cd_imdb),
                             modifier = Modifier.size(30.dp),
                             contentScale = ContentScale.Fit
                         )

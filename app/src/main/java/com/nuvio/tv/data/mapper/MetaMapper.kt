@@ -5,12 +5,20 @@ import com.nuvio.tv.data.remote.dto.MetaLinkDto
 import com.nuvio.tv.data.remote.dto.VideoDto
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.Meta
-import com.nuvio.tv.domain.model.MetaCastMember
 import com.nuvio.tv.domain.model.MetaLink
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.model.Video
 
 fun MetaDto.toDomain(episodeLabel: String = "Episode"): Meta {
+    val directorMembers = mapPeople(appExtras?.directors, roleFallback = "Director", forceRole = true)
+    val writerMembers = mapPeople(appExtras?.writers, roleFallback = "Writer", forceRole = true)
+    val castMembers = mapPeople(appExtras?.cast)
+    val directors = coerceStringList(director).ifEmpty { directorMembers.map { it.name } }
+    val writersList = coerceStringList(writer).ifEmpty { coerceStringList(writers) }
+        .ifEmpty { writerMembers.map { it.name } }
+    val castList = coerceStringList(cast).ifEmpty { castMembers.map { it.name } }
+    val trailersList = mapTrailers(trailers, trailerStreams)
+
     return Meta(
         id = id,
         type = ContentType.fromString(type),
@@ -20,49 +28,40 @@ fun MetaDto.toDomain(episodeLabel: String = "Episode"): Meta {
         posterShape = PosterShape.fromString(posterShape),
         background = background,
         logo = logo,
+        imdbId = imdbId,
+        slug = slug,
+        released = released,
+        landscapePoster = landscapePoster,
         description = description,
         releaseInfo = releaseInfo,
+        status = status?.trim()?.takeIf { it.isNotBlank() },
         imdbRating = imdbRating?.toFloatOrNull(),
         genres = genres ?: emptyList(),
         runtime = runtime,
-        director = coerceStringList(director),
-        writer = coerceStringList(writer).ifEmpty { coerceStringList(writers) },
-        cast = coerceStringList(cast),
-        castMembers = appExtras?.cast
-            .orEmpty()
-            .mapNotNull { castMember ->
-                val name = castMember.name.trim()
-                if (name.isBlank()) return@mapNotNull null
-                MetaCastMember(
-                    name = name,
-                    character = castMember.character?.takeIf { it.isNotBlank() },
-                    photo = castMember.photo?.takeIf { it.isNotBlank() }
-                )
-            },
+        director = directors,
+        writer = writersList,
+        cast = castList,
+        castMembers = directorMembers + writerMembers + castMembers,
         videos = videos?.map { it.toDomain(episodeLabel) } ?: emptyList(),
         productionCompanies = emptyList(),
         networks = emptyList(),
-        ageRating = null,
+        ageRating = appExtras?.certification?.takeIf { it.isNotBlank() },
         country = country,
         awards = awards,
         language = language,
         links = links?.mapNotNull { it.toDomain() } ?: emptyList(),
-        trailerYtIds = trailerStreams?.mapNotNull { it.ytId?.takeIf { id -> id.isNotBlank() } } ?: emptyList()
+        trailerYtIds = trailersList.mapNotNull { it.ytId }.distinct(),
+        rawPosterUrl = rawPosterUrl,
+        behaviorHints = mapBehaviorHints(behaviorHints),
+        trailers = trailersList,
+        releaseDates = mapReleaseDates(appExtras?.releaseDates),
+        hasPoster = hasPoster,
+        hasBackground = hasBackground,
+        hasLandscapePoster = hasLandscapePoster,
+        hasLogo = hasLogo,
+        hasLinks = hasLinks,
+        hasVideos = hasVideos
     )
-}
-
-private fun coerceStringList(value: Any?): List<String> {
-    return when (value) {
-        null -> emptyList()
-        is String -> listOf(value)
-        is List<*> -> value.filterIsInstance<String>()
-        is Map<*, *> -> {
-            // Some addons may return an object; try a couple common keys.
-            val name = value["name"] as? String
-            if (!name.isNullOrBlank()) listOf(name) else emptyList()
-        }
-        else -> emptyList()
-    }
 }
 
 fun VideoDto.toDomain(episodeLabel: String = "Episode"): Video {
@@ -74,7 +73,9 @@ fun VideoDto.toDomain(episodeLabel: String = "Episode"): Video {
         streams = streams?.map { it.toDomain(addonName = "Embedded Streams", addonLogo = null) } ?: emptyList(),
         season = season,
         episode = episode ?: number,
-        overview = overview ?: description
+        overview = overview ?: description,
+        runtime = parseEpisodeRuntimeMinutes(runtime),
+        available = available
     )
 }
 
@@ -86,4 +87,17 @@ fun MetaLinkDto.toDomain(): MetaLink? {
             url = it
         )
     }
+}
+
+private fun parseEpisodeRuntimeMinutes(runtime: String?): Int? {
+    val normalized = runtime?.trim()?.lowercase()?.takeIf { it.isNotBlank() } ?: return null
+    val hourMatch = "(\\d+)\\s*h".toRegex().find(normalized)
+    val minuteMatch = "(\\d+)\\s*m(?:in)?".toRegex().find(normalized)
+    val hours = hourMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
+    val minutes = minuteMatch?.groupValues?.getOrNull(1)?.toIntOrNull()
+    if (hours != null || minutes != null) {
+        return (hours ?: 0) * 60 + (minutes ?: 0)
+    }
+
+    return normalized.filter(Char::isDigit).toIntOrNull()
 }

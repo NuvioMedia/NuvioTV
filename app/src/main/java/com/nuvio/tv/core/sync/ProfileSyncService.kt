@@ -4,7 +4,9 @@ import android.util.Log
 import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.data.local.ProfileDataStore
+import com.nuvio.tv.data.remote.supabase.SupabaseProfileLockState
 import com.nuvio.tv.data.remote.supabase.SupabaseProfile
+import com.nuvio.tv.data.remote.supabase.SupabaseProfilePinVerifyResult
 import com.nuvio.tv.domain.model.UserProfile
 import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +19,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "ProfileSyncService"
+
+sealed class SetProfilePinResult {
+    object Success : SetProfilePinResult()
+    object CurrentPinRequired : SetProfilePinResult()
+    data class Failure(val throwable: Throwable) : SetProfilePinResult()
+}
 
 @Singleton
 class ProfileSyncService @Inject constructor(
@@ -47,6 +55,7 @@ class ProfileSyncService @Inject constructor(
                             put("avatar_color_hex", profile.avatarColorHex)
                             put("uses_primary_addons", profile.usesPrimaryAddons)
                             put("uses_primary_plugins", profile.usesPrimaryPlugins)
+                            put("avatar_id", profile.avatarId)
                         }
                     }
                 })
@@ -78,7 +87,8 @@ class ProfileSyncService @Inject constructor(
                     name = entry.name,
                     avatarColorHex = entry.avatarColorHex,
                     usesPrimaryAddons = entry.usesPrimaryAddons,
-                    usesPrimaryPlugins = entry.usesPrimaryPlugins
+                    usesPrimaryPlugins = entry.usesPrimaryPlugins,
+                    avatarId = entry.avatarId
                 )
             }
 
@@ -107,6 +117,82 @@ class ProfileSyncService @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to delete remote profile data for profile $profileId", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun pullProfileLockStates(): Result<Map<Int, Boolean>> = withContext(Dispatchers.IO) {
+        try {
+            val response = withJwtRefreshRetry {
+                postgrest.rpc("sync_pull_profile_locks")
+            }
+            val remote = response.decodeList<SupabaseProfileLockState>()
+            val result = remote.associate { it.profileIndex to it.pinEnabled }
+            Result.success(result)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to pull profile lock states", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun setProfilePin(profileId: Int, pin: String, currentPin: String? = null): SetProfilePinResult = withContext(Dispatchers.IO) {
+        try {
+            val params = buildJsonObject {
+                put("p_profile_id", profileId)
+                put("p_pin", pin)
+                if (!currentPin.isNullOrBlank()) {
+                    put("p_current_pin", currentPin)
+                }
+            }
+            withJwtRefreshRetry {
+                postgrest.rpc("set_profile_pin", params)
+            }
+            SetProfilePinResult.Success
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set profile PIN", e)
+            if (isCurrentPinRequiredError(e)) {
+                SetProfilePinResult.CurrentPinRequired
+            } else {
+                SetProfilePinResult.Failure(e)
+            }
+        }
+    }
+
+    private fun isCurrentPinRequiredError(e: Throwable): Boolean =
+        e.message?.contains("Current PIN is required", ignoreCase = true) == true
+
+    suspend fun clearProfilePin(profileId: Int, currentPin: String? = null): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val params = buildJsonObject {
+                put("p_profile_id", profileId)
+                if (!currentPin.isNullOrBlank()) {
+                    put("p_current_pin", currentPin)
+                }
+            }
+            withJwtRefreshRetry {
+                postgrest.rpc("clear_profile_pin", params)
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to clear profile PIN", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun verifyProfilePin(profileId: Int, pin: String): Result<SupabaseProfilePinVerifyResult> = withContext(Dispatchers.IO) {
+        try {
+            val params = buildJsonObject {
+                put("p_profile_id", profileId)
+                put("p_pin", pin)
+            }
+            val response = withJwtRefreshRetry {
+                postgrest.rpc("verify_profile_pin", params)
+            }
+            val decoded = response.decodeList<SupabaseProfilePinVerifyResult>().firstOrNull()
+                ?: SupabaseProfilePinVerifyResult(unlocked = false, retryAfterSeconds = 0)
+            Result.success(decoded)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to verify profile PIN", e)
             Result.failure(e)
         }
     }

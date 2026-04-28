@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.GridView
@@ -55,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.ui.screens.plugin.PluginScreenContent
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.delay
@@ -67,6 +70,7 @@ internal enum class SettingsCategory {
     PLUGINS,
     INTEGRATION,
     PLAYBACK,
+    ADVANCED,
     TRAKT,
     ABOUT,
     DEBUG
@@ -145,7 +149,7 @@ private fun rememberSettingsSectionSpecs() = listOf(
     SettingsSectionSpec(
         category = SettingsCategory.PLAYBACK,
         title = stringResource(R.string.settings_playback),
-        icon = Icons.Default.Settings,
+        icon = Icons.Rounded.PlayArrow,
         subtitle = stringResource(R.string.settings_playback_subtitle),
         destination = SettingsSectionDestination.Inline
     ),
@@ -164,6 +168,13 @@ private fun rememberSettingsSectionSpecs() = listOf(
         destination = SettingsSectionDestination.Inline
     ),
     SettingsSectionSpec(
+        category = SettingsCategory.ADVANCED,
+        title = stringResource(R.string.settings_advanced),
+        icon = Icons.Default.Build,
+        subtitle = stringResource(R.string.settings_advanced_subtitle),
+        destination = SettingsSectionDestination.Inline
+    ),
+    SettingsSectionSpec(
         category = SettingsCategory.DEBUG,
         title = stringResource(R.string.settings_debug),
         icon = Icons.Default.BugReport,
@@ -177,6 +188,8 @@ fun SettingsScreen(
     showBuiltInHeader: Boolean = true,
     onNavigateToTrakt: () -> Unit = {},
     onNavigateToAuthQrSignIn: () -> Unit = {},
+    onNavigateToManageProfiles: () -> Unit = {},
+    onNavigateToSupportersContributors: () -> Unit = {},
     profileViewModel: ProfileSettingsViewModel = hiltViewModel()
 ) {
     val isPrimaryProfileActive by profileViewModel.isPrimaryProfileActive.collectAsStateWithLifecycle()
@@ -188,12 +201,13 @@ fun SettingsScreen(
                 SettingsCategory.DEBUG -> BuildConfig.IS_DEBUG_BUILD
                 SettingsCategory.PROFILES -> isPrimaryProfileActive
                 SettingsCategory.ACCOUNT -> isPrimaryProfileActive
-                SettingsCategory.TRAKT -> isPrimaryProfileActive
+                SettingsCategory.PLUGINS -> AppFeaturePolicy.pluginsEnabled
                 else -> true
             }
         }
     }
 
+    val isRtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     var selectedCategory by remember(visibleSections) {
         mutableStateOf(
             visibleSections.firstOrNull()?.category ?: SettingsCategory.APPEARANCE
@@ -208,6 +222,7 @@ fun SettingsScreen(
                 SettingsCategory.LAYOUT to FocusRequester(),
                 SettingsCategory.INTEGRATION to FocusRequester(),
                 SettingsCategory.PLAYBACK to FocusRequester(),
+                SettingsCategory.ADVANCED to FocusRequester(),
                 SettingsCategory.ABOUT to FocusRequester()
             )
     }
@@ -252,7 +267,6 @@ fun SettingsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioColors.Background)
             .padding(
                 start = 32.dp,
                 end = 32.dp,
@@ -269,66 +283,75 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 var railHadFocus by remember { mutableStateOf(false) }
+                val railListState = rememberLazyListState()
 
-                LazyColumn(
+                Box(
                     modifier = Modifier
-                        .focusRequester(railContainerFocusRequester)
-                        .width(282.dp)
+                        .width(220.dp)
                         .fillMaxHeight()
-                        .onFocusChanged { state ->
-                            val justGainedFocus = !railHadFocus && state.hasFocus
-                            railHadFocus = state.hasFocus
-                            if (justGainedFocus) {
-                                val requester = railFocusRequesters[selectedCategory]
-                                val requested = if (requester != null) {
-                                    runCatching { requester.requestFocus() }.isSuccess
+                ) {
+                    LazyColumn(
+                        state = railListState,
+                        modifier = Modifier
+                            .focusRequester(railContainerFocusRequester)
+                            .fillMaxSize()
+                            .onFocusChanged { state ->
+                                val justGainedFocus = !railHadFocus && state.hasFocus
+                                railHadFocus = state.hasFocus
+                                if (justGainedFocus) {
+                                    val requester = railFocusRequesters[selectedCategory]
+                                    val requested = if (requester != null) {
+                                        runCatching { requester.requestFocus() }.isSuccess
+                                    } else {
+                                        false
+                                    }
+                                    if (!requested) {
+                                        focusManager.moveFocus(FocusDirection.Down)
+                                    }
+                                }
+                            }
+                            .onPreviewKeyEvent { event ->
+                                val toDetailKey = if (isRtl) Key.DirectionLeft else Key.DirectionRight
+                                if (event.type == KeyEventType.KeyDown && event.key == toDetailKey) {
+                                    allowDetailAutofocus = true
+                                    false
                                 } else {
                                     false
                                 }
-                                if (!requested) {
-                                    focusManager.moveFocus(FocusDirection.Down)
+                            },
+                        verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)
+                    ) {
+                        items(
+                            items = visibleSections,
+                            key = { it.category }
+                        ) { section ->
+                            SettingsRailButton(
+                                title = section.title,
+                                icon = section.icon,
+                                rawIconRes = section.rawIconRes,
+                                isSelected = selectedCategory == section.category,
+                                focusRequester = railFocusRequesters[section.category],
+                                onClick = {
+                                    if (section.destination == SettingsSectionDestination.External) {
+                                        when (section.category) {
+                                            SettingsCategory.ACCOUNT -> onNavigateToAuthQrSignIn()
+                                            SettingsCategory.TRAKT -> onNavigateToTrakt()
+                                            else -> Unit
+                                        }
+                                    } else {
+                                        if (section.category == SettingsCategory.INTEGRATION) {
+                                            integrationSection = IntegrationSettingsSection.Hub
+                                        }
+                                        allowDetailAutofocus = true
+                                        selectedCategory = section.category
+                                        pendingContentFocusCategory = section.category
+                                        pendingContentFocusRequestId += 1L
+                                    }
                                 }
-                            }
+                            )
                         }
-                        .onPreviewKeyEvent { event ->
-                            if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionRight) {
-                                allowDetailAutofocus = true
-                                false
-                            } else {
-                                false
-                            }
-                        },
-                    verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)
-                ) {
-                    items(
-                        items = visibleSections,
-                        key = { it.category }
-                    ) { section ->
-                        SettingsRailButton(
-                            title = section.title,
-                            icon = section.icon,
-                            rawIconRes = section.rawIconRes,
-                            isSelected = selectedCategory == section.category,
-                            focusRequester = railFocusRequesters[section.category],
-                            onClick = {
-                                if (section.destination == SettingsSectionDestination.External) {
-                                    when (section.category) {
-                                        SettingsCategory.ACCOUNT -> onNavigateToAuthQrSignIn()
-                                        SettingsCategory.TRAKT -> onNavigateToTrakt()
-                                        else -> Unit
-                                    }
-                                } else {
-                                    if (section.category == SettingsCategory.INTEGRATION) {
-                                        integrationSection = IntegrationSettingsSection.Hub
-                                    }
-                                    allowDetailAutofocus = true
-                                    selectedCategory = section.category
-                                    pendingContentFocusCategory = section.category
-                                    pendingContentFocusRequestId += 1L
-                                }
-                            }
-                        )
                     }
+                    SettingsVerticalScrollIndicators(state = railListState)
                 }
 
                 Box(
@@ -336,8 +359,9 @@ fun SettingsScreen(
                         .weight(1f)
                         .fillMaxHeight()
                         .onKeyEvent { event ->
-                            if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft) {
-                                val movedLeft = focusManager.moveFocus(FocusDirection.Left)
+                            val toRailKey = if (isRtl) Key.DirectionRight else Key.DirectionLeft
+                            if (event.type == KeyEventType.KeyDown && event.key == toRailKey) {
+                                val movedLeft = focusManager.moveFocus(if (isRtl) FocusDirection.Right else FocusDirection.Left)
                                 if (!movedLeft) {
                                     allowDetailAutofocus = false
                                     val requested = railFocusRequesters[selectedCategory]?.let { requester ->
@@ -361,7 +385,9 @@ fun SettingsScreen(
                         }
                 ) {
                     when (selectedCategory) {
-                        SettingsCategory.PROFILES -> ProfileSettingsContent()
+                        SettingsCategory.PROFILES -> ProfileSettingsContent(
+                            onManageProfiles = onNavigateToManageProfiles
+                        )
                         SettingsCategory.APPEARANCE -> ThemeSettingsContent(
                             initialFocusRequester = if (allowDetailAutofocus) {
                                 contentFocusRequesters[SettingsCategory.APPEARANCE]
@@ -383,6 +409,13 @@ fun SettingsScreen(
                                 null
                             }
                         )
+                        SettingsCategory.ADVANCED -> AdvancedSettingsContent(
+                            initialFocusRequester = if (allowDetailAutofocus) {
+                                contentFocusRequesters[SettingsCategory.ADVANCED]
+                            } else {
+                                null
+                            }
+                        )
                         SettingsCategory.INTEGRATION -> IntegrationSettingsContent(
                             selectedSection = integrationSection,
                             onSelectSection = { integrationSection = it },
@@ -399,13 +432,14 @@ fun SettingsScreen(
                             autoFocusEnabled = allowDetailAutofocus
                         )
                         SettingsCategory.ABOUT -> AboutSettingsContent(
+                            onNavigateToSupportersContributors = onNavigateToSupportersContributors,
                             initialFocusRequester = if (allowDetailAutofocus) {
                                 contentFocusRequesters[SettingsCategory.ABOUT]
                             } else {
                                 null
                             }
                         )
-                        SettingsCategory.PLUGINS -> PluginsSettingsContent()
+                        SettingsCategory.PLUGINS -> if (AppFeaturePolicy.pluginsEnabled) PluginsSettingsContent()
                         SettingsCategory.ACCOUNT -> AccountSettingsInline(
                             onNavigateToAuthQrSignIn = onNavigateToAuthQrSignIn
                         )
@@ -518,38 +552,43 @@ private fun IntegrationSettingsContent(
                         .fillMaxWidth()
                         .weight(1f)
                 ) {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        item(key = "integration_hub_tmdb") {
-                            SettingsActionRow(
-                                title = "TMDB",
-                                subtitle = stringResource(R.string.settings_tmdb_subtitle),
-                                onClick = { onSelectSection(IntegrationSettingsSection.Tmdb) },
-                                modifier = Modifier.focusRequester(hubEntryFocusRequester)
-                            )
+                    val integrationHubState = rememberLazyListState()
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            state = integrationHubState,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            item(key = "integration_hub_tmdb") {
+                                SettingsActionRow(
+                                    title = "TMDB",
+                                    subtitle = stringResource(R.string.settings_tmdb_subtitle),
+                                    onClick = { onSelectSection(IntegrationSettingsSection.Tmdb) },
+                                    modifier = Modifier.focusRequester(hubEntryFocusRequester)
+                                )
+                            }
+                            item(key = "integration_hub_mdblist") {
+                                SettingsActionRow(
+                                    title = "MDBList",
+                                    subtitle = stringResource(R.string.settings_mdblist_subtitle),
+                                    onClick = { onSelectSection(IntegrationSettingsSection.MdbList) }
+                                )
+                            }
+                            item(key = "integration_hub_animeskip") {
+                                SettingsActionRow(
+                                    title = "Anime-Skip",
+                                    subtitle = stringResource(R.string.settings_animeskip_subtitle),
+                                    onClick = { onSelectSection(IntegrationSettingsSection.AnimeSkip) }
+                                )
+                            }
+                            item(key = "integration_hub_tv_recommendations") {
+                                SettingsActionRow(
+                                    title = stringResource(R.string.settings_tv_recommendations),
+                                    subtitle = stringResource(R.string.settings_tv_recommendations_subtitle),
+                                    onClick = { onSelectSection(IntegrationSettingsSection.TvRecommendations) }
+                                )
+                            }
                         }
-                        item(key = "integration_hub_mdblist") {
-                            SettingsActionRow(
-                                title = "MDBList",
-                                subtitle = stringResource(R.string.settings_mdblist_subtitle),
-                                onClick = { onSelectSection(IntegrationSettingsSection.MdbList) }
-                            )
-                        }
-                        item(key = "integration_hub_animeskip") {
-                            SettingsActionRow(
-                                title = "Anime-Skip",
-                                subtitle = stringResource(R.string.settings_animeskip_subtitle),
-                                onClick = { onSelectSection(IntegrationSettingsSection.AnimeSkip) }
-                            )
-                        }
-                        item(key = "integration_hub_tv_recommendations") {
-                            SettingsActionRow(
-                                title = stringResource(R.string.settings_tv_recommendations),
-                                subtitle = stringResource(R.string.settings_tv_recommendations_subtitle),
-                                onClick = { onSelectSection(IntegrationSettingsSection.TvRecommendations) }
-                            )
-                        }
+                        SettingsVerticalScrollIndicators(state = integrationHubState)
                     }
                 }
             }

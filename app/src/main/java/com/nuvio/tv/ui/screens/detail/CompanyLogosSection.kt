@@ -13,13 +13,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,8 +32,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -42,9 +47,28 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 @Composable
 fun CompanyLogosSection(
     title: String,
-    companies: List<MetaCompany>
+    companies: List<MetaCompany>,
+    onCompanyClick: (MetaCompany) -> Unit = {},
+    restoreCompanyId: Int? = null,
+    restoreFocusToken: Int = 0,
+    onRestoreFocusHandled: () -> Unit = {}
 ) {
     if (companies.isEmpty()) return
+
+    val focusRequesters = remember(companies) {
+        companies
+            .mapNotNull { company -> company.tmdbId?.let { it to FocusRequester() } }
+            .toMap()
+    }
+
+    LaunchedEffect(restoreCompanyId, restoreFocusToken) {
+        if (restoreFocusToken <= 0 || restoreCompanyId == null) return@LaunchedEffect
+        val targetRequester = focusRequesters[restoreCompanyId]
+        if (targetRequester == null) return@LaunchedEffect
+        repeat(2) { withFrameNanos { } }
+        runCatching { targetRequester.requestFocus() }
+        onRestoreFocusHandled()
+    }
 
     Column(
         modifier = Modifier
@@ -69,14 +93,22 @@ fun CompanyLogosSection(
                     "$title-$index-${company.name}-${company.logo.orEmpty()}"
                 }
             ) { _, company ->
-                CompanyLogoCard(company = company)
+                CompanyLogoCard(
+                    company = company,
+                    focusRequester = focusRequesters[company.tmdbId],
+                    onClick = { onCompanyClick(company) }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun CompanyLogoCard(company: MetaCompany) {
+private fun CompanyLogoCard(
+    company: MetaCompany,
+    focusRequester: FocusRequester? = null,
+    onClick: () -> Unit
+) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val logoWidthPx = remember(density) { with(density) { 140.dp.roundToPx() } }
@@ -93,10 +125,17 @@ private fun CompanyLogoCard(company: MetaCompany) {
     var logoLoadFailed by remember(company.logo) { mutableStateOf(false) }
 
     Card(
-        onClick = { },
+        onClick = {
+            if (company.tmdbId != null) {
+                onClick()
+            }
+        },
         modifier = Modifier
             .width(140.dp)
-            .height(56.dp),
+            .height(56.dp)
+            .then(
+                if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier
+            ),
         colors = CardDefaults.colors(
             containerColor = Color.White,
             focusedContainerColor = Color.White

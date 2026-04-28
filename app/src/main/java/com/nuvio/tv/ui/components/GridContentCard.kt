@@ -1,7 +1,6 @@
 package com.nuvio.tv.ui.components
 
 import android.view.KeyEvent as AndroidKeyEvent
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -21,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -44,8 +44,9 @@ import androidx.tv.material3.Text
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.theme.NuvioColors
 import androidx.compose.ui.platform.LocalContext
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -55,10 +56,11 @@ fun GridContentCard(
     modifier: Modifier = Modifier,
     posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
     showLabel: Boolean = true,
-    imageCrossfade: Boolean = false,
+    imageCrossfade: Boolean = true,
     isWatched: Boolean = false,
     focusRequester: FocusRequester? = null,
     upFocusRequester: FocusRequester? = null,
+    downFocusRequester: FocusRequester? = null,
     onLongPress: (() -> Unit)? = null,
     onFocused: () -> Unit = {}
 ) {
@@ -68,11 +70,7 @@ fun GridContentCard(
     val requestHeightPx = remember(density, posterCardStyle.height) { with(density) { posterCardStyle.height.roundToPx() } }
     var isFocused by remember { mutableStateOf(false) }
     var longPressTriggered by remember { mutableStateOf(false) }
-    val watchedIconEndPadding by animateDpAsState(
-        targetValue = if (isFocused) 14.dp else 8.dp,
-        animationSpec = tween(durationMillis = 180),
-        label = "gridContentCardWatchedIconEndPadding"
-    )
+
 
     Column(
         modifier = modifier.width(posterCardStyle.width)
@@ -93,8 +91,15 @@ fun GridContentCard(
                     else Modifier
                 )
                 .then(
-                    if (upFocusRequester != null) {
-                        Modifier.focusProperties { up = upFocusRequester }
+                    if (upFocusRequester != null || downFocusRequester != null) {
+                        Modifier.focusProperties {
+                            if (upFocusRequester != null) {
+                                up = upFocusRequester
+                            }
+                            if (downFocusRequester != null) {
+                                down = downFocusRequester
+                            }
+                        }
                     } else {
                         Modifier
                     }
@@ -129,8 +134,8 @@ fun GridContentCard(
                 },
             shape = CardDefaults.shape(shape = cardShape),
             colors = CardDefaults.colors(
-                containerColor = NuvioColors.BackgroundCard,
-                focusedContainerColor = NuvioColors.BackgroundCard
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent
             ),
             border = CardDefaults.border(
                 focusedBorder = Border(
@@ -146,6 +151,8 @@ fun GridContentCard(
                     .clip(cardShape)
             ) {
                 val context = LocalContext.current
+                val bgCardColor = NuvioColors.BackgroundCard
+                val bgPainter = remember(bgCardColor) { androidx.compose.ui.graphics.painter.ColorPainter(bgCardColor) }
                 val imageModel = remember(item.poster, requestWidthPx, requestHeightPx) {
                     ImageRequest.Builder(context)
                         .data(item.poster)
@@ -161,31 +168,30 @@ fun GridContentCard(
                         model = imageModel,
                         contentDescription = item.name,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        placeholder = bgPainter,
+                        error = bgPainter,
+                        fallback = bgPainter
                     )
                 }
 
                 if (isWatched) {
-                    Box(
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = stringResource(R.string.episodes_cd_watched),
+                        tint = Color.White,
                         modifier = Modifier
                             .align(androidx.compose.ui.Alignment.TopEnd)
-                            .padding(end = watchedIconEndPadding, top = 8.dp)
-                            .zIndex(2f),
-                        contentAlignment = androidx.compose.ui.Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = Color.Black,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = stringResource(R.string.episodes_cd_watched),
-                            tint = Color.White,
-                            modifier = Modifier.size(21.dp)
-                        )
-                    }
+                            .padding(end = 8.dp, top = 8.dp)
+                            .zIndex(2f)
+                            .size(21.dp)
+                            .drawBehind {
+                                drawCircle(
+                                    color = androidx.compose.ui.graphics.Color.Black,
+                                    radius = size.minDimension / 2f + 1.5f
+                                )
+                            }
+                    )
                 }
             }
         }

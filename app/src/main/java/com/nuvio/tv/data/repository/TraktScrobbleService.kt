@@ -45,6 +45,7 @@ class TraktScrobbleService @Inject constructor(
     private val profileManager: ProfileManager
 ) {
     private data class ScrobbleStamp(
+        val profileId: Int,
         val action: String,
         val itemKey: String,
         val progress: Float,
@@ -72,12 +73,12 @@ class TraktScrobbleService @Inject constructor(
         item: TraktScrobbleItem,
         progressPercent: Float
     ) {
-        if (profileManager.activeProfileId.value != 1) return
+        val activeProfileId = profileManager.activeProfileId.value
         if (!traktAuthService.getCurrentAuthState().isAuthenticated) return
         if (!traktAuthService.hasRequiredCredentials()) return
 
         val clampedProgress = progressPercent.coerceIn(0f, 100f)
-        if (shouldSkip(action, item.itemKey, clampedProgress)) return
+        if (shouldSkip(activeProfileId, action, item.itemKey, clampedProgress)) return
 
         val requestBody = buildRequestBody(item, clampedProgress)
 
@@ -90,6 +91,7 @@ class TraktScrobbleService @Inject constructor(
 
         if (response.isSuccessful || response.code() == 409) {
             lastScrobbleStamp = ScrobbleStamp(
+                profileId = activeProfileId,
                 action = action,
                 itemKey = item.itemKey,
                 progress = clampedProgress,
@@ -133,13 +135,14 @@ class TraktScrobbleService @Inject constructor(
         }
     }
 
-    private fun shouldSkip(action: String, itemKey: String, progress: Float): Boolean {
+    private fun shouldSkip(profileId: Int, action: String, itemKey: String, progress: Float): Boolean {
         val last = lastScrobbleStamp ?: return false
         val now = System.currentTimeMillis()
         val isSameWindow = now - last.timestampMs < minSendIntervalMs
+        val isSameProfile = last.profileId == profileId
         val isSameAction = last.action == action
         val isSameItem = last.itemKey == itemKey
         val isNearProgress = abs(last.progress - progress) <= progressWindow
-        return isSameWindow && isSameAction && isSameItem && isNearProgress
+        return isSameWindow && isSameProfile && isSameAction && isSameItem && isNearProgress
     }
 }

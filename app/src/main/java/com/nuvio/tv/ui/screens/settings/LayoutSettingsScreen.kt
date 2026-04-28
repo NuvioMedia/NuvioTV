@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -53,6 +54,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.domain.model.FocusedPosterTrailerPlaybackTarget
 import com.nuvio.tv.domain.model.HomeLayout
 import com.nuvio.tv.ui.components.ClassicLayoutPreview
@@ -146,10 +148,11 @@ fun LayoutSettingsContent(
                 .fillMaxWidth()
                 .weight(1f)
         ) {
+        val layoutListState = rememberLazyListState()
+        Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
+            state = layoutListState,
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -217,6 +220,34 @@ fun LayoutSettingsContent(
                                     LayoutSettingsEvent.SetModernLandscapePostersEnabled(
                                         !uiState.modernLandscapePostersEnabled
                                     )
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
+                        )
+                    }
+
+                    if (uiState.selectedLayout == HomeLayout.MODERN) {
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_fullscreen_hero_backdrop),
+                            subtitle = stringResource(R.string.layout_fullscreen_hero_backdrop_sub),
+                            checked = uiState.modernHeroFullScreenBackdropEnabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetModernHeroFullScreenBackdropEnabled(!uiState.modernHeroFullScreenBackdropEnabled)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
+                        )
+                    }
+
+                    if (uiState.selectedLayout == HomeLayout.CLASSIC) {
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_classic_focus_gradient),
+                            subtitle = stringResource(R.string.layout_classic_focus_gradient_sub),
+                            checked = uiState.classicFocusGradientEnabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetClassicFocusGradientEnabled(!uiState.classicFocusGradientEnabled)
                                 )
                             },
                             onFocused = { focusedSection = LayoutSettingsSection.HOME_LAYOUT }
@@ -302,17 +333,19 @@ fun LayoutSettingsContent(
                             onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                         )
                     }
-                    CompactToggleRow(
-                        title = stringResource(R.string.layout_show_hero),
-                        subtitle = stringResource(R.string.layout_show_hero_sub),
-                        checked = uiState.heroSectionEnabled,
-                        onToggle = {
-                            viewModel.onEvent(
-                                LayoutSettingsEvent.SetHeroSectionEnabled(!uiState.heroSectionEnabled)
-                            )
-                        },
-                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
-                    )
+                    if (uiState.selectedLayout != HomeLayout.MODERN) {
+                        CompactToggleRow(
+                            title = stringResource(R.string.layout_show_hero),
+                            subtitle = stringResource(R.string.layout_show_hero_sub),
+                            checked = uiState.heroSectionEnabled,
+                            onToggle = {
+                                viewModel.onEvent(
+                                    LayoutSettingsEvent.SetHeroSectionEnabled(!uiState.heroSectionEnabled)
+                                )
+                            },
+                            onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                        )
+                    }
                     CompactToggleRow(
                         title = stringResource(R.string.layout_show_discover),
                         subtitle = stringResource(R.string.layout_show_discover_sub),
@@ -372,6 +405,17 @@ fun LayoutSettingsContent(
                         },
                         onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
                     )
+                    CompactToggleRow(
+                        title = stringResource(R.string.layout_blur_cw_next_up),
+                        subtitle = stringResource(R.string.layout_blur_cw_next_up_sub),
+                        checked = uiState.blurContinueWatchingNextUp,
+                        onToggle = {
+                            viewModel.onEvent(
+                                LayoutSettingsEvent.SetBlurContinueWatchingNextUp(!uiState.blurContinueWatchingNextUp)
+                            )
+                        },
+                        onFocused = { focusedSection = LayoutSettingsSection.HOME_CONTENT }
+                    )
                 }
             }
 
@@ -423,6 +467,18 @@ fun LayoutSettingsContent(
                         },
                         onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
                     )
+
+                    CompactToggleRow(
+                        title = stringResource(R.string.layout_show_full_release_date),
+                        subtitle = stringResource(R.string.layout_show_full_release_date_sub),
+                        checked = uiState.showFullReleaseDate,
+                        onToggle = {
+                            viewModel.onEvent(
+                                LayoutSettingsEvent.SetShowFullReleaseDate(!uiState.showFullReleaseDate)
+                            )
+                        },
+                        onFocused = { focusedSection = LayoutSettingsSection.DETAIL_PAGE }
+                    )
                 }
             }
 
@@ -438,7 +494,8 @@ fun LayoutSettingsContent(
                 ) {
                     val isModern = uiState.selectedLayout == HomeLayout.MODERN
                     val isModernLandscape = isModern && uiState.modernLandscapePostersEnabled
-                    val showAutoplayRow = uiState.focusedPosterBackdropExpandEnabled || isModernLandscape
+                    val showAutoplayRow = AppFeaturePolicy.inAppTrailerPlaybackEnabled &&
+                        (uiState.focusedPosterBackdropExpandEnabled || isModernLandscape)
 
                     if (!isModernLandscape) {
                         CompactToggleRow(
@@ -563,6 +620,8 @@ fun LayoutSettingsContent(
                     )
                 }
             }
+        }
+        SettingsVerticalScrollIndicators(state = layoutListState)
         }
         }
     }

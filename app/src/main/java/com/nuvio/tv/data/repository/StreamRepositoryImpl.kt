@@ -1,6 +1,8 @@
 package com.nuvio.tv.data.repository
 
+import android.content.Context
 import android.util.Log
+import com.nuvio.tv.R
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.network.safeApiCall
 import com.nuvio.tv.core.plugin.PluginManager
@@ -14,6 +16,7 @@ import com.nuvio.tv.domain.model.Stream
 import com.nuvio.tv.domain.model.StreamBehaviorHints
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.StreamRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
@@ -28,11 +31,22 @@ import javax.inject.Inject
 private const val TAG = "StreamRepositoryImpl"
 
 class StreamRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val api: AddonApi,
     private val addonRepository: AddonRepository,
     private val pluginManager: PluginManager,
     private val tmdbService: TmdbService
 ) : StreamRepository {
+    private enum class StreamFailureKind {
+        MISSING,
+        REQUEST_FAILED
+    }
+
+    private data class StreamAttemptFailure(
+        val addonName: String,
+        val kind: StreamFailureKind,
+        val detail: String
+    )
 
     override fun getStreamsFromAllAddons(
         type: String,
@@ -53,6 +67,10 @@ class StreamRepositoryImpl @Inject constructor(
             // Convert IMDB ID to TMDB ID if needed for plugins
             val tmdbId = tmdbService.ensureTmdbId(videoId, type)
             Log.d(TAG, "Video ID: $videoId -> TMDB ID: $tmdbId (type: $type)")
+            val attemptedAddonNames = streamAddons.map { it.displayName }
+            val attemptedFailures = java.util.Collections.synchronizedList(
+                mutableListOf<StreamAttemptFailure>()
+            )
 
             // Accumulate results as they arrive
             val accumulatedResults = mutableListOf<AddonStreams>()
@@ -83,13 +101,38 @@ class StreamRepositoryImpl @Inject constructor(
                                                 streams = namedStreams
                                             )
                                         )
+                                    } else {
+                                        // Stream endpoint returned empty - try inline
+                                        // streams from meta response as fallback.
+                                        val inlineStreams = fetchInlineStreamsFromMeta(
+                                            addon, type, videoId
+                                        )
+                                        if (inlineStreams.isNotEmpty()) {
+                                            resultChannel.send(
+                                                AddonStreams(
+                                                    addonName = addon.displayName,
+                                                    addonLogo = addon.logo,
+                                                    streams = inlineStreams
+                                                )
+                                            )
+                                        } else {
+                                            attemptedFailures += buildMissingStreamFailure(addon)
+                                        }
                                     }
                                 }
-                                else -> { /* No streams */ }
+                                is NetworkResult.Error -> {
+                                    attemptedFailures += buildAddonFailure(addon, streamsResult)
+                                }
+                                NetworkResult.Loading -> Unit
                             }
                         } catch (e: Exception) {
                             if (e is CancellationException) throw e
                             Log.e(TAG, "Addon ${addon.name} failed: ${e.message}")
+                            attemptedFailures += StreamAttemptFailure(
+                                addonName = addon.displayName,
+                                kind = StreamFailureKind.REQUEST_FAILED,
+                                detail = e.message ?: "the addon request failed"
+                            )
                         } finally {
                             completedJobs++
                             if (completedJobs >= totalJobs) {
@@ -136,7 +179,17 @@ class StreamRepositoryImpl @Inject constructor(
 
             // Emit final result (even if empty)
             if (accumulatedResults.isEmpty()) {
-                emit(NetworkResult.Success(emptyList()))
+                val errorMessage = buildAggregateFailureMessage(
+                    type = type,
+                    id = videoId,
+                    attemptedAddonNames = attemptedAddonNames,
+                    failures = attemptedFailures.toList()
+                )
+                if (errorMessage != null) {
+                    emit(NetworkResult.Error(errorMessage))
+                } else {
+                    emit(NetworkResult.Success(emptyList()))
+                }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -188,19 +241,18 @@ class StreamRepositoryImpl @Inject constructor(
                             val baseName = result.name?.takeIf { it.isNotBlank() }
                             val quality = result.quality?.takeIf { it.isNotBlank() }
 
-                            val displayTitle = buildString {
-                                append(baseTitle ?: baseName ?: scraperName)
-                                if (!quality.isNullOrBlank() && !(baseTitle ?: "").contains(quality)) {
-                                    append(" ").append(quality)
+                            // Only show quality in the name field as "Name - resolution"
+                            val qualityLabel = quality ?: "Unknown"
+                            val displayName = buildString {
+                                append(baseName ?: baseTitle ?: scraperName)
+                                if (!toString().contains(qualityLabel)) {
+                                    append(" - ").append(qualityLabel)
                                 }
                             }.takeIf { it.isNotBlank() }
 
-                            val displayName = buildString {
-                                append(baseName ?: baseTitle ?: scraperName)
-                                if (!quality.isNullOrBlank() && !(baseName ?: "").contains(quality)) {
-                                    append(" - ").append(quality)
-                                }
-                            }.takeIf { it.isNotBlank() }
+                            // Title stays clean — no quality appended
+                            val displayTitle = (baseTitle ?: baseName ?: scraperName)
+                                .takeIf { it.isNotBlank() }
 
                             Stream(
                                 name = displayName,
@@ -220,7 +272,9 @@ class StreamRepositoryImpl @Inject constructor(
                                 infoHash = result.infoHash,
                                 fileIdx = null,
                                 ytId = null,
-                                externalUrl = null
+                                externalUrl = null,
+                                quality = quality,
+                                qualityValue = parseQualityValue(quality)
                             )
                         }
                     )
@@ -240,11 +294,25 @@ class StreamRepositoryImpl @Inject constructor(
      * Build a description string from scraper result
      */
     private fun buildDescription(result: com.nuvio.tv.domain.model.LocalScraperResult): String? {
+        // Quality is shown in the stream name — only show size/language in description
         val parts = mutableListOf<String>()
-        result.quality?.let { parts.add(it) }
         result.size?.let { parts.add(it) }
         result.language?.let { parts.add(it) }
         return if (parts.isNotEmpty()) parts.joinToString(" • ") else null
+    }
+
+    private fun parseQualityValue(quality: String?): Int {
+        if (quality == null) return -1
+        val lower = quality.lowercase()
+        return when {
+            lower.contains("4k") || lower.contains("2160") -> 2160
+            lower.contains("1080") -> 1080
+            lower.contains("800") -> 800
+            lower.contains("720") -> 720
+            lower.contains("480") -> 480
+            lower.contains("360") -> 360
+            else -> -1
+        }
     }
 
     override suspend fun getStreamsFromAddon(
@@ -253,9 +321,12 @@ class StreamRepositoryImpl @Inject constructor(
         videoId: String
     ): NetworkResult<List<Stream>> {
         val cleanBaseUrl = baseUrl.trimEnd('/')
+        val queryStart = cleanBaseUrl.indexOf('?')
+        val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl
+        val baseQuery = if (queryStart >= 0) cleanBaseUrl.substring(queryStart) else ""
         val encodedType = encodePathSegment(type)
         val encodedVideoId = encodePathSegment(videoId)
-        val streamUrl = "$cleanBaseUrl/stream/$encodedType/$encodedVideoId.json"
+        val streamUrl = "$basePath/stream/$encodedType/$encodedVideoId.json$baseQuery"
         Log.d(TAG, "Fetching streams type=$type videoId=$videoId url=$streamUrl")
 
         // First, get addon info for name and logo
@@ -295,6 +366,122 @@ class StreamRepositoryImpl @Inject constructor(
         return resources.any { resource ->
             resource.name == "stream" && 
             (resource.types.isEmpty() || resource.types.contains(type))
+        }
+    }
+
+    /**
+     * Fetch meta for the given content and extract inline streams from the
+     * matching video entry.  Returns an empty list when the addon doesn't
+     * support meta or the video has no inline streams.
+     */
+    private suspend fun fetchInlineStreamsFromMeta(
+        addon: Addon,
+        type: String,
+        videoId: String
+    ): List<Stream> {
+        // For inline streams the meta is fetched using the content-level ID
+        // (everything before the video-specific suffix).  For "other" type
+        // the videoId IS the content ID; for series it is contentId:S:E.
+        val contentId = videoId.substringBefore(":")
+            .takeIf { it.isNotBlank() }
+            ?: videoId
+        // Reconstruct a content-level ID that keeps the addon-specific prefix.
+        // e.g. "realdebrid:ABC:3" → "realdebrid:ABC"
+        val metaId = run {
+            val parts = videoId.split(":")
+            // Drop trailing numeric segment(s) that represent video index
+            val contentParts = parts.dropLastWhile { it.toIntOrNull() != null }
+            if (contentParts.isNotEmpty()) contentParts.joinToString(":") else videoId
+        }
+        val cleanBaseUrl = addon.baseUrl.trimEnd('/')
+        val queryStart = cleanBaseUrl.indexOf('?')
+        val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl
+        val baseQuery = if (queryStart >= 0) cleanBaseUrl.substring(queryStart) else ""
+        val encodedType = encodePathSegment(type)
+        val encodedMetaId = encodePathSegment(metaId)
+        val metaUrl = "$basePath/meta/$encodedType/$encodedMetaId.json$baseQuery"
+        Log.d(TAG, "Fetching inline streams via meta type=$type metaId=$metaId videoId=$videoId url=$metaUrl")
+        return try {
+            when (val result = safeApiCall { api.getMeta(metaUrl) }) {
+                is NetworkResult.Success -> {
+                    val metaDto = result.data.meta ?: return emptyList()
+                    val matchingVideo = metaDto.videos?.firstOrNull { it.id == videoId }
+                    val streams = matchingVideo?.streams
+                        ?.mapNotNull { it.toDomain(addon.displayName, addon.logo) }
+                        ?: emptyList()
+                    Log.d(TAG, "Inline streams from meta: addon=${addon.displayName} videoId=$videoId found=${streams.size}")
+                    streams
+                }
+                else -> emptyList()
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "Failed to fetch inline streams from meta for ${addon.displayName}: ${e.message}")
+            emptyList()
+        }
+    }
+
+    private fun buildMissingStreamFailure(addon: Addon): StreamAttemptFailure {
+        return StreamAttemptFailure(
+            addonName = addon.displayName,
+            kind = StreamFailureKind.MISSING,
+            detail = "returned no streams for this id"
+        )
+    }
+
+    private fun buildAddonFailure(addon: Addon, error: NetworkResult.Error): StreamAttemptFailure {
+        if (error.code == 404 || error.message.equals("Not Found", ignoreCase = true)) {
+            return buildMissingStreamFailure(addon)
+        }
+        val normalizedReason = when {
+            error.message.contains("Unable to resolve host", ignoreCase = true) ->
+                "could not reach the addon server"
+            error.message.contains("Failed to connect", ignoreCase = true) ->
+                "connection to the addon failed"
+            error.message.contains("timeout", ignoreCase = true) ->
+                "the addon request timed out"
+            error.message.contains("CLEARTEXT communication", ignoreCase = true) ->
+                "the addon uses an insecure HTTP connection blocked by Android"
+            error.message.isBlank() ->
+                "the addon request failed"
+            else -> error.message.replaceFirstChar { char ->
+                if (char.isLowerCase()) char.titlecase() else char.toString()
+            }
+        }
+        val httpSuffix = error.code?.let { " (HTTP $it)" } ?: ""
+        return StreamAttemptFailure(
+            addonName = addon.displayName,
+            kind = StreamFailureKind.REQUEST_FAILED,
+            detail = "$normalizedReason$httpSuffix"
+        )
+    }
+
+    private fun buildAggregateFailureMessage(
+        type: String,
+        id: String,
+        attemptedAddonNames: List<String>,
+        failures: List<StreamAttemptFailure>
+    ): String? {
+        if (attemptedAddonNames.isEmpty()) {
+            return context.getString(R.string.error_stream_no_supported_addon, type)
+        }
+
+        val triedAddons = attemptedAddonNames.joinToString(", ")
+        val missingOnly = failures.isNotEmpty() && failures.all { it.kind == StreamFailureKind.MISSING }
+        if (failures.isEmpty() || missingOnly) {
+            return context.getString(R.string.error_stream_tried_none, triedAddons, id, type)
+        }
+
+        val issueSummary = failures
+            .filter { it.kind == StreamFailureKind.REQUEST_FAILED }
+            .distinctBy { it.addonName to it.detail }
+            .take(3)
+            .joinToString("; ") { "${it.addonName}: ${it.detail}" }
+
+        return if (issueSummary.isBlank()) {
+            context.getString(R.string.error_stream_tried_generic, triedAddons, id, type)
+        } else {
+            context.getString(R.string.error_stream_tried_issues, triedAddons, id, type, issueSummary)
         }
     }
 

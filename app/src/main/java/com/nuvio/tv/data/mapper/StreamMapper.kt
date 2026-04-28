@@ -18,7 +18,8 @@ fun StreamDto.toDomain(addonName: String, addonLogo: String?): Stream = Stream(
     externalUrl = externalUrl,
     behaviorHints = behaviorHints?.toDomain(),
     addonName = addonName,
-    addonLogo = addonLogo
+    addonLogo = addonLogo,
+    sources = sources
 )
 
 fun BehaviorHintsDto.toDomain(): StreamBehaviorHints = StreamBehaviorHints(

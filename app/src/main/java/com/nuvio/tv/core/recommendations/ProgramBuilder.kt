@@ -5,6 +5,8 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.graphics.drawable.toBitmap
 import androidx.tvprovider.media.tv.PreviewProgram
+import coil3.imageLoader
+import coil3.request.allowHardware
 import androidx.tvprovider.media.tv.TvContractCompat
 import androidx.tvprovider.media.tv.WatchNextProgram
 import com.nuvio.tv.domain.model.MetaPreview
@@ -106,24 +108,14 @@ class ProgramBuilder @Inject constructor(
 
     private suspend fun createProgressImage(url: String, progress: WatchProgress): java.io.File? {
         try {
-            val loader = coil.ImageLoader(context)
-            val request = coil.request.ImageRequest.Builder(context)
+            val request = coil3.request.ImageRequest.Builder(context)
                 .data(url)
                 .allowHardware(false)
                 .build()
-                
-            val result = loader.execute(request)
-            if (result is coil.request.SuccessResult) {
-                val dr = result.drawable
-                val original = if (dr is android.graphics.drawable.BitmapDrawable) {
-                    dr.bitmap 
-                } else {
-                    val fallback = android.graphics.Bitmap.createBitmap(dr.intrinsicWidth.coerceAtLeast(1), dr.intrinsicHeight.coerceAtLeast(1), android.graphics.Bitmap.Config.ARGB_8888)
-                    val canvasFallback = android.graphics.Canvas(fallback)
-                    dr.setBounds(0, 0, canvasFallback.width, canvasFallback.height)
-                    dr.draw(canvasFallback)
-                    fallback
-                }
+
+            val result = context.imageLoader.execute(request)
+            if (result is coil3.request.SuccessResult) {
+                val original = (result.image as? coil3.BitmapImage)?.bitmap ?: return null
                 val bitmap = original.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
                 val canvas = android.graphics.Canvas(bitmap)
                 val w = bitmap.width.toFloat()

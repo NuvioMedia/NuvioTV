@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -14,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -28,12 +30,16 @@ import com.nuvio.tv.ui.theme.NuvioColors
 @Composable
 fun MoreLikeThisSection(
     items: List<MetaPreview>,
+    sourceLabel: String? = null,
     upFocusRequester: FocusRequester? = null,
+    downFocusRequester: FocusRequester? = null,
+    sectionFocusRequester: FocusRequester? = null,
     restoreItemId: String? = null,
     restoreFocusToken: Int = 0,
     onRestoreFocusHandled: () -> Unit = {},
     onItemFocused: (MetaPreview) -> Unit = {},
-    onItemClick: (MetaPreview) -> Unit
+    onItemClick: (MetaPreview) -> Unit,
+    onItemLongPress: (MetaPreview) -> Unit = {}
 ) {
     if (items.isEmpty()) return
 
@@ -70,6 +76,7 @@ fun MoreLikeThisSection(
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (sectionFocusRequester != null) Modifier.focusRequester(sectionFocusRequester) else Modifier)
                 .focusRestorer { firstItemFocusRequester },
             contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -83,18 +90,20 @@ fun MoreLikeThisSection(
                 val focusRequester = when {
                     isRestoreTarget -> restoreFocusRequester
                     isFirstItem -> firstItemFocusRequester
-                    else -> itemFocusRequesters.getOrPut(item.id) { FocusRequester() }
+                    else -> remember(item.id) { itemFocusRequesters.getOrPut(item.id) { FocusRequester() } }
                 }
 
                 Column {
                     GridContentCard(
                         item = item,
                         onClick = { onItemClick(item) },
+                        onLongPress = { onItemLongPress(item) },
                         posterCardStyle = landscapeStyle,
                         showLabel = true,
                         imageCrossfade = true,
                         focusRequester = focusRequester,
                         upFocusRequester = upFocusRequester,
+                        downFocusRequester = downFocusRequester,
                         onFocused = {
                             onItemFocused(item)
                             if (isRestoreTarget && restoreFocusToken > 0) {
@@ -118,5 +127,20 @@ fun MoreLikeThisSection(
                 }
             }
         }
+
+        sourceLabel
+            ?.takeIf { it.isNotBlank() }
+            ?.let { label ->
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioColors.TextTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .align(androidx.compose.ui.Alignment.End)
+                        .padding(end = 10.dp, top = 2.dp, bottom = 2.dp)
+                )
+            }
     }
 }

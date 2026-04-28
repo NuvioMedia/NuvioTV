@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.runtime.Composable
@@ -59,6 +60,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.StreamAutoPlayMode
@@ -81,9 +83,19 @@ internal fun LazyListScope.autoPlaySettingsItems(
     onSetStreamAutoPlayPreferBingeGroupForNextEpisode: (Boolean) -> Unit,
     onSetNextEpisodeThresholdPercent: (Float) -> Unit,
     onSetNextEpisodeThresholdMinutesBeforeEnd: (Float) -> Unit,
+    onSetStreamAutoPlayTimeoutSeconds: (Int) -> Unit,
     onSetReuseLastLinkEnabled: (Boolean) -> Unit,
     onItemFocused: () -> Unit = {}
 ) {
+    val effectiveAutoPlaySource = if (
+        !AppFeaturePolicy.pluginsEnabled &&
+        playerSettings.streamAutoPlaySource == StreamAutoPlaySource.ENABLED_PLUGINS_ONLY
+    ) {
+        StreamAutoPlaySource.INSTALLED_ADDONS_ONLY
+    } else {
+        playerSettings.streamAutoPlaySource
+    }
+
     item(key = "autoplay_reuse_last_link") {
         ToggleSettingsItem(
             icon = Icons.Default.History,
@@ -118,6 +130,27 @@ internal fun LazyListScope.autoPlaySettingsItems(
             title = stringResource(R.string.autoplay_stream_selection),
             subtitle = modeLabel,
             onClick = onShowModeDialog,
+            onFocused = onItemFocused
+        )
+    }
+
+    item(key = "autoplay_stream_timeout") {
+        val timeoutSec = playerSettings.streamAutoPlayTimeoutSeconds
+        val valueText = when (timeoutSec) {
+            0 -> stringResource(R.string.autoplay_timeout_instant)
+            11 -> stringResource(R.string.autoplay_timeout_unlimited)
+            else -> "${timeoutSec}s"
+        }
+        SliderSettingsItem(
+            icon = Icons.Default.Timer,
+            title = stringResource(R.string.autoplay_timeout_title),
+            subtitle = stringResource(R.string.autoplay_timeout_sub),
+            value = timeoutSec,
+            valueText = valueText,
+            minValue = 0,
+            maxValue = 11,
+            step = 1,
+            onValueChange = { onSetStreamAutoPlayTimeoutSeconds(it) },
             onFocused = onItemFocused
         )
     }
@@ -194,7 +227,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
     if (playerSettings.streamAutoPlayMode != StreamAutoPlayMode.MANUAL) {
 
         item(key = "autoplay_source_scope") {
-            val sourceLabel = when (playerSettings.streamAutoPlaySource) {
+            val sourceLabel = when (effectiveAutoPlaySource) {
                 StreamAutoPlaySource.ALL_SOURCES -> stringResource(R.string.autoplay_scope_all)
                 StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> stringResource(R.string.autoplay_scope_addons)
                 StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> stringResource(R.string.autoplay_scope_plugins)
@@ -208,7 +241,7 @@ internal fun LazyListScope.autoPlaySettingsItems(
             )
         }
 
-        if (playerSettings.streamAutoPlaySource != StreamAutoPlaySource.ENABLED_PLUGINS_ONLY) {
+        if (effectiveAutoPlaySource != StreamAutoPlaySource.ENABLED_PLUGINS_ONLY) {
             item(key = "autoplay_allowed_addons") {
                 val addonSubtitle = if (playerSettings.streamAutoPlaySelectedAddons.isEmpty()) {
                     stringResource(R.string.autoplay_all_addons)
@@ -225,7 +258,10 @@ internal fun LazyListScope.autoPlaySettingsItems(
             }
         }
 
-        if (playerSettings.streamAutoPlaySource != StreamAutoPlaySource.INSTALLED_ADDONS_ONLY) {
+        if (
+            AppFeaturePolicy.pluginsEnabled &&
+            effectiveAutoPlaySource != StreamAutoPlaySource.INSTALLED_ADDONS_ONLY
+        ) {
             item(key = "autoplay_allowed_plugins") {
                 val pluginSubtitle = if (playerSettings.streamAutoPlaySelectedPlugins.isEmpty()) {
                     stringResource(R.string.autoplay_all_plugins)
@@ -675,7 +711,9 @@ private fun StreamAutoPlaySourceDialog(
             stringResource(R.string.autoplay_scope_plugins),
             stringResource(R.string.autoplay_scope_plugins_desc)
         )
-    )
+    ).filter { option ->
+        AppFeaturePolicy.pluginsEnabled || option.first != StreamAutoPlaySource.ENABLED_PLUGINS_ONLY
+    }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()

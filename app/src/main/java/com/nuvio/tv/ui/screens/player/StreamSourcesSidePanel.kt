@@ -114,10 +114,19 @@ internal fun StreamSourcesSidePanel(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Current content info
+            val seasonEpisodeCode = if (uiState.currentSeason != null && uiState.currentEpisode != null) {
+                stringResource(
+                    R.string.season_episode_format,
+                    uiState.currentSeason,
+                    uiState.currentEpisode
+                )
+            } else {
+                null
+            }
             Text(
                 text = buildString {
-                    if (uiState.currentSeason != null && uiState.currentEpisode != null) {
-                        append("S${uiState.currentSeason} E${uiState.currentEpisode}")
+                    if (seasonEpisodeCode != null) {
+                        append(seasonEpisodeCode)
                         if (!uiState.currentEpisodeTitle.isNullOrBlank()) {
                             append(" • ${uiState.currentEpisodeTitle}")
                         }
@@ -190,6 +199,8 @@ internal fun StreamSourcesSidePanel(
                     val initialFocusStream = uiState.sourceFilteredStreams.getOrNull(currentStreamIndex)
                         ?: uiState.sourceFilteredStreams.firstOrNull()
 
+                    val lastKeyRepeatDispatchRef = remember { java.util.concurrent.atomic.AtomicLong(0L) }
+
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(
@@ -202,6 +213,14 @@ internal fun StreamSourcesSidePanel(
                             .fillMaxHeight()
                             .onKeyEvent { event ->
                                 if (event.nativeKeyEvent.action != KeyEvent.ACTION_DOWN) return@onKeyEvent false
+
+                                // Throttle rapid key repeats (long-press)
+                                if (event.nativeKeyEvent.repeatCount > 0) {
+                                    val now = android.os.SystemClock.uptimeMillis()
+                                    if (now - lastKeyRepeatDispatchRef.get() < 112L) return@onKeyEvent true
+                                    lastKeyRepeatDispatchRef.set(now)
+                                }
+
                                 val addons = uiState.sourceAvailableAddons
                                 if (addons.isEmpty()) return@onKeyEvent false
                                 val allOptions = listOf<String?>(null) + addons
@@ -217,7 +236,9 @@ internal fun StreamSourcesSidePanel(
                                 }
                             }
                     ) {
-                        itemsIndexed(uiState.sourceFilteredStreams) { index, stream ->
+                        itemsIndexed(uiState.sourceFilteredStreams, key = { index, stream ->
+                            stream.stableKey(index)
+                        }) { index, stream ->
                             StreamItem(
                                 stream = stream,
                                 focusRequester = streamsFocusRequester,

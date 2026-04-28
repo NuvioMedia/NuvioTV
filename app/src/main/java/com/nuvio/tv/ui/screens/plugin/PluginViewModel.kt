@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
 import com.nuvio.tv.core.plugin.PluginManager
+import com.nuvio.tv.core.plugin.PluginSafety
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.qr.QrCodeGenerator
 import com.nuvio.tv.core.server.DeviceIpAddress
@@ -82,21 +83,24 @@ class PluginViewModel @Inject constructor(
             is PluginUiEvent.RemoveRepository -> removeRepository(event.repoId)
             is PluginUiEvent.RefreshRepository -> refreshRepository(event.repoId)
             is PluginUiEvent.ToggleScraper -> toggleScraper(event.scraperId, event.enabled)
+            is PluginUiEvent.ToggleAllScrapersForRepo -> toggleAllScrapersForRepo(event.repoId, event.enabled)
             is PluginUiEvent.TestScraper -> testScraper(event.scraperId)
             is PluginUiEvent.SetPluginsEnabled -> setPluginsEnabled(event.enabled)
-            PluginUiEvent.ClearTestResults -> _uiState.update { it.copy(testResults = null, testScraperId = null) }
+            PluginUiEvent.ClearTestResults -> _uiState.update { it.copy(testResults = null, testDiagnostics = null, testScraperId = null) }
             PluginUiEvent.ClearError -> _uiState.update { it.copy(errorMessage = null) }
             PluginUiEvent.ClearSuccess -> _uiState.update { it.copy(successMessage = null) }
             PluginUiEvent.StartQrMode -> startQrMode()
             PluginUiEvent.StopQrMode -> stopQrMode()
             PluginUiEvent.ConfirmPendingRepoChange -> confirmPendingRepoChange()
             PluginUiEvent.RejectPendingRepoChange -> rejectPendingRepoChange()
+            PluginUiEvent.ConfirmPendingScraperEnable -> confirmPendingScraperEnable()
+            PluginUiEvent.DismissPendingScraperEnable -> dismissPendingScraperEnable()
         }
     }
 
     private fun addRepository(url: String) {
         if (url.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Please enter a valid URL") }
+            _uiState.update { it.copy(errorMessage = context.getString(R.string.plugin_error_invalid_url)) }
             return
         }
 
@@ -118,7 +122,7 @@ class PluginViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isAddingRepo = false,
-                            errorMessage = "Failed to add repository: ${e.message}"
+                            errorMessage = context.getString(R.string.plugin_error_add_repo, e.message ?: "")
                         )
                     }
                 }
@@ -148,7 +152,7 @@ class PluginViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = "Failed to refresh: ${e.message}"
+                            errorMessage = context.getString(R.string.plugin_error_refresh, e.message ?: "")
                         )
                     }
                 }
@@ -157,9 +161,40 @@ class PluginViewModel @Inject constructor(
     }
 
     private fun toggleScraper(scraperId: String, enabled: Boolean) {
+        val scraper = _uiState.value.scrapers.firstOrNull { it.id == scraperId }
+        if (enabled && scraper != null && PluginSafety.isVideoEasyScraper(scraper.id, scraper.name, scraper.filename)) {
+            _uiState.update {
+                it.copy(
+                    pendingScraperEnable = PendingScraperEnableInfo(
+                        scraperId = scraper.id,
+                        scraperName = scraper.name
+                    )
+                )
+            }
+            return
+        }
+
         viewModelScope.launch {
             pluginManager.toggleScraper(scraperId, enabled)
         }
+    }
+
+    private fun toggleAllScrapersForRepo(repoId: String, enabled: Boolean) {
+        viewModelScope.launch {
+            pluginManager.toggleAllScrapersForRepo(repoId, enabled)
+        }
+    }
+
+    private fun confirmPendingScraperEnable() {
+        val pending = _uiState.value.pendingScraperEnable ?: return
+        _uiState.update { it.copy(pendingScraperEnable = null) }
+        viewModelScope.launch {
+            pluginManager.toggleScraper(pending.scraperId, true)
+        }
+    }
+
+    private fun dismissPendingScraperEnable() {
+        _uiState.update { it.copy(pendingScraperEnable = null) }
     }
 
     private fun setPluginsEnabled(enabled: Boolean) {
@@ -171,16 +206,17 @@ class PluginViewModel @Inject constructor(
 
     private fun testScraper(scraperId: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isTesting = true, testScraperId = scraperId, testResults = null) }
+            _uiState.update { it.copy(isTesting = true, testScraperId = scraperId, testResults = null, testDiagnostics = null) }
 
             val result = pluginManager.testScraper(scraperId)
 
             result.fold(
-                onSuccess = { results ->
+                onSuccess = { (results, diagnostics) ->
                     _uiState.update {
                         it.copy(
                             isTesting = false,
                             testResults = results,
+                            testDiagnostics = diagnostics,
                             successMessage = if (results.isEmpty()) "No results found" else "Found ${results.size} streams"
                         )
                     }
@@ -190,6 +226,7 @@ class PluginViewModel @Inject constructor(
                         it.copy(
                             isTesting = false,
                             testResults = emptyList(),
+                            testDiagnostics = null,
                             errorMessage = "Test failed: ${e.message}"
                         )
                     }
@@ -205,13 +242,14 @@ class PluginViewModel @Inject constructor(
     private fun startQrMode() {
         val ip = DeviceIpAddress.get(context)
         if (ip == null) {
-            _uiState.update { it.copy(errorMessage = "Connect to Wi-Fi or Ethernet to use this feature") }
+            _uiState.update { it.copy(errorMessage = context.getString(R.string.error_network_required)) }
             return
         }
 
         stopRepoServerInternal()
 
         repoServer = RepositoryConfigServer.startOnAvailablePort(
+            context = context,
             currentRepositoriesProvider = {
                 _uiState.value.repositories.map { repo ->
                     RepositoryConfigServer.RepositoryInfo(
@@ -227,7 +265,7 @@ class PluginViewModel @Inject constructor(
 
         val activeServer = repoServer
         if (activeServer == null) {
-            _uiState.update { it.copy(errorMessage = "Could not start server. All ports in use.") }
+            _uiState.update { it.copy(errorMessage = context.getString(R.string.error_server_ports_unavailable)) }
             return
         }
 

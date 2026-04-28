@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -41,8 +42,10 @@ class AddonRepositoryImpl @Inject constructor(
     companion object {
         private const val TAG = "AddonRepository"
         private const val MANIFEST_CACHE_PREFS = "addon_manifest_cache"
-        private const val MANIFEST_CACHE_KEY = "manifests"
+        private const val MANIFEST_CACHE_KEY = "manifests_v2"
+        private const val LEGACY_MANIFEST_CACHE_KEY = "manifests"
         private const val MANIFEST_SUFFIX = "/manifest.json"
+        private const val MANIFEST_CACHE_TTL_MS = 6 * 60 * 60 * 1000L 
     }
 
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -51,11 +54,17 @@ class AddonRepositoryImpl @Inject constructor(
 
     private fun canonicalizeUrl(url: String): String {
         val trimmed = url.trim().trimEnd('/')
-        return if (trimmed.endsWith(MANIFEST_SUFFIX, ignoreCase = true)) {
-            trimmed.dropLast(MANIFEST_SUFFIX.length).trimEnd('/')
+        // Separate path from query string so we can detect /manifest.json
+        // even when the URL carries query parameters (e.g. configurable addons).
+        val queryStart = trimmed.indexOf('?')
+        val path = if (queryStart >= 0) trimmed.substring(0, queryStart) else trimmed
+        val query = if (queryStart >= 0) trimmed.substring(queryStart) else ""
+        val cleanPath = if (path.endsWith(MANIFEST_SUFFIX, ignoreCase = true)) {
+            path.dropLast(MANIFEST_SUFFIX.length).trimEnd('/')
         } else {
-            trimmed
+            path.trimEnd('/')
         }
+        return cleanPath + query
     }
 
     private fun normalizeUrl(url: String): String = canonicalizeUrl(url).lowercase()
@@ -80,17 +89,42 @@ class AddonRepositoryImpl @Inject constructor(
 
     private val gson = Gson()
     private val manifestCache = mutableMapOf<String, Addon>()
+    @Volatile
+    private var lastManifestRefreshTime = 0L
+    private var manifestRefreshJob: Job? = null
 
     init {
-        loadManifestCacheFromDisk()
+        syncScope.launch { loadManifestCacheFromDisk() }
     }
 
-    private fun loadManifestCacheFromDisk() {
+    private fun isCacheStale(): Boolean =
+        System.currentTimeMillis() - lastManifestRefreshTime > MANIFEST_CACHE_TTL_MS
+
+    private fun scheduleManifestRefresh(urls: List<String>) {
+        if (manifestRefreshJob?.isActive == true) return
+        manifestRefreshJob = syncScope.launch {
+            val refreshed = urls.map { url ->
+                async {
+                    fetchAddon(url)
+                }
+            }.awaitAll()
+            val anyUpdated = refreshed.any { it is NetworkResult.Success }
+            if (anyUpdated) {
+                lastManifestRefreshTime = System.currentTimeMillis()
+                Log.d(TAG, "Background manifest refresh completed")
+            }
+        }
+    }
+
+    private suspend fun loadManifestCacheFromDisk() = kotlinx.coroutines.withContext(Dispatchers.IO) {
         try {
             val prefs = context.getSharedPreferences(MANIFEST_CACHE_PREFS, Context.MODE_PRIVATE)
-            val json = prefs.getString(MANIFEST_CACHE_KEY, null) ?: return
+            if (prefs.contains(LEGACY_MANIFEST_CACHE_KEY)) {
+                prefs.edit().remove(LEGACY_MANIFEST_CACHE_KEY).apply()
+            }
+            val json = prefs.getString(MANIFEST_CACHE_KEY, null) ?: return@withContext
             val type = object : TypeToken<Map<String, Addon>>() {}.type
-            val cached: Map<String, Addon> = gson.fromJson(json, type) ?: return
+            val cached: Map<String, Addon> = gson.fromJson(json, type) ?: return@withContext
             manifestCache.putAll(cached)
             Log.d(TAG, "Loaded ${cached.size} cached manifests from disk")
         } catch (e: Exception) {
@@ -99,44 +133,58 @@ class AddonRepositoryImpl @Inject constructor(
     }
 
     private fun persistManifestCacheToDisk() {
-        try {
-            val prefs = context.getSharedPreferences(MANIFEST_CACHE_PREFS, Context.MODE_PRIVATE)
-            prefs.edit().putString(MANIFEST_CACHE_KEY, gson.toJson(manifestCache.toMap())).apply()
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to persist manifest cache to disk", e)
+        syncScope.launch {
+            try {
+                val snapshot = manifestCache.toMap()
+                val prefs = context.getSharedPreferences(MANIFEST_CACHE_PREFS, Context.MODE_PRIVATE)
+                prefs.edit().putString(MANIFEST_CACHE_KEY, gson.toJson(snapshot)).apply()
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to persist manifest cache to disk", e)
+            }
         }
     }
 
     override fun getInstalledAddons(): Flow<List<Addon>> =
-        preferences.installedAddonUrls.flatMapLatest { urls ->
+        combine(
+            preferences.installedAddonUrls,
+            preferences.userSetNames
+        ) { urls, names -> urls to names }
+        .flatMapLatest { (urls, userNames) ->
             flow {
-                // Emit cached addons immediately (now includes disk-persisted cache)
                 val cached = urls.mapNotNull { manifestCache[canonicalizeUrl(it)] }
                 if (cached.isNotEmpty()) {
-                    emit(applyDisplayNames(cached))
+                    emit(applyDisplayNames(cached, userNames))
                 }
 
-                val fresh = coroutineScope {
-                    urls.map { url ->
-                        async {
-                            when (val result = fetchAddon(url)) {
-                                is NetworkResult.Success -> result.data
-                                else -> manifestCache[canonicalizeUrl(url)]
+                val hasCacheMiss = cached.size < urls.size
+                if (hasCacheMiss) {
+                    val fresh = coroutineScope {
+                        urls.map { url ->
+                            async {
+                                val canonical = canonicalizeUrl(url)
+                                manifestCache[canonical] ?: when (val result = fetchAddon(url)) {
+                                    is NetworkResult.Success -> result.data
+                                    else -> null
+                                }
                             }
-                        }
-                    }.awaitAll().filterNotNull()
-                }
+                        }.awaitAll().filterNotNull()
+                    }
 
-               
-                if (fresh != cached || cached.isEmpty()) {
-                    emit(applyDisplayNames(fresh))
+                    if (fresh != cached) {
+                        emit(applyDisplayNames(fresh, userNames))
+                    }
+                } else if (isCacheStale() && urls.isNotEmpty()) {
+                    scheduleManifestRefresh(urls)
                 }
             }.flowOn(Dispatchers.IO)
         }
 
     override suspend fun fetchAddon(baseUrl: String): NetworkResult<Addon> {
         val cleanBaseUrl = canonicalizeUrl(baseUrl)
-        val manifestUrl = "$cleanBaseUrl/manifest.json"
+        val queryStart = cleanBaseUrl.indexOf('?')
+        val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl
+        val baseQuery = if (queryStart >= 0) cleanBaseUrl.substring(queryStart) else ""
+        val manifestUrl = "$basePath/manifest.json$baseQuery"
 
         return when (val result = safeApiCall { api.getManifest(manifestUrl) }) {
             is NetworkResult.Success -> {
@@ -146,7 +194,7 @@ class AddonRepositoryImpl @Inject constructor(
                 NetworkResult.Success(addon)
             }
             is NetworkResult.Error -> {
-                Log.w(TAG, "Failed to fetch addon manifest for url=$cleanBaseUrl code=${result.code} message=${result.message}")
+                Log.w(TAG, "Failed to fetch addon manifest for url=$manifestUrl code=${result.code} message=${result.message}")
                 result
             }
             NetworkResult.Loading -> NetworkResult.Loading
@@ -193,48 +241,65 @@ class AddonRepositoryImpl @Inject constructor(
             removeMissingLocal
         }
 
+     
+        val localByNormalized = linkedMapOf<String, String>()
+        initialLocalUrls.forEach { url ->
+            localByNormalized.putIfAbsent(normalizeUrl(url), canonicalizeUrl(url))
+        }
+
+        val remoteOrdered = normalizedRemote.map { remote ->
+            localByNormalized[normalizeUrl(remote)] ?: remote
+        }
+
+        val finalList = if (shouldRemoveMissingLocal) {
+            remoteOrdered
+        } else {
+            val extras = initialLocalUrls
+                .map { canonicalizeUrl(it) }
+                .filter { normalizeUrl(it) !in remoteSet }
+            remoteOrdered + extras
+        }
+
         if (shouldRemoveMissingLocal) {
             initialLocalUrls
                 .filter { normalizeUrl(it) !in remoteSet }
-                .forEach { removeAddon(it) }
+                .forEach { manifestCache.remove(canonicalizeUrl(it)) }
         }
 
-        normalizedRemote
-            .filter { normalizeUrl(it) !in initialLocalSet }
-            .forEach { addAddon(it) }
 
-        val currentUrls = preferences.installedAddonUrls.first()
-        val currentByNormalizedUrl = linkedMapOf<String, String>()
-        currentUrls.forEach { url ->
-            currentByNormalizedUrl.putIfAbsent(normalizeUrl(url), canonicalizeUrl(url))
-        }
-        val remoteOrdered = normalizedRemote
-            .mapNotNull { currentByNormalizedUrl[normalizeUrl(it)] }
-        val extras = currentUrls
-            .map { canonicalizeUrl(it) }
-            .filter { normalizeUrl(it) !in remoteSet }
-
-        val reordered = if (shouldRemoveMissingLocal) remoteOrdered else remoteOrdered + extras
-        if (reordered != currentUrls.map { canonicalizeUrl(it) }) {
-            preferences.setAddonOrder(reordered)
+        val currentCanonical = initialLocalUrls.map { canonicalizeUrl(it) }
+        if (finalList != currentCanonical) {
+            preferences.setAddonOrder(finalList)
         }
     }
 
-    private fun applyDisplayNames(addons: List<Addon>): List<Addon> {
+    private fun applyDisplayNames(addons: List<Addon>, userSetNames: Map<String, String>): List<Addon> {
+        val withUserNames = addons.map { addon ->
+            val userSetName = userSetNames[canonicalizeUrl(addon.baseUrl)]
+            if (!userSetName.isNullOrBlank() && userSetName != addon.name) {
+                addon.copy(displayName = userSetName)
+            } else {
+                addon
+            }
+        }
+
+        val unrenamed = withUserNames.filter { it.displayName == it.name }
         val nameCounts = mutableMapOf<String, Int>()
-        for (addon in addons) {
+        for (addon in unrenamed) {
             nameCounts[addon.name] = (nameCounts[addon.name] ?: 0) + 1
         }
 
         val nameCounters = mutableMapOf<String, Int>()
-        return addons.map { addon ->
-            if ((nameCounts[addon.name] ?: 0) <= 1) {
-                addon.copy(displayName = addon.name)
+        return withUserNames.map { addon ->
+            if (addon.displayName != addon.name) {
+                addon
+            } else if ((nameCounts[addon.name] ?: 0) <= 1) {
+                addon
             } else {
                 val occurrence = (nameCounters[addon.name] ?: 0) + 1
                 nameCounters[addon.name] = occurrence
                 if (occurrence == 1) {
-                    addon.copy(displayName = addon.name)
+                    addon
                 } else {
                     addon.copy(displayName = "${addon.name} ($occurrence)")
                 }

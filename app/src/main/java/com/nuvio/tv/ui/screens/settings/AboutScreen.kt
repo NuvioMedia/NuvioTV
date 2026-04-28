@@ -8,19 +8,24 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -33,11 +38,13 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.BuildConfig
 import com.nuvio.tv.R
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.updater.UpdateViewModel
 
 @Composable
 fun AboutScreen(
+    onNavigateToSupportersContributors: () -> Unit = {},
     onBackPress: () -> Unit = {}
 ) {
     BackHandler { onBackPress() }
@@ -46,16 +53,18 @@ fun AboutScreen(
         title = stringResource(R.string.about_title),
         subtitle = stringResource(R.string.about_subtitle)
     ) {
-        AboutSettingsContent()
+        AboutSettingsContent(
+            onNavigateToSupportersContributors = onNavigateToSupportersContributors
+        )
     }
 }
 
 @Composable
 fun AboutSettingsContent(
+    onNavigateToSupportersContributors: () -> Unit = {},
     initialFocusRequester: FocusRequester? = null
 ) {
     val context = LocalContext.current
-    val updateViewModel: UpdateViewModel = hiltViewModel(context as ComponentActivity)
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -72,54 +81,68 @@ fun AboutSettingsContent(
                 .weight(1f),
             title = null
         ) {
+            val aboutScrollState = rememberScrollState()
+            Box(modifier = Modifier.fillMaxSize()) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(aboutScrollState),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                Spacer(modifier = Modifier.height(4.dp))
+
                 Image(
                     painter = painterResource(id = R.drawable.app_logo_wordmark),
-                    contentDescription = "NuvioTV",
+                    contentDescription = stringResource(R.string.cd_nuvio_logo),
                     modifier = Modifier
                         .width(180.dp)
-                        .height(50.dp),
+                        .height(40.dp),
                     contentScale = ContentScale.Fit
                 )
 
                 Text(
                     text = stringResource(R.string.about_made_with_love),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = NuvioColors.TextSecondary,
                     textAlign = TextAlign.Center
                 )
 
                 Text(
                     text = stringResource(R.string.about_version, BuildConfig.VERSION_NAME),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = NuvioColors.TextSecondary,
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
 
-                SettingsActionRow(
-                    title = stringResource(R.string.about_check_updates),
-                    subtitle = stringResource(R.string.about_check_updates_subtitle),
-                    trailingIcon = Icons.Default.OpenInNew,
-                    modifier = if (initialFocusRequester != null) {
-                        Modifier.focusRequester(initialFocusRequester)
-                    } else {
-                        Modifier
-                    },
-                    onClick = {
-                        updateViewModel.checkForUpdates(force = true, showNoUpdateFeedback = true)
-                    }
-                )
+                if (AppFeaturePolicy.inAppUpdatesEnabled) {
+                    val updateViewModel: UpdateViewModel = hiltViewModel(context as ComponentActivity)
+                    SettingsActionRow(
+                        title = stringResource(R.string.about_check_updates),
+                        subtitle = stringResource(R.string.about_check_updates_subtitle),
+                        trailingIcon = Icons.Default.OpenInNew,
+                        modifier = if (initialFocusRequester != null) {
+                            Modifier.focusRequester(initialFocusRequester)
+                        } else {
+                            Modifier
+                        },
+                        onClick = {
+                            updateViewModel.checkForUpdates(force = true, showNoUpdateFeedback = true)
+                        }
+                    )
+                }
 
                 SettingsActionRow(
                     title = stringResource(R.string.about_privacy_policy),
                     subtitle = stringResource(R.string.about_privacy_policy_subtitle),
                     trailingIcon = Icons.Default.OpenInNew,
+                    modifier = if (!AppFeaturePolicy.inAppUpdatesEnabled && initialFocusRequester != null) {
+                        Modifier.focusRequester(initialFocusRequester)
+                    } else {
+                        Modifier
+                    },
                     onClick = {
                         val intent = Intent(
                             Intent.ACTION_VIEW,
@@ -128,6 +151,15 @@ fun AboutSettingsContent(
                         context.startActivity(intent)
                     }
                 )
+
+                SettingsActionRow(
+                    title = stringResource(R.string.about_supporters_contributors),
+                    subtitle = stringResource(R.string.about_supporters_contributors_subtitle),
+                    trailingIcon = Icons.Default.ChevronRight,
+                    onClick = onNavigateToSupportersContributors
+                )
+            }
+            SettingsVerticalScrollIndicators(state = aboutScrollState)
             }
         }
     }

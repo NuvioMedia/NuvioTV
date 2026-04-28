@@ -76,18 +76,11 @@ data class AniSkipInterval(
 // --- ARM API (IMDB -> MAL ID resolution) ---
 
 interface ArmApi {
-    // /imdb?id=...&include=myanimelist  → List<ArmEntry> (one per season)
+    // /imdb?id=...&include=myanimelist,anilist,kitsu  → List<ArmEntry> (one per season)
     @GET("imdb")
-    suspend fun resolveImdbToMal(
+    suspend fun resolveImdbToAll(
         @Query("id") imdbId: String,
-        @Query("include") include: String = "myanimelist"
-    ): Response<List<ArmEntry>>
-
-    // /imdb?id=...&include=anilist  → List<ArmEntry> (one per season)
-    @GET("imdb")
-    suspend fun resolveImdbToAnilist(
-        @Query("id") imdbId: String,
-        @Query("include") include: String = "anilist"
+        @Query("include") include: String = "myanimelist,anilist,kitsu"
     ): Response<List<ArmEntry>>
 
     // /ids?source=myanimelist&id=...&include=anilist  → single ArmEntry
@@ -135,6 +128,7 @@ interface ArmApi {
 data class ArmEntry(
     @Json(name = "myanimelist") val myanimelist: Int? = null,
     @Json(name = "anilist") val anilist: Int? = null,
+    @Json(name = "kitsu") val kitsu: Int? = null,
     @Json(name = "imdb") val imdb: String? = null
 )
 

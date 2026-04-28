@@ -36,6 +36,11 @@ data class HomeScreenFocusState(
     val catalogRowScrollStates: Map<String, Int> = emptyMap(),
 
     /**
+     * Optional stable key for the currently focused card in grid-style layouts.
+     */
+    val focusedItemKey: String? = null,
+
+    /**
      * Whether focus state has been explicitly saved (vs still at defaults).
      */
     val hasSavedFocus: Boolean = false

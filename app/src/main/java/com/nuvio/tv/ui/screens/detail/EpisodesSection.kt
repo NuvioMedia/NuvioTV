@@ -1,10 +1,9 @@
 package com.nuvio.tv.ui.screens.detail
 
 import android.view.KeyEvent as AndroidKeyEvent
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
@@ -25,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -39,6 +39,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -68,16 +73,21 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.transformations
 import com.nuvio.tv.R
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.ui.components.NuvioDialog
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.theme.NuvioTheme
+import android.text.format.DateFormat
+import androidx.compose.ui.draw.clipToBounds
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import com.nuvio.tv.ui.util.localizeEpisodeTitle
 
 private const val EPISODE_CARD_CONTENT_TYPE = "episode_card"
 private const val EPISODE_SCROLL_REPEAT_THROTTLE_MS = 80L
@@ -90,6 +100,7 @@ fun SeasonTabs(
     onSeasonSelected: (Int) -> Unit,
     onSeasonLongPress: (Int) -> Unit = {},
     selectedTabFocusRequester: FocusRequester,
+    upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null
 ) {
     // Move season 0 (specials) to the end
@@ -99,10 +110,49 @@ fun SeasonTabs(
         regularSeasons + specials
     }
 
+    val tabShape = remember { RoundedCornerShape(20.dp) }
+    val tabBorder = CardDefaults.border(
+        focusedBorder = Border(
+            border = BorderStroke(2.dp, NuvioColors.FocusRing),
+            shape = RoundedCornerShape(20.dp)
+        )
+    )
+    val tabScale = CardDefaults.scale(focusedScale = 1.0f)
+    val typography = MaterialTheme.typography
+    val tabTextStyle = remember(typography) { typography.titleMedium }
+    val textSecondary = NuvioTheme.extendedColors.textSecondary
+    val initialSeasonIndex = remember(sortedSeasons, selectedSeason) {
+        sortedSeasons.indexOf(selectedSeason).coerceAtLeast(0)
+    }
+    val lazyListState = rememberLazyListState(initialFirstVisibleItemIndex = initialSeasonIndex)
+
+    var suppressFocusSwitch by remember { mutableStateOf(false) }
+    var pendingSeason by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(pendingSeason) {
+        val target = pendingSeason ?: return@LaunchedEffect
+        delay(150)
+        onSeasonSelected(target)
+        pendingSeason = null
+    }
+
+    LaunchedEffect(sortedSeasons, selectedSeason) {
+        val selectedIndex = sortedSeasons.indexOf(selectedSeason)
+        if (selectedIndex < 0) return@LaunchedEffect
+
+        val visibleIndices = lazyListState.layoutInfo.visibleItemsInfo.map { it.index }
+        if (selectedIndex in visibleIndices) return@LaunchedEffect
+
+        suppressFocusSwitch = true
+        lazyListState.scrollToItem(selectedIndex)
+        suppressFocusSwitch = false
+    }
+
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .focusRestorer { selectedTabFocusRequester },
+            .focusRestorer(selectedTabFocusRequester)
+            .focusGroup(),
+        state = lazyListState,
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -125,12 +175,15 @@ fun SeasonTabs(
                         if (isSelected && downFocusRequester != null) {
                             down = downFocusRequester
                         }
+                        if (upFocusRequester != null) {
+                            up = upFocusRequester
+                        }
                     }
                     .onFocusChanged {
                     val nowFocused = it.isFocused
                     isFocused = nowFocused
-                    if (nowFocused && !isSelected) {
-                        onSeasonSelected(season)
+                    if (nowFocused && !isSelected && !suppressFocusSwitch) {
+                        pendingSeason = season
                     }
                 }
                     .onPreviewKeyEvent { event ->
@@ -157,28 +210,21 @@ fun SeasonTabs(
                         }
                         false
                     },
-                shape = CardDefaults.shape(
-                    shape = RoundedCornerShape(20.dp)
-                ),
+                shape = CardDefaults.shape(shape = tabShape),
                 colors = CardDefaults.colors(
                     containerColor = if (isSelected) NuvioColors.SurfaceVariant else NuvioColors.BackgroundCard,
                     focusedContainerColor = NuvioColors.Secondary
                 ),
-                border = CardDefaults.border(
-                    focusedBorder = Border(
-                        border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                ),
-                scale = CardDefaults.scale(focusedScale = 1.0f)
+                border = tabBorder,
+                scale = tabScale
             ) {
                 Text(
                     text = if (season == 0) stringResource(R.string.episodes_specials) else stringResource(R.string.episodes_season, season),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = tabTextStyle,
                     color = when {
                         isFocused -> NuvioColors.OnSecondary
                         isSelected -> NuvioColors.TextPrimary
-                        else -> NuvioTheme.extendedColors.textSecondary
+                        else -> textSecondary
                     },
                     modifier = Modifier.padding(vertical = 10.dp, horizontal = 20.dp)
                 )
@@ -187,7 +233,7 @@ fun SeasonTabs(
     }
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalFoundationApi::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun EpisodesRow(
     episodes: List<Video>,
@@ -197,11 +243,15 @@ fun EpisodesRow(
     episodeWatchedPendingKeys: Set<String> = emptySet(),
     blurUnwatchedEpisodes: Boolean = false,
     onEpisodeClick: (Video) -> Unit,
+    onEpisodeManualPlayClick: (Video) -> Unit = onEpisodeClick,
     onToggleEpisodeWatched: (Video) -> Unit,
+    showManualPlayOption: Boolean = false,
     onMarkSeasonWatched: (Int) -> Unit = {},
     onMarkSeasonUnwatched: (Int) -> Unit = {},
     isSeasonFullyWatched: Boolean = false,
     selectedSeason: Int = 1,
+    onOpenEpisodeComments: (Video) -> Unit = {},
+    showOpenEpisodeComments: Boolean = false,
     onMarkPreviousEpisodesWatched: (Video) -> Unit = {},
     upFocusRequester: FocusRequester,
     downFocusRequester: FocusRequester? = null,
@@ -210,8 +260,10 @@ fun EpisodesRow(
     restoreFocusToken: Int = 0,
     onRestoreFocusHandled: () -> Unit = {},
     onEpisodeFocused: (episodeId: String) -> Unit = {},
-    scrollToEpisodeId: String? = null
+    scrollToEpisodeId: String? = null,
+    onScrollToEpisodeHandled: () -> Unit = {}
 ) {
+    val dedupedEpisodes = remember(episodes) { episodes.distinctBy { it.id } }
     val restoreTargetRequester = restoreEpisodeId?.let { episodeFocusRequesters[it] }
     var optionsEpisode by remember { mutableStateOf<Video?>(null) }
     val cardMetrics = rememberEpisodeCardMetrics()
@@ -219,29 +271,52 @@ fun EpisodesRow(
     val rowPrefetchStrategy = remember { LazyListPrefetchStrategy(nestedPrefetchItemCount = 2) }
     val lazyListState = rememberLazyListState(prefetchStrategy = rowPrefetchStrategy)
     var lastHorizontalKeyRepeatTime by remember { mutableStateOf(0L) }
-    val episodeIds = remember(episodes) { episodes.mapTo(mutableSetOf()) { it.id } }
+    val episodeIds = remember(dedupedEpisodes) { dedupedEpisodes.mapTo(mutableSetOf()) { it.id } }
+    val context = LocalContext.current
+    val imdbLogoRequest = remember(context) {
+        ImageRequest.Builder(context)
+            .data(R.raw.imdb_logo_2016)
+            .crossfade(false)
+            .build()
+    }
 
     LaunchedEffect(episodeIds, episodeFocusRequesters) {
         episodeFocusRequesters.keys.retainAll(episodeIds)
     }
 
-    LaunchedEffect(restoreFocusToken, restoreEpisodeId, restoreTargetRequester, episodes) {
+    // Track the last focused episode requester for focus restoration
+    var lastFocusedEpisodeRequester by remember { androidx.compose.runtime.mutableStateOf<FocusRequester?>(null) }
+
+    LaunchedEffect(restoreFocusToken, restoreEpisodeId, restoreTargetRequester, dedupedEpisodes) {
         if (restoreFocusToken <= 0 || restoreEpisodeId.isNullOrBlank()) return@LaunchedEffect
-        if (episodes.none { it.id == restoreEpisodeId }) return@LaunchedEffect
+        if (dedupedEpisodes.none { it.id == restoreEpisodeId }) return@LaunchedEffect
+        val index = dedupedEpisodes.indexOfFirst { it.id == restoreEpisodeId }
+        if (index >= 0) {
+            val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
+            lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
+        }
+        lastFocusedEpisodeRequester = restoreTargetRequester
         restoreTargetRequester?.requestFocusAfterFrames()
     }
 
-    LaunchedEffect(scrollToEpisodeId, episodes) {
+    LaunchedEffect(scrollToEpisodeId, dedupedEpisodes) {
         if (scrollToEpisodeId.isNullOrBlank()) return@LaunchedEffect
-        val index = episodes.indexOfFirst { it.id == scrollToEpisodeId }
+        val index = dedupedEpisodes.indexOfFirst { it.id == scrollToEpisodeId }
         if (index < 0) return@LaunchedEffect
         val offsetPx = with(density) { (cardMetrics.cardWidth * 2f / 3f - cardMetrics.itemSpacing).roundToPx() }
         lazyListState.scrollToItem(index, scrollOffset = -offsetPx)
+        // Reset the focus restorer target so it doesn't point at an off-screen episode
+        // after the list scrolled to a different position.
+        lastFocusedEpisodeRequester = episodeFocusRequesters[scrollToEpisodeId]
+        onScrollToEpisodeHandled()
     }
 
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
+            .focusRestorer {
+                lastFocusedEpisodeRequester ?: FocusRequester.Default
+            }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
                 val isHorizontalKey = native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_LEFT ||
@@ -267,26 +342,25 @@ fun EpisodesRow(
         horizontalArrangement = Arrangement.spacedBy(cardMetrics.itemSpacing)
     ) {
         items(
-            items = episodes,
+            items = dedupedEpisodes,
             key = { it.id },
             contentType = { EPISODE_CARD_CONTENT_TYPE }
         ) { episode ->
-            val progress = episode.season?.let { s ->
-                episode.episode?.let { e ->
-                    episodeProgressMap[s to e]
-                }
+            val seasonEp = remember(episode.season, episode.episode) { episode.season?.let { s -> episode.episode?.let { e -> s to e } } }
+            val progress = remember(seasonEp, episodeProgressMap) { seasonEp?.let { episodeProgressMap[it] } }
+            val imdbRating = remember(seasonEp, episodeRatings) { seasonEp?.let { episodeRatings[it] } }
+            val isMarkedWatched = remember(seasonEp, watchedEpisodes) { seasonEp?.let { watchedEpisodes.contains(it) } ?: false }
+            val episodeFocusRequester = remember(episode.id) { episodeFocusRequesters.getOrPut(episode.id) { FocusRequester() } }
+            val episodeOnClick = remember(episode.id) { { onEpisodeClick(episode) } }
+            val episodeOnLongPress = remember(episode.id) { { optionsEpisode = episode } }
+            val episodeOnFocused = remember(episode.id) { {
+                lastFocusedEpisodeRequester = episodeFocusRequester
+                onEpisodeFocused(episode.id)
+            } }
+            val isRestoreTarget = episode.id == restoreEpisodeId
+            val episodeOnFocusRestored = remember(isRestoreTarget, onRestoreFocusHandled) {
+                if (isRestoreTarget) onRestoreFocusHandled else null
             }
-            val imdbRating = episode.season?.let { s ->
-                episode.episode?.let { e ->
-                    episodeRatings[s to e]
-                }
-            }
-            val isMarkedWatched = episode.season?.let { s ->
-                episode.episode?.let { e ->
-                    watchedEpisodes.contains(s to e)
-                }
-            } ?: false
-            val episodeFocusRequester = episodeFocusRequesters.getOrPut(episode.id) { FocusRequester() }
             EpisodeCard(
                 episode = episode,
                 watchProgress = progress,
@@ -294,15 +368,14 @@ fun EpisodesRow(
                 isMarkedWatched = isMarkedWatched,
                 blurUnwatched = blurUnwatchedEpisodes,
                 cardMetrics = cardMetrics,
-                onClick = { onEpisodeClick(episode) },
-                onLongPress = { optionsEpisode = episode },
+                onClick = episodeOnClick,
+                onLongPress = episodeOnLongPress,
                 upFocusRequester = upFocusRequester,
                 downFocusRequester = downFocusRequester,
+                imdbLogoRequest = imdbLogoRequest,
                 focusRequester = episodeFocusRequester,
-                onFocused = {
-                    onEpisodeFocused(episode.id)
-                },
-                onFocusRestored = if (episode.id == restoreEpisodeId) onRestoreFocusHandled else null
+                onFocused = episodeOnFocused,
+                onFocusRestored = episodeOnFocusRestored
             )
         }
     }
@@ -315,7 +388,7 @@ fun EpisodesRow(
             }
         } ?: false
         val isPending = episodeWatchedPendingKeys.contains(episodePendingKey(selectedEpisode))
-        val firstEpisodeInSeason = episodes.minByOrNull { it.episode ?: Int.MAX_VALUE }
+        val firstEpisodeInSeason = dedupedEpisodes.minByOrNull { it.episode ?: Int.MAX_VALUE }
         val hasPreviousEpisodes = selectedEpisode.episode != null &&
             firstEpisodeInSeason?.episode != null &&
             selectedEpisode.episode > firstEpisodeInSeason.episode
@@ -331,6 +404,16 @@ fun EpisodesRow(
                 onEpisodeClick(selectedEpisode)
                 optionsEpisode = null
             },
+            onOpenEpisodeComments = {
+                onOpenEpisodeComments(selectedEpisode)
+                optionsEpisode = null
+            },
+            showOpenEpisodeComments = showOpenEpisodeComments,
+            onPlayManually = {
+                onEpisodeManualPlayClick(selectedEpisode)
+                optionsEpisode = null
+            },
+            showPlayManually = showManualPlayOption,
             onToggleWatched = {
                 onToggleEpisodeWatched(selectedEpisode)
                 optionsEpisode = null
@@ -360,6 +443,7 @@ private fun EpisodeCard(
     isMarkedWatched: Boolean = false,
     blurUnwatched: Boolean = false,
     cardMetrics: EpisodeCardMetrics,
+    imdbLogoRequest: ImageRequest,
     onClick: () -> Unit,
     onLongPress: () -> Unit,
     upFocusRequester: FocusRequester,
@@ -380,20 +464,21 @@ private fun EpisodeCard(
         imdbRating?.takeIf { it > 0.0 }?.let { String.format(Locale.US, "%.1f", it) }
     }
     val description = remember(episode.overview) { episode.overview?.trim().orEmpty() }
-    val isWatched = watchProgress?.isCompleted() == true || isMarkedWatched
-    val shouldBlur = blurUnwatched && !isWatched
-    val progressPercent = watchProgress?.progressPercentage ?: 0f
-    val showProgress = progressPercent >= 0.02f && progressPercent < 0.85f
+    val isWatched = remember(watchProgress, isMarkedWatched) { watchProgress?.isCompleted() == true || isMarkedWatched }
+    val shouldBlur = remember(blurUnwatched, isWatched) { blurUnwatched && !isWatched }
+    val progressPercent = remember(watchProgress) { watchProgress?.progressPercentage ?: 0f }
+    val showProgress = remember(progressPercent) { progressPercent >= 0.02f && progressPercent < 0.85f }
     val showCompletedBadge = isWatched
-    val showNotStartedBadge = !showCompletedBadge && progressPercent < 0.02f
-    var isFocused by remember { mutableStateOf(false) }
+    val showNotStartedBadge = remember(showCompletedBadge, progressPercent) { !showCompletedBadge && progressPercent < 0.02f }
+    val isUnavailable = remember(episode.available) { episode.available == false }
+    val cardBgColor = NuvioColors.BackgroundCard
+    val isFocusedState = remember { mutableStateOf(false) }
+    val cardCornerRadius = remember(cardMetrics.cornerRadius, density) {
+        with(density) { cardMetrics.cornerRadius.toPx() }
+    }
+    var isFocused by isFocusedState
     var longPressTriggered by remember { mutableStateOf(false) }
     val shape = remember(cardMetrics.cornerRadius) { RoundedCornerShape(cardMetrics.cornerRadius) }
-    val overlayAlpha by animateFloatAsState(
-        targetValue = if (isFocused) 1f else 0.94f,
-        animationSpec = tween(durationMillis = 180),
-        label = "episodeOverlayAlpha"
-    )
     val thumbnailWidthPx = remember(cardMetrics.cardWidth, density) {
         with(density) { cardMetrics.cardWidth.roundToPx() }
     }
@@ -403,18 +488,53 @@ private fun EpisodeCard(
     val overlayBrush = remember {
         Brush.verticalGradient(
             colorStops = arrayOf(
-                0.0f to Color.Black.copy(alpha = 0.06f),
-                0.22f to Color.Black.copy(alpha = 0.18f),
-                0.52f to Color.Black.copy(alpha = 0.62f),
-                0.82f to Color.Black.copy(alpha = 0.86f),
-                1.0f to Color.Black.copy(alpha = 0.95f)
+                0.0f to Color.Transparent,
+                0.15f to Color.Black.copy(alpha = 0.08f),
+                0.35f to Color.Black.copy(alpha = 0.28f),
+                0.60f to Color.Black.copy(alpha = 0.72f),
+                0.85f to Color.Black.copy(alpha = 0.90f),
+                1.0f to Color.Black.copy(alpha = 0.96f)
             )
         )
     }
+    val typography = MaterialTheme.typography
+    val episodeBadgeStyle = remember(typography, cardMetrics) {
+        typography.labelSmall.copy(
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = cardMetrics.episodeBadgeLetterSpacing,
+            color = Color.White.copy(alpha = 0.9f)
+        )
+    }
+    val titleStyle = remember(typography, cardMetrics) {
+        typography.titleMedium.copy(
+            fontWeight = FontWeight.ExtraBold,
+            lineHeight = cardMetrics.titleLineHeight
+        )
+    }
+    val descriptionStyle = remember(typography, cardMetrics) {
+        typography.bodySmall.copy(
+            color = Color.White.copy(alpha = 0.9f),
+            lineHeight = cardMetrics.descriptionLineHeight
+        )
+    }
+    val textSecondary = NuvioColors.TextSecondary
+    val metaLabelStyle = remember(typography, textSecondary) {
+        typography.labelSmall.copy(color = textSecondary)
+    }
+    val ratingStyle = remember(typography) {
+        typography.labelSmall.copy(
+            color = Color(0xFFF5C518),
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+    val badgeBgColor = remember { Color.Black.copy(alpha = 0.42f) }
+    val badgeShape = remember(cardMetrics.episodeBadgeCornerRadius) { RoundedCornerShape(cardMetrics.episodeBadgeCornerRadius) }
+    val progressBgColor = remember { Color.Black.copy(alpha = 0.45f) }
+    val notStartedBadgeColor = remember(textSecondary) { textSecondary.copy(alpha = 0.9f) }
     val thumbnailRequest = remember(context, episode.thumbnail, thumbnailWidthPx, thumbnailHeightPx, shouldBlur) {
         ImageRequest.Builder(context)
             .data(episode.thumbnail)
-            .crossfade(false)
+            .crossfade(true)
             .size(width = thumbnailWidthPx, height = thumbnailHeightPx)
             .apply {
                 if (shouldBlur) {
@@ -423,17 +543,30 @@ private fun EpisodeCard(
             }
             .build()
     }
-    val imdbLogoRequest = remember(context) {
-        ImageRequest.Builder(context)
-            .data(R.raw.imdb_logo_2016)
-            .crossfade(false)
-            .build()
-    }
+    val strCdWatched = stringResource(R.string.episodes_cd_watched)
     val strEpisode = stringResource(R.string.episodes_episode)
+    val strUnavailable = stringResource(R.string.episodes_unavailable)
     val episodeCode = remember(episode.episode, strEpisode) {
         val prefix = strEpisode.uppercase(Locale.getDefault())
         episode.episode?.let { number -> "$prefix $number" } ?: prefix
     }
+
+    val primaryColor = NuvioColors.Primary
+    val textPrimary = NuvioColors.TextPrimary
+    val focusRing = NuvioColors.FocusRing
+    val cardShape = CardDefaults.shape(shape = shape)
+    val cardColors = CardDefaults.colors(
+        containerColor = Color.Transparent,
+        focusedContainerColor = Color.Transparent
+    )
+    val cardBorder = CardDefaults.border(
+        focusedBorder = Border(
+            border = BorderStroke(2.dp, focusRing),
+            shape = shape
+        )
+    )
+    val cardScale = CardDefaults.scale(focusedScale = 1.0f)
+    val cardGlow = CardDefaults.glow()
 
     Card(
         onClick = {
@@ -483,46 +616,61 @@ private fun EpisodeCard(
                     down = downFocusRequester
                 }
             },
-        shape = CardDefaults.shape(shape = shape),
-        colors = CardDefaults.colors(
-            containerColor = Color.Transparent,
-            focusedContainerColor = Color.Transparent
-        ),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(2.dp, NuvioColors.FocusRing),
-                shape = shape
-            )
-        ),
-        scale = CardDefaults.scale(focusedScale = 1.02f)
+        shape = cardShape,
+        colors = cardColors,
+        border = cardBorder,
+        scale = cardScale,
+        glow = cardGlow
     ) {
         Box(
             modifier = Modifier
                 .width(cardMetrics.cardWidth)
                 .height(cardMetrics.cardHeight)
-                .clip(shape)
-                .background(NuvioColors.BackgroundCard)
-                .border(
-                    width = 1.dp,
-                    color = Color.White.copy(alpha = 0.14f),
-                    shape = shape
-                )
+                .clipToBounds()
         ) {
+            val bgPainter = remember(cardBgColor) { androidx.compose.ui.graphics.painter.ColorPainter(cardBgColor) }
             AsyncImage(
                 model = thumbnailRequest,
-                contentDescription = episode.title,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-
-            Box(
+                contentDescription = episode.title.localizeEpisodeTitle(context),
                 modifier = Modifier
                     .fillMaxSize()
-                    .drawWithCache {
-                        onDrawBehind {
-                            drawRect(brush = overlayBrush, alpha = overlayAlpha)
-                        }
+                    .graphicsLayer {
+                        compositingStrategy =
+                            CompositingStrategy.Offscreen
                     }
+                    .clipToBounds()
+
+                    //Gradient for text legibility
+                    .drawWithContent {
+                        drawContent()
+
+                        val startY = size.height * 0.40f
+                        val localBrush = Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.0f to Color.Transparent,
+                                0.15f to Color.Black.copy(alpha = 0.08f),
+                                0.35f to Color.Black.copy(alpha = 0.28f),
+                                0.60f to Color.Black.copy(alpha = 0.72f),
+                                0.85f to Color.Black.copy(alpha = 0.90f),
+                                1.0f to Color.Black.copy(alpha = 0.96f)
+                            ),
+                            startY = startY,
+                            endY = size.height
+                        )
+                        drawRect(
+                            brush = localBrush,
+                            topLeft = androidx.compose.ui.geometry.Offset(0f, startY),
+                            size = androidx.compose.ui.geometry.Size(
+                                size.width,
+                                size.height - startY
+                            ),
+                            alpha = if (isFocusedState.value) 1f else 0.94f
+                        )
+                    },
+                contentScale = ContentScale.Crop,
+                placeholder = bgPainter,
+                error = bgPainter,
+                fallback = bgPainter
             )
 
             Column(
@@ -540,8 +688,8 @@ private fun EpisodeCard(
                 Box(
                     modifier = Modifier
                         .background(
-                            color = Color.Black.copy(alpha = 0.42f),
-                            shape = RoundedCornerShape(cardMetrics.episodeBadgeCornerRadius)
+                            color = badgeBgColor,
+                            shape = badgeShape
                         )
                         .padding(
                             horizontal = cardMetrics.episodeBadgeHorizontalPadding,
@@ -550,22 +698,15 @@ private fun EpisodeCard(
                 ) {
                     Text(
                         text = episodeCode,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = cardMetrics.episodeBadgeLetterSpacing,
-                            color = Color.White.copy(alpha = 0.9f)
-                        ),
+                        style = episodeBadgeStyle,
                         maxLines = 1
                     )
                 }
 
                 Text(
-                    text = episode.title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        lineHeight = cardMetrics.titleLineHeight
-                    ),
-                    color = NuvioColors.TextPrimary,
+                    text = episode.title.localizeEpisodeTitle(context),
+                    style = titleStyle,
+                    color = textPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -573,10 +714,7 @@ private fun EpisodeCard(
                 if (description.isNotBlank()) {
                     Text(
                         text = description,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color.White.copy(alpha = 0.9f),
-                            lineHeight = cardMetrics.descriptionLineHeight
-                        ),
+                        style = descriptionStyle,
                         maxLines = cardMetrics.descriptionMaxLines,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -596,14 +734,12 @@ private fun EpisodeCard(
                                 Icon(
                                     imageVector = Icons.Outlined.Schedule,
                                     contentDescription = null,
-                                    tint = NuvioColors.TextSecondary,
+                                    tint = textSecondary,
                                     modifier = Modifier.size(cardMetrics.metadataIconSize)
                                 )
                                 Text(
                                     text = runtime,
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        color = NuvioColors.TextSecondary
-                                    ),
+                                    style = metaLabelStyle,
                                     maxLines = 1
                                 )
                             }
@@ -624,10 +760,7 @@ private fun EpisodeCard(
                                 )
                                 Text(
                                     text = rating,
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color(0xFFF5C518),
-                                        fontWeight = FontWeight.SemiBold
-                                    ),
+                                    style = ratingStyle,
                                     maxLines = 1
                                 )
                             }
@@ -636,7 +769,7 @@ private fun EpisodeCard(
                         if (formattedDate.isNotBlank()) {
                             Text(
                                 text = formattedDate,
-                                style = MaterialTheme.typography.labelSmall.copy(color = NuvioColors.TextSecondary),
+                                style = metaLabelStyle,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 textAlign = TextAlign.End,
@@ -648,6 +781,7 @@ private fun EpisodeCard(
             }
 
             if (showProgress) {
+                val progressBarRadius = cardMetrics.progressBarHeight / 2
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
@@ -657,18 +791,21 @@ private fun EpisodeCard(
                             bottom = cardMetrics.contentPadding * 0.5f
                         )
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(cardMetrics.progressBarHeight / 2))
                         .height(cardMetrics.progressBarHeight)
-                        .background(Color.Black.copy(alpha = 0.45f))
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(progressPercent)
-                            .clip(RoundedCornerShape(cardMetrics.progressBarHeight / 2))
-                            .height(cardMetrics.progressBarHeight)
-                            .background(NuvioColors.Primary)
-                    )
-                }
+                        .drawWithCache {
+                            val r = progressBarRadius.toPx()
+                            val cr = androidx.compose.ui.geometry.CornerRadius(r)
+                            val fillWidth = size.width * progressPercent
+                            onDrawBehind {
+                                drawRoundRect(color = progressBgColor, cornerRadius = cr)
+                                drawRoundRect(
+                                    color = primaryColor,
+                                    size = androidx.compose.ui.geometry.Size(fillWidth, size.height),
+                                    cornerRadius = cr
+                                )
+                            }
+                        }
+                )
             }
 
             if (showCompletedBadge) {
@@ -680,17 +817,43 @@ private fun EpisodeCard(
                             top = cardMetrics.statusBadgeInset
                         )
                         .size(cardMetrics.statusBadgeSize)
-                        .background(NuvioColors.Primary, CircleShape),
+                        .background(primaryColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = stringResource(R.string.episodes_cd_watched),
+                        contentDescription = strCdWatched,
                         tint = Color.White,
                         modifier = Modifier.size(cardMetrics.statusIconSize)
                     )
                 }
+            }
+
+            if (isUnavailable) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(
+                            end = cardMetrics.statusBadgeInset,
+                            top = cardMetrics.statusBadgeInset
+                        )
+                        .background(
+                            color = Color(0xCC5D4037),
+                            shape = badgeShape
+                        )
+                        .padding(
+                            horizontal = cardMetrics.episodeBadgeHorizontalPadding,
+                            vertical = cardMetrics.episodeBadgeVerticalPadding
+                        )
+                ) {
+                    Text(
+                        text = strUnavailable.uppercase(Locale.getDefault()),
+                        style = episodeBadgeStyle,
+                        maxLines = 1
+                    )
+                }
             } else if (showNotStartedBadge) {
+                val dashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(7f, 5f), 0f) }
                 Canvas(
                     modifier = Modifier
                         .align(Alignment.TopStart)
@@ -701,10 +864,10 @@ private fun EpisodeCard(
                         .size(cardMetrics.statusBadgeSize)
                 ) {
                     drawCircle(
-                        color = NuvioColors.TextSecondary.copy(alpha = 0.9f),
+                        color = notStartedBadgeColor,
                         style = Stroke(
                             width = 2.dp.toPx(),
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(7f, 5f), 0f)
+                            pathEffect = dashEffect
                         )
                     )
                 }
@@ -723,12 +886,17 @@ private fun EpisodeOptionsDialog(
     hasPreviousEpisodes: Boolean = false,
     onDismiss: () -> Unit,
     onPlay: () -> Unit,
+    onOpenEpisodeComments: () -> Unit = {},
+    showOpenEpisodeComments: Boolean = false,
+    onPlayManually: () -> Unit = {},
+    showPlayManually: Boolean = false,
     onToggleWatched: () -> Unit,
     onMarkSeasonWatched: () -> Unit = {},
     onMarkSeasonUnwatched: () -> Unit = {},
     onMarkPreviousEpisodesWatched: () -> Unit = {}
 ) {
     val primaryFocusRequester = remember { FocusRequester() }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         primaryFocusRequester.requestFocus()
@@ -736,7 +904,7 @@ private fun EpisodeOptionsDialog(
 
     NuvioDialog(
         onDismiss = onDismiss,
-        title = episode.title,
+        title = episode.title.localizeEpisodeTitle(context),
         subtitle = stringResource(R.string.episodes_dialog_subtitle)
     ) {
         Button(
@@ -786,6 +954,32 @@ private fun EpisodeOptionsDialog(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(stringResource(R.string.episodes_play))
+        }
+
+        if (showOpenEpisodeComments) {
+            Button(
+                onClick = onOpenEpisodeComments,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioColors.BackgroundCard,
+                    contentColor = NuvioColors.TextPrimary
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.episodes_open_comments))
+            }
+        }
+
+        if (showPlayManually) {
+            Button(
+                onClick = onPlayManually,
+                colors = ButtonDefaults.colors(
+                    containerColor = NuvioColors.BackgroundCard,
+                    contentColor = NuvioColors.TextPrimary
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.play_manually))
+            }
         }
     }
 }
@@ -971,18 +1165,19 @@ private fun formatEpisodeRuntime(runtimeMinutes: Int): String {
 
 private fun formatEpisodeCardDate(isoDate: String): String {
     val locale = Locale.getDefault()
-    val outputFormat = SimpleDateFormat("MMM d, yyyy", locale)
+    val bestPattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMMy")
+    val formatter = java.time.format.DateTimeFormatter.ofPattern(bestPattern, locale)
+
     return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }
-        val date = inputFormat.parse(isoDate)
-        date?.let { outputFormat.format(it) }.orEmpty()
+        val localDate = java.time.Instant.parse(isoDate)
+            .atZone(java.time.ZoneOffset.UTC)
+            .toLocalDate()
+
+        formatter.format(localDate)
     } catch (_: Exception) {
         try {
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            val date = inputFormat.parse(isoDate)
-            date?.let { outputFormat.format(it) }.orEmpty()
+            val localDate = java.time.LocalDate.parse(isoDate.substringBefore('T'))
+            formatter.format(localDate)
         } catch (_: Exception) {
             ""
         }

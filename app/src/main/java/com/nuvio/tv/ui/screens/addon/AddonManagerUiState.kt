@@ -9,6 +9,8 @@ data class AddonManagerUiState(
     val installUrl: String = "",
     val installedAddons: List<Addon> = emptyList(),
     val error: String? = null,
+    val transientMessage: String? = null,
+    val transientMessageIsError: Boolean = false,
     // QR mode
     val isQrModeActive: Boolean = false,
     val qrCodeBitmap: Bitmap? = null,
@@ -29,5 +31,9 @@ data class PendingChangeInfo(
     val enabledCatalogNames: List<String> = emptyList(),
     val addedNames: Map<String, String> = emptyMap(),
     val removedNames: Map<String, String> = emptyMap(),
+    val collectionsChanged: Boolean = false,
+    val proposedCollectionsJson: String? = null,
+    val proposedCollectionCount: Int = 0,
+    val proposedDisabledCollectionKeys: List<String> = emptyList(),
     val isApplying: Boolean = false
 )

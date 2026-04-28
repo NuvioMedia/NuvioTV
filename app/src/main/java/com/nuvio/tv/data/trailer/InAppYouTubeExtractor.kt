@@ -4,8 +4,15 @@ import android.net.Uri
 import android.util.Log
 import com.google.gson.Gson
 import com.nuvio.tv.BuildConfig
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withTimeout
 import okhttp3.Headers
 import okhttp3.OkHttpClient
@@ -13,6 +20,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URL
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -137,6 +145,7 @@ class InAppYouTubeExtractor @Inject constructor() {
     private val gson = Gson()
 
     private val httpClient = OkHttpClient.Builder()
+        .dns(com.nuvio.tv.core.network.IPv4FirstDns())
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
         .writeTimeout(20, TimeUnit.SECONDS)
@@ -144,17 +153,108 @@ class InAppYouTubeExtractor @Inject constructor() {
         .followSslRedirects(true)
         .build()
 
+    // --- Cached watch config (api key + visitor data) ---
+    private data class CachedConfig(
+        val apiKey: String,
+        val visitorData: String?,
+        val fetchedAt: Long = System.currentTimeMillis()
+    )
+
+    private val cachedConfig = AtomicReference<CachedConfig?>(null)
+    private val configMutex = Mutex()
+
+    companion object {
+        /** How long cached visitor_data stays valid before a proactive refresh. */
+        private const val CONFIG_TTL_MS = 3 * 60 * 60 * 1000L // 3 hours
+    }
+
+    /**
+     * Returns cached watch config, fetching from watch page only if:
+     *  - No cached config exists yet (first call)
+     *  - Cache is older than CONFIG_TTL_MS
+     *  - [forceRefresh] is true (e.g. after LOGIN_REQUIRED)
+     */
+    private suspend fun ensureWatchConfig(forceRefresh: Boolean = false): CachedConfig {
+        // Fast path: return valid cache without locking
+        if (!forceRefresh) {
+            val current = cachedConfig.get()
+            if (current != null && !isConfigStale(current)) {
+                return current
+            }
+        }
+
+        // Slow path: fetch new config under mutex (only one fetch at a time)
+        return configMutex.withLock {
+            // Double-check after acquiring lock
+            if (!forceRefresh) {
+                val current = cachedConfig.get()
+                if (current != null && !isConfigStale(current)) {
+                    return@withLock current
+                }
+            }
+
+            Log.d(TAG, "Fetching watch page for visitor_data (forceRefresh=$forceRefresh)")
+            val watchUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ&hl=en"
+            val watchResponse = performRequest(
+                url = watchUrl,
+                method = "GET",
+                headers = DEFAULT_HEADERS
+            )
+            if (!watchResponse.ok) {
+                // If we have a stale config, prefer it over failing
+                val stale = cachedConfig.get()
+                if (stale != null) {
+                    Log.w(TAG, "Watch page failed (${watchResponse.status}), using stale config")
+                    return@withLock stale
+                }
+                throw IllegalStateException("Failed to fetch watch page (${watchResponse.status})")
+            }
+
+            val parsed = getWatchConfig(watchResponse.body)
+            val apiKey = parsed.apiKey ?: "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8" // fallback key
+            val newConfig = CachedConfig(
+                apiKey = apiKey,
+                visitorData = parsed.visitorData
+            )
+            cachedConfig.set(newConfig)
+            Log.d(TAG, "Watch config cached (visitor=${!parsed.visitorData.isNullOrBlank()})")
+            newConfig
+        }
+    }
+
+    private fun isConfigStale(config: CachedConfig): Boolean {
+        return System.currentTimeMillis() - config.fetchedAt > CONFIG_TTL_MS
+    }
+
+    /** Invalidate cached config so next extraction re-fetches watch page. */
+    fun invalidateConfig() {
+        cachedConfig.set(null)
+        Log.d(TAG, "Watch config invalidated")
+    }
+
     suspend fun extractPlaybackSource(youtubeUrl: String): TrailerPlaybackSource? = withContext(Dispatchers.IO) {
         if (youtubeUrl.isBlank()) return@withContext null
 
         Log.d(TAG, "Starting Kotlin extraction for ${summarizeUrl(youtubeUrl)}")
-        val source = try {
-            withTimeout(EXTRACTOR_TIMEOUT_MS) {
-                extractPlaybackSourceInternal(youtubeUrl)
+        var source: TrailerPlaybackSource? = null
+        try {
+            source = withTimeout(EXTRACTOR_TIMEOUT_MS) {
+                extractPlaybackSourceInternal(youtubeUrl, forceRefreshConfig = false)
             }
         } catch (error: Exception) {
             Log.w(TAG, "Kotlin extractor failed for $youtubeUrl: ${error.message}")
-            null
+        }
+
+        // Retry with fresh config if first attempt returned nothing
+        if (source == null) {
+            Log.d(TAG, "First attempt failed, retrying with fresh watch config...")
+            try {
+                source = withTimeout(EXTRACTOR_TIMEOUT_MS) {
+                    extractPlaybackSourceInternal(youtubeUrl, forceRefreshConfig = true)
+                }
+            } catch (error: Exception) {
+                Log.w(TAG, "Kotlin extractor retry failed for $youtubeUrl: ${error.message}")
+            }
         }
 
         if (source == null) {
@@ -170,37 +270,40 @@ class InAppYouTubeExtractor @Inject constructor() {
         source
     }
 
-    private fun extractPlaybackSourceInternal(youtubeUrl: String): TrailerPlaybackSource? {
+    private suspend fun extractPlaybackSourceInternal(
+        youtubeUrl: String,
+        forceRefreshConfig: Boolean
+    ): TrailerPlaybackSource? {
         val videoId = extractVideoId(youtubeUrl) ?: return null
 
-        val watchUrl = "https://www.youtube.com/watch?v=$videoId&hl=en"
-        val watchResponse = performRequest(
-            url = watchUrl,
-            method = "GET",
-            headers = DEFAULT_HEADERS
-        )
-        if (!watchResponse.ok) {
-            throw IllegalStateException("Failed to fetch watch page (${watchResponse.status})")
-        }
-
-        val watchConfig = getWatchConfig(watchResponse.body)
-        val apiKey = watchConfig.apiKey
-            ?: throw IllegalStateException("Unable to extract INNERTUBE_API_KEY")
+        // Use cached config instead of fetching watch page every time
+        val config = ensureWatchConfig(forceRefresh = forceRefreshConfig)
+        Log.d(TAG, "Using config: apiKey=${config.apiKey.take(10)}... visitor=${!config.visitorData.isNullOrBlank()}")
 
         val progressive = mutableListOf<StreamCandidate>()
         val adaptiveVideo = mutableListOf<StreamCandidate>()
         val adaptiveAudio = mutableListOf<StreamCandidate>()
         val manifestUrls = mutableListOf<Triple<String, Int, String>>()
+        var loginRequiredCount = 0
 
         for (client in CLIENTS) {
             try {
                 val playerResponse = fetchPlayerResponse(
-                    apiKey = apiKey,
+                    apiKey = config.apiKey,
                     videoId = videoId,
                     client = client,
-                    visitorData = watchConfig.visitorData,
+                    visitorData = config.visitorData,
                     cookieHeader = null
                 )
+
+                // Check for LOGIN_REQUIRED which means visitor_data is stale
+                val playabilityStatus = playerResponse.mapValue("playabilityStatus")
+                val status = playabilityStatus?.stringValue("status")
+                if (status == "LOGIN_REQUIRED") {
+                    loginRequiredCount++
+                    Log.w(TAG, "Client ${client.key}: LOGIN_REQUIRED (visitor may be stale)")
+                    continue
+                }
 
                 val streamingData = playerResponse.mapValue("streamingData") ?: continue
                 val hlsManifestUrl = streamingData.stringValue("hlsManifestUrl")
@@ -286,6 +389,13 @@ class InAppYouTubeExtractor @Inject constructor() {
             }
         }
 
+        // If all clients returned LOGIN_REQUIRED, invalidate config for next attempt
+        if (loginRequiredCount == CLIENTS.size) {
+            Log.w(TAG, "All ${CLIENTS.size} clients returned LOGIN_REQUIRED, invalidating config")
+            invalidateConfig()
+            return null
+        }
+
         if (manifestUrls.isEmpty() && progressive.isEmpty() && adaptiveVideo.isEmpty() && adaptiveAudio.isEmpty()) {
             return null
         }
@@ -329,8 +439,8 @@ class InAppYouTubeExtractor @Inject constructor() {
             bestProgressive?.url
         }
 
-        val videoUrl = bestVideo?.url ?: combinedUrl ?: return null
-        val audioUrl = bestAudio?.url
+        val videoUrl = resolveReachableUrl(bestVideo?.url ?: combinedUrl ?: return null)
+        val audioUrl = bestAudio?.url?.let { resolveReachableUrl(it) }
 
         if (BuildConfig.DEBUG) {
             Log.d(
@@ -590,6 +700,64 @@ class InAppYouTubeExtractor @Inject constructor() {
             return sortCandidates(sameClient).firstOrNull()
         }
         return sortCandidates(items).firstOrNull()
+    }
+
+    private suspend fun resolveReachableUrl(url: String): String {
+        if (!url.contains("googlevideo.com")) return url
+        val uri = Uri.parse(url)
+        val mnParam = uri.getQueryParameter("mn") ?: return url
+        val servers = mnParam.split(",").map { it.trim() }.filter { it.isNotBlank() }
+        if (servers.size < 2) return url
+
+        val candidates = mutableListOf(url)
+        for (server in servers) {
+            val mviIndex = servers.indexOf(server)
+            val altHost = uri.host?.replaceFirst(
+                Regex("^rr\\d+---"),
+                "rr${mviIndex + 1}---"
+            )?.replaceFirst(
+                Regex("sn-[a-z0-9]+-[a-z0-9]+"),
+                server
+            ) ?: continue
+            if (altHost == uri.host) continue
+            candidates += url.replace(uri.host!!, altHost)
+        }
+
+        if (candidates.size == 1) return candidates[0]
+        val result = CompletableDeferred<String>()
+        val probeScope = CoroutineScope(Dispatchers.IO)
+        candidates.forEach { candidate ->
+            probeScope.launch {
+                val reachable = isUrlReachable(candidate)
+                Log.d(TAG, "CDN probe: ${Uri.parse(candidate).host} -> $reachable")
+                if (reachable) result.complete(candidate)
+            }
+        }
+        return try {
+            withTimeoutOrNull(2_000L) { result.await() } ?: url
+        } finally {
+            probeScope.cancel()
+        }
+    }
+
+    private val probeClient = OkHttpClient.Builder()
+        .dns(com.nuvio.tv.core.network.IPv4FirstDns())
+        .connectTimeout(2, TimeUnit.SECONDS)
+        .readTimeout(2, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .build()
+
+    private fun isUrlReachable(url: String): Boolean {
+        return runCatching {
+            val request = Request.Builder()
+                .url(url)
+                .get()
+                .header("Range", "bytes=0-0")
+                .headers(buildHeaders(DEFAULT_HEADERS))
+                .build()
+            probeClient.newCall(request).execute().use { val code = it.code; Log.d(TAG, "CDN probe code: ${Uri.parse(url).host} -> $code"); code == 200 }
+        }.getOrDefault(false)
     }
 
     private fun absolutizeUrl(baseUrl: String, maybeRelative: String): String {

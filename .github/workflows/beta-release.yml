@@ -1,0 +1,182 @@
+name: Beta Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_mode:
+        description: "Choose whether to preview, save as draft, or publish immediately"
+        required: true
+        default: dry_run
+        type: choice
+        options:
+          - dry_run
+          - draft
+          - publish
+      manual_release:
+        description: "Use manual tag/title without changing Gradle version"
+        required: true
+        default: false
+        type: boolean
+      version:
+        description: "Target versionName for auto mode, for example 0.4.19-beta"
+        required: false
+        type: string
+      version_code:
+        description: "Optional versionCode override for auto mode. Defaults to current versionCode + 1."
+        required: false
+        type: string
+      release_tag:
+        description: "Manual mode tag. Required when manual release is enabled."
+        required: false
+        type: string
+      release_title:
+        description: "Manual mode GitHub release title. Required when manual release is enabled."
+        required: false
+        type: string
+      downloader_code:
+        description: "Optional downloader code footer"
+        required: false
+        type: string
+      custom_release_notes:
+        description: "Optional full Markdown release notes. When set, it replaces generated notes entirely."
+        required: false
+        type: string
+      extra_notes:
+        description: "Optional extra bullet lines, one per line"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: beta-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  beta-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Prepare local properties
+        env:
+          LOCAL_PROPERTIES_BASE64: ${{ secrets.LOCAL_PROPERTIES_BASE64 }}
+          LOCAL_DEV_PROPERTIES_BASE64: ${{ secrets.LOCAL_DEV_PROPERTIES_BASE64 }}
+        run: |
+          if [ -n "$LOCAL_PROPERTIES_BASE64" ]; then
+            printf '%s' "$LOCAL_PROPERTIES_BASE64" | base64 --decode > local.properties
+          fi
+          if [ -n "$LOCAL_DEV_PROPERTIES_BASE64" ]; then
+            printf '%s' "$LOCAL_DEV_PROPERTIES_BASE64" | base64 --decode > local.dev.properties
+          fi
+
+      - name: Prepare signing config
+        if: ${{ inputs.release_mode != 'dry_run' }}
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.NUVIO_RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEY_ALIAS: ${{ secrets.NUVIO_RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.NUVIO_RELEASE_KEY_PASSWORD }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.NUVIO_RELEASE_STORE_PASSWORD }}
+        run: |
+          if [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
+            echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nuviotv.jks"
+            {
+              echo "NUVIO_RELEASE_STORE_FILE=$RUNNER_TEMP/nuviotv.jks"
+              echo "NUVIO_RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS"
+              echo "NUVIO_RELEASE_KEY_PASSWORD=$RELEASE_KEY_PASSWORD"
+              echo "NUVIO_RELEASE_STORE_PASSWORD=$RELEASE_STORE_PASSWORD"
+            } >> "$GITHUB_ENV"
+          else
+            echo "CI_USE_DEBUG_SIGNING=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Preview beta release
+        if: ${{ inputs.release_mode == 'dry_run' }}
+        run: |
+          args=(python3 scripts/release_beta.py --dry-run)
+          if [ "${{ inputs.manual_release }}" = "true" ]; then
+            args+=(--manual-release --release-tag "${{ inputs.release_tag }}" --release-title "${{ inputs.release_title }}")
+          else
+            args+=("${{ inputs.version }}")
+            if [ -n "${{ inputs.version_code }}" ]; then
+              args+=(--version-code "${{ inputs.version_code }}")
+            fi
+            if [ -n "${{ inputs.release_tag }}" ]; then
+              args+=(--release-tag "${{ inputs.release_tag }}")
+            fi
+            if [ -n "${{ inputs.release_title }}" ]; then
+              args+=(--release-title "${{ inputs.release_title }}")
+            fi
+          fi
+          if [ -n "${{ inputs.custom_release_notes }}" ]; then
+            printf '%s\n' '${{ inputs.custom_release_notes }}' > "$RUNNER_TEMP/custom-release-notes.md"
+            args+=(--custom-notes-file "$RUNNER_TEMP/custom-release-notes.md")
+          fi
+          if [ -n "${{ inputs.downloader_code }}" ]; then
+            args+=(--downloader-code "${{ inputs.downloader_code }}")
+          fi
+          if [ -n "${{ inputs.extra_notes }}" ]; then
+            args+=(--extra-notes "${{ inputs.extra_notes }}")
+          fi
+          "${args[@]}"
+
+      - name: Upload preview notes
+        if: ${{ inputs.release_mode == 'dry_run' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-release-preview-${{ inputs.manual_release && inputs.release_tag || inputs.version }}
+          path: build/release/release-notes-${{ inputs.manual_release && inputs.release_tag || inputs.version }}.md
+
+      - name: Build beta release
+        if: ${{ inputs.release_mode != 'dry_run' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          args=(python3 scripts/release_beta.py)
+          case "${{ inputs.release_mode }}" in
+            draft) args+=(--draft) ;;
+            publish) args+=(--publish) ;;
+          esac
+          if [ "${{ inputs.manual_release }}" = "true" ]; then
+            args+=(--manual-release --release-tag "${{ inputs.release_tag }}" --release-title "${{ inputs.release_title }}")
+          else
+            args+=("${{ inputs.version }}")
+            if [ -n "${{ inputs.version_code }}" ]; then
+              args+=(--version-code "${{ inputs.version_code }}")
+            fi
+            if [ -n "${{ inputs.release_tag }}" ]; then
+              args+=(--release-tag "${{ inputs.release_tag }}")
+            fi
+            if [ -n "${{ inputs.release_title }}" ]; then
+              args+=(--release-title "${{ inputs.release_title }}")
+            fi
+          fi
+          if [ -n "${{ inputs.custom_release_notes }}" ]; then
+            printf '%s\n' '${{ inputs.custom_release_notes }}' > "$RUNNER_TEMP/custom-release-notes.md"
+            args+=(--custom-notes-file "$RUNNER_TEMP/custom-release-notes.md")
+          fi
+          if [ -n "${{ inputs.downloader_code }}" ]; then
+            args+=(--downloader-code "${{ inputs.downloader_code }}")
+          fi
+          if [ -n "${{ inputs.extra_notes }}" ]; then
+            args+=(--extra-notes "${{ inputs.extra_notes }}")
+          fi
+          "${args[@]}"

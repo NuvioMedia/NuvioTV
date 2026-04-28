@@ -2,14 +2,20 @@ package com.nuvio.tv.ui.screens.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nuvio.tv.core.auth.AuthManager
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
+import com.nuvio.tv.data.local.LibraryPreferences
+import com.nuvio.tv.data.local.TraktAuthDataStore
 import com.nuvio.tv.data.repository.TraktLibraryService
+import com.nuvio.tv.domain.model.AuthState
 import com.nuvio.tv.domain.model.LibraryEntry
 import com.nuvio.tv.domain.model.LibraryListTab
 import com.nuvio.tv.domain.model.LibrarySourceMode
 import com.nuvio.tv.domain.model.TraktListPrivacy
 import com.nuvio.tv.domain.repository.LibraryRepository
+import android.content.Context
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +25,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.nuvio.tv.R
 import java.util.Locale
 import javax.inject.Inject
 
@@ -28,25 +35,31 @@ data class LibraryTypeTab(
 ) {
     companion object {
         const val ALL_KEY = "__all__"
-        val All = LibraryTypeTab(key = ALL_KEY, label = "All")
+        val All = LibraryTypeTab(key = ALL_KEY, label = "")
     }
 }
 
 enum class LibrarySortOption(
     val key: String,
-    val label: String
+    val labelResId: Int
 ) {
-    DEFAULT("default", "Trakt Order"),
-    ADDED_DESC("added_desc", "Added \u2193"),
-    ADDED_ASC("added_asc", "Added \u2191"),
-    TITLE_ASC("title_asc", "Title A-Z"),
-    TITLE_DESC("title_desc", "Title Z-A");
+    DEFAULT("default", R.string.library_sort_trakt_order),
+    ADDED_DESC("added_desc", R.string.library_sort_added_desc),
+    ADDED_ASC("added_asc", R.string.library_sort_added_asc),
+    TITLE_ASC("title_asc", R.string.library_sort_title_asc),
+    TITLE_DESC("title_desc", R.string.library_sort_title_desc);
 
     companion object {
         val TraktOptions = listOf(DEFAULT, ADDED_DESC, ADDED_ASC, TITLE_ASC, TITLE_DESC)
         val LocalOptions = listOf(ADDED_DESC, ADDED_ASC, TITLE_ASC, TITLE_DESC)
     }
 }
+
+data class FilterOption(
+    val key: String,
+    val label: String,
+    val count: Int
+)
 
 data class LibraryListEditorState(
     val mode: Mode,
@@ -72,6 +85,12 @@ data class LibraryUiState(
     val selectedTypeTab: LibraryTypeTab? = null,
     val selectedSortOption: LibrarySortOption = LibrarySortOption.DEFAULT,
     val sortSelectionVersion: Long = 0L,
+    val availableGenres: List<FilterOption> = emptyList(),
+    val availableYears: List<FilterOption> = emptyList(),
+    val selectedGenre: String? = null,
+    val selectedYear: String? = null,
+    val isNuvioAccount: Boolean = false,
+    val isTraktAuthenticated: Boolean = false,
     val posterCardWidthDp: Int = 126,
     val posterCardCornerRadiusDp: Int = 12,
     val isLoading: Boolean = true,
@@ -87,17 +106,33 @@ data class LibraryUiState(
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val libraryRepository: LibraryRepository,
-    private val layoutPreferenceDataStore: LayoutPreferenceDataStore
+    private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
+    private val libraryPreferences: LibraryPreferences,
+    private val authManager: AuthManager,
+    private val traktAuthDataStore: TraktAuthDataStore,
+    private val watchProgressRepository: com.nuvio.tv.domain.repository.WatchProgressRepository,
+    private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
+    val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
 
+    private val _watchedMovieIds = MutableStateFlow<Set<String>>(emptySet())
+    val watchedMovieIds: StateFlow<Set<String>> = _watchedMovieIds.asStateFlow()
+    val watchedSeriesIds: StateFlow<Set<String>> = watchedSeriesStateHolder.fullyWatchedSeriesIds
+
     private var messageClearJob: Job? = null
 
     init {
+        posterOptions.bind(viewModelScope)
         observeLayoutPreferences()
         observeLibraryData()
+        viewModelScope.launch {
+            watchProgressRepository.observeWatchedMovieIds()
+                .collect { ids -> _watchedMovieIds.value = ids }
+        }
     }
 
     fun onSelectTypeTab(tab: LibraryTypeTab) {
@@ -110,6 +145,20 @@ class LibraryViewModel @Inject constructor(
     fun onSelectListTab(listKey: String) {
         _uiState.update { current ->
             val updated = current.copy(selectedListKey = listKey)
+            updated.withVisibleItems()
+        }
+    }
+
+    fun onSelectGenre(key: String?) {
+        _uiState.update { current ->
+            val updated = current.copy(selectedGenre = key)
+            updated.withVisibleItems()
+        }
+    }
+
+    fun onSelectYear(key: String?) {
+        _uiState.update { current ->
+            val updated = current.copy(selectedYear = key)
             updated.withVisibleItems()
         }
     }
@@ -127,6 +176,7 @@ class LibraryViewModel @Inject constructor(
             )
             updated.withVisibleItems()
         }
+        viewModelScope.launch { libraryPreferences.setSortOption(option.key) }
     }
 
     fun onRefresh() {
@@ -298,18 +348,34 @@ class LibraryViewModel @Inject constructor(
                 libraryRepository.sourceMode,
                 libraryRepository.isSyncing,
                 libraryRepository.libraryItems,
-                libraryRepository.listTabs
-            ) { sourceMode, isSyncing, items, listTabs ->
+                libraryRepository.listTabs,
+                libraryPreferences.sortOption,
+                authManager.authState,
+                traktAuthDataStore.isEffectivelyAuthenticated
+            ) { args ->
+                val sourceMode = args[0] as LibrarySourceMode
+                val isSyncing = args[1] as Boolean
+                @Suppress("UNCHECKED_CAST")
+                val items = args[2] as List<LibraryEntry>
+                @Suppress("UNCHECKED_CAST")
+                val listTabs = args[3] as List<LibraryListTab>
+                val persistedSortKey = args[4] as String?
+                val authState = args[5] as AuthState
+                val isTraktAuthenticated = args[6] as Boolean
                 DataBundle(
                     sourceMode = sourceMode,
                     isSyncing = isSyncing,
                     items = items,
-                    listTabs = listTabs
+                    listTabs = listTabs,
+                    persistedSortKey = persistedSortKey,
+                    authState = authState,
+                    isTraktAuthenticated = isTraktAuthenticated
                 )
-            }.collectLatest { (sourceMode, isSyncing, items, listTabs) ->
+            }.collectLatest { bundle ->
+                val (sourceMode, isSyncing, items, listTabs, persistedSortKey, authState, isTraktAuthenticated) = bundle
                 _uiState.update { current ->
                     val nextSelectedList = when {
-                        sourceMode == LibrarySourceMode.TRAKT -> {
+                        sourceMode == LibrarySourceMode.TRAKT && isTraktAuthenticated -> {
                             current.selectedListKey
                                 ?.takeIf { key -> listTabs.any { it.key == key } }
                                 ?: listTabs.firstOrNull()?.key
@@ -325,40 +391,36 @@ class LibraryViewModel @Inject constructor(
                         }
                         ?: listTabs.firstOrNull { it.type == LibraryListTab.Type.PERSONAL }?.key
 
-                    val itemsForTypeTabs = if (sourceMode == LibrarySourceMode.TRAKT) {
-                        val listKey = nextSelectedList
-                        if (listKey.isNullOrBlank()) items else items.filter { it.listKeys.contains(listKey) }
-                    } else {
-                        items
-                    }
-                    val typeTabs = buildTypeTabs(itemsForTypeTabs)
                     val nextSelectedType = current.selectedTypeTab
-                        ?.takeIf { selected -> typeTabs.any { it.key == selected.key } }
-                        ?: LibraryTypeTab.All
-                    val sortOptions = if (sourceMode == LibrarySourceMode.TRAKT) {
+                        ?: LibraryTypeTab.All.copy(label = context.getString(R.string.library_type_all))
+                    val sortOptions = if (sourceMode == LibrarySourceMode.TRAKT && isTraktAuthenticated) {
                         LibrarySortOption.TraktOptions
                     } else {
                         LibrarySortOption.LocalOptions
                     }
-                    val nextSelectedSort = current.selectedSortOption
+                    val modeDefault = if (sourceMode == LibrarySourceMode.TRAKT && isTraktAuthenticated) LibrarySortOption.DEFAULT else LibrarySortOption.ADDED_DESC
+                    val persistedSort = persistedSortKey?.let { key ->
+                        LibrarySortOption.entries.find { it.key == key }
+                    }
+                    val nextSelectedSort = (persistedSort ?: current.selectedSortOption)
                         .takeIf { it in sortOptions }
-                        ?: if (sourceMode == LibrarySourceMode.TRAKT) LibrarySortOption.DEFAULT else LibrarySortOption.ADDED_DESC
+                        ?: modeDefault
+
+                    val isNuvioAccount = sourceMode == LibrarySourceMode.LOCAL && authState is AuthState.FullAccount
 
                     val updated = current.copy(
                         sourceMode = sourceMode,
                         allItems = items,
                         listTabs = listTabs,
-                        availableTypeTabs = typeTabs,
                         availableSortOptions = sortOptions,
                         selectedTypeTab = nextSelectedType,
                         selectedListKey = nextSelectedList,
                         selectedSortOption = nextSelectedSort,
                         manageSelectedListKey = nextManageSelected,
-                        isSyncing = sourceMode == LibrarySourceMode.TRAKT && isSyncing,
-                        isLoading = sourceMode == LibrarySourceMode.TRAKT &&
-                            isSyncing &&
-                            items.isEmpty() &&
-                            listTabs.isEmpty()
+                        isNuvioAccount = isNuvioAccount,
+                        isTraktAuthenticated = isTraktAuthenticated,
+                        isSyncing = isSyncing,
+                        isLoading = isSyncing && items.isEmpty()
                     )
                     updated.withVisibleItems()
                 }
@@ -394,7 +456,10 @@ class LibraryViewModel @Inject constructor(
         val sourceMode: LibrarySourceMode,
         val isSyncing: Boolean,
         val items: List<LibraryEntry>,
-        val listTabs: List<LibraryListTab>
+        val listTabs: List<LibraryListTab>,
+        val persistedSortKey: String?,
+        val authState: AuthState,
+        val isTraktAuthenticated: Boolean
     )
 
     private fun reorderSelectedList(moveUp: Boolean) {
@@ -454,19 +519,6 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    private fun buildTypeTabs(items: List<LibraryEntry>): List<LibraryTypeTab> {
-        val byKey = linkedMapOf<String, LibraryTypeTab>()
-        items.forEach { entry ->
-            val key = entry.type.trim().ifBlank { "unknown" }.lowercase(Locale.ROOT)
-            if (byKey.containsKey(key)) return@forEach
-            byKey[key] = LibraryTypeTab(
-                key = key,
-                label = prettifyTypeLabel(key)
-            )
-        }
-        return listOf(LibraryTypeTab.All) + byKey.values
-    }
-
     private fun prettifyTypeLabel(key: String): String {
         return key
             .replace('_', ' ')
@@ -481,52 +533,166 @@ class LibraryViewModel @Inject constructor(
             .ifBlank { "Unknown" }
     }
 
+    private val yearRegex = Regex("""\b(19|20)\d{2}\b""")
+
+    private fun LibraryEntry.extractYear(): String? =
+        releaseInfo?.let { yearRegex.find(it)?.value }
+
     private fun LibraryUiState.withVisibleItems(): LibraryUiState {
+        // Step 1: List filter (Trakt only)
+        val listFiltered = if (sourceMode == LibrarySourceMode.TRAKT) {
+            val listKey = selectedListKey ?: ""
+            allItems.filter { entry -> entry.listKeys.contains(listKey) }
+        } else {
+            allItems
+        }
+
+        // Step 2: Type filter
         val selectedTypeKey = selectedTypeTab?.key
-        val typeFiltered = allItems.filter { entry ->
+        val typeFiltered = listFiltered.filter { entry ->
             selectedTypeKey == null ||
                 selectedTypeKey == LibraryTypeTab.ALL_KEY ||
                 entry.type.trim().lowercase(Locale.ROOT) == selectedTypeKey
         }
 
-        val listFiltered = if (sourceMode == LibrarySourceMode.TRAKT) {
-            val listKey = selectedListKey ?: ""
-            typeFiltered.filter { entry -> entry.listKeys.contains(listKey) }
+        // Step 3: Genre filter
+        val genreFiltered = if (selectedGenre != null) {
+            typeFiltered.filter { entry ->
+                entry.genres.any { it.equals(selectedGenre, ignoreCase = true) }
+            }
         } else {
             typeFiltered
         }
 
+        // Step 4: Year filter
+        val yearFiltered = if (selectedYear != null) {
+            genreFiltered.filter { entry -> entry.extractYear() == selectedYear }
+        } else {
+            genreFiltered
+        }
+
+        // Faceted counts — each filter counts items matching all OTHER active filters
+
+        // Genre counts: from typeFiltered (after list+type), applying year filter but NOT genre filter
+        val itemsForGenreCounts = if (selectedYear != null) {
+            typeFiltered.filter { it.extractYear() == selectedYear }
+        } else {
+            typeFiltered
+        }
+        val genreCounts = mutableMapOf<String, Int>()
+        itemsForGenreCounts.forEach { entry ->
+            entry.genres.forEach { genre ->
+                val normalized = genre.trim()
+                if (normalized.isNotBlank()) {
+                    genreCounts[normalized] = (genreCounts[normalized] ?: 0) + 1
+                }
+            }
+        }
+        val genreOptions = genreCounts.entries
+            .sortedBy { it.key.lowercase(Locale.ROOT) }
+            .map { (genre, count) -> FilterOption(key = genre, label = genre, count = count) }
+
+        // Year counts: from typeFiltered (after list+type), applying genre filter but NOT year filter
+        val itemsForYearCounts = if (selectedGenre != null) {
+            typeFiltered.filter { entry ->
+                entry.genres.any { it.equals(selectedGenre, ignoreCase = true) }
+            }
+        } else {
+            typeFiltered
+        }
+        val yearCounts = mutableMapOf<String, Int>()
+        itemsForYearCounts.forEach { entry ->
+            val year = entry.extractYear() ?: return@forEach
+            yearCounts[year] = (yearCounts[year] ?: 0) + 1
+        }
+        val yearOptions = yearCounts.entries
+            .sortedByDescending { it.key }
+            .map { (year, count) -> FilterOption(key = year, label = year, count = count) }
+
+        // Type tab counts: from listFiltered, applying genre+year filters
+        val itemsForTypeCounts = listFiltered.filter { entry ->
+            val genreMatch = selectedGenre == null || entry.genres.any { it.equals(selectedGenre, ignoreCase = true) }
+            val yearMatch = selectedYear == null || entry.extractYear() == selectedYear
+            genreMatch && yearMatch
+        }
+
+        // Step 5: Sort
         val sorted = when (selectedSortOption) {
             LibrarySortOption.DEFAULT -> if (sourceMode == LibrarySourceMode.TRAKT) {
-                listFiltered.sortedWith(
+                yearFiltered.sortedWith(
                     compareBy<LibraryEntry> { it.traktRank ?: Int.MAX_VALUE }
                         .thenByDescending { it.listedAt }
                         .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
                         .thenBy { it.id }
                 )
             } else {
-                listFiltered
+                yearFiltered
             }
-            LibrarySortOption.ADDED_DESC -> listFiltered.sortedWith(
+            LibrarySortOption.ADDED_DESC -> yearFiltered.sortedWith(
                 compareByDescending<LibraryEntry> { it.listedAt }
                     .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
                     .thenBy { it.id }
             )
-            LibrarySortOption.ADDED_ASC -> listFiltered.sortedWith(
+            LibrarySortOption.ADDED_ASC -> yearFiltered.sortedWith(
                 compareBy<LibraryEntry> { it.listedAt }
                     .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name.ifBlank { it.id } }
                     .thenBy { it.id }
             )
-            LibrarySortOption.TITLE_ASC -> listFiltered.sortedWith(
-                compareBy<LibraryEntry> { it.name.ifBlank { it.id }.lowercase(Locale.ROOT) }
+            LibrarySortOption.TITLE_ASC -> yearFiltered.sortedWith(
+                compareBy<LibraryEntry> { titleSortKey(it.name.ifBlank { it.id }) }
                     .thenBy { it.id }
             )
-            LibrarySortOption.TITLE_DESC -> listFiltered.sortedWith(
-                compareByDescending<LibraryEntry> { it.name.ifBlank { it.id }.lowercase(Locale.ROOT) }
+            LibrarySortOption.TITLE_DESC -> yearFiltered.sortedWith(
+                compareByDescending<LibraryEntry> { titleSortKey(it.name.ifBlank { it.id }) }
                     .thenBy { it.id }
             )
         }
 
-        return copy(visibleItems = sorted)
+        // Rebuild type tabs with counts
+        val typeTabsWithCounts = buildTypeTabsWithCounts(listFiltered, itemsForTypeCounts)
+
+        // Validate selections — clear if no longer valid
+        val validGenre = selectedGenre?.takeIf { g -> genreOptions.any { it.key.equals(g, ignoreCase = true) } }
+        val validYear = selectedYear?.takeIf { y -> yearOptions.any { it.key == y } }
+
+        return copy(
+            visibleItems = sorted,
+            availableTypeTabs = typeTabsWithCounts,
+            availableGenres = genreOptions,
+            availableYears = yearOptions,
+            selectedGenre = validGenre,
+            selectedYear = validYear
+        )
+    }
+
+    private fun buildTypeTabsWithCounts(
+        allTypeItems: List<LibraryEntry>,
+        filteredItems: List<LibraryEntry>
+    ): List<LibraryTypeTab> {
+        val byKey = linkedMapOf<String, String>()
+        allTypeItems.forEach { entry ->
+            val key = entry.type.trim().ifBlank { "unknown" }.lowercase(Locale.ROOT)
+            if (!byKey.containsKey(key)) {
+                byKey[key] = prettifyTypeLabel(key)
+            }
+        }
+        val countByType = mutableMapOf<String, Int>()
+        filteredItems.forEach { entry ->
+            val key = entry.type.trim().ifBlank { "unknown" }.lowercase(Locale.ROOT)
+            countByType[key] = (countByType[key] ?: 0) + 1
+        }
+        val allCount = filteredItems.size
+        val allTab = LibraryTypeTab(key = LibraryTypeTab.ALL_KEY, label = "${context.getString(R.string.library_type_all)} ($allCount)")
+        return listOf(allTab) + byKey.map { (key, label) ->
+            LibraryTypeTab(key = key, label = "$label (${countByType[key] ?: 0})")
+        }
     }
 }
+
+// Strip leading English articles ("The", "A", "An") when sorting by title, so
+// "The Walking Dead" sorts under W and not T. Matches how streaming services
+// and most media libraries order titles alphabetically.
+private val LEADING_ARTICLE_REGEX = Regex("^(the|an|a)\\s+", RegexOption.IGNORE_CASE)
+
+private fun titleSortKey(title: String): String =
+    title.trim().replace(LEADING_ARTICLE_REGEX, "").lowercase(Locale.ROOT)

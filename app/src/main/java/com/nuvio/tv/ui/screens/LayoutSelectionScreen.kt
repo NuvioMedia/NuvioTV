@@ -27,6 +27,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -57,14 +59,19 @@ fun LayoutSelectionScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedLayout by remember { mutableStateOf(HomeLayout.MODERN) }
+    val continueFocusRequester = remember { FocusRequester() }
+
     LaunchedEffect(uiState.selectedLayout) {
         selectedLayout = uiState.selectedLayout
+    }
+
+    LaunchedEffect(Unit) {
+        continueFocusRequester.requestFocus()
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioColors.Background)
     ) {
         Column(
             modifier = Modifier
@@ -128,7 +135,8 @@ fun LayoutSelectionScreen(
                 },
                 modifier = Modifier
                     .width(200.dp)
-                    .height(48.dp),
+                    .height(48.dp)
+                    .focusRequester(continueFocusRequester),
                 shape = ButtonDefaults.shape(
                     shape = RoundedCornerShape(24.dp)
                 ),
@@ -239,7 +247,7 @@ private fun LayoutOptionCard(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.cd_selected),
                     tint = NuvioColors.FocusRing,
                     modifier = Modifier
                         .align(Alignment.TopEnd)

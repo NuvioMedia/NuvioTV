@@ -46,15 +46,20 @@ class AddonPreferences @Inject constructor(
     private val gson = Gson()
     private val orderedUrlsKey = stringPreferencesKey("installed_addon_urls_ordered")
     private val legacyUrlsKey = stringSetPreferencesKey("installed_addon_urls")
+    private val userSetNamesKey = stringPreferencesKey("addon_user_set_names")
     private val manifestSuffix = "/manifest.json"
 
     private fun canonicalizeUrl(url: String): String {
         val trimmed = url.trim().trimEnd('/')
-        return if (trimmed.endsWith(manifestSuffix, ignoreCase = true)) {
-            trimmed.dropLast(manifestSuffix.length).trimEnd('/')
+        val queryStart = trimmed.indexOf('?')
+        val path = if (queryStart >= 0) trimmed.substring(0, queryStart) else trimmed
+        val query = if (queryStart >= 0) trimmed.substring(queryStart) else ""
+        val cleanPath = if (path.endsWith(manifestSuffix, ignoreCase = true)) {
+            path.dropLast(manifestSuffix.length).trimEnd('/')
         } else {
-            trimmed
+            path.trimEnd('/')
         }
+        return cleanPath + query
     }
 
     val installedAddonUrls: Flow<List<String>> = effectiveProfileIdFlow.flatMapLatest { pid ->
@@ -82,7 +87,8 @@ class AddonPreferences @Inject constructor(
     }
 
     suspend fun addAddon(url: String) {
-        if (profileManager.activeProfile?.usesPrimaryAddons == true) return
+           val active = profileManager.activeProfile
+           if (active != null && !active.isPrimary && active.usesPrimaryAddons) return
         store().edit { preferences ->
             val current = getCurrentList(preferences)
             val normalizedUrl = canonicalizeUrl(url)
@@ -92,7 +98,8 @@ class AddonPreferences @Inject constructor(
     }
 
     suspend fun removeAddon(url: String) {
-        if (profileManager.activeProfile?.usesPrimaryAddons == true) return
+           val active = profileManager.activeProfile
+           if (active != null && !active.isPrimary && active.usesPrimaryAddons) return
         store().edit { preferences ->
             val current = getCurrentList(preferences).toMutableList()
             val normalizedUrl = canonicalizeUrl(url)
@@ -108,7 +115,8 @@ class AddonPreferences @Inject constructor(
     }
 
     suspend fun setAddonOrder(urls: List<String>) {
-        if (profileManager.activeProfile?.usesPrimaryAddons == true) return
+            val active = profileManager.activeProfile
+            if (active != null && !active.isPrimary && active.usesPrimaryAddons) return
         store().edit { preferences ->
             preferences[orderedUrlsKey] = gson.toJson(urls.map(::canonicalizeUrl))
         }
@@ -130,6 +138,28 @@ class AddonPreferences @Inject constructor(
             gson.fromJson(json, type) ?: getDefaultAddons().toList()
         } catch (e: Exception) {
             getDefaultAddons().toList()
+        }
+    }
+
+    val userSetNames: Flow<Map<String, String>> = effectiveProfileIdFlow.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { preferences ->
+            val json = preferences[userSetNamesKey]
+            if (json != null) parseNameMap(json) else emptyMap()
+        }
+    }
+
+    suspend fun setUserSetNames(names: Map<String, String>) {
+        store().edit { preferences ->
+            preferences[userSetNamesKey] = gson.toJson(names)
+        }
+    }
+
+    private fun parseNameMap(json: String): Map<String, String> {
+        return try {
+            val type = object : TypeToken<Map<String, String>>() {}.type
+            gson.fromJson(json, type) ?: emptyMap()
+        } catch (e: Exception) {
+            emptyMap()
         }
     }
 

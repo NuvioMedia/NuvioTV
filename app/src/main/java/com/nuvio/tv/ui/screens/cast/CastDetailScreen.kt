@@ -53,13 +53,15 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PersonDetail
 import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.components.PosterCardDefaults
+import com.nuvio.tv.ui.components.rememberShimmerBrush
 import com.nuvio.tv.ui.theme.NuvioColors
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -82,7 +84,6 @@ fun CastDetailScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioColors.Background)
     ) {
         Crossfade(
             targetState = uiState,
@@ -101,11 +102,21 @@ fun CastDetailScreen(
                 is CastDetailUiState.Success -> {
                     CastDetailContent(
                         person = state.personDetail,
-                        onNavigateToDetail = onNavigateToDetail
+                        onNavigateToDetail = onNavigateToDetail,
+                        posterOptions = viewModel.posterOptions
                     )
                 }
             }
         }
+
+        val posterOptionsState by viewModel.posterOptions.state.collectAsState()
+        com.nuvio.tv.ui.components.posteroptions.PosterOptionsHost(
+            state = posterOptionsState,
+            controller = viewModel.posterOptions,
+            onNavigateToDetail = { id, type, addonBaseUrl ->
+                onNavigateToDetail(id, type, addonBaseUrl.takeIf { it.isNotBlank() })
+            }
+        )
     }
 }
 
@@ -113,7 +124,8 @@ fun CastDetailScreen(
 @Composable
 private fun CastDetailContent(
     person: PersonDetail,
-    onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit
+    onNavigateToDetail: (itemId: String, itemType: String, addonBaseUrl: String?) -> Unit,
+    posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController
 ) {
     val backgroundColor = NuvioColors.Background
     val accentColor = NuvioColors.Secondary
@@ -149,47 +161,11 @@ private fun CastDetailContent(
                 )
             )
         }
-        // Left-to-right dark gradient for readability
-        val leftGradient = remember(backgroundColor) {
-            Brush.horizontalGradient(
-                colorStops = arrayOf(
-                    0.0f to backgroundColor.copy(alpha = 0.74f),
-                    0.22f to backgroundColor.copy(alpha = 0.70f),
-                    0.38f to backgroundColor.copy(alpha = 0.60f),
-                    0.55f to backgroundColor.copy(alpha = 0.46f),
-                    0.72f to backgroundColor.copy(alpha = 0.26f),
-                    1.0f to Color.Transparent
-                )
-            )
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(leftGradient)
-        )
-
-        // Accent goes on top of the dark gradient so it stays visible.
+        // Accent goes on top of the plain background to provide the Cast theme coloring
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(accentGradient)
-        )
-
-        // Bottom gradient
-        val bottomGradient = remember(backgroundColor) {
-            Brush.verticalGradient(
-                colorStops = arrayOf(
-                    0.0f to Color.Transparent,
-                    0.6f to Color.Transparent,
-                    0.85f to backgroundColor.copy(alpha = 0.85f),
-                    1.0f to backgroundColor
-                )
-            )
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(bottomGradient)
         )
 
         // Main content
@@ -211,6 +187,9 @@ private fun CastDetailContent(
                         firstItemFocusRequester = firstPosterFocusRequester,
                         onItemClick = { item ->
                             onNavigateToDetail(item.id, item.apiType, null)
+                        },
+                        onItemLongPress = { item ->
+                            posterOptions.show(item, null)
                         }
                     )
                 }
@@ -247,8 +226,8 @@ private fun HeroSection(person: PersonDetail) {
                 shape = RoundedCornerShape(16.dp)
             ),
             colors = CardDefaults.colors(
-                containerColor = NuvioColors.SurfaceVariant,
-                focusedContainerColor = NuvioColors.SurfaceVariant
+                containerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent
             ),
             border = CardDefaults.border(
                 border = Border(
@@ -261,13 +240,16 @@ private fun HeroSection(person: PersonDetail) {
                 )
             )
         ) {
+            val bgCardColor = NuvioColors.SurfaceVariant
+            val bgPainter = remember(bgCardColor) { androidx.compose.ui.graphics.painter.ColorPainter(bgCardColor) }
+            val photo = person.profilePhoto
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(16.dp)),
+                    .clip(RoundedCornerShape(16.dp))
+                    .then(if (photo.isNullOrBlank()) Modifier.background(bgCardColor) else Modifier),
                 contentAlignment = Alignment.Center
             ) {
-                val photo = person.profilePhoto
                 if (!photo.isNullOrBlank()) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
@@ -280,6 +262,9 @@ private fun HeroSection(person: PersonDetail) {
                             .build(),
                         contentDescription = person.name,
                         modifier = Modifier.fillMaxSize(),
+                        placeholder = bgPainter,
+                        error = bgPainter,
+                        fallback = bgPainter,
                         contentScale = ContentScale.Crop
                     )
                 } else {
@@ -317,14 +302,21 @@ private fun HeroSection(person: PersonDetail) {
             Spacer(modifier = Modifier.height(10.dp))
 
             // Personal Info Row
+            val strBorn = stringResource(R.string.cast_detail_born)
+            val strBornDied = stringResource(R.string.cast_detail_born_died)
+            val strAge = stringResource(R.string.cast_detail_age)
             val infoItems = buildList {
                 person.birthday?.let { bday ->
                     val age = calculateAge(bday, person.deathday)
-                    val ageStr = if (age != null) " (age $age)" else ""
+                    val ageStr = if (age != null) " (${strAge.format(age)})" else ""
                     val bdayDisplay = formatDateForDisplay(bday) ?: bday
                     val deathDisplay = person.deathday?.let { formatDateForDisplay(it) ?: it }
-                    val deathStr = deathDisplay?.let { " — †$it" } ?: ""
-                    add("Born: $bdayDisplay$deathStr$ageStr")
+                    val line = if (deathDisplay != null) {
+                        strBornDied.format(bdayDisplay, deathDisplay) + ageStr
+                    } else {
+                        strBorn.format(bdayDisplay) + ageStr
+                    }
+                    add(line)
                 }
                 person.placeOfBirth?.let { add(it) }
             }
@@ -394,7 +386,8 @@ private fun FilmographyRow(
     credits: List<MetaPreview>,
     posterCardStyle: PosterCardStyle,
     firstItemFocusRequester: FocusRequester,
-    onItemClick: (MetaPreview) -> Unit
+    onItemClick: (MetaPreview) -> Unit,
+    onItemLongPress: (MetaPreview) -> Unit = {}
 ) {
     val hasRequestedInitialFocus = remember(credits) { mutableStateOf(false) }
 
@@ -410,6 +403,7 @@ private fun FilmographyRow(
             GridContentCard(
                 item = item,
                 onClick = { onItemClick(item) },
+                onLongPress = { onItemLongPress(item) },
                 modifier = if (index == 0) {
                     Modifier.onGloballyPositioned {
                         if (!hasRequestedInitialFocus.value) {
@@ -435,6 +429,7 @@ private fun FilmographyRow(
 private fun CastDetailSkeleton(personName: String) {
     val backgroundColor = NuvioColors.Background
     val accentColor = NuvioColors.Secondary
+    val shimmerBrush = rememberShimmerBrush()
 
     Box(modifier = Modifier.fillMaxSize()) {
         val accentGradient = remember(accentColor, backgroundColor) {
@@ -448,33 +443,8 @@ private fun CastDetailSkeleton(personName: String) {
                 )
             )
         }
-        val leftGradient = remember(backgroundColor) {
-            Brush.horizontalGradient(
-                colorStops = arrayOf(
-                    0.0f to backgroundColor.copy(alpha = 0.74f),
-                    0.22f to backgroundColor.copy(alpha = 0.70f),
-                    0.38f to backgroundColor.copy(alpha = 0.60f),
-                    0.55f to backgroundColor.copy(alpha = 0.46f),
-                    0.72f to backgroundColor.copy(alpha = 0.26f),
-                    1.0f to Color.Transparent
-                )
-            )
-        }
-        Box(modifier = Modifier.fillMaxSize().background(leftGradient))
-
+        // Accent gradient provides skeleton color depth
         Box(modifier = Modifier.fillMaxSize().background(accentGradient))
-
-        val bottomGradient = remember(backgroundColor) {
-            Brush.verticalGradient(
-                colorStops = arrayOf(
-                    0.0f to Color.Transparent,
-                    0.6f to Color.Transparent,
-                    0.85f to backgroundColor.copy(alpha = 0.85f),
-                    1.0f to backgroundColor
-                )
-            )
-        }
-        Box(modifier = Modifier.fillMaxSize().background(bottomGradient))
 
         Column(modifier = Modifier.fillMaxSize()) {
             // Hero skeleton
@@ -489,7 +459,7 @@ private fun CastDetailSkeleton(personName: String) {
                         .width(160.dp)
                         .height(240.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(NuvioColors.SurfaceVariant)
+                        .background(shimmerBrush)
                 )
 
                 Spacer(modifier = Modifier.width(24.dp))
@@ -515,7 +485,7 @@ private fun CastDetailSkeleton(personName: String) {
                                 .fillMaxWidth(if (it == 0) 0.60f else if (it == 1) 0.48f else 0.72f)
                                 .height(14.dp)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(NuvioColors.SurfaceVariant)
+                                .background(shimmerBrush)
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                     }
@@ -525,7 +495,7 @@ private fun CastDetailSkeleton(personName: String) {
                             .fillMaxWidth(0.86f)
                             .height(14.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(NuvioColors.SurfaceVariant)
+                            .background(shimmerBrush)
                     )
                 }
             }
@@ -542,7 +512,7 @@ private fun CastDetailSkeleton(personName: String) {
                         .width(140.dp)
                         .height(20.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(NuvioColors.SurfaceVariant)
+                        .background(shimmerBrush)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Box(
@@ -550,7 +520,7 @@ private fun CastDetailSkeleton(personName: String) {
                         .width(36.dp)
                         .height(18.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(NuvioColors.SurfaceVariant)
+                        .background(shimmerBrush)
                 )
             }
 
@@ -568,7 +538,7 @@ private fun CastDetailSkeleton(personName: String) {
                                 .width(112.dp)
                                 .height(168.dp)
                                 .clip(RoundedCornerShape(PosterCardDefaults.Style.cornerRadius))
-                                .background(NuvioColors.SurfaceVariant)
+                                .background(shimmerBrush)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Box(
@@ -576,7 +546,7 @@ private fun CastDetailSkeleton(personName: String) {
                                 .fillMaxWidth()
                                 .height(16.dp)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(NuvioColors.SurfaceVariant)
+                                .background(shimmerBrush)
                         )
                     }
                 }
@@ -661,7 +631,8 @@ private fun parseDateFlexible(date: String?): Date? {
 private fun formatDateForDisplay(date: String?): String? {
     val parsed = parseDateFlexible(date) ?: return null
     return try {
-        SimpleDateFormat("d MMM yyyy", Locale.getDefault()).format(parsed)
+        val locale = Locale.getDefault()
+        SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMy"), locale).format(parsed)
     } catch (_: Exception) {
         null
     }

@@ -25,6 +25,8 @@
 # Keep Retrofit service interfaces (must preserve generic return types)
 -keep,allowobfuscation,allowshrinking interface retrofit2.Call
 -keep,allowobfuscation,allowshrinking class retrofit2.Response
+# NOTE: allowobfuscation here is fine for Retrofit, but superseded by the
+# broader kotlin.** keep rule below for DexClassLoader extension compatibility.
 -keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
 # Keep all project API interfaces
 -keep class com.nuvio.tv.data.remote.api.** { *; }
@@ -52,6 +54,9 @@
 -keep class fi.iki.elonen.** { *; }
 # Keep server classes and their inner data classes (serialized with Gson)
 -keep class com.nuvio.tv.core.server.** { *; }
+
+# ── Torrent streaming (TorrServer) ─────────────────────────────────────────────
+-keep class com.nuvio.tv.core.torrent.** { *; }
 
 #── QuickJS ────────────────────────────────────────────────────────────────────
 # Keep quickjs-kt library classes for proper type conversion
@@ -83,6 +88,14 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
+# ── External extension compatibility stubs (loaded via DexClassLoader) ────────
+-keep class com.lagradost.cloudstream3.** { *; }
+-keepclassmembers class com.lagradost.cloudstream3.** { *; }
+-keep class com.lagradost.nicehttp.** { *; }
+-keepclassmembers class com.lagradost.nicehttp.** { *; }
+-keep class com.lagradost.api.** { *; }
+-keepclassmembers class com.lagradost.api.** { *; }
+
 # ── General ────────────────────────────────────────────────────────────────────
 # Keep line numbers for crash reports
 -keepattributes SourceFile,LineNumberTable
@@ -99,3 +112,33 @@
 # Keep WorkManager + Hilt integration
 -keep class androidx.work.** { *; }
 -keep class androidx.hilt.work.** { *; }
+
+# MPV (native JNI callbacks)
+# Native code reflects into multiple classes/methods under is.xyz.mpv,
+# so keep the whole package to avoid JNI lookup crashes after R8.
+-keep class is.xyz.mpv.** { *; }
+
+# ── Missing class stubs (referenced by cloudstream3 / jsoup / newpipe) ────────
+-dontwarn org.mozilla.javascript.**
+-dontwarn com.google.re2j.**
+-dontwarn javax.script.**
+-dontwarn okhttp3.internal.sse.**
+-dontwarn org.jsoup.helper.Re2jRegex
+
+# ── DexClassLoader runtime deps (CloudStream extensions) ─────────────────────
+# Extensions are DEX files loaded at runtime via DexClassLoader. They resolve
+# dependencies by fully-qualified name from the host classloader. R8 must not
+# rename or remove any class that extensions may reference.
+-keep class kotlin.** { *; }
+-keep class kotlinx.coroutines.** { *; }
+
+-keep class okhttp3.** { *; }
+-keepclassmembers class okhttp3.** { *; }
+-keep class okio.** { *; }
+-keepclassmembers class okio.** { *; }
+-keep class org.jsoup.** { *; }
+-keepclassmembers class org.jsoup.** { *; }
+-keep class com.fasterxml.jackson.** { *; }
+-keepclassmembers class com.fasterxml.jackson.** { *; }
+-dontwarn java.beans.ConstructorProperties
+-dontwarn java.beans.Transient

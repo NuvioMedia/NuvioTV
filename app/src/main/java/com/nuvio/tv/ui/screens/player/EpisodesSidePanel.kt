@@ -63,9 +63,12 @@ import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.screens.detail.formatReleaseDate
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.transformations
 import androidx.compose.ui.platform.LocalContext
+import com.nuvio.tv.ui.util.localizeEpisodeTitle
 import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
 import com.nuvio.tv.R
@@ -235,7 +238,7 @@ private fun EpisodeStreamsView(
 
         uiState.episodeStreamsError != null -> {
             Text(
-                text = uiState.episodeStreamsError ?: stringResource(R.string.panel_failed_load_streams),
+                text = uiState.episodeStreamsError,
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.85f)
             )
@@ -320,7 +323,7 @@ private fun EpisodesListView(
 
         uiState.episodesError != null -> {
             Text(
-                text = uiState.episodesError ?: stringResource(R.string.panel_failed_load_episodes),
+                text = uiState.episodesError,
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.85f)
             )
@@ -459,6 +462,8 @@ private fun EpisodeItem(
     onClick: () -> Unit
 ) {
     val shouldBlur = blurUnwatched && !isWatched && !isCurrent
+    val context = LocalContext.current
+    val episodeTitle = episode.title.localizeEpisodeTitle(context).ifBlank { context.getString(R.string.episodes_episode) }
     val formattedDate = remember(episode.released) {
         episode.released?.let { formatReleaseDate(it) }?.takeIf { it.isNotBlank() }
     }
@@ -466,7 +471,7 @@ private fun EpisodeItem(
         val s = episode.season
         val e = episode.episode
         if (s != null && e != null) {
-            "S${s.toString().padStart(2, '0')}E${e.toString().padStart(2, '0')}"
+            context.getString(R.string.season_episode_format, s, e)
         } else {
             null
         }
@@ -515,7 +520,7 @@ private fun EpisodeItem(
                             }
                         }
                         .build(),
-                    contentDescription = episode.title,
+                    contentDescription = episodeTitle,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
@@ -549,7 +554,7 @@ private fun EpisodeItem(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "Current",
+                            contentDescription = stringResource(R.string.cd_current),
                             tint = Color.White,
                             modifier = Modifier.size(14.dp)
                         )
@@ -563,7 +568,7 @@ private fun EpisodeItem(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = episode.title.ifBlank { stringResource(R.string.episodes_episode) },
+                    text = episodeTitle,
                     style = MaterialTheme.typography.titleMedium,
                     color = NuvioColors.TextPrimary,
                     maxLines = 1,

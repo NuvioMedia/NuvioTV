@@ -36,6 +36,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import com.nuvio.tv.R
@@ -52,12 +60,14 @@ import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.ui.theme.NuvioColors
 import com.nuvio.tv.ui.util.formatAddonTypeLabel
 
-@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun CatalogRowSection(
     catalogRow: CatalogRow,
     onItemClick: (String, String, String) -> Unit,
     onSeeAll: () -> Unit = {},
+    showSeeAll: Boolean = catalogRow.items.size >= 15,
+    seeAllLabel: String? = null,
     posterCardStyle: PosterCardStyle = PosterCardDefaults.Style,
     showPosterLabels: Boolean = true,
     showAddonName: Boolean = true,
@@ -75,14 +85,21 @@ fun CatalogRowSection(
     modifier: Modifier = Modifier,
     enableRowFocusRestorer: Boolean = true,
     initialScrollIndex: Int = 0,
+    /** Used only for initial focus restore (e.g. returning from detail screen). */
     focusedItemIndex: Int = -1,
+    /** Persisted focus index from parent — used only by focusRestorer to
+     *  survive LazyColumn recycling.  Does NOT trigger a focus request. */
+    restorerFocusedIndex: Int = -1,
     onItemFocused: (itemIndex: Int) -> Unit = {},
     rowFocusRequester: FocusRequester? = null,
+    /** FocusRequester that will be attached to the first-or-last-focused card.
+     *  Wide elements above (CW, collections) can point their D-pad down here. */
+    entryFocusRequester: FocusRequester? = null,
     upFocusRequester: FocusRequester? = null,
     listState: LazyListState = rememberLazyListState(initialFirstVisibleItemIndex = initialScrollIndex)
 ) {
     fun rowItemFocusKey(index: Int, item: MetaPreview): String {
-        return "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}_${item.id}_$index"
+        return "${catalogRow.addonId}_${catalogRow.apiType}_${catalogRow.catalogId}_$index"
     }
 
     val seeAllCardShape = RoundedCornerShape(posterCardStyle.cornerRadius)
@@ -94,6 +111,44 @@ fun CatalogRowSection(
     val itemFocusRequestersByKey = remember { mutableMapOf<String, FocusRequester>() }
     var lastRequestedFocusItemKey by remember { mutableStateOf<String?>(null) }
     var lastFocusedItemIndex by remember { mutableIntStateOf(-1) }
+
+    val blockingFocusExit = remember { mutableStateOf(false) }
+    val rowHasFocusRef = remember { mutableStateOf(false) }
+    val firstItemId = catalogRow.items.firstOrNull()?.id
+    val wasPlaceholderRef = remember { mutableStateOf(firstItemId?.startsWith("__placeholder_") == true) }
+    val isNowReal = firstItemId?.startsWith("__placeholder_") != true
+    if (wasPlaceholderRef.value && isNowReal && rowHasFocusRef.value) {
+        blockingFocusExit.value = true
+    }
+    wasPlaceholderRef.value = firstItemId?.startsWith("__placeholder_") == true
+
+    LaunchedEffect(blockingFocusExit.value) {
+        if (!blockingFocusExit.value) return@LaunchedEffect
+        val targetKey = rowItemFocusKey(0, catalogRow.items.firstOrNull() ?: run {
+            blockingFocusExit.value = false
+            return@LaunchedEffect
+        })
+        repeat(15) {
+            val req = itemFocusRequestersByKey[targetKey]
+            if (req != null) {
+                val ok = runCatching { req.requestFocus(); true }.getOrDefault(false)
+                if (ok) { blockingFocusExit.value = false; return@LaunchedEffect }
+            }
+            withFrameNanos { }
+        }
+        blockingFocusExit.value = false
+    }
+
+    // When fresh data prepends new items to a row the user hasn't
+    // scrolled, snap back to position 0 so the newest content is visible.
+    val firstItemKey = catalogRow.items.firstOrNull()?.let { rowItemFocusKey(0, it) }
+    LaunchedEffect(firstItemKey) {
+        if (firstItemKey == null) return@LaunchedEffect
+        if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0) {
+            listState.scrollToItem(0)
+        }
+    }
+
     LaunchedEffect(catalogRow.items) {
         val validKeys = catalogRow.items.mapIndexedTo(mutableSetOf()) { index, item ->
             rowItemFocusKey(index, item)
@@ -104,6 +159,7 @@ fun CatalogRowSection(
         }
     }
 
+    // Restore focus from saved state when focusedItemIndex is set.
     LaunchedEffect(focusedItemIndex, catalogRow.items) {
         if (focusedItemIndex >= 0 && focusedItemIndex < catalogRow.items.size) {
             val targetItem = catalogRow.items[focusedItemIndex]
@@ -141,7 +197,14 @@ fun CatalogRowSection(
         if (showCatalogTypeSuffix && typeLabel.isNotEmpty()) "$formattedName - $typeLabel" else formattedName
     }
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth().then(
+        if (blockingFocusExit.value) {
+            Modifier.focusProperties {
+                up = FocusRequester.Cancel
+                down = FocusRequester.Cancel
+            }
+        } else Modifier
+    )) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -167,28 +230,53 @@ fun CatalogRowSection(
             }
         }
 
+        val density = LocalDensity.current
+        val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
+        val horizontalBringIntoViewSpec = remember(density, defaultBringIntoViewSpec) {
+            val startPx = with(density) { 48.dp.roundToPx() }
+            @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+            object : BringIntoViewSpec {
+                override val scrollAnimationSpec: AnimationSpec<Float> =
+                    defaultBringIntoViewSpec.scrollAnimationSpec
+                override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+                    val childSize = kotlin.math.abs(size)
+                    val target = startPx.toFloat()
+                    val space = containerSize - target
+                    val leading = if (childSize <= containerSize && space < childSize) containerSize - childSize else target
+                    return offset - leading
+                }
+            }
+        }
+
+        val usesPlaceholderShimmer = catalogRow.isLoading &&
+            catalogRow.items.firstOrNull()?.poster?.startsWith("placeholder://") == true
+        val placeholderShimmerOffsetState = if (usesPlaceholderShimmer) {
+            rememberPlaceholderShimmerOffsetState(label = "classicPlaceholderShimmer")
+        } else {
+            null
+        }
+
+        CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalBringIntoViewSpec) {
         LazyRow(
             state = listState,
             modifier = Modifier
                 .fillMaxWidth()
+                .onFocusChanged { rowHasFocusRef.value = it.hasFocus }
                 .focusRequester(resolvedRowFocusRequester)
-                .then(
-                    if (enableRowFocusRestorer && focusedItemIndex < 0 && catalogRow.items.isNotEmpty()) {
-                        Modifier.focusRestorer {
-                            val fallbackIndex = listState.firstVisibleItemIndex
+                .focusRestorer(
+                    if (enableRowFocusRestorer) {
+                        run {
+                            val idx = (if (lastFocusedItemIndex >= 0) lastFocusedItemIndex else restorerFocusedIndex)
                                 .coerceIn(0, (catalogRow.items.size - 1).coerceAtLeast(0))
-                            val fallbackItem = catalogRow.items.getOrNull(fallbackIndex)
-                            if (fallbackItem != null) {
-                                val fallbackItemKey = rowItemFocusKey(fallbackIndex, fallbackItem)
-                                itemFocusRequestersByKey.getOrPut(fallbackItemKey) { FocusRequester() }
-                            } else {
-                                resolvedRowFocusRequester
-                            }
+                            catalogRow.items.getOrNull(idx)
+                                ?.let { itemFocusRequestersByKey.getOrPut(rowItemFocusKey(idx, it)) { FocusRequester() } }
+                                ?: FocusRequester.Default
                         }
                     } else {
-                        Modifier
+                        FocusRequester.Default
                     }
-                ),
+                )
+                .focusGroup(),
             contentPadding = PaddingValues(start = 48.dp, end = 200.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -197,12 +285,19 @@ fun CatalogRowSection(
                 key = { index, item ->
                     rowItemFocusKey(index, item)
                 },
-                contentType = { _, _ -> "content_card" }
+                contentType = { _, item -> item.apiType } // Group items by apiType for better recycling
             ) { index, item ->
+                val targetIndex = if (lastFocusedItemIndex >= 0) lastFocusedItemIndex else 0
+                val isEntryTarget = entryFocusRequester != null && index == targetIndex
+                val cardFocusRequester = itemFocusRequestersByKey.getOrPut(
+                    rowItemFocusKey(index, item)
+                ) { FocusRequester() }
+
                 ContentCard(
                     item = item,
                     posterCardStyle = posterCardStyle,
                     showLabels = showPosterLabels,
+                    placeholderShimmerOffsetState = placeholderShimmerOffsetState,
                     focusedPosterBackdropExpandEnabled = focusedPosterBackdropExpandEnabled,
                     focusedPosterBackdropExpandDelaySeconds = focusedPosterBackdropExpandDelaySeconds,
                     focusedPosterBackdropTrailerEnabled = focusedPosterBackdropTrailerEnabled,
@@ -218,16 +313,31 @@ fun CatalogRowSection(
                             currentOnItemFocused(index)
                         }
                     },
+                    onBackdropExpandedChanged = null,
                     onClick = { onItemClick(item.id, item.apiType, catalogRow.addonBaseUrl) },
                     onLongPress = { onItemLongPress(item, catalogRow.addonBaseUrl) },
-                    modifier = Modifier.then(directionalFocusModifier),
-                    focusRequester = itemFocusRequestersByKey.getOrPut(
-                        rowItemFocusKey(index, item)
-                    ) { FocusRequester() }
+                    modifier = Modifier
+                        .then(directionalFocusModifier)
+                        .then(
+                            if (isEntryTarget) Modifier.focusRequester(entryFocusRequester!!) else Modifier
+                        ),
+                    focusRequester = cardFocusRequester
                 )
             }
 
-            if (catalogRow.items.size >= 15) {
+            if (!showSeeAll && catalogRow.isLoading) {
+                item(key = "${catalogRow.type}_${catalogRow.catalogId}_loading") {
+                    Box(
+                        modifier = Modifier
+                            .width(posterCardStyle.width)
+                            .height(posterCardStyle.height),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LoadingIndicator()
+                    }
+                }
+            }
+            if (showSeeAll) {
                 item(key = "${catalogRow.type}_${catalogRow.catalogId}_see_all") {
                     Card(
                         onClick = onSeeAll,
@@ -258,13 +368,13 @@ fun CatalogRowSection(
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = stringResource(R.string.action_see_all),
+                                    contentDescription = seeAllLabel ?: stringResource(R.string.action_see_all),
                                     modifier = Modifier.size(32.dp),
                                     tint = NuvioColors.TextSecondary
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = stringResource(R.string.action_see_all),
+                                    text = seeAllLabel ?: stringResource(R.string.action_see_all),
                                     style = MaterialTheme.typography.titleSmall,
                                     color = NuvioColors.TextSecondary
                                 )
@@ -274,5 +384,6 @@ fun CatalogRowSection(
                 }
             }
         }
+        } // CompositionLocalProvider
     }
 }

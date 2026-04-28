@@ -3,8 +3,8 @@
 package com.nuvio.tv.ui.screens
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -13,6 +13,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -23,47 +29,46 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import com.nuvio.tv.ui.util.dpadRepeatThrottle
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.foundation.layout.Box
-import com.nuvio.tv.ui.components.GridContentCard
+import com.nuvio.tv.R
 import com.nuvio.tv.ui.components.EmptyScreenState
+import com.nuvio.tv.ui.components.GridContentCard
 import com.nuvio.tv.ui.components.LoadingIndicator
 import com.nuvio.tv.ui.components.PosterCardDefaults
 import com.nuvio.tv.ui.components.PosterCardStyle
 import com.nuvio.tv.ui.screens.home.HomeEvent
 import com.nuvio.tv.ui.screens.home.HomeViewModel
+import com.nuvio.tv.ui.screens.search.SearchEvent
+import com.nuvio.tv.ui.screens.search.SearchViewModel
 import com.nuvio.tv.ui.theme.NuvioColors
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.roundToInt
-import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.res.stringResource
-import com.nuvio.tv.R
 
 @Composable
 fun CatalogSeeAllScreen(
     catalogId: String,
     addonId: String,
     type: String,
+    searchViewModel: SearchViewModel? = null,
     viewModel: HomeViewModel = hiltViewModel(),
+    posterOptionsViewModel: com.nuvio.tv.ui.components.posteroptions.PosterOptionsViewModel = hiltViewModel(),
     onNavigateToDetail: (String, String, String) -> Unit,
     onBackPress: () -> Unit
 ) {
+    val posterOptionsController = searchViewModel?.posterOptions ?: posterOptionsViewModel.controller
     val uiState by viewModel.uiState.collectAsState()
     val fullCatalogRows by viewModel.fullCatalogRows.collectAsState()
     val computedHeightDp = (uiState.posterCardWidthDp * 1.5f).roundToInt()
@@ -77,11 +82,21 @@ fun CatalogSeeAllScreen(
 
     BackHandler { onBackPress() }
 
-    // Find the matching catalog row from full (untruncated) data
+    val isSearchMode = searchViewModel != null
     val catalogKey = "${addonId}_${type}_${catalogId}"
-    val catalogRow = fullCatalogRows.find {
+
+    // In search mode, get the catalog row from SearchViewModel's existing results.
+    // Otherwise fall back to HomeViewModel's fullCatalogRows (home screen catalogs).
+    val searchUiState = searchViewModel?.uiState?.collectAsState()
+    val searchWatchedMovieIds = searchViewModel?.watchedMovieIds?.collectAsState()
+    val searchWatchedSeriesIds = searchViewModel?.watchedSeriesIds?.collectAsState()
+    val searchCatalogRow = searchUiState?.value?.catalogRows?.find {
         "${it.addonId}_${it.apiType}_${it.catalogId}" == catalogKey
     }
+    val homeCatalogRow = fullCatalogRows.find {
+        "${it.addonId}_${it.apiType}_${it.catalogId}" == catalogKey
+    }
+    val catalogRow = if (isSearchMode) searchCatalogRow else homeCatalogRow
 
     val gridState = rememberLazyGridState()
     val restoreFocusRequester = remember { FocusRequester() }
@@ -101,9 +116,15 @@ fun CatalogSeeAllScreen(
                 if (total > 0 && lastVisible >= total - 10) {
                     val row = catalogRow
                     if (row != null && row.hasMore && !row.isLoading) {
-                        viewModel.onEvent(
-                            HomeEvent.OnLoadMoreCatalog(row.catalogId, row.addonId, row.apiType)
-                        )
+                        if (isSearchMode) {
+                            searchViewModel?.onEvent(
+                                SearchEvent.LoadMoreCatalog(row.catalogId, row.addonId, row.apiType)
+                            )
+                        } else {
+                            viewModel.onEvent(
+                                HomeEvent.OnLoadMoreCatalog(row.catalogId, row.addonId, row.apiType)
+                            )
+                        }
                     }
                 }
             }
@@ -142,12 +163,10 @@ fun CatalogSeeAllScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NuvioColors.Background)
-            .padding(horizontal = 48.dp, vertical = 24.dp)
+            .padding(vertical = 24.dp)
     ) {
-        // Header
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 48.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -160,6 +179,7 @@ fun CatalogSeeAllScreen(
         if (uiState.catalogAddonNameEnabled) {
             catalogRow?.addonName?.let { addonName ->
                 Text(
+                    modifier = Modifier.padding(horizontal = 48.dp),
                     text = stringResource(R.string.catalog_see_all_from, addonName),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NuvioColors.TextSecondary
@@ -177,7 +197,10 @@ fun CatalogSeeAllScreen(
                 LazyVerticalGrid(
                     state = gridState,
                     columns = GridCells.Adaptive(minSize = posterCardStyle.width),
+                    modifier = Modifier.dpadRepeatThrottle(),
                     contentPadding = PaddingValues(
+                        start = 48.dp,
+                        end = 24.dp,
                         top = 12.dp,
                         bottom = if (catalogRow.isLoading) 80.dp else 32.dp
                     ),
@@ -188,26 +211,37 @@ fun CatalogSeeAllScreen(
                         items = catalogRow.items,
                         key = { index, item -> "${catalogRow.catalogId}_${item.id}_$index" }
                     ) { index, item ->
+                        val isWatched = if (isSearchMode) {
+                            val isSeries = item.apiType.equals("series", ignoreCase = true) || item.apiType.equals("tv", ignoreCase = true)
+                            if (isSeries) item.id in (searchWatchedSeriesIds?.value ?: emptySet())
+                            else item.id in (searchWatchedMovieIds?.value ?: emptySet())
+                        } else {
+                            uiState.movieWatchedStatus[
+                                com.nuvio.tv.ui.screens.home.homeItemStatusKey(item.id, item.apiType)
+                            ] == true
+                        }
                         GridContentCard(
                             item = item,
                             posterCardStyle = posterCardStyle,
                             showLabel = uiState.posterLabelsEnabled,
+                            isWatched = isWatched,
                             focusRequester = if (index == focusedItemIndex) restoreFocusRequester else null,
-                            onFocused = {
-                                focusedItemIndex = index
-                            },
+                            onFocused = { focusedItemIndex = index },
                             onClick = {
                                 onNavigateToDetail(
                                     item.id,
                                     item.apiType,
                                     catalogRow.addonBaseUrl
                                 )
+                            },
+                            onLongPress = {
+                                focusedItemIndex = index
+                                posterOptionsController.show(item, catalogRow.addonBaseUrl)
                             }
                         )
                     }
                 }
 
-                // Loading indicator at bottom when loading more items
                 if (catalogRow.isLoading) {
                     Box(
                         modifier = Modifier
@@ -234,5 +268,14 @@ fun CatalogSeeAllScreen(
                 icon = Icons.Default.GridView
             )
         }
+
+        val posterOptionsState by posterOptionsController.state.collectAsState()
+        com.nuvio.tv.ui.components.posteroptions.PosterOptionsHost(
+            state = posterOptionsState,
+            controller = posterOptionsController,
+            onNavigateToDetail = { id, type2, addonBaseUrl ->
+                onNavigateToDetail(id, type2, addonBaseUrl)
+            }
+        )
     }
 }

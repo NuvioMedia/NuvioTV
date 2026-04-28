@@ -1,11 +1,10 @@
 package com.nuvio.tv.core.player
 
+import com.nuvio.tv.core.build.AppFeaturePolicy
 import com.nuvio.tv.data.local.StreamAutoPlayMode
 import com.nuvio.tv.data.local.StreamAutoPlaySource
 import com.nuvio.tv.domain.model.AddonStreams
 import com.nuvio.tv.domain.model.Stream
-import java.net.HttpURLConnection
-import java.net.URL
 
 object StreamAutoPlaySelector {
     fun orderAddonStreams(
@@ -19,36 +18,8 @@ object StreamAutoPlaySelector {
         return orderedAddons + pluginEntries
     }
 
-    private fun resolvePlayableUrl(stream: Stream): String? {
-        val url = stream.getStreamUrl() ?: return null
-
-        return url
-    }
-
-
-
-    private fun urlWorks(url: String): Boolean {
-        val lower = url.lowercase()
-
-        // Skip probing for signed or tokened URLs
-        if (listOf("expires=", "signature=", "sig=", "auth=", "key=", "hash=", "x-amz-", "hdnts=", "cf_")
-                .any { lower.contains(it) }) {
-            return true
-        }
-
-        // Safe HEAD probe for everything else
-        return runCatching {
-            val connection = URL(url).openConnection() as HttpURLConnection
-            connection.requestMethod = "GET"
-            connection.setRequestProperty("Range", "bytes=0-1")
-            connection.connectTimeout = 3000
-            connection.readTimeout = 3000
-            connection.instanceFollowRedirects = true
-            connection.connect()
-            connection.responseCode in 200..399
-        }.getOrElse { false }
-    }
-
+    private fun isPlayable(stream: Stream): Boolean =
+        stream.getStreamUrl() != null || stream.isTorrent()
 
 
 
@@ -65,7 +36,13 @@ object StreamAutoPlaySelector {
     ): Stream? {
         if (streams.isEmpty()) return null
 
-        val sourceScopedStreams = when (source) {
+        val effectiveSource = if (!AppFeaturePolicy.pluginsEnabled && source == StreamAutoPlaySource.ENABLED_PLUGINS_ONLY) {
+            StreamAutoPlaySource.INSTALLED_ADDONS_ONLY
+        } else {
+            source
+        }
+
+        val sourceScopedStreams = when (effectiveSource) {
             StreamAutoPlaySource.ALL_SOURCES -> streams
             StreamAutoPlaySource.INSTALLED_ADDONS_ONLY -> streams.filter { it.addonName in installedAddonNames }
             StreamAutoPlaySource.ENABLED_PLUGINS_ONLY -> streams.filter { it.addonName !in installedAddonNames }
@@ -84,19 +61,20 @@ object StreamAutoPlaySelector {
         val targetBingeGroup = preferredBingeGroup?.trim().orEmpty()
         if (preferBingeGroupInSelection && targetBingeGroup.isNotEmpty()) {
             val bingeGroupMatch = candidateStreams.firstOrNull { stream ->
-                stream.behaviorHints?.bingeGroup == targetBingeGroup && stream.getStreamUrl() != null
+                stream.behaviorHints?.bingeGroup == targetBingeGroup && isPlayable(stream)
             }
             if (bingeGroupMatch != null) return bingeGroupMatch
         }
 
         return when (mode) {
             StreamAutoPlayMode.MANUAL -> null
-            StreamAutoPlayMode.FIRST_STREAM -> candidateStreams.firstOrNull { it.getStreamUrl() != null }
+            StreamAutoPlayMode.FIRST_STREAM -> candidateStreams.firstOrNull { isPlayable(it) }
             StreamAutoPlayMode.REGEX_MATCH -> {
                 val pattern = regexPattern.trim()
  
                 // Try to compile the user regex
-                val userRegex = runCatching { Regex(pattern, RegexOption.IGNORE_CASE) }.getOrNull() ?: return null
+                val userRegex = runCatching { Regex(pattern, RegexOption.IGNORE_CASE) }.getOrNull()
+                if (userRegex == null) return null
 
                 // Auto-extract exclusion patterns from negative lookaheads
                 val exclusionMatches = Regex("\\(\\?![^)]*?\\(([^)]+)\\)").findAll(pattern)
@@ -113,14 +91,15 @@ object StreamAutoPlaySelector {
 
                 // 1. Build list of ALL regex‑matching streams
                 val matchingStreams = candidateStreams.filter { stream ->
-                    val url = stream.getStreamUrl() ?: return@filter false
+                    if (!isPlayable(stream)) return@filter false
 
                     val searchableText = buildString {
                         append(stream.addonName).append(' ')
                         append(stream.name.orEmpty()).append(' ')
                         append(stream.title.orEmpty()).append(' ')
                         append(stream.description.orEmpty()).append(' ')
-                        append(url)
+                        append(stream.getStreamUrl().orEmpty())
+                        if (stream.isTorrent()) append(' ').append(stream.infoHash.orEmpty())
                     }
 
                     // Must match include pattern
@@ -135,16 +114,7 @@ object StreamAutoPlaySelector {
                 }
 
                 if (matchingStreams.isEmpty()) return null
-
-                // 2. Try each matching stream until one works
-                for (stream in matchingStreams) {
-                    val resolved = resolvePlayableUrl(stream) ?: continue
-                    println("Trying resolved stream: $resolved")
-                    if (urlWorks(resolved)) return stream
-
-                }
-                // None worked
-                null
+                matchingStreams.firstOrNull { isPlayable(it) }
             }
 
         }
