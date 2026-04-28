@@ -46,6 +46,7 @@ class ChannelManager @Inject constructor(
         // 1. Check cached ID first
         val cachedId = dataStore.getChannelId(internalId)
         if (cachedId != null && channelExists(cachedId)) {
+            updateChannelDisplayName(cachedId, displayName)
             return cachedId
         }
 
@@ -53,6 +54,7 @@ class ChannelManager @Inject constructor(
         val existingId = findChannelByInternalId(internalId)
         if (existingId != null) {
             dataStore.setChannelId(internalId, existingId)
+            updateChannelDisplayName(existingId, displayName)
             return existingId
         }
 
@@ -163,6 +165,43 @@ class ChannelManager @Inject constructor(
     // ────────────────────────────────────────────────────────────────
     //  Helpers
     // ────────────────────────────────────────────────────────────────
+
+    private fun updateChannelDisplayName(channelId: Long, displayName: String) {
+        try {
+            val current = readChannelDisplayName(channelId)
+            if (current == displayName) return
+            val values = android.content.ContentValues().apply {
+                put(TvContractCompat.Channels.COLUMN_DISPLAY_NAME, displayName)
+            }
+            context.contentResolver.update(
+                TvContractCompat.buildChannelUri(channelId),
+                values,
+                null,
+                null
+            )
+            Log.d(TAG, "updateChannelDisplayName channelId=$channelId '$current' -> '$displayName'")
+        } catch (e: Exception) {
+            Log.w(TAG, "updateChannelDisplayName failed channelId=$channelId", e)
+        }
+    }
+
+    private fun readChannelDisplayName(channelId: Long): String? {
+        var cursor: Cursor? = null
+        return try {
+            cursor = context.contentResolver.query(
+                TvContractCompat.buildChannelUri(channelId),
+                arrayOf(TvContractCompat.Channels.COLUMN_DISPLAY_NAME),
+                null, null, null
+            )
+            if (cursor != null && cursor.moveToFirst()) {
+                cursor.getString(0)
+            } else null
+        } catch (_: Exception) {
+            null
+        } finally {
+            cursor?.close()
+        }
+    }
 
     private fun channelExists(channelId: Long): Boolean {
         var cursor: Cursor? = null

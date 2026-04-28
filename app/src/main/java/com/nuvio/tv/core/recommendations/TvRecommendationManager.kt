@@ -161,11 +161,9 @@ class TvRecommendationManager @Inject constructor(
                             channelManager.insertPrograms(previewPrograms)
                         }
                     } else {
-                        // Fall back to the system Watch Next row and remove our custom channel programs.
-                        val playNextChannelId = channelManager.getChannelId("nuvio_play_next")
-                        if (playNextChannelId != null) {
-                            channelManager.clearProgramsForChannel(playNextChannelId)
-                        }
+                        // Fall back to the system Watch Next row and fully remove our custom channel
+                        // (deleting—not just clearing—so the launcher doesn't display an empty row).
+                        channelManager.deleteChannel("nuvio_play_next")
 
                         programBuilder.clearAllWatchNextPrograms()
                         for (progress in items) {
@@ -205,19 +203,14 @@ class TvRecommendationManager @Inject constructor(
      */
     suspend fun clearAll() {
         withContext(Dispatchers.IO) {
-            // Delete ALL preview channels
+            // Delete ALL preview channels (including Nuvio Play Next so the launcher
+            // doesn't keep an empty row around when recommendations are turned off).
             channelManager.cleanupLegacyChannels(emptyList())
-            
-            // Just clear the "Play Next" channel programs instead of deleting it
-            // so it hides but doesn't require user re-approval if toggled back on
-            val playNextChannelId = channelManager.getChannelId("nuvio_play_next")
-            if (playNextChannelId != null) {
-                channelManager.clearProgramsForChannel(playNextChannelId)
-            }
-            
+            channelManager.deleteChannel("nuvio_play_next")
+
             // Delete ALL watch next items
             programBuilder.clearAllWatchNextPrograms()
-            
+
             channelSignatures.clear()
         }
     }
