@@ -21,6 +21,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "OmnioTV"
 include(":app-tv")
+include(":app-phone")
 include(":baselineprofile")
 include(":core-domain")
 include(":core-data")
