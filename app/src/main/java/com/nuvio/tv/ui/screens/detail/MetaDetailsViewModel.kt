@@ -1586,17 +1586,19 @@ class MetaDetailsViewModel @Inject constructor(
                 // S1E2 even though the whole series is fully watched. Falling
                 // through to the comprehensive scan below correctly returns
                 // S1E1 in that case (issue #1016).
-                if (next != null) {
-                    val nextProgress = fallbackProgressMap[next.season to next.episode]
+                val nextSeason = next?.season
+                val nextEpisode = next?.episode
+                if (next != null && nextSeason != null && nextEpisode != null) {
+                    val nextProgress = fallbackProgressMap[nextSeason to nextEpisode]
                     val nextAlreadyWatched = nextProgress?.isCompleted() == true
                     if (!nextAlreadyWatched) {
                         return NextToWatch(
                             watchProgress = null,
                             isResume = false,
                             nextVideoId = next.id,
-                            nextSeason = next.season,
-                            nextEpisode = next.episode,
-                            displayText = context.getString(R.string.detail_btn_next_episode, next.season, next.episode)
+                            nextSeason = nextSeason,
+                            nextEpisode = nextEpisode,
+                            displayText = context.getString(R.string.detail_btn_next_episode, nextSeason, nextEpisode)
                         )
                     }
                 }
