@@ -28,7 +28,7 @@ case "$cmd" in
       -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
     ;;
   release-with-profile)
-    ./gradlew :app:assembleRelease :app:bundleRelease
+    ./gradlew :app-tv:assembleRelease :app-tv:bundleRelease
     ;;
   *)
     usage

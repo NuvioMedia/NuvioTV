@@ -14,7 +14,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    targetProjectPath = ":app"
+    targetProjectPath = ":app-tv"
     experimentalProperties["android.experimental.self-instrumenting"] = true
 
     buildTypes {

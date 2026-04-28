@@ -37,7 +37,7 @@ echo "    device ready."
 
 # --- Build & install --------------------------------------------------------
 echo "==> Running ./gradlew installDebug"
-./gradlew :app:installDebug
+./gradlew :app-tv:installDebug
 
 # --- Launch the app ---------------------------------------------------------
 echo "==> Launching OmnioTV"
