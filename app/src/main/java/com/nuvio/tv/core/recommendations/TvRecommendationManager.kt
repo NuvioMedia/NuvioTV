@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.async
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -40,6 +41,7 @@ class TvRecommendationManager @Inject constructor(
 
     private companion object {
         const val TAG = "TvRecommendation"
+        const val SNAPSHOT_TIMEOUT_MS = 5_000L
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -135,7 +137,7 @@ class TvRecommendationManager @Inject constructor(
             withContext(Dispatchers.IO) {
                 try {
                     val items = deduplicateByContent(
-                        watchProgressRepository.continueWatching.first()
+                        fetchContinueWatchingSnapshot()
                     ).take(RecommendationConstants.MAX_WATCH_NEXT_ITEMS)
 
                     val nuvioPlayNextEnabled = dataStore.getPlayNextEnabled()
@@ -242,6 +244,23 @@ class TvRecommendationManager @Inject constructor(
         return items
             .sortedByDescending { it.lastWatched }
             .distinctBy { it.contentId }
+    }
+
+    /**
+     * Returns a snapshot of the user's Continue Watching items.
+     *
+     * The repository emits a synthetic empty list via `onStart` when Trakt is the
+     * configured watch progress source, before the first remote sync completes.
+     * Calling [Flow.first] would capture that empty value and leave the Watch
+     * Next / Play Next channel empty until the next refresh. We instead wait up
+     * to 5s for a non-empty emission and fall back to whatever the flow has
+     * (typically empty) if the user genuinely has nothing in progress.
+     */
+    private suspend fun fetchContinueWatchingSnapshot(): List<WatchProgress> {
+        val nonEmpty = withTimeoutOrNull(SNAPSHOT_TIMEOUT_MS) {
+            watchProgressRepository.continueWatching.first { it.isNotEmpty() }
+        }
+        return nonEmpty ?: watchProgressRepository.continueWatching.first()
     }
 
     private suspend fun shouldRun(): Boolean =
