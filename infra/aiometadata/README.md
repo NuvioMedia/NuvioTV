@@ -16,15 +16,27 @@ workflow (or push a change to `infra/aiometadata/`).
 | `FLY_API_TOKEN` | — | Fly personal token for CI auth |
 | `AIOMETADATA_DATABASE_URI` | `DATABASE_URI` | Postgres connection string (Neon pooled) |
 | `AIOMETADATA_REDIS_URL` | `REDIS_URL` | `redis://` or `rediss://` URL |
-| `AIOMETADATA_HOST_NAME` | `HOST_NAME` | Public base URL, e.g. `https://nuviotv-aiometadata.fly.dev` |
+| `AIOMETADATA_HOST_NAME` | `HOST_NAME` | Public base URL, e.g. `https://aiometadata.omnio.tv` |
 | `AIOMETADATA_ADMIN_KEY` | `ADMIN_KEY` | Random hex, `openssl rand -hex 32` |
-| `TMDB_API_KEY` | `TMDB_API_KEY` | Shared with Android build |
-| `TVDB_API_KEY` | `TVDB_API_KEY` | |
-| `FANART_API_KEY` | `FANART_API_KEY` | |
-| `MDBLIST_API_KEY` | `MDBLIST_API_KEY` | |
-| `GEMINI_API_KEY` | `GEMINI_API_KEY` | |
-| `TRAKT_CLIENT_ID` | `TRAKT_CLIENT_ID` | Shared with Android build |
-| `TRAKT_CLIENT_SECRET` | `TRAKT_CLIENT_SECRET` | Shared with Android build |
+| `TRAKT_CLIENT_ID` | `TRAKT_CLIENT_ID` | OAuth client credential, shared by design |
+| `TRAKT_CLIENT_SECRET` | `TRAKT_CLIENT_SECRET` | OAuth client credential, shared by design |
+
+### Provider API keys are NOT pushed to Fly
+
+`TMDB_API_KEY`, `TVDB_API_KEY`, `FANART_API_KEY`, `MDBLIST_API_KEY`, and
+`GEMINI_API_KEY` must **not** be set as Fly secrets on this app. The upstream
+`cedya77/aiometadata` addon reads those env vars and bakes them into the
+public `/configure/` form, which would expose them to anyone who hits the URL
+(this is especially dangerous for billing-enabled keys like Gemini).
+
+Each user supplies their own keys through the Android settings flow; those
+are stored per-UUID in Postgres and travel with the user's saved config.
+RPDB always defaults to the free community key (`t0-free-rpdb`) on the
+client side — see `AioMetadataDefaultConfig.kt`.
+
+(`TMDB_API_KEY` is still kept as a GitHub Secret because the Android build
+itself uses it via `app/build.gradle.kts` and `.github/workflows/beta-release.yml`
+— just don't push it to Fly.)
 
 ## One-time infrastructure setup
 

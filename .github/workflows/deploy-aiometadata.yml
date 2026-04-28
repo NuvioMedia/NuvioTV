@@ -28,30 +28,23 @@ jobs:
           AIOMETADATA_REDIS_URL: ${{ secrets.AIOMETADATA_REDIS_URL }}
           AIOMETADATA_HOST_NAME: ${{ secrets.AIOMETADATA_HOST_NAME }}
           AIOMETADATA_ADMIN_KEY: ${{ secrets.AIOMETADATA_ADMIN_KEY }}
-          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
-          TVDB_API_KEY: ${{ secrets.TVDB_API_KEY }}
-          FANART_API_KEY: ${{ secrets.FANART_API_KEY }}
-          MDBLIST_API_KEY: ${{ secrets.MDBLIST_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
           TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
         run: |
-          # Required secrets — always set
-          args=(
-            DATABASE_URI="$AIOMETADATA_DATABASE_URI"
-            REDIS_URL="$AIOMETADATA_REDIS_URL"
-            HOST_NAME="$AIOMETADATA_HOST_NAME"
-            ADMIN_KEY="$AIOMETADATA_ADMIN_KEY"
-            TMDB_API_KEY="$TMDB_API_KEY"
-            TRAKT_CLIENT_ID="$TRAKT_CLIENT_ID"
-            TRAKT_CLIENT_SECRET="$TRAKT_CLIENT_SECRET"
-          )
-          # Optional provider keys — only set when the GitHub Secret is populated
-          [ -n "$TVDB_API_KEY" ]    && args+=(TVDB_API_KEY="$TVDB_API_KEY")
-          [ -n "$FANART_API_KEY" ]  && args+=(FANART_API_KEY="$FANART_API_KEY")
-          [ -n "$MDBLIST_API_KEY" ] && args+=(MDBLIST_API_KEY="$MDBLIST_API_KEY")
-          [ -n "$GEMINI_API_KEY" ]  && args+=(GEMINI_API_KEY="$GEMINI_API_KEY")
-          flyctl secrets set "${args[@]}" --app nuviotv-aiometadata --stage
+          # Provider API keys (TMDB/TVDB/Fanart/MDBList/Gemini) are intentionally
+          # NOT pushed here — the upstream addon bakes env vars into its public
+          # /configure/ form, which would expose them to anyone hitting the URL.
+          # Each user supplies their own keys via the Android settings flow,
+          # and those are stored per-UUID in Postgres. Trakt creds are OAuth
+          # client credentials shared across all users by design.
+          flyctl secrets set \
+            DATABASE_URI="$AIOMETADATA_DATABASE_URI" \
+            REDIS_URL="$AIOMETADATA_REDIS_URL" \
+            HOST_NAME="$AIOMETADATA_HOST_NAME" \
+            ADMIN_KEY="$AIOMETADATA_ADMIN_KEY" \
+            TRAKT_CLIENT_ID="$TRAKT_CLIENT_ID" \
+            TRAKT_CLIENT_SECRET="$TRAKT_CLIENT_SECRET" \
+            --app nuviotv-aiometadata --stage
 
       - name: Deploy
         run: flyctl deploy --config infra/aiometadata/fly.toml --app nuviotv-aiometadata
