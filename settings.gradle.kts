@@ -23,3 +23,4 @@ rootProject.name = "OmnioTV"
 include(":app-tv")
 include(":baselineprofile")
 include(":core-domain")
+include(":core-data")

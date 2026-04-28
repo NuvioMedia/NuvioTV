@@ -264,7 +264,7 @@ internal fun PlayerRuntimeController.fetchParentalGuide(id: String?, type: Strin
         }
 
         if (response?.parentalGuide != null) {
-            val guide = response.parentalGuide
+            val guide = response.parentalGuide!!
             val labels = mapOf(
                 "nudity" to context.getString(R.string.parental_nudity),
                 "violence" to context.getString(R.string.parental_violence),

@@ -461,7 +461,7 @@ private fun EpisodeItem(
 ) {
     val shouldBlur = blurUnwatched && !isWatched && !isCurrent
     val context = LocalContext.current
-    val episodeTitle = episode.title.localizeEpisodeTitle(context).ifBlank { context.getString(R.string.episodes_episode) }
+    val episodeTitle = episode.title.localizeEpisodeTitle(context).ifBlank { context.getString(com.omnio.tv.data.R.string.episodes_episode) }
     val formattedDate = remember(episode.released) {
         episode.released?.let { formatReleaseDate(it) }?.takeIf { it.isNotBlank() }
     }

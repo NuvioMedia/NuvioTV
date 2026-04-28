@@ -238,6 +238,7 @@ dependencies {
     baselineProfile(project(":baselineprofile"))
 
     implementation(project(":core-domain"))
+    implementation(project(":core-data"))
 
     implementation(libs.androidx.core.ktx)
     implementation("androidx.core:core-splashscreen:1.2.0")

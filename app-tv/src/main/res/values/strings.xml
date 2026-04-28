@@ -73,16 +73,7 @@
     <string name="error_state_fix_addon_cleartext">switch the addon URL to HTTPS or update the addon configuration.</string>
     <string name="error_state_fix_addon_generic">retry, update or reinstall the addon, or try a different addon.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
-    <string name="error_meta_not_found">Meta not found</string>
-    <string name="error_meta_no_supported_addon">No installed addon supports metadata for \"%1$s\".</string>
-    <string name="error_meta_no_addon_for_id">No installed addon could provide metadata for id=%1$s (type=%2$s).</string>
-    <string name="error_meta_tried_none">Tried meta addons: %1$s. None of them provided metadata for id=%2$s (type=%3$s).</string>
-    <string name="error_meta_tried_generic">Tried meta addons: %1$s. Metadata could not be loaded for id=%2$s (type=%3$s).</string>
-    <string name="error_meta_tried_issues">Tried meta addons: %1$s. Metadata could not be loaded for id=%2$s (type=%3$s). Issues: %4$s.</string>
-    <string name="error_stream_no_supported_addon">No installed addon supports streams for \"%1$s\".</string>
-    <string name="error_stream_tried_none">Tried stream addons: %1$s. None of them returned streams for id=%2$s (type=%3$s).</string>
-    <string name="error_stream_tried_generic">Tried stream addons: %1$s. Streams could not be loaded for id=%2$s (type=%3$s).</string>
-    <string name="error_stream_tried_issues">Tried stream addons: %1$s. Streams could not be loaded for id=%2$s (type=%3$s). Issues: %4$s.</string>
+    <!-- error_meta_* / error_stream_* relocated to :core-data/src/main/res/values/strings.xml -->
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Continue Watching</string>
@@ -123,7 +114,7 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">Season %1$d</string>
     <string name="episodes_specials">Specials</string>
-    <string name="episodes_episode">Episode</string>
+    <!-- episodes_episode relocated to :core-data/src/main/res/values/strings.xml -->
     <string name="episodes_cd_watched">Watched</string>
     <string name="episodes_dialog_subtitle">Episode actions</string>
     <string name="episodes_mark_watched">Mark as watched</string>

@@ -2,7 +2,6 @@ package com.omnio.tv.ui.screens.player
 
 import android.util.Log
 import kotlinx.coroutines.launch
-import com.omnio.tv.data.local.toTrackPreference
 
 internal fun PlayerRuntimeController.preparePlaybackBeforeStart(
     url: String,

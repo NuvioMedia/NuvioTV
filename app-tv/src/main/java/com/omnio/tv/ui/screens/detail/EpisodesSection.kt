@@ -495,7 +495,7 @@ private fun EpisodeCard(
             .build()
     }
     val strCdWatched = stringResource(R.string.episodes_cd_watched)
-    val strEpisode = stringResource(R.string.episodes_episode)
+    val strEpisode = stringResource(com.omnio.tv.data.R.string.episodes_episode)
     val strUnavailable = stringResource(R.string.episodes_unavailable)
     val episodeCode = remember(episode.episode, strEpisode) {
         val prefix = strEpisode.uppercase(Locale.getDefault())

@@ -5,7 +5,6 @@ import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.core.player.StreamAutoPlaySelector
 import com.omnio.tv.data.local.StreamAutoPlayMode
 import com.omnio.tv.data.local.StreamAutoPlaySource
-import com.omnio.tv.data.local.toTrackPreference
 import com.omnio.tv.domain.model.AddonStreams
 import com.omnio.tv.domain.model.Stream
 import com.omnio.tv.domain.model.Video

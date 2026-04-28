@@ -151,7 +151,7 @@ private fun rememberErrorStateStrings(): ErrorStateStrings {
         addonCleartextFix = stringResource(R.string.error_state_fix_addon_cleartext),
         addonGenericFix = stringResource(R.string.error_state_fix_addon_generic),
         addonIssueTemplate = stringResource(R.string.error_state_addon_issue_template, "%1\$s", "%2\$s"),
-        metaNotFound = stringResource(R.string.error_meta_not_found)
+        metaNotFound = stringResource(com.omnio.tv.data.R.string.error_meta_not_found)
     )
 }
 
