@@ -12,6 +12,7 @@ import dagger.assisted.AssistedInject
 import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.domain.repository.AddonRepository
 import com.nuvio.tv.domain.repository.CatalogRepository
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 
 /**
@@ -90,10 +91,19 @@ class TvRecommendationWorker @AssistedInject constructor(
                     type = catalog.apiType,
                     skip = 0,
                     supportsSkip = catalog.extra.any { it.name == "skip" }
-                ).firstOrNull()
-                
+                ).first { it !is NetworkResult.Loading }
+
                 if (result is NetworkResult.Success && result.data.items.isNotEmpty()) {
                     loadedRows.add(result.data)
+                    android.util.Log.d(
+                        "TvRecommendation",
+                        "Worker loaded ${result.data.items.size} items for ${addon.id}_${catalog.apiType}_${catalog.id}"
+                    )
+                } else {
+                    android.util.Log.w(
+                        "TvRecommendation",
+                        "Worker catalog fetch returned non-success for ${addon.id}_${catalog.apiType}_${catalog.id}: ${result::class.simpleName}"
+                    )
                 }
             }
         }

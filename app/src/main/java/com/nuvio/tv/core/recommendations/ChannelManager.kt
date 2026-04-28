@@ -11,6 +11,7 @@ import androidx.tvprovider.media.tv.Channel
 import androidx.tvprovider.media.tv.ChannelLogoUtils
 import androidx.tvprovider.media.tv.PreviewProgram
 import androidx.tvprovider.media.tv.TvContractCompat
+import android.util.Log
 import com.nuvio.tv.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -25,6 +26,10 @@ class ChannelManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val dataStore: RecommendationDataStore
 ) {
+
+    private companion object {
+        const val TAG = "ChannelManager"
+    }
 
     // ────────────────────────────────────────────────────────────────
     //  Channel operations
@@ -52,6 +57,7 @@ class ChannelManager @Inject constructor(
         }
 
         // 3. Insert a brand-new channel
+        Log.d(TAG, "getOrCreateChannel inserting new channel internalId=$internalId name='$displayName'")
         return try {
             val channel = Channel.Builder()
                 .setType(TvContractCompat.Channels.TYPE_PREVIEW)
@@ -68,10 +74,12 @@ class ChannelManager @Inject constructor(
             )
 
             if (channelUri == null) {
+                Log.w(TAG, "getOrCreateChannel channelUri=null internalId=$internalId (provider rejected insert)")
                 return null
             }
 
             val channelId = ContentUris.parseId(channelUri)
+            Log.d(TAG, "getOrCreateChannel inserted channelId=$channelId internalId=$internalId")
             dataStore.setChannelId(internalId, channelId)
 
             // Store a channel logo so the launcher can distinguish channels visually.
@@ -84,11 +92,13 @@ class ChannelManager @Inject constructor(
                 intent.putExtra(TvContractCompat.EXTRA_CHANNEL_ID, channelId)
                 intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(intent)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(TAG, "getOrCreateChannel failed to request browsable for channelId=$channelId", e)
             }
 
             channelId
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "getOrCreateChannel insert failed internalId=$internalId", e)
             null
         }
     }
@@ -111,11 +121,13 @@ class ChannelManager @Inject constructor(
         if (programs.isEmpty()) return
         try {
             val values = programs.map { it.toContentValues() }.toTypedArray()
-            context.contentResolver.bulkInsert(
+            val inserted = context.contentResolver.bulkInsert(
                 TvContractCompat.PreviewPrograms.CONTENT_URI,
                 values
             )
-        } catch (_: Exception) {
+            Log.d(TAG, "insertPrograms bulkInsert returned=$inserted (requested=${programs.size})")
+        } catch (e: Exception) {
+            Log.w(TAG, "insertPrograms failed (requested=${programs.size})", e)
         }
     }
 

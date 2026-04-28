@@ -836,15 +836,20 @@ internal suspend fun HomeViewModel.updateCatalogRowsPipeline() {
             if (row.items.isNotEmpty()) {
                 val catalogKey = "${row.addonId}_${row.apiType}_${row.catalogId}"
                 val catalogName = "${row.catalogName} (${row.addonName})"
-                
+
+                android.util.Log.d(
+                    "TvRecommendation",
+                    "HomeViewModel emitting key=$catalogKey items=${row.items.size}"
+                )
+
                 try {
                     tvRecommendationManager.updateCatalogChannel(
                         catalogKey = catalogKey,
                         catalogName = catalogName,
                         items = row.items
                     )
-                } catch (_: Exception) {
-                    // Ignore transient background sync failures
+                } catch (e: Exception) {
+                    android.util.Log.w("TvRecommendation", "HomeViewModel updateCatalogChannel threw key=$catalogKey", e)
                 }
             }
         }

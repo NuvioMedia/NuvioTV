@@ -2,6 +2,7 @@ package com.nuvio.tv.core.recommendations
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.util.Log
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.repository.WatchProgressRepository
@@ -37,6 +38,10 @@ class TvRecommendationManager @Inject constructor(
     /** Tracks the last set of items per channel to avoid redundant ContentProvider writes. */
     private val channelSignatures = mutableMapOf<String, String>()
 
+    private companion object {
+        const val TAG = "TvRecommendation"
+    }
+
     // ────────────────────────────────────────────────────────────────
     //  Public API
     // ────────────────────────────────────────────────────────────────
@@ -46,17 +51,22 @@ class TvRecommendationManager @Inject constructor(
      * Called from [NuvioApplication.onCreate].
      */
     suspend fun initializeChannels() {
-        if (!isTvDevice()) return
+        if (!isTvDevice()) {
+            Log.d(TAG, "initializeChannels skipped: not a TV device")
+            return
+        }
         withContext(Dispatchers.IO) {
             try {
                 // Determine which catalogs are valid
                 val validIds = dataStore.getEnabledCatalogs().toMutableList()
+                Log.d(TAG, "initializeChannels enabledCatalogs=$validIds")
                 validIds.add("nuvio_play_next")
                 channelManager.cleanupLegacyChannels(validIds)
-                
+
                 // Force sync Watch Next items right on startup to refresh launcher UI and bust caches
                 updateWatchNext()
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(TAG, "initializeChannels failed", e)
             }
         }
     }
@@ -66,30 +76,50 @@ class TvRecommendationManager @Inject constructor(
      * Called from [HomeViewModel] after catalog rows are loaded.
      */
     suspend fun updateCatalogChannel(catalogKey: String, catalogName: String, items: List<MetaPreview>) {
-        if (!shouldRun()) return
-        
+        if (!isTvDevice()) {
+            Log.d(TAG, "updateCatalogChannel skipped: not TV device key=$catalogKey")
+            return
+        }
+        if (!dataStore.isEnabled()) {
+            Log.d(TAG, "updateCatalogChannel skipped: globally disabled key=$catalogKey")
+            return
+        }
+
         // Ensure this catalog is still chosen by the user
         val enabledCatalogs = dataStore.getEnabledCatalogs()
-        if (!enabledCatalogs.contains(catalogKey)) return
+        if (!enabledCatalogs.contains(catalogKey)) {
+            Log.d(TAG, "updateCatalogChannel skipped: key=$catalogKey not in enabled=$enabledCatalogs")
+            return
+        }
 
         val maxItems = dataStore.getMaxItemsPerChannel()
         val useWidePoster = dataStore.getUseWidePoster()
 
         val trimmed = items.take(maxItems) // Dynamic Max Limit
         val signature = trimmed.joinToString("|") { it.id } + "_wide_$useWidePoster"
-        if (signature == channelSignatures[catalogKey]) return
+        if (signature == channelSignatures[catalogKey]) {
+            Log.d(TAG, "updateCatalogChannel unchanged key=$catalogKey items=${trimmed.size}")
+            return
+        }
 
+        Log.d(TAG, "updateCatalogChannel name='$catalogName' key=$catalogKey items=${trimmed.size}")
         mutex.withLock {
             withContext(Dispatchers.IO) {
                 try {
-                    val channelId = channelManager.getOrCreateChannel(catalogKey, catalogName) ?: return@withContext
+                    val channelId = channelManager.getOrCreateChannel(catalogKey, catalogName)
+                    if (channelId == null) {
+                        Log.w(TAG, "updateCatalogChannel channelId=null for key=$catalogKey")
+                        return@withContext
+                    }
                     channelManager.clearProgramsForChannel(channelId)
 
                     val programs = trimmed.map { programBuilder.buildTrendingProgram(channelId, it, useWidePoster) }
                     channelManager.insertPrograms(programs)
-                    
+                    Log.d(TAG, "updateCatalogChannel inserted ${programs.size} programs into channelId=$channelId")
+
                     channelSignatures[catalogKey] = signature
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    Log.w(TAG, "updateCatalogChannel failed key=$catalogKey", e)
                 }
             }
         }
