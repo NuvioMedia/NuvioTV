@@ -1,0 +1,68 @@
+name: aiometadata
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: aiometadata
+      POSTGRES_USER: aiometadata
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aiometadata -d aiometadata"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD required}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+  aiometadata:
+    image: ghcr.io/cedya77/aiometadata:v.testing.20260427.5-c3ee1a4acd1b9c1ba3f0ea6069e3395a744269f5
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URI: postgres://aiometadata:${POSTGRES_PASSWORD}@postgres:5432/aiometadata?sslmode=disable
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      HOST_NAME: ${HOST_NAME:?HOST_NAME required}
+      ADMIN_KEY: ${ADMIN_KEY:?ADMIN_KEY required}
+      TRAKT_CLIENT_ID: ${TRAKT_CLIENT_ID:?TRAKT_CLIENT_ID required}
+      TRAKT_CLIENT_SECRET: ${TRAKT_CLIENT_SECRET:?TRAKT_CLIENT_SECRET required}
+    volumes:
+      - aiometadata_data:/app/addon/data
+    # No public port binding here — how the addon is reached from outside
+    # (reverse proxy, tunnel, etc.) is configured in a docker-compose.override.yml
+    # that lives only on the host. Compose auto-merges it on `up`.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3232/configure/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  postgres_data:
+  redis_data:
+  aiometadata_data:

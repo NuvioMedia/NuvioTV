@@ -48,4 +48,6 @@ HOME_UI_OPTIMIZATION_NOTES.local.md
 .kotlin/
 bugs/
 avatars/
+infra/aiometadata-selfhost/docker-compose.override.yml
+infra/aiometadata-selfhost/.env
 logs

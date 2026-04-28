@@ -1,0 +1,52 @@
+name: Deploy AIOMetadata (self-host)
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'infra/aiometadata-selfhost/**'
+      - '.github/workflows/deploy-aiometadata-selfhost.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-aiometadata-selfhost-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, aiometadata]
+    defaults:
+      run:
+        working-directory: infra/aiometadata-selfhost
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Render .env from secrets
+        run: |
+          umask 077
+          cat > .env <<EOF
+          POSTGRES_PASSWORD=${{ secrets.AIOMETADATA_POSTGRES_PASSWORD }}
+          REDIS_PASSWORD=${{ secrets.AIOMETADATA_REDIS_PASSWORD }}
+          ADMIN_KEY=${{ secrets.AIOMETADATA_ADMIN_KEY }}
+          HOST_NAME=${{ secrets.AIOMETADATA_HOST_NAME }}
+          TRAKT_CLIENT_ID=${{ secrets.TRAKT_CLIENT_ID }}
+          TRAKT_CLIENT_SECRET=${{ secrets.TRAKT_CLIENT_SECRET }}
+          EOF
+
+      - name: Apply local override file (if present)
+        run: |
+          # The host keeps a private override at ~/aiometadata-override.yml
+          # for proxy/network wiring it doesn't want in the repo. Copy it in
+          # so `docker compose` auto-merges it on `up`.
+          if [ -f "$HOME/aiometadata-override.yml" ]; then
+            cp "$HOME/aiometadata-override.yml" docker-compose.override.yml
+            echo "Applied override from $HOME/aiometadata-override.yml"
+          else
+            echo "No override file at $HOME/aiometadata-override.yml — skipping"
+          fi
+
+      - name: Deploy stack
+        run: |
+          docker compose pull
+          docker compose up -d --remove-orphans
+          docker compose ps
