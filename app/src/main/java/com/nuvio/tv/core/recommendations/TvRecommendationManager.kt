@@ -134,46 +134,48 @@ class TvRecommendationManager @Inject constructor(
         mutex.withLock {
             withContext(Dispatchers.IO) {
                 try {
-                    // Clear ALL our Watch Next entries first to remove stale ones
-                    programBuilder.clearAllWatchNextPrograms()
-
                     val items = deduplicateByContent(
                         watchProgressRepository.continueWatching.first()
                     ).take(RecommendationConstants.MAX_WATCH_NEXT_ITEMS)
 
-                    for (progress in items) {
-                        val program = programBuilder.buildWatchNextProgram(progress)
-                        val internalId = "wn_${progress.contentId}"
-                        programBuilder.upsertWatchNextProgram(program, internalId)
-                    }
+                    val nuvioPlayNextEnabled = dataStore.getPlayNextEnabled()
+                    Log.d(TAG, "updateWatchNext nuvioPlayNextEnabled=$nuvioPlayNextEnabled items=${items.size}")
 
-                    // --- Create a dedicated "Play Next" Preview Channel ---
-                    // This is for Google TV / newer launchers where the global Watch Next row is hidden or restricted.
-                    // We generate a standard channel that behaves exactly like "Continue Watching".
-                    if (dataStore.getPlayNextEnabled()) {
+                    if (nuvioPlayNextEnabled) {
+                        // Nuvio Play Next channel takes over: clear the system Watch Next row
+                        // so the launcher only shows our dedicated row and there is no duplication.
+                        programBuilder.clearAllWatchNextPrograms()
+
                         val playNextChannelId = channelManager.getOrCreateChannel(
                             internalId = "nuvio_play_next",
-                            displayName = "Play Next"
+                            displayName = "Nuvio Play Next"
                         )
-                        
+
                         if (playNextChannelId != null) {
                             channelManager.clearProgramsForChannel(playNextChannelId)
-                            val previewPrograms = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                kotlinx.coroutines.coroutineScope {
-                                    items.map { progress ->
-                                        async { programBuilder.buildContinueWatchingProgram(playNextChannelId, progress) }
-                                    }.map { it.await() }
-                                }
+                            val previewPrograms = kotlinx.coroutines.coroutineScope {
+                                items.map { progress ->
+                                    async { programBuilder.buildContinueWatchingProgram(playNextChannelId, progress) }
+                                }.map { it.await() }
                             }
                             channelManager.insertPrograms(previewPrograms)
                         }
                     } else {
+                        // Fall back to the system Watch Next row and remove our custom channel programs.
                         val playNextChannelId = channelManager.getChannelId("nuvio_play_next")
                         if (playNextChannelId != null) {
                             channelManager.clearProgramsForChannel(playNextChannelId)
                         }
+
+                        programBuilder.clearAllWatchNextPrograms()
+                        for (progress in items) {
+                            val program = programBuilder.buildWatchNextProgram(progress)
+                            val internalId = "wn_${progress.contentId}"
+                            programBuilder.upsertWatchNextProgram(program, internalId)
+                        }
                     }
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    Log.w(TAG, "updateWatchNext failed", e)
                 }
             }
         }

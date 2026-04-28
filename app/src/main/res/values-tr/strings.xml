@@ -1330,8 +1330,8 @@
     <string name="settings_tv_recommendations_appearance">Görünüm &amp; Senkronizasyon</string>
     <string name="settings_tv_recommendations_appearance_sub">Poster stili, satır limitleri ve güncelleme sıklığını ayarla</string>
     
-    <string name="settings_tv_recommendations_play_next_title">Sıradakini İzle Kanalı</string>
-    <string name="settings_tv_recommendations_play_next_sub">İzlemeye Devam Et satırını desteklemeyen cihazlar için yatay ve izleme çubuklu özel bir kanal oluştur</string>
+    <string name="settings_tv_recommendations_play_next_title">Nuvio Sıradakini İzle Kanalı</string>
+    <string name="settings_tv_recommendations_play_next_sub">Etkinleştirildiğinde sistemin İzlemeye Devam Et (Watch Next) satırı yerine, ilerleme çubuklu özel Nuvio kanalı kullanılır</string>
     
     <string name="settings_tv_recommendations_poster_style_title">Geniş Posterler Kullan</string>
     <string name="settings_tv_recommendations_poster_style_sub">Standart dikey posterler yerine manzara görünümlü (backdrop) posterler göster</string>
