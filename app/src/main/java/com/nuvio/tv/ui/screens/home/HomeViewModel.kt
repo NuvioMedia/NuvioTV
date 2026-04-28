@@ -300,6 +300,19 @@ class HomeViewModel @Inject constructor(
                 }
             }
         }
+
+        observeContinueWatchingForLauncher()
+    }
+
+    private fun observeContinueWatchingForLauncher() {
+        viewModelScope.launch {
+            _uiState
+                .map { it.continueWatchingItems }
+                .distinctUntilChanged()
+                .collect { items ->
+                    runCatching { tvRecommendationManager.updateWatchNextFromCwItems(items) }
+                }
+        }
     }
 
     private fun clearAllCwInMemoryCaches() {

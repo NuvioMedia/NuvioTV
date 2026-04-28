@@ -12,6 +12,7 @@ import androidx.tvprovider.media.tv.WatchNextProgram
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
 import com.nuvio.tv.domain.model.WatchProgress
+import com.nuvio.tv.ui.components.formatContinueWatchingProgressLabel
 import com.nuvio.tv.ui.screens.home.NextUpInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -80,8 +81,23 @@ class ProgramBuilder @Inject constructor(
         // Play Next row natively presents horizontal (16:9) backdrop cards.
         val horizontalArt = progress.backdrop ?: progress.poster
         var finalArtUri: Uri? = null
-        if (horizontalArt != null && progress.duration > 0) {
-            val file = createProgressImage(horizontalArt, progress)
+        if (horizontalArt != null) {
+            val badgeText = formatContinueWatchingProgressLabel(
+                progress = progress,
+                resumeLabel = context.getString(com.nuvio.tv.R.string.cw_resume),
+                percentWatchedLabel = context.getString(com.nuvio.tv.R.string.cw_percent_watched),
+                hoursMinLeftLabel = context.getString(com.nuvio.tv.R.string.cw_hours_min_left),
+                minLeftLabel = context.getString(com.nuvio.tv.R.string.cw_min_left)
+            )
+            val fraction = progress.progressPercentage.takeIf { it > 0f }
+            val file = createCwOverlayImage(
+                url = horizontalArt,
+                badgeText = badgeText,
+                badgeBgColor = CW_BADGE_DEFAULT_BG,
+                progressFraction = fraction,
+                logoUrl = progress.logo,
+                cachePrefix = "progress_${progress.contentId}_${progress.videoId}"
+            )
             if (file != null) {
                 finalArtUri = Uri.parse("content://${context.packageName}.tvimages/${file.name}")
             }
@@ -90,8 +106,10 @@ class ProgramBuilder @Inject constructor(
         if (finalArtUri == null && horizontalArt != null) {
             finalArtUri = Uri.parse(horizontalArt)
         }
-        finalArtUri?.let { builder.setPosterArtUri(it) }
-        progress.poster?.let { builder.setThumbnailUri(Uri.parse(it)) }
+        finalArtUri?.let {
+            builder.setPosterArtUri(it)
+            builder.setThumbnailUri(it)
+        }
 
         if (!isMovie) {
             progress.season?.let { builder.setSeasonNumber(it) }
@@ -106,7 +124,14 @@ class ProgramBuilder @Inject constructor(
         return@withContext builder.build()
     }
 
-    private suspend fun createProgressImage(url: String, progress: WatchProgress): java.io.File? {
+    private suspend fun createCwOverlayImage(
+        url: String,
+        badgeText: String,
+        badgeBgColor: Int,
+        progressFraction: Float?,
+        logoUrl: String?,
+        cachePrefix: String
+    ): java.io.File? {
         try {
             val request = coil3.request.ImageRequest.Builder(context)
                 .data(url)
@@ -120,119 +145,130 @@ class ProgramBuilder @Inject constructor(
                 val canvas = android.graphics.Canvas(bitmap)
                 val w = bitmap.width.toFloat()
                 val h = bitmap.height.toFloat()
-                
-                val pct = (progress.position.toFloat() / progress.duration).coerceIn(0f, 1f)
-                val marginX = w * 0.04f // slightly larger horizontal padding
-                val marginBottom = h * 0.04f // pushed up slightly more from the bottom
-                val barHeight = h * 0.035f // noticeably thicker height
-                val left = marginX
-                val right = w - marginX
-                val bottom = h - marginBottom
-                val top = bottom - barHeight
-                val radius = barHeight / 2f
-                
-                // --------- Draw bottom gradient overlay for readability ---------
+
                 val gradientBgParams = intArrayOf(
-                    android.graphics.Color.TRANSPARENT,
-                    android.graphics.Color.parseColor("#B3000000"), // 70% black
-                    android.graphics.Color.parseColor("#F2000000")  // 95% black
+                    0x000D0D0D,
+                    0xB30D0D0D.toInt(),
+                    0xF20D0D0D.toInt()
                 )
-                val gradientPositions = floatArrayOf(0f, 0.5f, 1f)
-                
+                val gradientPositions = floatArrayOf(0f, 0.6f, 1f)
+                val shadowStartY = h * 0.45f
                 val shadowPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                     shader = android.graphics.LinearGradient(
-                        0f, h * 0.6f, 
-                        0f, h, 
-                        gradientBgParams, gradientPositions, 
+                        0f, shadowStartY, 0f, h,
+                        gradientBgParams, gradientPositions,
                         android.graphics.Shader.TileMode.CLAMP
                     )
                 }
-                canvas.drawRect(0f, h * 0.6f, w, h, shadowPaint)
-                
-                val bgPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    color = android.graphics.Color.parseColor("#4D000000") // Black 30% alpha
-                    style = android.graphics.Paint.Style.FILL
-                }
-                canvas.drawRoundRect(left, top, right, bottom, radius, radius, bgPaint)
-                
-                val fgPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    color = (0xFF9E9E9E).toInt() // NuvioColors.Primary
-                    style = android.graphics.Paint.Style.FILL
-                }
-                
-                // Draw clipped right edge for progress rect
-                val progressRight = left + (right - left) * pct
-                // Ensure a minimum width so radius can be drawn without visual bugs
-                if (progressRight > left + radius) {
-                    canvas.drawRoundRect(left, top, progressRight, bottom, radius, radius, fgPaint)
+                canvas.drawRect(0f, shadowStartY, w, h, shadowPaint)
+
+                // Treat the bitmap as if it were the 288×162 dp Continue Watching card,
+                // so launcher-side downscaling preserves the same legibility as in-app.
+                val dpScale = w / 288f
+
+                if (!logoUrl.isNullOrBlank()) {
+                    val logoRequest = coil3.request.ImageRequest.Builder(context)
+                        .data(logoUrl)
+                        .allowHardware(false)
+                        .build()
+                    val logoResult = context.imageLoader.execute(logoRequest)
+                    if (logoResult is coil3.request.SuccessResult) {
+                        val logoBitmap = (logoResult.image as? coil3.BitmapImage)?.bitmap
+                        if (logoBitmap != null) {
+                            val logoBoxWidth = 140f * dpScale
+                            val logoBoxHeight = 48f * dpScale
+                            val logoAspect = logoBitmap.width.toFloat() / logoBitmap.height.toFloat()
+                            val logoWidth: Float
+                            val logoHeight: Float
+                            if (logoAspect > logoBoxWidth / logoBoxHeight) {
+                                logoWidth = logoBoxWidth
+                                logoHeight = logoBoxWidth / logoAspect
+                            } else {
+                                logoHeight = logoBoxHeight
+                                logoWidth = logoBoxHeight * logoAspect
+                            }
+                            val logoLeft = 12f * dpScale
+                            val barReservedSpace = if (progressFraction != null) 16f * dpScale else 12f * dpScale
+                            val logoBottom = h - barReservedSpace
+                            val logoTop = logoBottom - logoHeight
+                            val dst = android.graphics.RectF(logoLeft, logoTop, logoLeft + logoWidth, logoBottom)
+                            canvas.drawBitmap(logoBitmap, null, dst, android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                                isFilterBitmap = true
+                            })
+                        }
+                    }
                 }
 
-                // --------- Draw "41m left" badge in top right ---------
-                val remainingMs = progress.duration - progress.position
-                val totalMinutes = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(remainingMs)
-                val hours = totalMinutes / 60
-                val minutes = totalMinutes % 60
-                
-                val badgeText = when {
-                    hours > 0 -> context.getString(com.nuvio.tv.R.string.cw_hours_min_left, hours, minutes)
-                    minutes > 0 -> context.getString(com.nuvio.tv.R.string.cw_min_left, minutes)
-                    else -> context.getString(com.nuvio.tv.R.string.cw_almost_done)
+                if (progressFraction != null) {
+                    val pct = progressFraction.coerceIn(0f, 1f)
+                    val marginX = 10f * dpScale
+                    val marginBottom = 4f * dpScale
+                    val barHeight = 3f * dpScale
+                    val left = marginX
+                    val right = w - marginX
+                    val bottom = h - marginBottom
+                    val top = bottom - barHeight
+                    val radius = barHeight / 2f
+
+                    val bgPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                        color = 0x4D000000
+                        style = android.graphics.Paint.Style.FILL
+                    }
+                    canvas.drawRoundRect(left, top, right, bottom, radius, radius, bgPaint)
+
+                    val fgPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                        color = 0xFF9E9E9E.toInt()
+                        style = android.graphics.Paint.Style.FILL
+                    }
+                    val progressRight = left + (right - left) * pct
+                    if (progressRight > left + radius) {
+                        canvas.drawRoundRect(left, top, progressRight, bottom, radius, radius, fgPaint)
+                    }
                 }
-                
+
                 val textPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    color = (0xFFEAEAEA).toInt() // NuvioColors.TextPrimary approx
-                    textSize = h * 0.057f // Small label text size 
-                    typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
+                    color = 0xFFFFFFFF.toInt()
+                    textSize = 14f * dpScale
+                    typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
                 }
-                
+
                 val textBounds = android.graphics.Rect()
                 textPaint.getTextBounds(badgeText, 0, badgeText.length, textBounds)
-                
-                // Match Compose padding: `padding(horizontal = 8.dp, vertical = 4.dp)`
-                val badgePadX = w * 0.02f // Approx 8dp
-                val badgePadY = w * 0.01f // Approx 4dp
-                
-                // Match Compose margin: `padding(8.dp)` outside
-                val badgeMargin = w * 0.02f
+
+                val badgePadX = 10f * dpScale
+                val badgePadY = 6f * dpScale
+                val badgeMargin = 10f * dpScale
                 val badgeRight = w - badgeMargin
                 val badgeTop = badgeMargin
-                
+
                 val badgeWidth = textBounds.width() + badgePadX * 2
                 val badgeHeight = textBounds.height() + badgePadY * 2
                 val badgeLeft = badgeRight - badgeWidth
                 val badgeBottom = badgeTop + badgeHeight
-                
+
                 val badgeBgPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    color = android.graphics.Color.parseColor("#CC141414") // NuvioColors.Background approx with 80% opacity
+                    color = badgeBgColor
                     style = android.graphics.Paint.Style.FILL
                 }
-                
-                // Match Compose generic badge radius shape: RoundedCornerShape(4.dp)
-                val badgeRadius = w * 0.01f 
+                val badgeRadius = 6f * dpScale
                 canvas.drawRoundRect(badgeLeft, badgeTop, badgeRight, badgeBottom, badgeRadius, badgeRadius, badgeBgPaint)
-                
+
                 val textX = badgeLeft + badgePadX
                 val textY = badgeBottom - badgePadY - textBounds.bottom
                 canvas.drawText(badgeText, textX, textY, textPaint)
-                
-                val pctInt = (pct * 100).toInt()
+
                 val cacheDir = java.io.File(context.cacheDir, "tv_progress")
                 cacheDir.mkdirs()
-                
-                // Cleanup old files for this specific content to avoid bloating storage
-                cacheDir.listFiles { _, name -> 
-                    name.startsWith("progress_${progress.contentId}_${progress.videoId}") 
-                }?.forEach { it.delete() }
-                
-                // Add timestamp / pct to filename so Android TV Launcher invalidates its image cache
-                val finalName = "progress_${progress.contentId}_${progress.videoId}_${pctInt}_${System.currentTimeMillis()}.jpg"
+                cacheDir.listFiles { _, name -> name.startsWith(cachePrefix) }?.forEach { it.delete() }
+
+                val finalName = "${cachePrefix}_${System.currentTimeMillis()}.jpg"
                 val outFile = java.io.File(cacheDir, finalName)
                 java.io.FileOutputStream(outFile).use { out ->
                     bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, out)
                 }
                 return outFile
             }
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             e.printStackTrace()
         }
         return null
@@ -242,10 +278,10 @@ class ProgramBuilder @Inject constructor(
     //  Next Up → PreviewProgram
     // ────────────────────────────────────────────────────────────────
 
-    fun buildNextUpProgram(
+    suspend fun buildNextUpProgram(
         channelId: Long,
         nextUp: NextUpInfo
-    ): PreviewProgram {
+    ): PreviewProgram = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val builder = PreviewProgram.Builder()
             .setChannelId(channelId)
             .setType(TvContractCompat.PreviewPrograms.TYPE_TV_EPISODE)
@@ -256,13 +292,57 @@ class ProgramBuilder @Inject constructor(
             .setEpisodeNumber(nextUp.episode)
             .setInternalProviderId("nu_${nextUp.contentId}_s${nextUp.season}e${nextUp.episode}")
             .setIntentUri(buildNextUpPlayUri(nextUp))
+            .setPosterArtAspectRatio(TvContractCompat.PreviewPrograms.ASPECT_RATIO_16_9)
             .setLive(false)
 
         nextUp.episodeTitle?.let { builder.setEpisodeTitle(it) }
-        nextUp.poster?.let { builder.setPosterArtUri(Uri.parse(it)) }
-        (nextUp.thumbnail ?: nextUp.backdrop)?.let { builder.setThumbnailUri(Uri.parse(it)) }
 
-        return builder.build()
+        val badgeText = when {
+            nextUp.isReleaseAlert && nextUp.isNewSeasonRelease ->
+                context.getString(com.nuvio.tv.R.string.cw_new_season)
+            nextUp.isReleaseAlert ->
+                context.getString(com.nuvio.tv.R.string.cw_new_episode)
+            !nextUp.hasAired -> nextUp.airDateLabel
+                ?.let { context.getString(com.nuvio.tv.R.string.cw_airs_date, it) }
+                ?: context.getString(com.nuvio.tv.R.string.cw_upcoming)
+            else -> context.getString(com.nuvio.tv.R.string.cw_next_up)
+        }
+        val badgeBg = when {
+            nextUp.isNewSeasonRelease -> CW_BADGE_NEW_SEASON_BG
+            nextUp.isReleaseAlert -> CW_BADGE_NEW_EPISODE_BG
+            else -> CW_BADGE_DEFAULT_BG
+        }
+
+        val horizontalArt = nextUp.backdrop ?: nextUp.thumbnail ?: nextUp.poster
+        var finalArtUri: Uri? = null
+        if (horizontalArt != null) {
+            val file = createCwOverlayImage(
+                url = horizontalArt,
+                badgeText = badgeText,
+                badgeBgColor = badgeBg,
+                progressFraction = null,
+                logoUrl = nextUp.logo,
+                cachePrefix = "nextup_${nextUp.contentId}_s${nextUp.season}e${nextUp.episode}"
+            )
+            if (file != null) {
+                finalArtUri = Uri.parse("content://${context.packageName}.tvimages/${file.name}")
+            }
+        }
+        if (finalArtUri == null && horizontalArt != null) {
+            finalArtUri = Uri.parse(horizontalArt)
+        }
+        finalArtUri?.let {
+            builder.setPosterArtUri(it)
+            builder.setThumbnailUri(it)
+        }
+
+        return@withContext builder.build()
+    }
+
+    private companion object {
+        const val CW_BADGE_DEFAULT_BG = 0xCC0D0D0D.toInt()
+        const val CW_BADGE_NEW_EPISODE_BG = 0xFF1D4ED8.toInt()
+        const val CW_BADGE_NEW_SEASON_BG = 0xFFB45309.toInt()
     }
 
     // ────────────────────────────────────────────────────────────────

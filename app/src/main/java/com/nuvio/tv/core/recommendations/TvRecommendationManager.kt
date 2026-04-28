@@ -6,6 +6,7 @@ import android.util.Log
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.domain.repository.WatchProgressRepository
+import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -133,19 +134,28 @@ class TvRecommendationManager @Inject constructor(
      */
     suspend fun updateWatchNext() {
         if (!shouldRun()) return
+        val progress = deduplicateByContent(fetchContinueWatchingSnapshot())
+            .take(RecommendationConstants.MAX_WATCH_NEXT_ITEMS)
+        val cwItems = progress.map { ContinueWatchingItem.InProgress(it) }
+        updateWatchNextFromCwItems(cwItems)
+    }
+
+    /**
+     * Variant called by [HomeViewModel] with the same `ContinueWatchingItem`
+     * list rendered in the in-app Continue Watching row, so the launcher's
+     * Nuvio Play Next channel mirrors both InProgress and NextUp variants
+     * (including release-alert badges).
+     */
+    suspend fun updateWatchNextFromCwItems(items: List<ContinueWatchingItem>) {
+        if (!shouldRun()) return
         mutex.withLock {
             withContext(Dispatchers.IO) {
                 try {
-                    val items = deduplicateByContent(
-                        fetchContinueWatchingSnapshot()
-                    ).take(RecommendationConstants.MAX_WATCH_NEXT_ITEMS)
-
+                    val capped = items.take(RecommendationConstants.MAX_WATCH_NEXT_ITEMS)
                     val nuvioPlayNextEnabled = dataStore.getPlayNextEnabled()
-                    Log.d(TAG, "updateWatchNext nuvioPlayNextEnabled=$nuvioPlayNextEnabled items=${items.size}")
+                    Log.d(TAG, "updateWatchNext nuvioPlayNextEnabled=$nuvioPlayNextEnabled items=${capped.size}")
 
                     if (nuvioPlayNextEnabled) {
-                        // Nuvio Play Next channel takes over: clear the system Watch Next row
-                        // so the launcher only shows our dedicated row and there is no duplication.
                         programBuilder.clearAllWatchNextPrograms()
 
                         val playNextChannelId = channelManager.getOrCreateChannel(
@@ -156,21 +166,26 @@ class TvRecommendationManager @Inject constructor(
                         if (playNextChannelId != null) {
                             channelManager.clearProgramsForChannel(playNextChannelId)
                             val previewPrograms = kotlinx.coroutines.coroutineScope {
-                                items.map { progress ->
-                                    async { programBuilder.buildContinueWatchingProgram(playNextChannelId, progress) }
+                                capped.map { item ->
+                                    async {
+                                        when (item) {
+                                            is ContinueWatchingItem.InProgress ->
+                                                programBuilder.buildContinueWatchingProgram(playNextChannelId, item.progress)
+                                            is ContinueWatchingItem.NextUp ->
+                                                programBuilder.buildNextUpProgram(playNextChannelId, item.info)
+                                        }
+                                    }
                                 }.map { it.await() }
                             }
                             channelManager.insertPrograms(previewPrograms)
                         }
                     } else {
-                        // Fall back to the system Watch Next row and fully remove our custom channel
-                        // (deleting—not just clearing—so the launcher doesn't display an empty row).
                         channelManager.deleteChannel("nuvio_play_next")
 
                         programBuilder.clearAllWatchNextPrograms()
-                        for (progress in items) {
-                            val program = programBuilder.buildWatchNextProgram(progress)
-                            val internalId = "wn_${progress.contentId}"
+                        capped.filterIsInstance<ContinueWatchingItem.InProgress>().forEach { item ->
+                            val program = programBuilder.buildWatchNextProgram(item.progress)
+                            val internalId = "wn_${item.progress.contentId}"
                             programBuilder.upsertWatchNextProgram(program, internalId)
                         }
                     }
