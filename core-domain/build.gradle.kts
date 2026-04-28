@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
 }
 
@@ -17,5 +18,6 @@ kotlin {
 dependencies {
     api(libs.coroutines.core)
     api(libs.moshi)
+    api(libs.kotlinx.serialization.json)
     ksp(libs.moshi.codegen)
 }

@@ -1,6 +1,6 @@
 package com.omnio.tv.data.repository
 
-import com.omnio.tv.core.auth.AuthManager
+import com.omnio.tv.domain.auth.AuthManager
 import com.omnio.tv.domain.result.NetworkResult
 import com.omnio.tv.core.sync.WatchProgressSyncService
 import com.omnio.tv.core.sync.WatchedItemsSyncService

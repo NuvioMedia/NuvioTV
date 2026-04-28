@@ -11,7 +11,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import com.omnio.tv.core.auth.AuthManager
+import com.omnio.tv.domain.auth.AuthManager
 import com.omnio.tv.core.profile.ProfileManager
 import com.omnio.tv.data.local.ProfileDataStoreFactory
 import com.omnio.tv.data.remote.supabase.SupabaseProfileSettingsBlob

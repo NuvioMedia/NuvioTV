@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.omnio.tv.R
-import com.omnio.tv.core.auth.AuthManager
+import com.omnio.tv.domain.auth.AuthManager
 import com.omnio.tv.data.local.DebugSettingsDataStore
 import com.omnio.tv.data.local.LibraryPreferences
 import com.omnio.tv.domain.model.PosterShape

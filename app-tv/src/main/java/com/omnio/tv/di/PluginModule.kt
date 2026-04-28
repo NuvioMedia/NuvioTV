@@ -1,6 +1,6 @@
 package com.omnio.tv.di
 
-import com.omnio.tv.core.auth.AuthManager
+import com.omnio.tv.domain.auth.AuthManager
 import com.omnio.tv.core.plugin.PluginManager
 import com.omnio.tv.core.plugin.PluginRuntime
 import com.omnio.tv.core.sync.PluginSyncService

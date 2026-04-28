@@ -1,7 +1,7 @@
 package com.omnio.tv.data.repository
 
 import android.util.Log
-import com.omnio.tv.core.auth.AuthManager
+import com.omnio.tv.domain.auth.AuthManager
 import com.omnio.tv.data.remote.supabase.SupabaseClaimSyncResult
 import com.omnio.tv.data.remote.supabase.SupabaseLinkedDevice
 import com.omnio.tv.data.remote.supabase.SyncCodeResult

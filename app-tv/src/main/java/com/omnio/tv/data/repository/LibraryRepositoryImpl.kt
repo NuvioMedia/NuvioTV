@@ -1,6 +1,6 @@
 package com.omnio.tv.data.repository
 
-import com.omnio.tv.core.auth.AuthManager
+import com.omnio.tv.domain.auth.AuthManager
 import com.omnio.tv.core.sync.LibrarySyncService
 import com.omnio.tv.data.local.LibraryPreferences
 import com.omnio.tv.data.local.TraktAuthDataStore

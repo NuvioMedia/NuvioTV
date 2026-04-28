@@ -2,7 +2,7 @@ package com.omnio.tv.ui.screens.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.omnio.tv.core.auth.AuthManager
+import com.omnio.tv.domain.auth.AuthManager
 import com.omnio.tv.data.local.LayoutPreferenceDataStore
 import com.omnio.tv.data.local.LibraryPreferences
 import com.omnio.tv.data.repository.TraktLibraryService

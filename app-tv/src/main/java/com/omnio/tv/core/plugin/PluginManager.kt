@@ -2,6 +2,7 @@ package com.omnio.tv.core.plugin
 
 import android.util.Log
 import com.omnio.tv.data.local.PluginDataStore
+import com.omnio.tv.domain.auth.AuthManager
 import com.omnio.tv.domain.model.LocalScraperResult
 import com.omnio.tv.domain.model.PluginManifest
 import com.omnio.tv.domain.model.PluginRepository
@@ -43,7 +44,7 @@ class PluginManager @Inject constructor(
     private val dataStore: PluginDataStore,
     private val runtime: PluginRuntime,
     private val pluginSyncService: com.omnio.tv.core.sync.PluginSyncService,
-    private val authManager: com.omnio.tv.core.auth.AuthManager
+    private val authManager: AuthManager
 ) {
     private val moshi = Moshi.Builder()
         .addLast(KotlinJsonAdapterFactory())

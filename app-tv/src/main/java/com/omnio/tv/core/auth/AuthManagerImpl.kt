@@ -3,10 +3,11 @@ package com.omnio.tv.core.auth
 import android.util.Log
 import com.omnio.tv.BuildConfig
 import com.omnio.tv.data.local.AuthSessionNoticeDataStore
-import com.omnio.tv.data.remote.supabase.TvLoginExchangeResult
-import com.omnio.tv.data.remote.supabase.TvLoginPollResult
-import com.omnio.tv.data.remote.supabase.TvLoginStartResult
+import com.omnio.tv.domain.auth.AuthManager
 import com.omnio.tv.domain.model.AuthState
+import com.omnio.tv.domain.model.auth.TvLoginExchangeResult
+import com.omnio.tv.domain.model.auth.TvLoginPollResult
+import com.omnio.tv.domain.model.auth.TvLoginStartResult
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
@@ -32,17 +33,17 @@ import javax.inject.Singleton
 private const val TAG = "AuthManager"
 
 @Singleton
-class AuthManager @Inject constructor(
+class AuthManagerImpl @Inject constructor(
     private val auth: Auth,
     private val postgrest: Postgrest,
     private val httpClient: OkHttpClient,
     private val authSessionNoticeDataStore: AuthSessionNoticeDataStore
-) {
+) : AuthManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val json = Json { ignoreUnknownKeys = true }
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
-    val authState: StateFlow<AuthState> = _authState.asStateFlow()
+    override val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
     private var cachedEffectiveUserId: String? = null
     private var cachedEffectiveUserSourceUserId: String? = null
@@ -101,10 +102,10 @@ class AuthManager @Inject constructor(
         }
     }
 
-    val isAuthenticated: Boolean
+    override val isAuthenticated: Boolean
         get() = _authState.value is AuthState.FullAccount
 
-    val currentUserId: String?
+    override val currentUserId: String?
         get() = when (val state = _authState.value) {
             is AuthState.FullAccount -> state.userId
             else -> null
@@ -115,7 +116,7 @@ class AuthManager @Inject constructor(
      * For sync-linked devices, this returns the sync owner's user ID.
      * For direct users, returns their own user ID.
      */
-    suspend fun getEffectiveUserId(fallbackToOwnIdOnFailure: Boolean = true): String? {
+    override suspend fun getEffectiveUserId(fallbackToOwnIdOnFailure: Boolean): String? {
         val userId = currentUserId ?: return null
         if (cachedEffectiveUserSourceUserId != userId) {
             cachedEffectiveUserId = null
@@ -158,7 +159,7 @@ class AuthManager @Inject constructor(
         }
     }
 
-    suspend fun signUpWithEmail(email: String, password: String): Result<Unit> {
+    override suspend fun signUpWithEmail(email: String, password: String): Result<Unit> {
         return try {
             auth.signUpWith(Email) {
                 this.email = email
@@ -171,7 +172,7 @@ class AuthManager @Inject constructor(
         }
     }
 
-    suspend fun signInWithEmail(email: String, password: String): Result<Unit> {
+    override suspend fun signInWithEmail(email: String, password: String): Result<Unit> {
         return try {
             auth.signInWith(Email) {
                 this.email = email
@@ -189,7 +190,7 @@ class AuthManager @Inject constructor(
      * This creates/reuses an anonymous session only for the QR flow while
      * keeping app-level auth state exposed as SignedOut until a full account exists.
      */
-    suspend fun ensureQrSessionAuthenticated(): Result<Unit> {
+    override suspend fun ensureQrSessionAuthenticated(): Result<Unit> {
         val user = auth.currentUserOrNull()
         val hasToken = auth.currentAccessTokenOrNull() != null
 
@@ -206,7 +207,7 @@ class AuthManager @Inject constructor(
         }
     }
 
-    suspend fun signOut(explicit: Boolean = true) {
+    override suspend fun signOut(explicit: Boolean) {
         if (explicit) {
             authSessionNoticeDataStore.markOmnioExplicitLogout()
         } else {
@@ -221,12 +222,12 @@ class AuthManager @Inject constructor(
         cachedEffectiveUserSourceUserId = null
     }
 
-    fun clearEffectiveUserIdCache() {
+    override fun clearEffectiveUserIdCache() {
         cachedEffectiveUserId = null
         cachedEffectiveUserSourceUserId = null
     }
 
-    suspend fun refreshSessionIfJwtExpired(error: Throwable): Boolean {
+    override suspend fun refreshSessionIfJwtExpired(error: Throwable): Boolean {
         if (!error.isJwtExpiredError()) return false
         val hasRefreshToken = auth.currentSessionOrNull()?.refreshToken?.isNotBlank() == true
         if (!hasRefreshToken) {
@@ -243,7 +244,7 @@ class AuthManager @Inject constructor(
         }
     }
 
-    suspend fun startTvLoginSession(deviceNonce: String, deviceName: String?, redirectBaseUrl: String): Result<TvLoginStartResult> {
+    override suspend fun startTvLoginSession(deviceNonce: String, deviceName: String?, redirectBaseUrl: String): Result<TvLoginStartResult> {
         return try {
             Result.success(
                 startTvLoginSessionRpc(
@@ -295,7 +296,7 @@ class AuthManager @Inject constructor(
             ?: throw Exception("Empty response from start_tv_login_session")
     }
 
-    suspend fun pollTvLoginSession(code: String, deviceNonce: String): Result<TvLoginPollResult> {
+    override suspend fun pollTvLoginSession(code: String, deviceNonce: String): Result<TvLoginPollResult> {
         return try {
             val params = buildJsonObject {
                 put("p_code", code)
@@ -311,7 +312,7 @@ class AuthManager @Inject constructor(
         }
     }
 
-    suspend fun exchangeTvLoginSession(code: String, deviceNonce: String): Result<Unit> {
+    override suspend fun exchangeTvLoginSession(code: String, deviceNonce: String): Result<Unit> {
         return try {
             val payload = buildJsonObject {
                 put("code", code)
