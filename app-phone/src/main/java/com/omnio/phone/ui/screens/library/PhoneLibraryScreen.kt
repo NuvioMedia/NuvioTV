@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,13 +13,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -38,10 +50,14 @@ fun PhoneLibraryScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        LibraryTabRow(
+        LibraryControlsRow(
             tabs = state.tabs,
             selected = state.selectedTab,
-            onSelect = viewModel::onSelectTab
+            onSelect = viewModel::onSelectTab,
+            sortOptions = state.availableSortOptions,
+            selectedSort = state.selectedSortOption,
+            onSelectSort = viewModel::onSelectSortOption,
+            sortEnabled = state.totalItemCount > 0
         )
         Box(modifier = Modifier.fillMaxSize()) {
             when {
@@ -55,13 +71,43 @@ fun PhoneLibraryScreen(
 }
 
 @Composable
+private fun LibraryControlsRow(
+    tabs: List<PhoneLibraryTab>,
+    selected: PhoneLibraryTabKey,
+    onSelect: (PhoneLibraryTabKey) -> Unit,
+    sortOptions: List<PhoneLibrarySortOption>,
+    selectedSort: PhoneLibrarySortOption,
+    onSelectSort: (PhoneLibrarySortOption) -> Unit,
+    sortEnabled: Boolean
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        LibraryTabRow(
+            tabs = tabs,
+            selected = selected,
+            onSelect = onSelect,
+            modifier = Modifier.weight(1f)
+        )
+        SortMenu(
+            options = sortOptions,
+            selected = selectedSort,
+            onSelect = onSelectSort,
+            enabled = sortEnabled
+        )
+    }
+}
+
+@Composable
 private fun LibraryTabRow(
     tabs: List<PhoneLibraryTab>,
     selected: PhoneLibraryTabKey,
-    onSelect: (PhoneLibraryTabKey) -> Unit
+    onSelect: (PhoneLibraryTabKey) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val selectedIndex = tabs.indexOfFirst { it.key == selected }.coerceAtLeast(0)
-    SecondaryTabRow(selectedTabIndex = selectedIndex) {
+    SecondaryTabRow(selectedTabIndex = selectedIndex, modifier = modifier) {
         tabs.forEach { tab ->
             Tab(
                 selected = tab.key == selected,
@@ -73,6 +119,57 @@ private fun LibraryTabRow(
                     )
                 }
             )
+        }
+    }
+}
+
+@Composable
+private fun SortMenu(
+    options: List<PhoneLibrarySortOption>,
+    selected: PhoneLibrarySortOption,
+    onSelect: (PhoneLibrarySortOption) -> Unit,
+    enabled: Boolean
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(
+            onClick = { expanded = true },
+            enabled = enabled && options.isNotEmpty()
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Sort,
+                contentDescription = stringResource(R.string.cd_library_sort)
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            Text(
+                text = stringResource(R.string.library_sort_title),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            HorizontalDivider()
+            options.forEach { option ->
+                val isSelected = option == selected
+                DropdownMenuItem(
+                    text = { Text(stringResource(option.labelResId)) },
+                    onClick = {
+                        expanded = false
+                        onSelect(option)
+                    },
+                    trailingIcon = {
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null
+                            )
+                        }
+                    }
+                )
+            }
         }
     }
 }
