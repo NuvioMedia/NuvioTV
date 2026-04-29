@@ -50,8 +50,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import com.omnio.tv.domain.model.Stream
-import com.omnio.tv.ui.components.SourceChipItem
-import com.omnio.tv.ui.components.SourceChipStatus
+import com.omnio.tv.core.player.SourceChipItem
+import com.omnio.tv.core.player.SourceChipStatus
 import com.omnio.tv.ui.components.SourceStatusFilterChip
 import com.omnio.tv.core.uishared.OmnioColors
 import com.omnio.tv.ui.theme.OmnioTheme

@@ -777,17 +777,8 @@
     <string name="stream_player_external">Player Externo</string>
 
     <!-- PlayerScreen -->
-    <string name="player_no_external_player">Nenhum player externo encontrado</string>
     
     <!-- ParentalGuideOverlay -->
-    <string name="parental_nudity">Nudez</string>
-    <string name="parental_violence">Violência</string>
-    <string name="parental_profanity">Linguagem Imprópria</string>
-    <string name="parental_alcohol">Drogas/Álcool</string>
-    <string name="parental_frightening">Conteúdo Assustador</string>
-    <string name="parental_severity_severe">Intenso</string>
-    <string name="parental_severity_moderate">Moderado</string>
-    <string name="parental_severity_mild">Leve</string>
     <string name="player_ends_at">Termina às %1$s</string>
     <string name="player_via"> %1$s</string>
     <string name="player_subtitle_delay">Atraso da legenda</string>
@@ -816,8 +807,6 @@
     <string name="stream_info_language">Idioma</string>
     <string name="stream_info_name">Nome</string>
     <string name="stream_info_source">Fonte</string>
-    <string name="stream_info_subtitle_source_addon">Extensão</string>
-    <string name="stream_info_subtitle_source_embedded">Embutida</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Fontes</string>
@@ -835,14 +824,6 @@
     <string name="episodes_panel_title">Episódios</string>
     <string name="episodes_panel_streams_title">Opções de Fontes</string>
     <string name="player_speed_normal">Normal</string>
-    <string name="player_aspect_fit">Ajustar (Original)</string>
-    <string name="player_aspect_stretch">Esticar</string>
-    <string name="player_aspect_fit_width">Ajustar à largura</string>
-    <string name="player_aspect_fit_height">Ajustar à altura</string>
-    <string name="player_aspect_crop">Preencher Tela</string>
-    <string name="player_aspect_tunneling_unavailable">Indisponível durante reprodução em túnel</string>
-    <string name="player_aspect_mode_slight_zoom">Zoom leve</string>
-    <string name="player_aspect_mode_cinema_zoom">Zoom cinema</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Áudio</string>
@@ -906,7 +887,6 @@
     <string name="next_episode_playing_via">Reproduzindo: %1$s em %2$ds</string>
     <string name="next_episode_play">Reproduzir</string>
     <string name="next_episode_unaired">Ainda não estreou</string>
-    <string name="next_episode_not_aired_yet">O próximo episódio ainda não foi exibido</string>
     <string name="skip_intro">Pular Abertura</string>
     <string name="skip_ending">Pular Encerramento</string>
     <string name="skip_recap">Pular Resumo</string>
@@ -1237,7 +1217,6 @@
     <string name="home_error_no_catalog_addons">Nenhum addon de catálogo instalado</string>
 
     <!-- Player errors -->
-    <string name="player_error_no_stream_url">Nenhuma URL de stream fornecida</string>
 
     <!-- Playback subtitle settings -->
     <string name="sub_mode_overlay_canvas_sub">Suporte HDR com renderização em canvas. Pode bloquear a interface.</string>

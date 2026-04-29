@@ -776,17 +776,8 @@
     <string name="stream_player_external">Extern</string>
 
     <!-- PlayerScreen -->
-    <string name="player_no_external_player">Kein externer Player gefunden</string>
 
     <!-- ParentalGuideOverlay -->
-    <string name="parental_nudity">Nacktheit</string>
-    <string name="parental_violence">Gewalt</string>
-    <string name="parental_profanity">Obszöne Sprache</string>
-    <string name="parental_alcohol">Alkohol/Drogen</string>
-    <string name="parental_frightening">Beängstigend</string>
-    <string name="parental_severity_severe">Schwerwiegend</string>
-    <string name="parental_severity_moderate">Mäßig</string>
-    <string name="parental_severity_mild">Mild</string>
     <string name="player_ends_at">Endet um %1$s</string>
     <string name="player_via">über %1$s</string>
     <string name="player_subtitle_delay">Untertitelverzögerung</string>
@@ -815,8 +806,6 @@
     <string name="stream_info_language">Sprache</string>
     <string name="stream_info_name">Name</string>
     <string name="stream_info_source">Quelle</string>
-    <string name="stream_info_subtitle_source_addon">Addon</string>
-    <string name="stream_info_subtitle_source_embedded">Eingebettet</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Quellen</string>
@@ -834,11 +823,6 @@
     <string name="episodes_panel_title">Episoden</string>
     <string name="episodes_panel_streams_title">Streams</string>
     <string name="player_speed_normal">Normal</string>
-    <string name="player_aspect_fit">Anpassen (Original)</string>
-    <string name="player_aspect_stretch">Strecken</string>
-    <string name="player_aspect_fit_width">Breite anpassen</string>
-    <string name="player_aspect_fit_height">Höhe anpassen</string>
-    <string name="player_aspect_crop">Zuschneiden</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
@@ -902,7 +886,6 @@
     <string name="next_episode_playing_via">Wiedergabe über %1$s in %2$ds</string>
     <string name="next_episode_play">Abspielen</string>
     <string name="next_episode_unaired">Noch nicht ausgestrahlt</string>
-    <string name="next_episode_not_aired_yet">Nächste Folge wurde noch nicht ausgestrahlt</string>
     <string name="skip_intro">Intro überspringen</string>
     <string name="skip_ending">Ende überspringen</string>
     <string name="skip_recap">Zusammenfassung überspringen</string>

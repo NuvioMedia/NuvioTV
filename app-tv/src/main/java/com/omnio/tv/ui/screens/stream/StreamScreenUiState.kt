@@ -2,8 +2,8 @@ package com.omnio.tv.ui.screens.stream
 
 import com.omnio.tv.domain.model.AddonStreams
 import com.omnio.tv.domain.model.Stream
-import com.omnio.tv.ui.components.SourceChipItem
-import com.omnio.tv.ui.components.SourceChipStatus
+import com.omnio.tv.core.player.SourceChipItem
+import com.omnio.tv.core.player.SourceChipStatus
 
 data class StreamScreenUiState(
     val isLoading: Boolean = true,

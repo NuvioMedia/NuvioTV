@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="next_episode_not_aired_yet">Kita serija dar nepasirodyta</string>
+    <string name="parental_alcohol">Alkoholis / Narkotikai</string>
+    <string name="parental_frightening">Baisus / Gąsdinantis</string>
+    <string name="parental_nudity">Nuogumas</string>
+    <string name="parental_profanity">Keiksmažodžiai</string>
+    <string name="parental_severity_mild">Lengvas</string>
+    <string name="parental_severity_moderate">Vidutinis</string>
+    <string name="parental_severity_severe">Griežtas (Severe)</string>
+    <string name="parental_violence">Smurtas</string>
+    <string name="player_aspect_crop">Apkarpyti</string>
+    <string name="player_aspect_fit">Taikyti (Originalus)</string>
+    <string name="player_aspect_fit_height">Taikyti pagal aukštį</string>
+    <string name="player_aspect_fit_width">Taikyti pagal plotį</string>
+    <string name="player_aspect_stretch">Ištęsti (Stretch)</string>
+    <string name="player_no_external_player">Išorinis grotuvas nerastas</string>
+</resources>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="next_episode_not_aired_yet">הפרק הבא טרם שודר</string>
+    <string name="parental_alcohol">אלכוהול/סמים</string>
+    <string name="parental_frightening">מפחיד</string>
+    <string name="parental_nudity">עירום</string>
+    <string name="parental_profanity">גסות רוח</string>
+    <string name="parental_severity_mild">קל</string>
+    <string name="parental_severity_moderate">בינוני</string>
+    <string name="parental_severity_severe">חמור</string>
+    <string name="parental_violence">אלימות</string>
+    <string name="player_aspect_crop">חתוך</string>
+    <string name="player_aspect_fit">התאם (מקורי)</string>
+    <string name="player_aspect_fit_height">התאם לגובה</string>
+    <string name="player_aspect_fit_width">התאם לרוחב</string>
+    <string name="player_aspect_stretch">מתח</string>
+    <string name="player_no_external_player">לא נמצא נגן חיצוני</string>
+</resources>

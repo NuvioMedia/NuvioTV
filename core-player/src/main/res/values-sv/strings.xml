@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="next_episode_not_aired_yet">Nästa avsnitt har inte sänts ännu</string>
+    <string name="parental_alcohol">Alkohol/droger</string>
+    <string name="parental_frightening">Skrämmande</string>
+    <string name="parental_nudity">Nakenhet</string>
+    <string name="parental_profanity">Svordomar</string>
+    <string name="parental_severity_mild">Milt</string>
+    <string name="parental_severity_moderate">Måttligt</string>
+    <string name="parental_severity_severe">Allvarligt</string>
+    <string name="parental_violence">Våld</string>
+    <string name="player_aspect_crop">Beskär</string>
+    <string name="player_aspect_fit">Anpassa (original)</string>
+    <string name="player_aspect_fit_height">Anpassa höjd</string>
+    <string name="player_aspect_fit_width">Anpassa bredd</string>
+    <string name="player_aspect_stretch">Sträck</string>
+    <string name="player_no_external_player">Ingen extern spelare hittades</string>
+    <string name="stream_info_subtitle_source_addon">Tillägg</string>
+    <string name="stream_info_subtitle_source_embedded">Inbäddad</string>
+</resources>

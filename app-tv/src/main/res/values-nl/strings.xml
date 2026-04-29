@@ -603,11 +603,6 @@
 <string name="episodes_panel_title">Afleveringen</string>
 <string name="episodes_panel_streams_title">Streams</string>
 <string name="player_speed_normal">Normaal</string>
-<string name="player_aspect_fit">Passend (Origineel)</string>
-<string name="player_aspect_stretch">Uitrekken</string>
-<string name="player_aspect_fit_width">Passend op breedte</string>
-<string name="player_aspect_fit_height">Passend op hoogte</string>
-<string name="player_aspect_crop">Bijsnijden</string>
 
 <!-- AudioDialog -->
 <string name="audio_dialog_title">Audio</string>

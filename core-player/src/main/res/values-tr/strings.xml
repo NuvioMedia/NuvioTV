@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="next_episode_not_aired_yet">Sonraki bölüm henüz yayınlanmadı</string>
+    <string name="parental_alcohol">Alkol/Uyuşturucu</string>
+    <string name="parental_frightening">Korkutucu</string>
+    <string name="parental_nudity">Çıplaklık</string>
+    <string name="parental_profanity">Küfür</string>
+    <string name="parental_severity_mild">Hafif</string>
+    <string name="parental_severity_moderate">Orta</string>
+    <string name="parental_severity_severe">Şiddetli</string>
+    <string name="parental_violence">Şiddet</string>
+    <string name="player_aspect_crop">Kırp</string>
+    <string name="player_aspect_fit">Sığdır (Orijinal)</string>
+    <string name="player_aspect_fit_height">Yüksekliğe Sığdır</string>
+    <string name="player_aspect_fit_width">Genişliğe Sığdır</string>
+    <string name="player_aspect_mode_cinema_zoom">Sinema Yakınlaştırma</string>
+    <string name="player_aspect_mode_slight_zoom">Hafif Yakınlaştırma</string>
+    <string name="player_aspect_stretch">Genişlet</string>
+    <string name="player_aspect_tunneling_unavailable">Tünellenmiş oynatım sırasında kullanılamaz</string>
+    <string name="player_no_external_player">Harici oynatıcı bulunamadı</string>
+    <string name="stream_info_subtitle_source_addon">Eklenti</string>
+    <string name="stream_info_subtitle_source_embedded">Gömülü</string>
+</resources>

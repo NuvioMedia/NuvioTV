@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import com.omnio.tv.core.uishared.OmnioColors
 import kotlinx.coroutines.delay
+import com.omnio.tv.core.player.ParentalWarning
 
 private val ROW_HEIGHT = 18.dp
 private val ROW_GAP = 2.dp

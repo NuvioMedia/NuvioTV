@@ -678,17 +678,8 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="stream_player_external">Išorinis</string>
 
     <!-- PlayerScreen -->
-    <string name="player_no_external_player">Išorinis grotuvas nerastas</string>
 
     <!-- ParentalGuideOverlay -->
-    <string name="parental_nudity">Nuogumas</string>
-    <string name="parental_violence">Smurtas</string>
-    <string name="parental_profanity">Keiksmažodžiai</string>
-    <string name="parental_alcohol">Alkoholis / Narkotikai</string>
-    <string name="parental_frightening">Baisus / Gąsdinantis</string>
-    <string name="parental_severity_severe">Griežtas (Severe)</string>
-    <string name="parental_severity_moderate">Vidutinis</string>
-    <string name="parental_severity_mild">Lengvas</string>
     <string name="player_ends_at">Baigiasi %1$s</string>
     <string name="player_via">per %1$s</string>
     <string name="player_subtitle_delay">Subtitrų delsa</string>
@@ -716,11 +707,6 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="episodes_panel_title">Serijos</string>
     <string name="episodes_panel_streams_title">Srautai</string>
     <string name="player_speed_normal">Normalus</string>
-    <string name="player_aspect_fit">Taikyti (Originalus)</string>
-    <string name="player_aspect_stretch">Ištęsti (Stretch)</string>
-    <string name="player_aspect_fit_width">Taikyti pagal plotį</string>
-    <string name="player_aspect_fit_height">Taikyti pagal aukštį</string>
-    <string name="player_aspect_crop">Apkarpyti</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Garsas</string>
@@ -775,7 +761,6 @@ Klaida: Bandomoji simuliuojama klaida — tai nėra tikras gedimas. Šaltinis gr
     <string name="next_episode_playing_via">Bus atkurta per %1$s po %2$ds</string>
     <string name="next_episode_play">Leisti</string>
     <string name="next_episode_unaired">Neišleista</string>
-    <string name="next_episode_not_aired_yet">Kita serija dar nepasirodyta</string>
     <string name="skip_intro">Praleisti Intro</string>
     <string name="skip_ending">Praleisti pabaigą</string>
     <string name="skip_recap">Praleisti santrauką</string>

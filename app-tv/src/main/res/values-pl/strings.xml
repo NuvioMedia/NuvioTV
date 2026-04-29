@@ -621,28 +621,12 @@
 
     <!-- PlayerScreen -->
     <string name="player_ends_at">Koniec o: %1$s</string>
-    <string name="player_no_external_player">Nie znaleziono zewnętrznego odtwarzacza</string>
 
     <!-- ParentalGuideOverlay -->
-    <string name="parental_nudity">Nagość</string>
-    <string name="parental_violence">Przemoc</string>
-    <string name="parental_profanity">Wulgaryzmy</string>
-    <string name="parental_alcohol">Alkohol/Narkotyki</string>
-    <string name="parental_frightening">Przerażające sceny</string>
-    <string name="parental_severity_severe">Silne</string>
-    <string name="parental_severity_moderate">Umiarkowane</string>
-    <string name="parental_severity_mild">Łagodne</string>
     <string name="player_via">przez %1$s</string>
     <string name="player_subtitle_delay">Opóźnienie napisów</string>
     <string name="player_loading_preparing">Przygotowywanie strumienia…</string>
-    <string name="player_loading_detecting_format">Wykrywanie formatu strumienia…</string>
     <string name="player_loading_subtitles">Pobieranie napisów…</string>
-    <string name="player_loading_subtitles_from">Pobieranie napisów z %1$d dodatków…</string>
-    <string name="player_loading_subtitles_progress">Pobieranie napisów… (%1$d / %2$d)</string>
-    <string name="player_loading_subtitles_addon">Napisy: %1$s (%2$d / %3$d)</string>
-    <string name="player_loading_building">Budowanie odtwarzacza…</string>
-    <string name="player_loading_starting">Uruchamianie strumienia…</string>
-    <string name="player_loading_buffering">Buforowanie…</string>
     <string name="player_error_title">Błąd odtwarzania</string>
     <string name="player_go_back">Wróć</string>
     <string name="player_speed_title">Prędkość odtwarzania</string>
@@ -668,8 +652,6 @@
     <string name="stream_info_language">Język</string>
     <string name="stream_info_name">Nazwa</string>
     <string name="stream_info_source">Źródło</string>
-    <string name="stream_info_subtitle_source_addon">Dodatek</string>
-    <string name="stream_info_subtitle_source_embedded">Wbudowane</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Źródła</string>
@@ -687,11 +669,6 @@
     <string name="episodes_panel_title">Odcinki</string>
     <string name="episodes_panel_streams_title">Strumienie</string>
     <string name="player_speed_normal">Normalna</string>
-    <string name="player_aspect_fit">Dopasuj (oryginalny)</string>
-    <string name="player_aspect_stretch">Rozciągnij</string>
-    <string name="player_aspect_fit_width">Dopasuj szerokość</string>
-    <string name="player_aspect_fit_height">Dopasuj wysokość</string>
-    <string name="player_aspect_crop">Przytnij</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Dźwięk</string>
@@ -746,7 +723,6 @@
     <string name="next_episode_playing_via">Odtwarzanie przez %1$s za %2$ds</string>
     <string name="next_episode_play">Odtwórz</string>
     <string name="next_episode_unaired">Niewyemitowany</string>
-    <string name="next_episode_not_aired_yet">Następny odcinek nie został jeszcze wyemitowany</string>
     <string name="skip_intro">Pomiń czołówkę</string>
     <string name="skip_ending">Pomiń zakończenie</string>
     <string name="skip_recap">Pomiń podsumowanie</string>
@@ -1262,10 +1238,6 @@
     <string name="library_sync_btn">Synchronizuj</string>
     <string name="library_syncing_btn">Synchronizowanie…</string>
 
-    <string name="player_aspect_tunneling_unavailable">Niedostępne podczas tunelowanego odtwarzania</string>
-    <string name="player_aspect_mode_slight_zoom">Lekkie powiększenie</string>
-    <string name="player_aspect_mode_cinema_zoom">Powiększenie kinowe</string>
-    <string name="player_error_no_stream_url">Nie podano adresu URL strumienia</string>
 
     <string name="plugin_error_invalid_url">Podaj prawidłowy adres URL</string>
     <string name="plugin_error_add_repo">Nie udało się dodać repozytorium: %1$s</string>
@@ -1340,14 +1312,11 @@
     <string name="web_status_msg_connection_lost">Serwer TV jest nieosiągalny. Zmiany mogły zostać zastosowane.</string>
 
     <string name="playback_internal_player_engine">Silnik wewnętrzny</string>
-    <string name="playback_engine_exoplayer">ExoPlayer</string>
-    <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Automatyczne przełączanie silnika przy błędzie</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">Jeśli uruchomienie strumienia się nie powiedzie, automatycznie przełącz między ExoPlayer a libmpv.</string>
     <string name="playback_engine_exoplayer_desc">Najlepsza kompatybilność z funkcjami Omnio.</string>
     <string name="playback_engine_mvplayer_desc">Używa libmpv z kontrolkami Omnio OSD. Eksperymentalny.</string>
     <string name="player_engine_switching_title">Przełączanie silnika odtwarzacza</string>
-    <string name="player_engine_switching_message">Uruchomienie nie powiodło się. Przełączanie na %1$s…</string>
     <string name="search_recent_title">Ostatnie wyszukiwania</string>
     <string name="search_recent_clear">Wyczyść historię</string>
 </resources>

@@ -36,6 +36,7 @@ import com.omnio.tv.core.uishared.OmnioColors
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import com.omnio.tv.core.player.DisplayModeInfo
 
 private val ROW_HEIGHT = 18.dp
 private val ROW_GAP = 2.dp

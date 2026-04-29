@@ -777,17 +777,8 @@
     <string name="stream_player_external">Külső</string>
 
     <!-- PlayerScreen -->
-    <string name="player_no_external_player">Nem található külső lejátszó</string>
 
     <!-- ParentalGuideOverlay -->
-    <string name="parental_nudity">Meztelenség</string>
-    <string name="parental_violence">Erőszak</string>
-    <string name="parental_profanity">Trágár nyelvezet</string>
-    <string name="parental_alcohol">Alkohol/Drogok</string>
-    <string name="parental_frightening">Félelemkeltő elemek</string>
-    <string name="parental_severity_severe">Súlyos</string>
-    <string name="parental_severity_moderate">Mérsékelt</string>
-    <string name="parental_severity_mild">Enyhe</string>
     <string name="player_ends_at">Befejezés: %1$s</string>
     <string name="player_via">forrás: %1$s</string>
     <string name="player_subtitle_delay">Felirat késleltetése</string>
@@ -816,8 +807,6 @@
     <string name="stream_info_language">Nyelv</string>
     <string name="stream_info_name">Név</string>
     <string name="stream_info_source">Forrás</string>
-    <string name="stream_info_subtitle_source_addon">Bővítmény</string>
-    <string name="stream_info_subtitle_source_embedded">Beépített</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Források</string>
@@ -835,14 +824,6 @@
     <string name="episodes_panel_title">Epizódok</string>
     <string name="episodes_panel_streams_title">Források</string>
     <string name="player_speed_normal">Normál</string>
-    <string name="player_aspect_fit">Illesztés (Eredeti)</string>
-    <string name="player_aspect_stretch">Nyújtás</string>
-    <string name="player_aspect_fit_width">Szélességhez igazítás</string>
-    <string name="player_aspect_fit_height">Magassághoz igazítás</string>
-    <string name="player_aspect_crop">Vágás</string>
-    <string name="player_aspect_tunneling_unavailable">Alagutazott (tunneled) lejátszás közben nem elérhető</string>
-    <string name="player_aspect_mode_slight_zoom">Enyhe zoom</string>
-    <string name="player_aspect_mode_cinema_zoom">Mozi zoom</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Hang</string>
@@ -906,7 +887,6 @@
     <string name="next_episode_playing_via">Lejátszás (%1$s) %2$d mp múlva</string>
     <string name="next_episode_play">Lejátszás</string>
     <string name="next_episode_unaired">Még nem vetített</string>
-    <string name="next_episode_not_aired_yet">A következő epizód még nem került vetítésre</string>
     <string name="skip_intro">Intro átugrása</string>
     <string name="skip_ending">Stáblista átugrása</string>
     <string name="skip_recap">Összefoglaló átugrása</string>
@@ -1237,7 +1217,6 @@
     <string name="home_error_no_catalog_addons">Nincsenek telepített katalógusbővítmények</string>
 
     <!-- Player errors -->
-    <string name="player_error_no_stream_url">Nincs megadva stream URL</string>
 
     <!-- Playback subtitle settings -->
     <string name="sub_mode_overlay_canvas_sub">HDR támogatás canvas megjelenítéssel. Blokkolhatja a felhasználói felület szálát.</string>

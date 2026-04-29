@@ -935,16 +935,7 @@
     <string name="stream_player_external">Zunanji</string>
 
     <!-- PlayerScreen -->
-    <string name="player_no_external_player">Zunanjega predvajalnika ni bilo mogoče najti</string>
 	<!-- ParentalGuideOverlay -->													   
-	<string name="parental_nudity">Gola vsebina</string>
-    <string name="parental_violence">Nasilje</string>
-    <string name="parental_profanity">Vulgarno izražanje</string>
-    <string name="parental_alcohol">Alkohol/Droge</string>
-    <string name="parental_frightening">Strašljiva vsebina</string>
-    <string name="parental_severity_severe">Izrazito</string>
-    <string name="parental_severity_moderate">Zmerno</string>
-    <string name="parental_severity_mild">Blago</string>
     <string name="player_ends_at">Konča se ob %1$s</string>
     <string name="player_via">prek %1$s</string>
     <string name="player_subtitle_delay">Zakasnitev podnapisov</string>
@@ -972,8 +963,8 @@
     <string name="stream_info_language">Jezik</string>
     <string name="stream_info_name">Ime</string>
     <string name="stream_info_source">Vir</string>
-    <string name="stream_info_subtitle_source_addon">Dodatek</string>
-    <string name="stream_info_subtitle_source_embedded">Vdelano</string>						  
+    
+    						  
 	<!-- StreamSourcesSidePanel -->
     <string name="sources_title">Viri</string>
     <string name="sources_reload">Osveži</string>
@@ -988,12 +979,7 @@
     <string name="episodes_panel_no_episodes">Epizode niso na voljo</string>
 	<string name="episodes_panel_title">Epizode</string>
     <string name="episodes_panel_streams_title">Viri (Streami)</string>
-    <string name="player_speed_normal">Običajno</string>
-    <string name="player_aspect_fit">Prilagodi (Izvirno)</string>
-    <string name="player_aspect_stretch">Raztegni</string>
-    <string name="player_aspect_fit_width">Prilagodi širini</string>
-    <string name="player_aspect_fit_height">Prilagodi višini</string>
-    <string name="player_aspect_crop">Obreži</string>													 
+    <string name="player_speed_normal">Običajno</string>													 
 	
 	<!-- AudioDialog -->
     <string name="audio_dialog_title">Zvok</string>
@@ -1057,7 +1043,6 @@
     <string name="next_episode_playing_via">Predvajanje prek %1$s čez %2$ds</string>
     <string name="next_episode_play">Predvajaj</string>
     <string name="next_episode_unaired">Še ni izdano</string>
-    <string name="next_episode_not_aired_yet">Naslednja epizoda še ni bila predvajana</string>
     <string name="skip_intro">Preskoči uvod</string>
     <string name="skip_ending">Preskoči konec</string>
     <string name="skip_recap">Preskoči obnovo</string>

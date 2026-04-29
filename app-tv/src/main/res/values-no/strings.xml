@@ -772,17 +772,8 @@
     <string name="stream_player_external">Ekstern</string>
 
     <!-- PlayerScreen -->
-    <string name="player_no_external_player">Ingen ekstern spiller funnet</string>
 
     <!-- ParentalGuideOverlay -->
-    <string name="parental_nudity">Nøthet</string>
-    <string name="parental_violence">Vold</string>
-    <string name="parental_profanity">Banneord</string>
-    <string name="parental_alcohol">Alkohol/narkotika</string>
-    <string name="parental_frightening">Skremmende</string>
-    <string name="parental_severity_severe">Alvorlig</string>
-    <string name="parental_severity_moderate">Moderat</string>
-    <string name="parental_severity_mild">Mild</string>
     <string name="player_ends_at">Slutter klokken %1$s</string>
     <string name="player_via">via %1$s</string>
     <string name="player_subtitle_delay">Undertekst forsinkelse</string>
@@ -810,11 +801,6 @@
     <string name="episodes_panel_title">Episoder</string>
     <string name="episodes_panel_streams_title">Strømmer</string>
     <string name="player_speed_normal">Normal</string>
-    <string name="player_aspect_fit">Tilpass (original)</string>
-    <string name="player_aspect_stretch">Strekk</string>
-    <string name="player_aspect_fit_width">Tilpass bredde</string>
-    <string name="player_aspect_fit_height">Tilpass høyde</string>
-    <string name="player_aspect_crop">Beskjær</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Lyd</string>
@@ -878,7 +864,6 @@
     <string name="next_episode_playing_via">Avspilles via %1$s om %2$ds</string>
     <string name="next_episode_play">Spill av</string>
     <string name="next_episode_unaired">Ikke sendt</string>
-    <string name="next_episode_not_aired_yet">Neste episode har ikke gått på luften ennå</string>
     <string name="skip_intro">Hopp over intro</string>
     <string name="skip_ending">Hopp over ending</string>
     <string name="skip_recap">Hopp over recap</string>

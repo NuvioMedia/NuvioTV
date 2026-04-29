@@ -26,18 +26,9 @@ import androidx.tv.material3.FilterChip
 import androidx.tv.material3.FilterChipDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.omnio.tv.core.player.SourceChipItem
+import com.omnio.tv.core.player.SourceChipStatus
 import com.omnio.tv.core.uishared.OmnioColors
-
-enum class SourceChipStatus {
-    LOADING,
-    SUCCESS,
-    ERROR
-}
-
-data class SourceChipItem(
-    val name: String,
-    val status: SourceChipStatus
-)
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable

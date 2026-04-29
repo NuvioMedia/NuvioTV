@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="next_episode_not_aired_yet">Naslednja epizoda še ni bila predvajana</string>
+    <string name="parental_alcohol">Alkohol/Droge</string>
+    <string name="parental_frightening">Strašljiva vsebina</string>
+    <string name="parental_nudity">Gola vsebina</string>
+    <string name="parental_profanity">Vulgarno izražanje</string>
+    <string name="parental_severity_mild">Blago</string>
+    <string name="parental_severity_moderate">Zmerno</string>
+    <string name="parental_severity_severe">Izrazito</string>
+    <string name="parental_violence">Nasilje</string>
+    <string name="player_aspect_crop">Obreži</string>
+    <string name="player_aspect_fit">Prilagodi (Izvirno)</string>
+    <string name="player_aspect_fit_height">Prilagodi višini</string>
+    <string name="player_aspect_fit_width">Prilagodi širini</string>
+    <string name="player_aspect_stretch">Raztegni</string>
+    <string name="player_no_external_player">Zunanjega predvajalnika ni bilo mogoče najti</string>
+    <string name="stream_info_subtitle_source_addon">Dodatek</string>
+    <string name="stream_info_subtitle_source_embedded">Vdelano</string>
+</resources>

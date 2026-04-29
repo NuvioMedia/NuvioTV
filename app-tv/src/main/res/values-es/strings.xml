@@ -612,11 +612,6 @@
     <string name="episodes_panel_title">Episodios</string>
     <string name="episodes_panel_streams_title">Transmisiones</string>
     <string name="player_speed_normal">Normal</string>
-    <string name="player_aspect_fit">Ajustar (Original)</string>
-    <string name="player_aspect_stretch">Estirar</string>
-    <string name="player_aspect_fit_width">Ajustar ancho</string>
-    <string name="player_aspect_fit_height">Ajustar alto</string>
-    <string name="player_aspect_crop">Recortar</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
@@ -974,15 +969,6 @@
     <string name="addon_error_invalid_url">Introduce una URL de complemento válida</string>
     <string name="addon_error_invalid_scheme">La URL del complemento debe comenzar con http o https</string>
     <string name="addon_install_success">Instalado %1$s</string>
-    <string name="player_no_external_player">No se encontró reproductor externo</string>
-    <string name="parental_nudity">Desnudez</string>
-    <string name="parental_violence">Violencia</string>
-    <string name="parental_profanity">Lenguaje soez</string>
-    <string name="parental_alcohol">Alcohol/Drogas</string>
-    <string name="parental_frightening">Aterrador</string>
-    <string name="parental_severity_severe">Severo</string>
-    <string name="parental_severity_moderate">Moderado</string>
-    <string name="parental_severity_mild">Leve</string>
     <string name="stream_info_section_source">FUENTE</string>
     <string name="stream_info_section_file">ARCHIVO</string>
     <string name="stream_info_section_video">VÍDEO</string>
@@ -999,8 +985,6 @@
     <string name="stream_info_language">Idioma</string>
     <string name="stream_info_name">Nombre</string>
     <string name="stream_info_source">Fuente</string>
-    <string name="stream_info_subtitle_source_addon">Complemento</string>
-    <string name="stream_info_subtitle_source_embedded">Integrado</string>
     <string name="audio_dialog_tab_tracks">Audio</string>
     <string name="audio_dialog_tab_mix">Mezcla</string>
     <string name="audio_mix_label">Amplificación (PCM)</string>
@@ -1011,7 +995,6 @@
     <string name="audio_mix_range_saved">Rango: %1$d dB a %2$d dB (guardado)</string>
     <string name="audio_mix_unavailable">La amplificación no está disponible en este dispositivo</string>
     <string name="subtitle_style_customize">Personalizar</string>
-    <string name="next_episode_not_aired_yet">El siguiente episodio aún no se ha estrenado</string>
     <string name="search_voice_no_speech">Sin voz detectada. Intenta de nuevo.</string>
     <string name="search_voice_mic_permission">Se requiere permiso de micrófono para búsqueda por voz.</string>
     <string name="search_voice_failed">Falló el reconocimiento de voz. Intenta de nuevo.</string>

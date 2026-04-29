@@ -53,6 +53,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
 import com.omnio.tv.R
 import android.view.KeyEvent
+import com.omnio.tv.core.player.NextEpisodeInfo
 
 @Composable
 fun NextEpisodeCardOverlay(

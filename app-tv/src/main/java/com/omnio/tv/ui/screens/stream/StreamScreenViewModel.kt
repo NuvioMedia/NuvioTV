@@ -20,8 +20,8 @@ import com.omnio.tv.domain.model.Stream
 import com.omnio.tv.domain.repository.AddonRepository
 import com.omnio.tv.domain.repository.MetaRepository
 import com.omnio.tv.domain.repository.StreamRepository
-import com.omnio.tv.ui.components.SourceChipItem
-import com.omnio.tv.ui.components.SourceChipStatus
+import com.omnio.tv.core.player.SourceChipItem
+import com.omnio.tv.core.player.SourceChipStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job

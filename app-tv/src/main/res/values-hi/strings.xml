@@ -668,17 +668,8 @@
     <string name="stream_player_external">एक्सटर्नल</string>
 
     <!-- PlayerScreen -->
-    <string name="player_no_external_player">कोई एक्सटर्नल प्लेयर नहीं मिला</string>
 
     <!-- ParentalGuideOverlay -->
-    <string name="parental_nudity">नग्नता</string>
-    <string name="parental_violence">हिंसा</string>
-    <string name="parental_profanity">अपशब्द</string>
-    <string name="parental_alcohol">अल्कोहल/ड्रग्स</string>
-    <string name="parental_frightening">डरावना</string>
-    <string name="parental_severity_severe">गंभीर</string>
-    <string name="parental_severity_moderate">मध्यम</string>
-    <string name="parental_severity_mild">हल्का</string>
     <string name="player_ends_at">%1$s पर समाप्त होगा</string>
     <string name="player_via">%1$s के माध्यम से</string>
     <string name="player_subtitle_delay">सबटाइटल देरी</string>
@@ -706,11 +697,6 @@
     <string name="episodes_panel_title">एपिसोड</string>
     <string name="episodes_panel_streams_title">स्ट्रीम</string>
     <string name="player_speed_normal">सामान्य</string>
-    <string name="player_aspect_fit">फिट (मूल)</string>
-    <string name="player_aspect_stretch">स्ट्रेच</string>
-    <string name="player_aspect_fit_width">फिट चौड़ाई</string>
-    <string name="player_aspect_fit_height">फिट ऊँचाई</string>
-    <string name="player_aspect_crop">क्रॉप</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">ऑडियो</string>
@@ -764,7 +750,6 @@
     <string name="next_episode_playing_via">%1$s के माध्यम से %2$ds में चल रहा है</string>
     <string name="next_episode_play">चलाएँ</string>
     <string name="next_episode_unaired">अनएयर्ड</string>
-    <string name="next_episode_not_aired_yet">अगला एपिसोड अभी प्रसारित नहीं हुआ है</string>
     <string name="skip_intro">इंट्रो स्किप करें</string>
     <string name="skip_ending">एंडिंग स्किप करें</string>
     <string name="skip_recap">रिकैप स्किप करें</string>

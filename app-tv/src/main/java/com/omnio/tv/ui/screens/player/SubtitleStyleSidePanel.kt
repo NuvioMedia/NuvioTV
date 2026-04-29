@@ -48,6 +48,7 @@ import com.omnio.tv.data.local.SubtitleStyleSettings
 import com.omnio.tv.core.uishared.OmnioColors
 import androidx.compose.ui.res.stringResource
 import com.omnio.tv.R
+import com.omnio.tv.core.player.PlayerEvent
 
 private val PANEL_TEXT_COLORS = listOf(
     Color.White,

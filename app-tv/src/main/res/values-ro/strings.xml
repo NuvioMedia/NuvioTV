@@ -576,11 +576,6 @@
     <string name="episodes_panel_title">Episoade</string>
     <string name="episodes_panel_streams_title">Fluxuri</string>
     <string name="player_speed_normal">Normal</string>
-    <string name="player_aspect_fit">Potrivește (Original)</string>
-    <string name="player_aspect_stretch">Întinde</string>
-    <string name="player_aspect_fit_width">Potrivește lățimea</string>
-    <string name="player_aspect_fit_height">Potrivește înălțimea</string>
-    <string name="player_aspect_crop">Taie</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>

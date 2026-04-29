@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="next_episode_not_aired_yet">Το επόμενο επεισόδιο δεν έχει προβληθεί ακόμα</string>
+    <string name="parental_alcohol">Αλκοόλ/Ναρκωτικά</string>
+    <string name="parental_frightening">Τρομακτικό</string>
+    <string name="parental_nudity">Γυμνό</string>
+    <string name="parental_profanity">Χυδαία γλώσσα</string>
+    <string name="parental_severity_mild">Ήπιο</string>
+    <string name="parental_severity_moderate">Μέτριο</string>
+    <string name="parental_severity_severe">Σοβαρό</string>
+    <string name="parental_violence">Βία</string>
+    <string name="player_aspect_crop">Περικοπή</string>
+    <string name="player_aspect_fit">Προσαρμογή (Αρχική)</string>
+    <string name="player_aspect_fit_height">Προσαρμογή ύψους</string>
+    <string name="player_aspect_fit_width">Προσαρμογή πλάτους</string>
+    <string name="player_aspect_stretch">Τέντωμα</string>
+    <string name="player_no_external_player">Δεν βρέθηκε εξωτερικό πρόγραμμα αναπαραγωγής</string>
+    <string name="stream_info_subtitle_source_addon">Πρόσθετο</string>
+    <string name="stream_info_subtitle_source_embedded">Ενσωματωμένο</string>
+</resources>

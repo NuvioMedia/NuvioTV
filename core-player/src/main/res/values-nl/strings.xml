@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="player_aspect_crop">Bijsnijden</string>
+    <string name="player_aspect_fit">Passend (Origineel)</string>
+    <string name="player_aspect_fit_height">Passend op hoogte</string>
+    <string name="player_aspect_fit_width">Passend op breedte</string>
+    <string name="player_aspect_stretch">Uitrekken</string>
+</resources>

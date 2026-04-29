@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="next_episode_not_aired_yet">L\'épisode suivant n\'est pas encore diffusé</string>
+    <string name="parental_alcohol">Alcool / Drogues</string>
+    <string name="parental_frightening">Images effrayantes</string>
+    <string name="parental_nudity">Nudité</string>
+    <string name="parental_profanity">Langage grossier</string>
+    <string name="parental_severity_mild">Léger</string>
+    <string name="parental_severity_moderate">Modéré</string>
+    <string name="parental_severity_severe">Sévère</string>
+    <string name="parental_violence">Violence</string>
+    <string name="player_aspect_crop">Remplir</string>
+    <string name="player_aspect_fit">Ajuster (Original)</string>
+    <string name="player_aspect_fit_height">Ajuster à la hauteur</string>
+    <string name="player_aspect_fit_width">Ajuster à la largeur</string>
+    <string name="player_aspect_stretch">Étirer</string>
+    <string name="player_error_no_stream_url">Aucune URL de flux fournie</string>
+    <string name="player_no_external_player">Aucun lecteur externe trouvé</string>
+    <string name="stream_info_subtitle_source_addon">Addon</string>
+    <string name="stream_info_subtitle_source_embedded">Intégré</string>
+</resources>

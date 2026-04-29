@@ -744,16 +744,7 @@
     <string name="stream_player_internal">Interní</string>
     <string name="stream_player_external">Externí</string>
 
-    <string name="player_no_external_player">Nebyl nalezen žádný externí přehrávač</string>
 
-    <string name="parental_nudity">Nahota</string>
-    <string name="parental_violence">Násilí</string>
-    <string name="parental_profanity">Vulgární mluva</string>
-    <string name="parental_alcohol">Alkohol/Drogy</string>
-    <string name="parental_frightening">Strašidelné</string>
-    <string name="parental_severity_severe">Závažné</string>
-    <string name="parental_severity_moderate">Střední</string>
-    <string name="parental_severity_mild">Mírné</string>
     <string name="player_ends_at">Končí v %1$s</string>
     <string name="player_via">přes %1$s</string>
     <string name="player_subtitle_delay">Zpoždění titulků</string>
@@ -781,8 +772,6 @@
     <string name="stream_info_language">Jazyk</string>
     <string name="stream_info_name">Název</string>
     <string name="stream_info_source">Zdroj</string>
-    <string name="stream_info_subtitle_source_addon">Doplněk</string>
-    <string name="stream_info_subtitle_source_embedded">Vestavěné</string>
 
     <string name="sources_title">Zdroje</string>
     <string name="sources_reload">Obnovit</string>
@@ -798,11 +787,6 @@
     <string name="episodes_panel_title">Epizody</string>
     <string name="episodes_panel_streams_title">Streamy</string>
     <string name="player_speed_normal">Normální</string>
-    <string name="player_aspect_fit">Přizpůsobit (Originál)</string>
-    <string name="player_aspect_stretch">Roztáhnout</string>
-    <string name="player_aspect_fit_width">Přizpůsobit šířce</string>
-    <string name="player_aspect_fit_height">Přizpůsobit výšce</string>
-    <string name="player_aspect_crop">Oříznout</string>
 
     <string name="audio_dialog_title">Audio</string>
     <string name="audio_dialog_tab_tracks">Audio</string>
@@ -862,7 +846,6 @@
     <string name="next_episode_playing_via">Přehrává se přes %1$s za %2$ds</string>
     <string name="next_episode_play">Přehrát</string>
     <string name="next_episode_unaired">Nevysílané</string>
-    <string name="next_episode_not_aired_yet">Další epizoda se ještě nevysílala</string>
     <string name="skip_intro">Přeskočit intro</string>
     <string name="skip_ending">Přeskočit závěr</string>
     <string name="skip_recap">Přeskočit rekapitulaci</string>

@@ -47,6 +47,9 @@ import com.omnio.tv.R
 import com.omnio.tv.core.uishared.OmnioColors
 import com.omnio.tv.domain.util.languageCodeToName
 import kotlinx.coroutines.delay
+import com.omnio.tv.core.player.TrackInfo
+import com.omnio.tv.core.player.AUDIO_AMPLIFICATION_MIN_DB
+import com.omnio.tv.core.player.AUDIO_AMPLIFICATION_MAX_DB
 
 @Composable
 internal fun AudioSelectionOverlay(
@@ -267,7 +270,7 @@ private fun AudioTrackCard(
                 )
                 if (!track.language.isNullOrBlank()) {
                     Text(
-                        text = languageCodeToName(track.language),
+                        text = languageCodeToName(track.language!!),
                         style = MaterialTheme.typography.bodySmall,
                         color = secondaryTextColor
                     )

@@ -776,17 +776,8 @@
     <string name="stream_player_external">外部</string>
 
     <!-- PlayerScreen -->
-    <string name="player_no_external_player">外部プレーヤーが見つかりません</string>
 
     <!-- ParentalGuideOverlay -->
-    <string name="parental_nudity">ヌード</string>
-    <string name="parental_violence">暴力</string>
-    <string name="parental_profanity">不適切な言葉</string>
-    <string name="parental_alcohol">飲酒・薬物</string>
-    <string name="parental_frightening">恐怖表現</string>
-    <string name="parental_severity_severe">激しい</string>
-    <string name="parental_severity_moderate">中程度</string>
-    <string name="parental_severity_mild">軽度</string>
     <string name="player_ends_at">%1$sに終了</string>
     <string name="player_via">%1$s</string>
     <string name="player_subtitle_delay">字幕の遅延</string>
@@ -815,8 +806,6 @@
     <string name="stream_info_language">Language</string>
     <string name="stream_info_name">Name</string>
     <string name="stream_info_source">Source</string>
-    <string name="stream_info_subtitle_source_addon">Addon</string>
-    <string name="stream_info_subtitle_source_embedded">Embedded</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">ソース</string>
@@ -834,11 +823,6 @@
     <string name="episodes_panel_title">エピソード</string>
     <string name="episodes_panel_streams_title">ストリーム</string>
     <string name="player_speed_normal">標準</string>
-    <string name="player_aspect_fit">フィット（オリジナル）</string>
-    <string name="player_aspect_stretch">ストレッチ</string>
-    <string name="player_aspect_fit_width">幅に合わせる</string>
-    <string name="player_aspect_fit_height">高さに合わせる</string>
-    <string name="player_aspect_crop">クロップ</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">音声</string>
@@ -902,7 +886,6 @@
     <string name="next_episode_playing_via">%2$d秒後に%1$s経由で再生</string>
     <string name="next_episode_play">再生</string>
     <string name="next_episode_unaired">未放送</string>
-    <string name="next_episode_not_aired_yet">次のエピソードはまだ放送されていません</string>
     <string name="skip_intro">イントロをスキップ</string>
     <string name="skip_ending">エンディングをスキップ</string>
     <string name="skip_recap">リキャップをスキップ</string>

@@ -581,17 +581,8 @@
     <string name="stream_player_external">Bên ngoài</string>
 
     <!-- PlayerScreen -->
-    <string name="player_no_external_player">Không tìm thấy trình phát bên ngoài</string>
 
     <!-- ParentalGuideOverlay -->
-    <string name="parental_nudity">Cảnh khoả thân</string>
-    <string name="parental_violence">Bạo lực</string>
-    <string name="parental_profanity">Ngôn từ thô tục</string>
-    <string name="parental_alcohol">Chất kích thích</string>
-    <string name="parental_frightening">Cảnh đáng sợ</string>
-    <string name="parental_severity_severe">Nặng</string>
-    <string name="parental_severity_moderate">Vừa phải</string>
-    <string name="parental_severity_mild">Nhẹ</string>
     <string name="player_ends_at">Kết thúc lúc %1$s</string>
     <string name="player_via">từ %1$s</string>
     <string name="player_subtitle_delay">Độ trễ phụ đề</string>
@@ -619,11 +610,6 @@
     <string name="episodes_panel_title">Tập phim</string>
     <string name="episodes_panel_streams_title">Nguồn phát</string>
     <string name="player_speed_normal">Bình thường</string>
-    <string name="player_aspect_fit">Vừa vặn (Gốc)</string>
-    <string name="player_aspect_stretch">Kéo giãn</string>
-    <string name="player_aspect_fit_width">Vừa chiều rộng</string>
-    <string name="player_aspect_fit_height">Vừa chiều cao</string>
-    <string name="player_aspect_crop">Cắt xén</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Âm thanh</string>
@@ -677,7 +663,6 @@
     <string name="next_episode_playing_via">Xem từ %1$s sau %2$ds</string>
     <string name="next_episode_play">Xem</string>
     <string name="next_episode_unaired">Chưa phát sóng</string>
-    <string name="next_episode_not_aired_yet">Tập tiếp theo chưa phát sóng</string>
     <string name="skip_intro">Bỏ qua intro</string>
     <string name="skip_ending">Bỏ qua ending</string>
     <string name="skip_recap">Bỏ qua recap</string>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="next_episode_not_aired_yet">الحلقة التالية لم تُعرض بعد</string>
+    <string name="parental_alcohol">كحول/مخدرات</string>
+    <string name="parental_frightening">رعب</string>
+    <string name="parental_nudity">عري</string>
+    <string name="parental_profanity">ألفاظ بذيئة</string>
+    <string name="parental_severity_mild">خفيف</string>
+    <string name="parental_severity_moderate">متوسط</string>
+    <string name="parental_severity_severe">شديد</string>
+    <string name="parental_violence">عنف</string>
+    <string name="player_aspect_crop">مقصوص</string>
+    <string name="player_aspect_fit">ملائمة (الأصلي)</string>
+    <string name="player_aspect_fit_height">ملائمة الارتفاع</string>
+    <string name="player_aspect_fit_width">ملائمة العرض</string>
+    <string name="player_aspect_stretch">تمدد</string>
+    <string name="player_no_external_player">لم يتم العثور على مشغل خارجي</string>
+    <string name="stream_info_subtitle_source_addon">إضافة</string>
+    <string name="stream_info_subtitle_source_embedded">مدمج</string>
+</resources>

@@ -768,17 +768,8 @@
     <string name="stream_player_external">Externo</string>
 
     <!-- PlayerScreen -->
-    <string name="player_no_external_player">No se encontró un reproductor externo</string>
 
     <!-- ParentalGuideOverlay -->
-    <string name="parental_nudity">Desnudez</string>
-    <string name="parental_violence">Violencia</string>
-    <string name="parental_profanity">Lenguaje inapropiado</string>
-    <string name="parental_alcohol">Alcohol/Drogas</string>
-    <string name="parental_frightening">Escenas aterradoras</string>
-    <string name="parental_severity_severe">Severo</string>
-    <string name="parental_severity_moderate">Moderado</string>
-    <string name="parental_severity_mild">Leve</string>
     <string name="player_ends_at">Termina a las %1$s</string>
     <string name="player_via">vía %1$s</string>
     <string name="player_subtitle_delay">Retraso de Subtítulos</string>
@@ -806,11 +797,6 @@
     <string name="episodes_panel_title">Episodios</string>
     <string name="episodes_panel_streams_title">Fuentes</string>
     <string name="player_speed_normal">Normal</string>
-    <string name="player_aspect_fit">Ajustar (Original)</string>
-    <string name="player_aspect_stretch">Estirar</string>
-    <string name="player_aspect_fit_width">Ajustar al Ancho</string>
-    <string name="player_aspect_fit_height">Ajustar al Alto</string>
-    <string name="player_aspect_crop">Recortar</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
@@ -874,7 +860,6 @@
     <string name="next_episode_playing_via">Reproduciendo vía %1$s en %2$ds</string>
     <string name="next_episode_play">Reproducir</string>
     <string name="next_episode_unaired">No emitido</string>
-    <string name="next_episode_not_aired_yet">El siguiente episodio aún no se ha emitido</string>
     <string name="skip_intro">Omitir Intro</string>
     <string name="skip_ending">Omitir Final</string>
     <string name="skip_recap">Omitir Resumen</string>

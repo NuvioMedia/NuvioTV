@@ -777,17 +777,8 @@
     <string name="stream_player_external">Externe</string>
 
     <!-- PlayerScreen -->
-    <string name="player_no_external_player">Aucun lecteur externe trouvé</string>
 
     <!-- ParentalGuideOverlay -->
-    <string name="parental_nudity">Nudité</string>
-    <string name="parental_violence">Violence</string>
-    <string name="parental_profanity">Langage grossier</string>
-    <string name="parental_alcohol">Alcool / Drogues</string>
-    <string name="parental_frightening">Images effrayantes</string>
-    <string name="parental_severity_severe">Sévère</string>
-    <string name="parental_severity_moderate">Modéré</string>
-    <string name="parental_severity_mild">Léger</string>
     <string name="player_ends_at">Fin à : %1$s</string>
     <string name="player_via">via %1$s</string>
     <string name="player_subtitle_delay">Délai des sous-titres</string>
@@ -816,8 +807,6 @@
     <string name="stream_info_language">Langue</string>
     <string name="stream_info_name">Nom</string>
     <string name="stream_info_source">Source</string>
-    <string name="stream_info_subtitle_source_addon">Addon</string>
-    <string name="stream_info_subtitle_source_embedded">Intégré</string>
 
 
     <!-- StreamSourcesSidePanel -->
@@ -836,11 +825,6 @@
     <string name="episodes_panel_title">Épisodes</string>
     <string name="episodes_panel_streams_title">Flux</string>
     <string name="player_speed_normal">Normal</string>
-    <string name="player_aspect_fit">Ajuster (Original)</string>
-    <string name="player_aspect_stretch">Étirer</string>
-    <string name="player_aspect_fit_width">Ajuster à la largeur</string>
-    <string name="player_aspect_fit_height">Ajuster à la hauteur</string>
-    <string name="player_aspect_crop">Remplir</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
@@ -904,7 +888,6 @@
     <string name="next_episode_playing_via">Lecture via %1$s dans %2$ds</string>
     <string name="next_episode_play">Regarder</string>
     <string name="next_episode_unaired">Non diffusé</string>
-    <string name="next_episode_not_aired_yet">L\'épisode suivant n\'est pas encore diffusé</string>
     <string name="skip_intro">Passer l\'intro</string>
     <string name="skip_ending">Passer les crédits</string>
     <string name="skip_recap">Passer le résumé</string>
@@ -1235,7 +1218,6 @@
     <string name="home_error_no_catalog_addons">Aucun addon de catalogue installé</string>
 
     <!-- Player errors -->
-    <string name="player_error_no_stream_url">Aucune URL de flux fournie</string>
 
     <!-- Playback subtitle settings -->
     <string name="sub_mode_overlay_canvas_sub">Support HDR avec rendu Canvas. Peut bloquer le thread UI.</string>

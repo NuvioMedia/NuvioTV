@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="player_aspect_crop">Taie</string>
+    <string name="player_aspect_fit">Potrivește (Original)</string>
+    <string name="player_aspect_fit_height">Potrivește înălțimea</string>
+    <string name="player_aspect_fit_width">Potrivește lățimea</string>
+    <string name="player_aspect_stretch">Întinde</string>
+</resources>

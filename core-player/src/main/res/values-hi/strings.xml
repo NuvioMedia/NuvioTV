@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="next_episode_not_aired_yet">अगला एपिसोड अभी प्रसारित नहीं हुआ है</string>
+    <string name="parental_alcohol">अल्कोहल/ड्रग्स</string>
+    <string name="parental_frightening">डरावना</string>
+    <string name="parental_nudity">नग्नता</string>
+    <string name="parental_profanity">अपशब्द</string>
+    <string name="parental_severity_mild">हल्का</string>
+    <string name="parental_severity_moderate">मध्यम</string>
+    <string name="parental_severity_severe">गंभीर</string>
+    <string name="parental_violence">हिंसा</string>
+    <string name="player_aspect_crop">क्रॉप</string>
+    <string name="player_aspect_fit">फिट (मूल)</string>
+    <string name="player_aspect_fit_height">फिट ऊँचाई</string>
+    <string name="player_aspect_fit_width">फिट चौड़ाई</string>
+    <string name="player_aspect_stretch">स्ट्रेच</string>
+    <string name="player_no_external_player">कोई एक्सटर्नल प्लेयर नहीं मिला</string>
+</resources>

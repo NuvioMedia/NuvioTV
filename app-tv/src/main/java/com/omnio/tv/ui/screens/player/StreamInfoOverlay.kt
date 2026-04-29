@@ -28,6 +28,7 @@ import coil.request.ImageRequest
 import com.omnio.tv.R
 import com.omnio.tv.core.uishared.OmnioColors
 import com.omnio.tv.domain.util.languageCodeToName
+import com.omnio.tv.core.player.StreamInfoData
 
 @Composable
 fun StreamInfoOverlay(
@@ -79,7 +80,7 @@ private fun StreamInfoContent(data: StreamInfoData) {
             Column {
                 if (data.addonName != null) {
                     Text(
-                        text = data.addonName,
+                        text = data.addonName!!,
                         style = MaterialTheme.typography.headlineMedium,
                         color = Color.White,
                         fontWeight = FontWeight.SemiBold,
@@ -89,7 +90,7 @@ private fun StreamInfoContent(data: StreamInfoData) {
                 }
                 if (data.streamName != null && data.streamName != data.addonName) {
                     Text(
-                        text = data.streamName.replace("\n", " · "),
+                        text = data.streamName!!.replace("\n", " · "),
                         style = MaterialTheme.typography.bodyLarge,
                         color = OmnioColors.TextSecondary,
                         maxLines = 1,
@@ -100,7 +101,7 @@ private fun StreamInfoContent(data: StreamInfoData) {
         }
         if (!data.streamDescription.isNullOrBlank()) {
             Text(
-                text = data.streamDescription.replace("\n", " · "),
+                text = data.streamDescription!!.replace("\n", " · "),
                 style = MaterialTheme.typography.bodyMedium,
                 color = OmnioColors.TextSecondary,
                 maxLines = 1,
@@ -133,7 +134,7 @@ private fun StreamInfoContent(data: StreamInfoData) {
             InfoItem(
                 label = stringResource(R.string.stream_info_resolution),
                 value = if (data.videoWidth != null && data.videoHeight != null) {
-                    formatResolution(data.videoWidth, data.videoHeight)
+                    formatResolution(data.videoWidth!!, data.videoHeight!!)
                 } else null
             )
             InfoItem(

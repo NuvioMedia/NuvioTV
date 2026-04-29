@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="next_episode_not_aired_yet">Neste episode har ikke gått på luften ennå</string>
+    <string name="parental_alcohol">Alkohol/narkotika</string>
+    <string name="parental_frightening">Skremmende</string>
+    <string name="parental_nudity">Nøthet</string>
+    <string name="parental_profanity">Banneord</string>
+    <string name="parental_severity_mild">Mild</string>
+    <string name="parental_severity_moderate">Moderat</string>
+    <string name="parental_severity_severe">Alvorlig</string>
+    <string name="parental_violence">Vold</string>
+    <string name="player_aspect_crop">Beskjær</string>
+    <string name="player_aspect_fit">Tilpass (original)</string>
+    <string name="player_aspect_fit_height">Tilpass høyde</string>
+    <string name="player_aspect_fit_width">Tilpass bredde</string>
+    <string name="player_aspect_stretch">Strekk</string>
+    <string name="player_no_external_player">Ingen ekstern spiller funnet</string>
+</resources>

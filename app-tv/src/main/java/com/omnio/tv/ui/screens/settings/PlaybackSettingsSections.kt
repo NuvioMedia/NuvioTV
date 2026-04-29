@@ -181,8 +181,8 @@ internal fun PlaybackSettingsSections(
             PlayerPreference.ASK_EVERY_TIME -> stringResource(R.string.playback_player_ask)
         },
         internalEngineLabel = when (playerSettings.internalPlayerEngine) {
-            InternalPlayerEngine.EXOPLAYER -> stringResource(R.string.playback_engine_exoplayer)
-            InternalPlayerEngine.MVP_PLAYER -> stringResource(R.string.playback_engine_mvplayer)
+            InternalPlayerEngine.EXOPLAYER -> stringResource(com.omnio.tv.core.player.R.string.playback_engine_exoplayer)
+            InternalPlayerEngine.MVP_PLAYER -> stringResource(com.omnio.tv.core.player.R.string.playback_engine_mvplayer)
         }
     )
 
@@ -794,12 +794,12 @@ private fun InternalPlayerEngineDialog(
     val options = listOf(
         Triple(
             InternalPlayerEngine.EXOPLAYER,
-            stringResource(R.string.playback_engine_exoplayer),
+            stringResource(com.omnio.tv.core.player.R.string.playback_engine_exoplayer),
             stringResource(R.string.playback_engine_exoplayer_desc)
         ),
         Triple(
             InternalPlayerEngine.MVP_PLAYER,
-            stringResource(R.string.playback_engine_mvplayer),
+            stringResource(com.omnio.tv.core.player.R.string.playback_engine_mvplayer),
             stringResource(R.string.playback_engine_mvplayer_desc)
         )
     )

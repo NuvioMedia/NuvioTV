@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="next_episode_not_aired_yet">Nächste Folge wurde noch nicht ausgestrahlt</string>
+    <string name="parental_alcohol">Alkohol/Drogen</string>
+    <string name="parental_frightening">Beängstigend</string>
+    <string name="parental_nudity">Nacktheit</string>
+    <string name="parental_profanity">Obszöne Sprache</string>
+    <string name="parental_severity_mild">Mild</string>
+    <string name="parental_severity_moderate">Mäßig</string>
+    <string name="parental_severity_severe">Schwerwiegend</string>
+    <string name="parental_violence">Gewalt</string>
+    <string name="player_aspect_crop">Zuschneiden</string>
+    <string name="player_aspect_fit">Anpassen (Original)</string>
+    <string name="player_aspect_fit_height">Höhe anpassen</string>
+    <string name="player_aspect_fit_width">Breite anpassen</string>
+    <string name="player_aspect_stretch">Strecken</string>
+    <string name="player_no_external_player">Kein externer Player gefunden</string>
+    <string name="stream_info_subtitle_source_addon">Addon</string>
+    <string name="stream_info_subtitle_source_embedded">Eingebettet</string>
+</resources>

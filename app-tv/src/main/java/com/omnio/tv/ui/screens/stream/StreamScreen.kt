@@ -83,8 +83,8 @@ import coil.compose.AsyncImage
 import com.omnio.tv.core.player.ExternalPlayerLauncher
 import com.omnio.tv.data.local.PlayerPreference
 import com.omnio.tv.domain.model.Stream
-import com.omnio.tv.ui.components.SourceChipItem
-import com.omnio.tv.ui.components.SourceChipStatus
+import com.omnio.tv.core.player.SourceChipItem
+import com.omnio.tv.core.player.SourceChipStatus
 import com.omnio.tv.ui.components.SourceStatusFilterChip
 import com.omnio.tv.core.uishared.OmnioColors
 import com.omnio.tv.ui.components.StreamsSkeletonList

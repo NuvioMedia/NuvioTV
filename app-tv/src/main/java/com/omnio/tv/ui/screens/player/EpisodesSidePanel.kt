@@ -70,6 +70,7 @@ import com.omnio.tv.ui.util.localizeEpisodeTitle
 import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
 import com.omnio.tv.R
+import com.omnio.tv.core.player.PlayerUiState
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -236,7 +237,7 @@ private fun EpisodeStreamsView(
 
         uiState.episodeStreamsError != null -> {
             Text(
-                text = uiState.episodeStreamsError,
+                text = uiState.episodeStreamsError!!,
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.85f)
             )
@@ -321,7 +322,7 @@ private fun EpisodesListView(
 
         uiState.episodesError != null -> {
             Text(
-                text = uiState.episodesError,
+                text = uiState.episodesError!!,
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.85f)
             )

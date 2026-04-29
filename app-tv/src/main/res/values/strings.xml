@@ -336,8 +336,6 @@
     <string name="playback_player_external">External</string>
     <string name="playback_player_ask">Ask every time</string>
     <string name="playback_internal_player_engine">Internal Engine</string>
-    <string name="playback_engine_exoplayer">ExoPlayer</string>
-    <string name="playback_engine_mvplayer">Libmpv (Beta)</string>
     <string name="playback_auto_switch_internal_player_on_error">Auto-switch engine on startup error</string>
     <string name="playback_auto_switch_internal_player_on_error_sub">If stream startup fails, switch between ExoPlayer and libmpv automatically.</string>
     <string name="playback_section_audio">Audio &amp; Trailer</string>
@@ -891,31 +889,13 @@
     <string name="stream_player_external">External</string>
 
     <!-- PlayerScreen -->
-    <string name="player_no_external_player">No external player found</string>
     <string name="player_loading_preparing">Preparing stream…</string>
-    <string name="player_loading_detecting_format">Detecting stream format…</string>
     <string name="player_loading_subtitles">Fetching subtitles…</string>
-    <string name="player_loading_subtitles_from">Fetching subtitles from %1$d addons…</string>
-    <string name="player_loading_subtitles_progress">Fetching subtitles… (%1$d / %2$d)</string>
-    <string name="player_loading_subtitles_addon">Subtitles: %1$s (%2$d / %3$d)</string>
-    <string name="player_loading_building">Building player…</string>
-    <string name="player_loading_starting">Starting stream…</string>
-    <string name="player_loading_buffering">Buffering…</string>
     <string name="player_engine_switching_title">Switching Player Engine</string>
-    <string name="player_engine_switching_message">Startup failed. Switching to %1$s…</string>
-    <string name="player_engine_switching_manual_message">Switching to %1$s...</string>
     <string name="playback_show_loading_status">Show loading status</string>
     <string name="playback_show_loading_status_sub">Display step-by-step progress while the player is initializing.</string>
 
     <!-- ParentalGuideOverlay -->
-    <string name="parental_nudity">Nudity</string>
-    <string name="parental_violence">Violence</string>
-    <string name="parental_profanity">Profanity</string>
-    <string name="parental_alcohol">Alcohol/Drugs</string>
-    <string name="parental_frightening">Frightening</string>
-    <string name="parental_severity_severe">Severe</string>
-    <string name="parental_severity_moderate">Moderate</string>
-    <string name="parental_severity_mild">Mild</string>
     <string name="player_ends_at">Ends at %1$s</string>
     <string name="player_via">via %1$s</string>
     <string name="player_subtitle_delay">Subtitles Delay</string>
@@ -944,8 +924,6 @@
     <string name="stream_info_language">Language</string>
     <string name="stream_info_name">Name</string>
     <string name="stream_info_source">Source</string>
-    <string name="stream_info_subtitle_source_addon">Addon</string>
-    <string name="stream_info_subtitle_source_embedded">Embedded</string>
 
     <!-- StreamSourcesSidePanel -->
     <string name="sources_title">Sources</string>
@@ -963,14 +941,6 @@
     <string name="episodes_panel_title">Episodes</string>
     <string name="episodes_panel_streams_title">Streams</string>
     <string name="player_speed_normal">Normal</string>
-    <string name="player_aspect_fit">Fit (Original)</string>
-    <string name="player_aspect_stretch">Stretch</string>
-    <string name="player_aspect_fit_width">Fit Width</string>
-    <string name="player_aspect_fit_height">Fit Height</string>
-    <string name="player_aspect_crop">Crop</string>
-    <string name="player_aspect_tunneling_unavailable">Unavailable during tunneled playback</string>
-    <string name="player_aspect_mode_slight_zoom">Slight Zoom</string>
-    <string name="player_aspect_mode_cinema_zoom">Cinema Zoom</string>
 
     <!-- AudioDialog -->
     <string name="audio_dialog_title">Audio</string>
@@ -1035,7 +1005,6 @@
     <string name="next_episode_playing_via">Playing via %1$s in %2$ds</string>
     <string name="next_episode_play">Play</string>
     <string name="next_episode_unaired">Unaired</string>
-    <string name="next_episode_not_aired_yet">Next episode hasn\'t aired yet</string>
     <string name="skip_intro">Skip Intro</string>
     <string name="skip_ending">Skip Ending</string>
     <string name="skip_recap">Skip Recap</string>
@@ -1372,7 +1341,6 @@
     <string name="home_error_no_catalog_addons">No catalog addons installed</string>
 
     <!-- Player errors -->
-    <string name="player_error_no_stream_url">No stream URL provided</string>
 
     <!-- Playback subtitle settings -->
     <string name="sub_mode_overlay_canvas_sub">HDR support with canvas rendering. May block UI thread.</string>

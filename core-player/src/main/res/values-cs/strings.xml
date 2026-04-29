@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="next_episode_not_aired_yet">Další epizoda se ještě nevysílala</string>
+    <string name="parental_alcohol">Alkohol/Drogy</string>
+    <string name="parental_frightening">Strašidelné</string>
+    <string name="parental_nudity">Nahota</string>
+    <string name="parental_profanity">Vulgární mluva</string>
+    <string name="parental_severity_mild">Mírné</string>
+    <string name="parental_severity_moderate">Střední</string>
+    <string name="parental_severity_severe">Závažné</string>
+    <string name="parental_violence">Násilí</string>
+    <string name="player_aspect_crop">Oříznout</string>
+    <string name="player_aspect_fit">Přizpůsobit (Originál)</string>
+    <string name="player_aspect_fit_height">Přizpůsobit výšce</string>
+    <string name="player_aspect_fit_width">Přizpůsobit šířce</string>
+    <string name="player_aspect_stretch">Roztáhnout</string>
+    <string name="player_no_external_player">Nebyl nalezen žádný externí přehrávač</string>
+    <string name="stream_info_subtitle_source_addon">Doplněk</string>
+    <string name="stream_info_subtitle_source_embedded">Vestavěné</string>
+</resources>
