@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 android {
@@ -33,6 +34,19 @@ android {
             )
             // Skeleton-only: signing wired up in a later sub-step (Play Store flow).
             signingConfig = signingConfigs.getByName("debug")
+        }
+        create("benchmark") {
+            initWith(buildTypes.getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            applicationIdSuffix = ".debug"
+            matchingFallbacks += "release"
         }
     }
 
@@ -86,9 +100,21 @@ androidComponents {
     }
 }
 
+baselineProfile {
+    automaticGenerationDuringBuild = false
+    saveInSrc = true
+    mergeIntoMain = true
+    baselineProfileOutputDir = "src/main"
+    filter {
+        include("com.omnio.phone.**")
+    }
+}
+
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
+
+    baselineProfile(project(":baselineprofile-phone"))
 
     implementation(project(":core-domain"))
     implementation(project(":core-data"))
@@ -97,6 +123,7 @@ dependencies {
     implementation(project(":core-ui-shared"))
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.profileinstaller)
     implementation(composeBom)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
