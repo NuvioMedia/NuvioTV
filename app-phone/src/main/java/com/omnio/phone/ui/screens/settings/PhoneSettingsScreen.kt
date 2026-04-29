@@ -1,5 +1,6 @@
 package com.omnio.phone.ui.screens.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -89,6 +91,13 @@ fun PhoneSettingsScreen(
                 email = state.email,
                 isSigningOut = state.isSigningOut,
                 onSignOut = viewModel::signOut
+            )
+            AccountConnectedStatsStrip(
+                stats = state.connectedStats,
+                isLoading = state.isStatsLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -254,6 +263,75 @@ private fun ActionRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+@Composable
+private fun AccountConnectedStatsStrip(
+    stats: AccountConnectedStats?,
+    isLoading: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val values = if (isLoading || stats == null) {
+        listOf("…", "…", "…", "…")
+    } else {
+        listOf(
+            stats.addons.toString(),
+            stats.plugins.toString(),
+            stats.library.toString(),
+            stats.watchProgress.toString()
+        )
+    }
+    val labels = listOf(
+        stringResource(R.string.settings_account_stat_addons),
+        stringResource(R.string.settings_account_stat_plugins),
+        stringResource(R.string.settings_account_stat_library),
+        stringResource(R.string.settings_account_stat_progress)
+    )
+    val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(values.size) { index ->
+            AccountStatItem(
+                value = values[index],
+                label = labels[index],
+                modifier = Modifier.weight(1f)
+            )
+            if (index != values.lastIndex) {
+                Box(
+                    modifier = Modifier
+                        .height(36.dp)
+                        .width(1.dp)
+                        .background(borderColor)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountStatItem(
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
