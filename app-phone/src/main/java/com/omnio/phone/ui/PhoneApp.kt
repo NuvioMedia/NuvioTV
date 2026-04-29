@@ -13,6 +13,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -21,13 +22,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.omnio.phone.R
 import com.omnio.phone.ui.screens.addons.AddonsScreen
 import com.omnio.phone.ui.screens.auth.AuthScreen
+import com.omnio.phone.ui.screens.home.HomeScreen
 import com.omnio.phone.ui.screens.profiles.ProfilesScreen
 import com.omnio.phone.ui.screens.splash.SplashScreen
 
 object PhoneRoutes {
     const val AUTH = "auth"
+    const val HOME = "home"
     const val PROFILES = "profiles"
     const val ADDONS = "addons"
 }
@@ -57,8 +61,9 @@ private fun SignedInNav() {
                 title = {
                     Text(
                         text = when (currentRoute) {
-                            PhoneRoutes.PROFILES -> "Profiles"
-                            PhoneRoutes.ADDONS -> "Addons"
+                            PhoneRoutes.HOME -> stringResource(R.string.home_tab_label)
+                            PhoneRoutes.PROFILES -> stringResource(R.string.profiles_tab_label)
+                            PhoneRoutes.ADDONS -> stringResource(R.string.addons_tab_label)
                             else -> "OmnioTV"
                         }
                     )
@@ -76,11 +81,20 @@ private fun SignedInNav() {
         ) {
             composable(PhoneRoutes.PROFILES) {
                 ProfilesScreen(onProfileSelected = {
-                    navController.navigate(PhoneRoutes.ADDONS) {
+                    navController.navigate(PhoneRoutes.HOME) {
                         popUpTo(PhoneRoutes.PROFILES) { inclusive = false }
                         launchSingleTop = true
                     }
                 })
+            }
+            composable(PhoneRoutes.HOME) {
+                HomeScreen(
+                    onNavigateToAddons = {
+                        navController.navigate(PhoneRoutes.ADDONS) {
+                            launchSingleTop = true
+                        }
+                    }
+                )
             }
             composable(PhoneRoutes.ADDONS) {
                 AddonsScreen()
@@ -97,21 +111,40 @@ private fun BottomTabBar(navController: NavHostController, currentRoute: String)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        TextButton(onClick = {
-            if (currentRoute != PhoneRoutes.PROFILES) {
+        TabBarButton(
+            label = stringResource(R.string.home_tab_label),
+            isCurrent = currentRoute == PhoneRoutes.HOME,
+            onClick = {
+                navController.navigate(PhoneRoutes.HOME) {
+                    popUpTo(PhoneRoutes.PROFILES) { inclusive = false }
+                    launchSingleTop = true
+                }
+            }
+        )
+        TabBarButton(
+            label = stringResource(R.string.profiles_tab_label),
+            isCurrent = currentRoute == PhoneRoutes.PROFILES,
+            onClick = {
                 navController.navigate(PhoneRoutes.PROFILES) {
                     popUpTo(PhoneRoutes.PROFILES) { inclusive = true }
                     launchSingleTop = true
                 }
             }
-        }) { Text("Profiles") }
-        TextButton(onClick = {
-            if (currentRoute != PhoneRoutes.ADDONS) {
+        )
+        TabBarButton(
+            label = stringResource(R.string.addons_tab_label),
+            isCurrent = currentRoute == PhoneRoutes.ADDONS,
+            onClick = {
                 navController.navigate(PhoneRoutes.ADDONS) {
                     popUpTo(PhoneRoutes.PROFILES) { inclusive = false }
                     launchSingleTop = true
                 }
             }
-        }) { Text("Addons") }
+        )
     }
+}
+
+@Composable
+private fun TabBarButton(label: String, isCurrent: Boolean, onClick: () -> Unit) {
+    TextButton(onClick = { if (!isCurrent) onClick() }) { Text(label) }
 }
