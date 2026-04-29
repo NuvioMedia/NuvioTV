@@ -1,5 +1,8 @@
 package com.omnio.phone.ui.screens.detail
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,6 +47,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.omnio.tv.domain.model.LibrarySourceMode
 import com.omnio.tv.domain.model.Meta
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -91,9 +96,11 @@ fun DetailScreen(
                 PlayBottomBar(
                     isInLibrary = state.isInLibrary,
                     isResolving = state.isResolvingPlayback,
+                    canPickLists = state.sourceMode == LibrarySourceMode.TRAKT,
                     onPlay = { viewModel.requestPlayback() },
                     onChooseSource = { viewModel.openSourceSelection() },
-                    onToggleLibrary = viewModel::toggleLibrary
+                    onToggleLibrary = viewModel::toggleLibrary,
+                    onLongPressLibrary = viewModel::openListPicker
                 )
             }
         },
@@ -133,6 +140,15 @@ fun DetailScreen(
             onSetAddonFilter = viewModel::setAddonFilter
         )
     }
+
+    state.listPicker?.let { picker ->
+        TraktListPickerSheet(
+            state = picker,
+            onDismiss = viewModel::dismissListPicker,
+            onToggle = viewModel::toggleListMembership,
+            onSave = viewModel::saveListMembership
+        )
+    }
 }
 
 @Composable
@@ -170,13 +186,16 @@ private fun DetailContent(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PlayBottomBar(
     isInLibrary: Boolean,
     isResolving: Boolean,
+    canPickLists: Boolean,
     onPlay: () -> Unit,
     onChooseSource: () -> Unit,
-    onToggleLibrary: () -> Unit
+    onToggleLibrary: () -> Unit,
+    onLongPressLibrary: () -> Unit
 ) {
     Surface(
         tonalElevation = 6.dp,
@@ -223,16 +242,39 @@ private fun PlayBottomBar(
                     contentDescription = "Choose source"
                 )
             }
-            OutlinedButton(
+            BookmarkButton(
+                isInLibrary = isInLibrary,
+                canPickLists = canPickLists,
                 onClick = onToggleLibrary,
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(
-                    imageVector = if (isInLibrary) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                    contentDescription = if (isInLibrary) "Remove from library" else "Add to library"
-                )
-            }
+                onLongClick = onLongPressLibrary
+            )
         }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BookmarkButton(
+    isInLibrary: Boolean,
+    canPickLists: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    val borderColor = MaterialTheme.colorScheme.outline
+    Box(
+        modifier = Modifier
+            .size(width = 56.dp, height = 40.dp)
+            .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = if (canPickLists) onLongClick else null
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = if (isInLibrary) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+            contentDescription = if (isInLibrary) "Remove from library" else "Add to library"
+        )
     }
 }
 
