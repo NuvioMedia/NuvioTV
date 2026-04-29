@@ -1,5 +1,6 @@
 package com.omnio.phone.ui.screens.detail
 
+import com.omnio.tv.domain.model.AddonStreams
 import com.omnio.tv.domain.model.Meta
 import com.omnio.tv.domain.model.Stream
 import com.omnio.tv.domain.model.Video
@@ -13,7 +14,16 @@ data class DetailUiState(
     val episodesForSeason: List<Video> = emptyList(),
     val isInLibrary: Boolean = false,
     val userMessage: String? = null,
-    val isResolvingPlayback: Boolean = false
+    val isResolvingPlayback: Boolean = false,
+    val streamSelection: StreamSelectionState? = null
+)
+
+data class StreamSelectionState(
+    val targetVideo: Video? = null,
+    val isLoading: Boolean = true,
+    val error: String? = null,
+    val groups: List<AddonStreams> = emptyList(),
+    val addonFilter: String? = null
 )
 
 data class PlaybackRequest(

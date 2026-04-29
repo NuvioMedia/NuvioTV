@@ -3,6 +3,7 @@ package com.omnio.phone.ui.screens.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.omnio.tv.domain.model.AddonStreams
 import com.omnio.tv.domain.model.ContentType
 import com.omnio.tv.domain.model.LibraryEntryInput
 import com.omnio.tv.domain.model.Meta
@@ -94,45 +95,95 @@ class DetailViewModel @Inject constructor(
         if (_uiState.value.isResolvingPlayback) return
 
         val target = video ?: pickInitialEpisode(meta)
-        val isSeries = meta.type == ContentType.SERIES
-        val videoId = target?.id ?: meta.id
-        val season = target?.season
-        val episode = target?.episode
-        val episodeTitle = target?.title
-
         _uiState.update { it.copy(isResolvingPlayback = true) }
         viewModelScope.launch {
-            val streamsResult = streamRepository
-                .getStreamsFromAllAddons(
-                    type = meta.apiType,
-                    videoId = videoId,
-                    season = season,
-                    episode = episode
-                )
-                .first { it !is NetworkResult.Loading }
-
-            val streams: List<Stream> = when (streamsResult) {
-                is NetworkResult.Success -> streamsResult.data.flatMap { it.streams }
-                is NetworkResult.Error -> emptyList()
-                NetworkResult.Loading -> emptyList()
-            }
+            val outcome = loadStreamGroups(meta, target)
+            val streams = outcome.groups.flatMap { it.streams }
             val playable = streams.firstOrNull { !it.getStreamUrl().isNullOrBlank() }
 
             if (playable == null) {
-                val errorMsg = (streamsResult as? NetworkResult.Error)?.message
                 _uiState.update {
                     it.copy(
                         isResolvingPlayback = false,
-                        userMessage = errorMsg ?: "No playable streams found for this title."
+                        userMessage = outcome.error ?: "No playable streams found for this title."
                     )
                 }
                 return@launch
             }
 
             _uiState.update { it.copy(isResolvingPlayback = false) }
+            emitPlaybackRequest(meta, target, playable)
+        }
+    }
+
+    /**
+     * Opens the bottom-sheet source chooser, loads streams from all addons, and surfaces
+     * them grouped by addon. Selecting a row from the sheet emits a [PlaybackRequest].
+     */
+    fun openSourceSelection(video: Video? = null) {
+        val meta = _uiState.value.meta ?: return
+        val target = video ?: pickInitialEpisode(meta)
+        _uiState.update {
+            it.copy(
+                streamSelection = StreamSelectionState(
+                    targetVideo = target,
+                    isLoading = true
+                )
+            )
+        }
+        viewModelScope.launch {
+            val outcome = loadStreamGroups(meta, target)
+            _uiState.update { state ->
+                val current = state.streamSelection ?: return@update state
+                state.copy(
+                    streamSelection = current.copy(
+                        isLoading = false,
+                        groups = outcome.groups,
+                        error = if (outcome.groups.isEmpty()) {
+                            outcome.error ?: "No sources found for this title."
+                        } else null
+                    )
+                )
+            }
+        }
+    }
+
+    fun dismissSourceSelection() {
+        _uiState.update { it.copy(streamSelection = null) }
+    }
+
+    fun setAddonFilter(addonName: String?) {
+        _uiState.update { state ->
+            val current = state.streamSelection ?: return@update state
+            state.copy(streamSelection = current.copy(addonFilter = addonName))
+        }
+    }
+
+    /**
+     * Called when the user taps a stream row in the chooser. Emits a [PlaybackRequest]
+     * for that exact stream and dismisses the sheet.
+     */
+    fun selectStream(stream: Stream) {
+        val meta = _uiState.value.meta ?: return
+        val selection = _uiState.value.streamSelection ?: return
+        if (stream.getStreamUrl().isNullOrBlank()) {
+            _uiState.update {
+                it.copy(userMessage = "This source has no playable URL.")
+            }
+            return
+        }
+        _uiState.update { it.copy(streamSelection = null) }
+        emitPlaybackRequest(meta, selection.targetVideo, stream)
+    }
+
+    private fun emitPlaybackRequest(meta: Meta, target: Video?, stream: Stream) {
+        val isSeries = meta.type == ContentType.SERIES
+        val videoId = target?.id ?: meta.id
+        val episodeTitle = target?.title
+        viewModelScope.launch {
             _playbackRequests.emit(
                 PlaybackRequest(
-                    stream = playable,
+                    stream = stream,
                     title = if (isSeries && episodeTitle != null) "${meta.name} — ${episodeTitle}" else meta.name,
                     contentName = if (isSeries) meta.name else null,
                     contentId = meta.id,
@@ -141,14 +192,39 @@ class DetailViewModel @Inject constructor(
                     backdrop = meta.backdropUrl,
                     logo = meta.logo,
                     videoId = videoId,
-                    season = season,
-                    episode = episode,
+                    season = target?.season,
+                    episode = target?.episode,
                     episodeTitle = episodeTitle,
                     year = meta.releaseInfo
                 )
             )
         }
     }
+
+    private suspend fun loadStreamGroups(meta: Meta, target: Video?): StreamLoadOutcome {
+        val videoId = target?.id ?: meta.id
+        val streamsResult = streamRepository
+            .getStreamsFromAllAddons(
+                type = meta.apiType,
+                videoId = videoId,
+                season = target?.season,
+                episode = target?.episode
+            )
+            .first { it !is NetworkResult.Loading }
+
+        return when (streamsResult) {
+            is NetworkResult.Success -> StreamLoadOutcome(
+                groups = streamsResult.data.filter { it.streams.isNotEmpty() }
+            )
+            is NetworkResult.Error -> StreamLoadOutcome(error = streamsResult.message)
+            NetworkResult.Loading -> StreamLoadOutcome()
+        }
+    }
+
+    private data class StreamLoadOutcome(
+        val groups: List<AddonStreams> = emptyList(),
+        val error: String? = null
+    )
 
     private fun pickInitialEpisode(meta: Meta): Video? {
         if (meta.type != ContentType.SERIES) return null

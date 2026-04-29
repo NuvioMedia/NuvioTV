@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,7 +36,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.omnio.tv.domain.model.Meta
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,7 +55,6 @@ fun DetailScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(state.userMessage) {
         val message = state.userMessage ?: return@LaunchedEffect
@@ -94,6 +92,7 @@ fun DetailScreen(
                     isInLibrary = state.isInLibrary,
                     isResolving = state.isResolvingPlayback,
                     onPlay = { viewModel.requestPlayback() },
+                    onChooseSource = { viewModel.openSourceSelection() },
                     onToggleLibrary = viewModel::toggleLibrary
                 )
             }
@@ -124,6 +123,15 @@ fun DetailScreen(
                 )
             }
         }
+    }
+
+    state.streamSelection?.let { selection ->
+        StreamSelectionSheet(
+            state = selection,
+            onDismiss = viewModel::dismissSourceSelection,
+            onSelectStream = viewModel::selectStream,
+            onSetAddonFilter = viewModel::setAddonFilter
+        )
     }
 }
 
@@ -167,6 +175,7 @@ private fun PlayBottomBar(
     isInLibrary: Boolean,
     isResolving: Boolean,
     onPlay: () -> Unit,
+    onChooseSource: () -> Unit,
     onToggleLibrary: () -> Unit
 ) {
     Surface(
@@ -203,6 +212,16 @@ private fun PlayBottomBar(
                         modifier = Modifier.padding(start = 8.dp)
                     )
                 }
+            }
+            OutlinedButton(
+                onClick = onChooseSource,
+                enabled = !isResolving,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Tune,
+                    contentDescription = "Choose source"
+                )
             }
             OutlinedButton(
                 onClick = onToggleLibrary,
