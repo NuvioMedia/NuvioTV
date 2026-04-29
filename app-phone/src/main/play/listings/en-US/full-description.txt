@@ -1,0 +1,13 @@
+Omnio brings the Stremio addon ecosystem to your phone with a polished, touch-first experience.
+
+Sign in once and your addons, plugins, profiles, watch progress, and library follow you across devices. Includes a built-in player powered by ExoPlayer and mpv, with subtitle, audio, and stream selection.
+
+Features:
+- Sign in with email or scan a QR from Omnio TV to instantly sync your account.
+- Browse catalogs from any Stremio-compatible addon.
+- Local playback with hardware-accelerated decoders (FFmpeg, AV1, IAMF, MPEG-H).
+- Picture-in-picture, lock-screen controls, and Bluetooth headset support.
+- Multi-profile with optional PIN lock per profile.
+- Cross-device sync via a personal Supabase backend.
+
+Omnio for phone shares the same account and feature set as Omnio TV, so your library is always one tap away.

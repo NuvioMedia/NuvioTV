@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,7 +8,34 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.androidx.baselineprofile)
+    alias(libs.plugins.gradle.play.publisher)
 }
+
+fun loadProperties(fileName: String): Properties = Properties().apply {
+    val propertiesFile = rootProject.file(fileName)
+    if (propertiesFile.exists()) {
+        load(propertiesFile.inputStream())
+    }
+}
+
+val localProperties = loadProperties("local.properties")
+
+fun env(name: String): String? = providers.environmentVariable(name).orNull
+
+fun propertyOrNull(properties: Properties, name: String): String? =
+    properties.getProperty(name)?.takeIf { it.isNotBlank() }
+
+fun releaseValue(name: String, default: String = ""): String =
+    env(name) ?: propertyOrNull(localProperties, name) ?: default
+
+fun releaseOptional(name: String): String? =
+    env(name) ?: propertyOrNull(localProperties, name)
+
+val useDebugReleaseSigning = env("CI_USE_DEBUG_SIGNING").equals("true", ignoreCase = true)
+val phoneStoreFilePath = releaseOptional("OMNIO_PHONE_RELEASE_STORE_FILE")
+val phoneKeyAliasValue = releaseValue("OMNIO_PHONE_RELEASE_KEY_ALIAS", "omniophone")
+val phoneKeyPasswordValue = releaseValue("OMNIO_PHONE_RELEASE_KEY_PASSWORD")
+val phoneStorePasswordValue = releaseValue("OMNIO_PHONE_RELEASE_STORE_PASSWORD")
 
 android {
     namespace = "com.omnio.phone"
@@ -18,6 +47,15 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0-alpha"
+    }
+
+    signingConfigs {
+        create("release") {
+            keyAlias = phoneKeyAliasValue
+            keyPassword = phoneKeyPasswordValue
+            storeFile = phoneStoreFilePath?.let(::file) ?: file("../omnio-phone.jks")
+            storePassword = phoneStorePasswordValue
+        }
     }
 
     buildTypes {
@@ -32,8 +70,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Skeleton-only: signing wired up in a later sub-step (Play Store flow).
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (useDebugReleaseSigning) {
+                signingConfigs.getByName("debug")
+            } else {
+                signingConfigs.getByName("release")
+            }
         }
         create("benchmark") {
             initWith(buildTypes.getByName("release"))
@@ -108,6 +149,26 @@ baselineProfile {
     filter {
         include("com.omnio.phone.**")
     }
+}
+
+// Gradle Play Publisher (com.github.triplet.play). Listing assets and release notes
+// live under app-phone/src/main/play/. Service account JSON path is provided via
+// OMNIO_PHONE_PLAY_SERVICE_ACCOUNT_JSON (env or local.properties); falls back to
+// rootProject/play-service-account-phone.json so local dev "just works" if the file
+// is dropped in. The file is only opened when a publish task actually runs, so a
+// missing path is harmless for assemble/bundle tasks.
+val playServiceAccountFile = releaseOptional("OMNIO_PHONE_PLAY_SERVICE_ACCOUNT_JSON")
+    ?.let(::file)
+    ?: rootProject.file("play-service-account-phone.json")
+
+play {
+    serviceAccountCredentials.set(playServiceAccountFile)
+    track.set("internal")
+    defaultToAppBundles.set(true)
+    releaseStatus.set(com.github.triplet.gradle.androidpublisher.ReleaseStatus.DRAFT)
+    // Keep the plugin from failing the build on configuration when creds are absent;
+    // the publish tasks will still error out, which is the correct behavior.
+    enabled.set(playServiceAccountFile.exists())
 }
 
 dependencies {

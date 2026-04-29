@@ -1,0 +1,1 @@
+First internal alpha. Email + QR sign-in, addon browsing, local playback.

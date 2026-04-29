@@ -40,6 +40,7 @@ androidxTestRunner = "1.7.0"
 uiautomator = "2.3.0"
 profileinstaller = "1.4.1"
 baselineProfilePlugin = "1.4.1"
+gradlePlayPublisher = "3.12.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -142,3 +143,4 @@ hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineProfilePlugin" }
+gradle-play-publisher = { id = "com.github.triplet.play", version.ref = "gradlePlayPublisher" }

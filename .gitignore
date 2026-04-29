@@ -19,6 +19,9 @@ local.properties
 libass-android
 Stremio addons refer
 nuviotv.jks
+omniotv.jks
+omnio-phone.jks
+play-service-account*.json
 CLAUDE.md
 build_and_install.sh
 android-tv-samples
