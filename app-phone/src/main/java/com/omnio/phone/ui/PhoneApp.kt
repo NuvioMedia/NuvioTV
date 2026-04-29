@@ -5,6 +5,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,6 +36,7 @@ import com.omnio.phone.ui.screens.home.HomeScreen
 import com.omnio.phone.ui.screens.player.PhonePlayerRoute
 import com.omnio.phone.ui.screens.player.PhonePlayerScreen
 import com.omnio.phone.ui.screens.profiles.ProfilesScreen
+import com.omnio.phone.ui.screens.search.PhoneSearchScreen
 import com.omnio.phone.ui.screens.splash.SplashScreen
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -41,6 +46,7 @@ object PhoneRoutes {
     const val HOME = "home"
     const val PROFILES = "profiles"
     const val ADDONS = "addons"
+    const val SEARCH = "search"
     const val DETAIL = "detail/{contentId}/{contentType}"
     val PLAYER = PhonePlayerRoute.ROUTE
 
@@ -88,6 +94,20 @@ private fun SignedInNav() {
                                 else -> "OmnioTV"
                             }
                         )
+                    },
+                    actions = {
+                        if (currentRoute == PhoneRoutes.HOME) {
+                            IconButton(onClick = {
+                                navController.navigate(PhoneRoutes.SEARCH) {
+                                    launchSingleTop = true
+                                }
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = stringResource(R.string.cd_search)
+                                )
+                            }
+                        }
                     }
                 )
             }
@@ -130,6 +150,19 @@ private fun SignedInNav() {
             }
             composable(PhoneRoutes.ADDONS) {
                 AddonsScreen()
+            }
+            composable(PhoneRoutes.SEARCH) {
+                PhoneSearchScreen(
+                    onBack = { navController.popBackStack() },
+                    onItemClick = { item ->
+                        navController.navigate(
+                            PhoneRoutes.detail(
+                                contentId = item.id,
+                                contentType = item.apiType
+                            )
+                        )
+                    }
+                )
             }
             composable(
                 route = PhoneRoutes.DETAIL,
