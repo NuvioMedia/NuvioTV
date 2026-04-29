@@ -60,6 +60,11 @@ export default function ProfilesForm({
   const dirty = initialSig !== currentSig;
   useUnsavedWarning(dirty);
 
+  const avatarById = useMemo(
+    () => Object.fromEntries(avatarCatalog.map((a) => [a.id, a])),
+    [avatarCatalog],
+  );
+
   const update = (idx: number, patch: Partial<ProfileEdit>) => {
     setItems((prev) =>
       prev.map((p) => (p.profile_index === idx ? { ...p, ...patch } : p))
@@ -96,6 +101,7 @@ export default function ProfilesForm({
     <div className="space-y-6">
       {items.map((p) => {
         const isPrimary = p.profile_index === 1;
+        const avatar = p.avatar_id ? avatarById[p.avatar_id] : null;
         return (
           <section
             key={p.profile_index}
@@ -103,10 +109,20 @@ export default function ProfilesForm({
           >
             <div className="mb-4 flex items-start gap-4">
               <div
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-2xl font-semibold text-white"
-                style={{ backgroundColor: p.avatar_color_hex }}
+                className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full text-2xl font-semibold text-white"
+                style={{ backgroundColor: avatar?.bg_color ?? p.avatar_color_hex }}
               >
-                {p.name ? p.name[0]?.toUpperCase() : <User className="h-7 w-7" />}
+                {avatar ? (
+                  <img
+                    src={avatar.image_url}
+                    alt={avatar.display_name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : p.name ? (
+                  p.name[0]?.toUpperCase()
+                ) : (
+                  <User className="h-7 w-7" />
+                )}
               </div>
               <div className="flex-1 space-y-3">
                 <div className="flex items-baseline gap-2">

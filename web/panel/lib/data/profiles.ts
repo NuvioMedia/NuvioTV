@@ -41,17 +41,20 @@ export interface AvatarEntry {
   storage_path: string;
   category: string;
   bg_color: string | null;
+  image_url: string;
 }
 
 export async function listAvatarCatalog(): Promise<AvatarEntry[]> {
   const supabase = await createServerSupabase();
   const { data, error } = await supabase.rpc("get_avatar_catalog");
   if (error) throw error;
+  const base = `${process.env.NEXT_PUBLIC_SUPABASE_URL!.replace(/\/$/, "")}/storage/v1/object/public/avatars`;
   return ((data as AvatarEntry[]) ?? []).map((a) => ({
     id: a.id,
     display_name: a.display_name,
     storage_path: a.storage_path,
     category: a.category,
     bg_color: a.bg_color ?? null,
+    image_url: `${base}/${a.storage_path}`,
   }));
 }

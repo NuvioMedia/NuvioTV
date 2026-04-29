@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Lock, User } from "lucide-react";
-import { listProfiles } from "@/lib/data/profiles";
+import { listAvatarCatalog, listProfiles } from "@/lib/data/profiles";
 import SignOutButton from "@/components/SignOutButton";
 
 export const metadata = {
@@ -8,7 +8,11 @@ export const metadata = {
 };
 
 export default async function ProfilesPage() {
-  const profiles = await listProfiles();
+  const [profiles, avatarCatalog] = await Promise.all([
+    listProfiles(),
+    listAvatarCatalog(),
+  ]);
+  const avatarById = new Map(avatarCatalog.map((a) => [a.id, a]));
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col p-6">
@@ -23,17 +27,29 @@ export default async function ProfilesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          {profiles.map((p) => (
+          {profiles.map((p) => {
+            const avatar = p.avatar_id ? avatarById.get(p.avatar_id) : null;
+            return (
             <Link
               key={p.id}
               href={`/p/${p.profile_index}`}
               className="group flex flex-col items-center gap-3 rounded-2xl border border-slate-700/50 bg-slate-800/40 p-6 transition hover:border-primary"
             >
               <div
-                className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-semibold text-white"
-                style={{ backgroundColor: p.avatar_color_hex }}
+                className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full text-2xl font-semibold text-white"
+                style={{ backgroundColor: avatar?.bg_color ?? p.avatar_color_hex }}
               >
-                {p.name ? p.name[0]?.toUpperCase() : <User className="h-8 w-8" />}
+                {avatar ? (
+                  <img
+                    src={avatar.image_url}
+                    alt={avatar.display_name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : p.name ? (
+                  p.name[0]?.toUpperCase()
+                ) : (
+                  <User className="h-8 w-8" />
+                )}
               </div>
               <div className="text-center">
                 <div className="font-medium text-slate-100">
@@ -47,7 +63,8 @@ export default async function ProfilesPage() {
                 )}
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </main>

@@ -23,11 +23,40 @@ async function listProfiles(): Promise<Profile[]> {
   return (data ?? []) as Profile[];
 }
 
+interface AvatarEntry {
+  id: string;
+  display_name: string;
+  storage_path: string;
+  category: string;
+  bg_color: string | null;
+  image_url: string;
+}
+
+async function listAvatarCatalog(): Promise<AvatarEntry[]> {
+  const { data, error } = await supabase.rpc("get_avatar_catalog");
+  if (error) throw error;
+  const base = `${import.meta.env.VITE_SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/avatars`;
+  return ((data ?? []) as AvatarEntry[]).map((a) => ({
+    id: a.id,
+    display_name: a.display_name,
+    storage_path: a.storage_path,
+    category: a.category,
+    bg_color: a.bg_color ?? null,
+    image_url: `${base}/${a.storage_path}`,
+  }));
+}
+
 function ProfilesPage() {
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["profiles"],
     queryFn: listProfiles,
   });
+  const { data: avatarCatalog = [] } = useQuery({
+    queryKey: ["avatar-catalog"],
+    queryFn: listAvatarCatalog,
+    staleTime: 60 * 60 * 1000,
+  });
+  const avatarById = new Map(avatarCatalog.map((a) => [a.id, a]));
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-3xl flex-col p-6">
@@ -57,7 +86,9 @@ function ProfilesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          {profiles.map((p) => (
+          {profiles.map((p) => {
+            const avatar = p.avatar_id ? avatarById.get(p.avatar_id) : null;
+            return (
             <Link
               key={p.id}
               to="/p/$profileId"
@@ -65,10 +96,20 @@ function ProfilesPage() {
               className="group flex flex-col items-center gap-3 rounded-2xl border border-slate-700/50 bg-slate-800/40 p-6 transition hover:border-primary"
             >
               <div
-                className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-semibold text-white"
-                style={{ backgroundColor: p.avatar_color_hex }}
+                className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full text-2xl font-semibold text-white"
+                style={{ backgroundColor: avatar?.bg_color ?? p.avatar_color_hex }}
               >
-                {p.name ? p.name[0]?.toUpperCase() : <User className="h-8 w-8" />}
+                {avatar ? (
+                  <img
+                    src={avatar.image_url}
+                    alt={avatar.display_name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : p.name ? (
+                  p.name[0]?.toUpperCase()
+                ) : (
+                  <User className="h-8 w-8" />
+                )}
               </div>
               <div className="text-center">
                 <div className="font-medium text-slate-100">
@@ -82,7 +123,8 @@ function ProfilesPage() {
                 )}
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </main>
