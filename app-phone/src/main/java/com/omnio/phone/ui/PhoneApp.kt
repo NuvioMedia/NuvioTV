@@ -44,6 +44,8 @@ import com.omnio.phone.ui.screens.profiles.ProfilesScreen
 import com.omnio.phone.ui.screens.search.PhoneSearchScreen
 import com.omnio.phone.ui.screens.seeall.PhoneSeeAllRoute
 import com.omnio.phone.ui.screens.seeall.PhoneSeeAllScreen
+import com.omnio.phone.ui.screens.settings.PhoneLanguageScreen
+import com.omnio.phone.ui.screens.settings.PhonePlayerDefaultsScreen
 import com.omnio.phone.ui.screens.settings.PhoneSettingsScreen
 import com.omnio.phone.ui.screens.scan.PhoneTvLoginScannerScreen
 import com.omnio.phone.ui.screens.splash.SplashScreen
@@ -58,6 +60,8 @@ object PhoneRoutes {
     const val ADDONS = "addons"
     const val SEARCH = "search"
     const val SETTINGS = "settings"
+    const val SETTINGS_PLAYER_DEFAULTS = "settings/player_defaults"
+    const val SETTINGS_LANGUAGE = "settings/language"
     const val TV_QR_SCAN = "tv_qr_scan"
     const val DETAIL = "detail/{contentId}/{contentType}"
     val PLAYER = PhonePlayerRoute.ROUTE
@@ -224,8 +228,29 @@ private fun SignedInNav() {
                         navController.navigate(PhoneRoutes.TV_QR_SCAN) {
                             launchSingleTop = true
                         }
+                    },
+                    onPlayerDefaults = {
+                        navController.navigate(PhoneRoutes.SETTINGS_PLAYER_DEFAULTS) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onLanguage = {
+                        navController.navigate(PhoneRoutes.SETTINGS_LANGUAGE) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onManageAddons = {
+                        navController.navigate(PhoneRoutes.ADDONS) {
+                            launchSingleTop = true
+                        }
                     }
                 )
+            }
+            composable(PhoneRoutes.SETTINGS_PLAYER_DEFAULTS) {
+                PhonePlayerDefaultsScreen(onBack = { navController.popBackStack() })
+            }
+            composable(PhoneRoutes.SETTINGS_LANGUAGE) {
+                PhoneLanguageScreen(onBack = { navController.popBackStack() })
             }
             composable(PhoneRoutes.TV_QR_SCAN) {
                 PhoneTvLoginScannerScreen(onBack = { navController.popBackStack() })
