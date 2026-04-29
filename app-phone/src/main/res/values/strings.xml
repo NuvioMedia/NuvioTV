@@ -40,6 +40,16 @@
     <string name="cd_back">Back</string>
     <string name="cd_search">Search</string>
     <string name="cd_settings">Settings</string>
+
+    <string name="tv_qr_scan_title">Scan TV QR</string>
+    <string name="tv_qr_scan_hint">Point the camera at the QR code shown on your TV.</string>
+    <string name="tv_qr_scan_permission_title">Camera permission needed</string>
+    <string name="tv_qr_scan_permission_message">Grant camera access to scan the QR code shown on your TV.</string>
+    <string name="tv_qr_scan_permission_action">Grant permission</string>
+    <string name="tv_qr_scan_requesting_permission">Requesting camera permission…</string>
+    <string name="settings_section_tv_login">Sign in TV</string>
+    <string name="settings_action_scan_tv_qr">Scan TV QR</string>
+    <string name="settings_action_scan_tv_qr_subtitle">Use this phone to approve a TV sign in</string>
     <string name="search_placeholder">Search movies, series, channels…</string>
     <string name="search_clear">Clear</string>
     <string name="search_retry">Retry</string>

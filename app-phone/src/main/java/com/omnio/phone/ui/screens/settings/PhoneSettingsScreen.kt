@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -32,8 +33,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.omnio.phone.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -41,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun PhoneSettingsScreen(
     onBack: () -> Unit,
+    onScanTvQr: () -> Unit,
     viewModel: PhoneSettingsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -79,6 +83,16 @@ fun PhoneSettingsScreen(
                 email = state.email,
                 isSigningOut = state.isSigningOut,
                 onSignOut = viewModel::signOut
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+            SectionHeader(text = stringResource(R.string.settings_section_tv_login))
+            ActionRow(
+                icon = Icons.Filled.QrCodeScanner,
+                title = stringResource(R.string.settings_action_scan_tv_qr),
+                subtitle = stringResource(R.string.settings_action_scan_tv_qr_subtitle),
+                onClick = onScanTvQr
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -168,6 +182,42 @@ private fun AboutRow(
         SettingsKv(label = "Version", value = versionName.ifBlank { "—" })
         SettingsKv(label = "Build", value = versionCode.ifBlank { "—" })
         SettingsKv(label = "Variant", value = if (isDebugBuild) "Debug" else "Release")
+    }
+}
+
+@Composable
+private fun ActionRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(Modifier.size(16.dp))
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
