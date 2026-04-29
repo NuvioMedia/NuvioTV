@@ -30,6 +30,7 @@ import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.Cookie
 import okhttp3.CookieJar
@@ -126,44 +127,47 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory, Configurat
     }
 
     // ── TV Home Screen Recommendations ──
+    //
+    // Recommendation init is intentionally deferred: ContentResolver writes,
+    // Coil image generation and the 5s continue-watching flow timeout would
+    // otherwise contend with startup sync, addon manifest fetches and the
+    // first frame render on cold start.
 
     private fun initializeTvRecommendations() {
-        // Create channels asynchronously — no-op on non-TV devices
         appScope.launch {
+            delay(TV_RECS_INIT_DEFER_MS)
             try {
                 tvRecommendationManager.initializeChannels()
             } catch (_: Exception) {
             }
+            scheduleRecommendationSync()
         }
-
-        // Schedule periodic background sync
-        scheduleRecommendationSync()
     }
 
-    private fun scheduleRecommendationSync() {
-        appScope.launch {
-            recommendationDataStore.syncIntervalHoursFlow.collect { intervalHours ->
-                val workManager = WorkManager.getInstance(this@NuvioApplication)
-                val workName = RecommendationConstants.WORK_NAME_PERIODIC_SYNC
+    private suspend fun scheduleRecommendationSync() {
+        recommendationDataStore.syncIntervalHoursFlow.collect { intervalHours ->
+            val workManager = WorkManager.getInstance(this@NuvioApplication)
+            val workName = RecommendationConstants.WORK_NAME_PERIODIC_SYNC
 
-                if (intervalHours <= 0) {
-                    workManager.cancelUniqueWork(workName)
-                } else {
-                    val workRequest = PeriodicWorkRequestBuilder<TvRecommendationWorker>(
-                        intervalHours.toLong(), TimeUnit.HOURS
-                    ).setConstraints(
-                        Constraints.Builder()
-                            .setRequiredNetworkType(NetworkType.CONNECTED)
-                            .build()
-                    ).build()
+            if (intervalHours <= 0) {
+                workManager.cancelUniqueWork(workName)
+            } else {
+                val workRequest = PeriodicWorkRequestBuilder<TvRecommendationWorker>(
+                    intervalHours.toLong(), TimeUnit.HOURS
+                ).setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build()
+                ).build()
 
-                    workManager.enqueueUniquePeriodicWork(
-                        workName,
-                        ExistingPeriodicWorkPolicy.UPDATE,
-                        workRequest
-                    )
-                }
+                workManager.enqueueUniquePeriodicWork(
+                    workName,
+                    ExistingPeriodicWorkPolicy.UPDATE,
+                    workRequest
+                )
             }
         }
     }
 }
+
+private const val TV_RECS_INIT_DEFER_MS = 8_000L
