@@ -34,12 +34,6 @@
     <string name="error_state_fix_addon_cleartext">byt tilläggets URL till HTTPS eller uppdatera tilläggskonfigurationen.</string>
     <string name="error_state_fix_addon_generic">försök igen, uppdatera eller installera om tillägget, eller prova ett annat tillägg.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
-    <string name="error_meta_not_found">Metadata hittades inte</string>
-    <string name="error_meta_no_supported_addon">Inget installerat tillägg stödjer metadata för \"%1$s\".</string>
-    <string name="error_meta_no_addon_for_id">Inget installerat tillägg kunde tillhandahålla metadata för id=%1$s (typ=%2$s).</string>
-    <string name="error_meta_tried_none">Provade metatillägg: %1$s. Inget av dem tillhandahöll metadata för id=%2$s (typ=%3$s).</string>
-    <string name="error_meta_tried_generic">Provade metatillägg: %1$s. Metadata kunde inte laddas för id=%2$s (typ=%3$s).</string>
-    <string name="error_meta_tried_issues">Provade metatillägg: %1$s. Metadata kunde inte laddas för id=%2$s (typ=%3$s). Problem: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Fortsätt titta</string>
@@ -80,7 +74,6 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">Säsong %1$d</string>
     <string name="episodes_specials">Special</string>
-    <string name="episodes_episode">Avsnitt</string>
     <string name="episodes_cd_watched">Sedd</string>
     <string name="episodes_dialog_subtitle">Avsnittsåtgärder</string>
     <string name="episodes_mark_watched">Markera som sedd</string>
@@ -1057,10 +1050,6 @@
     <string name="watchlist_removed">Borttagen från bevakningslistan</string>
 
     <!-- Missing: ErrorState (streams) -->
-    <string name="error_stream_no_supported_addon">Inget installerat tillägg stödjer strömmar för \"%1$s\".</string>
-    <string name="error_stream_tried_none">Provade strömtillägg: %1$s. Inget av dem returnerade strömmar för id=%2$s (typ=%3$s).</string>
-    <string name="error_stream_tried_generic">Provade strömtillägg: %1$s. Strömmar kunde inte laddas för id=%2$s (typ=%3$s).</string>
-    <string name="error_stream_tried_issues">Provade strömtillägg: %1$s. Strömmar kunde inte laddas för id=%2$s (typ=%3$s). Problem: %4$s.</string>
 
     <!-- Missing: AddonManager -->
     <string name="addon_install_success">Installerade %1$s</string>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_meta_not_found">Metadatos no encontrados</string>
+    <string name="error_meta_no_supported_addon">Ningún complemento instalado admite metadatos para \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">Ningún complemento instalado pudo proporcionar metadatos para id=%1$s (tipo=%2$s).</string>
+    <string name="error_meta_tried_none">Complementos de metadatos probados: %1$s. Ninguno de ellos proporcionó metadatos para id=%2$s (tipo=%3$s).</string>
+    <string name="error_meta_tried_generic">Complementos de metadatos probados: %1$s. No se pudo cargar metadatos para id=%2$s (tipo=%3$s).</string>
+    <string name="error_meta_tried_issues">Complementos de metadatos probados: %1$s. No se pudo cargar metadatos para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Ningún complemento instalado admite transmisiones para \"%1$s\".</string>
+    <string name="error_stream_tried_none">Complementos de transmisión probados: %1$s. Ninguno de ellos devolvió transmisiones para id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_generic">Complementos de transmisión probados: %1$s. No se pudo cargar transmisiones para id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_issues">Complementos de transmisión probados: %1$s. No se pudo cargar transmisiones para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
+    <string name="episodes_episode">Episodio</string>
+</resources>

@@ -47,7 +47,6 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">Sezon %1$d</string>
     <string name="episodes_specials">Speciale</string>
-    <string name="episodes_episode">Episod</string>
     <string name="episodes_cd_watched">Vizionat</string>
     <string name="episodes_dialog_subtitle">Acțiuni episod</string>
     <string name="episodes_mark_watched">Marchează ca vizionat</string>

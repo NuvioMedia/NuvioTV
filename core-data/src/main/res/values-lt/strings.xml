@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_meta_not_found">Metaduomenys nerasti</string>
+    <string name="error_meta_no_supported_addon">Nė vienas įdiegtas priedas nepalaiko „%1$s“ metaduomenų.</string>
+    <string name="error_meta_no_addon_for_id">Nė vienas įdiegtas priedas negalėjo pateikti metaduomenų ID=%1$s (tipas=%2$s).</string>
+    <string name="error_meta_tried_none">Išbandyti meta priedai: %1$s. Nė vienas iš jų nepateikė metaduomenų ID=%2$s (tipas=%3$s).</string>
+    <string name="error_meta_tried_generic">Išbandyti meta priedai: %1$s. Nepavyko įkelti metaduomenų ID=%2$s (tipas=%3$s).</string>
+    <string name="error_meta_tried_issues">Išbandyti meta priedai: %1$s. Nepavyko įkelti metaduomenų ID=%2$s (tipas=%3$s). Problemos: %4$s.</string>
+    <string name="episodes_episode">Serija</string>
+</resources>

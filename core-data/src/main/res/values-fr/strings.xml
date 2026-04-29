@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_meta_not_found">Métadonnées introuvables</string>
+    <string name="error_meta_no_supported_addon">Aucun addon installé ne fournit de métadonnées pour \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">Aucun addon installé n\'a pu fournir de métadonnées pour l\'id=%1$s (type=%2$s).</string>
+    <string name="error_meta_tried_none">Addons de métadonnées tentés : %1$s. Aucun d\'entre eux n\'a fourni de métadonnées pour l\'id=%2$s (type=%3$s).</string>
+    <string name="error_meta_tried_generic">Addons de métadonnées tentés : %1$s. Impossible de charger les métadonnées pour l\'id=%2$s (type=%3$s).</string>
+    <string name="error_meta_tried_issues">Addons de métadonnées tentés : %1$s. Impossible de charger les métadonnées pour l\'id=%2$s (type=%3$s). Problèmes : %4$s.</string>
+    <string name="error_stream_no_supported_addon">Aucun addon installé ne supporte les flux pour \"%1$s\".</string>
+    <string name="error_stream_tried_none">Addons de flux tentés : %1$s. Aucun d\'entre eux n\'a retourné de flux pour l\'id=%2$s (type=%3$s).</string>
+    <string name="error_stream_tried_generic">Addons de flux tentés : %1$s. Les flux n\'ont pas pu être chargés pour l\'id=%2$s (type=%3$s).</string>
+    <string name="error_stream_tried_issues">Addons de flux tentés : %1$s. Les flux n\'ont pas pu être chargés pour l\'id=%2$s (type=%3$s). Problèmes : %4$s.</string>
+    <string name="episodes_episode">Épisode</string>
+</resources>

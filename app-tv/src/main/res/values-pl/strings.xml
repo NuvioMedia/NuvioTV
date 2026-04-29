@@ -46,7 +46,6 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">Sezon %1$d</string>
     <string name="episodes_specials">Specjalne</string>
-    <string name="episodes_episode">Odcinek</string>
     <string name="episodes_cd_watched">Obejrzane</string>
     <string name="episodes_dialog_subtitle">Akcje odcinka</string>
     <string name="episodes_mark_watched">Oznacz jako obejrzane</string>
@@ -1042,16 +1041,6 @@
     <string name="error_state_fix_addon_cleartext">zmień URL dodatku na HTTPS lub zaktualizuj konfigurację dodatku.</string>
     <string name="error_state_fix_addon_generic">spróbuj ponownie, zaktualizuj lub zainstaluj ponownie dodatek, lub wypróbuj inny.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
-    <string name="error_meta_not_found">Nie znaleziono metadanych</string>
-    <string name="error_meta_no_supported_addon">Żaden zainstalowany dodatek nie obsługuje metadanych dla \"%1$s\".</string>
-    <string name="error_meta_no_addon_for_id">Żaden zainstalowany dodatek nie może dostarczyć metadanych dla id=%1$s (typ=%2$s).</string>
-    <string name="error_meta_tried_none">Wypróbowane dodatki meta: %1$s. Żaden nie dostarczył metadanych dla id=%2$s (typ=%3$s).</string>
-    <string name="error_meta_tried_generic">Wypróbowane dodatki meta: %1$s. Nie można załadować metadanych dla id=%2$s (typ=%3$s).</string>
-    <string name="error_meta_tried_issues">Wypróbowane dodatki meta: %1$s. Nie można załadować metadanych dla id=%2$s (typ=%3$s). Problemy: %4$s.</string>
-    <string name="error_stream_no_supported_addon">Żaden zainstalowany dodatek nie obsługuje strumieni dla \"%1$s\".</string>
-    <string name="error_stream_tried_none">Wypróbowane dodatki strumieni: %1$s. Żaden nie zwrócił strumieni dla id=%2$s (typ=%3$s).</string>
-    <string name="error_stream_tried_generic">Wypróbowane dodatki strumieni: %1$s. Nie można załadować strumieni dla id=%2$s (typ=%3$s).</string>
-    <string name="error_stream_tried_issues">Wypróbowane dodatki strumieni: %1$s. Nie można załadować strumieni dla id=%2$s (typ=%3$s). Problemy: %4$s.</string>
 
     <string name="cw_new_episode">Nowy odcinek</string>
     <string name="cw_new_season">Nowy sezon</string>

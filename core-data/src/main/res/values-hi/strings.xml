@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_meta_not_found">मेटा नहीं मिला</string>
+    <string name="error_meta_no_supported_addon">कोई भी इंस्टॉल किया हुआ ऐडऑन "%1$s" के लिए मेटाडेटा सपोर्ट नहीं करता।</string>
+    <string name="error_meta_no_addon_for_id">किसी भी इंस्टॉल किए गए ऐडऑन ने id=%1$s (type=%2$s) के लिए मेटाडेटा प्रदान नहीं किया।</string>
+    <string name="error_meta_tried_none">आजमाए गए मेटा ऐडऑन: %1$s. इनमें से किसी ने भी id=%2$s (type=%3$s) के लिए मेटाडेटा प्रदान नहीं किया।</string>
+    <string name="error_meta_tried_generic">आजमाए गए मेटा ऐडऑन: %1$s. id=%2$s (type=%3$s) के लिए मेटाडेटा लोड नहीं हो सका।</string>
+    <string name="error_meta_tried_issues">आजमाए गए मेटा ऐडऑन: %1$s. id=%2$s (type=%3$s) के लिए मेटाडेटा लोड नहीं हो सका। समस्याएँ: %4$s।</string>
+    <string name="episodes_episode">एपिसोड</string>
+</resources>

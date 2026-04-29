@@ -48,7 +48,6 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">Phần %1$d</string>
     <string name="episodes_specials">Tập đặc biệt</string>
-    <string name="episodes_episode">Tập</string>
     <string name="episodes_cd_watched">Đã xem</string>
     <string name="episodes_dialog_subtitle">Thao tác với tập phim</string>
     <string name="episodes_mark_watched">Đánh dấu đã xem</string>

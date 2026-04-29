@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_meta_not_found">Metaadat nem található</string>
+    <string name="error_meta_no_supported_addon">Egyetlen telepített bővítmény sem támogatja a metaadatokat ehhez: \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">Egyetlen telepített bővítmény sem tudott metaadatot biztosítani ehhez: id=%1$s (típus=%2$s).</string>
+    <string name="error_meta_tried_none">Kipróbált meta bővítmények: %1$s. Egyik sem biztosított metaadatot ehhez: id=%2$s (típus=%3$s).</string>
+    <string name="error_meta_tried_generic">Kipróbált meta bővítmények: %1$s. A metaadatok betöltése sikertelen ehhez: id=%2$s (típus=%3$s).</string>
+    <string name="error_meta_tried_issues">Kipróbált meta bővítmények: %1$s. A metaadatok betöltése sikertelen ehhez: id=%2$s (típus=%3$s). Problémák: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Egyetlen telepített bővítmény sem támogatja a streameket ehhez: \"%1$s\".</string>
+    <string name="error_stream_tried_none">Kipróbált stream bővítmények: %1$s. Egyik sem adott vissza streameket a következőhöz: id=%2$s (típus=%3$s).</string>
+    <string name="error_stream_tried_generic">Kipróbált stream bővítmények: %1$s. A streameket nem sikerült betölteni a következőhöz: id=%2$s (típus=%3$s).</string>
+    <string name="error_stream_tried_issues">Kipróbált stream bővítmények: %1$s. A streameket nem sikerült betölteni a következőhöz: id=%2$s (típus=%3$s). Problémák: %4$s.</string>
+    <string name="episodes_episode">Epizód</string>
+</resources>

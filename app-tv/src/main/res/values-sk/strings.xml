@@ -41,7 +41,6 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">Séria %1$d</string>
     <string name="episodes_specials">Špeciály</string>
-    <string name="episodes_episode">Epizóda</string>
     <string name="episodes_cd_watched">Videné</string>
     <string name="episodes_dialog_subtitle">Akcie epizódy</string>
     <string name="episodes_mark_watched">Označiť ako videné</string>

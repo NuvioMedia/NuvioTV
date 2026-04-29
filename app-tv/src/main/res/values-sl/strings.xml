@@ -33,16 +33,6 @@
     <string name="error_state_fix_addon_cleartext">spremenite URL dodatka v HTTPS ali posodobite konfiguracijo dodatka.</string>
     <string name="error_state_fix_addon_generic">poskusite znova, posodobite ali ponovno namestite dodatek ali pa poskusite z drugim dodatkom.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
-    <string name="error_meta_not_found">Metapodatkov ni mogoče najti</string>
-    <string name="error_meta_no_supported_addon">Noben nameščen dodatek ne podpira metapodatkov za \"%1$s\".</string>
-    <string name="error_meta_no_addon_for_id">Noben nameščen dodatek ni mogel zagotoviti metapodatkov za id=%1$s (vrsta=%2$s).</string>
-    <string name="error_meta_tried_none">Preizkušeni meta dodatki: %1$s. Nobeden od njih ni zagotovil metapodatkov za id=%2$s (vrsta=%3$s).</string>
-    <string name="error_meta_tried_generic">Preizkušeni meta dodatki: %1$s. Metapodatkov ni bilo mogoče naložiti za id=%2$s (vrsta=%3$s).</string>
-    <string name="error_meta_tried_issues">Preizkušeni meta dodatki: %1$s. Metapodatkov ni bilo mogoče naložiti za id=%2$s (vrsta=%3$s). Težave: %4$s.</string>
-    <string name="error_stream_no_supported_addon">Noben nameščen dodatek ne podpira virov za \"%1$s\".</string>
-    <string name="error_stream_tried_none">Preizkušeni dodatki za vire: %1$s. Nobeden od njih ni vrnil virov za id=%2$s (vrsta=%3$s).</string>
-    <string name="error_stream_tried_generic">Preizkušeni dodatki za vire: %1$s. Virov ni bilo mogoče naložiti za id=%2$s (vrsta=%3$s).</string>
-    <string name="error_stream_tried_issues">Preizkušeni dodatki za vire: %1$s. Virov ni bilo mogoče naložiti za id=%2$s (vrsta=%3$s). Težave: %4$s.</string>																   
 	<!-- ContinueWatchingSection -->
     <string name="continue_watching">Nadaljuj z gledanjem</string>
     <string name="cw_upcoming">Prihajajoče</string>
@@ -82,7 +72,6 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">Sezona %1$d</string>
     <string name="episodes_specials">Posebne epizode</string>
-    <string name="episodes_episode">Epizoda</string>
     <string name="episodes_cd_watched">Ogledano</string>
     <string name="episodes_dialog_subtitle">Možnosti epizode</string>
     <string name="episodes_mark_watched">Označi kot ogledano</string>

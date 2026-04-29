@@ -36,12 +36,6 @@
     <string name="error_state_fix_addon_cleartext">שנה את כתובת ה-URL של התוסף ל-HTTPS או עדכן את הגדרות התוסף.</string>
     <string name="error_state_fix_addon_generic">נסה שוב, עדכן או התקן מחדש את התוסף, או נסה תוסף אחר.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
-    <string name="error_meta_not_found">מטה-דאטה לא נמצא</string>
-    <string name="error_meta_no_supported_addon">אף תוסף מותקן אינו תומך במטה-דאטה עבור \"%1$s\".</string>
-    <string name="error_meta_no_addon_for_id">אף תוסף מותקן לא הצליח לספק מטה-דאטה עבור id=%1$s (type=%2$s).</string>
-    <string name="error_meta_tried_none">תוספי מטה שנוסו: %1$s. אף אחד לא סיפק מטה-דאטה עבור id=%2$s (type=%3$s).</string>
-    <string name="error_meta_tried_generic">תוספי מטה שנוסו: %1$s. לא ניתן לטעון מטה-דאטה עבור id=%2$s (type=%3$s).</string>
-    <string name="error_meta_tried_issues">תוספי מטה שנוסו: %1$s. לא ניתן לטעון מטה-דאטה עבור id=%2$s (type=%3$s). בעיות: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">המשך צפייה</string>
@@ -80,7 +74,6 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">עונה %1$d</string>
     <string name="episodes_specials">מיוחדים</string>
-    <string name="episodes_episode">פרק</string>
     <string name="episodes_cd_watched">נצפה</string>
     <string name="episodes_dialog_subtitle">פעולות פרק</string>
     <string name="episodes_mark_watched">סמן כנצפה</string>

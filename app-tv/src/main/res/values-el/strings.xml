@@ -35,16 +35,6 @@
     <string name="error_state_fix_addon_cleartext">αλλάξτε το URL του πρόσθετου σε HTTPS ή ενημερώστε τη διαμόρφωση του πρόσθετου.</string>
     <string name="error_state_fix_addon_generic">δοκιμάστε ξανά, ενημερώστε ή επανεγκαταστήστε το πρόσθετο ή δοκιμάστε διαφορετικό πρόσθετο.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
-    <string name="error_meta_not_found">Δεν βρέθηκαν μεταδεδομένα</string>
-    <string name="error_meta_no_supported_addon">Κανένα εγκατεστημένο πρόσθετο δεν υποστηρίζει μεταδεδομένα για «%1$s».</string>
-    <string name="error_meta_no_addon_for_id">Κανένα εγκατεστημένο πρόσθετο δεν μπόρεσε να παρέχει μεταδεδομένα για το ID=%1$s (τύπος=%2$s).</string>
-    <string name="error_meta_tried_none">Δοκιμάστηκαν πρόσθετα μεταδεδομένων: %1$s. Κανένα δεν παρείχε μεταδεδομένα για το ID=%2$s (τύπος=%3$s).</string>
-    <string name="error_meta_tried_generic">Δοκιμάστηκαν πρόσθετα μεταδεδομένων: %1$s. Δεν μπόρεσαν να φορτωθούν μεταδεδομένα για το ID=%2$s (τύπος=%3$s).</string>
-    <string name="error_meta_tried_issues">Δοκιμάστηκαν πρόσθετα μεταδεδομένων: %1$s. Δεν μπόρεσαν να φορτωθούν μεταδεδομένα για το ID=%2$s (τύπος=%3$s). Προβλήματα: %4$s.</string>
-    <string name="error_stream_no_supported_addon">Κανένα εγκατεστημένο πρόσθετο δεν υποστηρίζει ροές για «%1$s».</string>
-    <string name="error_stream_tried_none">Δοκιμάστηκαν πρόσθετα ροών: %1$s. Κανένα δεν επέστρεψε ροές για το ID=%2$s (τύπος=%3$s).</string>
-    <string name="error_stream_tried_generic">Δοκιμάστηκαν πρόσθετα ροών: %1$s. Δεν μπόρεσαν να φορτωθούν ροές για το ID=%2$s (τύπος=%3$s).</string>
-    <string name="error_stream_tried_issues">Δοκιμάστηκαν πρόσθετα ροών: %1$s. Δεν μπόρεσαν να φορτωθούν ροές για το ID=%2$s (τύπος=%3$s). Προβλήματα: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Συνέχεια παρακολούθησης</string>
@@ -85,7 +75,6 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">Σεζόν %1$d</string>
     <string name="episodes_specials">Ειδικά</string>
-    <string name="episodes_episode">Επεισόδιο</string>
     <string name="episodes_cd_watched">Προβλήθηκε</string>
     <string name="episodes_dialog_subtitle">Ενέργειες επεισοδίου</string>
     <string name="episodes_mark_watched">Επισήμανση ως προβληθέν</string>

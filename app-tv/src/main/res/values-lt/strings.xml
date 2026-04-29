@@ -33,12 +33,6 @@
     <string name="error_state_fix_addon_cleartext">pakeiskite priedo URL į HTTPS arba atnaujinkite priedo konfigūraciją.</string>
     <string name="error_state_fix_addon_generic">pabandykite dar kartą, atnaujinkite arba iš naujo įdiekite priedą arba išbandykite kitą priedą.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
-    <string name="error_meta_not_found">Metaduomenys nerasti</string>
-    <string name="error_meta_no_supported_addon">Nė vienas įdiegtas priedas nepalaiko „%1$s“ metaduomenų.</string>
-    <string name="error_meta_no_addon_for_id">Nė vienas įdiegtas priedas negalėjo pateikti metaduomenų ID=%1$s (tipas=%2$s).</string>
-    <string name="error_meta_tried_none">Išbandyti meta priedai: %1$s. Nė vienas iš jų nepateikė metaduomenų ID=%2$s (tipas=%3$s).</string>
-    <string name="error_meta_tried_generic">Išbandyti meta priedai: %1$s. Nepavyko įkelti metaduomenų ID=%2$s (tipas=%3$s).</string>
-    <string name="error_meta_tried_issues">Išbandyti meta priedai: %1$s. Nepavyko įkelti metaduomenų ID=%2$s (tipas=%3$s). Problemos: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Tęsti žiūrėjimą</string>
@@ -77,7 +71,6 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">%1$d sezonas</string>
     <string name="episodes_specials">Specialios serijos</string>
-    <string name="episodes_episode">Serija</string>
     <string name="episodes_cd_watched">Žiūrėta</string>
     <string name="episodes_dialog_subtitle">Serijos veiksmai</string>
     <string name="episodes_mark_watched">Pažymėti kaip žiūrėtą</string>

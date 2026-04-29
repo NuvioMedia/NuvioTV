@@ -33,16 +33,6 @@
     <string name="error_state_fix_addon_cleartext">změňte URL doplňku na HTTPS nebo aktualizujte konfiguraci doplňku.</string>
     <string name="error_state_fix_addon_generic">zkuste to znovu, aktualizujte nebo přeinstalujte doplněk, případně zkuste jiný.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
-    <string name="error_meta_not_found">Meta nenalezena</string>
-    <string name="error_meta_no_supported_addon">Žádný nainstalovaný doplněk nepodporuje metadata pro „%1$s“.</string>
-    <string name="error_meta_no_addon_for_id">Žádný nainstalovaný doplněk nemohl poskytnout metadata pro id=%1$s (typ=%2$s).</string>
-    <string name="error_meta_tried_none">Vyzkoušené meta doplňky: %1$s. Žádný z nich neposkytl metadata pro id=%2$s (typ=%3$s).</string>
-    <string name="error_meta_tried_generic">Vyzkoušené meta doplňky: %1$s. Metadata nebylo možné načíst pro id=%2$s (typ=%3$s).</string>
-    <string name="error_meta_tried_issues">Vyzkoušené meta doplňky: %1$s. Metadata nebylo možné načíst pro id=%2$s (typ=%3$s). Problémy: %4$s.</string>
-    <string name="error_stream_no_supported_addon">Žádný nainstalovaný doplněk nepodporuje streamy pro „%1$s“.</string>
-    <string name="error_stream_tried_none">Vyzkoušené doplňky pro streamy: %1$s. Žádný z nich nevrátil streamy pro id=%2$s (typ=%3$s).</string>
-    <string name="error_stream_tried_generic">Vyzkoušené doplňky pro streamy: %1$s. Streamy nebylo možné načíst pro id=%2$s (typ=%3$s).</string>
-    <string name="error_stream_tried_issues">Vyzkoušené doplňky pro streamy: %1$s. Streamy nebylo možné načíst pro id=%2$s (typ=%3$s). Problémy: %4$s.</string>
 
     <string name="continue_watching">Pokračovat ve sledování</string>
     <string name="cw_upcoming">Brzy</string>
@@ -79,7 +69,6 @@
 
     <string name="episodes_season">Série %1$d</string>
     <string name="episodes_specials">Speciály</string>
-    <string name="episodes_episode">Epizoda</string>
     <string name="episodes_cd_watched">Zhlédnuto</string>
     <string name="episodes_dialog_subtitle">Akce epizody</string>
     <string name="episodes_mark_watched">Označit jako zhlédnuté</string>

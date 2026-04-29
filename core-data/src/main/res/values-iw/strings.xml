@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_meta_not_found">מטה-דאטה לא נמצא</string>
+    <string name="error_meta_no_supported_addon">אף תוסף מותקן אינו תומך במטה-דאטה עבור \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">אף תוסף מותקן לא הצליח לספק מטה-דאטה עבור id=%1$s (type=%2$s).</string>
+    <string name="error_meta_tried_none">תוספי מטה שנוסו: %1$s. אף אחד לא סיפק מטה-דאטה עבור id=%2$s (type=%3$s).</string>
+    <string name="error_meta_tried_generic">תוספי מטה שנוסו: %1$s. לא ניתן לטעון מטה-דאטה עבור id=%2$s (type=%3$s).</string>
+    <string name="error_meta_tried_issues">תוספי מטה שנוסו: %1$s. לא ניתן לטעון מטה-דאטה עבור id=%2$s (type=%3$s). בעיות: %4$s.</string>
+    <string name="episodes_episode">פרק</string>
+</resources>

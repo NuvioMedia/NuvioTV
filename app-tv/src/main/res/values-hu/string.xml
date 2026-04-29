@@ -35,16 +35,6 @@
     <string name="error_state_fix_addon_cleartext">változtasd a bővítmény URL-jét HTTPS-re, vagy frissítsd a bővítmény konfigurációját.</string>
     <string name="error_state_fix_addon_generic">próbáld újra, frissítsd vagy telepítsd újra a bővítményt, esetleg próbálj meg egy másikat.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
-    <string name="error_meta_not_found">Metaadat nem található</string>
-    <string name="error_meta_no_supported_addon">Egyetlen telepített bővítmény sem támogatja a metaadatokat ehhez: \"%1$s\".</string>
-    <string name="error_meta_no_addon_for_id">Egyetlen telepített bővítmény sem tudott metaadatot biztosítani ehhez: id=%1$s (típus=%2$s).</string>
-    <string name="error_meta_tried_none">Kipróbált meta bővítmények: %1$s. Egyik sem biztosított metaadatot ehhez: id=%2$s (típus=%3$s).</string>
-    <string name="error_meta_tried_generic">Kipróbált meta bővítmények: %1$s. A metaadatok betöltése sikertelen ehhez: id=%2$s (típus=%3$s).</string>
-    <string name="error_meta_tried_issues">Kipróbált meta bővítmények: %1$s. A metaadatok betöltése sikertelen ehhez: id=%2$s (típus=%3$s). Problémák: %4$s.</string>
-    <string name="error_stream_no_supported_addon">Egyetlen telepített bővítmény sem támogatja a streameket ehhez: \"%1$s\".</string>
-    <string name="error_stream_tried_none">Kipróbált stream bővítmények: %1$s. Egyik sem adott vissza streameket a következőhöz: id=%2$s (típus=%3$s).</string>
-    <string name="error_stream_tried_generic">Kipróbált stream bővítmények: %1$s. A streameket nem sikerült betölteni a következőhöz: id=%2$s (típus=%3$s).</string>
-    <string name="error_stream_tried_issues">Kipróbált stream bővítmények: %1$s. A streameket nem sikerült betölteni a következőhöz: id=%2$s (típus=%3$s). Problémák: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Megtekintés folytatása</string>
@@ -85,7 +75,6 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">%1$d. évad</string>
     <string name="episodes_specials">Különkiadások</string>
-    <string name="episodes_episode">Epizód</string>
     <string name="episodes_cd_watched">Megnézve</string>
     <string name="episodes_dialog_subtitle">Epizódműveletek</string>
     <string name="episodes_mark_watched">Megjelölés megnézettként</string>

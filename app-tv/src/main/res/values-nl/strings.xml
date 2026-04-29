@@ -48,7 +48,6 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">Seizoen %1$d</string>
     <string name="episodes_specials">Specials</string>
-    <string name="episodes_episode">Aflevering</string>
     <string name="episodes_cd_watched">Bekeken</string>
     <string name="episodes_dialog_subtitle">Afleveringsacties</string>
     <string name="episodes_mark_watched">Markeer als bekeken</string>

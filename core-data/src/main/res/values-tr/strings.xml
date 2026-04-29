@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_meta_not_found">İçerik bilgisi bulunamadı</string>
+    <string name="error_meta_no_supported_addon">\"%1$s\" hakkında bilgi verecek yüklü bir eklenti yok.</string>
+    <string name="error_meta_no_addon_for_id">Şu içerik için detayları sağlayabilen bir eklenti bulunamadı: id=%1$s (tür=%2$s).</string>
+    <string name="error_meta_tried_none">Şu eklentiler denendi: %1$s. Hiçbiri bu içerik için bilgi sağlamadı: id=%2$s (tür=%3$s).</string>
+    <string name="error_meta_tried_generic">Şu eklentiler denendi: %1$s. Bu içerik için gerekli bilgiler yüklenemedi: id=%2$s (tür=%3$s).</string>
+    <string name="error_meta_tried_issues">Şu eklentiler denendi: %1$s. Bu içerik için gerekli bilgiler yüklenemedi: id=%2$s (tür=%3$s). Karşılaşılan sorunlar: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Yüklü eklentilerin hiçbiri \"%1$s\" için yayın desteği sunmuyor.</string>
+    <string name="error_stream_tried_none">Şu eklentiler denendi: %1$s. Hiçbiri id=%2$s (tür=%3$s) için yayın döndürmedi.</string>
+    <string name="error_stream_tried_generic">Şu eklentiler denendi: %1$s. id=%2$s (tür=%3$s) için yayınlar yüklenemedi.</string>
+    <string name="error_stream_tried_issues">Şu eklentiler denendi: %1$s. id=%2$s (tür=%3$s) için yayınlar yüklenemedi. Sorunlar: %4$s.</string>
+    <string name="episodes_episode">Bölüm</string>
+</resources>

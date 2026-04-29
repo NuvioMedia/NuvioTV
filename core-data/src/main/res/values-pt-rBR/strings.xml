@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_meta_not_found">Informações não encontradas</string>
+    <string name="error_meta_no_supported_addon">Nenhum addon instalado suporta informações para \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">Nenhum addon instalado forneceu informações para id=%1$s (tipo=%2$s).</string>
+    <string name="error_meta_tried_none">Addons consultados: %1$s. Nenhum forneceu informações para id=%2$s (tipo=%3$s).</string>
+    <string name="error_meta_tried_generic">Addons consultados: %1$s. Não foi possível carregar informações para id=%2$s (tipo=%3$s).</string>
+    <string name="error_meta_tried_issues">Addons consultados: %1$s. Falha ao carregar id=%2$s (tipo=%3$s). Erros: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Nenhum addon instalado oferece suporte a streams para "%1$s".</string>
+    <string name="error_stream_tried_none">Addons de stream testados: %1$s. Nenhum deles retornou streams para id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_generic">Addons de stream testados: %1$s. Não foi possível carregar streams para id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_issues">Addons de stream testados: %1$s. Não foi possível carregar streams para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
+    <string name="episodes_episode">Episódio</string>
+</resources>

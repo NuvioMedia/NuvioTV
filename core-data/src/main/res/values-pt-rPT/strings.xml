@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_meta_not_found">Metadados não encontrados</string>
+    <string name="error_meta_no_supported_addon">Nenhum addon instalado suporta metadados para \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">Nenhum addon instalado pôde fornecer metadados para id=%1$s (tipo=%2$s).</string>
+    <string name="error_meta_tried_none">Addons de meta testados: %1$s. Nenhum forneceu metadados para id=%2$s (tipo=%3$s).</string>
+    <string name="error_meta_tried_generic">Addons de meta testados: %1$s. Não foi possível carregar metadados para id=%2$s (tipo=%3$s).</string>
+    <string name="error_meta_tried_issues">Addons de meta testados: %1$s. Não foi possível carregar metadados para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Nenhum addon instalado suporta transmissões para \"%1$s\".</string>
+    <string name="error_stream_tried_none">Addons de transmissão testados: %1$s. Nenhum retornou transmissões para id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_generic">Addons de transmissão testados: %1$s. Não foi possível carregar as transmissões para id=%2$s (tipo=%3$s).</string>
+    <string name="error_stream_tried_issues">Addons de transmissão testados: %1$s. Não foi possível carregar as transmissões para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
+    <string name="episodes_episode">Episódio</string>
+</resources>

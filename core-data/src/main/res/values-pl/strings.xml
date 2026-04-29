@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="episodes_episode">Odcinek</string>
+    <string name="error_meta_not_found">Nie znaleziono metadanych</string>
+    <string name="error_meta_no_supported_addon">Żaden zainstalowany dodatek nie obsługuje metadanych dla \"%1$s\".</string>
+    <string name="error_meta_no_addon_for_id">Żaden zainstalowany dodatek nie może dostarczyć metadanych dla id=%1$s (typ=%2$s).</string>
+    <string name="error_meta_tried_none">Wypróbowane dodatki meta: %1$s. Żaden nie dostarczył metadanych dla id=%2$s (typ=%3$s).</string>
+    <string name="error_meta_tried_generic">Wypróbowane dodatki meta: %1$s. Nie można załadować metadanych dla id=%2$s (typ=%3$s).</string>
+    <string name="error_meta_tried_issues">Wypróbowane dodatki meta: %1$s. Nie można załadować metadanych dla id=%2$s (typ=%3$s). Problemy: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Żaden zainstalowany dodatek nie obsługuje strumieni dla \"%1$s\".</string>
+    <string name="error_stream_tried_none">Wypróbowane dodatki strumieni: %1$s. Żaden nie zwrócił strumieni dla id=%2$s (typ=%3$s).</string>
+    <string name="error_stream_tried_generic">Wypróbowane dodatki strumieni: %1$s. Nie można załadować strumieni dla id=%2$s (typ=%3$s).</string>
+    <string name="error_stream_tried_issues">Wypróbowane dodatki strumieni: %1$s. Nie można załadować strumieni dla id=%2$s (typ=%3$s). Problemy: %4$s.</string>
+</resources>

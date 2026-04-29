@@ -35,16 +35,6 @@
     <string name="error_state_fix_addon_cleartext">アドオンのURLをHTTPSに変更するか、アドオンの設定を更新してください</string>
     <string name="error_state_fix_addon_generic">再試行するか、アドオンを更新・再インストールするか、別のアドオンを試してください</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s。</string>
-    <string name="error_meta_not_found">メタデータが見つかりません</string>
-    <string name="error_meta_no_supported_addon">「%1$s」のメタデータに対応したインストール済みアドオンがありません</string>
-    <string name="error_meta_no_addon_for_id">id=%1$s (type=%2$s) のメタデータを提供できるインストール済みアドオンがありません</string>
-    <string name="error_meta_tried_none">試したメタアドオン: %1$s。id=%2$s (type=%3$s) のメタデータを提供したものはありませんでした</string>
-    <string name="error_meta_tried_generic">試したメタアドオン: %1$s。id=%2$s (type=%3$s) のメタデータを読み込めませんでした</string>
-    <string name="error_meta_tried_issues">試したメタアドオン: %1$s。id=%2$s (type=%3$s) のメタデータを読み込めませんでした。問題: %4$s。</string>
-    <string name="error_stream_no_supported_addon">「%1$s」のストリームに対応したインストール済みアドオンがありません</string>
-    <string name="error_stream_tried_none">試したストリームアドオン: %1$s。id=%2$s (type=%3$s) のストリームを返したものはありませんでした</string>
-    <string name="error_stream_tried_generic">試したストリームアドオン: %1$s。id=%2$s (type=%3$s) のストリームを読み込めませんでした</string>
-    <string name="error_stream_tried_issues">試したストリームアドオン: %1$s。id=%2$s (type=%3$s) のストリームを読み込めませんでした。問題: %4$s。</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">視聴を続ける</string>
@@ -85,7 +75,6 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">シーズン%1$d</string>
     <string name="episodes_specials">スペシャル</string>
-    <string name="episodes_episode">エピソード</string>
     <string name="episodes_cd_watched">視聴済み</string>
     <string name="episodes_dialog_subtitle">エピソードの操作</string>
     <string name="episodes_mark_watched">視聴済みにする</string>

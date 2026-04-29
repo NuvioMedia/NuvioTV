@@ -35,16 +35,6 @@
     <string name="error_state_fix_addon_cleartext">قم بتغيير رابط الإضافة إلى HTTPS أو حدث إعدادات الإضافة.</string>
     <string name="error_state_fix_addon_generic">أعد المحاولة، حدث أو أعد تثبيت الإضافة، أو جرب إضافة مختلفة.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
-    <string name="error_meta_not_found">لم يتم العثور على البيانات الوصفية</string>
-    <string name="error_meta_no_supported_addon">لا توجد إضافة مثبتة تدعم البيانات الوصفية لـ \"%1$s\".</string>
-    <string name="error_meta_no_addon_for_id">لا توجد إضافة مثبتة قادرة على توفير بيانات وصفية للمعرف=%1$s (النوع=%2$s).</string>
-    <string name="error_meta_tried_none">تمت تجربة إضافات البيانات الوصفية: %1$s. لم توفر أي منها بيانات وصفية للمعرف=%2$s (النوع=%3$s).</string>
-    <string name="error_meta_tried_generic">تمت تجربة إضافات البيانات الوصفية: %1$s. تعذر تحميل البيانات الوصفية للمعرف=%2$s (النوع=%3$s).</string>
-    <string name="error_meta_tried_issues">تمت تجربة إضافات البيانات الوصفية: %1$s. تعذر تحميل البيانات للمعرف=%2$s (النوع=%3$s). المشاكل: %4$s.</string>
-    <string name="error_stream_no_supported_addon">لا توجد إضافة مثبتة تدعم المصادر لـ \"%1$s\".</string>
-    <string name="error_stream_tried_none">تمت تجربة إضافات المصادر: %1$s. لم تُرجع أي منها مصادر للمعرف=%2$s (النوع=%3$s).</string>
-    <string name="error_stream_tried_generic">تمت تجربة إضافات المصادر: %1$s. تعذر تحميل المصادر للمعرف=%2$s (النوع=%3$s).</string>
-    <string name="error_stream_tried_issues">تمت تجربة إضافات المصادر: %1$s. تعذر تحميل المصادر للمعرف=%2$s (النوع=%3$s). المشاكل: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">متابعة المشاهدة</string>
@@ -85,7 +75,6 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">الموسم %1$d</string>
     <string name="episodes_specials">الحلقات الخاصة</string>
-    <string name="episodes_episode">الحلقة</string>
     <string name="episodes_cd_watched">تمت المشاهدة</string>
     <string name="episodes_dialog_subtitle">اجراءات الحلقة</string>
     <string name="episodes_mark_watched">تحديد كمشاهد</string>

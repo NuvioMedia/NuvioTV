@@ -35,16 +35,6 @@
     <string name="error_state_fix_addon_cleartext">muda o URL do addon para HTTPS ou atualiza a configuração do addon.</string>
     <string name="error_state_fix_addon_generic">tenta novamente, atualiza ou reinstala o addon, ou tenta um addon diferente.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
-    <string name="error_meta_not_found">Metadados não encontrados</string>
-    <string name="error_meta_no_supported_addon">Nenhum addon instalado suporta metadados para \"%1$s\".</string>
-    <string name="error_meta_no_addon_for_id">Nenhum addon instalado pôde fornecer metadados para id=%1$s (tipo=%2$s).</string>
-    <string name="error_meta_tried_none">Addons de meta testados: %1$s. Nenhum forneceu metadados para id=%2$s (tipo=%3$s).</string>
-    <string name="error_meta_tried_generic">Addons de meta testados: %1$s. Não foi possível carregar metadados para id=%2$s (tipo=%3$s).</string>
-    <string name="error_meta_tried_issues">Addons de meta testados: %1$s. Não foi possível carregar metadados para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
-    <string name="error_stream_no_supported_addon">Nenhum addon instalado suporta transmissões para \"%1$s\".</string>
-    <string name="error_stream_tried_none">Addons de transmissão testados: %1$s. Nenhum retornou transmissões para id=%2$s (tipo=%3$s).</string>
-    <string name="error_stream_tried_generic">Addons de transmissão testados: %1$s. Não foi possível carregar as transmissões para id=%2$s (tipo=%3$s).</string>
-    <string name="error_stream_tried_issues">Addons de transmissão testados: %1$s. Não foi possível carregar as transmissões para id=%2$s (tipo=%3$s). Problemas: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Continuar a Ver</string>
@@ -83,7 +73,6 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">Temporada %1$d</string>
     <string name="episodes_specials">Especiais</string>
-    <string name="episodes_episode">Episódio</string>
     <string name="episodes_cd_watched">Visto</string>
     <string name="episodes_dialog_subtitle">Ações do episódio</string>
     <string name="episodes_mark_watched">Marcar como visto</string>

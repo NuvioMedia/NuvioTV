@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_meta_not_found">Meta nenalezena</string>
+    <string name="error_meta_no_supported_addon">Žádný nainstalovaný doplněk nepodporuje metadata pro „%1$s“.</string>
+    <string name="error_meta_no_addon_for_id">Žádný nainstalovaný doplněk nemohl poskytnout metadata pro id=%1$s (typ=%2$s).</string>
+    <string name="error_meta_tried_none">Vyzkoušené meta doplňky: %1$s. Žádný z nich neposkytl metadata pro id=%2$s (typ=%3$s).</string>
+    <string name="error_meta_tried_generic">Vyzkoušené meta doplňky: %1$s. Metadata nebylo možné načíst pro id=%2$s (typ=%3$s).</string>
+    <string name="error_meta_tried_issues">Vyzkoušené meta doplňky: %1$s. Metadata nebylo možné načíst pro id=%2$s (typ=%3$s). Problémy: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Žádný nainstalovaný doplněk nepodporuje streamy pro „%1$s“.</string>
+    <string name="error_stream_tried_none">Vyzkoušené doplňky pro streamy: %1$s. Žádný z nich nevrátil streamy pro id=%2$s (typ=%3$s).</string>
+    <string name="error_stream_tried_generic">Vyzkoušené doplňky pro streamy: %1$s. Streamy nebylo možné načíst pro id=%2$s (typ=%3$s).</string>
+    <string name="error_stream_tried_issues">Vyzkoušené doplňky pro streamy: %1$s. Streamy nebylo možné načíst pro id=%2$s (typ=%3$s). Problémy: %4$s.</string>
+    <string name="episodes_episode">Epizoda</string>
+</resources>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_meta_not_found">Meta nicht gefunden</string>
+    <string name="error_meta_no_supported_addon">Kein installiertes Add-on unterstützt Metadaten für „%1$s“.</string>
+    <string name="error_meta_no_addon_for_id">Kein installiertes Add-on konnte Metadaten für id=%1$s (Typ=%2$s) bereitstellen.</string>
+    <string name="error_meta_tried_none">Versuchte Meta-Add-ons: %1$s. Keines davon lieferte Metadaten für id=%2$s (Typ=%3$s).</string>
+    <string name="error_meta_tried_generic">Ausprobierte Meta-Add-ons: %1$s. Metadaten konnten für id=%2$s (Typ=%3$s) nicht geladen werden. </string>
+    <string name="error_meta_tried_issues">Versuchte Meta-Add-ons: %1$s. Metadaten konnten für id=%2$s (Typ=%3$s) nicht geladen werden. Probleme: %4$s.</string>
+    <string name="error_stream_no_supported_addon">Kein installiertes Add-on unterstützt \"%1$s\" Streams.</string>
+    <string name="error_stream_tried_none">Versuchte Add-ons: %1$s. Keines hat Streams für id=%2$s (type=%3$s) gefunden.</string>
+    <string name="error_stream_tried_generic">Versuchte Add-ons: %1$s. Streams konnten nicht geladen werden für id=%2$s (type=%3$s).</string>
+    <string name="error_stream_tried_issues">Versuchte Add-ons: %1$s. Streams konnten nicht geladen werden für id=%2$s (type=%3$s). Fehler: %4$s.</string>
+    <string name="episodes_episode">Folge</string>
+</resources>

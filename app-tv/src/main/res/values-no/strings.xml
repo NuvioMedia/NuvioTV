@@ -35,16 +35,6 @@
     <string name="error_state_fix_addon_cleartext">Bytt tilleggslenken til HTTPS eller oppdater tilleggskonfigurasjonen.</string>
     <string name="error_state_fix_addon_generic">Prøv igjen, oppdater eller reinstaller tillegget, eller prøv et annet tillegg.</string>
     <string name="error_state_addon_issue_template">%1$s: %2$s.</string>
-    <string name="error_meta_not_found">Metadata ikke funnet</string>
-    <string name="error_meta_no_supported_addon">Ingen installerte tillegg støtter metadata for \"%1$s\".</string>
-    <string name="error_meta_no_addon_for_id">Ingen installerte tillegg kunne gi metadata for id=%1$s (type=%2$s).</string>
-    <string name="error_meta_tried_none">Prøvde metatillegg: %1$s. Ingen av dem gav metadata for id=%2$s (type=%3$s).</string>
-    <string name="error_meta_tried_generic">Prøvde metatillegg: %1$s. Metadata kunne ikke lastes for id=%2$s (type=%3$s).</string>
-    <string name="error_meta_tried_issues">Prøvde metatillegg: %1$s. Metadata kunne ikke lastes for id=%2$s (type=%3$s). Problemer: %4$s.</string>
-    <string name="error_stream_no_supported_addon">Ingen installerte tillegg støtter strømmer for \"%1$s\".</string>
-    <string name="error_stream_tried_none">Prøvde strømmetillegg: %1$s. Ingen av dem returnerte strømmer for id=%2$s (type=%3$s).</string>
-    <string name="error_stream_tried_generic">Prøvde strømmetillegg: %1$s. Strømmer kunne ikke lastes for id=%2$s (type=%3$s).</string>
-    <string name="error_stream_tried_issues">Prøvde strømmetillegg: %1$s. Strømmer kunne ikke lastes for id=%2$s (type=%3$s). Problemer: %4$s.</string>
 
     <!-- ContinueWatchingSection -->
     <string name="continue_watching">Fortsett å se</string>
@@ -85,7 +75,6 @@
     <!-- EpisodesSection -->
     <string name="episodes_season">Sesong %1$d</string>
     <string name="episodes_specials">Spesial</string>
-    <string name="episodes_episode">Episode</string>
     <string name="episodes_cd_watched">Sett</string>
     <string name="episodes_dialog_subtitle">Episodehandlinger</string>
     <string name="episodes_mark_watched">Merk som sett</string>
