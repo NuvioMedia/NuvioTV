@@ -71,7 +71,7 @@ import coil.request.ImageRequest
 import com.omnio.tv.R
 import com.omnio.tv.domain.model.Video
 import com.omnio.tv.ui.components.OmnioDialog
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import com.omnio.tv.ui.theme.OmnioTheme
 import android.text.format.DateFormat
 import java.text.SimpleDateFormat

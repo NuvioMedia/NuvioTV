@@ -20,7 +20,7 @@ import androidx.tv.material3.Glow
 import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.max

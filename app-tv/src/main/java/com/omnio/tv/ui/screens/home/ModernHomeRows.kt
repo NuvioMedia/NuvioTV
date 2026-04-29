@@ -85,7 +85,7 @@ import com.omnio.tv.ui.components.ContinueWatchingCard
 import com.omnio.tv.ui.components.MonochromePosterPlaceholder
 import com.omnio.tv.ui.components.TrailerPlayer
 import com.omnio.tv.LocalSidebarExpanded
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlin.math.abs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged

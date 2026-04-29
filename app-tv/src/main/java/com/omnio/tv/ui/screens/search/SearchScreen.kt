@@ -77,7 +77,7 @@ import com.omnio.tv.ui.components.ErrorState
 import com.omnio.tv.ui.components.LoadingIndicator
 import com.omnio.tv.ui.components.PosterCardDefaults
 import com.omnio.tv.ui.components.PosterCardStyle
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import android.view.inputmethod.CompletionInfo
 import android.view.inputmethod.InputMethodManager
 import androidx.compose.ui.platform.LocalView

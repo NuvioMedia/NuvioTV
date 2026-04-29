@@ -27,7 +27,7 @@ import com.omnio.tv.R
 import com.omnio.tv.ui.components.EmptyScreenState
 import com.omnio.tv.ui.components.PosterCardDefaults
 import com.omnio.tv.ui.components.PosterCardStyle
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlin.math.roundToInt
 
 @Composable

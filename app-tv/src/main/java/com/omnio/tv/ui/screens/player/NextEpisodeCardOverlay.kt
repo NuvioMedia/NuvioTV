@@ -48,7 +48,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
 import com.omnio.tv.R

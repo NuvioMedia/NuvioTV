@@ -123,7 +123,7 @@ import com.omnio.tv.ui.components.OmnioScrollDefaults
 import com.omnio.tv.ui.components.ProfileAvatarCircle
 import com.omnio.tv.ui.screens.account.AuthQrSignInScreen
 import com.omnio.tv.ui.screens.profile.ProfileSelectionScreen
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import com.omnio.tv.ui.theme.OmnioTheme
 import com.omnio.tv.updater.UpdateViewModel
 import com.omnio.tv.updater.ui.UpdatePromptDialog

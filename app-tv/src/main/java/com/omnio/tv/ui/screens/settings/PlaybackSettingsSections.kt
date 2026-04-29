@@ -62,7 +62,7 @@ import com.omnio.tv.data.local.PlayerPreference
 import com.omnio.tv.data.local.PlayerSettings
 import com.omnio.tv.data.local.TrailerSettings
 import com.omnio.tv.ui.components.OmnioDialog
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 
 private enum class PlaybackSection {
     GENERAL,

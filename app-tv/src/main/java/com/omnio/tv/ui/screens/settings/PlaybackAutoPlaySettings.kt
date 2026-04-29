@@ -65,7 +65,7 @@ import com.omnio.tv.data.local.NextEpisodeThresholdMode
 import com.omnio.tv.data.local.StreamAutoPlayMode
 import com.omnio.tv.data.local.StreamAutoPlaySource
 import com.omnio.tv.ui.components.OmnioDialog
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlin.math.roundToInt
 import java.util.Locale
 

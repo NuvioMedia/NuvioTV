@@ -1,9 +1,8 @@
-package com.omnio.tv.ui.theme
+package com.omnio.tv.core.uishared
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
-import com.omnio.tv.domain.model.AppTheme
 
 /**
  * Dynamic color scheme that changes based on selected theme.
@@ -54,24 +53,25 @@ class OmnioColorScheme(palette: ThemeColorPalette) {
 /**
  * Legacy OmnioColors object for backwards compatibility.
  * Components should migrate to using OmnioTheme.colors instead.
- * This object provides the current theme's colors via composition local.
+ * Reads the active scheme directly from [LocalOmnioColors] so this object
+ * has no dependency on the TV-only OmnioTheme accessor.
  */
 object OmnioColors {
     // Dynamic background colors - Theme dependent with subtle tinting
     val Background: Color
         @Composable
         @ReadOnlyComposable
-        get() = OmnioTheme.colors.Background
+        get() = LocalOmnioColors.current.Background
 
     val BackgroundElevated: Color
         @Composable
         @ReadOnlyComposable
-        get() = OmnioTheme.colors.BackgroundElevated
+        get() = LocalOmnioColors.current.BackgroundElevated
 
     val BackgroundCard: Color
         @Composable
         @ReadOnlyComposable
-        get() = OmnioTheme.colors.BackgroundCard
+        get() = LocalOmnioColors.current.BackgroundCard
 
     // Surface colors (constant)
     val Surface = Color(0xFF1E1E1E)
@@ -100,35 +100,35 @@ object OmnioColors {
     val Secondary: Color
         @Composable
         @ReadOnlyComposable
-        get() = OmnioTheme.colors.Secondary
+        get() = LocalOmnioColors.current.Secondary
 
     val SecondaryVariant: Color
         @Composable
         @ReadOnlyComposable
-        get() = OmnioTheme.colors.SecondaryVariant
+        get() = LocalOmnioColors.current.SecondaryVariant
 
     val OnSecondary: Color
         @Composable
         @ReadOnlyComposable
-        get() = OmnioTheme.colors.OnSecondary
+        get() = LocalOmnioColors.current.OnSecondary
 
     val OnSecondaryVariant: Color
         @Composable
         @ReadOnlyComposable
-        get() = OmnioTheme.colors.OnSecondaryVariant
+        get() = LocalOmnioColors.current.OnSecondaryVariant
 
     val FocusRing: Color
         @Composable
         @ReadOnlyComposable
-        get() = OmnioTheme.colors.FocusRing
+        get() = LocalOmnioColors.current.FocusRing
 
     val FocusBackground: Color
         @Composable
         @ReadOnlyComposable
-        get() = OmnioTheme.colors.FocusBackground
+        get() = LocalOmnioColors.current.FocusBackground
 
     val BorderFocused: Color
         @Composable
         @ReadOnlyComposable
-        get() = OmnioTheme.colors.BorderFocused
+        get() = LocalOmnioColors.current.BorderFocused
 }

@@ -58,7 +58,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.omnio.tv.R
 import com.omnio.tv.data.remote.supabase.AvatarCatalogItem
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 
 private val PinnedAvatarCategories = listOf("anime", "animation", "tv", "movie", "gaming")
 

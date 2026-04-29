@@ -55,7 +55,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import com.omnio.tv.BuildConfig
 import com.omnio.tv.R
 import com.omnio.tv.ui.screens.plugin.PluginScreenContent
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlinx.coroutines.delay
 
 internal enum class SettingsCategory {

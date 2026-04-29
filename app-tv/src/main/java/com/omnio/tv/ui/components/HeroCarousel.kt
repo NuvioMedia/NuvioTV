@@ -57,7 +57,7 @@ import coil.request.ImageRequest
 import androidx.compose.ui.res.stringResource
 import com.omnio.tv.R
 import com.omnio.tv.domain.model.MetaPreview
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlinx.coroutines.delay
 
 private const val AUTO_ADVANCE_INTERVAL_MS = 10000L

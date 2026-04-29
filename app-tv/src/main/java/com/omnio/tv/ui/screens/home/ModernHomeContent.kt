@@ -105,7 +105,7 @@ import com.omnio.tv.ui.components.MonochromePosterPlaceholder
 import com.omnio.tv.ui.components.TrailerPlayer
 import com.omnio.tv.LocalSidebarExpanded
 import com.omnio.tv.LocalContentFocusRequester
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlinx.coroutines.delay
 import android.view.KeyEvent as AndroidKeyEvent
 import kotlinx.coroutines.flow.distinctUntilChanged

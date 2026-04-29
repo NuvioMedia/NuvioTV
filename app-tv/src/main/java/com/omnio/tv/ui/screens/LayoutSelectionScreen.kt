@@ -48,7 +48,7 @@ import com.omnio.tv.ui.components.GridLayoutPreview
 import com.omnio.tv.ui.components.ModernLayoutPreview
 import com.omnio.tv.ui.screens.settings.LayoutSettingsEvent
 import com.omnio.tv.ui.screens.settings.LayoutSettingsViewModel
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import androidx.compose.ui.res.stringResource
 import com.omnio.tv.R
 

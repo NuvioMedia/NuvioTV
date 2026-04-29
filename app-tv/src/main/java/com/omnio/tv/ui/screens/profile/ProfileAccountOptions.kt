@@ -41,7 +41,7 @@ import androidx.tv.material3.Text
 import com.omnio.tv.R
 import com.omnio.tv.domain.model.AgeRatingTier
 import com.omnio.tv.domain.model.AioSharingMode
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 
 private val SectionShape = RoundedCornerShape(14.dp)
 

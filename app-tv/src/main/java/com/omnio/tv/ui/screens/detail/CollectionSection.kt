@@ -23,7 +23,7 @@ import androidx.tv.material3.Text
 import com.omnio.tv.domain.model.MetaPreview
 import com.omnio.tv.ui.components.GridContentCard
 import com.omnio.tv.ui.components.PosterCardStyle
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable

@@ -44,7 +44,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.omnio.tv.R
 import com.omnio.tv.ui.components.OmnioDialog
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 
 @Composable
 fun AnimeSkipSettingsContent(

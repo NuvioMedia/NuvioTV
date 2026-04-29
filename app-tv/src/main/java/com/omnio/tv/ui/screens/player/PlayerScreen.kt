@@ -107,7 +107,7 @@ import com.omnio.tv.core.player.ExternalPlayerLauncher
 import com.omnio.tv.data.local.InternalPlayerEngine
 import com.omnio.tv.data.local.StreamAutoPlayMode
 import com.omnio.tv.ui.components.LoadingIndicator
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import android.text.format.DateFormat
 import java.util.Date
 import java.util.Locale

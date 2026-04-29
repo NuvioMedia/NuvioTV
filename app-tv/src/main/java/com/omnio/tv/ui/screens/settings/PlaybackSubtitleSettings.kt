@@ -37,7 +37,7 @@ import com.omnio.tv.data.local.PlayerSettings
 import com.omnio.tv.data.local.AddonSubtitleStartupMode
 import com.omnio.tv.data.local.SUBTITLE_LANGUAGE_FORCED
 import com.omnio.tv.ui.components.OmnioDialog
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 
 private val subtitleColors = listOf(
     Color.White,

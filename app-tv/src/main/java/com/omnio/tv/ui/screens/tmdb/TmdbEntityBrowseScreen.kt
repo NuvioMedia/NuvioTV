@@ -79,7 +79,7 @@ import com.omnio.tv.ui.components.GridContentCard
 import com.omnio.tv.ui.components.LoadingIndicator
 import com.omnio.tv.ui.components.PosterCardDefaults
 import com.omnio.tv.ui.components.PosterCardStyle
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable

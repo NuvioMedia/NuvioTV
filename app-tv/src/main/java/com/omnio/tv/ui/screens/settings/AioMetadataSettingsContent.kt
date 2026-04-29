@@ -55,7 +55,7 @@ import com.omnio.tv.R
 import com.omnio.tv.core.qr.QrCodeGenerator
 import com.omnio.tv.domain.model.AioMetadataProvider
 import com.omnio.tv.ui.components.OmnioDialog
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 
 @Composable
 fun AioMetadataSettingsContent(

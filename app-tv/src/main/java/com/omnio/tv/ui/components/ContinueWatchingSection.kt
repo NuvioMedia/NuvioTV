@@ -56,7 +56,7 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Text
 import androidx.compose.ui.window.Dialog
 import com.omnio.tv.ui.screens.home.ContinueWatchingItem
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import com.omnio.tv.ui.theme.OmnioTheme
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity

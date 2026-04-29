@@ -6,8 +6,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.Typography
+import androidx.tv.material3.Typography as TvTypography
 import com.omnio.tv.R
+import com.omnio.tv.core.uishared.OmnioTypography
 import com.omnio.tv.domain.model.AppFont
 
 val DMSansFamily = FontFamily(
@@ -37,8 +38,19 @@ fun getFontFamily(appFont: AppFont): FontFamily = when (appFont) {
     AppFont.OPEN_SANS -> OpenSansFamily
 }
 
-@OptIn(ExperimentalTvMaterial3Api::class)
-fun buildOmnioTypography(fontFamily: FontFamily): Typography = Typography(
+/**
+ * Form-factor-neutral typography filled with TV-tuned sizes.
+ * The phone variant uses :core-ui-shared#phoneTypography. Both produce the
+ * same [OmnioTypography] shape; the per-app-module adapter below converts
+ * each into its respective MaterialTheme typography type.
+ *
+ * Sizes match the pre-extraction TV scale verbatim (10-foot-distance tuned).
+ * displaySmall and headlineSmall are intentionally placeholder values here
+ * because the prior code never set them on androidx.tv.material3.Typography
+ * — call sites that read those two slots fall back to TV defaults via the
+ * adapter, which omits them when constructing the TvTypography.
+ */
+fun tvOmnioTypography(fontFamily: FontFamily): OmnioTypography = OmnioTypography(
     displayLarge = TextStyle(
         fontFamily = fontFamily,
         fontWeight = FontWeight.Bold,
@@ -53,6 +65,7 @@ fun buildOmnioTypography(fontFamily: FontFamily): Typography = Typography(
         lineHeight = 44.sp,
         letterSpacing = 0.sp
     ),
+    displaySmall = TextStyle(fontFamily = fontFamily),
     headlineLarge = TextStyle(
         fontFamily = fontFamily,
         fontWeight = FontWeight.SemiBold,
@@ -67,6 +80,7 @@ fun buildOmnioTypography(fontFamily: FontFamily): Typography = Typography(
         lineHeight = 32.sp,
         letterSpacing = 0.sp
     ),
+    headlineSmall = TextStyle(fontFamily = fontFamily),
     titleLarge = TextStyle(
         fontFamily = fontFamily,
         fontWeight = FontWeight.Medium,
@@ -132,5 +146,29 @@ fun buildOmnioTypography(fontFamily: FontFamily): Typography = Typography(
     )
 )
 
+/**
+ * Adapt the neutral [OmnioTypography] into androidx.tv.material3.Typography.
+ * Omits displaySmall and headlineSmall so TV defaults apply at those slots,
+ * matching pre-extraction behavior (callers that read those slots got the
+ * tv-material3 defaults previously).
+ */
 @OptIn(ExperimentalTvMaterial3Api::class)
-val OmnioTypography = buildOmnioTypography(InterFamily)
+fun OmnioTypography.toTvMaterial3Typography(): TvTypography = TvTypography(
+    displayLarge = displayLarge,
+    displayMedium = displayMedium,
+    headlineLarge = headlineLarge,
+    headlineMedium = headlineMedium,
+    titleLarge = titleLarge,
+    titleMedium = titleMedium,
+    titleSmall = titleSmall,
+    bodyLarge = bodyLarge,
+    bodyMedium = bodyMedium,
+    bodySmall = bodySmall,
+    labelLarge = labelLarge,
+    labelMedium = labelMedium,
+    labelSmall = labelSmall
+)
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+fun buildTvMaterial3Typography(fontFamily: FontFamily): TvTypography =
+    tvOmnioTypography(fontFamily).toTvMaterial3Typography()

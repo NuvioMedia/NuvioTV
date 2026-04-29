@@ -77,7 +77,7 @@ import com.omnio.tv.data.repository.GitHubContributor
 import com.omnio.tv.data.repository.SupporterDonation
 import com.omnio.tv.ui.components.OmnioDialog
 import com.omnio.tv.ui.screens.detail.requestFocusAfterFrames
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

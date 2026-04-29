@@ -1,4 +1,4 @@
-package com.omnio.tv.ui.theme
+package com.omnio.tv.core.uishared
 
 import androidx.compose.ui.graphics.Color
 import com.omnio.tv.domain.model.AppTheme

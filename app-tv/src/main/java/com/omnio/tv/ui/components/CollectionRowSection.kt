@@ -62,7 +62,7 @@ import coil.compose.AsyncImage
 import com.omnio.tv.domain.model.Collection
 import com.omnio.tv.domain.model.CollectionFolder
 import com.omnio.tv.domain.model.PosterShape
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable

@@ -83,7 +83,7 @@ import androidx.tv.material3.Text
 import com.omnio.tv.domain.model.Addon
 import com.omnio.tv.domain.model.CatalogDescriptor
 import com.omnio.tv.ui.components.LoadingIndicator
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.platform.LocalLifecycleOwner

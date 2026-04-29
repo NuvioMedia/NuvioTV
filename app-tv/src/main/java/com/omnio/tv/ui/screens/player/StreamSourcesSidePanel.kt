@@ -42,7 +42,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import com.omnio.tv.domain.model.Stream
 import com.omnio.tv.ui.components.LoadingIndicator
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import com.omnio.tv.ui.theme.OmnioTheme
 import androidx.compose.ui.res.stringResource
 import com.omnio.tv.R

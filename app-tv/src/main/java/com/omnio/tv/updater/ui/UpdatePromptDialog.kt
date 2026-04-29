@@ -73,7 +73,7 @@ import androidx.tv.material3.Text
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.m3.markdownTypography
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import com.omnio.tv.updater.UpdateUiState
 import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource

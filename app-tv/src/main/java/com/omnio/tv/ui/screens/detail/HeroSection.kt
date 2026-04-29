@@ -66,7 +66,7 @@ import com.omnio.tv.domain.model.Meta
 import com.omnio.tv.domain.model.MDBListRatings
 import com.omnio.tv.domain.model.Video
 import com.omnio.tv.domain.model.NextToWatch
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import com.omnio.tv.ui.theme.OmnioTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check

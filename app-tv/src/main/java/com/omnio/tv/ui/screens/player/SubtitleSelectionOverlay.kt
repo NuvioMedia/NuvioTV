@@ -65,7 +65,7 @@ import com.omnio.tv.data.local.SubtitleStyleSettings
 import com.omnio.tv.domain.model.Subtitle
 import com.omnio.tv.ui.components.LoadingIndicator
 import com.omnio.tv.ui.screens.detail.requestFocusAfterFrames
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 
 private const val SubtitleOffLanguageKey = "__off__"
 private const val SubtitleUnknownLanguageKey = "__unknown__"

@@ -59,7 +59,7 @@ import coil.compose.rememberAsyncImagePainter
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import com.omnio.tv.R
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 
 internal val SettingsContainerRadius = 28.dp
 internal val SettingsPillRadius = 999.dp

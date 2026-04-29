@@ -58,8 +58,8 @@ import com.omnio.tv.R
 import com.omnio.tv.domain.model.AppFont
 import com.omnio.tv.domain.model.AppTheme
 import com.omnio.tv.ui.components.OmnioDialog
-import com.omnio.tv.ui.theme.OmnioColors
-import com.omnio.tv.ui.theme.ThemeColors
+import com.omnio.tv.core.uishared.OmnioColors
+import com.omnio.tv.core.uishared.ThemeColors
 import com.omnio.tv.ui.theme.getFontFamily
 import kotlinx.coroutines.delay
 import java.util.Locale

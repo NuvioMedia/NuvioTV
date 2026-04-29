@@ -73,7 +73,7 @@ import com.omnio.tv.domain.model.CollectionFolder
 import com.omnio.tv.domain.model.FolderViewMode
 import com.omnio.tv.domain.model.PosterShape
 import com.omnio.tv.ui.components.LoadingIndicator
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import com.omnio.tv.R
 import androidx.compose.ui.res.stringResource
 

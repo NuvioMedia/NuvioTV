@@ -63,7 +63,7 @@ import com.omnio.tv.ui.screens.home.GridHomeContent
 import com.omnio.tv.ui.screens.home.HomeScreenFocusState
 import com.omnio.tv.domain.model.MetaPreview
 import com.omnio.tv.ui.screens.home.ModernHomeContent
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 

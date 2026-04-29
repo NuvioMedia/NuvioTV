@@ -46,7 +46,7 @@ import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import com.omnio.tv.R
 import com.omnio.tv.domain.model.AuthState
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 
 private const val SHOW_SYNC_CODE_FEATURES = false
 

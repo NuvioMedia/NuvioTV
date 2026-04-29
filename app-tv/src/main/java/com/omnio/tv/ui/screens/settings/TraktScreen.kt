@@ -60,7 +60,7 @@ import com.omnio.tv.data.local.WatchProgressSource
 import com.omnio.tv.data.repository.TraktProgressService
 import com.omnio.tv.domain.model.TraktSharingMode
 import com.omnio.tv.ui.components.OmnioDialog
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlinx.coroutines.delay
 import java.util.concurrent.TimeUnit
 

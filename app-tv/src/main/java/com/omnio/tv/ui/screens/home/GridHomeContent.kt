@@ -59,7 +59,7 @@ import com.omnio.tv.ui.components.GridContinueWatchingSection
 import com.omnio.tv.ui.components.HeroCarousel
 import com.omnio.tv.ui.components.PosterCardDefaults
 import com.omnio.tv.ui.components.PosterCardStyle
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 
 /** Minimum interval between processed key repeat events to prevent HWUI overload. */
 private const val KEY_REPEAT_THROTTLE_MS = 80L

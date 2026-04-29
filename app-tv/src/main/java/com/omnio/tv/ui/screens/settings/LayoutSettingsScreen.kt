@@ -58,7 +58,7 @@ import com.omnio.tv.domain.model.HomeLayout
 import com.omnio.tv.ui.components.ClassicLayoutPreview
 import com.omnio.tv.ui.components.GridLayoutPreview
 import com.omnio.tv.ui.components.ModernLayoutPreview
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 
 @Composable
 fun LayoutSettingsScreen(

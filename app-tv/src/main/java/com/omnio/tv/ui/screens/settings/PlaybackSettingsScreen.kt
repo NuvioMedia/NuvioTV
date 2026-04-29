@@ -98,7 +98,7 @@ import com.omnio.tv.data.local.StreamAutoPlayMode
 import com.omnio.tv.data.local.StreamAutoPlaySource
 import com.omnio.tv.data.local.TrailerSettings
 import com.omnio.tv.ui.components.OmnioDialog
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.PauseCircle

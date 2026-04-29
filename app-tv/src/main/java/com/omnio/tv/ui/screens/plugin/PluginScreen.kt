@@ -86,7 +86,7 @@ import com.omnio.tv.domain.model.LocalScraperResult
 import com.omnio.tv.domain.model.PluginRepository
 import com.omnio.tv.domain.model.ScraperInfo
 import com.omnio.tv.ui.components.LoadingIndicator
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -170,7 +170,7 @@ fun PluginScreenContent(
                         androidx.tv.material3.Text(
                             text = stringResource(R.string.plugin_readonly_notice),
                             style = androidx.tv.material3.MaterialTheme.typography.bodyMedium,
-                            color = com.omnio.tv.ui.theme.OmnioColors.TextSecondary,
+                            color = com.omnio.tv.core.uishared.OmnioColors.TextSecondary,
                             modifier = Modifier.padding(16.dp)
                         )
                     }

@@ -57,7 +57,7 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import com.omnio.tv.domain.model.Stream
 import com.omnio.tv.domain.model.Video
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import com.omnio.tv.ui.theme.OmnioTheme
 import com.omnio.tv.ui.components.LoadingIndicator
 import com.omnio.tv.ui.screens.detail.formatReleaseDate

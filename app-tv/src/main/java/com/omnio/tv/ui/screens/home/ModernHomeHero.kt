@@ -47,7 +47,7 @@ import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import com.omnio.tv.R
 import com.omnio.tv.ui.components.TrailerPlayer
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import androidx.compose.ui.res.stringResource
 
 private data class ModernHeroSecondaryMeta(

@@ -45,7 +45,7 @@ import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.omnio.tv.data.local.SubtitleStyleSettings
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import androidx.compose.ui.res.stringResource
 import com.omnio.tv.R
 

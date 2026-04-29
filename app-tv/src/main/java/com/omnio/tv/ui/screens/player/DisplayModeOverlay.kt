@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import com.omnio.tv.R
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay

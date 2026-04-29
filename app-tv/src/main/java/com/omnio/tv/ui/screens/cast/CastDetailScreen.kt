@@ -61,7 +61,7 @@ import com.omnio.tv.ui.components.GridContentCard
 import com.omnio.tv.ui.components.PosterCardStyle
 import com.omnio.tv.ui.components.PosterCardDefaults
 import com.omnio.tv.ui.components.rememberShimmerBrush
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date

@@ -53,7 +53,7 @@ import com.omnio.tv.domain.model.Stream
 import com.omnio.tv.ui.components.SourceChipItem
 import com.omnio.tv.ui.components.SourceChipStatus
 import com.omnio.tv.ui.components.SourceStatusFilterChip
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import com.omnio.tv.ui.theme.OmnioTheme
 import androidx.compose.ui.res.stringResource
 import com.omnio.tv.R

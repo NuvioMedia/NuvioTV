@@ -98,7 +98,7 @@ import com.omnio.tv.domain.model.UserProfile
 import com.omnio.tv.ui.components.AvatarPickerGrid
 import com.omnio.tv.ui.components.OmnioDialog
 import com.omnio.tv.ui.components.ProfileAvatarCircle
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlinx.coroutines.delay
 
 private object ProfileSelectionSpacing {

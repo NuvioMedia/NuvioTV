@@ -3,41 +3,17 @@ package com.omnio.tv.ui.theme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.graphics.Color
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.darkColorScheme
+import com.omnio.tv.core.uishared.LocalAppTheme
+import com.omnio.tv.core.uishared.LocalOmnioColors
+import com.omnio.tv.core.uishared.LocalOmnioExtendedColors
+import com.omnio.tv.core.uishared.OmnioColorScheme
+import com.omnio.tv.core.uishared.OmnioExtendedColors
+import com.omnio.tv.core.uishared.ThemeColors
 import com.omnio.tv.domain.model.AppFont
 import com.omnio.tv.domain.model.AppTheme
-
-data class OmnioExtendedColors(
-    val backgroundElevated: Color,
-    val backgroundCard: Color,
-    val textSecondary: Color,
-    val textTertiary: Color,
-    val focusRing: Color,
-    val focusBackground: Color,
-    val rating: Color
-)
-
-val LocalOmnioColors = staticCompositionLocalOf {
-    OmnioColorScheme(ThemeColors.Ocean)
-}
-
-val LocalOmnioExtendedColors = staticCompositionLocalOf {
-    OmnioExtendedColors(
-        backgroundElevated = Color(0xFF1A1A1A),
-        backgroundCard = Color(0xFF242424),
-        textSecondary = Color(0xFFB3B3B3),
-        textTertiary = Color(0xFF808080),
-        focusRing = ThemeColors.Ocean.focusRing,
-        focusBackground = ThemeColors.Ocean.focusBackground,
-        rating = Color(0xFFFFD700)
-    )
-}
-
-val LocalAppTheme = staticCompositionLocalOf { AppTheme.WHITE }
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -80,7 +56,7 @@ fun OmnioTheme(
     ) {
         MaterialTheme(
             colorScheme = materialColorScheme,
-            typography = buildOmnioTypography(getFontFamily(appFont)),
+            typography = buildTvMaterial3Typography(getFontFamily(appFont)),
             content = content
         )
     }

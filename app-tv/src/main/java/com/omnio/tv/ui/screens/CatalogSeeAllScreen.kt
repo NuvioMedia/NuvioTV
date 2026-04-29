@@ -52,7 +52,7 @@ import com.omnio.tv.ui.screens.home.HomeEvent
 import com.omnio.tv.ui.screens.home.HomeViewModel
 import com.omnio.tv.ui.screens.search.SearchEvent
 import com.omnio.tv.ui.screens.search.SearchViewModel
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlin.math.roundToInt
 

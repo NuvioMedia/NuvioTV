@@ -33,7 +33,7 @@ import androidx.tv.material3.Text
 import androidx.compose.ui.res.stringResource
 import com.omnio.tv.R
 import com.omnio.tv.ui.screens.home.ContinueWatchingItem
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable

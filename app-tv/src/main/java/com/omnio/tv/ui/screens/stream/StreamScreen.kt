@@ -86,7 +86,7 @@ import com.omnio.tv.domain.model.Stream
 import com.omnio.tv.ui.components.SourceChipItem
 import com.omnio.tv.ui.components.SourceChipStatus
 import com.omnio.tv.ui.components.SourceStatusFilterChip
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import com.omnio.tv.ui.components.StreamsSkeletonList
 import com.omnio.tv.ui.screens.player.LoadingOverlay
 import com.omnio.tv.ui.theme.OmnioTheme

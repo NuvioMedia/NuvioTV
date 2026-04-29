@@ -105,7 +105,7 @@ import com.omnio.tv.ui.components.ErrorState
 import com.omnio.tv.ui.components.MetaDetailsSkeleton
 import com.omnio.tv.ui.components.OmnioDialog
 import com.omnio.tv.ui.components.TrailerPlayer
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.window.Dialog

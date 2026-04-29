@@ -41,7 +41,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import com.omnio.tv.domain.model.MetaCastMember
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import android.text.format.DateFormat
 import java.util.Date
 import java.util.Locale

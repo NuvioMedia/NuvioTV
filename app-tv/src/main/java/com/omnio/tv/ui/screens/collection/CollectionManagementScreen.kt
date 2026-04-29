@@ -62,7 +62,7 @@ import androidx.tv.material3.Text
 import com.omnio.tv.data.local.ValidationResult
 import com.omnio.tv.domain.model.Collection
 import com.omnio.tv.ui.components.LoadingIndicator
-import com.omnio.tv.ui.theme.OmnioColors
+import com.omnio.tv.core.uishared.OmnioColors
 import com.omnio.tv.R
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.Dispatchers
