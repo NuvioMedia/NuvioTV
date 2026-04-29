@@ -3,8 +3,17 @@
     <string name="app_name">Omnio</string>
 
     <string name="home_tab_label">Home</string>
+    <string name="library_tab_label">Library</string>
     <string name="profiles_tab_label">Profiles</string>
     <string name="addons_tab_label">Addons</string>
+
+    <string name="library_tab_all">All</string>
+    <string name="library_tab_movies">Movies</string>
+    <string name="library_tab_series">Series</string>
+    <string name="library_empty_title">Your library is empty</string>
+    <string name="library_empty_message">Add movies or series from their details page to find them here.</string>
+    <string name="library_empty_tab_title">Nothing here yet</string>
+    <string name="library_empty_tab_message">Items you save will show up under the matching tab.</string>
 
     <string name="home_empty_title">No addons yet</string>
     <string name="home_empty_message">Install a Stremio-compatible addon to start browsing movies and series.</string>
