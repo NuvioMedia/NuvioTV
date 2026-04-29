@@ -205,6 +205,7 @@ class CollectionsDataStore @Inject constructor(
         val sources: List<SerializableSource>? = null,
         val catalogSources: List<SerializableCatalogSource> = emptyList(),
         val heroBackdropUrl: String? = null,
+        val heroVideoUrl: String? = null,
         val titleLogoUrl: String? = null
     )
 
@@ -266,6 +267,7 @@ class CollectionsDataStore @Inject constructor(
                 tileShape = folder.tileShape.name,
                 hideTitle = folder.hideTitle,
                 heroBackdropUrl = folder.heroBackdropUrl,
+                heroVideoUrl = folder.heroVideoUrl,
                 titleLogoUrl = folder.titleLogoUrl,
                 sources = folder.sources.map { it.toSerializableSource() },
                 catalogSources = folder.catalogSources.map { source ->
@@ -335,6 +337,7 @@ class CollectionsDataStore @Inject constructor(
                 tileShape = PosterShape.fromString(folder.tileShape),
                 hideTitle = folder.hideTitle,
                 heroBackdropUrl = folder.heroBackdropUrl,
+                heroVideoUrl = folder.heroVideoUrl,
                 titleLogoUrl = folder.titleLogoUrl,
                 sources = folder.sources?.mapNotNull { it.toDomainSource() }
                     ?: folder.catalogSources.map { source ->

@@ -503,12 +503,26 @@ class WatchProgressRepositoryImpl @Inject constructor(
 
     /**
      * Returns per-show watched episodes from the active source.
-     * For Trakt: from /sync/watched/shows response.
+     * For Trakt: merges /sync/watched/shows with local watchedItemsPreferences
+     * (which may contain episodes marked locally but not yet synced to Trakt).
      * For Nuvio sync: from watchedItemsPreferences.
      */
     override suspend fun getWatchedShowEpisodes(): Map<String, Set<Pair<Int, Int>>> {
         return if (shouldUseTraktProgress()) {
-            traktProgressService.getWatchedShowEpisodes()
+            val traktEpisodes = traktProgressService.getWatchedShowEpisodes()
+            val localEpisodes = watchedItemsPreferences.allItems.first()
+                .filter { it.season != null && it.episode != null }
+                .filter { it.contentType.equals("series", ignoreCase = true) || it.contentType.equals("tv", ignoreCase = true) }
+                .groupBy { it.contentId }
+                .mapValues { (_, items) ->
+                    items.map { it.season!! to it.episode!! }.toSet()
+                }
+            // Merge: union of episodes from both sources per content ID
+            val merged = traktEpisodes.toMutableMap()
+            for ((contentId, episodes) in localEpisodes) {
+                merged[contentId] = (merged[contentId] ?: emptySet()) + episodes
+            }
+            merged
         } else {
             watchedItemsPreferences.allItems.first()
                 .filter { it.season != null && it.episode != null }
@@ -575,6 +589,15 @@ class WatchProgressRepositoryImpl @Inject constructor(
             traktProgressService.applyOptimisticProgress(progress)
             watchProgressPreferences.saveProgress(progress)
             triggerRecommendationUpdate(progress)
+            // Mirror to Nuvio Sync so data is ready if user switches source later.
+            if (syncRemote && authManager.isAuthenticated) {
+                syncScope.launch(NonCancellable) {
+                    watchProgressSyncService.pushSingleToRemote(progressKey(progress), progress)
+                        .onFailure { error ->
+                            Log.w(TAG, "Failed single progress push (Trakt mirror); falling back to full sync next cycle", error)
+                        }
+                }
+            }
             return
         }
         watchProgressPreferences.saveProgress(progress)
@@ -790,6 +813,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
                     watchedAt = System.currentTimeMillis()
                 )
             )
+            // Mirror to Nuvio Sync so data is ready if user switches source later.
+            triggerRemoteSync()
+            triggerWatchedItemsSync()
             return
         }
         watchProgressPreferences.markAsCompleted(progress)
@@ -876,6 +902,9 @@ class WatchProgressRepositoryImpl @Inject constructor(
                 )
             }
             watchedItemsPreferences.markAsWatchedBatch(watchedItems)
+            // Mirror to Nuvio Sync so data is ready if user switches source later.
+            triggerRemoteSync()
+            triggerWatchedItemsSync()
             return
         }
 

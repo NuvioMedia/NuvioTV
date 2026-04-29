@@ -77,6 +77,7 @@ val LocalVerticalScrollSuppressImages = androidx.compose.runtime.compositionLoca
 private const val BACKDROP_ASPECT_RATIO = 16f / 9f
 private const val TRAILER_PREVIEW_REQUEST_FOCUS_DEBOUNCE_MS = 140L
 private val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
+private val YEAR_RANGE_REGEX = Regex("""^((19|20)\d{2})\s*[-–]\s*((19|20)\d{2})?$""")
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -196,7 +197,17 @@ fun ContentCard(
                     add("${item.seasonCount} ${if (item.seasonCount == 1) "season" else "seasons"}")
                 }
                 item.releaseInfo
-                    ?.let { YEAR_REGEX.find(it)?.value }
+                    ?.let { info ->
+                        val trimmed = info.trim()
+                        val rangeMatch = YEAR_RANGE_REGEX.find(trimmed)
+                        if (rangeMatch != null) {
+                            val startYear = rangeMatch.groupValues[1]
+                            val endYear = rangeMatch.groupValues[3]
+                            if (endYear.isNotBlank()) "$startYear–$endYear" else startYear
+                        } else {
+                            YEAR_REGEX.find(trimmed)?.value
+                        }
+                    }
                     ?.let { add(it) }
                 item.imdbRating?.let { add(String.format("%.1f", it)) }
             }

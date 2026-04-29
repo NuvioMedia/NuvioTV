@@ -16,6 +16,21 @@ import kotlinx.coroutines.launch
 
 internal const val AUDIO_AMPLIFICATION_MIN_DB = 0
 internal const val AUDIO_AMPLIFICATION_MAX_DB = 10
+internal const val AUDIO_DELAY_MIN_MS = -3000
+internal const val AUDIO_DELAY_MAX_MS = 3000
+internal const val AUDIO_DELAY_STEP_MS = 25
+
+internal fun PlayerRuntimeController.applyAudioDelay(
+    delayMs: Int,
+    persistForCurrentRoute: Boolean = true
+) {
+    val clampedDelayMs = delayMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS)
+    audioDelayUs.set(clampedDelayMs.toLong() * 1000L)
+    _uiState.update { it.copy(audioDelayMs = clampedDelayMs) }
+    if (persistForCurrentRoute) {
+        persistAudioDelayForCurrentRoute(clampedDelayMs)
+    }
+}
 
 internal fun PlayerRuntimeController.applyAudioAmplification(db: Int) {
     val clampedDb = db.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
@@ -172,6 +187,10 @@ internal fun PlayerRuntimeController.saveWatchProgressIfNeeded() {
     if (!hasRenderedFirstFrame) return
     val currentPosition = currentPlaybackPositionMs() ?: return
     val duration = getEffectiveDuration(currentPosition)
+    // Don't save progress for very short streams (< 1 minute) — these are
+    // typically error/warning messages or "stream not ready" placeholders that
+    // would incorrectly mark content as watched when the user exits.
+    if (duration in 1..59999) return
     
     
     if (kotlin.math.abs(currentPosition - lastSavedPosition) >= saveThresholdMs) {
@@ -184,6 +203,7 @@ internal fun PlayerRuntimeController.saveWatchProgress() {
     if (!hasRenderedFirstFrame) return
     val currentPosition = currentPlaybackPositionMs() ?: return
     val duration = getEffectiveDuration(currentPosition)
+    if (duration in 1..59999) return
     saveWatchProgressInternal(currentPosition, duration)
 }
 
@@ -623,6 +643,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleTimingDialog = false
                 )
             }
+        }
+        is PlayerEvent.OnSetAudioDelayMs -> {
+            applyAudioDelay(event.delayMs)
         }
         is PlayerEvent.OnSetAudioAmplificationDb -> {
             val clampedDb = event.db.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)

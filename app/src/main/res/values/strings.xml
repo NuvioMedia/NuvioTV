@@ -360,12 +360,19 @@
     <string name="supporters_contributors_qr_hint">Point your camera at the QR code or use the button below.</string>
     <string name="supporters_contributors_back_button">Back to details</string>
     <string name="supporters_tab">Supporters</string>
+    <string name="sponsors_tab">Sponsors</string>
     <string name="contributors_tab">Contributors</string>
     <string name="supporters_loading">Loading supporters…</string>
     <string name="supporters_empty">No supporters found yet.</string>
     <string name="supporters_error_title">Couldn’t load supporters</string>
     <string name="supporters_no_message">No message shared.</string>
     <string name="supporters_open_donations">Open donations page</string>
+    <string name="sponsors_loading">Loading sponsors…</string>
+    <string name="sponsors_empty">No sponsors found yet.</string>
+    <string name="sponsors_error_title">Couldn’t load sponsors</string>
+    <string name="sponsors_detail_copy">Sponsors help move Nuvio forward through support across the different parts of development.</string>
+    <string name="sponsors_channel_unavailable">Sponsor channel unavailable.</string>
+    <string name="sponsors_open_channel">Open sponsor channel</string>
     <string name="contributors_loading">Loading GitHub contributors…</string>
     <string name="contributors_empty">No contributors found yet.</string>
     <string name="contributors_error_title">Couldn’t load contributors</string>
@@ -440,6 +447,8 @@
     <string name="audio_preferred_lang">Preferred Audio Language</string>
     <string name="audio_skip_silence">Skip Silence</string>
     <string name="audio_skip_silence_sub">Skip silent portions of audio during playback</string>
+    <string name="audio_remember_delay_per_device">Remember audio delay per device</string>
+    <string name="audio_remember_delay_per_device_sub">Save and restore the in-player audio delay for the current audio output route</string>
     <string name="audio_advanced_section">Advanced Audio</string>
     <string name="audio_advanced_warning">These settings may cause issues on some devices. Change only if you know what you\'re doing.</string>
     <string name="audio_decoder_device_only">Device decoders only</string>
@@ -1047,6 +1056,8 @@
     <string name="audio_dialog_title">Audio</string>
     <string name="audio_dialog_tab_tracks">Audio</string>
     <string name="audio_dialog_tab_mix">Mix</string>
+    <string name="audio_delay_label">Audio Delay</string>
+    <string name="audio_delay_range">Range: %1$.2fs to %2$.2fs</string>
     <string name="audio_mix_label">Amplification (PCM)</string>
     <string name="audio_mix_value_db">%1$d dB</string>
     <string name="audio_mix_persist_on">Persist between sessions: ON</string>
@@ -1666,6 +1677,8 @@
     <string name="collections_editor_placeholder_gif">Animated GIF URL (plays only while focused)</string>
     <string name="collections_editor_hero_backdrop">Hero Backdrop (Modern Home)</string>
     <string name="collections_editor_placeholder_hero_backdrop">Custom hero backdrop URL (optional)</string>
+    <string name="collections_editor_hero_video">Hero Video (Modern Home)</string>
+    <string name="collections_editor_placeholder_hero_video">Custom hero video URL (optional)</string>
     <string name="collections_editor_title_logo">Title Logo (Modern Home)</string>
     <string name="collections_editor_placeholder_title_logo">Custom title logo URL (optional)</string>
     <string name="collections_editor_genre_filter">Genre Filter</string>

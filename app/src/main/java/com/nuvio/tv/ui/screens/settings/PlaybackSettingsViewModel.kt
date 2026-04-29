@@ -96,6 +96,10 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setSkipSilence(enabled)
     }
 
+    suspend fun setRememberAudioDelayPerDevice(enabled: Boolean) {
+        playerSettingsDataStore.setRememberAudioDelayPerDevice(enabled)
+    }
+
     suspend fun setPreferredAudioLanguage(language: String) {
         playerSettingsDataStore.setPreferredAudioLanguage(language)
     }

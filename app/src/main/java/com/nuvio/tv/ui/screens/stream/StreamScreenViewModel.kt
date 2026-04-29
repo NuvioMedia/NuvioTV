@@ -281,11 +281,11 @@ class StreamScreenViewModel @Inject constructor(
                     addonStreams.streams.sortedByDescending { it.qualityValue }
                 }
                 val availableAddons = orderedAddonStreams.map { it.addonName }
-                // For FIRST_STREAM mode, run the selector as soon as any
-                // addon returns results (don't wait for all addons or the
-                // timeout). Other modes still wait for the full result set.
-                val shouldAutoSelect = !autoPlayHandledForSession && !resolvedAutoPlayTarget &&
-                    (isAllLoaded || playerSettings.streamAutoPlayMode == StreamAutoPlayMode.FIRST_STREAM)
+                // Auto-select only after all addons have responded or the
+                // configured timeout has elapsed. This gives slower addons a
+                // chance to return higher-quality streams before the selector
+                // picks from whatever is available.
+                val shouldAutoSelect = !autoPlayHandledForSession && !resolvedAutoPlayTarget && isAllLoaded
                 val selectedAutoPlayStream = if (!shouldAutoSelect) {
                     null
                 } else {

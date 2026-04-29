@@ -129,6 +129,17 @@ class WatchedSeriesStateHolder @Inject constructor(
     }
 
     /**
+     * Clears all revalidation deadlines, forcing every series to be re-evaluated
+     * on the next CW pipeline cycle. Called when the user manually clears the CW cache.
+     */
+    fun clearValidationState() {
+        revalidateAfterMap = emptyMap()
+        scope.launch {
+            store().edit { prefs -> prefs.remove(REVALIDATE_KEY) }
+        }
+    }
+
+    /**
      * Filters the given set to only those series that need re-validation
      * (past their revalidation deadline or never validated).
      */

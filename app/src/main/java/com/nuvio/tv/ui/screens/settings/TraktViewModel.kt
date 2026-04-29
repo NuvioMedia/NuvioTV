@@ -133,8 +133,8 @@ class TraktViewModel @Inject constructor(
         viewModelScope.launch {
             traktSettingsDataStore.setWatchProgressSource(source)
             // Clear CW cache so stale items from the previous source don't flash on screen.
-            cwEnrichmentCache.saveInProgressSnapshot(emptyList())
-            cwEnrichmentCache.saveNextUpSnapshot(emptyList())
+            cwEnrichmentCache.saveInProgressSnapshot(emptyList(), force = true)
+            cwEnrichmentCache.saveNextUpSnapshot(emptyList(), force = true)
             if (source == WatchProgressSource.TRAKT) {
                 watchedItemsPreferences.clearAll()
                 watchedSeriesStateHolder.update(emptySet())
@@ -234,8 +234,8 @@ class TraktViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             traktAuthService.revokeAndLogout()
             // Clear CW cache so stale Trakt items don't flash on next launch.
-            cwEnrichmentCache.saveInProgressSnapshot(emptyList())
-            cwEnrichmentCache.saveNextUpSnapshot(emptyList())
+            cwEnrichmentCache.saveInProgressSnapshot(emptyList(), force = true)
+            cwEnrichmentCache.saveNextUpSnapshot(emptyList(), force = true)
             // Repopulate watched items from Nuvio sync now that Trakt is no
             // longer the source of truth.
             watchedSeriesStateHolder.update(emptySet())

@@ -632,6 +632,7 @@ private fun EpisodeCommentPickerDialog(
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     state = seasonListState,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(sortedSeasons, key = { it }) { seasonNumber ->
@@ -672,6 +673,7 @@ private fun EpisodeCommentPickerDialog(
                     .fillMaxWidth()
                     .height(320.dp),
                 state = episodeListState,
+                contentPadding = PaddingValues(vertical = 6.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(episodes, key = { it.id }) { episode ->

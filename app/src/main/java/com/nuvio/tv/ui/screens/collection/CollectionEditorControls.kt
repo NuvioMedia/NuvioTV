@@ -219,6 +219,8 @@ fun tmdbSourceSubtitle(source: TmdbCollectionSource): String {
         TmdbCollectionSourceType.COLLECTION -> "TMDB Movie Collection"
         TmdbCollectionSourceType.COMPANY -> listOf("Production", media, sort).joinToString(" • ")
         TmdbCollectionSourceType.NETWORK -> listOf("Network", "Series", sort).joinToString(" • ")
+        TmdbCollectionSourceType.PERSON -> listOf("Person Credits", media, sort).joinToString(" • ")
+        TmdbCollectionSourceType.DIRECTOR -> listOf("Director Credits", media, sort).joinToString(" • ")
         TmdbCollectionSourceType.DISCOVER -> listOf("TMDB Discover", media, sort).joinToString(" • ")
     }
 }

@@ -222,13 +222,26 @@ private fun ModernCatalogRowItem(
         latestOnFocused()
         item.metaPreview?.let { latestOnItemFocus(it) }
         latestOnPreloadAdjacentItem()
-        if (payload is ModernPayload.Catalog && !payload.itemId.startsWith("__placeholder_")) {
-            latestOnCatalogSelectionFocused(
-                FocusedCatalogSelection(
-                    focusKey = focusKey,
-                    payload = payload
+        when (payload) {
+            is ModernPayload.Catalog -> {
+                if (!payload.itemId.startsWith("__placeholder_")) {
+                    latestOnCatalogSelectionFocused(
+                        FocusedCatalogSelection(
+                            focusKey = focusKey,
+                            payload = payload
+                        )
+                    )
+                }
+            }
+            is ModernPayload.CollectionFolder -> {
+                latestOnCatalogSelectionFocused(
+                    FocusedCatalogSelection(
+                        focusKey = focusKey,
+                        payload = payload
+                    )
                 )
-            )
+            }
+            is ModernPayload.ContinueWatching -> Unit
         }
     }
 
@@ -869,7 +882,11 @@ private fun ModernCarouselCard(
     val cardShape = remember(cardCornerRadius) { RoundedCornerShape(cardCornerRadius) }
     val context = LocalContext.current
     val density = LocalDensity.current
-    val expandedCardWidth = cardHeight * (16f / 9f)
+    val expandedCardWidth = if (useLandscapeOverlayTreatment) {
+        cardWidth
+    } else {
+        cardHeight * (16f / 9f)
+    }
     val targetCardWidth = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
         expandedCardWidth
     } else {
@@ -909,9 +926,14 @@ private fun ModernCarouselCard(
     val effectiveBackdropUrl = frozenBackdropUrl.value
     var isFocused by remember { mutableStateOf(false) }
     val payload = item.payload as? ModernPayload.CollectionFolder
+    val isCollectionFolder = item.payload is ModernPayload.CollectionFolder
     val baseImageUrl = if (focusedPosterBackdropExpandEnabled && isBackdropExpanded) {
-        item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
-    } else if (useLandscapeOverlayTreatment) {
+        if (useLandscapeOverlayTreatment) {
+            effectiveBackdropUrl ?: item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
+        } else {
+            item.heroPreview.backdrop ?: item.imageUrl ?: item.heroPreview.poster
+        }
+    } else if (useLandscapeOverlayTreatment && !isCollectionFolder) {
         effectiveBackdropUrl ?: item.heroPreview.poster
     } else {
         item.imageUrl ?: item.heroPreview.poster ?: item.heroPreview.backdrop
@@ -1110,7 +1132,7 @@ private fun ModernCarouselCard(
                 }
 
                 Box(modifier = mediaLayerModifier) {
-                    val isPlaceholderItem = imageUrl?.startsWith("placeholder://") == true
+                    val isPlaceholderItem = item.imageUrl?.startsWith("placeholder://") == true
                     if (isPlaceholderItem) {
                         // Horizontal sweeping shimmer for placeholder cards
                         val effectivePlaceholderShimmerOffsetState =

@@ -52,6 +52,7 @@ data class FolderInfo(
     val tileShape: String,
     val hideTitle: Boolean,
     val heroBackdropUrl: String? = null,
+    val heroVideoUrl: String? = null,
     val titleLogoUrl: String? = null,
     val catalogSources: List<CatalogSourceInfo> = emptyList(),
     val sources: List<CollectionSourceInfo> = catalogSources.map { it.toCollectionSourceInfo() }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.R
+import com.nuvio.tv.core.sync.CollectionSyncService
 import com.nuvio.tv.core.sync.HomeCatalogSettingsSyncService
 import com.nuvio.tv.core.sync.homeCatalogKey
 import com.nuvio.tv.core.sync.homeLegacyDisabledCatalogKey
@@ -56,6 +57,7 @@ class AddonManagerViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
     private val collectionsDataStore: CollectionsDataStore,
+    private val collectionSyncService: CollectionSyncService,
     private val homeCatalogSettingsSyncService: HomeCatalogSettingsSyncService,
     private val profileManager: ProfileManager,
     private val tmdbCollectionSourceResolver: TmdbCollectionSourceResolver,
@@ -351,6 +353,8 @@ class AddonManagerViewModel @Inject constructor(
                     TmdbCollectionSourceType.COLLECTION -> tmdbCollectionSourceResolver.collectionImportMetadata(request.tmdbId)
                     TmdbCollectionSourceType.COMPANY -> tmdbCollectionSourceResolver.companyImportMetadata(request.tmdbId)
                     TmdbCollectionSourceType.NETWORK -> tmdbCollectionSourceResolver.networkImportMetadata(request.tmdbId)
+                    TmdbCollectionSourceType.PERSON,
+                    TmdbCollectionSourceType.DIRECTOR -> tmdbCollectionSourceResolver.personImportMetadata(request.tmdbId)
                     TmdbCollectionSourceType.DISCOVER -> return@runBlocking null
                 }
                 TmdbSourceMetadataInfo(
@@ -504,6 +508,7 @@ class AddonManagerViewModel @Inject constructor(
                 try {
                     val newCollections = parseCollectionsFromJson(pending.proposedCollectionsJson)
                     collectionsDataStore.setCollections(newCollections)
+                    collectionSyncService.triggerPush()
                 } catch (_: Exception) { }
             }
             // Apply disabled collection key changes
@@ -613,6 +618,7 @@ class AddonManagerViewModel @Inject constructor(
                         tileShape = folder.tileShape.name,
                         hideTitle = folder.hideTitle,
                         heroBackdropUrl = folder.heroBackdropUrl,
+                        heroVideoUrl = folder.heroVideoUrl,
                         titleLogoUrl = folder.titleLogoUrl,
                         catalogSources = folder.catalogSources.map { src ->
                             CatalogSourceInfo(

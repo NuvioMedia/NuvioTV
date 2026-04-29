@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.repository.GitHubContributor
 import com.nuvio.tv.data.repository.GitHubContributorsRepository
+import com.nuvio.tv.data.repository.DevelopmentSponsor
+import com.nuvio.tv.data.repository.SponsorsRepository
 import com.nuvio.tv.data.repository.SupporterDonation
 import com.nuvio.tv.data.repository.SupportersRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,6 +18,7 @@ import javax.inject.Inject
 
 enum class SupportersContributorsTab {
     Supporters,
+    Sponsors,
     Contributors
 }
 
@@ -26,6 +29,11 @@ data class SupportersContributorsUiState(
     val supporters: List<SupporterDonation> = emptyList(),
     val supportersErrorMessage: String? = null,
     val selectedSupporter: SupporterDonation? = null,
+    val isSponsorsLoading: Boolean = false,
+    val hasLoadedSponsors: Boolean = false,
+    val sponsors: List<DevelopmentSponsor> = emptyList(),
+    val sponsorsErrorMessage: String? = null,
+    val selectedSponsor: DevelopmentSponsor? = null,
     val isContributorsLoading: Boolean = false,
     val hasLoadedContributors: Boolean = false,
     val contributors: List<GitHubContributor> = emptyList(),
@@ -36,6 +44,7 @@ data class SupportersContributorsUiState(
 @HiltViewModel
 class SupportersContributorsViewModel @Inject constructor(
     private val supportersRepository: SupportersRepository,
+    private val sponsorsRepository: SponsorsRepository,
     private val contributorsRepository: GitHubContributorsRepository
 ) : ViewModel() {
 
@@ -50,6 +59,7 @@ class SupportersContributorsViewModel @Inject constructor(
         _uiState.update { it.copy(selectedTab = tab) }
         when (tab) {
             SupportersContributorsTab.Supporters -> loadSupportersIfNeeded()
+            SupportersContributorsTab.Sponsors -> loadSponsorsIfNeeded()
             SupportersContributorsTab.Contributors -> loadContributorsIfNeeded()
         }
     }
@@ -62,12 +72,24 @@ class SupportersContributorsViewModel @Inject constructor(
         loadContributors(force = true)
     }
 
+    fun retrySponsors() {
+        loadSponsors(force = true)
+    }
+
     fun onSupporterSelected(supporter: SupporterDonation) {
         _uiState.update { it.copy(selectedSupporter = supporter) }
     }
 
     fun dismissSupporterDetails() {
         _uiState.update { it.copy(selectedSupporter = null) }
+    }
+
+    fun onSponsorSelected(sponsor: DevelopmentSponsor) {
+        _uiState.update { it.copy(selectedSponsor = sponsor) }
+    }
+
+    fun dismissSponsorDetails() {
+        _uiState.update { it.copy(selectedSponsor = null) }
     }
 
     fun onContributorSelected(contributor: GitHubContributor) {
@@ -88,6 +110,12 @@ class SupportersContributorsViewModel @Inject constructor(
         val current = _uiState.value
         if (current.hasLoadedContributors || current.isContributorsLoading) return
         loadContributors(force = false)
+    }
+
+    private fun loadSponsorsIfNeeded() {
+        val current = _uiState.value
+        if (current.hasLoadedSponsors || current.isSponsorsLoading) return
+        loadSponsors(force = false)
     }
 
     private fun loadSupporters(force: Boolean) {
@@ -158,6 +186,43 @@ class SupportersContributorsViewModel @Inject constructor(
                             hasLoadedContributors = false,
                             contributors = emptyList(),
                             contributorsErrorMessage = error.message ?: "Unable to load contributors."
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun loadSponsors(force: Boolean) {
+        val current = _uiState.value
+        if (current.isSponsorsLoading) return
+        if (!force && current.hasLoadedSponsors) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isSponsorsLoading = true,
+                    sponsorsErrorMessage = null
+                )
+            }
+
+            sponsorsRepository.getSponsors()
+                .onSuccess { sponsors ->
+                    _uiState.update {
+                        it.copy(
+                            isSponsorsLoading = false,
+                            hasLoadedSponsors = true,
+                            sponsors = sponsors,
+                            sponsorsErrorMessage = null
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isSponsorsLoading = false,
+                            hasLoadedSponsors = false,
+                            sponsors = emptyList(),
+                            sponsorsErrorMessage = error.message ?: "Unable to load sponsors."
                         )
                     }
                 }

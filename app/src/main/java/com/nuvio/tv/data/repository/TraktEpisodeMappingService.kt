@@ -67,16 +67,16 @@ class TraktEpisodeMappingService @Inject constructor(
         val addonEpisodes = getAddonEpisodes(resolvedContentId, resolvedContentType)
         if (addonEpisodes.isEmpty()) return null
 
-        val addonHasEpisode = addonEpisodes.any {
-            it.season == requestedSeason && it.episode == requestedEpisode
-        }
-        if (addonHasEpisode) {
-            return null
-        }
-
         val showLookupId = resolveShowLookupId(contentId = resolvedContentId, videoId = null) ?: return null
         val traktEpisodes = getTraktEpisodes(showLookupId)
         if (traktEpisodes.isEmpty()) return null
+
+        val addonHasEpisode = addonEpisodes.any {
+            it.season == requestedSeason && it.episode == requestedEpisode
+        }
+        if (addonHasEpisode && hasSameSeasonStructure(addonEpisodes, traktEpisodes)) {
+            return null
+        }
 
         val mapped = reverseRemapEpisodeByTitleOrIndex(
             requestedSeason = requestedSeason,
@@ -90,6 +90,15 @@ class TraktEpisodeMappingService @Inject constructor(
             reverseMappingCache[reverseKey] = mapped
         }
         return mapped
+    }
+
+    private fun hasSameSeasonStructure(
+        addonEpisodes: List<EpisodeMappingEntry>,
+        traktEpisodes: List<EpisodeMappingEntry>
+    ): Boolean {
+        val addonSeasons = addonEpisodes.mapTo(mutableSetOf()) { it.season }
+        val traktSeasons = traktEpisodes.mapTo(mutableSetOf()) { it.season }
+        return addonSeasons == traktSeasons
     }
 
     internal suspend fun getCachedEpisodeMapping(
@@ -126,6 +135,10 @@ class TraktEpisodeMappingService @Inject constructor(
         val showLookupId = resolveShowLookupId(contentId = resolvedContentId, videoId = videoId) ?: return null
         val traktEpisodes = getTraktEpisodes(showLookupId)
         if (traktEpisodes.isEmpty()) return null
+
+        if (hasSameSeasonStructure(addonEpisodes, traktEpisodes)) {
+            return null
+        }
 
         val mapped = remapEpisodeByTitleOrIndex(
             requestedSeason = requestedSeason,

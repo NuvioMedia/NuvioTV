@@ -188,6 +188,8 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
     scope.launch {
         playerSettingsDataStore.playerSettings.collect { settings ->
             val currentState = _uiState.value
+            val wasRememberingAudioDelayPerDevice = rememberAudioDelayPerDeviceEnabled
+            rememberAudioDelayPerDeviceEnabled = settings.rememberAudioDelayPerDevice
             val resolvedInternalPlayerEngine =
                 runtimeInternalPlayerEngineOverride ?: resolvedAutoPlayerEngine ?: settings.internalPlayerEngine
             val resolvedAudioAmplificationDb = when {
@@ -229,6 +231,13 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
 
             if (resolvedAudioAmplificationDb != currentState.audioAmplificationDb) {
                 applyAudioAmplification(resolvedAudioAmplificationDb)
+            }
+
+            if (settings.rememberAudioDelayPerDevice && !wasRememberingAudioDelayPerDevice) {
+                registerAudioDelayRouteCallback()
+                applyStoredAudioDelayForCurrentRouteIfEnabled()
+            } else if (!settings.rememberAudioDelayPerDevice && wasRememberingAudioDelayPerDevice) {
+                unregisterAudioDelayRouteCallback()
             }
 
             if (settings.frameRateMatchingMode == FrameRateMatchingMode.OFF) {
@@ -434,7 +443,8 @@ internal fun PlayerRuntimeController.retryCurrentStreamFromStartAfter416() {
                     headers = currentHeaders,
                     filename = currentFilename,
                     responseHeaders = currentStreamResponseHeaders,
-                    mimeTypeOverride = currentStreamMimeType
+                    mimeTypeOverride = currentStreamMimeType,
+                    audioDelayUsProvider = audioDelayUs::get
                 )
             )
             player.seekTo(0L)

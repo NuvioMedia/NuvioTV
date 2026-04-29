@@ -328,6 +328,7 @@ class HomeViewModel @Inject constructor(
         cwEnrichedNextUpOverlay.clear()
         cwEnrichedInProgressOverlay.clear()
         cwLastBadgeEpisodeKeys = emptySet()
+        watchedSeriesStateHolder.clearValidationState()
         _uiState.update { it.copy(continueWatchingItems = emptyList()) }
         // Bump trigger so the pipeline's collectLatest restarts with fresh state.
         cwPipelineRefreshTrigger.value++
@@ -428,8 +429,8 @@ class HomeViewModel @Inject constructor(
                         _uiState.update { it.copy(continueWatchingItems = emptyList()) }
                         // Clear disk cache for current profile.
                         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                            runCatching { cwEnrichmentCache.saveNextUpSnapshot(emptyList()) }
-                            runCatching { cwEnrichmentCache.saveInProgressSnapshot(emptyList()) }
+                            runCatching { cwEnrichmentCache.saveNextUpSnapshot(emptyList(), force = true) }
+                            runCatching { cwEnrichmentCache.saveInProgressSnapshot(emptyList(), force = true) }
                         }
                         // Reload CW from fresh source.
                         loadContinueWatching()

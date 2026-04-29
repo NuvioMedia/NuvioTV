@@ -2,6 +2,7 @@ package com.nuvio.tv.ui.screens.player
 
 import android.app.Activity
 import android.content.Context
+import android.media.AudioDeviceCallback
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.media3.exoplayer.ExoPlayer
@@ -11,6 +12,7 @@ import com.nuvio.tv.core.torrent.TorrentService
 import com.nuvio.tv.data.local.InternalPlayerEngine
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
+import com.nuvio.tv.data.local.AudioDelayRouteDataStore
 import com.nuvio.tv.data.local.PlayerSettingsDataStore
 import com.nuvio.tv.data.local.DeviceLocalPlayerPreferences
 import com.nuvio.tv.data.local.StreamLinkCacheDataStore
@@ -58,6 +60,7 @@ class PlayerRuntimeController(
     internal val layoutPreferenceDataStore: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
     internal val watchedItemsPreferences: com.nuvio.tv.data.local.WatchedItemsPreferences,
     internal val trackPreferenceDataStore: com.nuvio.tv.data.local.TrackPreferenceDataStore,
+    internal val audioDelayRouteDataStore: AudioDelayRouteDataStore,
     internal val torrentService: TorrentService,
     internal val torrentSettings: com.nuvio.tv.core.torrent.TorrentSettings,
     internal val tmdbService: com.nuvio.tv.core.tmdb.TmdbService,
@@ -301,6 +304,9 @@ class PlayerRuntimeController(
     internal var mpvPreferredAudioLanguages: List<String> = emptyList()
     internal var currentStreamBingeGroup: String? = navigationArgs.bingeGroup
     internal var hasInitializedAudioAmplificationForSession: Boolean = false
+    internal var rememberAudioDelayPerDeviceEnabled: Boolean = false
+    internal var currentAudioOutputRoute: AudioOutputRoute? = null
+    internal var audioOutputRouteCallback: AudioDeviceCallback? = null
 
     internal var lastBufferLogTimeMs: Long = 0L
     
@@ -316,6 +322,7 @@ class PlayerRuntimeController(
     internal var pauseOverlayJob: Job? = null
     internal val pauseOverlayDelayMs = 5000L
     internal val seekProgressSyncDebounceMs = 700L
+    internal val audioDelayUs = AtomicLong(0L)
     internal val subtitleDelayUs = AtomicLong(0L)
     internal var pendingPreviewSeekPosition: Long? = null
     internal var pendingResumeProgress: WatchProgress? = null

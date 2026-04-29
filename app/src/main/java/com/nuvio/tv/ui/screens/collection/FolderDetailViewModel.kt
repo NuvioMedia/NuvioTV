@@ -757,6 +757,8 @@ class FolderDetailViewModel @Inject constructor(
             "COLLECTION" -> "TMDB Movie Collection"
             "COMPANY" -> "Production"
             "NETWORK" -> "Network"
+            "PERSON" -> "Person Credits"
+            "DIRECTOR" -> "Director Credits"
             else -> "TMDB Discover"
         }
     }

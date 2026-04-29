@@ -170,6 +170,7 @@ data class PlayerSettings(
     val skipSilence: Boolean = false,
     val audioAmplificationDb: Int = 0,
     val persistAudioAmplification: Boolean = false,
+    val rememberAudioDelayPerDevice: Boolean = true,
     val preferredAudioLanguage: String = AudioLanguageOption.DEVICE,
     val secondaryPreferredAudioLanguage: String? = null,
     val loadingOverlayEnabled: Boolean = true,
@@ -301,6 +302,7 @@ class PlayerSettingsDataStore @Inject constructor(
     private val skipSilenceKey = booleanPreferencesKey("skip_silence")
     private val audioAmplificationDbKey = intPreferencesKey("audio_amplification_db")
     private val persistAudioAmplificationKey = booleanPreferencesKey("persist_audio_amplification")
+    private val rememberAudioDelayPerDeviceKey = booleanPreferencesKey("remember_audio_delay_per_device")
     private val preferredAudioLanguageKey = stringPreferencesKey("preferred_audio_language")
     private val secondaryPreferredAudioLanguageKey = stringPreferencesKey("secondary_preferred_audio_language")
     private val loadingOverlayEnabledKey = booleanPreferencesKey("loading_overlay_enabled")
@@ -448,6 +450,7 @@ class PlayerSettingsDataStore @Inject constructor(
                     AUDIO_AMPLIFICATION_DB_MAX
                 ),
                 persistAudioAmplification = prefs[persistAudioAmplificationKey] ?: false,
+                rememberAudioDelayPerDevice = prefs[rememberAudioDelayPerDeviceKey] ?: true,
                 preferredAudioLanguage = normalizeSelectableLanguageCode(
                     prefs[preferredAudioLanguageKey] ?: AudioLanguageOption.DEVICE
                 ),
@@ -609,6 +612,12 @@ class PlayerSettingsDataStore @Inject constructor(
                     AUDIO_AMPLIFICATION_DB_MAX
                 )
             }
+        }
+    }
+
+    suspend fun setRememberAudioDelayPerDevice(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[rememberAudioDelayPerDeviceKey] = enabled
         }
     }
 
