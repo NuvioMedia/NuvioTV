@@ -15,6 +15,14 @@
     <string name="library_empty_tab_title">Nothing here yet</string>
     <string name="library_empty_tab_message">Items you save will show up under the matching tab.</string>
 
+    <string name="library_sort_title">Sort by</string>
+    <string name="library_sort_trakt_order">Trakt order</string>
+    <string name="library_sort_added_desc">Recently added</string>
+    <string name="library_sort_added_asc">Oldest added</string>
+    <string name="library_sort_title_asc">Title A–Z</string>
+    <string name="library_sort_title_desc">Title Z–A</string>
+    <string name="cd_library_sort">Sort library</string>
+
     <string name="home_empty_title">No addons yet</string>
     <string name="home_empty_message">Install a Stremio-compatible addon to start browsing movies and series.</string>
     <string name="home_empty_cta">Install addons</string>
