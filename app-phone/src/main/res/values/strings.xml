@@ -61,6 +61,11 @@
     <string name="settings_action_language">Display language</string>
     <string name="settings_action_language_subtitle">Change the app interface language</string>
 
+    <string name="settings_account_stat_addons">Addons</string>
+    <string name="settings_account_stat_plugins">Plugins</string>
+    <string name="settings_account_stat_library">Library</string>
+    <string name="settings_account_stat_progress">Progress</string>
+
     <string name="player_defaults_title">Player defaults</string>
     <string name="player_defaults_subtitle_section">Subtitle language</string>
     <string name="player_defaults_subtitle_primary">Preferred</string>

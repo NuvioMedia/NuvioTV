@@ -5,16 +5,28 @@ import android.content.pm.PackageManager
 import androidx.core.content.pm.PackageInfoCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.omnio.tv.data.local.LibraryPreferences
 import com.omnio.tv.domain.auth.AuthManager
 import com.omnio.tv.domain.model.AuthState
+import com.omnio.tv.domain.plugin.PluginManager
+import com.omnio.tv.domain.repository.AddonRepository
+import com.omnio.tv.domain.repository.WatchProgressRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+data class AccountConnectedStats(
+    val addons: Int = 0,
+    val plugins: Int = 0,
+    val library: Int = 0,
+    val watchProgress: Int = 0
+)
 
 data class PhoneSettingsUiState(
     val email: String? = null,
@@ -22,12 +34,18 @@ data class PhoneSettingsUiState(
     val versionName: String = "",
     val versionCode: String = "",
     val isDebugBuild: Boolean = false,
-    val message: String? = null
+    val message: String? = null,
+    val connectedStats: AccountConnectedStats? = null,
+    val isStatsLoading: Boolean = true
 )
 
 @HiltViewModel
 class PhoneSettingsViewModel @Inject constructor(
     private val authManager: AuthManager,
+    private val addonRepository: AddonRepository,
+    private val pluginManager: PluginManager,
+    private val libraryPreferences: LibraryPreferences,
+    private val watchProgressRepository: WatchProgressRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -37,6 +55,7 @@ class PhoneSettingsViewModel @Inject constructor(
     init {
         loadVersion()
         observeAuth()
+        observeConnectedStats()
     }
 
     private fun loadVersion() {
@@ -63,6 +82,26 @@ class PhoneSettingsViewModel @Inject constructor(
             authManager.authState.collect { state ->
                 val email = (state as? AuthState.FullAccount)?.email
                 _uiState.update { it.copy(email = email) }
+            }
+        }
+    }
+
+    private fun observeConnectedStats() {
+        viewModelScope.launch {
+            combine(
+                addonRepository.getInstalledAddons(),
+                pluginManager.repositories,
+                libraryPreferences.libraryItems,
+                watchProgressRepository.allProgress
+            ) { addons, plugins, library, progress ->
+                AccountConnectedStats(
+                    addons = addons.size,
+                    plugins = plugins.size,
+                    library = library.size,
+                    watchProgress = progress.size
+                )
+            }.collect { stats ->
+                _uiState.update { it.copy(connectedStats = stats, isStatsLoading = false) }
             }
         }
     }
