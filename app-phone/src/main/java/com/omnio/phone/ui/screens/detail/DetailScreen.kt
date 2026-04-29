@@ -50,6 +50,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun DetailScreen(
     onBack: () -> Unit,
+    onPlayRequest: (PlaybackRequest) -> Unit,
     viewModel: DetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -61,6 +62,10 @@ fun DetailScreen(
         val message = state.userMessage ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(message)
         viewModel.clearMessage()
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.playbackRequests.collect(onPlayRequest)
     }
 
     Scaffold(
@@ -87,12 +92,8 @@ fun DetailScreen(
             if (state.meta != null) {
                 PlayBottomBar(
                     isInLibrary = state.isInLibrary,
-                    onPlay = {
-                        scope.launch {
-                            // Player screen lands in sub-step 2f.
-                            snackbarHostState.showSnackbar("Playback will land in the next sub-step.")
-                        }
-                    },
+                    isResolving = state.isResolvingPlayback,
+                    onPlay = { viewModel.requestPlayback() },
                     onToggleLibrary = viewModel::toggleLibrary
                 )
             }
@@ -119,9 +120,7 @@ fun DetailScreen(
                     selectedSeason = state.selectedSeason,
                     episodes = state.episodesForSeason,
                     onSelectSeason = viewModel::selectSeason,
-                    onEpisodeClick = {
-                        // Episode play wired in 2f.
-                    }
+                    onEpisodeClick = { video -> viewModel.requestPlayback(video) }
                 )
             }
         }
@@ -166,6 +165,7 @@ private fun DetailContent(
 @Composable
 private fun PlayBottomBar(
     isInLibrary: Boolean,
+    isResolving: Boolean,
     onPlay: () -> Unit,
     onToggleLibrary: () -> Unit
 ) {
@@ -182,17 +182,27 @@ private fun PlayBottomBar(
         ) {
             Button(
                 onClick = onPlay,
+                enabled = !isResolving,
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
-                Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null)
-                Text(
-                    text = "Play",
-                    modifier = Modifier.padding(start = 8.dp)
-                )
+                if (isResolving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.padding(end = 8.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Text(text = "Loading…")
+                } else {
+                    Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null)
+                    Text(
+                        text = "Play",
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
             }
             OutlinedButton(
                 onClick = onToggleLibrary,

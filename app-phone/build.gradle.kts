@@ -45,6 +45,23 @@ android {
         }
     }
 
+    packaging {
+        jniLibs {
+            // Keep one consistent native set across dependencies (mpv-android-lib + ass-kt
+            // both ship libc++_shared.so; FFmpeg variants ship duplicate libav*.so).
+            pickFirsts += listOf(
+                "lib/*/libc++_shared.so",
+                "lib/*/libavcodec.so",
+                "lib/*/libavdevice.so",
+                "lib/*/libavfilter.so",
+                "lib/*/libavformat.so",
+                "lib/*/libavutil.so",
+                "lib/*/libswscale.so",
+                "lib/*/libswresample.so"
+            )
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -76,6 +93,7 @@ dependencies {
     implementation(project(":core-domain"))
     implementation(project(":core-data"))
     implementation(project(":core-platform"))
+    implementation(project(":core-player"))
     implementation(project(":core-ui-shared"))
 
     implementation(libs.androidx.core.ktx)

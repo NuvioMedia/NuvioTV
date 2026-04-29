@@ -3,16 +3,22 @@ package com.omnio.phone.ui.screens.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.omnio.tv.domain.model.ContentType
 import com.omnio.tv.domain.model.LibraryEntryInput
 import com.omnio.tv.domain.model.Meta
+import com.omnio.tv.domain.model.Stream
 import com.omnio.tv.domain.model.Video
 import com.omnio.tv.domain.repository.LibraryRepository
 import com.omnio.tv.domain.repository.MetaRepository
+import com.omnio.tv.domain.repository.StreamRepository
 import com.omnio.tv.domain.result.NetworkResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -23,11 +29,15 @@ import javax.inject.Inject
 class DetailViewModel @Inject constructor(
     private val metaRepository: MetaRepository,
     private val libraryRepository: LibraryRepository,
+    private val streamRepository: StreamRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val contentId: String = savedStateHandle["contentId"] ?: ""
     private val contentType: String = savedStateHandle["contentType"] ?: ""
+
+    private val _playbackRequests = MutableSharedFlow<PlaybackRequest>(extraBufferCapacity = 1)
+    val playbackRequests: SharedFlow<PlaybackRequest> = _playbackRequests.asSharedFlow()
 
     private val _uiState = MutableStateFlow(DetailUiState())
     val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
@@ -72,6 +82,81 @@ class DetailViewModel @Inject constructor(
 
     fun clearMessage() {
         _uiState.update { it.copy(userMessage = null) }
+    }
+
+    /**
+     * Resolves the first available stream for the meta (or the supplied [video] for series)
+     * and emits a [PlaybackRequest] on [playbackRequests]. If no stream resolves, posts a
+     * snackbar message instead.
+     */
+    fun requestPlayback(video: Video? = null) {
+        val meta = _uiState.value.meta ?: return
+        if (_uiState.value.isResolvingPlayback) return
+
+        val target = video ?: pickInitialEpisode(meta)
+        val isSeries = meta.type == ContentType.SERIES
+        val videoId = target?.id ?: meta.id
+        val season = target?.season
+        val episode = target?.episode
+        val episodeTitle = target?.title
+
+        _uiState.update { it.copy(isResolvingPlayback = true) }
+        viewModelScope.launch {
+            val streamsResult = streamRepository
+                .getStreamsFromAllAddons(
+                    type = meta.apiType,
+                    videoId = videoId,
+                    season = season,
+                    episode = episode
+                )
+                .first { it !is NetworkResult.Loading }
+
+            val streams: List<Stream> = when (streamsResult) {
+                is NetworkResult.Success -> streamsResult.data.flatMap { it.streams }
+                is NetworkResult.Error -> emptyList()
+                NetworkResult.Loading -> emptyList()
+            }
+            val playable = streams.firstOrNull { !it.getStreamUrl().isNullOrBlank() }
+
+            if (playable == null) {
+                val errorMsg = (streamsResult as? NetworkResult.Error)?.message
+                _uiState.update {
+                    it.copy(
+                        isResolvingPlayback = false,
+                        userMessage = errorMsg ?: "No playable streams found for this title."
+                    )
+                }
+                return@launch
+            }
+
+            _uiState.update { it.copy(isResolvingPlayback = false) }
+            _playbackRequests.emit(
+                PlaybackRequest(
+                    stream = playable,
+                    title = if (isSeries && episodeTitle != null) "${meta.name} — ${episodeTitle}" else meta.name,
+                    contentName = if (isSeries) meta.name else null,
+                    contentId = meta.id,
+                    contentType = meta.apiType,
+                    poster = meta.poster,
+                    backdrop = meta.backdropUrl,
+                    logo = meta.logo,
+                    videoId = videoId,
+                    season = season,
+                    episode = episode,
+                    episodeTitle = episodeTitle,
+                    year = meta.releaseInfo
+                )
+            )
+        }
+    }
+
+    private fun pickInitialEpisode(meta: Meta): Video? {
+        if (meta.type != ContentType.SERIES) return null
+        val watchable = meta.watchableEpisodes()
+        if (watchable.isEmpty()) return null
+        return watchable.minWithOrNull(
+            compareBy({ it.season ?: Int.MAX_VALUE }, { it.episode ?: Int.MAX_VALUE })
+        )
     }
 
     private fun load() {

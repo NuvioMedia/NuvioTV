@@ -29,6 +29,8 @@ import com.omnio.phone.ui.screens.addons.AddonsScreen
 import com.omnio.phone.ui.screens.auth.AuthScreen
 import com.omnio.phone.ui.screens.detail.DetailScreen
 import com.omnio.phone.ui.screens.home.HomeScreen
+import com.omnio.phone.ui.screens.player.PhonePlayerRoute
+import com.omnio.phone.ui.screens.player.PhonePlayerScreen
 import com.omnio.phone.ui.screens.profiles.ProfilesScreen
 import com.omnio.phone.ui.screens.splash.SplashScreen
 import java.net.URLEncoder
@@ -40,6 +42,7 @@ object PhoneRoutes {
     const val PROFILES = "profiles"
     const val ADDONS = "addons"
     const val DETAIL = "detail/{contentId}/{contentType}"
+    val PLAYER = PhonePlayerRoute.ROUTE
 
     fun detail(contentId: String, contentType: String): String {
         val encodedId = URLEncoder.encode(contentId, StandardCharsets.UTF_8.name())
@@ -135,7 +138,47 @@ private fun SignedInNav() {
                     navArgument("contentType") { type = NavType.StringType }
                 )
             ) {
-                DetailScreen(onBack = { navController.popBackStack() })
+                DetailScreen(
+                    onBack = { navController.popBackStack() },
+                    onPlayRequest = { request ->
+                        val streamUrl = request.stream.getStreamUrl() ?: return@DetailScreen
+                        navController.navigate(
+                            PhonePlayerRoute.create(
+                                streamUrl = streamUrl,
+                                title = request.title,
+                                streamName = request.stream.getDisplayName(),
+                                year = request.year,
+                                headers = request.stream.behaviorHints?.proxyHeaders?.request,
+                                contentId = request.contentId,
+                                contentType = request.contentType,
+                                contentName = request.contentName,
+                                poster = request.poster,
+                                backdrop = request.backdrop,
+                                logo = request.logo,
+                                videoId = request.videoId,
+                                season = request.season,
+                                episode = request.episode,
+                                episodeTitle = request.episodeTitle,
+                                bingeGroup = request.stream.behaviorHints?.bingeGroup,
+                                filename = request.stream.behaviorHints?.filename,
+                                videoHash = request.stream.behaviorHints?.videoHash,
+                                videoSize = request.stream.behaviorHints?.videoSize,
+                                addonName = request.stream.addonName,
+                                addonLogo = request.stream.addonLogo,
+                                streamDescription = request.stream.description,
+                                sourceProvider = request.stream.sourceProvider,
+                                providerItemId = request.stream.providerItemId,
+                                providerMediaSourceId = request.stream.providerMediaSourceId
+                            )
+                        )
+                    }
+                )
+            }
+            composable(
+                route = PhoneRoutes.PLAYER,
+                arguments = PhonePlayerRoute.navArguments()
+            ) {
+                PhonePlayerScreen(onBack = { navController.popBackStack() })
             }
         }
     }

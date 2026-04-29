@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.omnio.phone.ui.PhoneApp
+import com.omnio.phone.ui.screens.player.PhonePlayerPipController
 import com.omnio.phone.ui.theme.OmnioTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -21,5 +22,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        PhonePlayerPipController.onUserLeaveHint(this)
     }
 }
