@@ -7,6 +7,7 @@ import com.omnio.tv.domain.model.CatalogDescriptor
 import com.omnio.tv.domain.model.CatalogRow
 import com.omnio.tv.domain.repository.AddonRepository
 import com.omnio.tv.domain.repository.CatalogRepository
+import com.omnio.tv.domain.repository.WatchProgressRepository
 import com.omnio.tv.domain.result.NetworkResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -22,11 +23,13 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 private const val MAX_HERO_ITEMS = 7
+private const val MAX_CONTINUE_WATCHING_ITEMS = 20
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val addonRepository: AddonRepository,
-    private val catalogRepository: CatalogRepository
+    private val catalogRepository: CatalogRepository,
+    private val watchProgressRepository: WatchProgressRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -41,6 +44,13 @@ class HomeViewModel @Inject constructor(
             addonRepository.getInstalledAddons()
                 .distinctUntilChanged()
                 .collectLatest { addons -> reload(addons, refresh = false) }
+        }
+        viewModelScope.launch {
+            watchProgressRepository.continueWatching
+                .collectLatest { items ->
+                    val limited = items.take(MAX_CONTINUE_WATCHING_ITEMS)
+                    _uiState.update { it.copy(continueWatching = limited) }
+                }
         }
     }
 

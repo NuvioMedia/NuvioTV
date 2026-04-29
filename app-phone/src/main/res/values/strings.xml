@@ -22,6 +22,12 @@
     <string name="home_empty_no_catalogs_title">Nothing on home yet</string>
     <string name="home_empty_no_catalogs_message">Your installed addons don\'t have any home-row catalogs available.</string>
     <string name="home_empty_manage_addons">Manage addons</string>
+    <string name="home_continue_watching_title">Continue watching</string>
+
+    <string name="home_see_all">See all</string>
+    <string name="catalog_see_all_from">from %1$s</string>
+    <string name="catalog_see_all_empty_title">No items available</string>
+    <string name="catalog_see_all_empty_message">Try a different catalog or check back later.</string>
 
     <string name="cd_back">Back</string>
     <string name="cd_search">Search</string>

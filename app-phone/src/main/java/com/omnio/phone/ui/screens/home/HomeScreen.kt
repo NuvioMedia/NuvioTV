@@ -26,13 +26,17 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.omnio.phone.R
+import com.omnio.tv.domain.model.CatalogRow
 import com.omnio.tv.domain.model.MetaPreview
+import com.omnio.tv.domain.model.WatchProgress
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onNavigateToAddons: () -> Unit,
     onItemClick: (MetaPreview) -> Unit,
+    onContinueWatchingClick: (WatchProgress) -> Unit,
+    onSeeAllClick: (CatalogRow) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -48,16 +52,19 @@ fun HomeScreen(
             state.installedAddonsCount == 0 && !state.isLoading ->
                 EmptyAddonsState(onInstallClick = onNavigateToAddons)
 
-            state.isLoading && state.rows.isEmpty() ->
+            state.isLoading && state.rows.isEmpty() && state.continueWatching.isEmpty() ->
                 LoadingState()
 
-            state.rows.isEmpty() && !state.isLoading ->
+            state.rows.isEmpty() && state.continueWatching.isEmpty() && !state.isLoading ->
                 EmptyCatalogsState(onManageAddons = onNavigateToAddons)
 
             else -> HomeFeed(
                 heroItems = state.heroItems,
                 rows = state.rows,
-                onItemClick = onItemClick
+                continueWatching = state.continueWatching,
+                onItemClick = onItemClick,
+                onContinueWatchingClick = onContinueWatchingClick,
+                onSeeAllClick = onSeeAllClick
             )
         }
     }
@@ -66,8 +73,11 @@ fun HomeScreen(
 @Composable
 private fun HomeFeed(
     heroItems: List<MetaPreview>,
-    rows: List<com.omnio.tv.domain.model.CatalogRow>,
-    onItemClick: (MetaPreview) -> Unit
+    rows: List<CatalogRow>,
+    continueWatching: List<WatchProgress>,
+    onItemClick: (MetaPreview) -> Unit,
+    onContinueWatchingClick: (WatchProgress) -> Unit,
+    onSeeAllClick: (CatalogRow) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -79,8 +89,20 @@ private fun HomeFeed(
                 HeroCarousel(items = heroItems, onItemClick = onItemClick)
             }
         }
+        if (continueWatching.isNotEmpty()) {
+            item(key = "continue-watching") {
+                ContinueWatchingRow(
+                    items = continueWatching,
+                    onItemClick = onContinueWatchingClick
+                )
+            }
+        }
         items(rows, key = { "${it.addonId}:${it.apiType}:${it.catalogId}" }) { row ->
-            CategoryRow(row = row, onItemClick = onItemClick)
+            CategoryRow(
+                row = row,
+                onItemClick = onItemClick,
+                onSeeAllClick = onSeeAllClick
+            )
         }
     }
 }

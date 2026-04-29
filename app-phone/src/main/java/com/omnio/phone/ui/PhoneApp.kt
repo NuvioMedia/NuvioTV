@@ -41,6 +41,8 @@ import com.omnio.phone.ui.screens.player.PhonePlayerRoute
 import com.omnio.phone.ui.screens.player.PhonePlayerScreen
 import com.omnio.phone.ui.screens.profiles.ProfilesScreen
 import com.omnio.phone.ui.screens.search.PhoneSearchScreen
+import com.omnio.phone.ui.screens.seeall.PhoneSeeAllRoute
+import com.omnio.phone.ui.screens.seeall.PhoneSeeAllScreen
 import com.omnio.phone.ui.screens.splash.SplashScreen
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -54,6 +56,7 @@ object PhoneRoutes {
     const val SEARCH = "search"
     const val DETAIL = "detail/{contentId}/{contentType}"
     val PLAYER = PhonePlayerRoute.ROUTE
+    val SEE_ALL = PhoneSeeAllRoute.ROUTE
 
     fun detail(contentId: String, contentType: String): String {
         val encodedId = URLEncoder.encode(contentId, StandardCharsets.UTF_8.name())
@@ -145,6 +148,33 @@ private fun SignedInNav() {
                             launchSingleTop = true
                         }
                     },
+                    onItemClick = { item ->
+                        navController.navigate(
+                            PhoneRoutes.detail(
+                                contentId = item.id,
+                                contentType = item.apiType
+                            )
+                        )
+                    },
+                    onContinueWatchingClick = { progress ->
+                        navController.navigate(
+                            PhoneRoutes.detail(
+                                contentId = progress.contentId,
+                                contentType = progress.contentType
+                            )
+                        )
+                    },
+                    onSeeAllClick = { row ->
+                        navController.navigate(PhoneSeeAllRoute.create(row))
+                    }
+                )
+            }
+            composable(
+                route = PhoneRoutes.SEE_ALL,
+                arguments = PhoneSeeAllRoute.navArguments()
+            ) {
+                PhoneSeeAllScreen(
+                    onBack = { navController.popBackStack() },
                     onItemClick = { item ->
                         navController.navigate(
                             PhoneRoutes.detail(
