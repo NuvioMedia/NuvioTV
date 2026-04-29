@@ -11,6 +11,7 @@ import com.omnio.tv.domain.model.LibrarySourceMode
 import com.omnio.tv.domain.model.ListMembershipChanges
 import com.omnio.tv.domain.model.Meta
 import com.omnio.tv.domain.model.Stream
+import com.omnio.tv.domain.model.TraktListPrivacy
 import com.omnio.tv.domain.model.Video
 import com.omnio.tv.domain.repository.LibraryRepository
 import com.omnio.tv.domain.repository.MetaRepository
@@ -397,6 +398,90 @@ class DetailViewModel @Inject constructor(
 
     fun dismissListPicker() {
         _uiState.update { it.copy(listPicker = null) }
+    }
+
+    fun openListEditor() {
+        _uiState.update { state ->
+            val picker = state.listPicker ?: return@update state
+            if (picker.editor != null) return@update state
+            state.copy(listPicker = picker.copy(editor = ListEditorState()))
+        }
+    }
+
+    fun updateEditorName(value: String) {
+        updateEditor { it.copy(name = value, error = null) }
+    }
+
+    fun updateEditorDescription(value: String) {
+        updateEditor { it.copy(description = value) }
+    }
+
+    fun updateEditorPrivacy(value: TraktListPrivacy) {
+        updateEditor { it.copy(privacy = value) }
+    }
+
+    fun cancelListEditor() {
+        _uiState.update { state ->
+            val picker = state.listPicker ?: return@update state
+            state.copy(listPicker = picker.copy(editor = null))
+        }
+    }
+
+    fun submitListEditor() {
+        val state = _uiState.value
+        val picker = state.listPicker ?: return
+        val editor = picker.editor ?: return
+        if (editor.isSubmitting) return
+        val trimmedName = editor.name.trim()
+        if (trimmedName.isBlank()) {
+            updateEditor { it.copy(error = "List name is required") }
+            return
+        }
+        val description = editor.description.trim().ifBlank { null }
+        val previousKeys = picker.tabs.map { it.key }.toSet()
+
+        updateEditor { it.copy(isSubmitting = true, error = null) }
+        viewModelScope.launch {
+            runCatching {
+                libraryRepository.createPersonalList(
+                    name = trimmedName,
+                    description = description,
+                    privacy = editor.privacy
+                )
+                libraryRepository.listTabs.first()
+            }.onSuccess { refreshedTabs ->
+                listTabs = refreshedTabs
+                val newKey = refreshedTabs.firstOrNull { it.key !in previousKeys }?.key
+                _uiState.update { current ->
+                    val active = current.listPicker ?: return@update current
+                    val updatedMembership = active.membership.toMutableMap().apply {
+                        if (newKey != null) this[newKey] = true
+                    }
+                    current.copy(
+                        listPicker = active.copy(
+                            tabs = refreshedTabs,
+                            membership = updatedMembership,
+                            editor = null
+                        )
+                    )
+                }
+            }.onFailure { error ->
+                updateEditor {
+                    it.copy(
+                        isSubmitting = false,
+                        error = error.message ?: "Failed to create list"
+                    )
+                }
+            }
+        }
+    }
+
+    private inline fun updateEditor(transform: (ListEditorState) -> ListEditorState) {
+        _uiState.update { state ->
+            val picker = state.listPicker ?: return@update state
+            val editor = picker.editor ?: return@update state
+            state.copy(listPicker = picker.copy(editor = transform(editor)))
+        }
     }
 
     private fun episodesForSeason(videos: List<Video>, season: Int): List<Video> =

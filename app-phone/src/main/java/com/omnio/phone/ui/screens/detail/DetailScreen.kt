@@ -146,7 +146,13 @@ fun DetailScreen(
             state = picker,
             onDismiss = viewModel::dismissListPicker,
             onToggle = viewModel::toggleListMembership,
-            onSave = viewModel::saveListMembership
+            onSave = viewModel::saveListMembership,
+            onCreateListClick = viewModel::openListEditor,
+            onEditorNameChange = viewModel::updateEditorName,
+            onEditorDescriptionChange = viewModel::updateEditorDescription,
+            onEditorPrivacyChange = viewModel::updateEditorPrivacy,
+            onEditorCancel = viewModel::cancelListEditor,
+            onEditorSubmit = viewModel::submitListEditor
         )
     }
 }

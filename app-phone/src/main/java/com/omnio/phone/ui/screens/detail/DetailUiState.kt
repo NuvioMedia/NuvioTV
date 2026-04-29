@@ -5,6 +5,7 @@ import com.omnio.tv.domain.model.LibraryListTab
 import com.omnio.tv.domain.model.LibrarySourceMode
 import com.omnio.tv.domain.model.Meta
 import com.omnio.tv.domain.model.Stream
+import com.omnio.tv.domain.model.TraktListPrivacy
 import com.omnio.tv.domain.model.Video
 
 data class DetailUiState(
@@ -36,13 +37,22 @@ data class ListPickerState(
     val error: String? = null,
     val tabs: List<LibraryListTab> = emptyList(),
     val membership: Map<String, Boolean> = emptyMap(),
-    val originalMembership: Map<String, Boolean> = emptyMap()
+    val originalMembership: Map<String, Boolean> = emptyMap(),
+    val editor: ListEditorState? = null
 ) {
     val hasChanges: Boolean
         get() = tabs.any { tab ->
             (membership[tab.key] == true) != (originalMembership[tab.key] == true)
         }
 }
+
+data class ListEditorState(
+    val name: String = "",
+    val description: String = "",
+    val privacy: TraktListPrivacy = TraktListPrivacy.PRIVATE,
+    val isSubmitting: Boolean = false,
+    val error: String? = null
+)
 
 data class PlaybackRequest(
     val stream: Stream,
