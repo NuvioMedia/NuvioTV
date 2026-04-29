@@ -45,6 +45,7 @@ import com.omnio.phone.ui.screens.search.PhoneSearchScreen
 import com.omnio.phone.ui.screens.seeall.PhoneSeeAllRoute
 import com.omnio.phone.ui.screens.seeall.PhoneSeeAllScreen
 import com.omnio.phone.ui.screens.settings.PhoneSettingsScreen
+import com.omnio.phone.ui.screens.scan.PhoneTvLoginScannerScreen
 import com.omnio.phone.ui.screens.splash.SplashScreen
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -57,6 +58,7 @@ object PhoneRoutes {
     const val ADDONS = "addons"
     const val SEARCH = "search"
     const val SETTINGS = "settings"
+    const val TV_QR_SCAN = "tv_qr_scan"
     const val DETAIL = "detail/{contentId}/{contentType}"
     val PLAYER = PhonePlayerRoute.ROUTE
     val SEE_ALL = PhoneSeeAllRoute.ROUTE
@@ -216,7 +218,17 @@ private fun SignedInNav() {
                 AddonsScreen()
             }
             composable(PhoneRoutes.SETTINGS) {
-                PhoneSettingsScreen(onBack = { navController.popBackStack() })
+                PhoneSettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onScanTvQr = {
+                        navController.navigate(PhoneRoutes.TV_QR_SCAN) {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+            composable(PhoneRoutes.TV_QR_SCAN) {
+                PhoneTvLoginScannerScreen(onBack = { navController.popBackStack() })
             }
             composable(PhoneRoutes.SEARCH) {
                 PhoneSearchScreen(

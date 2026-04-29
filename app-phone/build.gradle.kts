@@ -126,6 +126,14 @@ dependencies {
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
 
+    // CameraX + QR scanning + Custom Tabs (TV QR sign-in helper)
+    implementation(libs.camera.core)
+    implementation(libs.camera.camera2)
+    implementation(libs.camera.lifecycle)
+    implementation(libs.camera.view)
+    implementation(libs.zxing.core)
+    implementation(libs.androidx.browser)
+
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation("junit:junit:4.13.2")

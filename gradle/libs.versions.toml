@@ -29,6 +29,8 @@ gson = "2.14.0"
 markdownRenderer = "0.40.2"
 nanohttpd = "2.3.1"
 zxing = "3.5.4"
+cameraX = "1.5.0"
+browser = "1.9.0"
 supabase = "3.5.0"
 ktor = "3.4.3"
 kotlinxSerialization = "1.11.0"
@@ -106,6 +108,11 @@ jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 nanohttpd = { group = "org.nanohttpd", name = "nanohttpd", version.ref = "nanohttpd" }
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "cameraX" }
+camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "cameraX" }
+camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "cameraX" }
+camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "cameraX" }
+androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
 
 # Markdown rendering
 markdown-renderer-m3 = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-m3", version.ref = "markdownRenderer" }
