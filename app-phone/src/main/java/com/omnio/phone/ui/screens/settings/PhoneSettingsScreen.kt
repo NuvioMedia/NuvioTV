@@ -15,6 +15,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,6 +48,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun PhoneSettingsScreen(
     onBack: () -> Unit,
     onScanTvQr: () -> Unit,
+    onPlayerDefaults: () -> Unit,
+    onLanguage: () -> Unit,
+    onManageAddons: () -> Unit,
     viewModel: PhoneSettingsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -93,6 +99,36 @@ fun PhoneSettingsScreen(
                 title = stringResource(R.string.settings_action_scan_tv_qr),
                 subtitle = stringResource(R.string.settings_action_scan_tv_qr_subtitle),
                 onClick = onScanTvQr
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+            SectionHeader(text = stringResource(R.string.settings_section_player))
+            ActionRow(
+                icon = Icons.Filled.PlayCircle,
+                title = stringResource(R.string.settings_action_player_defaults),
+                subtitle = stringResource(R.string.settings_action_player_defaults_subtitle),
+                onClick = onPlayerDefaults
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+            SectionHeader(text = stringResource(R.string.settings_section_content))
+            ActionRow(
+                icon = Icons.Filled.Extension,
+                title = stringResource(R.string.settings_action_manage_addons),
+                subtitle = stringResource(R.string.settings_action_manage_addons_subtitle),
+                onClick = onManageAddons
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+            SectionHeader(text = stringResource(R.string.settings_section_general))
+            ActionRow(
+                icon = Icons.Filled.Language,
+                title = stringResource(R.string.settings_action_language),
+                subtitle = stringResource(R.string.settings_action_language_subtitle),
+                onClick = onLanguage
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))

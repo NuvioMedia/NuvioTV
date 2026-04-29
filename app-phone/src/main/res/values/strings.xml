@@ -50,6 +50,32 @@
     <string name="settings_section_tv_login">Sign in TV</string>
     <string name="settings_action_scan_tv_qr">Scan TV QR</string>
     <string name="settings_action_scan_tv_qr_subtitle">Use this phone to approve a TV sign in</string>
+
+    <string name="settings_section_player">Player</string>
+    <string name="settings_action_player_defaults">Player defaults</string>
+    <string name="settings_action_player_defaults_subtitle">Preferred subtitle and audio languages</string>
+    <string name="settings_section_content">Content</string>
+    <string name="settings_action_manage_addons">Manage addons</string>
+    <string name="settings_action_manage_addons_subtitle">Install or remove Stremio-compatible sources</string>
+    <string name="settings_section_general">General</string>
+    <string name="settings_action_language">Display language</string>
+    <string name="settings_action_language_subtitle">Change the app interface language</string>
+
+    <string name="player_defaults_title">Player defaults</string>
+    <string name="player_defaults_subtitle_section">Subtitle language</string>
+    <string name="player_defaults_subtitle_primary">Preferred</string>
+    <string name="player_defaults_subtitle_secondary">Secondary (fallback)</string>
+    <string name="player_defaults_audio_section">Audio language</string>
+    <string name="player_defaults_audio_primary">Preferred</string>
+    <string name="player_defaults_audio_secondary">Secondary (fallback)</string>
+    <string name="player_defaults_none">None</string>
+    <string name="player_defaults_device_default">System default</string>
+    <string name="player_defaults_original">Original audio</string>
+    <string name="player_defaults_forced">Forced subtitles only</string>
+
+    <string name="language_screen_title">Display language</string>
+    <string name="language_system_default">System default</string>
+    <string name="language_restart_hint">Restarting to apply language…</string>
     <string name="search_placeholder">Search movies, series, channels…</string>
     <string name="search_clear">Clear</string>
     <string name="search_retry">Retry</string>
