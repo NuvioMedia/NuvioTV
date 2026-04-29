@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.omnio.tv.domain.model.AddonStreams
 import com.omnio.tv.domain.model.ContentType
 import com.omnio.tv.domain.model.LibraryEntryInput
+import com.omnio.tv.domain.model.LibraryListTab
+import com.omnio.tv.domain.model.LibrarySourceMode
+import com.omnio.tv.domain.model.ListMembershipChanges
 import com.omnio.tv.domain.model.Meta
 import com.omnio.tv.domain.model.Stream
 import com.omnio.tv.domain.model.Video
@@ -21,6 +24,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -44,6 +48,7 @@ class DetailViewModel @Inject constructor(
     val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
 
     private var libraryObserveJob: Job? = null
+    private var listTabs: List<LibraryListTab> = emptyList()
 
     init {
         load()
@@ -285,13 +290,113 @@ class DetailViewModel @Inject constructor(
         libraryObserveJob?.cancel()
         if (contentId.isBlank() || contentType.isBlank()) return
         libraryObserveJob = viewModelScope.launch {
-            libraryRepository.isInLibrary(itemId = contentId, itemType = contentType)
-                .collect { inLibrary ->
-                    _uiState.update {
-                        if (it.isInLibrary == inLibrary) it else it.copy(isInLibrary = inLibrary)
+            combine(
+                libraryRepository.isInLibrary(itemId = contentId, itemType = contentType),
+                libraryRepository.sourceMode,
+                libraryRepository.listTabs
+            ) { inLibrary, sourceMode, tabs ->
+                Triple(inLibrary, sourceMode, tabs)
+            }.collect { (inLibrary, sourceMode, tabs) ->
+                listTabs = tabs
+                _uiState.update { state ->
+                    if (state.isInLibrary == inLibrary && state.sourceMode == sourceMode) {
+                        state
+                    } else {
+                        state.copy(isInLibrary = inLibrary, sourceMode = sourceMode)
                     }
                 }
+            }
         }
+    }
+
+    fun openListPicker() {
+        if (_uiState.value.sourceMode != LibrarySourceMode.TRAKT) return
+        val meta = _uiState.value.meta ?: return
+        if (_uiState.value.listPicker?.isLoading == true) return
+        _uiState.update { it.copy(listPicker = ListPickerState(isLoading = true)) }
+        viewModelScope.launch {
+            runCatching {
+                libraryRepository.getMembershipSnapshot(meta.toLibraryEntryInput())
+            }.onSuccess { snapshot ->
+                val tabs = listTabs
+                val membership = tabs.associate { tab ->
+                    tab.key to (snapshot.listMembership[tab.key] == true)
+                }
+                _uiState.update {
+                    it.copy(
+                        listPicker = ListPickerState(
+                            isLoading = false,
+                            tabs = tabs,
+                            membership = membership,
+                            originalMembership = membership
+                        )
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        listPicker = null,
+                        userMessage = error.message ?: "Failed to load lists"
+                    )
+                }
+            }
+        }
+    }
+
+    fun toggleListMembership(listKey: String) {
+        _uiState.update { state ->
+            val picker = state.listPicker ?: return@update state
+            val current = picker.membership[listKey] == true
+            state.copy(
+                listPicker = picker.copy(
+                    membership = picker.membership.toMutableMap().apply {
+                        this[listKey] = !current
+                    },
+                    error = null
+                )
+            )
+        }
+    }
+
+    fun saveListMembership() {
+        val state = _uiState.value
+        val meta = state.meta ?: return
+        val picker = state.listPicker ?: return
+        if (picker.isSaving || picker.isLoading) return
+        if (!picker.hasChanges) {
+            _uiState.update { it.copy(listPicker = null) }
+            return
+        }
+
+        _uiState.update {
+            it.copy(listPicker = picker.copy(isSaving = true, error = null))
+        }
+        viewModelScope.launch {
+            runCatching {
+                libraryRepository.applyMembershipChanges(
+                    item = meta.toLibraryEntryInput(),
+                    changes = ListMembershipChanges(desiredMembership = picker.membership)
+                )
+            }.onSuccess {
+                _uiState.update {
+                    it.copy(listPicker = null, userMessage = "Lists updated")
+                }
+            }.onFailure { error ->
+                _uiState.update { current ->
+                    val active = current.listPicker ?: return@update current
+                    current.copy(
+                        listPicker = active.copy(
+                            isSaving = false,
+                            error = error.message ?: "Failed to update lists"
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    fun dismissListPicker() {
+        _uiState.update { it.copy(listPicker = null) }
     }
 
     private fun episodesForSeason(videos: List<Video>, season: Int): List<Video> =
