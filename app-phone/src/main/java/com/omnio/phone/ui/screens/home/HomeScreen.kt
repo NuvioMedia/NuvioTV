@@ -32,6 +32,7 @@ import com.omnio.tv.domain.model.MetaPreview
 @Composable
 fun HomeScreen(
     onNavigateToAddons: () -> Unit,
+    onItemClick: (MetaPreview) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -56,7 +57,7 @@ fun HomeScreen(
             else -> HomeFeed(
                 heroItems = state.heroItems,
                 rows = state.rows,
-                onItemClick = { /* Detail screen lands in 2e */ }
+                onItemClick = onItemClick
             )
         }
     }

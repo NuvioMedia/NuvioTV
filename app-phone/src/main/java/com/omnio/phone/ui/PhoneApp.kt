@@ -18,22 +18,34 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.omnio.phone.R
 import com.omnio.phone.ui.screens.addons.AddonsScreen
 import com.omnio.phone.ui.screens.auth.AuthScreen
+import com.omnio.phone.ui.screens.detail.DetailScreen
 import com.omnio.phone.ui.screens.home.HomeScreen
 import com.omnio.phone.ui.screens.profiles.ProfilesScreen
 import com.omnio.phone.ui.screens.splash.SplashScreen
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 object PhoneRoutes {
     const val AUTH = "auth"
     const val HOME = "home"
     const val PROFILES = "profiles"
     const val ADDONS = "addons"
+    const val DETAIL = "detail/{contentId}/{contentType}"
+
+    fun detail(contentId: String, contentType: String): String {
+        val encodedId = URLEncoder.encode(contentId, StandardCharsets.UTF_8.name())
+        val encodedType = URLEncoder.encode(contentType, StandardCharsets.UTF_8.name())
+        return "detail/$encodedId/$encodedType"
+    }
 }
 
 @Composable
@@ -54,23 +66,32 @@ private fun SignedInNav() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: PhoneRoutes.PROFILES
+    val isTabRoute = currentRoute in setOf(
+        PhoneRoutes.HOME,
+        PhoneRoutes.PROFILES,
+        PhoneRoutes.ADDONS
+    )
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = when (currentRoute) {
-                            PhoneRoutes.HOME -> stringResource(R.string.home_tab_label)
-                            PhoneRoutes.PROFILES -> stringResource(R.string.profiles_tab_label)
-                            PhoneRoutes.ADDONS -> stringResource(R.string.addons_tab_label)
-                            else -> "OmnioTV"
-                        }
-                    )
-                }
-            )
+            if (isTabRoute) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = when (currentRoute) {
+                                PhoneRoutes.HOME -> stringResource(R.string.home_tab_label)
+                                PhoneRoutes.PROFILES -> stringResource(R.string.profiles_tab_label)
+                                PhoneRoutes.ADDONS -> stringResource(R.string.addons_tab_label)
+                                else -> "OmnioTV"
+                            }
+                        )
+                    }
+                )
+            }
         },
-        bottomBar = { BottomTabBar(navController, currentRoute) }
+        bottomBar = {
+            if (isTabRoute) BottomTabBar(navController, currentRoute)
+        }
     ) { padding ->
         NavHost(
             navController = navController,
@@ -93,11 +114,28 @@ private fun SignedInNav() {
                         navController.navigate(PhoneRoutes.ADDONS) {
                             launchSingleTop = true
                         }
+                    },
+                    onItemClick = { item ->
+                        navController.navigate(
+                            PhoneRoutes.detail(
+                                contentId = item.id,
+                                contentType = item.apiType
+                            )
+                        )
                     }
                 )
             }
             composable(PhoneRoutes.ADDONS) {
                 AddonsScreen()
+            }
+            composable(
+                route = PhoneRoutes.DETAIL,
+                arguments = listOf(
+                    navArgument("contentId") { type = NavType.StringType },
+                    navArgument("contentType") { type = NavType.StringType }
+                )
+            ) {
+                DetailScreen(onBack = { navController.popBackStack() })
             }
         }
     }
