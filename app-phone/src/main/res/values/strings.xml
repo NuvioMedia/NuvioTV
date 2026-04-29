@@ -39,6 +39,7 @@
 
     <string name="cd_back">Back</string>
     <string name="cd_search">Search</string>
+    <string name="cd_settings">Settings</string>
     <string name="search_placeholder">Search movies, series, channels…</string>
     <string name="search_clear">Clear</string>
     <string name="search_retry">Retry</string>

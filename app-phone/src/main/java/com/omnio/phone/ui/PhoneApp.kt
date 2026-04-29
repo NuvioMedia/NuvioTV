@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
@@ -43,6 +44,7 @@ import com.omnio.phone.ui.screens.profiles.ProfilesScreen
 import com.omnio.phone.ui.screens.search.PhoneSearchScreen
 import com.omnio.phone.ui.screens.seeall.PhoneSeeAllRoute
 import com.omnio.phone.ui.screens.seeall.PhoneSeeAllScreen
+import com.omnio.phone.ui.screens.settings.PhoneSettingsScreen
 import com.omnio.phone.ui.screens.splash.SplashScreen
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -54,6 +56,7 @@ object PhoneRoutes {
     const val PROFILES = "profiles"
     const val ADDONS = "addons"
     const val SEARCH = "search"
+    const val SETTINGS = "settings"
     const val DETAIL = "detail/{contentId}/{contentType}"
     val PLAYER = PhonePlayerRoute.ROUTE
     val SEE_ALL = PhoneSeeAllRoute.ROUTE
@@ -115,6 +118,18 @@ private fun SignedInNav() {
                                 Icon(
                                     imageVector = Icons.Default.Search,
                                     contentDescription = stringResource(R.string.cd_search)
+                                )
+                            }
+                        }
+                        if (currentRoute == PhoneRoutes.PROFILES) {
+                            IconButton(onClick = {
+                                navController.navigate(PhoneRoutes.SETTINGS) {
+                                    launchSingleTop = true
+                                }
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = stringResource(R.string.cd_settings)
                                 )
                             }
                         }
@@ -199,6 +214,9 @@ private fun SignedInNav() {
             }
             composable(PhoneRoutes.ADDONS) {
                 AddonsScreen()
+            }
+            composable(PhoneRoutes.SETTINGS) {
+                PhoneSettingsScreen(onBack = { navController.popBackStack() })
             }
             composable(PhoneRoutes.SEARCH) {
                 PhoneSearchScreen(
