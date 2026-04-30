@@ -86,6 +86,11 @@ class RemotePluginRuntimeClient @Inject constructor(
         override fun onServiceDisconnected(name: ComponentName?) {
             Log.w(TAG, "Plugin service disconnected (pending=${pendingRequests.size})")
             serviceMessenger = null
+            // Bypass Android's exponential restart backoff (seen at ~200s after
+            // an lmkd kill). Drop the binding so the next ensureBound() spins
+            // up a fresh :plugin process on demand instead of waiting.
+            isBound = false
+            try { context.unbindService(this) } catch (_: Throwable) {}
             failAllPending("Plugin runtime process died")
         }
 
