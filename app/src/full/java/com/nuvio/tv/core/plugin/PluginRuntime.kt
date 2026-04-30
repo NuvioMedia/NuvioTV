@@ -1,6 +1,7 @@
 package com.nuvio.tv.core.plugin
 
 import android.util.Log
+import android.util.LruCache
 import com.dokar.quickjs.binding.define
 import com.dokar.quickjs.binding.function
 import com.dokar.quickjs.quickJs
@@ -27,6 +28,8 @@ import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.net.URL
 import java.security.MessageDigest
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
 import java.util.Base64
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -38,6 +41,9 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import javax.inject.Inject
 import javax.inject.Singleton
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 private const val TAG = "PluginRuntime"
 private const val PLUGIN_TIMEOUT_MS = 60_000L
@@ -45,21 +51,34 @@ private const val MAX_FETCH_RESPONSE_BYTES = 256 * 1024
 private const val MAX_FETCH_BODY_CHARS = 256 * 1024
 private const val MAX_FETCH_HEADER_VALUE_CHARS = 8 * 1024
 private const val FETCH_TRUNCATION_SUFFIX = "\n...[truncated]"
+private const val MAX_PENDING_RESPONSE_BODIES = 32
 
 @Singleton
 class PluginRuntime @Inject constructor() {
 
     private val gson: Gson = GsonBuilder().create()
 
-    private val httpClient = OkHttpClient.Builder()
-        .dns(com.nuvio.tv.core.network.IPv4FirstDns())
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
-        .followRedirects(true)
-        .followSslRedirects(true)
-        .proxy(java.net.Proxy.NO_PROXY)
-        .build()
+    private val httpClient: OkHttpClient = run {
+        val trustAllManager = object : X509TrustManager {
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+            override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+        }
+        val sslContext = SSLContext.getInstance("TLS").apply {
+            init(null, arrayOf<TrustManager>(trustAllManager), SecureRandom())
+        }
+        OkHttpClient.Builder()
+            .dns(com.nuvio.tv.core.network.IPv4FirstDns())
+            .sslSocketFactory(sslContext.socketFactory, trustAllManager)
+            .hostnameVerifier { _, _ -> true }
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .proxy(java.net.Proxy.NO_PROXY)
+            .build()
+    }
 
     // Pre-compiled regex for :contains() selector conversion
     private val containsRegex = Regex(""":contains\(["']([^"']+)["']\)""")
@@ -153,6 +172,7 @@ class PluginRuntime @Inject constructor() {
         val documentCache = ConcurrentHashMap<String, Document>()
         val elementCache = ConcurrentHashMap<String, Element>()
         val inFlightCalls = ConcurrentHashMap.newKeySet<Call>()
+        val responseBodies = LruCache<String, CachedResponseBody>(MAX_PENDING_RESPONSE_BODIES)
 
         var resultJson = "[]"
 
@@ -196,7 +216,7 @@ class PluginRuntime @Inject constructor() {
                         val headersJson = args.getOrNull(2)?.toString() ?: "{}"
                         val body = args.getOrNull(3)?.toString() ?: ""
                         try {
-                            performNativeFetch(url, method, headersJson, body, inFlightCalls)
+                            performNativeFetch(url, method, headersJson, body, inFlightCalls, responseBodies)
                         } catch (t: Throwable) {
                             Log.e(TAG, "Async fetch bridge error for $method $url: ${t.message}")
                             gson.toJson(
@@ -205,11 +225,25 @@ class PluginRuntime @Inject constructor() {
                                     "status" to 0,
                                     "statusText" to (t.message ?: "Fetch failed"),
                                     "url" to url,
-                                    "body" to "",
+                                    "__bodyId" to "",
+                                    "__bodyLen" to 0,
                                     "headers" to emptyMap<String, String>()
                                 )
                             )
                         }
+                    }
+
+                    function("__native_fetch_body_text") { args ->
+                        val id = args.getOrNull(0)?.toString() ?: ""
+                        if (id.isEmpty()) return@function ""
+                        val cached = responseBodies.remove(id) ?: return@function ""
+                        decodeBodyToSafeString(cached.bytes, cached.charset)
+                    }
+
+                    function("__native_fetch_body_release") { args ->
+                        val id = args.getOrNull(0)?.toString() ?: ""
+                        if (id.isNotEmpty()) responseBodies.remove(id)
+                        null
                     }
 
                     // Define URL parser
@@ -395,10 +429,9 @@ class PluginRuntime @Inject constructor() {
             Log.e(TAG, "Plugin execution failed: ${e.message}", e)
             throw e
         } finally {
-            // Clean up caches
             documentCache.clear()
             elementCache.clear()
-            // Cancel any network calls still in progress when plugin execution exits.
+            responseBodies.evictAll()
             inFlightCalls.forEach { call -> call.cancel() }
             inFlightCalls.clear()
         }
@@ -409,7 +442,8 @@ class PluginRuntime @Inject constructor() {
         method: String,
         headersJson: String,
         body: String,
-        inFlightCalls: MutableSet<Call>
+        inFlightCalls: MutableSet<Call>,
+        responseBodies: LruCache<String, CachedResponseBody>
     ): String {
         Log.d(TAG, "Fetch: $method $url body=${body.take(200)}")
         return try {
@@ -485,23 +519,29 @@ class PluginRuntime @Inject constructor() {
                     }
 
                     val charset = bodyContentType?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
-                    val responseBody = decodeBodyToSafeString(decodedRead.bytes, charset)
                     val responseHeaders = mutableMapOf<String, String>()
                     httpResponse.headers.forEach { (name, value) ->
                         responseHeaders[name.lowercase()] = truncateString(value, MAX_FETCH_HEADER_VALUE_CHARS)
                     }
+
+                    val bodyId = if (decodedRead.bytes.isNotEmpty()) {
+                        val id = UUID.randomUUID().toString()
+                        responseBodies.put(id, CachedResponseBody(decodedRead.bytes, charset))
+                        id
+                    } else ""
 
                     val result = mapOf(
                         "ok" to httpResponse.isSuccessful,
                         "status" to httpResponse.code,
                         "statusText" to httpResponse.message,
                         "url" to httpResponse.request.url.toString(),
-                        "body" to responseBody,
+                        "__bodyId" to bodyId,
+                        "__bodyLen" to decodedRead.bytes.size,
                         "headers" to responseHeaders,
                         "truncated" to decodedRead.truncated
                     )
 
-                    Log.d(TAG, "Fetch result: ${httpResponse.code} ${httpResponse.message} url=$url bodyLen=${responseBody.length} bodyPreview=${responseBody.take(300)}")
+                    Log.d(TAG, "Fetch result: ${httpResponse.code} ${httpResponse.message} url=$url bodyLen=${decodedRead.bytes.size}")
                     gson.toJson(result)
                 }
             } finally {
@@ -514,11 +554,17 @@ class PluginRuntime @Inject constructor() {
                 "status" to 0,
                 "statusText" to (e.message ?: "Fetch failed"),
                 "url" to url,
-                "body" to "",
+                "__bodyId" to "",
+                "__bodyLen" to 0,
                 "headers" to emptyMap<String, String>()
             ))
         }
     }
+
+    private data class CachedResponseBody(
+        val bytes: ByteArray,
+        val charset: java.nio.charset.Charset
+    )
 
     private data class BoundedReadResult(
         val bytes: ByteArray,
@@ -630,29 +676,56 @@ class PluginRuntime @Inject constructor() {
                     throw postErr;
                 }
 
+                var bodyId = parsed.__bodyId || '';
+                var bodyLen = parsed.__bodyLen || 0;
+                var responseHeaders = parsed.headers || {};
+                var responseOk = parsed.ok;
+                var responseStatus = parsed.status;
+                var responseStatusText = parsed.statusText;
+                var responseUrl = parsed.url;
+                parsed = null;
+
+                var bodyDecoded = false;
+                var bodyText = '';
+                var readBodyText = function() {
+                    if (!bodyDecoded) {
+                        bodyDecoded = true;
+                        bodyText = bodyId ? __native_fetch_body_text(bodyId) : '';
+                    }
+                    return bodyText;
+                };
+
                 return {
-                    ok: parsed.ok,
-                    status: parsed.status,
-                    statusText: parsed.statusText,
-                    url: parsed.url,
+                    ok: responseOk,
+                    status: responseStatus,
+                    statusText: responseStatusText,
+                    url: responseUrl,
                     headers: {
                         get: function(name) {
-                            return parsed.headers[name.toLowerCase()] || null;
+                            return responseHeaders[name.toLowerCase()] || null;
                         }
                     },
                     text: function() {
-                        return Promise.resolve(parsed.body);
+                        return Promise.resolve(readBodyText());
                     },
                     json: function() {
-                        
                         try {
-                            if (parsed.body === null || parsed.body === undefined || parsed.body === '') {
-                                return Promise.resolve(null);
-                            }
-                            return Promise.resolve(JSON.parse(parsed.body));
+                            var t = readBodyText();
+                            if (!t) return Promise.resolve(null);
+                            return Promise.resolve(JSON.parse(t));
                         } catch (e) {
                             console.error('fetch.json parse error:', e && e.message ? e.message : e);
                             return Promise.resolve(null);
+                        }
+                    },
+                    release: function() {
+                        // Only release native bytes if the body has not been decoded yet.
+                        // If text()/json() already ran, bodyText holds the decoded content
+                        // and must be preserved so subsequent text()/json() calls remain idempotent.
+                        if (!bodyDecoded && bodyId) {
+                            bodyDecoded = true;
+                            bodyText = '';
+                            __native_fetch_body_release(bodyId);
                         }
                     }
                 };
