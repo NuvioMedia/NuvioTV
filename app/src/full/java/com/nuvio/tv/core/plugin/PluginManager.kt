@@ -22,6 +22,7 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Mutex
@@ -662,12 +663,16 @@ class PluginManager @Inject constructor(
             externalExtensionLoader.ensureExtractorsLoaded(allDexIds)
         }
 
-        val results = enabledScraperList.map { scraper ->
-            async {
-                executeScraperWithSingleFlight(scraper, tmdbId, mediaType, season, episode)
-            }
-        }.awaitAll()
-        
+        val results = try {
+            enabledScraperList.map { scraper ->
+                async {
+                    executeScraperWithSingleFlight(scraper, tmdbId, mediaType, season, episode)
+                }
+            }.awaitAll()
+        } finally {
+            withContext(NonCancellable) { remoteRuntime.releaseIfIdle() }
+        }
+
         results.flatten()
             .distinctBy { it.url }
             .take(MAX_RESULT_ITEMS)
@@ -701,18 +706,23 @@ class PluginManager @Inject constructor(
             externalExtensionLoader.ensureExtractorsLoaded(allDexIds)
         }
 
-        // Launch all scrapers concurrently within the channelFlow scope
-        enabledList.forEach { scraper ->
-            launch {
-                try {
-                    val results = executeScraperWithSingleFlight(scraper, tmdbId, mediaType, season, episode)
-                    if (results.isNotEmpty()) {
-                        send(scraper.name to results)
+        try {
+            coroutineScope {
+                enabledList.forEach { scraper ->
+                    launch {
+                        try {
+                            val results = executeScraperWithSingleFlight(scraper, tmdbId, mediaType, season, episode)
+                            if (results.isNotEmpty()) {
+                                send(scraper.name to results)
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Scraper ${scraper.name} failed in streaming: ${e.message}")
+                        }
                     }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Scraper ${scraper.name} failed in streaming: ${e.message}")
                 }
             }
+        } finally {
+            withContext(NonCancellable) { remoteRuntime.releaseIfIdle() }
         }
     }
     

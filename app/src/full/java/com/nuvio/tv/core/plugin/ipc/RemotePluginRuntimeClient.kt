@@ -192,6 +192,23 @@ class RemotePluginRuntimeClient @Inject constructor(
         }
     }
 
+    /**
+     * Tear down the binding if no scraper is currently in flight. Called from
+     * PluginManager when a scraper batch completes so the :plugin process can
+     * exit and release its native arenas / OkHttp pools back to the OS.
+     * No-op while requests are still pending (concurrent batches are safe).
+     */
+    suspend fun releaseIfIdle() {
+        bindMutex.withLock {
+            if (pendingRequests.isNotEmpty()) return
+            if (!isBound && serviceMessenger == null) return
+            Log.d(TAG, "Releasing plugin runtime (idle)")
+            serviceMessenger = null
+            isBound = false
+            try { context.unbindService(connection) } catch (_: Throwable) {}
+        }
+    }
+
     private fun sendCancel(requestId: String) {
         val target = serviceMessenger ?: return
         try {
