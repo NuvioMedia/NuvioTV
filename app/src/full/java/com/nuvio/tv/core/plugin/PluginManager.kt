@@ -7,6 +7,7 @@ import com.nuvio.tv.core.plugin.cloudstream.tvTypeFromString
 import com.nuvio.tv.core.plugin.cloudstream.ExternalExtensionLoader
 import com.nuvio.tv.core.plugin.cloudstream.ExternalExtensionRunner
 import com.nuvio.tv.core.plugin.cloudstream.ExternalRepoParser
+import com.nuvio.tv.core.plugin.ipc.RemotePluginRuntimeClient
 import com.nuvio.tv.data.local.PluginDataStore
 import com.nuvio.tv.domain.model.ExternalPluginEntry
 import com.nuvio.tv.domain.model.LocalScraperResult
@@ -65,6 +66,7 @@ private const val MANIFEST_SUFFIX = "/manifest.json"
 class PluginManager @Inject constructor(
     private val dataStore: PluginDataStore,
     private val runtime: PluginRuntime,
+    private val remoteRuntime: RemotePluginRuntimeClient,
     private val pluginSyncService: com.nuvio.tv.core.sync.PluginSyncService,
     private val authManager: com.nuvio.tv.core.auth.AuthManager,
     private val externalRepoParser: ExternalRepoParser,
@@ -781,9 +783,14 @@ class PluginManager @Inject constructor(
         episode: Int?
     ): List<LocalScraperResult> {
         return try {
-            val code = dataStore.getScraperCode(scraper.id)
-            if (code.isNullOrBlank()) {
-                Log.w(TAG, "No code found for scraper: ${scraper.name}")
+            val codeFile = dataStore.getScraperCodeFile(scraper.id)
+            if (!codeFile.exists() || codeFile.length() == 0L) {
+                Log.w(TAG, "No code file found for scraper: ${scraper.name} (${codeFile.absolutePath})")
+                return emptyList()
+            }
+            val code = withContext(Dispatchers.IO) { codeFile.readText() }
+            if (code.isBlank()) {
+                Log.w(TAG, "Empty code for scraper: ${scraper.name}")
                 return emptyList()
             }
 
@@ -805,11 +812,13 @@ class PluginManager @Inject constructor(
             
             Log.d(TAG, "Executing scraper: ${scraper.name}")
             val results = withTimeoutOrNull(SCRAPER_TIMEOUT_MS) {
-                // Run plugin JS on the dedicated low-priority pool so a buggy
-                // scraper can't burn cores at the expense of ExoPlayer / UI.
+                // Run plugin JS in the :plugin worker process. The IPC client
+                // suspends until the worker replies; cancellation propagates a
+                // cancel message so the worker stops too. pluginDispatcher is
+                // kept for IPC bookkeeping at low priority on the main side.
                 withContext(pluginDispatcher) {
-                    runtime.executePlugin(
-                        code = code,
+                    remoteRuntime.executePlugin(
+                        codePath = codeFile.absolutePath,
                         tmdbId = tmdbId,
                         mediaType = mediaType,
                         season = season,

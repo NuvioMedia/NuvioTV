@@ -6,6 +6,7 @@ import com.nuvio.tv.core.plugin.PluginRuntime
 import com.nuvio.tv.core.plugin.cloudstream.ExternalExtensionLoader
 import com.nuvio.tv.core.plugin.cloudstream.ExternalExtensionRunner
 import com.nuvio.tv.core.plugin.cloudstream.ExternalRepoParser
+import com.nuvio.tv.core.plugin.ipc.RemotePluginRuntimeClient
 import com.nuvio.tv.core.sync.PluginSyncService
 import com.nuvio.tv.data.local.PluginDataStore
 import dagger.Module
@@ -29,6 +30,7 @@ object PluginModule {
     fun providePluginManager(
         dataStore: PluginDataStore,
         runtime: PluginRuntime,
+        remoteRuntime: RemotePluginRuntimeClient,
         pluginSyncService: PluginSyncService,
         authManager: AuthManager,
         externalRepoParser: ExternalRepoParser,
@@ -36,7 +38,7 @@ object PluginModule {
         externalExtensionRunner: ExternalExtensionRunner
     ): PluginManager {
         return PluginManager(
-            dataStore, runtime, pluginSyncService, authManager,
+            dataStore, runtime, remoteRuntime, pluginSyncService, authManager,
             externalRepoParser, externalExtensionLoader, externalExtensionRunner
         )
     }
