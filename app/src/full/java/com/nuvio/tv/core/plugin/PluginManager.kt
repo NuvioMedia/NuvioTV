@@ -798,25 +798,10 @@ class PluginManager @Inject constructor(
                 Log.w(TAG, "No code file found for scraper: ${scraper.name} (${codeFile.absolutePath})")
                 return emptyList()
             }
-            val code = withContext(Dispatchers.IO) { codeFile.readText() }
-            if (code.isBlank()) {
-                Log.w(TAG, "Empty code for scraper: ${scraper.name}")
-                return emptyList()
-            }
 
-            // Debug: confirm which exact JS code is running on-device.
-            try {
-                val sha = sha256Hex(code)
-                val bytes = code.toByteArray(Charsets.UTF_8).size
-                val hasHrefliLogs = code.contains("[UHDMovies][Hrefli]", ignoreCase = false) ||
-                    code.contains("[Hrefli]", ignoreCase = false)
-                Log.d(
-                    TAG,
-                    "Scraper code loaded: ${scraper.name}(${scraper.id}) bytes=$bytes sha256=${sha.take(12)} hrefliLogs=$hasHrefliLogs"
-                )
-            } catch (_: Exception) {
-                // ignore
-            }
+            // Note: do not read the code here. The :plugin worker process re-reads the
+            // file via codePath; reading on the host side would just cost an extra disk
+            // read + ~100 KB heap allocation per scraper invocation with no consumer.
 
             val settings = dataStore.getScraperSettings(scraper.id)
             

@@ -52,6 +52,8 @@ private const val MAX_FETCH_BODY_CHARS = 256 * 1024
 private const val MAX_FETCH_HEADER_VALUE_CHARS = 8 * 1024
 private const val FETCH_TRUNCATION_SUFFIX = "\n...[truncated]"
 private const val MAX_PENDING_RESPONSE_BODIES = 32
+private const val MAX_DOCUMENT_CACHE_ENTRIES = 8
+private const val MAX_ELEMENT_CACHE_ENTRIES = 8192
 
 @Singleton
 class PluginRuntime @Inject constructor() {
@@ -169,8 +171,8 @@ class PluginRuntime @Inject constructor() {
         scraperId: String,
         scraperSettings: Map<String, Any>
     ): List<LocalScraperResult> {
-        val documentCache = ConcurrentHashMap<String, Document>()
-        val elementCache = ConcurrentHashMap<String, Element>()
+        val documentCache = LruCache<String, Document>(MAX_DOCUMENT_CACHE_ENTRIES)
+        val elementCache = LruCache<String, Element>(MAX_ELEMENT_CACHE_ENTRIES)
         val inFlightCalls = ConcurrentHashMap.newKeySet<Call>()
         val responseBodies = LruCache<String, CachedResponseBody>(MAX_PENDING_RESPONSE_BODIES)
 
@@ -189,7 +191,9 @@ class PluginRuntime @Inject constructor() {
                     // Define console object - must return null to avoid quickjs conversion issues
                     define("console") {
                         function("log") { args ->
-                            Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                            if (BuildConfig.DEBUG) {
+                                Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                            }
                             null
                         }
                         function("error") { args ->
@@ -205,7 +209,9 @@ class PluginRuntime @Inject constructor() {
                             null
                         }
                         function("debug") { args ->
-                            Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                            if (BuildConfig.DEBUG) {
+                                Log.d("Plugin:$scraperId", args.joinToString(" ") { it?.toString() ?: "null" })
+                            }
                             null
                         }
                     }
@@ -236,7 +242,11 @@ class PluginRuntime @Inject constructor() {
                     function("__native_fetch_body_text") { args ->
                         val id = args.getOrNull(0)?.toString() ?: ""
                         if (id.isEmpty()) return@function ""
-                        val cached = responseBodies.remove(id) ?: return@function ""
+                        val cached = responseBodies.remove(id)
+                        if (cached == null) {
+                            Log.w(TAG, "fetch body $id evicted before read (cache cap=$MAX_PENDING_RESPONSE_BODIES)")
+                            return@function ""
+                        }
                         decodeBodyToSafeString(cached.bytes, cached.charset)
                     }
 
@@ -257,7 +267,7 @@ class PluginRuntime @Inject constructor() {
                         val html = args.getOrNull(0)?.toString() ?: ""
                         val docId = UUID.randomUUID().toString()
                         val doc = Jsoup.parse(html)
-                        documentCache[docId] = doc
+                        documentCache.put(docId, doc)
                         docId
                     }
 
@@ -265,7 +275,7 @@ class PluginRuntime @Inject constructor() {
                     function("__cheerio_select") { args ->
                         val docId = args.getOrNull(0)?.toString() ?: ""
                         var selector = args.getOrNull(1)?.toString() ?: ""
-                        val doc = documentCache[docId] ?: return@function "[]"
+                        val doc = documentCache.get(docId) ?: return@function "[]"
                         try {
                             // Convert cheerio :contains("text") to jsoup :contains(text)
                             selector = selector.replace(containsRegex, ":contains($1)")
@@ -276,7 +286,7 @@ class PluginRuntime @Inject constructor() {
                             }
                             val ids = elements.mapIndexed { index, el ->
                                 val elId = "$docId:$index:${el.hashCode()}"
-                                elementCache[elId] = el
+                                elementCache.put(elId, el)
                                 elId
                             }
                             // Use simple JSON array construction to avoid Gson issues
@@ -291,14 +301,14 @@ class PluginRuntime @Inject constructor() {
                     val docId = args.getOrNull(0)?.toString() ?: ""
                     val elementId = args.getOrNull(1)?.toString() ?: ""
                     var selector = args.getOrNull(2)?.toString() ?: ""
-                    val element = elementCache[elementId] ?: return@function "[]"
+                    val element = elementCache.get(elementId) ?: return@function "[]"
                     try {
                         // Convert cheerio :contains("text") to jsoup :contains(text)
                         selector = selector.replace(containsRegex, ":contains($1)")
                         val elements = element.select(selector)
                         val ids = elements.mapIndexed { index, el ->
                             val elId = "$docId:find:$index:${el.hashCode()}"
-                            elementCache[elId] = el
+                            elementCache.put(elId, el)
                             elId
                         }
                         // Use simple JSON array construction to avoid Gson issues
@@ -313,7 +323,7 @@ class PluginRuntime @Inject constructor() {
                     val elementIds = args.getOrNull(1)?.toString() ?: ""
                     val ids = elementIds.split(",").filter { it.isNotEmpty() }
                     val texts = ids.mapNotNull { id ->
-                        elementCache[id]?.text()
+                        elementCache.get(id)?.text()
                     }
                     texts.joinToString(" ")
                 }
@@ -323,23 +333,23 @@ class PluginRuntime @Inject constructor() {
                     val docId = args.getOrNull(0)?.toString() ?: ""
                     val elementId = args.getOrNull(1)?.toString() ?: ""
                     if (elementId.isEmpty()) {
-                        documentCache[docId]?.html() ?: ""
+                        documentCache.get(docId)?.html() ?: ""
                     } else {
-                        elementCache[elementId]?.html() ?: ""
+                        elementCache.get(elementId)?.html() ?: ""
                     }
                 }
 
                 // Define cheerio inner html function
                 function("__cheerio_inner_html") { args ->
                     val elementId = args.getOrNull(1)?.toString() ?: ""
-                    elementCache[elementId]?.html() ?: ""
+                    elementCache.get(elementId)?.html() ?: ""
                 }
 
                 // Define cheerio attr function
                 function("__cheerio_attr") { args ->
                     val elementId = args.getOrNull(1)?.toString() ?: ""
                     val attrName = args.getOrNull(2)?.toString() ?: ""
-                    val value = elementCache[elementId]?.attr(attrName)
+                    val value = elementCache.get(elementId)?.attr(attrName)
                     if (value.isNullOrEmpty()) "__UNDEFINED__" else value
                 }
 
@@ -347,10 +357,10 @@ class PluginRuntime @Inject constructor() {
                 function("__cheerio_next") { args ->
                     val docId = args.getOrNull(0)?.toString() ?: ""
                     val elementId = args.getOrNull(1)?.toString() ?: ""
-                    val el = elementCache[elementId] ?: return@function "__NONE__"
+                    val el = elementCache.get(elementId) ?: return@function "__NONE__"
                     val next = el.nextElementSibling() ?: return@function "__NONE__"
                     val nextId = "$docId:next:${next.hashCode()}"
-                    elementCache[nextId] = next
+                    elementCache.put(nextId, next)
                     nextId
                 }
 
@@ -358,10 +368,10 @@ class PluginRuntime @Inject constructor() {
                 function("__cheerio_prev") { args ->
                     val docId = args.getOrNull(0)?.toString() ?: ""
                     val elementId = args.getOrNull(1)?.toString() ?: ""
-                    val el = elementCache[elementId] ?: return@function "__NONE__"
+                    val el = elementCache.get(elementId) ?: return@function "__NONE__"
                     val prev = el.previousElementSibling() ?: return@function "__NONE__"
                     val prevId = "$docId:prev:${prev.hashCode()}"
-                    elementCache[prevId] = prev
+                    elementCache.put(prevId, prev)
                     prevId
                 }
 
@@ -429,8 +439,8 @@ class PluginRuntime @Inject constructor() {
             Log.e(TAG, "Plugin execution failed: ${e.message}", e)
             throw e
         } finally {
-            documentCache.clear()
-            elementCache.clear()
+            documentCache.evictAll()
+            elementCache.evictAll()
             responseBodies.evictAll()
             inFlightCalls.forEach { call -> call.cancel() }
             inFlightCalls.clear()
@@ -445,7 +455,9 @@ class PluginRuntime @Inject constructor() {
         inFlightCalls: MutableSet<Call>,
         responseBodies: LruCache<String, CachedResponseBody>
     ): String {
-        Log.d(TAG, "Fetch: $method $url body=${body.take(200)}")
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "Fetch: $method $url body=${body.take(200)}")
+        }
         return try {
             val headers = mutableMapOf<String, String>()
             try {
@@ -541,7 +553,9 @@ class PluginRuntime @Inject constructor() {
                         "truncated" to decodedRead.truncated
                     )
 
-                    Log.d(TAG, "Fetch result: ${httpResponse.code} ${httpResponse.message} url=$url bodyLen=${decodedRead.bytes.size}")
+                    if (BuildConfig.DEBUG) {
+                        Log.d(TAG, "Fetch result: ${httpResponse.code} ${httpResponse.message} url=$url bodyLen=${decodedRead.bytes.size}")
+                    }
                     gson.toJson(result)
                 }
             } finally {
