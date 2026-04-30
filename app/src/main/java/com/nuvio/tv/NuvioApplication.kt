@@ -54,8 +54,22 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
     }
 
     override fun onCreate() {
+        if (isPluginProcess()) {
+            // Skip Hilt injection in :plugin worker; Supabase init fails there.
+            PluginRuntimeHooks.onApplicationCreate(this)
+            return
+        }
         super.onCreate()
         PluginRuntimeHooks.onApplicationCreate(this)
+    }
+
+    private fun isPluginProcess(): Boolean = try {
+        java.io.File("/proc/${android.os.Process.myPid()}/cmdline")
+            .readText()
+            .substringBefore('\u0000')
+            .endsWith(":plugin")
+    } catch (_: Throwable) {
+        false
     }
 
     override fun newImageLoader(context: android.content.Context): ImageLoader {
