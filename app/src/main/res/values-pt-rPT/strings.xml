@@ -231,7 +231,7 @@
     <string name="movie_status_continuing">Em curso</string>
     <string name="movie_status_current">Atual</string>
     <string name="movie_status_cancelled">Cancelado</string>
-    <string name="movie_status_released">Lançado</string>
+    <string name="movie_status_released">Exibido</string>
     <string name="movie_status_planned">Planeado</string>
     <string name="movie_status_rumored">Rumores</string>
     <string name="movie_status_in_production">Em produção</string>
@@ -258,6 +258,10 @@
     <string name="appearance_subtitle">Escolhe o teu tema de cores, tipo de letra e idioma</string>
     <string name="appearance_color_theme">Tema de Cores</string>
     <string name="appearance_color_theme_subtitle">Escolhe a cor de destaque utilizada na aplicação</string>
+    <string name="appearance_amoled_mode">Modo AMOLED</string>
+    <string name="appearance_amoled_mode_subtitle">Usar preto puro nos fundos da aplicação</string>
+    <string name="appearance_amoled_surfaces_mode">Superfícies em Preto Puro</string>
+    <string name="appearance_amoled_surfaces_mode_subtitle">Aplicar também preto puro a cartões, painéis e contentores</string>
     <string name="appearance_font_and_language">Tipo de Letra e Idioma</string>
     <string name="appearance_font_and_language_subtitle">Escolhe o tipo de letra e a região utilizados na aplicação</string>
     <string name="cd_selected">Selecionado</string>
@@ -356,12 +360,19 @@
     <string name="supporters_contributors_qr_hint">Aponta a tua câmara para o código QR ou utiliza o botão abaixo.</string>
     <string name="supporters_contributors_back_button">Voltar aos detalhes</string>
     <string name="supporters_tab">Apoiantes</string>
+    <string name="sponsors_tab">Patrocinadores</string>
     <string name="contributors_tab">Colaboradores</string>
     <string name="supporters_loading">A carregar apoiantes…</string>
     <string name="supporters_empty">Ainda não foram encontrados apoiantes.</string>
     <string name="supporters_error_title">Não foi possível carregar os apoiantes</string>
     <string name="supporters_no_message">Nenhuma mensagem partilhada.</string>
     <string name="supporters_open_donations">Abrir página de doações</string>
+    <string name="sponsors_loading">A carregar patrocinadores…</string>
+    <string name="sponsors_empty">Ainda não foram encontrados patrocinadores.</string>
+    <string name="sponsors_error_title">Não foi possível carregar os patrocinadores</string>
+    <string name="sponsors_detail_copy">Os patrocinadores ajudam a fazer avançar o Nuvio através do apoio nas diferentes áreas de desenvolvimento.</string>
+    <string name="sponsors_channel_unavailable">Canal de patrocinadores indisponível.</string>
+    <string name="sponsors_open_channel">Abrir canal de patrocinadores</string>
     <string name="contributors_loading">A carregar colaboradores do GitHub…</string>
     <string name="contributors_empty">Ainda não foram encontrados colaboradores.</string>
     <string name="contributors_error_title">Não foi possível carregar os colaboradores</string>
@@ -380,8 +391,8 @@
     <string name="playback_pause_overlay_sub">Mostrar detalhes após 5 segundos em pausa.</string>
     <string name="playback_show_clock_sub">Mostrar hora atual e hora de término enquanto os controlos estão visíveis.</string>
     <string name="playback_osd_clock">Relógio no OSD</string>
-    <string name="playback_skip_intro">Saltar Intro</string>
-    <string name="playback_skip_intro_sub">Utilizar introdb.app para detetar intros e recapitulações.</string>
+    <string name="playback_skip_intro">Saltar Introdução</string>
+    <string name="playback_skip_intro_sub">Utilizar introdb.app para detetar introduções e resumos.</string>
     <string name="playback_auto_frame_rate">Frame Rate e Resolução Automática</string>
     <string name="playback_section_player">Reprodutor e Seleção de Transmissão</string>
     <string name="playback_section_player_desc">Preferência de reprodutor, reprodução automática e filtragem de fontes.</string>
@@ -436,6 +447,8 @@
     <string name="audio_preferred_lang">Idioma de Áudio Preferido</string>
     <string name="audio_skip_silence">Saltar Silêncio</string>
     <string name="audio_skip_silence_sub">Saltar partes sem som durante a reprodução</string>
+    <string name="audio_remember_delay_per_device">Memorizar atraso de áudio por dispositivo</string>
+    <string name="audio_remember_delay_per_device_sub">Guardar e restaurar o atraso de áudio no leitor para a saída de áudio atual</string>
     <string name="audio_advanced_section">Áudio Avançado</string>
     <string name="audio_advanced_warning">Estas definições podem causar problemas em alguns dispositivos. Altera apenas se souberes o que estás a fazer.</string>
     <string name="audio_decoder_device_only">Apenas descodificadores do dispositivo</string>
@@ -578,6 +591,8 @@
     <string name="layout_modern_sidebar_blur_sub">Alterna o efeito de desfoque (blur) nas superfícies da barra lateral moderna.</string>
     <string name="layout_fullscreen_hero_backdrop">Fundo em Destaque no Ecrã Inteiro</string>
     <string name="layout_fullscreen_hero_backdrop_sub">Expande o fundo do conteúdo em destaque para preencher todo o ecrã.</string>
+    <string name="layout_classic_focus_gradient">Gradiente do Item em Foco</string>
+    <string name="layout_classic_focus_gradient_sub">Misturar as cores da arte no lado direito da página inicial clássica.</string>
     <string name="layout_show_hero">Mostrar Secção de Destaque</string>
     <string name="layout_show_hero_sub">Apresenta o carrossel de destaque no topo do início.</string>
     <string name="layout_show_discover">Mostrar \"Descobrir\" na Pesquisa</string>
@@ -588,8 +603,8 @@
     <string name="layout_addon_name_sub">Mostra o nome da fonte por baixo dos títulos do catálogo.</string>
     <string name="layout_catalog_type">Mostrar Tipo de Catálogo</string>
     <string name="layout_catalog_type_sub">Mostra o sufixo do tipo ao lado do nome do catálogo (Filme/Série).</string>
-    <string name="layout_hide_unreleased">Ocultar Conteúdo Não Lançado</string>
-    <string name="layout_hide_unreleased_sub">Oculta filmes e séries que ainda não foram lançados.</string>
+    <string name="layout_hide_unreleased">Ocultar Conteúdo Não Exibido</string>
+    <string name="layout_hide_unreleased_sub">Oculta filmes e séries que ainda não foram exibidos.</string>
     <string name="layout_section_detail">Página de Detalhes</string>
     <string name="layout_section_detail_desc">Definições para os ecrãs de detalhes e episódios.</string>
     <string name="layout_blur_unwatched">Desfocar Episódios Não Vistos</string>
@@ -922,6 +937,8 @@
     <!-- CatalogOrderScreen -->
     <string name="catalog_order_title">Reordenar Catálogos do Início</string>
     <string name="catalog_order_subtitle">Isto controla a ordem das linhas de catálogos no Início (Clássico + Moderno + Grelha).</string>
+    <string name="catalog_order_follow_addons">Follow addons order</string>
+    <string name="catalog_order_follow_addons_desc">Catalogs follow addon manifest order. Collections can still be moved between addons.</string>
     <string name="catalog_order_empty">Ainda não existem catálogos disponíveis para o início.</string>
     <string name="catalog_order_disabled_on_home">Desativado no Início</string>
     <string name="catalog_order_enable">Ativar</string>
@@ -1041,6 +1058,8 @@
     <string name="audio_dialog_title">Áudio</string>
     <string name="audio_dialog_tab_tracks">Áudio</string>
     <string name="audio_dialog_tab_mix">Mistura</string>
+    <string name="audio_delay_label">Atraso de áudio</string>
+    <string name="audio_delay_range">Intervalo: %1$.2fs a %2$.2fs</string>
     <string name="audio_mix_label">Amplificação (PCM)</string>
     <string name="audio_mix_value_db">%1$d dB</string>
     <string name="audio_mix_persist_on">Manter entre sessões: LIGADO</string>
@@ -1596,7 +1615,7 @@
     <string name="collections_editor_tmdb_help_collection">Pesquisa pelo nome de uma coleção de filmes ou cola o ID da coleção do TMDB.</string>
     <string name="collections_editor_tmdb_help_discover">Cria uma linha TMDB dinâmica usando filtros opcionais. Deixa os campos vazios quando não precisares desse filtro.</string>
     <string name="collections_editor_tmdb_search_helper">Exemplos: Marvel Studios, 420, ou https://www.themoviedb.org/company/420.</string>
-    <string name="collections_editor_tmdb_collection_helper">Exemplo: Star Wars Collection, Harry Potter Collection, ou um URL de coleção.</string>
+    <string name="collections_editor_tmdb_collection_helper">Exemplo: Coleção Star Wars, Coleção Harry Potter, ou um URL de coleção.</string>
     <string name="collections_editor_tmdb_network_helper">Exemplos de IDs: Netflix 213, HBO 49, Disney+ 2739.</string>
     <string name="collections_editor_tmdb_list_helper">Exemplo: https://www.themoviedb.org/list/8504994 ou 8504994.</string>
     <string name="collections_editor_tmdb_title_helper">Aparece como o nome da linha/separador. Se estiver vazio, o Nuvio cria um a partir da fonte.</string>
@@ -1632,9 +1651,11 @@
     <string name="collections_editor_placeholder_backdrop">URL da imagem de fundo (opcional)</string>
     <string name="collections_editor_placeholder_folder">Nome da pasta</string>
     <string name="collections_editor_placeholder_gif">URL do GIF animado (reproduz apenas quando focado)</string>
-    <string name="collections_editor_hero_backdrop">Fundo de Destaque (Modern Home)</string>
+    <string name="collections_editor_hero_backdrop">Fundo de Destaque (Página inicial moderna)</string>
     <string name="collections_editor_placeholder_hero_backdrop">URL de imagem de destaque personalizada (opcional)</string>
-    <string name="collections_editor_title_logo">Logótipo do Título (Modern Home)</string>
+    <string name="collections_editor_hero_video">Vídeo de destaque (Página inicial moderna)</string>
+    <string name="collections_editor_placeholder_hero_video">URL personalizada do vídeo de destaque (opcional)</string>
+    <string name="collections_editor_title_logo">Logótipo do Título (Página inicial moderna)</string>
     <string name="collections_editor_placeholder_title_logo">URL do logótipo personalizado (opcional)</string>
     <string name="collections_editor_genre_filter">Filtro de Género</string>
     <string name="collections_editor_choose_genre">Escolher</string>
