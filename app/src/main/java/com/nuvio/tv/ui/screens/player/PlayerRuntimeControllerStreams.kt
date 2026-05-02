@@ -29,6 +29,7 @@ internal fun PlayerRuntimeController.showEpisodesPanel() {
             showSubtitleStylePanel = false,
             showSubtitleTimingDialog = false,
             showSpeedDialog = false,
+            showMkvChapterPanel = false,
             showMoreDialog = false
         )
     }
@@ -52,6 +53,7 @@ internal fun PlayerRuntimeController.showSourcesPanel() {
             showSubtitleStylePanel = false,
             showSubtitleTimingDialog = false,
             showSpeedDialog = false,
+            showMkvChapterPanel = false,
             showMoreDialog = false,
             showEpisodesPanel = false,
             showEpisodeStreams = false

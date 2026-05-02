@@ -176,6 +176,7 @@ class PlayerRuntimeController(
     fun getCurrentHeaders(): Map<String, String> = currentHeaders
 
     fun stopAndRelease() {
+        mkvChapterProbeJob?.cancel()
         releasePlayer()
     }
 
@@ -243,6 +244,9 @@ class PlayerRuntimeController(
     internal var sourceStreamsJob: Job? = null
     internal var sourceChipErrorDismissJob: Job? = null
     internal var sourceStreamsCacheRequestKey: String? = null
+    internal var mkvChapterProbeJob: Job? = null
+    internal var mkvChapterSupportEnabled: Boolean = false
+    internal var mkvChapterProbeKey: String? = null
     internal var hostActivityRef: WeakReference<Activity>? = null
     internal var initialPlaybackStarted: Boolean = false
     
@@ -396,6 +400,7 @@ class PlayerRuntimeController(
     
 
     fun onCleared() {
+        mkvChapterProbeJob?.cancel()
         releasePlayer()
         stopTorrentStream()
         mediaSourceFactory.shutdown()

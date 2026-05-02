@@ -251,6 +251,13 @@ fun PlaybackSettingsContent(
                 onSetPauseOverlayEnabled = { enabled -> coroutineScope.launch { viewModel.setPauseOverlayEnabled(enabled) } },
                 onSetOsdClockEnabled = { enabled -> coroutineScope.launch { viewModel.setOsdClockEnabled(enabled) } },
                 onSetSkipIntroEnabled = { enabled -> coroutineScope.launch { viewModel.setSkipIntroEnabled(enabled) } },
+                onSetMkvChaptersEnabled = { enabled -> coroutineScope.launch { viewModel.setMkvChaptersEnabled(enabled) } },
+                onSetShowMkvChapterInControls = { enabled ->
+                    coroutineScope.launch { viewModel.setShowMkvChapterInControls(enabled) }
+                },
+                onSetHideGenericMkvChapterInControls = { enabled ->
+                    coroutineScope.launch { viewModel.setHideGenericMkvChapterInControls(enabled) }
+                },
                 onSetFrameRateMatchingMode = { mode -> coroutineScope.launch { viewModel.setFrameRateMatchingMode(mode) } },
                 onSetResolutionMatchingEnabled = { enabled ->
                     coroutineScope.launch { viewModel.setResolutionMatchingEnabled(enabled) }

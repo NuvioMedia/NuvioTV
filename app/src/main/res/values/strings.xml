@@ -393,6 +393,12 @@
     <string name="playback_osd_clock">OSD Clock</string>
     <string name="playback_skip_intro">Skip Intro</string>
     <string name="playback_skip_intro_sub">Use introdb.app to detect intros and recaps.</string>
+    <string name="playback_mkv_chapters">MKV Chapters</string>
+    <string name="playback_mkv_chapters_sub">Read chapter markers from MKV files and show a chapter switcher in the player.</string>
+    <string name="playback_mkv_current_chapter_controls">Show Current Chapter</string>
+    <string name="playback_mkv_current_chapter_controls_sub">Show the active MKV chapter in the player controls.</string>
+    <string name="playback_mkv_hide_generic_current_chapter_controls">Hide Generic Current Chapters</string>
+    <string name="playback_mkv_hide_generic_current_chapter_controls_sub">Hide names like Chapter 1 or 00:12:30 from the player controls.</string>
     <string name="playback_auto_frame_rate">Auto Frame Rate &amp; Resolution</string>
     <string name="playback_section_player">Player &amp; Stream Selection</string>
     <string name="playback_section_player_desc">Player preference, auto-play, and source filtering.</string>
@@ -1068,6 +1074,11 @@
     <string name="audio_mix_range_saved">Range: %1$d dB to %2$d dB (saved)</string>
     <string name="audio_mix_unavailable">Amplification is not available on this device</string>
 
+    <!-- MKV Chapters -->
+    <string name="player_chapters_title">Chapters</string>
+    <string name="player_chapters_empty">No chapters found</string>
+    <string name="player_chapters_count">%1$d chapters</string>
+
     <!-- SubtitleDialog / SubtitleStyleSidePanel -->
     <string name="subtitle_dialog_title">Subtitles</string>
     <string name="subtitle_no_builtin">No built-in subtitles available</string>
@@ -1484,6 +1495,7 @@
     <string name="cd_sources">Sources</string>
     <string name="cd_switch_player_engine">Switch player engine</string>
     <string name="cd_episodes">Episodes</string>
+    <string name="cd_chapters">Chapters</string>
     <string name="cd_playback_speed">Playback speed</string>
     <string name="cd_aspect_ratio">Aspect ratio</string>
     <string name="cd_open_external_player">Open in external player</string>

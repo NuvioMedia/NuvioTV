@@ -106,6 +106,12 @@ data class PlayerUiState(
     val sourceFilteredStreams: List<Stream> = emptyList(),
     val sourceAvailableAddons: List<String> = emptyList(),
     val sourceChips: List<SourceChipItem> = emptyList(),
+    val mkvChapterSupportEnabled: Boolean = false,
+    val showMkvChapterInControls: Boolean = false,
+    val hideGenericMkvChapterInControls: Boolean = false,
+    val mkvChapters: List<MkvChapter> = emptyList(),
+    val mkvChaptersLoading: Boolean = false,
+    val showMkvChapterPanel: Boolean = false,
     val error: String? = null,
     val pendingSeekPosition: Long? = null,  // For resuming from saved progress
     // Parental guide overlay
@@ -245,6 +251,9 @@ sealed class PlayerEvent {
     data object OnReloadSourceStreams : PlayerEvent()
     data class OnSourceAddonFilterSelected(val addonName: String?) : PlayerEvent()
     data class OnSourceStreamSelected(val stream: Stream) : PlayerEvent()
+    data object OnShowMkvChapterPanel : PlayerEvent()
+    data object OnDismissMkvChapterPanel : PlayerEvent()
+    data class OnSelectMkvChapter(val chapter: MkvChapter) : PlayerEvent()
     data object OnDismissTransientOverlay : PlayerEvent()
     data object OnRetry : PlayerEvent()
     data object OnParentalGuideHide : PlayerEvent()

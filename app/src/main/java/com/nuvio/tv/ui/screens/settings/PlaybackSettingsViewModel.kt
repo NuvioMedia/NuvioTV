@@ -128,6 +128,18 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setSkipIntroEnabled(enabled)
     }
 
+    suspend fun setMkvChaptersEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setMkvChaptersEnabled(enabled)
+    }
+
+    suspend fun setShowMkvChapterInControls(enabled: Boolean) {
+        playerSettingsDataStore.setShowMkvChapterInControls(enabled)
+    }
+
+    suspend fun setHideGenericMkvChapterInControls(enabled: Boolean) {
+        playerSettingsDataStore.setHideGenericMkvChapterInControls(enabled)
+    }
+
     suspend fun setFrameRateMatchingMode(mode: FrameRateMatchingMode) {
         playerSettingsDataStore.setFrameRateMatchingMode(mode)
     }

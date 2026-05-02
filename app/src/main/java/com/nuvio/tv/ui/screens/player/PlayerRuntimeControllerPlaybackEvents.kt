@@ -401,6 +401,7 @@ fun PlayerRuntimeController.scheduleHideControls() {
             !_uiState.value.showSubtitleDelayOverlay &&
             !_uiState.value.showSubtitleTimingDialog &&
             !_uiState.value.showEpisodesPanel && !_uiState.value.showSourcesPanel &&
+            !_uiState.value.showMkvChapterPanel &&
             !_uiState.value.showStreamInfoOverlay) {
             _uiState.update { it.copy(showControls = false) }
         }
@@ -417,6 +418,7 @@ internal fun PlayerRuntimeController.showSubtitleDelayOverlay() {
             showSubtitleOverlay = false,
             showSubtitleStylePanel = false,
             showSubtitleTimingDialog = false,
+            showMkvChapterPanel = false,
             showSpeedDialog = false
         )
     }
@@ -503,7 +505,7 @@ internal fun PlayerRuntimeController.schedulePauseOverlay() {
         val s = _uiState.value
         val anyPanelOpen = s.showSubtitleOverlay || s.showSubtitleStylePanel ||
             s.showSpeedDialog || s.showMoreDialog || s.showEpisodesPanel ||
-            s.showSourcesPanel || s.showAudioOverlay || s.showStreamInfoOverlay ||
+            s.showSourcesPanel || s.showMkvChapterPanel || s.showAudioOverlay || s.showStreamInfoOverlay ||
             s.showSubtitleTimingDialog
         if (!s.isPlaying && s.pauseOverlayEnabled && s.error == null && !anyPanelOpen) {
             _uiState.update { it.copy(showPauseOverlay = true, showControls = false) }
@@ -528,7 +530,14 @@ fun PlayerRuntimeController.onUserInteraction() {
 
 fun PlayerRuntimeController.hideControls() {
     hideControlsJob?.cancel()
-    _uiState.update { it.copy(showControls = false, showSeekOverlay = false, showMoreDialog = false) }
+    _uiState.update {
+        it.copy(
+            showControls = false,
+            showSeekOverlay = false,
+            showMoreDialog = false,
+            showMkvChapterPanel = false
+        )
+    }
 }
 
 fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
@@ -779,6 +788,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showMoreDialog = false,
                     showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
+                    showMkvChapterPanel = false,
                     showControls = true
                 )
             }
@@ -792,6 +802,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showMoreDialog = false,
                     showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
+                    showMkvChapterPanel = false,
                     showControls = true
                 )
             }
@@ -804,6 +815,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showMoreDialog = false,
                     showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
+                    showMkvChapterPanel = false,
                     showControls = true
                 )
             }
@@ -861,6 +873,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showMoreDialog = false,
                     showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
+                    showMkvChapterPanel = false,
                     showControls = true
                 )
             }
@@ -875,6 +888,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
                     showSpeedDialog = false,
+                    showMkvChapterPanel = false,
                     showControls = true
                 )
             }
@@ -927,6 +941,15 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         is PlayerEvent.OnSourceStreamSelected -> {
             switchToSourceStream(event.stream)
         }
+        PlayerEvent.OnShowMkvChapterPanel -> {
+            showMkvChapterPanel()
+        }
+        PlayerEvent.OnDismissMkvChapterPanel -> {
+            dismissMkvChapterPanel()
+        }
+        is PlayerEvent.OnSelectMkvChapter -> {
+            selectMkvChapter(event.chapter)
+        }
         PlayerEvent.OnDismissTransientOverlay -> {
             _uiState.update { 
                 it.copy(
@@ -936,6 +959,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     showSubtitleTimingDialog = false,
                     showSpeedDialog = false,
                     showSubtitleDelayOverlay = false,
+                    showMkvChapterPanel = false,
                     showMoreDialog = false
                 ) 
             }

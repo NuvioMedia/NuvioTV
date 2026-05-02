@@ -178,6 +178,9 @@ data class PlayerSettings(
     val pauseOverlayEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
     val skipIntroEnabled: Boolean = true,
+    val mkvChaptersEnabled: Boolean = false,
+    val showMkvChapterInControls: Boolean = true,
+    val hideGenericMkvChapterInControls: Boolean = true,
     // Dolby Vision Profile 7 → HEVC fallback (requires forked ExoPlayer)
     val mapDV7ToHevc: Boolean = false,
     val mpvHardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE,
@@ -310,6 +313,10 @@ class PlayerSettingsDataStore @Inject constructor(
     private val pauseOverlayEnabledKey = booleanPreferencesKey("pause_overlay_enabled")
     private val osdClockEnabledKey = booleanPreferencesKey("osd_clock_enabled")
     private val skipIntroEnabledKey = booleanPreferencesKey("skip_intro_enabled")
+    private val mkvChaptersEnabledKey = booleanPreferencesKey("mkv_chapters_enabled")
+    private val showMkvChapterInControlsKey = booleanPreferencesKey("show_mkv_chapter_in_controls")
+    private val hideGenericMkvChapterInControlsKey =
+        booleanPreferencesKey("hide_generic_mkv_chapter_in_controls")
     private val mapDV7ToHevcKey = booleanPreferencesKey("map_dv7_to_hevc")
     private val mpvHardwareDecodeModeKey = stringPreferencesKey("mpv_hardware_decode_mode")
     private val frameRateMatchingKey = booleanPreferencesKey("frame_rate_matching")
@@ -461,6 +468,9 @@ class PlayerSettingsDataStore @Inject constructor(
                 pauseOverlayEnabled = prefs[pauseOverlayEnabledKey] ?: true,
                 osdClockEnabled = prefs[osdClockEnabledKey] ?: true,
                 skipIntroEnabled = prefs[skipIntroEnabledKey] ?: true,
+                mkvChaptersEnabled = prefs[mkvChaptersEnabledKey] ?: false,
+                showMkvChapterInControls = prefs[showMkvChapterInControlsKey] ?: true,
+                hideGenericMkvChapterInControls = prefs[hideGenericMkvChapterInControlsKey] ?: true,
                 mapDV7ToHevc = prefs[mapDV7ToHevcKey] ?: false,
                 mpvHardwareDecodeMode = parseMpvHardwareDecodeMode(prefs[mpvHardwareDecodeModeKey]),
                 frameRateMatchingMode = prefs[frameRateMatchingModeKey]?.let {
@@ -657,6 +667,24 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setSkipIntroEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[skipIntroEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setMkvChaptersEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[mkvChaptersEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setShowMkvChapterInControls(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[showMkvChapterInControlsKey] = enabled
+        }
+    }
+
+    suspend fun setHideGenericMkvChapterInControls(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[hideGenericMkvChapterInControlsKey] = enabled
         }
     }
 

@@ -132,6 +132,9 @@ internal fun PlaybackSettingsSections(
     onSetPauseOverlayEnabled: (Boolean) -> Unit,
     onSetOsdClockEnabled: (Boolean) -> Unit,
     onSetSkipIntroEnabled: (Boolean) -> Unit,
+    onSetMkvChaptersEnabled: (Boolean) -> Unit,
+    onSetShowMkvChapterInControls: (Boolean) -> Unit,
+    onSetHideGenericMkvChapterInControls: (Boolean) -> Unit,
     onSetFrameRateMatchingMode: (FrameRateMatchingMode) -> Unit,
     onSetResolutionMatchingEnabled: (Boolean) -> Unit,
     onDisableAfrAndResolution: () -> Unit,
@@ -324,6 +327,44 @@ internal fun PlaybackSettingsSections(
                     onCheckedChange = onSetSkipIntroEnabled,
                     onFocused = { focusedSection = PlaybackSection.GENERAL },
                     enabled = !generalUi.isExternalPlayer
+                )
+            }
+
+            item(key = "general_mkv_chapters") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.Info,
+                    title = stringResource(R.string.playback_mkv_chapters),
+                    subtitle = stringResource(R.string.playback_mkv_chapters_sub),
+                    isChecked = playerSettings.mkvChaptersEnabled,
+                    onCheckedChange = onSetMkvChaptersEnabled,
+                    onFocused = { focusedSection = PlaybackSection.GENERAL },
+                    enabled = !generalUi.isExternalPlayer
+                )
+            }
+
+            item(key = "general_mkv_current_chapter_controls") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.Info,
+                    title = stringResource(R.string.playback_mkv_current_chapter_controls),
+                    subtitle = stringResource(R.string.playback_mkv_current_chapter_controls_sub),
+                    isChecked = playerSettings.showMkvChapterInControls,
+                    onCheckedChange = onSetShowMkvChapterInControls,
+                    onFocused = { focusedSection = PlaybackSection.GENERAL },
+                    enabled = !generalUi.isExternalPlayer && playerSettings.mkvChaptersEnabled
+                )
+            }
+
+            item(key = "general_mkv_hide_generic_current_chapter_controls") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.Info,
+                    title = stringResource(R.string.playback_mkv_hide_generic_current_chapter_controls),
+                    subtitle = stringResource(R.string.playback_mkv_hide_generic_current_chapter_controls_sub),
+                    isChecked = playerSettings.hideGenericMkvChapterInControls,
+                    onCheckedChange = onSetHideGenericMkvChapterInControls,
+                    onFocused = { focusedSection = PlaybackSection.GENERAL },
+                    enabled = !generalUi.isExternalPlayer &&
+                        playerSettings.mkvChaptersEnabled &&
+                        playerSettings.showMkvChapterInControls
                 )
             }
 

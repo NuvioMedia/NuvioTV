@@ -271,6 +271,11 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             nextEpisodeThresholdModeSetting = settings.nextEpisodeThresholdMode
             nextEpisodeThresholdPercentSetting = settings.nextEpisodeThresholdPercent
             nextEpisodeThresholdMinutesBeforeEndSetting = settings.nextEpisodeThresholdMinutesBeforeEnd
+            applyMkvChapterSetting(
+                enabled = settings.mkvChaptersEnabled,
+                showCurrentChapterInControls = settings.showMkvChapterInControls,
+                hideGenericCurrentChapterInControls = settings.hideGenericMkvChapterInControls
+            )
             val previousMpvHardwareDecodeMode = mpvHardwareDecodeModeSetting
             mpvHardwareDecodeModeSetting = settings.mpvHardwareDecodeMode
             if (isUsingMpvEngine() && previousMpvHardwareDecodeMode != mpvHardwareDecodeModeSetting) {

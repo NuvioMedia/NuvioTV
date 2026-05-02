@@ -177,6 +177,8 @@ fun PlayerScreen(
             viewModel.onEvent(PlayerEvent.OnHideSubtitleDelayOverlay)
         } else if (uiState.showSubtitleStylePanel) {
             viewModel.onEvent(PlayerEvent.OnDismissSubtitleStylePanel)
+        } else if (uiState.showMkvChapterPanel) {
+            viewModel.onEvent(PlayerEvent.OnDismissMkvChapterPanel)
         } else if (uiState.showSourcesPanel) {
             viewModel.onEvent(PlayerEvent.OnDismissSourcesPanel)
         } else if (uiState.showEpisodesPanel) {
@@ -275,6 +277,7 @@ fun PlayerScreen(
         uiState.showControls,
         uiState.showEpisodesPanel,
         uiState.showSourcesPanel,
+        uiState.showMkvChapterPanel,
         uiState.showSubtitleStylePanel,
         uiState.showSubtitleDelayOverlay,
         uiState.showSubtitleTimingDialog,
@@ -283,6 +286,7 @@ fun PlayerScreen(
         uiState.showSpeedDialog,
     ) {
         if (uiState.showControls && !uiState.showEpisodesPanel && !uiState.showSourcesPanel &&
+            !uiState.showMkvChapterPanel &&
             !uiState.showAudioOverlay && !uiState.showSubtitleOverlay &&
             !uiState.showSubtitleStylePanel && !uiState.showSubtitleDelayOverlay &&
             !uiState.showSubtitleTimingDialog &&
@@ -364,6 +368,7 @@ fun PlayerScreen(
                 } else if (
                     !uiState.showEpisodesPanel &&
                     !uiState.showSourcesPanel &&
+                    !uiState.showMkvChapterPanel &&
                     !uiState.showAudioOverlay &&
                     !uiState.showSubtitleOverlay &&
                     !uiState.showSubtitleStylePanel &&
@@ -440,6 +445,7 @@ fun PlayerScreen(
 
                 // When a side panel or dialog is open, let it handle all keys
                 val panelOrDialogOpen = uiState.showEpisodesPanel || uiState.showSourcesPanel ||
+                        uiState.showMkvChapterPanel ||
                         uiState.showAudioOverlay || uiState.showSubtitleOverlay ||
                         uiState.showSubtitleStylePanel || uiState.showSpeedDialog ||
                         uiState.showSubtitleDelayOverlay || uiState.showSubtitleTimingDialog ||
@@ -729,6 +735,7 @@ fun PlayerScreen(
                 !uiState.showStreamInfoOverlay &&
                 !uiState.showEpisodesPanel &&
                 !uiState.showSourcesPanel &&
+                !uiState.showMkvChapterPanel &&
                 !uiState.showAudioOverlay &&
                 !uiState.showSubtitleOverlay &&
                 !uiState.showSubtitleStylePanel &&
@@ -778,6 +785,7 @@ fun PlayerScreen(
             !uiState.showPauseOverlay &&
             !uiState.showEpisodesPanel &&
             !uiState.showSourcesPanel &&
+            !uiState.showMkvChapterPanel &&
             !uiState.showAudioOverlay &&
             !uiState.showSubtitleOverlay &&
             !uiState.showSubtitleStylePanel &&
@@ -809,6 +817,7 @@ fun PlayerScreen(
                 !uiState.showSubtitleDelayOverlay &&
                 !uiState.showEpisodesPanel &&
                 !uiState.showSourcesPanel &&
+                !uiState.showMkvChapterPanel &&
                 !uiState.showAudioOverlay &&
                 !uiState.showSubtitleOverlay &&
                 !uiState.showSpeedDialog,
@@ -834,6 +843,7 @@ fun PlayerScreen(
                 onSeekTo = { viewModel.onEvent(PlayerEvent.OnSeekTo(it)) },
                 onShowEpisodesPanel = { viewModel.onEvent(PlayerEvent.OnShowEpisodesPanel) },
                 onShowSourcesPanel = { viewModel.onEvent(PlayerEvent.OnShowSourcesPanel) },
+                onShowMkvChapterPanel = { viewModel.onEvent(PlayerEvent.OnShowMkvChapterPanel) },
                 onShowAudioDialog = { viewModel.onEvent(PlayerEvent.OnShowAudioOverlay) },
                 onShowSubtitleDialog = { viewModel.onEvent(PlayerEvent.OnShowSubtitleOverlay) },
                 onShowSpeedDialog = { viewModel.onEvent(PlayerEvent.OnShowSpeedDialog) },
@@ -920,6 +930,7 @@ fun PlayerScreen(
                 !uiState.showSubtitleStylePanel &&
                 !uiState.showEpisodesPanel &&
                 !uiState.showSourcesPanel &&
+                !uiState.showMkvChapterPanel &&
                 !uiState.showAudioOverlay &&
                 !uiState.showSubtitleOverlay &&
                 !uiState.showSubtitleTimingDialog &&
@@ -947,6 +958,7 @@ fun PlayerScreen(
             visible = uiState.showSeekOverlay && !uiState.showControls && uiState.error == null &&
                 !uiState.showLoadingOverlay && !uiState.showPauseOverlay &&
                 !uiState.showSubtitleDelayOverlay && !uiState.showSubtitleTimingDialog &&
+                !uiState.showMkvChapterPanel &&
                 !uiState.showMoreDialog,
             enter = fadeIn(animationSpec = tween(150)),
             exit = fadeOut(animationSpec = tween(150)),
@@ -1114,6 +1126,14 @@ fun PlayerScreen(
                 .zIndex(2.6f)
         )
 
+        MkvChapterPanelHost(
+            viewModel = viewModel,
+            uiState = uiState,
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(2.6f)
+        )
+
         PlayerOverlayScaffold(
             visible = uiState.showSubtitleTimingDialog &&
                 uiState.error == null &&
@@ -1121,6 +1141,7 @@ fun PlayerScreen(
                 !uiState.showPauseOverlay &&
                 !uiState.showEpisodesPanel &&
                 !uiState.showSourcesPanel &&
+                !uiState.showMkvChapterPanel &&
                 !uiState.showAudioOverlay &&
                 !uiState.showSubtitleOverlay &&
                 !uiState.showSubtitleStylePanel &&
@@ -1458,6 +1479,7 @@ private fun PlayerControlsOverlay(
     onSeekTo: (Long) -> Unit,
     onShowEpisodesPanel: () -> Unit,
     onShowSourcesPanel: () -> Unit,
+    onShowMkvChapterPanel: () -> Unit,
     onShowAudioDialog: () -> Unit,
     onShowSubtitleDialog: () -> Unit,
     onShowSpeedDialog: () -> Unit,
@@ -1471,6 +1493,7 @@ private fun PlayerControlsOverlay(
     onBack: () -> Unit,
     skipButtonVisible: Boolean = false
 ) {
+    val playbackTimeline by viewModel.playbackTimeline.collectAsState()
     val customPlayPainter = rememberRawSvgPainter(R.raw.ic_player_play)
     val customPausePainter = rememberRawSvgPainter(R.raw.ic_player_pause)
     val customSubtitlePainter = rememberRawSvgPainter(R.raw.ic_player_subtitles)
@@ -1556,6 +1579,29 @@ private fun PlayerControlsOverlay(
                             text = episodeInfo,
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White.copy(alpha = 0.9f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    val currentChapter = if (
+                        uiState.mkvChapterSupportEnabled &&
+                        uiState.showMkvChapterInControls &&
+                        uiState.mkvChapters.isNotEmpty()
+                    ) {
+                        currentMkvChapter(
+                            chapters = uiState.mkvChapters,
+                            positionMs = playbackTimeline.currentPosition,
+                            hideGenericTitle = uiState.hideGenericMkvChapterInControls
+                        )
+                    } else {
+                        null
+                    }
+                    if (currentChapter != null) {
+                        Text(
+                            text = "${formatMkvChapterTime(currentChapter.startMs)} - ${currentChapter.title}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.78f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1719,6 +1765,18 @@ private fun PlayerControlsOverlay(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            if (uiState.mkvChapterSupportEnabled && uiState.mkvChapters.isNotEmpty()) {
+                                ControlButton(
+                                    icon = Icons.AutoMirrored.Filled.List,
+                                    contentDescription = stringResource(R.string.cd_chapters),
+                                    onClick = {
+                                        onShowMkvChapterPanel()
+                                    },
+                                    upFocusRequester = progressBarFocusRequester,
+                                    onDownKey = onHideControls,
+                                    onFocused = onResetHideTimer
+                                )
+                            }
                             ControlButton(
                                 icon = Icons.Default.Speed,
                                 contentDescription = stringResource(R.string.cd_playback_speed),

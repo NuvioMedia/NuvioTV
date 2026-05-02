@@ -108,6 +108,11 @@ internal fun PlayerRuntimeController.initializePlayer(
             hasTriedDv7HevcFallback = false
             mpvDelayStartAfterAfrSwitch = false
             val playerSettings = playerSettingsDataStore.playerSettings.first()
+            applyMkvChapterSetting(
+                enabled = playerSettings.mkvChaptersEnabled,
+                showCurrentChapterInControls = playerSettings.showMkvChapterInControls,
+                hideGenericCurrentChapterInControls = playerSettings.hideGenericMkvChapterInControls
+            )
             rememberAudioDelayPerDeviceEnabled = playerSettings.rememberAudioDelayPerDevice
             if (rememberAudioDelayPerDeviceEnabled) {
                 registerAudioDelayRouteCallback()
@@ -182,6 +187,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     // Keep addon subtitle discovery available on the mpv path too.
                     // Exo does this later in this method, but this branch returns early.
                     fetchAddonSubtitles()
+                    loadMkvChaptersIfEnabled(url, headers)
                 } finally {
                     mpvInitializationInProgress = false
                 }
@@ -191,6 +197,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                 url = url,
                 headers = headers
             )
+            loadMkvChaptersIfEnabled(url, headers)
             mpvInitializationInProgress = false
             val startupSubtitlePreparation = prepareStreamStartSubtitles(playerSettings, showLoadingStatus)
             afrJob.await()
