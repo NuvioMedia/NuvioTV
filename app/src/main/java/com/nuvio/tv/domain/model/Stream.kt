@@ -23,9 +23,24 @@ data class Stream(
     val qualityValue: Int = -1
 ) {
     /**
-     * Returns the primary stream source URL
+     * Returns the primary stream source URL. Prefers [url], then the first
+     * playable entry from [sources] (addons that only fill [sources] are
+     * still internally playable), then [externalUrl] as a last resort.
      */
-    fun getStreamUrl(): String? = url ?: externalUrl
+    fun getStreamUrl(): String? = url ?: firstSourceUrl() ?: externalUrl
+
+    /**
+     * Returns all distinct, non-blank, whitespace-trimmed playable URLs
+     * for this stream in preference order: [url] first, then [sources].
+     */
+    fun getStreamUrls(): List<String> {
+        val result = LinkedHashSet<String>()
+        url?.trim()?.takeIf { it.isNotEmpty() }?.let(result::add)
+        sources?.forEach { raw ->
+            raw.trim().takeIf { it.isNotEmpty() }?.let(result::add)
+        }
+        return result.toList()
+    }
 
     /**
      * Returns true if this is a torrent-only stream (no HTTP URL available).
@@ -40,9 +55,15 @@ data class Stream(
     fun isYouTube(): Boolean = ytId != null
 
     /**
-     * Returns true if this is an external URL (opens in browser)
+     * Returns true if the only playable location is an external URL that
+     * must open in a browser. Streams with [url] or playable [sources] are
+     * internally playable even if [externalUrl] is also set.
      */
-    fun isExternal(): Boolean = externalUrl != null && url == null
+    fun isExternal(): Boolean =
+        externalUrl != null && url.isNullOrBlank() && firstSourceUrl() == null
+
+    private fun firstSourceUrl(): String? =
+        sources?.firstOrNull { !it.isNullOrBlank() }?.trim()
 
     /**
      * Returns a display name for the stream

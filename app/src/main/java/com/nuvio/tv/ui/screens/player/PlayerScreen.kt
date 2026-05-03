@@ -20,7 +20,10 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size as GeometrySize
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -67,7 +70,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -1479,6 +1484,13 @@ private fun PlayerControlsOverlay(
     val customAspectPainter = rememberRawSvgPainter(R.raw.ic_player_aspect_ratio)
     val customEpisodesPainter = rememberRawSvgPainter(R.raw.ic_player_episodes)
 
+    val isScrubbing = uiState.pendingPreviewSeekPosition != null
+    val osdAlpha by animateFloatAsState(
+        targetValue = if (isScrubbing) 0.25f else 1f,
+        animationSpec = tween(250),
+        label = "osdAlpha"
+    )
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Top gradient
         Box(
@@ -1486,6 +1498,7 @@ private fun PlayerControlsOverlay(
                 .fillMaxWidth()
                 .height(150.dp)
                 .align(Alignment.TopCenter)
+                .alpha(osdAlpha)
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
@@ -1502,6 +1515,7 @@ private fun PlayerControlsOverlay(
                 .fillMaxWidth()
                 .height(200.dp)
                 .align(Alignment.BottomCenter)
+                .alpha(osdAlpha)
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
@@ -1521,7 +1535,7 @@ private fun PlayerControlsOverlay(
             val skipIntroVisible = uiState.activeSkipInterval != null
 
             AnimatedVisibility(
-                visible = !skipIntroVisible,
+                visible = !skipIntroVisible && !isScrubbing,
                 enter = fadeIn(animationSpec = tween(180)),
                 exit = fadeOut(animationSpec = tween(180))
             ) {
@@ -1597,6 +1611,20 @@ private fun PlayerControlsOverlay(
 
             // Progress bar — always LTR regardless of locale
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                // Measured at natural height but reports 0 to the column, so the
+                // title and buttons never shift. Content is placed above this slot
+                // (y = -height) so the thumbnail floats directly over the progress bar.
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        layout(placeable.width, 0) {
+                            placeable.placeRelative(0, -placeable.height)
+                        }
+                    }
+                ) {
+                    SeekPreviewThumbnailHost(viewModel = viewModel)
+                }
                 PlayerControlsProgressBarHost(
                     viewModel = viewModel,
                     focusRequester = progressBarFocusRequester,
@@ -1612,7 +1640,7 @@ private fun PlayerControlsOverlay(
             // Control buttons row — always LTR regardless of locale
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().alpha(osdAlpha),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1796,6 +1824,7 @@ private fun PlayerControlsProgressBarHost(
     onFocused: (() -> Unit)? = null
 ) {
     val playbackTimeline by viewModel.playbackTimeline.collectAsState()
+    val thumbnailFractions by viewModel.seekPreviewCachedFractions.collectAsState()
 
     ProgressBar(
         currentPosition = playbackTimeline.currentPosition,
@@ -1810,7 +1839,8 @@ private fun PlayerControlsProgressBarHost(
         upFocusRequester = upFocusRequester,
         downFocusRequester = downFocusRequester,
         onUpKey = onUpKey,
-        onFocused = onFocused
+        onFocused = onFocused,
+        thumbnailFractions = thumbnailFractions
     )
 }
 
@@ -1910,7 +1940,8 @@ private fun ProgressBar(
     upFocusRequester: FocusRequester? = null,
     downFocusRequester: FocusRequester? = null,
     onUpKey: (() -> Unit)? = null,
-    onFocused: (() -> Unit)? = null
+    onFocused: (() -> Unit)? = null,
+    thumbnailFractions: FloatArray = floatArrayOf()
 ) {
     val progress = if (duration > 0) {
         (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
@@ -2013,25 +2044,43 @@ private fun ProgressBar(
                 .clip(RoundedCornerShape(3.dp))
                 .background(NuvioColors.Secondary)
         )
+        if (thumbnailFractions.isNotEmpty()) {
+            Canvas(modifier = Modifier.matchParentSize()) {
+                val tickWidth = 2.dp.toPx()
+                for (fraction in thumbnailFractions) {
+                    val x = (fraction * size.width).coerceIn(0f, size.width - tickWidth)
+                    drawRect(
+                        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.4f),
+                        topLeft = Offset(x, 0f),
+                        size = GeometrySize(tickWidth, size.height)
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
 private fun SeekOverlay(
+    viewModel: PlayerViewModel,
     currentPosition: Long,
     duration: Long
 ) {
+    val thumbnailFractions by viewModel.seekPreviewCachedFractions.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 32.dp, vertical = 24.dp)
     ) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            SeekPreviewThumbnailHost(viewModel = viewModel)
             ProgressBar(
                 currentPosition = currentPosition,
                 duration = duration,
                 onSeekPreview = {},
-                onSeekCommit = {}
+                onSeekCommit = {},
+                thumbnailFractions = thumbnailFractions
             )
         }
 
@@ -2056,6 +2105,7 @@ private fun SeekOverlayHost(viewModel: PlayerViewModel) {
     val playbackTimeline by viewModel.playbackTimeline.collectAsState()
 
     SeekOverlay(
+        viewModel = viewModel,
         currentPosition = playbackTimeline.currentPosition,
         duration = playbackTimeline.duration
     )

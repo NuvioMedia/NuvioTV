@@ -13,6 +13,9 @@ internal fun PlayerRuntimeController.releasePlayer(flushPlaybackState: Boolean) 
     if (flushPlaybackState) {
         stopTorrentStream()
         flushPlaybackSnapshotForSwitchOrExit()
+        releaseSeekPreview()
+    } else {
+        resetSeekPreviewForNewStream()
     }
 
     notifyAudioSessionUpdate(false)

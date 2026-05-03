@@ -25,12 +25,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Warning
@@ -132,6 +134,11 @@ internal fun PlaybackSettingsSections(
     onSetPauseOverlayEnabled: (Boolean) -> Unit,
     onSetOsdClockEnabled: (Boolean) -> Unit,
     onSetSkipIntroEnabled: (Boolean) -> Unit,
+    onSetSeekPreviewEnabled: (Boolean) -> Unit,
+    onShowSeekPreviewGenerationTypeDialog: () -> Unit = {},
+    seekPreviewCacheSizeBytes: Long = 0L,
+    onClearSeekPreviewCache: () -> Unit = {},
+    onSetSeekPreviewCacheLimitMb: (Int) -> Unit = {},
     onSetFrameRateMatchingMode: (FrameRateMatchingMode) -> Unit,
     onSetResolutionMatchingEnabled: (Boolean) -> Unit,
     onDisableAfrAndResolution: () -> Unit,
@@ -325,6 +332,60 @@ internal fun PlaybackSettingsSections(
                     onFocused = { focusedSection = PlaybackSection.GENERAL },
                     enabled = !generalUi.isExternalPlayer
                 )
+            }
+
+            item(key = "general_seek_preview") {
+                ToggleSettingsItem(
+                    icon = Icons.Default.Image,
+                    title = stringResource(R.string.playback_seek_preview),
+                    subtitle = stringResource(R.string.playback_seek_preview_sub),
+                    isChecked = playerSettings.seekPreviewEnabled,
+                    onCheckedChange = onSetSeekPreviewEnabled,
+                    onFocused = { focusedSection = PlaybackSection.GENERAL },
+                    enabled = !generalUi.isExternalPlayer
+                )
+            }
+
+            if (playerSettings.seekPreviewEnabled && !generalUi.isExternalPlayer) {
+                item(key = "general_seek_preview_generation_type") {
+                    val typeLabel = when (playerSettings.seekPreviewGenerationType) {
+                        io.framescout.SeekPreviewGenerationType.SPARSE -> stringResource(R.string.playback_seek_preview_generation_type_sparse)
+                        io.framescout.SeekPreviewGenerationType.DETAILED -> stringResource(R.string.playback_seek_preview_generation_type_detailed)
+                    }
+                    NavigationSettingsItem(
+                        icon = Icons.Default.SwapHoriz,
+                        title = stringResource(R.string.playback_seek_preview_generation_type),
+                        subtitle = typeLabel,
+                        onClick = onShowSeekPreviewGenerationTypeDialog,
+                        onFocused = { focusedSection = PlaybackSection.GENERAL }
+                    )
+                }
+
+                item(key = "general_seek_preview_clear") {
+                    val cacheSubtitle = if (seekPreviewCacheSizeBytes > 0L) {
+                        stringResource(
+                            R.string.playback_seek_preview_cache_used,
+                            formatBytes(seekPreviewCacheSizeBytes)
+                        )
+                    } else {
+                        stringResource(R.string.playback_seek_preview_cache_empty)
+                    }
+                    NavigationSettingsItem(
+                        icon = Icons.Default.Delete,
+                        title = stringResource(R.string.playback_seek_preview_clear_cache),
+                        subtitle = cacheSubtitle,
+                        onClick = onClearSeekPreviewCache,
+                        onFocused = { focusedSection = PlaybackSection.GENERAL }
+                    )
+                }
+
+                item(key = "general_seek_preview_cache_limit") {
+                    SeekPreviewCacheLimitOptions(
+                        selectedLimitMb = playerSettings.seekPreviewCacheLimitMb,
+                        onSelect = onSetSeekPreviewCacheLimitMb,
+                        onFocused = { focusedSection = PlaybackSection.GENERAL }
+                    )
+                }
             }
 
             item(key = "general_afr_header") {
@@ -804,6 +865,7 @@ internal fun PlaybackSettingsDialogsHost(
     showStreamRegexDialog: Boolean,
     showNextEpisodeThresholdModeDialog: Boolean,
     showReuseLastLinkCacheDialog: Boolean,
+    showSeekPreviewGenerationTypeDialog: Boolean = false,
     onSetPlayerPreference: (PlayerPreference) -> Unit,
     onDismissPlayerPreferenceDialog: () -> Unit,
     onSetInternalPlayerEngine: (InternalPlayerEngine) -> Unit,
@@ -825,6 +887,7 @@ internal fun PlaybackSettingsDialogsHost(
     onSetStreamAutoPlaySelectedAddons: (Set<String>) -> Unit,
     onSetStreamAutoPlaySelectedPlugins: (Set<String>) -> Unit,
     onSetReuseLastLinkCacheHours: (Int) -> Unit,
+    onSetSeekPreviewGenerationType: (io.framescout.SeekPreviewGenerationType) -> Unit = {},
     onDismissLanguageDialog: () -> Unit,
     onDismissSecondaryLanguageDialog: () -> Unit,
     onDismissSubtitleStartupModeDialog: () -> Unit,
@@ -841,7 +904,8 @@ internal fun PlaybackSettingsDialogsHost(
     onDismissStreamAutoPlayAddonSelectionDialog: () -> Unit,
     onDismissStreamAutoPlayPluginSelectionDialog: () -> Unit,
     onDismissNextEpisodeThresholdModeDialog: () -> Unit,
-    onDismissReuseLastLinkCacheDialog: () -> Unit
+    onDismissReuseLastLinkCacheDialog: () -> Unit,
+    onDismissSeekPreviewGenerationTypeDialog: () -> Unit = {}
 ) {
     if (showPlayerPreferenceDialog) {
         PlayerPreferenceDialog(
@@ -932,6 +996,17 @@ internal fun PlaybackSettingsDialogsHost(
         onDismissNextEpisodeThresholdModeDialog = onDismissNextEpisodeThresholdModeDialog,
         onDismissReuseLastLinkCacheDialog = onDismissReuseLastLinkCacheDialog
     )
+
+    if (showSeekPreviewGenerationTypeDialog) {
+        SeekPreviewGenerationTypeDialog(
+            currentType = playerSettings.seekPreviewGenerationType,
+            onTypeSelected = { type ->
+                onSetSeekPreviewGenerationType(type)
+                onDismissSeekPreviewGenerationTypeDialog()
+            },
+            onDismiss = onDismissSeekPreviewGenerationTypeDialog
+        )
+    }
 }
 
 @Composable
@@ -1076,6 +1151,134 @@ private fun InternalPlayerEngineDialog(
 
                     Card(
                         onClick = { onEngineSelected(engine) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),
+                        colors = CardDefaults.colors(
+                            containerColor = if (isSelected) NuvioColors.FocusBackground else NuvioColors.BackgroundCard,
+                            focusedContainerColor = NuvioColors.FocusBackground
+                        ),
+                        shape = CardDefaults.shape(shape = RoundedCornerShape(10.dp)),
+                        scale = CardDefaults.scale(focusedScale = 1f)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = title,
+                                    color = if (isSelected) NuvioColors.Primary else NuvioColors.TextPrimary,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = description,
+                                    color = NuvioColors.TextSecondary,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            if (isSelected) {
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = stringResource(R.string.cd_selected),
+                                    tint = NuvioColors.Primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun formatBytes(bytes: Long): String {
+    val mb = bytes / (1024.0 * 1024.0)
+    return if (mb < 1.0) "<1 MB" else "${mb.toInt()} MB"
+}
+
+@Composable
+private fun SeekPreviewCacheLimitOptions(
+    selectedLimitMb: Int,
+    onSelect: (Int) -> Unit,
+    onFocused: () -> Unit
+) {
+    val options = listOf(50, 100, 200)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.playback_seek_preview_cache_limit),
+            style = MaterialTheme.typography.bodyMedium,
+            color = NuvioColors.TextSecondary,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        options.forEachIndexed { index, mb ->
+            if (index > 0) Spacer(modifier = Modifier.height(6.dp))
+            RenderTypeSettingsItem(
+                title = "$mb MB",
+                subtitle = stringResource(R.string.playback_seek_preview_cache_limit_sub),
+                isSelected = selectedLimitMb == mb,
+                onClick = { onSelect(mb) },
+                onFocused = onFocused
+            )
+        }
+    }
+}
+
+@Composable
+private fun SeekPreviewGenerationTypeDialog(
+    currentType: io.framescout.SeekPreviewGenerationType,
+    onTypeSelected: (io.framescout.SeekPreviewGenerationType) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    val options = listOf(
+        Triple(
+            io.framescout.SeekPreviewGenerationType.SPARSE,
+            stringResource(R.string.playback_seek_preview_generation_type_sparse),
+            stringResource(R.string.playback_seek_preview_generation_type_sparse_desc)
+        ),
+        Triple(
+            io.framescout.SeekPreviewGenerationType.DETAILED,
+            stringResource(R.string.playback_seek_preview_generation_type_detailed),
+            stringResource(R.string.playback_seek_preview_generation_type_detailed_desc)
+        )
+    )
+
+    NuvioDialog(
+        onDismiss = onDismiss,
+        title = stringResource(R.string.playback_seek_preview_generation_type),
+        width = 420.dp,
+        suppressFirstKeyUp = false
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 320.dp)
+        ) {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                items(
+                    count = options.size,
+                    key = { index -> options[index].first.name }
+                ) { index ->
+                    val (type, title, description) = options[index]
+                    val isSelected = type == currentType
+
+                    Card(
+                        onClick = { onTypeSelected(type) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .then(if (index == 0) Modifier.focusRequester(focusRequester) else Modifier),

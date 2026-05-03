@@ -1,5 +1,6 @@
 package com.nuvio.tv.data.local
 
+import io.framescout.SeekPreviewGenerationType
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -178,6 +179,9 @@ data class PlayerSettings(
     val pauseOverlayEnabled: Boolean = true,
     val osdClockEnabled: Boolean = true,
     val skipIntroEnabled: Boolean = true,
+    val seekPreviewEnabled: Boolean = false,
+    val seekPreviewGenerationType: SeekPreviewGenerationType = SeekPreviewGenerationType.SPARSE,
+    val seekPreviewCacheLimitMb: Int = 200,
     // Dolby Vision Profile 7 → HEVC fallback (requires forked ExoPlayer)
     val mapDV7ToHevc: Boolean = false,
     val mpvHardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE,
@@ -258,6 +262,7 @@ enum class InternalPlayerEngine {
     AUTO
 }
 
+
 /**
  * Enum representing the different libass render types
  * Maps to io.github.peerless2012.ass.media.type.AssRenderType
@@ -310,6 +315,9 @@ class PlayerSettingsDataStore @Inject constructor(
     private val pauseOverlayEnabledKey = booleanPreferencesKey("pause_overlay_enabled")
     private val osdClockEnabledKey = booleanPreferencesKey("osd_clock_enabled")
     private val skipIntroEnabledKey = booleanPreferencesKey("skip_intro_enabled")
+    private val seekPreviewEnabledKey = booleanPreferencesKey("seek_preview_enabled")
+    private val seekPreviewGenerationTypeKey = stringPreferencesKey("seek_preview_generation_type")
+    private val seekPreviewCacheLimitMbKey = intPreferencesKey("seek_preview_cache_limit_mb")
     private val mapDV7ToHevcKey = booleanPreferencesKey("map_dv7_to_hevc")
     private val mpvHardwareDecodeModeKey = stringPreferencesKey("mpv_hardware_decode_mode")
     private val frameRateMatchingKey = booleanPreferencesKey("frame_rate_matching")
@@ -461,6 +469,11 @@ class PlayerSettingsDataStore @Inject constructor(
                 pauseOverlayEnabled = prefs[pauseOverlayEnabledKey] ?: true,
                 osdClockEnabled = prefs[osdClockEnabledKey] ?: true,
                 skipIntroEnabled = prefs[skipIntroEnabledKey] ?: true,
+                seekPreviewEnabled = prefs[seekPreviewEnabledKey] ?: false,
+                seekPreviewGenerationType = prefs[seekPreviewGenerationTypeKey]?.let {
+                    runCatching { SeekPreviewGenerationType.valueOf(it) }.getOrDefault(SeekPreviewGenerationType.SPARSE)
+                } ?: SeekPreviewGenerationType.SPARSE,
+                seekPreviewCacheLimitMb = (prefs[seekPreviewCacheLimitMbKey] ?: 200).coerceIn(50, 200),
                 mapDV7ToHevc = prefs[mapDV7ToHevcKey] ?: false,
                 mpvHardwareDecodeMode = parseMpvHardwareDecodeMode(prefs[mpvHardwareDecodeModeKey]),
                 frameRateMatchingMode = prefs[frameRateMatchingModeKey]?.let {
@@ -657,6 +670,24 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setSkipIntroEnabled(enabled: Boolean) {
         store().edit { prefs ->
             prefs[skipIntroEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setSeekPreviewEnabled(enabled: Boolean) {
+        store().edit { prefs ->
+            prefs[seekPreviewEnabledKey] = enabled
+        }
+    }
+
+    suspend fun setSeekPreviewGenerationType(type: SeekPreviewGenerationType) {
+        store().edit { prefs ->
+            prefs[seekPreviewGenerationTypeKey] = type.name
+        }
+    }
+
+    suspend fun setSeekPreviewCacheLimitMb(mb: Int) {
+        store().edit { prefs ->
+            prefs[seekPreviewCacheLimitMbKey] = mb.coerceIn(50, 200)
         }
     }
 

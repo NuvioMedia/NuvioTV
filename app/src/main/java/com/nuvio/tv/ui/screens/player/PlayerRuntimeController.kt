@@ -66,6 +66,8 @@ class PlayerRuntimeController(
     internal val tmdbService: com.nuvio.tv.core.tmdb.TmdbService,
     internal val tmdbMetadataService: com.nuvio.tv.core.tmdb.TmdbMetadataService,
     internal val tmdbSettingsDataStore: com.nuvio.tv.data.local.TmdbSettingsDataStore,
+    internal val seekPreviewGenerator: io.framescout.SeekPreviewGenerator,
+    internal val seekPreviewStore: io.framescout.SeekPreviewThumbnailStore,
     savedStateHandle: SavedStateHandle,
     internal val scope: CoroutineScope
 ) {
@@ -308,6 +310,15 @@ class PlayerRuntimeController(
     internal var currentAudioOutputRoute: AudioOutputRoute? = null
     internal var audioOutputRouteCallback: AudioDeviceCallback? = null
 
+    // Seek preview thumbnails (step 4 wiring)
+    internal var seekPreviewEnabled: Boolean = false
+    internal var seekPreviewGenerationType: io.framescout.SeekPreviewGenerationType = io.framescout.SeekPreviewGenerationType.SPARSE
+    internal var seekPreviewCacheBudgetBytes: Long = 200L * 1024L * 1024L
+    internal var seekPreviewStartedForCurrentStream: Boolean = false
+    internal var seekPreviewStateObserverJob: Job? = null
+    internal var seekPreviewProbeJob: Job? = null
+    internal val seekPreviewTriedSourceUrls: MutableSet<String> = mutableSetOf()
+
     internal var lastBufferLogTimeMs: Long = 0L
     
     internal val gainAudioProcessor = GainAudioProcessor()
@@ -384,6 +395,9 @@ class PlayerRuntimeController(
         observeEpisodeWatchProgress()
         observeTorrentSettings()
         observeDeviceLocalAspectMode()
+        observeSeekPreviewSettings()
+        observeSeekPreviewGeneratorState()
+        observeSourceStreamsForSeekPreview()
     }
 
     private fun observeTorrentSettings() {

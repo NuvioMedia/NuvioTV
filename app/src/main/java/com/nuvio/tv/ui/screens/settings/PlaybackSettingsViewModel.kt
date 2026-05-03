@@ -1,6 +1,8 @@
 package com.nuvio.tv.ui.screens.settings
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import io.framescout.SeekPreviewThumbnailStore
 import com.nuvio.tv.core.plugin.PluginManager
 import com.nuvio.tv.data.local.LibassRenderType
 import com.nuvio.tv.data.local.InternalPlayerEngine
@@ -20,9 +22,14 @@ import com.nuvio.tv.core.torrent.TorrentSettings
 import com.nuvio.tv.core.torrent.TorrentSettingsData
 import com.nuvio.tv.domain.repository.AddonRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -31,12 +38,26 @@ class PlaybackSettingsViewModel @Inject constructor(
     private val trailerSettingsDataStore: TrailerSettingsDataStore,
     private val addonRepository: AddonRepository,
     private val pluginManager: PluginManager,
-    private val torrentSettings: TorrentSettings
+    private val torrentSettings: TorrentSettings,
+    private val seekPreviewStore: SeekPreviewThumbnailStore
 ) : ViewModel() {
 
     val playerSettings: Flow<PlayerSettings> = playerSettingsDataStore.playerSettings
     val trailerSettings: Flow<TrailerSettings> = trailerSettingsDataStore.settings
     val torrentSettingsFlow: Flow<TorrentSettingsData> = torrentSettings.settings
+
+    private val _seekPreviewCacheSizeBytes = MutableStateFlow(0L)
+    val seekPreviewCacheSizeBytes: StateFlow<Long> = _seekPreviewCacheSizeBytes.asStateFlow()
+
+    init {
+        refreshSeekPreviewCacheSize()
+    }
+
+    private fun refreshSeekPreviewCacheSize() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _seekPreviewCacheSizeBytes.value = seekPreviewStore.totalBytes()
+        }
+    }
 
     fun setP2pEnabled(enabled: Boolean) = torrentSettings.setP2pEnabled(enabled)
     fun setHideTorrentStats(enabled: Boolean) = torrentSettings.setHideTorrentStats(enabled)
@@ -126,6 +147,25 @@ class PlaybackSettingsViewModel @Inject constructor(
 
     suspend fun setSkipIntroEnabled(enabled: Boolean) {
         playerSettingsDataStore.setSkipIntroEnabled(enabled)
+    }
+
+    suspend fun setSeekPreviewEnabled(enabled: Boolean) {
+        playerSettingsDataStore.setSeekPreviewEnabled(enabled)
+    }
+
+    suspend fun setSeekPreviewGenerationType(type: io.framescout.SeekPreviewGenerationType) {
+        playerSettingsDataStore.setSeekPreviewGenerationType(type)
+    }
+
+    suspend fun setSeekPreviewCacheLimitMb(mb: Int) {
+        playerSettingsDataStore.setSeekPreviewCacheLimitMb(mb)
+    }
+
+    fun clearSeekPreviewCache() {
+        viewModelScope.launch(Dispatchers.IO) {
+            seekPreviewStore.clearAll()
+            _seekPreviewCacheSizeBytes.value = 0L
+        }
     }
 
     suspend fun setFrameRateMatchingMode(mode: FrameRateMatchingMode) {

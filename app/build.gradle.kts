@@ -278,6 +278,7 @@ dependencies {
     // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
+    implementation("com.github.AKhalil609:FrameScout:1.0.2")
 
     // Image Loading
     implementation(libs.coil.compose)

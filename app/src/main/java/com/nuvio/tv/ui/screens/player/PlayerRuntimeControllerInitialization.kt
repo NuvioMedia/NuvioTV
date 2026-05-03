@@ -399,6 +399,7 @@ internal fun PlayerRuntimeController.initializePlayer(
                     
                         
                         if (playbackState == Player.STATE_READY) {
+                            startSeekPreviewIfReady(playerDuration)
                             if (shouldEnforceAutoplayOnFirstReady) {
                                 shouldEnforceAutoplayOnFirstReady = false
                                 if (!userPausedManually && !isPlaying) {
