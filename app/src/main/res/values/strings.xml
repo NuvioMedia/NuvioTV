@@ -1712,4 +1712,16 @@
     <string name="collections_tab_all">All</string>
     <string name="collections_tab_combined">Combined</string>
 
+    <!-- Watch Together -->
+    <string name="wt_title">Watch Together</string>
+    <string name="wt_join_desc">Join an existing room or create a new one to watch with friends.</string>
+    <string name="wt_room_code">Room Code: %1$s</string>
+    <string name="wt_create_room">Create New Room</string>
+    <string name="wt_join_room">Join Room</string>
+    <string name="wt_leave_room">Leave Room</string>
+    <string name="wt_now_playing">HOST IS WATCHING</string>
+    <string name="wt_enter_code">Enter Room Code</string>
+    <string name="wt_join">Join</string>
+    <string name="wt_watch_together">Watch Together</string>
+
 </resources>

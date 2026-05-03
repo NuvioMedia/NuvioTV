@@ -53,8 +53,10 @@ internal fun StreamSourcesSidePanel(
     streamsFocusRequester: FocusRequester,
     onClose: () -> Unit,
     onReload: () -> Unit,
+    onWatchTogetherClick: () -> Unit,
     onAddonFilterSelected: (String?) -> Unit,
     onStreamSelected: (Stream) -> Unit,
+    onStreamWatchTogetherSelected: (Stream) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Only request focus when loading finishes (not on addon filter changes)
@@ -98,6 +100,14 @@ internal fun StreamSourcesSidePanel(
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DialogButton(
+                        text = if (uiState.watchTogetherState.role == com.nuvio.tv.ui.screens.player.watchtogether.RoomRole.NONE) 
+                            stringResource(R.string.wt_join_room) 
+                        else 
+                            stringResource(R.string.wt_room_code, uiState.watchTogetherState.roomCode ?: ""),
+                        onClick = onWatchTogetherClick,
+                        isPrimary = uiState.watchTogetherState.role != com.nuvio.tv.ui.screens.player.watchtogether.RoomRole.NONE
+                    )
                     DialogButton(
                         text = stringResource(R.string.sources_reload),
                         onClick = onReload,
@@ -244,7 +254,9 @@ internal fun StreamSourcesSidePanel(
                                 focusRequester = streamsFocusRequester,
                                 requestInitialFocus = stream == initialFocusStream,
                                 isCurrentStream = index == currentStreamIndex,
+                                isInWatchTogetherRoom = uiState.watchTogetherState.role != com.nuvio.tv.ui.screens.player.watchtogether.RoomRole.NONE,
                                 onClick = { onStreamSelected(stream) },
+                                onWatchTogetherClick = { onStreamWatchTogetherSelected(stream) },
                                 onUpKey = if (index == 0 && chipFocusRequesters.isNotEmpty()) {{
                                     val selected = uiState.sourceSelectedAddonFilter
                                     val idx = if (selected == null) 0 else orderedAddonNames.indexOf(selected) + 1

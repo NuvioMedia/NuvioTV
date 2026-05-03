@@ -41,6 +41,8 @@ androidxTestRunner = "1.6.2"
 uiautomator = "2.3.0"
 profileinstaller = "1.4.1"
 baselineProfilePlugin = "1.4.1"
+protobuf = "4.34.1"
+protobufPlugin = "0.10.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -131,6 +133,8 @@ androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 androidx-test-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
+protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobuf" }
+protobuf-kotlin-lite = { group = "com.google.protobuf", name = "protobuf-kotlin-lite", version.ref = "protobuf" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -142,3 +146,4 @@ hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineProfilePlugin" }
+protobuf = { id = "com.google.protobuf", version.ref = "protobufPlugin" }

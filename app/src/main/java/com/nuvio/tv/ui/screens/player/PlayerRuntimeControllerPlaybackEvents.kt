@@ -1,6 +1,8 @@
 package com.nuvio.tv.ui.screens.player
 
 import android.util.Log
+import com.nuvio.tv.ui.screens.player.watchtogether.PlaybackActions
+import com.nuvio.tv.ui.screens.player.watchtogether.RoomRole
 import androidx.media3.common.Player
 import com.nuvio.tv.R
 import com.nuvio.tv.data.local.SubtitleStyleSettings
@@ -562,6 +564,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     stopWatchProgressSaving()
                     emitStopScrobbleForCurrentProgress()
                     schedulePauseOverlay()
+                    watchTogetherManager.broadcastPlaybackAction(PlaybackActions.PAUSE)
                 } else {
                     userPausedManually = false
                     cancelPauseOverlay()
@@ -570,6 +573,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                     startWatchProgressSaving()
                     scheduleHideControls()
                     emitScrobbleStart()
+                    watchTogetherManager.broadcastPlaybackAction(PlaybackActions.PLAY)
                 }
             } else {
                 _exoPlayer?.let { player ->
@@ -577,10 +581,12 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                         userPausedManually = true
                         player.pause()
                         schedulePauseOverlay()
+                        watchTogetherManager.broadcastPlaybackAction(PlaybackActions.PAUSE)
                     } else {
                         userPausedManually = false
                         cancelPauseOverlay()
                         player.play()
+                        watchTogetherManager.broadcastPlaybackAction(PlaybackActions.PLAY)
                     }
                 }
             }
@@ -602,6 +608,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             seekPlaybackTo(target)
             updatePlaybackTimeline(currentPosition = target)
             scheduleProgressSyncAfterSeek()
+            watchTogetherManager.broadcastPlaybackAction(PlaybackActions.SEEK, target)
             if (_uiState.value.showControls) {
                 showControlsTemporarily()
             } else {
@@ -629,6 +636,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
                 updatePlaybackTimeline(currentPosition = target)
                 pendingPreviewSeekPosition = null
                 scheduleProgressSyncAfterSeek()
+                watchTogetherManager.broadcastPlaybackAction(PlaybackActions.SEEK, target)
                 if (_uiState.value.showControls) {
                     showControlsTemporarily()
                 } else {
@@ -641,6 +649,7 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
             seekPlaybackTo(event.position)
             updatePlaybackTimeline(currentPosition = event.position)
             scheduleProgressSyncAfterSeek()
+            watchTogetherManager.broadcastPlaybackAction(PlaybackActions.SEEK, event.position)
             if (_uiState.value.showControls) {
                 showControlsTemporarily()
             } else {
@@ -1126,6 +1135,36 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         }
         PlayerEvent.OnDismissStreamInfo -> {
             _uiState.update { it.copy(showStreamInfoOverlay = false) }
+        }
+        PlayerEvent.OnShowWatchTogetherDialog -> {
+            _uiState.update { it.copy(showWatchTogetherDialog = true) }
+        }
+        PlayerEvent.OnDismissWatchTogetherDialog -> {
+            _uiState.update { it.copy(showWatchTogetherDialog = false) }
+        }
+        is PlayerEvent.OnJoinWatchTogetherRoom -> {
+            watchTogetherManager.joinRoom(event.roomCode, event.username)
+        }
+        is PlayerEvent.OnCreateWatchTogetherRoom -> {
+            watchTogetherManager.createRoom(event.username)
+        }
+        PlayerEvent.OnLeaveWatchTogetherRoom -> {
+            watchTogetherManager.leaveRoom()
+        }
+        is PlayerEvent.OnApproveWatchTogetherJoin -> {
+            watchTogetherManager.approveJoin(event.userId)
+        }
+        is PlayerEvent.OnRejectWatchTogetherJoin -> {
+            watchTogetherManager.rejectJoin(event.userId)
+        }
+        is PlayerEvent.OnWatchTogetherStreamSelected -> {
+            onEvent(PlayerEvent.OnSourceStreamSelected(event.stream))
+            watchTogetherManager.broadcastChangeContent(
+                stream = event.stream,
+                contentId = contentId ?: "",
+                title = title,
+                video = metaVideos.find { it.season == currentSeason && it.episode == currentEpisode }
+            )
         }
     }
 }

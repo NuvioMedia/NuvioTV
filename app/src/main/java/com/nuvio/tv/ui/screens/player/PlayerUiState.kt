@@ -15,6 +15,7 @@ import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.domain.model.Video
 import com.nuvio.tv.domain.model.WatchProgress
 import com.nuvio.tv.ui.components.SourceChipItem
+import com.nuvio.tv.ui.screens.player.watchtogether.WatchTogetherState
 
 data class PlayerUiState(
     val isPlaying: Boolean = false,
@@ -162,7 +163,10 @@ data class PlayerUiState(
     val torrentBufferingProgress: Float = 0f,
     // When true, suppress all torrent stats text (buffer, seeds, peers, speed)
     // from loading overlay, rebuffering indicator, and corner overlay.
-    val hideTorrentStats: Boolean = true
+    val hideTorrentStats: Boolean = true,
+    // Watch Together
+    val showWatchTogetherDialog: Boolean = false,
+    val watchTogetherState: WatchTogetherState = WatchTogetherState()
 )
 
 data class PlaybackTimelineState(
@@ -268,6 +272,15 @@ sealed class PlayerEvent {
     data object OnShowStreamInfo : PlayerEvent()
     data object OnDismissStreamInfo : PlayerEvent()
     data object OnToggleTorrentStats : PlayerEvent()
+    // Watch Together
+    data object OnShowWatchTogetherDialog : PlayerEvent()
+    data object OnDismissWatchTogetherDialog : PlayerEvent()
+    data class OnJoinWatchTogetherRoom(val roomCode: String, val username: String) : PlayerEvent()
+    data class OnCreateWatchTogetherRoom(val username: String) : PlayerEvent()
+    data object OnLeaveWatchTogetherRoom : PlayerEvent()
+    data class OnApproveWatchTogetherJoin(val userId: String) : PlayerEvent()
+    data class OnRejectWatchTogetherJoin(val userId: String) : PlayerEvent()
+    data class OnWatchTogetherStreamSelected(val stream: Stream) : PlayerEvent()
 }
 
 data class ParentalWarning(

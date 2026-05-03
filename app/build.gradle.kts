@@ -6,6 +6,7 @@
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.protobuf)
 }
 
 import java.util.Properties
@@ -363,6 +364,8 @@ dependencies {
 
     // Kotlinx Serialization
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.protobuf.javalite)
+    implementation(libs.protobuf.kotlin.lite)
 
     // Performance profiling
     implementation("androidx.metrics:metrics-performance:1.0.0-rc01")  // JankStats
@@ -377,4 +380,22 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.12")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${libs.versions.protobuf.get()}"
+    }
+    generateProtoTasks {
+        all().forEach { task ->
+            task.builtins {
+                create("java") {
+                    option("lite")
+                }
+                create("kotlin") {
+                    option("lite")
+                }
+            }
+        }
+    }
 }

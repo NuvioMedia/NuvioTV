@@ -53,6 +53,7 @@ class PlayerViewModel @Inject constructor(
     private val tmdbService: TmdbService,
     private val tmdbMetadataService: TmdbMetadataService,
     private val tmdbSettingsDataStore: TmdbSettingsDataStore,
+    private val watchTogetherManager: com.nuvio.tv.ui.screens.player.watchtogether.WatchTogetherManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -80,6 +81,7 @@ class PlayerViewModel @Inject constructor(
         tmdbService = tmdbService,
         tmdbMetadataService = tmdbMetadataService,
         tmdbSettingsDataStore = tmdbSettingsDataStore,
+        watchTogetherManager = watchTogetherManager,
         savedStateHandle = savedStateHandle,
         scope = viewModelScope
     )

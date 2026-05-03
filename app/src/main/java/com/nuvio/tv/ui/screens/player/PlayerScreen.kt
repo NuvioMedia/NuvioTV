@@ -50,6 +50,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ClosedCaption
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -624,6 +625,19 @@ fun PlayerScreen(
                 .zIndex(2.6f)
         )
 
+        // Watch Together Dialog
+        if (uiState.showWatchTogetherDialog) {
+            com.nuvio.tv.ui.screens.player.watchtogether.WatchTogetherDialog(
+                state = uiState.watchTogetherState,
+                onJoin = { code, name -> viewModel.onEvent(PlayerEvent.OnJoinWatchTogetherRoom(code, name)) },
+                onCreate = { name -> viewModel.onEvent(PlayerEvent.OnCreateWatchTogetherRoom(name)) },
+                onLeave = { viewModel.onEvent(PlayerEvent.OnLeaveWatchTogetherRoom) },
+                onApprove = { viewModel.onEvent(PlayerEvent.OnApproveWatchTogetherJoin(it)) },
+                onReject = { viewModel.onEvent(PlayerEvent.OnRejectWatchTogetherJoin(it)) },
+                onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissWatchTogetherDialog) }
+            )
+        }
+
         // Torrent stats overlay (top-right corner)
         TorrentOverlay(
             visible = uiState.isTorrentStream && uiState.showTorrentStats && !uiState.hideTorrentStats && uiState.error == null,
@@ -842,6 +856,7 @@ fun PlayerScreen(
                     viewModel.onEvent(PlayerEvent.OnToggleAspectRatio)
                 },
                 onSwitchPlayerEngine = { viewModel.onEvent(PlayerEvent.OnSwitchInternalPlayerEngine) },
+                onShowWatchTogetherDialog = { viewModel.onEvent(PlayerEvent.OnShowWatchTogetherDialog) },
                 onToggleMoreActions = {
                     if (uiState.showMoreDialog) {
                         viewModel.onEvent(PlayerEvent.OnDismissMoreDialog)
@@ -1024,15 +1039,17 @@ fun PlayerScreen(
             )
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                StreamSourcesSidePanel(
-                    uiState = uiState,
-                    streamsFocusRequester = sourceStreamsFocusRequester,
-                    onClose = { viewModel.onEvent(PlayerEvent.OnDismissSourcesPanel) },
-                    onReload = { viewModel.onEvent(PlayerEvent.OnReloadSourceStreams) },
-                    onAddonFilterSelected = { viewModel.onEvent(PlayerEvent.OnSourceAddonFilterSelected(it)) },
-                    onStreamSelected = { viewModel.onEvent(PlayerEvent.OnSourceStreamSelected(it)) },
-                    modifier = Modifier.align(Alignment.CenterEnd)
-                )
+                    StreamSourcesSidePanel(
+                        uiState = uiState,
+                        streamsFocusRequester = sourceStreamsFocusRequester,
+                        onClose = { viewModel.onEvent(PlayerEvent.OnDismissSourcesPanel) },
+                        onReload = { viewModel.onEvent(PlayerEvent.OnReloadSourceStreams) },
+                        onWatchTogetherClick = { viewModel.onEvent(PlayerEvent.OnShowWatchTogetherDialog) },
+                        onAddonFilterSelected = { viewModel.onEvent(PlayerEvent.OnSourceAddonFilterSelected(it)) },
+                        onStreamSelected = { viewModel.onEvent(PlayerEvent.OnSourceStreamSelected(it)) },
+                        onStreamWatchTogetherSelected = { viewModel.onEvent(PlayerEvent.OnWatchTogetherStreamSelected(it)) },
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    )
             }
         }
 
@@ -1094,6 +1111,19 @@ fun PlayerScreen(
                 .zIndex(2.6f)
         )
 
+        // Watch Together Dialog
+        if (uiState.showWatchTogetherDialog) {
+            com.nuvio.tv.ui.screens.player.watchtogether.WatchTogetherDialog(
+                state = uiState.watchTogetherState,
+                onJoin = { code, name -> viewModel.onEvent(PlayerEvent.OnJoinWatchTogetherRoom(code, name)) },
+                onCreate = { name -> viewModel.onEvent(PlayerEvent.OnCreateWatchTogetherRoom(name)) },
+                onLeave = { viewModel.onEvent(PlayerEvent.OnLeaveWatchTogetherRoom) },
+                onApprove = { viewModel.onEvent(PlayerEvent.OnApproveWatchTogetherJoin(it)) },
+                onReject = { viewModel.onEvent(PlayerEvent.OnRejectWatchTogetherJoin(it)) },
+                onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissWatchTogetherDialog) }
+            )
+        }
+
         SubtitleSelectionOverlay(
             visible = uiState.showSubtitleOverlay,
             internalTracks = uiState.subtitleTracks,
@@ -1113,6 +1143,19 @@ fun PlayerScreen(
                 .fillMaxSize()
                 .zIndex(2.6f)
         )
+
+        // Watch Together Dialog
+        if (uiState.showWatchTogetherDialog) {
+            com.nuvio.tv.ui.screens.player.watchtogether.WatchTogetherDialog(
+                state = uiState.watchTogetherState,
+                onJoin = { code, name -> viewModel.onEvent(PlayerEvent.OnJoinWatchTogetherRoom(code, name)) },
+                onCreate = { name -> viewModel.onEvent(PlayerEvent.OnCreateWatchTogetherRoom(name)) },
+                onLeave = { viewModel.onEvent(PlayerEvent.OnLeaveWatchTogetherRoom) },
+                onApprove = { viewModel.onEvent(PlayerEvent.OnApproveWatchTogetherJoin(it)) },
+                onReject = { viewModel.onEvent(PlayerEvent.OnRejectWatchTogetherJoin(it)) },
+                onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissWatchTogetherDialog) }
+            )
+        }
 
         PlayerOverlayScaffold(
             visible = uiState.showSubtitleTimingDialog &&
@@ -1463,6 +1506,7 @@ private fun PlayerControlsOverlay(
     onShowSpeedDialog: () -> Unit,
     onToggleAspectRatio: () -> Unit,
     onSwitchPlayerEngine: () -> Unit,
+    onShowWatchTogetherDialog: () -> Unit,
     onToggleMoreActions: () -> Unit,
     onOpenInExternalPlayer: () -> Unit,
     onShowStreamInfo: () -> Unit,
@@ -1692,6 +1736,16 @@ private fun PlayerControlsOverlay(
                         onFocused = onResetHideTimer
                     )
 
+                    ControlButton(
+                        icon = Icons.Default.Group,
+                        contentDescription = stringResource(R.string.wt_title),
+                        onClick = onShowWatchTogetherDialog,
+                        upFocusRequester = progressBarFocusRequester,
+                        onDownKey = onHideControls,
+                        onFocused = onResetHideTimer,
+                        customContentColor = if (uiState.watchTogetherState.role != com.nuvio.tv.ui.screens.player.watchtogether.RoomRole.NONE) NuvioColors.Secondary else Color.White
+                    )
+
                     if (hasEpisodeContext) {
                         ControlButton(
                             icon = Icons.AutoMirrored.Filled.List,
@@ -1834,7 +1888,8 @@ private fun ControlButton(
     focusRequester: FocusRequester? = null,
     upFocusRequester: FocusRequester? = null,
     onDownKey: (() -> Unit)? = null,
-    onFocused: (() -> Unit)? = null
+    onFocused: (() -> Unit)? = null,
+    customContentColor: Color? = null
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
@@ -1879,7 +1934,7 @@ private fun ControlButton(
         colors = IconButtonDefaults.colors(
             containerColor = Color.Transparent,
             focusedContainerColor = Color.White,
-            contentColor = Color.White,
+            contentColor = customContentColor ?: Color.White,
             focusedContentColor = Color.Black
         ),
         shape = IconButtonDefaults.shape(shape = CircleShape)

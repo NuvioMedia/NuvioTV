@@ -38,6 +38,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
@@ -67,13 +69,14 @@ class PlayerRuntimeController(
     internal val tmdbService: com.nuvio.tv.core.tmdb.TmdbService,
     internal val tmdbMetadataService: com.nuvio.tv.core.tmdb.TmdbMetadataService,
     internal val tmdbSettingsDataStore: com.nuvio.tv.data.local.TmdbSettingsDataStore,
+    internal val watchTogetherManager: com.nuvio.tv.ui.screens.player.watchtogether.WatchTogetherManager,
     savedStateHandle: SavedStateHandle,
     internal val scope: CoroutineScope
 ) {
 
     companion object {
         internal const val TAG = "PlayerViewModel"
-        internal const val SWITCH_TRACE_TAG = "SwitchTrace"
+        internal const val SWITCH_TAG = "SwitchTrace"
         internal const val SWITCH_TRACE_ENABLED = false
         internal const val TRACK_FRAME_RATE_GRACE_MS = 1500L
         internal const val ADDON_SUBTITLE_TRACK_ID_PREFIX = "nuvio-addon-sub:"
@@ -146,6 +149,7 @@ class PlayerRuntimeController(
     internal var currentFilename: String? = navigationArgs.filename
         ?: initialStreamUrl.substringBefore('?').substringAfterLast('/', "")
             .takeIf { it.isNotBlank() && it.contains('.') }
+
     internal var currentAddonName: String? = navigationArgs.addonName
     internal var currentAddonLogo: String? = navigationArgs.addonLogo
     internal var currentStreamDescription: String? = navigationArgs.streamDescription
@@ -387,6 +391,8 @@ class PlayerRuntimeController(
         observeEpisodeWatchProgress()
         observeTorrentSettings()
         observeDeviceLocalAspectMode()
+        observeWatchTogetherEvents()
+        observeBufferingState()
     }
 
     private fun observeTorrentSettings() {
@@ -403,6 +409,69 @@ class PlayerRuntimeController(
         stopTorrentStream()
         mediaSourceFactory.shutdown()
         sourceChipErrorDismissJob?.cancel()
+    }
+
+    internal fun observeWatchTogetherEvents() {
+        scope.launch {
+            watchTogetherManager.state.collect { wtState ->
+                _uiState.update { it.copy(watchTogetherState = wtState) }
+            }
+        }
+
+        scope.launch {
+            watchTogetherManager.events.collect { event ->
+                when (event) {
+                    is com.nuvio.tv.ui.screens.player.watchtogether.WatchTogetherEvent.PlaybackSync -> applyRemoteAction(event.action)
+                    else -> {}
+                }
+            }
+        }
+    }
+
+    private fun applyRemoteAction(action: com.nuvio.tv.ui.screens.player.watchtogether.PlaybackActionPayload) {
+        when (action.action) {
+            com.nuvio.tv.ui.screens.player.watchtogether.PlaybackActions.PLAY -> {
+                if (watchTogetherManager.state.value.role == com.nuvio.tv.ui.screens.player.watchtogether.RoomRole.GUEST) {
+                    resumePlayback()
+                }
+            }
+            com.nuvio.tv.ui.screens.player.watchtogether.PlaybackActions.PAUSE -> {
+                if (watchTogetherManager.state.value.role == com.nuvio.tv.ui.screens.player.watchtogether.RoomRole.GUEST) {
+                    pausePlayback()
+                }
+            }
+            com.nuvio.tv.ui.screens.player.watchtogether.PlaybackActions.SEEK -> {
+                if (watchTogetherManager.state.value.role == com.nuvio.tv.ui.screens.player.watchtogether.RoomRole.GUEST) {
+                    action.position?.let { seekPlaybackTo(it) }
+                }
+            }
+        }
+    }
+
+    private fun pausePlayback() {
+        if (isUsingMpvEngine()) {
+            setPlaybackPaused(true)
+        } else {
+            _exoPlayer?.pause()
+        }
+    }
+
+    private fun resumePlayback() {
+        if (isUsingMpvEngine()) {
+            setPlaybackPaused(false)
+        } else {
+            _exoPlayer?.play()
+        }
+    }
+
+    internal fun observeBufferingState() {
+        scope.launch {
+            _uiState.map { it.isBuffering }.distinctUntilChanged().collect { isBuffering ->
+                if (watchTogetherManager.state.value.role != com.nuvio.tv.ui.screens.player.watchtogether.RoomRole.NONE) {
+                    watchTogetherManager.reportBuffering(isBuffering)
+                }
+            }
+        }
     }
 }
 
@@ -430,7 +499,7 @@ internal fun PlayerRuntimeController.logSwitchTrace(
     val sequence = ++switchTraceSequence
     val streamToken = currentStreamUrl.hashCode().toUInt().toString(16)
     Log.w(
-        PlayerRuntimeController.SWITCH_TRACE_TAG,
+        PlayerRuntimeController.SWITCH_TAG,
         "sid=$switchTraceSessionId seq=$sequence stage=$stage engine=$currentInternalPlayerEngine streamToken=$streamToken $message"
     )
 }

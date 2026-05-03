@@ -453,6 +453,12 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
         resetNextEpisodeCardState(clearEpisode = false)
         launchTorrentSourceStream(stream, infoHash, loadSavedProgress = true)
         persistTorrentStreamForReuse(stream)
+        watchTogetherManager.broadcastChangeContent(
+            stream = stream,
+            contentId = contentId ?: "",
+            title = title,
+            video = metaVideos.find { it.season == currentSeason && it.episode == currentEpisode }
+        )
         return
     }
 
@@ -483,6 +489,12 @@ internal fun PlayerRuntimeController.switchToSourceStream(stream: Stream) {
         headers = newHeaders
     )
     persistSelectedStreamForReuse(stream = stream, url = url, headers = newHeaders)
+    watchTogetherManager.broadcastChangeContent(
+        stream = stream,
+        contentId = contentId ?: "",
+        title = title,
+        video = metaVideos.find { it.season == currentSeason && it.episode == currentEpisode }
+    )
     hasRetriedCurrentStreamAfter416 = false
     resetErrorRetryState()
     subtitleDisabledByPersistedPreference = false
@@ -742,6 +754,12 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
         switchToEpisodeStreamCommon(stream, forcedTargetVideo)
         launchTorrentSourceStream(stream, infoHash, loadSavedProgress = true)
         persistTorrentStreamForReuse(stream)
+        watchTogetherManager.broadcastChangeContent(
+            stream = stream,
+            contentId = contentId ?: "",
+            title = title,
+            video = metaVideos.find { it.season == currentSeason && it.episode == currentEpisode }
+        )
         return
     }
 
@@ -787,6 +805,13 @@ internal fun PlayerRuntimeController.switchToEpisodeStream(stream: Stream, force
     currentTraktEpisodeMapping = null
     currentTraktEpisodeMappingKey = null
     lastSavedPosition = 0L
+
+    watchTogetherManager.broadcastChangeContent(
+        stream = stream,
+        contentId = contentId ?: "",
+        title = title,
+        video = targetVideo ?: metaVideos.find { it.season == currentSeason && it.episode == currentEpisode }
+    )
 
     _uiState.update {
         it.copy(
@@ -872,9 +897,24 @@ private fun PlayerRuntimeController.switchToEpisodeStreamCommon(
     currentSeason = targetVideo?.season ?: _uiState.value.episodeStreamsSeason ?: currentSeason
     currentEpisode = targetVideo?.episode ?: _uiState.value.episodeStreamsEpisode ?: currentEpisode
     currentEpisodeTitle = targetVideo?.title ?: _uiState.value.episodeStreamsTitle ?: currentEpisodeTitle
+    
+    watchTogetherManager.broadcastChangeContent(
+        stream = stream,
+        contentId = contentId ?: "",
+        title = title,
+        video = targetVideo ?: metaVideos.find { it.season == currentSeason && it.episode == currentEpisode }
+    )
+
     currentTraktEpisodeMapping = null
     currentTraktEpisodeMappingKey = null
     lastSavedPosition = 0L
+
+    watchTogetherManager.broadcastChangeContent(
+        stream = stream,
+        contentId = contentId ?: "",
+        title = title,
+        video = targetVideo ?: metaVideos.find { it.season == currentSeason && it.episode == currentEpisode }
+    )
 
     _uiState.update {
         it.copy(

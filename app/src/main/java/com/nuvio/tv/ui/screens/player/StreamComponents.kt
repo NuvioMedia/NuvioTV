@@ -66,7 +66,9 @@ internal fun StreamItem(
     focusRequester: FocusRequester,
     requestInitialFocus: Boolean,
     isCurrentStream: Boolean = false,
+    isInWatchTogetherRoom: Boolean = false,
     onClick: () -> Unit,
+    onWatchTogetherClick: () -> Unit = {},
     onUpKey: (() -> Unit)? = null
 ) {
     Card(
@@ -165,6 +167,25 @@ internal fun StreamItem(
             Column(
                 horizontalAlignment = Alignment.End
             ) {
+                if (isInWatchTogetherRoom) {
+                    androidx.tv.material3.Button(
+                        onClick = onWatchTogetherClick,
+                        colors = androidx.tv.material3.ButtonDefaults.colors(
+                            containerColor = NuvioColors.Secondary,
+                            focusedContainerColor = NuvioColors.Secondary,
+                            contentColor = NuvioColors.OnSecondary,
+                            focusedContentColor = NuvioColors.OnSecondary
+                        ),
+                        shape = androidx.tv.material3.ButtonDefaults.shape(shape = RoundedCornerShape(8.dp)),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.wt_watch_together),
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+
                 if (stream.addonLogo != null) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
